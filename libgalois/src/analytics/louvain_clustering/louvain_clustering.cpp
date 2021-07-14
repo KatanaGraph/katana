@@ -359,6 +359,10 @@ public:
       const std::string& edge_type_property_name,
       const std::vector<std::string>& temp_node_property_names,
       katana::NUMAArray<uint64_t>& clusters_orig, LouvainClusteringPlan plan) {
+    TemporaryPropertyGuard temp_edge_property{pfg};
+    std::vector<std::string> temp_edge_property_names = {
+        temp_edge_property.name()};
+
     /*
      * Construct temp property graph. This graph gets coarsened as the
      * computation proceeds.
@@ -433,17 +437,18 @@ public:
         clusters_orig[n] = graph_curr.template GetData<CurrentCommunityId>(n);
       });
 
+      auto pfg_empty = std::make_unique<katana::PropertyGraph>();
+
       // Build new graph to remove the isolated nodes
       auto coarsened_graph_result =
           Base::template GraphCoarsening<NodeData, EdgeData, EdgeWeightType>(
-              graph_curr, pfg_mutable.get(), num_unique_clusters,
+              graph_curr, pfg_empty.get(), num_unique_clusters,
               temp_node_property_names, temp_edge_property_names);
       if (!coarsened_graph_result) {
         return coarsened_graph_result.error();
       }
 
-      auto pfg_next = std::move(coarsened_graph_result.value());
-      pfg_mutable = std::move(pfg_next);
+      pfg_mutable = std::move(coarsened_graph_result.value());
 
     } else {
       /*
@@ -453,13 +458,13 @@ public:
           katana::iterate(graph_curr), [&](GNode n) { clusters_orig[n] = -1; });
     }
 
+    KATANA_LOG_ASSERT(pfg_mutable);
+
     double prev_mod = -1;  // Previous modularity
     double curr_mod = -1;  // Current modularity
     uint32_t phase = 0;
 
-    std::unique_ptr<katana::PropertyGraph> pfg_curr =
-        std::make_unique<katana::PropertyGraph>();
-    pfg_curr = std::move(pfg_mutable);
+    std::unique_ptr<katana::PropertyGraph> pfg_curr = std::move(pfg_mutable);
     uint32_t iter = 0;
     uint64_t num_nodes_orig = clusters_orig.size();
     while (true) {

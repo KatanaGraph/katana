@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from numba import from_dtype
 
-from katana.loops import (
+from katana import (
     OrderedByIntegerMetric,
     PerSocketChunkFIFO,
     do_all,

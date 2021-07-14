@@ -5,7 +5,7 @@
 
 #include "RDGPartHeader.h"
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "tsuba/ReadGroup.h"
 
 namespace tsuba {

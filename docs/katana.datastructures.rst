@@ -1,5 +1,6 @@
-Data Structures (katana.datastructures)
-=======================================
+===============
+Data Structures
+===============
 
 .. automodule:: katana.datastructures
    :members:

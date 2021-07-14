@@ -1,4 +1,4 @@
-#include "katana/Http.h"
+#include "katana/HTTP.h"
 
 #include <curl/curl.h>
 
@@ -40,7 +40,7 @@ public:
       const std::string& url, std::vector<char>* response) {
     CURL* curl = curl_easy_init();
     if (!curl) {
-      return katana::ErrorCode::HttpError;
+      return katana::ErrorCode::HTTPError;
     }
     CurlHandle handle(curl);
     KATANA_CHECKED(handle.SetOpt(CURLOPT_URL, url.c_str()));
@@ -80,7 +80,7 @@ public:
     CURLcode request_res = curl_easy_perform(handle_);
     if (request_res != CURLE_OK) {
       return KATANA_ERROR(
-          katana::ErrorCode::HttpError, "CURL error: {}",
+          katana::ErrorCode::HTTPError, "CURL error: {}",
           curl_easy_strerror(request_res));
     }
 
@@ -92,12 +92,12 @@ public:
     case 404:
       return katana::ErrorCode::NotFound;
     case 400:
-      return katana::ErrorCode::HttpError;
+      return katana::ErrorCode::HTTPError;
     case 409:
       return katana::ErrorCode::AlreadyExists;
     default:
       return KATANA_ERROR(
-          katana::ErrorCode::HttpError,
+          katana::ErrorCode::HTTPError,
           "HTTP request returned unhandled code: {}", response_code);
     }
   }
@@ -158,7 +158,7 @@ katana::HttpInit() {
   auto init_ret = curl_global_init(CURL_GLOBAL_ALL);
   if (init_ret != CURLE_OK) {
     return KATANA_ERROR(
-        ErrorCode::HttpError, "libcurl initialization failed: {}",
+        ErrorCode::HTTPError, "libcurl initialization failed: {}",
         curl_easy_strerror(init_ret));
   }
   return katana::ResultSuccess();

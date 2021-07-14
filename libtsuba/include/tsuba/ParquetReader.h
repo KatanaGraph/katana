@@ -6,7 +6,7 @@
 #include <arrow/api.h>
 
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 
 namespace parquet::arrow {
 

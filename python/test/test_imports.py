@@ -6,10 +6,6 @@ def test_import_applications_property_graph():
     import katana.lonestar.analytics.pagerank
 
 
-def test_import_loops():
-    import katana.loops
-
-
 def test_import_property_graph():
     import katana.property_graph
 

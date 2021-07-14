@@ -5,7 +5,7 @@
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 
 namespace {
 
@@ -89,11 +89,8 @@ TestRoundTrip() {
 
   std::unique_ptr<katana::PropertyGraph> g2 = std::move(make_result.value());
 
-  std::shared_ptr<arrow::Table> node_properties = g2->node_properties();
-  std::shared_ptr<arrow::Table> edge_properties = g2->edge_properties();
-
-  KATANA_LOG_ASSERT(node_properties->num_columns() == 1);
-  KATANA_LOG_ASSERT(edge_properties->num_columns() == 1);
+  KATANA_LOG_ASSERT(g2->GetNumNodeProperties() == 1);
+  KATANA_LOG_ASSERT(g2->GetNumEdgeProperties() == 1);
 
   KATANA_LOG_ASSERT(g2->edge_schema()->field(0)->name() == "edge-name");
   KATANA_LOG_ASSERT(g2->node_schema()->field(0)->name() == "node-name");
@@ -104,10 +101,8 @@ TestRoundTrip() {
   KATANA_LOG_ASSERT(
       g2->node_schema()->field(0)->type()->Equals(arrow::int32()));
 
-  std::shared_ptr<arrow::ChunkedArray> node_property =
-      node_properties->column(0);
-  std::shared_ptr<arrow::ChunkedArray> edge_property =
-      edge_properties->column(0);
+  std::shared_ptr<arrow::ChunkedArray> node_property = g2->GetNodeProperty(0);
+  std::shared_ptr<arrow::ChunkedArray> edge_property = g2->GetEdgeProperty(0);
 
   KATANA_LOG_ASSERT(
       static_cast<size_t>(node_property->length()) == test_length);

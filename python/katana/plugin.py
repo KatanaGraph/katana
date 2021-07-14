@@ -4,7 +4,6 @@ Discover and setup all Katana plugins.
 """
 
 import importlib
-import importlib.metadata
 import logging
 import sys
 from collections import namedtuple
@@ -14,6 +13,14 @@ from typing import Dict
 logger = logging.getLogger(__name__)
 
 installed_plugins = []
+
+try:
+    # Python >= 3.9
+
+    # pylint: disable=ungrouped-imports
+    from importlib import metadata
+except ImportError:
+    import importlib_metadata as metadata
 
 
 class PluginMetadata(namedtuple("PluginMetadata", ["name", "description", "version", "author", "licence"])):
@@ -75,7 +82,7 @@ class KatanaPluginLoader(MetaPathFinder):
 
 
 def _register_plugin_loader():
-    entry_points = importlib.metadata.entry_points()
+    entry_points = metadata.entry_points()
     if "katana_plugin" in entry_points:
         katana_plugins = entry_points["katana_plugin"]
         table = {e.name: e.value for e in katana_plugins}

@@ -419,6 +419,41 @@ transform(
   return d_first + std::distance(first, last);
 }
 
+template <typename ForwardIt, typename T>
+void
+iota(const ForwardIt& first, const ForwardIt& last, const T& start_val) {
+  using diff_type = typename std::iterator_traits<ForwardIt>::difference_type;
+  using value_type = typename std::iterator_traits<ForwardIt>::value_type;
+  static_assert(
+      std::is_convertible_v<T, value_type>,
+      "Can't convert start_val to iterator's value_type");
+  static_assert(
+      std::is_arithmetic_v<T> && std::is_arithmetic_v<value_type>,
+      "iota only supported for numeric types");
+
+  on_each([&](unsigned tid, unsigned total) {
+    auto [begin, end] = block_range(first, last, tid, total);
+    diff_type offset = std::distance(first, begin);
+    std::iota(
+        begin, end,
+        static_cast<value_type>(start_val) + static_cast<value_type>(offset));
+  });
+}
+
+template <typename ForwardIt, typename T>
+void
+fill(const ForwardIt& first, const ForwardIt& last, const T& val) {
+  using value_type = typename std::iterator_traits<ForwardIt>::value_type;
+  static_assert(
+      std::is_convertible_v<T, value_type>,
+      "Can't convert param val to iterator's value_type");
+
+  on_each([&](unsigned tid, unsigned total) {
+    auto [begin, end] = block_range(first, last, tid, total);
+    std::fill(begin, end, val);
+  });
+}
+
 template <class InputIt, class OutputIt>
 OutputIt
 copy(InputIt first, InputIt last, OutputIt d_first) {

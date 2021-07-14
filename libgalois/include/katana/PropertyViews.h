@@ -10,18 +10,13 @@ namespace katana::internal {
 /// error if there is more than one array for any column.
 KATANA_EXPORT Result<std::vector<arrow::Array*>> ExtractArrays(
     const arrow::Table* table, const std::vector<std::string>& properties);
+KATANA_EXPORT Result<std::vector<arrow::Array*>> ExtractArrays(
+    const PropertyGraph::ReadOnlyPropertyView& pview,
+    const std::vector<std::string>& properties);
 
 template <typename PropTuple>
 Result<katana::PropertyViewTuple<PropTuple>>
-MakePropertyViews(
-    const arrow::Table* table, const std::vector<std::string>& properties) {
-  auto arrays_result = ExtractArrays(table, properties);
-  if (!arrays_result) {
-    return arrays_result.error();
-  }
-
-  auto arrays = std::move(arrays_result.value());
-
+PropertyViewsFromArrays(std::vector<arrow::Array*> arrays) {
   if (arrays.size() < std::tuple_size_v<PropTuple>) {
     return std::errc::invalid_argument;
   }
@@ -41,10 +36,20 @@ MakePropertyViews(
 /// view or if the underlying arrow::ChunkedArray has more than one
 /// arrow::Array.
 template <typename PropTuple>
-static Result<katana::PropertyViewTuple<PropTuple>>
-MakeNodePropertyViews(
-    const PropertyGraph* pg, const std::vector<std::string>& properties) {
-  return MakePropertyViews<PropTuple>(pg->node_properties().get(), properties);
+Result<katana::PropertyViewTuple<PropTuple>>
+MakePropertyViews(
+    const arrow::Table* table, const std::vector<std::string>& properties) {
+  auto arrays = KATANA_CHECKED(ExtractArrays(table, properties));
+  return PropertyViewsFromArrays<PropTuple>(arrays);
+}
+
+template <typename PropTuple>
+Result<katana::PropertyViewTuple<PropTuple>>
+MakePropertyViews(
+    const PropertyGraph::ReadOnlyPropertyView& pview,
+    const std::vector<std::string>& properties) {
+  auto arrays = KATANA_CHECKED(ExtractArrays(pview, properties));
+  return PropertyViewsFromArrays<PropTuple>(arrays);
 }
 
 /// MakeNodePropertyViews asserts a typed view on top of runtime properties.
@@ -52,6 +57,17 @@ MakeNodePropertyViews(
 /// It returns an error if there are fewer properties than elements of the
 /// view or if the underlying arrow::ChunkedArray has more than one
 /// arrow::Array.
+template <typename PropTuple>
+static Result<katana::PropertyViewTuple<PropTuple>>
+MakeNodePropertyViews(
+    const PropertyGraph* pg, const std::vector<std::string>& properties) {
+  return MakePropertyViews<PropTuple>(
+      pg->NodeReadOnlyPropertyView(), properties);
+}
+
+/// MakeNodePropertyViews asserts a typed view on top of runtime properties.
+///
+/// \see MakeNodePropertyViews
 template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
 MakeNodePropertyViews(const PropertyGraph* pg) {
@@ -67,7 +83,8 @@ template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
 MakeEdgePropertyViews(
     const PropertyGraph* pg, const std::vector<std::string>& properties) {
-  return MakePropertyViews<PropTuple>(pg->edge_properties().get(), properties);
+  return MakePropertyViews<PropTuple>(
+      pg->EdgeReadOnlyPropertyView(), properties);
 }
 
 /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.

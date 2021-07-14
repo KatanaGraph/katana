@@ -1157,6 +1157,6 @@ katana::ConvertMongoDB(
   if (auto r = builder.Finish(); !r) {
     KATANA_LOG_FATAL("Failed to construct graph: {}", r.error());
   } else {
-    return r.value();
+    return std::move(r.value());
   }
 }

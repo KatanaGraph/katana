@@ -8,7 +8,7 @@
 #include <parquet/properties.h>
 
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "tsuba/WriteGroup.h"
 
 namespace tsuba {

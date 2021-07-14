@@ -300,8 +300,8 @@ public:
 
   GraphNode getEdgeDst(edge_iterator ni) const { return edgeDst[*ni]; }
 
-  size_t size() const { return numNodes; }
-  size_t sizeEdges() const { return numEdges; }
+  uint64_t size() const { return numNodes; }
+  uint64_t sizeEdges() const { return numEdges; }
 
   uint64_t num_nodes() const { return numNodes; }
   uint64_t num_edges() const { return numEdges; }
@@ -414,7 +414,7 @@ public:
    */
   void sortAllEdgesByDst(MethodFlag mflag = MethodFlag::WRITE) {
     katana::do_all(
-        katana::iterate(size_t{0}, this->size()),
+        katana::iterate(uint64_t{0}, this->size()),
         [=](GraphNode N) { this->sortEdgesByDst(N, mflag); },
         katana::no_stats(), katana::steal());
   }

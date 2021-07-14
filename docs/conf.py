@@ -1,5 +1,4 @@
 # Configuration file for the Sphinx documentation builder.
-# Setting that vary are in setup.py
 
 # -- Path setup --------------------------------------------------------------
 
@@ -7,19 +6,14 @@
 # add these directories to sys.path here.
 
 import pathlib
-import sys
+import os
+import katana
 
-# Find the build directory relative to this file (this works because we are doing an in-tree build.
-build_dir = pathlib.Path(__file__).parent.parent.parent / "build"
-# Find the cython "lib" tree which ahs all the files we need.
-lib_dirs = list(build_dir.glob("lib*"))
-if len(lib_dirs) > 1:
-    print(f"WARNING: There are multiple lib directories in the python build tree. Picking {lib_dirs[0]}")
-elif not lib_dirs:
-    raise ValueError(f"Could not find library directory in {build_dir}")
-lib_dir = lib_dirs[0]
-# Add the lib path to the python search path.
-sys.path.insert(0, str(lib_dir))
+# Breathe takes a minute or two to parse Doxygen output. If you aren't editing
+# C++ documents, set this environment variable for faster edit-render loops.
+cxx_disabled = os.environ.get("KATANA_DOCS_DISABLE_CXX", False)
+
+doxygen_path = os.environ["KATANA_DOXYGEN_PATH"]
 
 # -- General configuration ---------------------------------------------------
 
@@ -27,6 +21,7 @@ sys.path.insert(0, str(lib_dir))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "breathe",
     "sphinx.ext.intersphinx",
     #'sphinx.ext.autosummary',
     "sphinx.ext.autodoc",
@@ -35,7 +30,14 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
+    "sphinx_tabs.tabs"
 ]
+
+if cxx_disabled:
+    breathe_projects = {}
+else:
+    breathe_default_project = "katana"
+    breathe_projects = {"katana": str(pathlib.Path(doxygen_path))}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -50,14 +52,27 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-html_theme = "alabaster"
+
+html_theme = "pydata_sphinx_theme"
+html_logo = "_static/logo.png"
+html_title = "Katana"
+html_theme_options = {"show_prev_next": False}
 # html_theme_path = []
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ["_static"]
 
 autodoc_preserve_defaults = True
 autodoc_member_order = "groupwise"
+
+
+# Standard Sphinx values
+project = "Katana Graph"
+version = katana.__version__
+release = katana.__version__
+author = "Katana Graph"
+
+# TODO(ddn): Get this from katana.libgalois.version
+copyright = "Katana Graph, Inc. 2021"

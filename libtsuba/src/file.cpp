@@ -25,7 +25,7 @@ tsuba::FileStore(const std::string& uri, const void* data, uint64_t size) {
   return FS(uri)->PutMultiSync(uri, static_cast<const uint8_t*>(data), size);
 }
 
-std::future<katana::Result<void>>
+std::future<katana::CopyableResult<void>>
 tsuba::FileStoreAsync(const std::string& uri, const void* data, uint64_t size) {
   return FS(uri)->PutAsync(uri, static_cast<const uint8_t*>(data), size);
 }
@@ -38,7 +38,7 @@ tsuba::FileGet(
       uri, begin, size, static_cast<uint8_t*>(result_buffer));
 }
 
-std::future<katana::Result<void>>
+std::future<katana::CopyableResult<void>>
 tsuba::FileGetAsync(
     const std::string& uri, void* result_buffer, uint64_t begin,
     uint64_t size) {
@@ -66,7 +66,7 @@ tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
   return FS(uri)->Stat(uri, s_buf);
 }
 
-std::future<katana::Result<void>>
+std::future<katana::CopyableResult<void>>
 tsuba::FileListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {

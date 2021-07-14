@@ -5,7 +5,7 @@
 
 #include "katana/CommBackend.h"
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "katana/config.h"
 
 namespace tsuba {

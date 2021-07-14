@@ -49,12 +49,12 @@ public:
   virtual uint32_t Priority() const { return 0; }
 
   // get on future can potentially block (bulk synchronous parallel)
-  virtual std::future<katana::Result<void>> PutAsync(
+  virtual std::future<katana::CopyableResult<void>> PutAsync(
       const std::string& uri, const uint8_t* data, uint64_t size) = 0;
-  virtual std::future<katana::Result<void>> GetAsync(
+  virtual std::future<katana::CopyableResult<void>> GetAsync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) = 0;
-  virtual std::future<katana::Result<void>> ListAsync(
+  virtual std::future<katana::CopyableResult<void>> ListAsync(
       const std::string& directory, std::vector<std::string>* list,
       std::vector<uint64_t>* size) = 0;
   virtual katana::Result<void> Delete(

@@ -1,6 +1,7 @@
 #ifndef KATANA_LIBSUPPORT_KATANA_RANDOM_H_
 #define KATANA_LIBSUPPORT_KATANA_RANDOM_H_
 
+#include <algorithm>
 #include <random>
 #include <string>
 
@@ -20,6 +21,36 @@ KATANA_EXPORT std::string RandomAlphanumericString(
 /// The generator is local to the calling thread so uses of it are thread safe.
 /// Useful for things like `std::uniform_int_distribution`
 KATANA_EXPORT RandGenerator& GetGenerator();
+
+/// Fills the iterator range with  a uniform random sequence of numbers from
+/// interval [min_val, max_val]
+/// \param start begin iterator
+/// \param end end iterator
+/// \param min_val inclusive lower bound for random number generation
+/// \param max_val inclusive upper bound for random number generation
+template <typename ForwardIt, typename T>
+void
+GenerateUniformRandomSequence(
+    const ForwardIt& start, const ForwardIt& end, const T& min_val,
+    const T& max_val) {
+  using value_type = typename std::iterator_traits<ForwardIt>::value_type;
+  static_assert(
+      std::is_convertible_v<T, value_type>,
+      "Can't convert start_val to iterator's value_type");
+  static_assert(
+      std::is_arithmetic_v<T> && std::is_arithmetic_v<value_type>,
+      "iota only supported for numeric types");
+
+  using DistributionTy = typename std::conditional_t<
+      std::is_integral_v<value_type>, std::uniform_int_distribution<value_type>,
+      std::uniform_real_distribution<value_type>>;
+
+  DistributionTy distribution(min_val, max_val);
+
+  std::generate(start, end, [&]() -> value_type {
+    return distribution(katana::GetGenerator());
+  });
+}
 
 }  // namespace katana
 

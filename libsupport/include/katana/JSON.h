@@ -19,7 +19,7 @@ JsonParse(U& obj) {
   } catch (const std::exception& exp) {
     KATANA_LOG_DEBUG("nlohmann::json::parse exception: {}", exp.what());
   }
-  return katana::ErrorCode::JsonParseFailed;
+  return katana::ErrorCode::JSONParseFailed;
 }
 
 template <typename T, typename U>
@@ -32,7 +32,7 @@ JsonParse(U& obj, T* val) {
   } catch (const std::exception& exp) {
     KATANA_LOG_DEBUG("nlohmann::json::parse exception: {}", exp.what());
   }
-  return katana::Result<void>(katana::ErrorCode::JsonParseFailed);
+  return katana::Result<void>(katana::ErrorCode::JSONParseFailed);
 }
 
 /// Dump to string, but catch errors

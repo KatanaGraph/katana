@@ -18,7 +18,7 @@ class KATANA_EXPORT FileView : public arrow::io::RandomAccessFile {
   struct FillingRange {
     uint64_t first_page;
     uint64_t last_page;
-    std::future<katana::Result<void>> work;
+    std::future<katana::CopyableResult<void>> work;
   };
 
   uint8_t* map_start_{nullptr};

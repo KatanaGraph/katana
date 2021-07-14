@@ -2977,15 +2977,12 @@ struct Gr2Kg : public Conversion {
       }
     }
 
-    auto pg = std::make_unique<katana::PropertyGraph>();
-    auto topo = std::make_unique<katana::GraphTopology>(
-        std::move(out_indices), std::move(out_dests));
-    auto set_result = pg->SetTopology(std::move(topo));
-    if (!set_result) {
-      KATANA_LOG_FATAL(
-          "Failed to set topology for property file graph: {}",
-          set_result.error());
+    katana::GraphTopology topo{std::move(out_indices), std::move(out_dests)};
+    auto pg_res = katana::PropertyGraph::Make(std::move(topo));
+    if (!pg_res) {
+      KATANA_LOG_FATAL("Failed to create PropertyGraph");
     }
+    std::unique_ptr<katana::PropertyGraph> pg = std::move(pg_res.value());
 
     if (EdgeData::has_value) {
       if (auto r = AppendEdgeData<EdgeTy>(pg.get(), out_dests_data); !r) {

@@ -413,7 +413,7 @@ public:
    */
   void SortVectorByDataThenDst(std::vector<uint64_t>& vector_to_sort) {
     katana::do_all(
-        katana::iterate(size_t{0}, this->size()),
+        katana::iterate(uint64_t{0}, this->size()),
         [&](size_t node_id) {
           // get this node's first and last edge
           uint32_t first_edge = *(BaseGraph::edge_begin(node_id));
@@ -467,7 +467,7 @@ private:
   void ConstructEdgeLabelIndex() {
     katana::PerThreadStorage<std::set<EdgeTy>> edgeLabels;
     katana::do_all(
-        katana::iterate(size_t{0}, this->size()),
+        katana::iterate(uint64_t{0}, this->size()),
         [&](GraphNode N) {
           for (auto e : BaseGraph::edges(N)) {
             const uint64_t& data = this->getEdgeData(e);
@@ -506,7 +506,7 @@ private:
     }
 
     katana::do_all(
-        katana::iterate(size_t{0}, this->size()),
+        katana::iterate(uint64_t{0}, this->size()),
         [&](GraphNode N) {
           auto offset = N * this->numEdgeLabels;
           uint32_t index = 0;
@@ -536,7 +536,7 @@ private:
     }
 
     katana::do_all(
-        katana::iterate(size_t{0}, this->size()),
+        katana::iterate(uint64_t{0}, this->size()),
         [&](GraphNode N) {
           auto offset = N * this->numEdgeLabels;
           uint32_t index = 0;
@@ -585,7 +585,7 @@ private:
    */
   void SortAllEdgesByDataThenDst(MethodFlag mflag = MethodFlag::WRITE) {
     katana::do_all(
-        katana::iterate(size_t{0}, this->size()),
+        katana::iterate(uint64_t{0}, this->size()),
         [=](GraphNode N) { this->SortEdgesByDataThenDst(N, mflag); },
         katana::no_stats(), katana::steal());
   }
@@ -622,7 +622,7 @@ private:
    */
   void SortAllInEdgesByDataThenDst(MethodFlag mflag = MethodFlag::WRITE) {
     katana::do_all(
-        katana::iterate(size_t{0}, this->size()),
+        katana::iterate(uint64_t{0}, this->size()),
         [=](GraphNode N) { this->SortInEdgesByDataThenDst(N, mflag); },
         katana::no_stats(), katana::steal());
   }

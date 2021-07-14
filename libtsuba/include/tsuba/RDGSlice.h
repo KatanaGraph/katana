@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "katana/config.h"
 #include "tsuba/FileView.h"
 #include "tsuba/tsuba.h"

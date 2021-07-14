@@ -28,7 +28,7 @@
 #include "katana/JSON.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/ParquetWriter.h"

@@ -23,6 +23,7 @@ from katana.numpy_structs import StructInstance
 from katana.util.template_type import make_template_type1, make_template_type1_with_opaque
 from .cpp.libgalois cimport datastructures
 from libc.stdint cimport uintptr_t
+from libcpp.utility cimport move
 from cython.operator cimport preincrement, dereference as deref
 import cython
 
@@ -36,6 +37,8 @@ __all__ = ["InsertBag", "NUMAArray", "AllocationPolicy"]
 {% macro wrap_insert_bag(inst) %}
 {% set underlying_type %}datastructures.InsertBag[{{inst.element_c_type}}]{% endset -%}
 {% set class_name %}InsertBag_{{inst.element_c_type}}{% endset -%}
+
+
 @cython.freelist(2)
 cdef class {{class_name}}_Iterator:
     def __next__(self):
@@ -49,6 +52,7 @@ cdef class {{class_name}}_Iterator:
         {% else %}
         return v
         {% endif %}
+
 
 cdef class {{class_name}}:
     """
@@ -137,6 +141,8 @@ class AllocationPolicy(Enum):
 # inst.element_c_type, inst.element_py_type, inst.element_format_code
 {% set underlying_type %}datastructures.NUMAArray[{{inst.element_c_type}}]{% endset -%}
 {% set class_name %}NUMAArray_{{inst.element_c_type}}{% endset -%}
+
+
 @cython.freelist(2)
 cdef class {{class_name}}_Iterator:
     def __next__(self):
@@ -151,10 +157,21 @@ cdef class {{class_name}}_Iterator:
         return v
         {% endif %}
 
+
 cdef class {{class_name}}:
     """
     An array of elements of the same type that are allocated using NUMA aware policies.
     """
+
+    @staticmethod
+    cdef {{class_name}} make_move({{underlying_type}}&& u, dtype=None):
+        self = <{{class_name}}>{{class_name}}.__new__({{class_name}})
+        self.dtype = {{inst.dtype("dtype")}}
+        self.shape = -1
+        self.stride = sizeof({{inst.element_c_type}})
+        self.underlying = move(u)
+        return self
+
     def __init__(self, size=None, policy=None, dtype=None):
         """
         __init__(self, size=None, policy=None)
@@ -184,7 +201,7 @@ cdef class {{class_name}}:
 
         Set an element of the array. This may be called from numba code and is not bounds check in that context.
         """
-        if i < 0 or i >= self.underlying.size():
+        if i >= self.underlying.size():
             raise IndexError(i)
 {%- if inst.by_pointer %}
         arr = argument_to_ndarray_dtype(v, self.dtype)
@@ -199,7 +216,7 @@ cdef class {{class_name}}:
 
         Get an element of the array. This may be called from numba code and is not bounds check in that context.
         """
-        if i < 0 or i >= self.underlying.size():
+        if i >= self.underlying.size():
             raise IndexError(i)
         v = {% if inst.by_pointer %}&{% else %}<{{inst.element_c_type}}>{% endif %}self.underlying[i]
         {% if inst.by_pointer %}

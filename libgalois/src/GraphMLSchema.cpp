@@ -367,9 +367,10 @@ ExtractData(std::shared_ptr<arrow::Array> array, int64_t index) {
   }
 }
 
+template <typename EdgeIterRange>
 bool
-InRange(uint32_t id, const std::pair<uint64_t, uint64_t>& interval) {
-  return interval.first <= id && id < interval.second;
+InRange(uint64_t id, const EdgeIterRange& range) {
+  return *range.begin() <= id && id < *range.end();
 }
 }  // namespace
 
@@ -407,29 +408,28 @@ katana::graphml::ExportGraph(
   xmlTextWriterStartElement(writer, BAD_CAST "graph");
 
   // export nodes and edges here
-  std::shared_ptr<arrow::Table> node_props = graph->node_properties();
 
   std::vector<int64_t> chunk_indexes;
   std::vector<int64_t> sub_indexes;
-  for (int i = 0; i < node_props->num_columns(); i++) {
+  for (int i = 0; i < graph->GetNumNodeProperties(); i++) {
     chunk_indexes.emplace_back(0);
     sub_indexes.emplace_back(0);
   }
 
-  for (int64_t i = 0; i < node_props->column(0)->length(); i++) {
+  for (uint64_t i = 0; i < graph->num_nodes(); i++) {
     // find labels
     std::string labels;
     for (auto j : node_label_indexes) {
       if (sub_indexes[j] >=
-          node_props->column(j)->chunk(chunk_indexes[j])->length()) {
+          graph->GetNodeProperty(j)->chunk(chunk_indexes[j])->length()) {
         sub_indexes[j] = 0;
         chunk_indexes[j]++;
       }
-      if (!node_props->column(j)
+      if (!graph->GetNodeProperty(j)
                ->chunk(chunk_indexes[j])
                ->IsNull(sub_indexes[j])) {
         auto node_labels = std::static_pointer_cast<arrow::UInt8Array>(
-            node_props->column(j)->chunk(chunk_indexes[j]));
+            graph->GetNodeProperty(j)->chunk(chunk_indexes[j]));
         if (node_labels->Value(sub_indexes[j]) > 0) {
           labels += ":" + node_schema->field(j)->name();
         }
@@ -442,16 +442,16 @@ katana::graphml::ExportGraph(
     // add properties
     for (auto j : node_property_indexes) {
       if (sub_indexes[j] >=
-          node_props->column(j)->chunk(chunk_indexes[j])->length()) {
+          graph->GetNodeProperty(j)->chunk(chunk_indexes[j])->length()) {
         sub_indexes[j] = 0;
         chunk_indexes[j]++;
       }
-      if (!node_props->column(j)
+      if (!graph->GetNodeProperty(j)
                ->chunk(chunk_indexes[j])
                ->IsNull(sub_indexes[j])) {
         auto name = node_schema->field(j)->name();
         auto data = ExtractData(
-            node_props->column(j)->chunk(chunk_indexes[j]), sub_indexes[j]);
+            graph->GetNodeProperty(j)->chunk(chunk_indexes[j]), sub_indexes[j]);
         AddGraphmlProperty(writer, name, data);
       }
       sub_indexes[j]++;
@@ -459,30 +459,29 @@ katana::graphml::ExportGraph(
     FinishGraphmlNode(writer);
   }
 
-  std::shared_ptr<arrow::Table> edge_props = graph->edge_properties();
   const katana::GraphTopology& topology = graph->topology();
   uint32_t src_node = 0;
 
   chunk_indexes.clear();
   sub_indexes.clear();
-  for (int i = 0; i < edge_props->num_columns(); i++) {
+  for (int i = 0; i < graph->GetNumEdgeProperties(); i++) {
     chunk_indexes.emplace_back(0);
     sub_indexes.emplace_back(0);
   }
-  for (int64_t i = 0; i < edge_props->column(0)->length(); i++) {
+  for (uint64_t i = 0; i < graph->num_edges(); i++) {
     // find labels
     std::string labels;
     for (auto j : edge_label_indexes) {
       if (sub_indexes[j] >=
-          edge_props->column(0)->chunk(chunk_indexes[j])->length()) {
+          graph->GetEdgeProperty(0)->chunk(chunk_indexes[j])->length()) {
         sub_indexes[j] = 0;
         chunk_indexes[j]++;
       }
-      if (!edge_props->column(j)
+      if (!graph->GetEdgeProperty(j)
                ->chunk(chunk_indexes[j])
                ->IsNull(sub_indexes[j])) {
         auto edge_labels = std::static_pointer_cast<arrow::UInt8Array>(
-            edge_props->column(j)->chunk(chunk_indexes[j]));
+            graph->GetEdgeProperty(j)->chunk(chunk_indexes[j]));
         if (edge_labels->Value(sub_indexes[j]) > 0) {
           // TODO(Patrick) when the parser is altered to handle multiple labels, use this line instead
           //labels += ":" + edge_schema->field(j)->name();
@@ -492,28 +491,27 @@ katana::graphml::ExportGraph(
       sub_indexes[j]++;
     }
 
-    while (!InRange(i, topology.edge_range(src_node))) {
+    while (!InRange(i, topology.edges(src_node))) {
       src_node++;
     }
     std::string src = boost::lexical_cast<std::string>(src_node);
-    std::string dest =
-        boost::lexical_cast<std::string>(topology.out_dests->Value(i));
+    std::string dest = boost::lexical_cast<std::string>(topology.edge_dest(i));
     StartGraphmlEdge(
         writer, boost::lexical_cast<std::string>(i), src, dest, labels);
 
     // add properties
     for (auto j : edge_property_indexes) {
       if (sub_indexes[j] >=
-          edge_props->column(j)->chunk(chunk_indexes[j])->length()) {
+          graph->GetEdgeProperty(j)->chunk(chunk_indexes[j])->length()) {
         sub_indexes[j] = 0;
         chunk_indexes[j]++;
       }
-      if (!edge_props->column(j)
+      if (!graph->GetEdgeProperty(j)
                ->chunk(chunk_indexes[j])
                ->IsNull(sub_indexes[j])) {
         std::string name = edge_schema->field(j)->name();
         std::string data = ExtractData(
-            edge_props->column(j)->chunk(chunk_indexes[j]), sub_indexes[j]);
+            graph->GetEdgeProperty(j)->chunk(chunk_indexes[j]), sub_indexes[j]);
         AddGraphmlProperty(writer, name, data);
       }
       sub_indexes[j]++;

@@ -67,7 +67,7 @@ public:
   katana::Result<void> Destroy();
 
   katana::Result<void> Persist();
-  std::future<katana::Result<void>> PersistAsync();
+  std::future<katana::CopyableResult<void>> PersistAsync();
 
   uint64_t map_size() const { return map_size_; }
 

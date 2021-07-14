@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from katana import do_all, do_all_operator
 from katana.atomic import (
     GAccumulator,
     GReduceLogicalAnd,
@@ -13,7 +14,6 @@ from katana.atomic import (
     atomic_sub,
 )
 from katana.datastructures import NUMAArray
-from katana.loops import do_all, do_all_operator
 
 dtypes_int = [
     pytest.param(np.int64, id="int64"),

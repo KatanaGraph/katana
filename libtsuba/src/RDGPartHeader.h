@@ -8,7 +8,7 @@
 
 #include "katana/JSON.h"
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/RDG.h"
 #include "tsuba/WriteGroup.h"

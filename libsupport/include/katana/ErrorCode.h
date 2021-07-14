@@ -56,9 +56,9 @@ enum class ErrorCode {
   NotImplemented = 2,
   NotFound = 3,
   ArrowError = 4,
-  JsonParseFailed = 5,
-  JsonDumpFailed = 6,
-  HttpError = 7,
+  JSONParseFailed = 5,
+  JSONDumpFailed = 6,
+  HTTPError = 7,
   TODO = 8,
   PropertyNotFound = 9,
   AlreadyExists = 10,
@@ -88,11 +88,11 @@ public:
       return "not found";
     case ErrorCode::ArrowError:
       return "arrow error";
-    case ErrorCode::JsonParseFailed:
+    case ErrorCode::JSONParseFailed:
       return "could not parse json";
-    case ErrorCode::JsonDumpFailed:
+    case ErrorCode::JSONDumpFailed:
       return "could not dump json";
-    case ErrorCode::HttpError:
+    case ErrorCode::HTTPError:
       return "http operation failed";
     case ErrorCode::TODO:
       return "TODO";
@@ -118,8 +118,8 @@ public:
     case ErrorCode::TODO:
     case ErrorCode::InvalidArgument:
     case ErrorCode::ArrowError:
-    case ErrorCode::JsonParseFailed:
-    case ErrorCode::JsonDumpFailed:
+    case ErrorCode::JSONParseFailed:
+    case ErrorCode::JSONDumpFailed:
     case ErrorCode::TypeError:
     case ErrorCode::AssertionFailed:
     case ErrorCode::GraphUpdateFailed:
@@ -132,7 +132,7 @@ public:
     case ErrorCode::NotFound:
     case ErrorCode::PropertyNotFound:
       return make_error_condition(std::errc::no_such_file_or_directory);
-    case ErrorCode::HttpError:
+    case ErrorCode::HTTPError:
       return make_error_condition(std::errc::io_error);
     default:
       return std::error_condition(c, *this);

@@ -1,9 +1,9 @@
 import numpy as np
 import pyarrow
 
+from katana import do_all, do_all_operator
 from katana.atomic import atomic_add
 from katana.datastructures import AllocationPolicy, NUMAArray
-from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 
 

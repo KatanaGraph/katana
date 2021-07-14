@@ -6,8 +6,7 @@ import numpy as np
 import pyarrow
 import pytest
 
-from katana import TsubaError
-from katana.loops import do_all, do_all_operator
+from katana import TsubaError, do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 
 
@@ -175,6 +174,31 @@ def test_upsert_edge_property(property_graph):
     assert len(property_graph.edge_schema()) == 19
     assert property_graph.get_edge_property_chunked(prop) == pyarrow.chunked_array([range(property_graph.num_edges())])
     assert property_graph.get_edge_property(prop) == pyarrow.array(range(property_graph.num_edges()))
+
+
+def test_from_csr():
+    pg = PropertyGraph.from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
+    assert pg.num_nodes() == 2
+    assert pg.num_edges() == 1
+    assert list(pg.edges(0)) == [0]
+    assert pg.get_edge_dest(0) == 1
+
+
+def test_from_csr_int16():
+    pg = PropertyGraph.from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
+    assert pg.num_nodes() == 2
+    assert pg.num_edges() == 1
+    assert list(pg.edges(0)) == [0]
+    assert pg.get_edge_dest(0) == 1
+
+
+def test_from_csr_k3():
+    pg = PropertyGraph.from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
+    assert pg.num_nodes() == 3
+    assert pg.num_edges() == 6
+    assert list(pg.edges(2)) == [4, 5]
+    assert pg.get_edge_dest(4) == 0
+    assert pg.get_edge_dest(5) == 1
 
 
 def test_load_graphml():

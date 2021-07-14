@@ -8,7 +8,7 @@ namespace {
 
 void
 ApplyTransform(
-    katana::PropertyGraph::PropertyView view,
+    katana::PropertyGraph::MutablePropertyView view,
     katana::ColumnTransformer* transform) {
   int cur_field = 0;
   int num_fields = view.schema()->num_fields();
@@ -25,7 +25,7 @@ ApplyTransform(
     KATANA_LOG_WARN(
         "applying {} to property {}", transform->name(), field->name());
 
-    std::shared_ptr<arrow::ChunkedArray> property = view.Property(cur_field);
+    std::shared_ptr<arrow::ChunkedArray> property = view.GetProperty(cur_field);
 
     if (auto result = view.RemoveProperty(cur_field); !result) {
       KATANA_LOG_FATAL("failed to remove {}: {}", cur_field, result.error());
@@ -157,7 +157,7 @@ katana::ApplyTransforms(
     const std::vector<std::unique_ptr<katana::ColumnTransformer>>&
         transformers) {
   for (const auto& t : transformers) {
-    ApplyTransform(graph->node_property_view(), t.get());
-    ApplyTransform(graph->edge_property_view(), t.get());
+    ApplyTransform(graph->NodeMutablePropertyView(), t.get());
+    ApplyTransform(graph->EdgeMutablePropertyView(), t.get());
   }
 }

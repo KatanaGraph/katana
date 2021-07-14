@@ -39,6 +39,7 @@ set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
 set(BUILD_TESTING ON CACHE BOOL "Build tests")
+set(BUILD_DOCS OFF CACHE BOOL "Build documentation with make doc")
 # Set here to override the cmake default of "/usr/local" because
 # "/usr/local/lib" is not a default search location for ld.so
 set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
@@ -213,21 +214,23 @@ endif ()
 
 message(STATUS "Building Katana language bindings: ${KATANA_LANG_BINDINGS}")
 
-if(python IN_LIST KATANA_LANG_BINDINGS)
+if (python IN_LIST KATANA_LANG_BINDINGS)
   include(FindPythonModule)
   find_package (Python3 COMPONENTS Interpreter Development NumPy)
 
   find_python_module(setuptools REQUIRED)
   find_python_module(Cython REQUIRED)
   find_python_module(numpy REQUIRED)
-  find_python_module(sphinx)
+  if (BUILD_DOCS)
+    find_python_module(sphinx REQUIRED)
+  endif ()
 
-  if(NOT BUILD_SHARED_LIBS)
+  if (NOT BUILD_SHARED_LIBS)
     message(FATAL_ERROR "Cannot build Python binding without BUILD_SHARED_LIBS")
-  endif()
+  endif ()
 
   set(KATANA_LANG_BINDINGS_PYTHON TRUE)
-endif()
+endif ()
 
 
 ###### Configure features ######
@@ -351,7 +354,9 @@ set(KATANA_GRAPH_LOCATION ${BASEINPUT})
 
 ###### Documentation ######
 
-find_package(Doxygen)
+if (BUILD_DOCS)
+  find_package(Doxygen REQUIRED)
+endif()
 
 ###### Source finding ######
 
@@ -360,10 +365,6 @@ add_custom_target(apps)
 add_custom_target(tools)
 
 # Core libraries (lib)
-
-# Allow build tree libraries and executables to see preload customizations like
-# in libtsuba-fs without having to set LD_PRELOAD or similar explicitly.
-list(PREPEND CMAKE_BUILD_RPATH ${PROJECT_BINARY_DIR})
 
 # Allow installed libraries and executables to pull in deployment specific
 # modifications like vendored runtime libraries (e.g., MPI).
@@ -402,32 +403,51 @@ install(
 add_custom_target(docs)
 add_custom_target(doc)
 add_dependencies(doc docs)
-add_dependencies(docs python_docs)
 
 set_property(GLOBAL PROPERTY KATANA_DOXYGEN_DIRECTORIES)
 # Invoke this after all the documentation directories have been added to KATANA_DOXYGEN_DIRECTORIES.
 function(add_katana_doxygen_target)
-  if (NOT TARGET doxygen_docs AND DOXYGEN_FOUND)
-    get_property(doc_dirs GLOBAL PROPERTY KATANA_DOXYGEN_DIRECTORIES)
-    list(JOIN doc_dirs "\" \"" DOXYFILE_SOURCE_DIR)
-    set(DOXYFILE_LATEX "NO")
-
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-    add_custom_target(doxygen_docs
-                      # Delete the old html docs before rebuilding, because doxygen will find it's own build files
-                      # during search and get confused if the build directory is a subdirectory of the source directory.
-                      # amp looked several times and found no way to limit the doxygen search path involved.
-                      COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/html
-                      COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-                      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/html ${CMAKE_BINARY_DIR}/docs/cxx
-                      COMMAND ${CMAKE_COMMAND} -E echo "Doxygen documentation at file://${CMAKE_BINARY_DIR}/docs/cxx/index.html"
-                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                      BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/html
-                      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-                      COMMENT "Building Doxygen docs from ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
-                      )
-    add_dependencies(docs doxygen_docs)
+  if (NOT BUILD_DOCS)
+    return()
   endif ()
+  get_property(doc_dirs GLOBAL PROPERTY KATANA_DOXYGEN_DIRECTORIES)
+  list(JOIN doc_dirs "\" \"" DOXYFILE_SOURCE_DIR)
+
+  file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/docs/doxygen)
+  configure_file(${PROJECT_SOURCE_DIR}/docs/Doxyfile.in ${PROJECT_BINARY_DIR}/docs/Doxyfile @ONLY)
+  add_custom_target(doxygen_docs
+      COMMAND ${CMAKE_COMMAND} -E rm -rf ${PROJECT_BINARY_DIR}/docs/doxygen
+      COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/docs/Doxyfile
+      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+      DEPENDS ${PROJECT_BINARY_DIR}/docs/Doxyfile
+      COMMENT "Building Doxygen docs from ${PROJECT_BINARY_DIR}/docs/Doxyfile")
+endfunction()
+
+add_custom_target(sphinx_docs)
+add_dependencies(docs sphinx_docs)
+
+function(add_katana_sphinx_target target_name)
+  if (NOT BUILD_DOCS)
+    return()
+  endif ()
+
+  get_target_property(PYTHON_ENV_SCRIPT ${target_name} PYTHON_ENV_SCRIPT)
+
+  add_custom_target(
+      ${target_name}_sphinx_docs
+      COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
+      COMMAND env KATANA_DOXYGEN_PATH="${PROJECT_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
+        -b html
+        ${PROJECT_SOURCE_DIR}/docs
+        ${CMAKE_BINARY_DIR}/docs/${target_name}
+      COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
+      COMMENT "Building ${target_name} sphinx documentation"
+  )
+
+  # The root of documentation is sphinx_docs, which include doxygen_docs via
+  # the breathe extension
+  add_dependencies(${target_name}_sphinx_docs ${target_name} doxygen_docs)
+  add_dependencies(sphinx_docs ${target_name}_sphinx_docs)
 endfunction()
 
 ###### Packaging ######

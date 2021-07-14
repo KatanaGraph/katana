@@ -10,6 +10,7 @@
 #include <arrow/chunked_array.h>
 #include <arrow/type_traits.h>
 
+#include "katana/ArrowInterchange.h"
 #include "katana/Details.h"
 #include "katana/ErrorCode.h"
 #include "katana/NUMAArray.h"
@@ -17,6 +18,17 @@
 #include "tsuba/RDG.h"
 
 namespace katana {
+
+// TODO(amber): find a better place to put this
+template <
+    typename T,
+    typename __Unused = std::enable_if_t<std::is_arithmetic<T>::value>>
+auto
+ProjectAsArrowArray(const T* buf, const size_t len) noexcept {
+  using ArrowDataType = typename arrow::CTypeTraits<T>::ArrowType;
+  using ArrowArrayType = arrow::NumericArray<ArrowDataType>;
+  return std::make_shared<ArrowArrayType>(len, arrow::Buffer::Wrap(buf, len));
+}
 
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
@@ -31,120 +43,102 @@ public:
   using iterator = node_iterator;
 
   GraphTopology() = default;
+  GraphTopology(GraphTopology&&) = default;
+  GraphTopology& operator=(GraphTopology&&) = default;
 
   GraphTopology(const GraphTopology&) = delete;
   GraphTopology& operator=(const GraphTopology&) = delete;
 
   GraphTopology(
       const Edge* adj_indices, size_t numNodes, const Node* dests,
-      size_t numEdges);
+      size_t numEdges) noexcept;
 
   GraphTopology(NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests) noexcept
-      : adj_indices_(std::move(adj_indices)),
-        dests_(std::move(dests)),
-        out_indices(LargeToArrowArray(adj_indices_)),
-        out_dests(LargeToArrowArray(dests_)) {}
+      : adj_indices_(std::move(adj_indices)), dests_(std::move(dests)) {}
 
-  static std::unique_ptr<GraphTopology> Copy(
-      const GraphTopology& that) noexcept;
+  static GraphTopology Copy(const GraphTopology& that) noexcept;
 
-  /*
-   * TODO(amber): consider re-enabling these in the near future
-  GraphTopology(GraphTopology&& that):
-    adj_indices_(std::move(that.adj_indices_)),
-    dests_(std::move(that.dests)),
-    out_indices(LargeToArrowArray(adj_indices_)),
-    out_dests(LargeToArrowArray(dests_))
-  {}
+  uint64_t num_nodes() const noexcept { return adj_indices_.size(); }
 
-  GraphTopology& operator = (GraphTopology&& that) {
-    adj_indices_ = std::move(that.adj_indices_);
-    dests_ = std::move(that.dests_);
-    out_indices = LargeToArrowArray(adj_indices_);
-    out_dests = LargeToArrowArray(dests_);
-    return *this;
-  }
-  */
+  uint64_t num_edges() const noexcept { return dests_.size(); }
 
-  uint64_t num_nodes() const { return adj_indices_.size(); }
+  const Edge* adj_data() const noexcept { return adj_indices_.data(); }
 
-  uint64_t num_edges() const { return dests_.size(); }
+  const Node* dest_data() const noexcept { return dests_.data(); }
 
-  bool Equals(const GraphTopology& other) const {
-    return out_indices->Equals(*other.out_indices) &&
-           out_dests->Equals(*other.out_dests);
+  /**
+   * Checks equality against another instance of GraphTopology.
+   * WARNING: Expensive operation due to element-wise checks on large arrays
+   * @param that: GraphTopology instance to compare against
+   * @returns true if topology arrays are equal
+   */
+  bool Equals(const GraphTopology& that) const noexcept {
+    if (this == &that) {
+      return true;
+    }
+    if (num_nodes() != that.num_nodes()) {
+      return false;
+    }
+    if (num_edges() != that.num_edges()) {
+      return false;
+    }
+
+    return adj_indices_ == that.adj_indices_ && dests_ == that.dests_;
   }
 
   // Edge accessors
 
-  // TODO(amp): [[deprecated("use edges(node)")]]
-  std::pair<Edge, Edge> edge_range(Node node_id) const {
-    KATANA_LOG_DEBUG_ASSERT(node_id < adj_indices_.size());
-    auto edge_start = node_id > 0 ? adj_indices_[node_id - 1] : 0;
-    auto edge_end = adj_indices_[node_id];
-    return std::make_pair(edge_start, edge_end);
+  edge_iterator edge_begin(Node node) const noexcept {
+    return edge_iterator{node > 0 ? adj_indices_[node - 1] : 0};
+  }
+
+  edge_iterator edge_end(Node node) const noexcept {
+    return edge_iterator{adj_indices_[node]};
   }
 
   /// Gets the edge range of some node.
   ///
   /// \param node an iterator pointing to the node to get the edge range of
   /// \returns iterable edge range for node.
-  edges_range edges(const node_iterator& node) const { return edges(*node); }
+  edges_range edges(const node_iterator& node) const noexcept {
+    return edges(*node);
+  }
   // TODO(amp): [[deprecated("use edges(Node node)")]]
 
   /// Gets the edge range of some node.
   ///
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
-  edges_range edges(Node node) const {
-    auto [begin_edge, end_edge] = edge_range(node);
-    return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
+  edges_range edges(Node node) const noexcept {
+    return MakeStandardRange<edge_iterator>(edge_begin(node), edge_end(node));
   }
 
-  Node edge_dest(Edge edge_id) const {
+  Node edge_dest(Edge edge_id) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
     return dests_[edge_id];
   }
 
-  nodes_range nodes(Node begin, Node end) const {
+  Node edge_dest(const edge_iterator ei) const noexcept {
+    return edge_dest(*ei);
+  }
+
+  nodes_range nodes(Node begin, Node end) const noexcept {
     return MakeStandardRange<node_iterator>(begin, end);
   }
 
   // Standard container concepts
 
-  node_iterator begin() const { return node_iterator(0); }
+  node_iterator begin() const noexcept { return node_iterator(0); }
 
-  node_iterator end() const { return node_iterator(num_nodes()); }
+  node_iterator end() const noexcept { return node_iterator(num_nodes()); }
 
-  size_t size() const { return num_nodes(); }
+  size_t size() const noexcept { return num_nodes(); }
 
-  bool empty() const { return num_nodes() == 0; }
+  bool empty() const noexcept { return num_nodes() == 0; }
 
 private:
-  // TODO: generalize to typename T
-  static std::shared_ptr<arrow::UInt64Array> LargeToArrowArray(
-      NUMAArray<uint64_t>& lg_arr) noexcept {
-    return std::make_shared<arrow::UInt64Array>(
-        lg_arr.size(),
-        arrow::MutableBuffer::Wrap(lg_arr.data(), lg_arr.size()));
-  }
-
-  static std::shared_ptr<arrow::UInt32Array> LargeToArrowArray(
-      NUMAArray<uint32_t>& lg_arr) noexcept {
-    return std::make_shared<arrow::UInt32Array>(
-        lg_arr.size(),
-        arrow::MutableBuffer::Wrap(lg_arr.data(), lg_arr.size()));
-  }
-
   NUMAArray<Edge> adj_indices_;
   NUMAArray<Node> dests_;
-
-public:
-  // TODO(amber): make these private in the near future. No other class should
-  // access these directly. Instead provide access methods. Also, can't move these
-  // up due to member declaration & initialization order. out_indices depends on adj_indices_
-  std::shared_ptr<arrow::UInt64Array> out_indices;
-  std::shared_ptr<arrow::UInt32Array> out_dests;
 };
 
 /// A property graph is a graph that has properties associated with its nodes
@@ -207,10 +201,7 @@ private:
 
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
-
-  // The topology is either backed by rdg_ or shared with the
-  // caller of SetTopology.
-  std::unique_ptr<GraphTopology> topology_ = std::make_unique<GraphTopology>();
+  GraphTopology topology_;
 
   /// A map from the node TypeSetID to
   /// the set of the node type names it contains
@@ -272,17 +263,60 @@ private:
     rdg_.set_mirror_nodes(std::move(a));
   }
 
+  /// Return the node property table for local nodes
+  const std::shared_ptr<arrow::Table>& node_properties() const {
+    return rdg_.node_properties();
+  }
+
+  /// Return the edge property table for local edges
+  const std::shared_ptr<arrow::Table>& edge_properties() const {
+    return rdg_.edge_properties();
+  }
+
 public:
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
-  struct PropertyView {
-    PropertyGraph* g;
+  struct ReadOnlyPropertyView {
+    const PropertyGraph* const_g;
 
     std::shared_ptr<arrow::Schema> (PropertyGraph::*schema_fn)() const;
-    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn)(
+    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_int)(
         int i) const;
-    const std::shared_ptr<arrow::Table>& (
-        PropertyGraph::*properties_fn)() const;
+    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_str)(
+        const std::string& str) const;
+    int32_t (PropertyGraph::*property_num_fn)() const;
+
+    std::shared_ptr<arrow::Schema> schema() const {
+      return (const_g->*schema_fn)();
+    }
+
+    std::shared_ptr<arrow::ChunkedArray> GetProperty(int i) const {
+      return (const_g->*property_fn_int)(i);
+    }
+
+    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+        const std::string& str) const {
+      return (const_g->*property_fn_str)(str);
+    }
+
+    int32_t GetNumProperties() const { return (const_g->*property_num_fn)(); }
+
+    uint64_t ApproxMemUse() const {
+      uint64_t total_mem_use = 0;
+      for (int32_t i = 0; i < GetNumProperties(); ++i) {
+        const auto& chunked_array = GetProperty(i);
+        for (const auto& array : chunked_array->chunks()) {
+          total_mem_use += katana::ApproxArrayMemUse(array);
+        }
+      }
+      return total_mem_use;
+    }
+  };
+
+  struct MutablePropertyView {
+    ReadOnlyPropertyView ropv;
+    PropertyGraph* g;
+
     Result<void> (PropertyGraph::*add_properties_fn)(
         const std::shared_ptr<arrow::Table>& props);
     Result<void> (PropertyGraph::*upsert_properties_fn)(
@@ -290,19 +324,20 @@ public:
     Result<void> (PropertyGraph::*remove_property_int)(int i);
     Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
 
-    std::shared_ptr<arrow::Schema> schema() const { return (g->*schema_fn)(); }
+    std::shared_ptr<arrow::Schema> schema() const { return ropv.schema(); }
 
-    std::shared_ptr<arrow::ChunkedArray> Property(int i) const {
-      return (g->*property_fn)(i);
+    std::shared_ptr<arrow::ChunkedArray> GetProperty(int i) const {
+      return ropv.GetProperty(i);
     }
 
-    const std::shared_ptr<arrow::Table>& properties() const {
-      return (g->*properties_fn)();
+    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+        const std::string& str) const {
+      return ropv.GetProperty(str);
     }
 
-    std::vector<std::string> property_names() const {
-      return properties()->ColumnNames();
-    }
+    int32_t GetNumProperties() const { return ropv.GetNumProperties(); }
+
+    uint64_t ApproxMemUse() const { return ropv.ApproxMemUse(); }
 
     Result<void> AddProperties(
         const std::shared_ptr<arrow::Table>& props) const {
@@ -325,8 +360,14 @@ public:
   PropertyGraph() = default;
 
   PropertyGraph(
-      std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
-      std::unique_ptr<GraphTopology> topo_to_assign);
+      std::unique_ptr<tsuba::RDGFile>&& rdg_file, tsuba::RDG&& rdg,
+      GraphTopology&& topo) noexcept
+      : rdg_(std::move(rdg)),
+        file_(std::move(rdg_file)),
+        topology_(std::move(topo)) {}
+
+  PropertyGraph(katana::GraphTopology&& topo_to_assign) noexcept
+      : rdg_(), file_(), topology_(std::move(topo_to_assign)) {}
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
@@ -337,6 +378,10 @@ public:
   static Result<std::unique_ptr<PropertyGraph>> Make(
       const std::string& rdg_name,
       const tsuba::RDGLoadOptions& opts = tsuba::RDGLoadOptions());
+
+  /// Make a property graph from topology
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      GraphTopology&& topo_to_assign);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.
@@ -505,16 +550,15 @@ public:
   }
 
   // Return type dictated by arrow
-  int32_t GetNodePropertyNum() const {
-    return node_properties()->num_columns();
-  }
-  int32_t GetEdgePropertyNum() const {
-    return edge_properties()->num_columns();
-  }
+  /// Returns the number of node properties
+  int32_t GetNumNodeProperties() const { return node_schema()->num_fields(); }
+
+  /// Returns the number of edge properties
+  int32_t GetNumEdgeProperties() const { return edge_schema()->num_fields(); }
 
   // num_rows() == num_nodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
-    if (i >= rdg_.node_properties()->num_columns()) {
+    if (i >= node_properties()->num_columns()) {
       return nullptr;
     }
     return node_properties()->column(i);
@@ -530,12 +574,12 @@ public:
 
   /// \returns true if a node property/type with @param name exists
   bool HasNodeProperty(const std::string& name) const {
-    return node_properties()->schema()->GetFieldIndex(name) != -1;
+    return node_schema()->GetFieldIndex(name) != -1;
   }
 
   /// \returns true if an edge property/type with @param name exists
   bool HasEdgeProperty(const std::string& name) const {
-    return edge_properties()->schema()->GetFieldIndex(name) != -1;
+    return edge_schema()->GetFieldIndex(name) != -1;
   }
 
   /// Get a node property by name.
@@ -546,16 +590,18 @@ public:
       const std::string& name) const {
     return node_properties()->GetColumnByName(name);
   }
-  std::vector<std::string> GetNodePropertyNames() const {
-    return node_properties()->ColumnNames();
+
+  std::string GetNodePropertyName(int32_t i) const {
+    return node_schema()->field(i)->name();
   }
 
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
       const std::string& name) const {
     return edge_properties()->GetColumnByName(name);
   }
-  std::vector<std::string> GetEdgePropertyNames() const {
-    return edge_properties()->ColumnNames();
+
+  std::string GetEdgePropertyName(int32_t i) const {
+    return edge_schema()->field(i)->name();
   }
 
   /// Get a node property by name and cast it to a type.
@@ -621,10 +667,7 @@ public:
     return rdg_.MarkEdgePropertiesPersistent(persist_edge_props);
   }
 
-  const GraphTopology& topology() const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(topology_);
-    return *topology_;
-  }
+  const GraphTopology& topology() const noexcept { return topology_; }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);
@@ -646,49 +689,58 @@ public:
   /// Remove all edge properties
   void DropEdgeProperties() { rdg_.DropEdgeProperties(); }
 
-  PropertyView node_property_view() {
-    return PropertyView{
+  MutablePropertyView NodeMutablePropertyView() {
+    return MutablePropertyView{
+        .ropv =
+            {
+                .const_g = this,
+                .schema_fn = &PropertyGraph::node_schema,
+                .property_fn_int = &PropertyGraph::GetNodeProperty,
+                .property_fn_str = &PropertyGraph::GetNodeProperty,
+                .property_num_fn = &PropertyGraph::GetNumNodeProperties,
+            },
         .g = this,
-        .schema_fn = &PropertyGraph::node_schema,
-        .property_fn = &PropertyGraph::GetNodeProperty,
-        .properties_fn = &PropertyGraph::node_properties,
         .add_properties_fn = &PropertyGraph::AddNodeProperties,
         .upsert_properties_fn = &PropertyGraph::UpsertNodeProperties,
         .remove_property_int = &PropertyGraph::RemoveNodeProperty,
         .remove_property_str = &PropertyGraph::RemoveNodeProperty,
     };
   }
+  ReadOnlyPropertyView NodeReadOnlyPropertyView() const {
+    return ReadOnlyPropertyView{
+        .const_g = this,
+        .schema_fn = &PropertyGraph::node_schema,
+        .property_fn_int = &PropertyGraph::GetNodeProperty,
+        .property_fn_str = &PropertyGraph::GetNodeProperty,
+        .property_num_fn = &PropertyGraph::GetNumNodeProperties,
+    };
+  }
 
-  PropertyView edge_property_view() {
-    return PropertyView{
+  MutablePropertyView EdgeMutablePropertyView() {
+    return MutablePropertyView{
+        .ropv =
+            {
+                .const_g = this,
+                .schema_fn = &PropertyGraph::edge_schema,
+                .property_fn_int = &PropertyGraph::GetEdgeProperty,
+                .property_fn_str = &PropertyGraph::GetEdgeProperty,
+                .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
+            },
         .g = this,
-        .schema_fn = &PropertyGraph::edge_schema,
-        .property_fn = &PropertyGraph::GetEdgeProperty,
-        .properties_fn = &PropertyGraph::edge_properties,
         .add_properties_fn = &PropertyGraph::AddEdgeProperties,
         .upsert_properties_fn = &PropertyGraph::UpsertEdgeProperties,
         .remove_property_int = &PropertyGraph::RemoveEdgeProperty,
         .remove_property_str = &PropertyGraph::RemoveEdgeProperty,
     };
   }
-
-  // This one copies the topology
-  Result<void> SetTopology(const GraphTopology& topology);
-
-  // This one takes over an existing topology through move operation
-  Result<void> SetTopology(
-      std::unique_ptr<GraphTopology>&& topo_to_assign) noexcept {
-    topology_ = std::move(topo_to_assign);
-    return katana::ResultSuccess();
-  }
-
-  /// Return the node property table for local nodes
-  const std::shared_ptr<arrow::Table>& node_properties() const {
-    return rdg_.node_properties();
-  }
-  /// Return the edge property table for local edges
-  const std::shared_ptr<arrow::Table>& edge_properties() const {
-    return rdg_.edge_properties();
+  ReadOnlyPropertyView EdgeReadOnlyPropertyView() const {
+    return ReadOnlyPropertyView{
+        .const_g = this,
+        .schema_fn = &PropertyGraph::edge_schema,
+        .property_fn_int = &PropertyGraph::GetEdgeProperty,
+        .property_fn_str = &PropertyGraph::GetEdgeProperty,
+        .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
+    };
   }
 
   // Standard container concepts
@@ -730,21 +782,24 @@ public:
 /// IDs (ascending order).
 ///
 /// Returns the permutation vector (mapping from old
-/// indices to the new indices) which results due to the sorting.
-KATANA_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
-    PropertyGraph* pg);
+/// indices to the new indices) which results due to  sorting.
+KATANA_EXPORT Result<std::unique_ptr<katana::NUMAArray<uint64_t>>>
+SortAllEdgesByDest(PropertyGraph* pg);
 
 /// FindEdgeSortedByDest finds the "node_to_find" id in the
 /// sorted edgelist of the "node" using binary search.
 ///
 /// This returns the matched edge index if 'node_to_find' is present
 /// in the edgelist of 'node' else edge end if 'node_to_find' is not found.
+// TODO(amber): make this a method of a sorted topology class in the near future
+// TODO(amber): this method should return an edge_iterator
 KATANA_EXPORT GraphTopology::Edge FindEdgeSortedByDest(
     const PropertyGraph* graph, GraphTopology::Node node,
     GraphTopology::Node node_to_find);
 
 /// Relabel all nodes in the graph by sorting in the descending
 /// order by node degree.
+// TODO(amber): this method should return a new sorted topology
 KATANA_EXPORT Result<void> SortNodesByDegree(PropertyGraph* pg);
 
 /// Creates in-memory symmetric (or undirected) graph.
@@ -758,7 +813,7 @@ KATANA_EXPORT Result<void> SortNodesByDegree(PropertyGraph* pg);
 /// The generated symmetric graph may have duplicate edges.
 /// \param pg The original property graph
 /// \return The new symmetric property graph by adding reverse edges
-// TODO(gill): Add edge properties for the new reversed edges.
+// TODO(amber): this function should return a new topology
 KATANA_EXPORT Result<std::unique_ptr<katana::PropertyGraph>>
 CreateSymmetricGraph(PropertyGraph* pg);
 
@@ -773,7 +828,7 @@ CreateSymmetricGraph(PropertyGraph* pg);
 /// \param topology The original property graph topology
 /// \return The new transposed property graph by reversing the edges
 // TODO(lhc): hack for bfs-direct-opt
-// TODO(gill): Add tranposed edge properties as well.
+// TODO(amber): this function should return a new topology
 KATANA_EXPORT Result<std::unique_ptr<PropertyGraph>>
 CreateTransposeGraphTopology(const GraphTopology& topology);
 

@@ -83,7 +83,7 @@
    "source": [
     "import katana.galois\n",
     "from katana.datastructures import InsertBag\n",
-    "from katana.loops import do_all, do_all_operator\n",
+    "from katana import do_all, do_all_operator\n",
     "from katana.property_graph import PropertyGraph\n",
     "\n",
     "import katana.local\n",

@@ -2,9 +2,9 @@ import numpy as np
 import pyarrow
 from numba import jit
 
+from katana import do_all, do_all_operator
 from katana.atomic import GAccumulator, GReduceMax
 from katana.datastructures import InsertBag
-from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 from katana.timer import StatTimer
 

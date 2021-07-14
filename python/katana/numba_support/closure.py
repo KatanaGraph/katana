@@ -19,16 +19,6 @@ class Closure:
     used by galois to specify operators.
     """
 
-    __slots__ = [
-        "_function",
-        "_userdata",
-        "return_type",
-        "unbound_argument_types",
-        "_captured",
-        "__name__",
-        "__qualname__",
-    ]
-
     def __init__(self, func, userdata, return_type, unbound_argument_types, captured=(), *, name, qualname):
         """
         :param func: The function to of this closure. Must have an address attribute returning a function pointer
@@ -256,8 +246,6 @@ class UninstantiatedClosure:
     """
 
     _builder: ClosureBuilder
-
-    __slots__ = ["_builder", "_args", "__name__", "__qualname__"]
 
     def __init__(self, builder, args):
         self._builder = builder

@@ -1,0 +1,51 @@
+name: Daily Checkup
+
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # Run daily at 3:35am UTC
+    - cron: '35 3 * * *'
+
+env:
+  PYVER: 3.8
+  CHANNELS: defaults -c metagraph/label/dev -c conda-forge
+
+jobs:
+  daily_check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Create env
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: ${{ env.PYVER }}
+      - name: Update env
+        run: |
+          # TODO: remove this hack once no longer necessary; without this, v1.8.0 installs in a broken state
+          conda install 'smart_open>=4.0.1'
+          # Install package using latest "dev" versions from metagraph channel
+          conda install -c ${{ env.CHANNELS }} metagraph-karateclub 'metagraph-dev>=0.2.6'
+          conda list
+      - name: Pytest
+        run: |
+          python -c 'import karateclub'
+          pytest --pyargs metagraph_karateclub
+          python -m metagraph.tests
+          python -m metagraph.tests --dask
+      - name: Notify for Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'danger',
+                text: ':x: Failure\nDaily health check failed for *<https://github.com/metagraph-dev/metagraph-karateclub/actions?query=workflow%3A%22Daily+Checkup%22|metagraph-karateclub>*'
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

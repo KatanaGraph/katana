@@ -1,0 +1,130 @@
+name: Test and Deploy
+
+on:
+  # Run this workflow every time a PR is opened or a new commit is pushed to the PR
+  pull_request:
+  # Run this workflow every time a PR is merged to main
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+
+env:
+  MAIN_PYVER: 3.8
+  CHANNELS: defaults -c conda-forge -c metagraph/label/dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Create env
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          activate-environment: mg
+          environment-file: continuous_integration/environment.yml
+      - name: Update env
+        run: |
+          conda install -q conda-build
+          pip install -e .
+      - name: Lint with Black
+        run: |
+          black --version
+          black metagraph_karateclub *.py --check --diff
+      - name: Pytest
+        run: |
+          pytest --pyargs metagraph
+      - name: Coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          conda install -c conda-forge coveralls
+          coveralls --service=github
+      - name: Conda Build
+        run: |
+          conda build -c ${{ env.CHANNELS }} --python ${{ env.MAIN_PYVER }} continuous_integration/conda
+          # This doesn't rebuild, but simply computes the name of the file that was previously built
+          OUTPUT=$(conda build --output -c ${{ env.CHANNELS }} --python ${{ env.MAIN_PYVER }} continuous_integration/conda)
+          echo "Path to built package:"
+          echo $OUTPUT
+          echo "CONDA_BUILD_OUTPUT=$OUTPUT" >> $GITHUB_ENV
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: built_package
+          path: ${{ env.CONDA_BUILD_OUTPUT }}
+          retention-days: 7
+
+  test_pyver:
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        pyver:
+          - 3.8
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: built_package
+          path: ./artifact_storage
+      - name: Create env
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.pyver }}
+      - name: Update env
+        run: |
+          conda install -c ${{ env.CHANNELS }} 'metagraph-dev>=0.2.6'
+          # TODO: remove this hack once no longer necessary; without this, v1.8.0 installs in a broken state
+          conda install 'smart_open>=4.0.1'
+          # Install built_package
+          BUILT_PKG=`ls ./artifact_storage | head -1`
+          conda install ./artifact_storage/$BUILT_PKG
+          # Install dependencies listed in built package
+          # (This is a workaround because conda does not install dependencies for local file installs)
+          conda update -c ${{ env.CHANNELS }} metagraph-karateclub
+          conda list
+      - name: Pytest
+        run: |
+          python -c 'import karateclub'
+          pytest --pyargs metagraph_karateclub
+          python -m metagraph.tests
+          python -m metagraph.tests --dask
+
+  dev_deploy:
+    runs-on: ubuntu-latest
+    needs: test_pyver
+    if: (github.ref == 'refs/heads/main') || contains(github.ref, 'refs/tags/')
+    env:
+      AC_LABEL: dev
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: built_package
+          path: ./artifact_storage
+      - name: Determine label
+        if: contains(github.ref, 'refs/tags/')
+        run: |
+          echo "AC_LABEL=main" >> $GITHUB_ENV
+      - name: Deploy to Anaconda Cloud
+        run: |
+          source "$CONDA/etc/profile.d/conda.sh"
+          conda config --set always_yes yes --set changeps1 no
+          conda install -q anaconda-client
+          ls -la ./artifact_storage
+          UPLOAD=`ls ./artifact_storage | head -1`
+          echo "Uploading $UPLOAD with label=${{ env.AC_LABEL }}"
+          $CONDA/bin/anaconda -t ${{ secrets.ANACONDA_ORG_TOKEN }} upload -u metagraph -l ${{ env.AC_LABEL }} --no-progress --force --no-register ./artifact_storage/$UPLOAD

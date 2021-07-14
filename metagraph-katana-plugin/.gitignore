@@ -1,0 +1,43 @@
+# no editor files
+*~
+*.backup
+/.dir-locals.el
+.DS_Store
+*.orig
+/.project
+.settings
+*.sw[a-p]
+.vscode
+\#*\#
+.\#*
+.idea/
+
+# no tool generated files
+.clang-complete
+.clangd
+compile_commands.json
+cscope.out
+/GPATH
+/GRTAGS
+/GTAGS
+.tags*
+tags
+.ycm_extra_conf.py
+
+# no build files
+/build*
+
+# no nfs temp files
+.nfs*
+
+# no python build artifacts
+*.pyc
+__pycache__/
+
+# no Jupyter server state files
+.ipynb_checkpoints/
+.local/
+.ipython/
+
+
+/metagraph_katana.egg-info*

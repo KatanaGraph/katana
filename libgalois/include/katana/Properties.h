@@ -267,13 +267,14 @@ public:
         sizeof(typename arrow::NumericArray<U>::value_type) == sizeof(T),
         "incompatible types");
     if (array.offset() < 0) {
-      KATANA_LOG_DEBUG("arrow error: Offset not supported");
-      return ErrorCode::ArrowError;
+      return KATANA_ERROR(
+          ErrorCode::ArrowError, "offset must be positive, given {}",
+          array.offset());
     }
     if (array.data()->buffers.size() <= 1 ||
         !array.data()->buffers[1]->is_mutable()) {
-      KATANA_LOG_DEBUG("arrow error: immutable buffers not supported");
-      return ErrorCode::ArrowError;
+      return KATANA_ERROR(
+          ErrorCode::ArrowError, "immutable buffers not supported");
     }
     return PODPropertyView(
         internal::GetMutableValuesWorkAround<T>(array.data(), 1, 0),
@@ -284,19 +285,19 @@ public:
   static Result<PODPropertyView> Make(
       const arrow::FixedSizeBinaryArray& array) {
     if (array.byte_width() != sizeof(T)) {
-      KATANA_LOG_DEBUG(
-          "arrow error: bad byte width of data: {} != {}", array.byte_width(),
-          sizeof(T));
-      return ErrorCode::ArrowError;
+      return KATANA_ERROR(
+          ErrorCode::ArrowError, "bad byte width of data: {} != {}",
+          array.byte_width(), sizeof(T));
     }
     if (array.offset() < 0) {
-      KATANA_LOG_DEBUG("arrow error: Offset not supported");
-      return ErrorCode::ArrowError;
+      return KATANA_ERROR(
+          ErrorCode::ArrowError, "offset must be positive, given {}",
+          array.offset());
     }
     if (array.data()->buffers.size() <= 1 ||
         !array.data()->buffers[1]->is_mutable()) {
-      KATANA_LOG_DEBUG("arrow error: immutable buffers not supported");
-      return ErrorCode::ArrowError;
+      return KATANA_ERROR(
+          ErrorCode::ArrowError, "immutable buffers not supported");
     }
     return PODPropertyView(
         internal::GetMutableValuesWorkAround<T>(array.data(), 1, 0),

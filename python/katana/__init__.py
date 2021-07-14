@@ -20,13 +20,37 @@ by Galois C++.
 """
 
 import atexit
+import warnings
 from typing import Dict, Type
 
 import katana.plugin
-from katana._loops import OrderedByIntegerMetric, PerSocketChunkFIFO, UserContext, do_all, for_each
-from katana.barrier import Barrier
-from katana.loop_operators import do_all_operator, for_each_operator, obim_metric
 from katana.plugin import installed_plugins
+
+try:
+    import katana.galois
+
+    __version__ = katana.galois.get_version()
+
+    from katana._loops import OrderedByIntegerMetric, PerSocketChunkFIFO, UserContext, do_all, for_each
+    from katana.barrier import Barrier
+    from katana.loop_operators import do_all_operator, for_each_operator, obim_metric
+except ModuleNotFoundError as e:
+    if "katana.galois" in str(e):
+        warnings.warn(
+            "Katana Python extension modules are missing. Some features of katana.remote may still be used, "
+            "but this configuration is not fully supported. "
+            "TODO(amp): Remove this case once we nolonger need support for Ubuntu 16.04."
+        )
+    else:
+        raise
+except ImportError as e:
+    if "libkatana" in str(e):
+        raise ImportError(
+            "The native libraries required by katana are missing or incorrectly installed. NOTE: The native libraries "
+            "are not included in pip packages and must be installed separately (e.g., with `conda install katana-cpp`)."
+        ) from e
+    raise
+
 
 __all__ = [
     "Barrier",
@@ -43,17 +67,6 @@ __all__ = [
     "installed_plugins",
     "obim_metric",
 ]
-
-try:
-    # Trigger the load of katana libraries
-    import katana.galois
-except ImportError as e:
-    if "libkatana" in str(e):
-        raise ImportError(
-            "The native libraries required by katana are missing or incorrectly installed. NOTE: The native libraries "
-            "are not included in pip packages and must be installed separately (e.g., with `conda install katana-cpp`)."
-        ) from e
-    raise
 
 
 # A global variable to hold the Katana runtime "Sys". The type will vary and has no methods. None means no Katana
@@ -92,9 +105,6 @@ def reset_runtime_sys():
     # pylint: disable=global-statement
     global _runtime_sys
     _runtime_sys = None
-
-
-__version__ = katana.galois.get_version()
 
 
 class TsubaError(IOError):

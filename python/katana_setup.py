@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import traceback
 from pathlib import Path
 from typing import Optional, Set
 
@@ -349,9 +350,22 @@ def _build_cython_extensions(pyx_files, source_root_name, extension_options):
 def cythonize(module_list, *, source_root, **kwargs):
     # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
     require_python_module("packaging")
-    require_python_module("Cython", "0.29.12")
     require_python_module("numpy", "1.10")
-    require_python_module("pyarrow", "4.0", "5.0.dev")
+    try:
+        require_python_module("Cython", "0.29.12")
+        require_python_module("pyarrow", "4.0", "5.0.dev")
+        build_extensions = True
+    except RequirementError:
+        print(
+            "WARNING: Building Katana Python without extensions! The following features will not work: katana.local, "
+            "katana.distributed, katana parallel loops. The following features will work: katana.client and "
+            "katana.remote (with limitations).",
+            file=sys.stderr,
+        )
+        build_extensions = False
+
+    if not build_extensions:
+        return []
 
     import Cython.Build
     import numpy

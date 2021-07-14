@@ -332,6 +332,7 @@ private:
 ////////////////////////////////////////////
 // Visitor-based utility
 /// Take a vector of scalars of type data_type and return an Array
+/// scalars vector can contain nullptr entries
 KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> ArrayFromScalars(
     const std::vector<std::shared_ptr<arrow::Scalar>>& scalars,
     const std::shared_ptr<arrow::DataType>& type);

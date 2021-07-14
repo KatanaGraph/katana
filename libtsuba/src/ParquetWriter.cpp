@@ -1,6 +1,7 @@
 #include "tsuba/ParquetWriter.h"
 
 #include "katana/ArrowInterchange.h"
+#include "katana/JSON.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
@@ -18,8 +19,10 @@ ResetBuilder(Builder* builder) {
   return array;
 }
 
-// constant taken directly from the arrow docs
+// max is 0x7FFFFFFE according to error messages
 constexpr uint64_t kMaxStringChunkSize = 0x7FFFFFFE;
+// this value was determined empirically
+constexpr int64_t kMaxRowsPerFile = 0x3FFFFFFE;
 
 katana::Result<std::vector<std::shared_ptr<arrow::Array>>>
 LargeStringToChunkedString(
@@ -34,7 +37,7 @@ LargeStringToChunkedString(
       chunks.emplace_back(KATANA_CHECKED(ResetBuilder(&builder)));
       inserted = 0;
     }
-    ++inserted;
+    inserted += 4;
     if (!arr->IsValid(i)) {
       KATANA_CHECKED(builder.AppendNull());
       continue;
@@ -157,6 +160,53 @@ BlockTable(std::shared_ptr<arrow::Table> table, uint64_t mbs_per_block) {
   return blocks;
 }
 
+Result<void>
+DoStoreParquet(
+    const std::string& path, std::shared_ptr<arrow::Table> table,
+    const std::shared_ptr<parquet::WriterProperties>& writer_props,
+    const std::shared_ptr<parquet::ArrowWriterProperties>& arrow_props,
+    tsuba::WriteGroup* desc) {
+  auto ff = std::make_shared<tsuba::FileFrame>();
+  KATANA_CHECKED(ff->Init());
+  ff->Bind(path);
+
+  auto future = std::async(
+      std::launch::async,
+      [table = std::move(table), ff = std::move(ff), desc, writer_props,
+       arrow_props]() mutable -> katana::CopyableResult<void> {
+        table = KATANA_CHECKED(HandleBadParquetTypes(table));
+        auto write_result = parquet::arrow::WriteTable(
+            *table, arrow::default_memory_pool(), ff,
+            std::numeric_limits<int64_t>::max(), writer_props, arrow_props);
+        table.reset();
+
+        if (!write_result.ok()) {
+          return KATANA_ERROR(
+              tsuba::ErrorCode::ArrowError, "arrow error: {}", write_result);
+        }
+        if (desc) {
+          desc->AddToOutstanding(ff->map_size());
+        }
+
+        TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
+        if (auto res = ff->Persist(); !res) {
+          return res.error();
+        }
+        return katana::CopyableResultSuccess();
+      });
+
+  if (!desc) {
+    auto res = future.get();
+    if (!res) {
+      return res.error();
+    }
+    return katana::ResultSuccess();
+  }
+
+  desc->AddOp(std::move(future), path);
+  return katana::ResultSuccess();
+}
+
 }  // namespace
 
 Result<std::unique_ptr<tsuba::ParquetWriter>>
@@ -208,53 +258,38 @@ katana::Result<void>
 tsuba::ParquetWriter::StoreParquet(
     std::shared_ptr<arrow::Table> table, const katana::Uri& uri,
     tsuba::WriteGroup* desc) {
-  auto ff = std::make_shared<tsuba::FileFrame>();
-  if (auto res = ff->Init(); !res) {
-    return res.error().WithContext("creating output buffer");
-  }
-  ff->Bind(uri.string());
-  auto future = std::async(
-      std::launch::async,
-      [table = std::move(table), ff = std::move(ff), desc,
-       writer_props = StandardWriterProperties(),
-       arrow_props = StandardArrowProperties()]() mutable
-      -> katana::CopyableResult<void> {
-        auto res = HandleBadParquetTypes(table);
-        if (!res) {
-          return res.error().WithContext(
-              "conversion from arrow to parquet mismatch");
-        }
-        table = std::move(res.value());
-        auto write_result = parquet::arrow::WriteTable(
-            *table, arrow::default_memory_pool(), ff,
-            std::numeric_limits<int64_t>::max(), writer_props, arrow_props);
-        table.reset();
+  auto writer_props = StandardWriterProperties();
+  auto arrow_props = StandardArrowProperties();
+  std::string prefix = uri.string();
 
-        if (!write_result.ok()) {
-          return KATANA_ERROR(
-              tsuba::ErrorCode::ArrowError, "arrow error: {}", write_result);
-        }
-        if (desc) {
-          desc->AddToOutstanding(ff->map_size());
-        }
-
-        TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
-        if (auto res = ff->Persist(); !res) {
-          return res.error();
-        }
-        return katana::CopyableResultSuccess();
-      });
-
-  if (!desc) {
-    auto res = future.get();
-    if (!res) {
-      return res.error();
-    }
-    return katana::ResultSuccess();
+  if (table->num_rows() <= kMaxRowsPerFile) {
+    return DoStoreParquet(prefix, table, writer_props, arrow_props, desc);
   }
 
-  desc->AddOp(std::move(future), uri.string());
-  return katana::ResultSuccess();
+  std::vector<std::shared_ptr<arrow::Table>> tables;
+  std::vector<int64_t> table_offsets;
+
+  // Slicing like this is necessary because of a problem with arrow<>parquet
+  // and nulls for string columns. If entries in a column are all or mostly null
+  // and greater than the element limit for a String array, you can end up
+  // in a situation where you've generated a parquet file that arrow cannot
+  // read. To make sure we don't end up in that situation, slice the table here
+  // into groups of rows that are definitely smaller than the element limit
+  for (int64_t i = 0, total_rows = table->num_rows(); i < total_rows;
+       i += kMaxRowsPerFile) {
+    table_offsets.emplace_back(i);
+    tables.emplace_back(table->Slice(i, kMaxRowsPerFile));
+  }
+  table.reset();
+
+  uint32_t table_count = 0;
+  for (const auto& t : tables) {
+    KATANA_CHECKED(DoStoreParquet(
+        fmt::format("{}.part_{:09}", prefix, table_count++), t, writer_props,
+        arrow_props, desc));
+  }
+  return FileStore(
+      uri.string(), KATANA_CHECKED(katana::JsonDump(table_offsets)));
 }
 
 katana::Result<void>

@@ -95,15 +95,8 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
 
   if (auto res = fv.Bind(uri.string(), true); !res) {
     return res.error();
-    auto latest_manifest_uri = FindLatestManifestFile(uri);
-    if (!latest_manifest_uri) {
-      return res.error();
-    }
-    if (auto res_latest = fv.Bind(latest_manifest_uri.value().string(), true);
-        !res_latest) {
-      return res.error();
-    }
   }
+  
   tsuba::RDGManifest manifest(uri.DirName());
   auto manifest_res = katana::JsonParse<tsuba::RDGManifest>(fv, &manifest);
 

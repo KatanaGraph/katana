@@ -28,45 +28,6 @@ Parse(const std::string& str) {
   return val;
 }
 
-katana::Result<std::vector<std::string>>
-FileList(const std::string& dir) {
-  std::vector<std::string> files;
-  auto list_fut = tsuba::FileListAsync(dir, &files);
-  KATANA_LOG_ASSERT(list_fut.valid());
-
-  if (auto res = list_fut.get(); !res) {
-    return res.error();
-  }
-  return files;
-}
-
-katana::Result<katana::Uri>
-FindLatestManifestFile(const katana::Uri& name) {
-  KATANA_LOG_DEBUG_ASSERT(!tsuba::RDGManifest::IsManifestUri(name));
-  auto list_res = FileList(name.string());
-  if (!list_res) {
-    return list_res.error();
-  }
-
-  uint64_t version = 0;
-  std::string found_manifest;
-  for (const std::string& file : list_res.value()) {
-    if (auto res = tsuba::RDGManifest::ParseVersionFromName(file); res) {
-      uint64_t new_version = res.value();
-      if (new_version >= version) {
-        version = new_version;
-        found_manifest = file;
-      }
-    }
-  }
-  if (found_manifest.empty()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::NotFound,
-        "failed: could not find manifest   file in {}", name);
-  }
-  return name.Join(found_manifest);
-}
-
 const int MANIFEST_MATCH_VERS_INDEX = 1;
 const int MANIFEST_MATCH_VIEW_INDEX = 2;
 
@@ -95,15 +56,8 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
 
   if (auto res = fv.Bind(uri.string(), true); !res) {
     return res.error();
-    auto latest_manifest_uri = FindLatestManifestFile(uri);
-    if (!latest_manifest_uri) {
-      return res.error();
-    }
-    if (auto res_latest = fv.Bind(latest_manifest_uri.value().string(), true);
-        !res_latest) {
-      return res.error();
-    }
   }
+
   tsuba::RDGManifest manifest(uri.DirName());
   auto manifest_res = katana::JsonParse<tsuba::RDGManifest>(fv, &manifest);
 
@@ -263,15 +217,16 @@ RDGManifest::FileNames() {
   for (auto i = 0U; i < num_hosts(); ++i) {
     // All other file names are directory-local, so we pass an empty
     // directory instead of handle.impl_->rdg_manifest.path for the partition files
-    fnames.emplace(PartitionFileName(view_type_, i, version()));
+    fnames.emplace(PartitionFileName(view_specifier(), i, version()));
 
-    auto header_res =
-        RDGPartHeader::Make(PartitionFileName(dir(), i, version()));
+    auto header_uri = KATANA_CHECKED(katana::Uri::Make(fmt::format(
+        "{}/{}", dir(), PartitionFileName(view_specifier(), i, version()))));
+    auto header_res = RDGPartHeader::Make(header_uri);
 
     if (!header_res) {
       KATANA_LOG_DEBUG(
-          "problem uri: {} host: {} ver: {} : {}", dir(), i, version(),
-          header_res.error());
+          "problem uri: {} host: {} ver: {} view_name: {}  : {}", header_uri, i,
+          version(), view_specifier(), header_res.error());
     } else {
       auto header = std::move(header_res.value());
       for (const auto& node_prop : header.node_prop_info_list()) {

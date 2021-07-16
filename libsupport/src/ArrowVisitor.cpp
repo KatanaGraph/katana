@@ -30,7 +30,7 @@ struct ToArrayVisitor {
 
     KATANA_CHECKED(builder->Reserve(scalars.size()));
     for (const auto& scalar : scalars) {
-      if (scalar->is_valid) {
+      if (scalar != nullptr && scalar->is_valid) {
         const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
         builder->UnsafeAppend(typed_scalar->value);
       } else {
@@ -46,7 +46,7 @@ struct ToArrayVisitor {
     using ScalarType = typename arrow::TypeTraits<ArrowType>::ScalarType;
     // same as above, but with string_view and Append instead of UnsafeAppend
     for (const auto& scalar : scalars) {
-      if (scalar->is_valid) {
+      if (scalar != nullptr && scalar->is_valid) {
         // ->value->ToString() works, scalar->ToString() yields "..."
         const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
         if (auto res = builder->Append(
@@ -77,7 +77,7 @@ struct ToArrayVisitor {
     // use a visitor to traverse more complex types
     katana::AppendScalarToBuilder visitor(builder);
     for (const auto& scalar : scalars) {
-      if (scalar->is_valid) {
+      if (scalar != nullptr && scalar->is_valid) {
         const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
         KATANA_CHECKED(visitor.Call<ArrowType>(*typed_scalar));
       } else {

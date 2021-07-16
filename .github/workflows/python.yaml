@@ -132,6 +132,32 @@ jobs:
       - name: Install in docker container
         run: python3 test/install_conda_packages_test.py pkgs ${{matrix.image}}
 
+  upload_conda_package:
+    if: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' && github.repository == 'KatanaGraph/katana' }}
+    environment: AnacondaUpload
+    needs: test_conda_package_install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup upload environment
+        run: |
+          # Use pip here because we don't need a full conda environment and pip doesn't need to be installed.
+          pip3 install setuptools
+          pip3 install anaconda-client
+      - name: Download conda packages
+        uses: actions/download-artifact@v2
+        with:
+          name: conda-pkgs-ubuntu-18.04
+          path: pkgs
+      - name: Info
+        run: |
+          ls -R pkgs
+      - name: Upload package to anaconda
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          echo ${#ANACONDA_TOKEN}
+          anaconda --token "$ANACONDA_TOKEN" upload pkgs/*/*.tar.bz2
+
   test_build_in_container_conda:
     runs-on: ubuntu-18.04
     steps:

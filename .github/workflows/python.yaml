@@ -15,8 +15,69 @@ jobs:
 #      if: ${{ github.event_name == 'pull_request' }}
 #      with:
 #        access_token: ${{ github.token }}
+  do_python:
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        !contains(github.event.pull_request.body, '[no Python]')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info
+        run: echo "${{ github.event.pull_request.body }}"
+
+  do_package:
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        !contains(github.event.pull_request.body, '[no package]')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info
+        run: echo "${{ github.event.pull_request.body }}"
+
+  do_python_package:
+    needs:
+      - do_package
+      - do_python
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        !contains(github.event.pull_request.body, '[no Python package]')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info
+        run: echo "${{ github.event.pull_request.body }}"
+
+  do_test:
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        !contains(github.event.pull_request.body, '[no test]')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info
+        run: echo "${{ github.event.pull_request.body }}"
+
+  do_python_test:
+    needs:
+      - do_test
+      - do_python
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        !contains(github.event.pull_request.body, '[no Python test]')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info
+        run: echo "${{ github.event.pull_request.body }}"
 
   build_and_test_conda_package:
+    needs: do_python_package
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -133,6 +194,7 @@ jobs:
         run: python3 test/install_conda_packages_test.py pkgs ${{matrix.image}}
 
   test_build_in_container_conda:
+    needs: do_python_test
     runs-on: ubuntu-18.04
     steps:
       - name: Checkout repo
@@ -143,6 +205,7 @@ jobs:
         run: scripts/build_in_container.py --build $HOME/build --type conda
 
   test_build_in_container_conda_ninja:
+    needs: do_python_test
     runs-on: ubuntu-18.04
     steps:
       - name: Checkout repo
@@ -153,6 +216,7 @@ jobs:
         run: scripts/build_in_container.py --build $HOME/build --type conda --cmake-generator Ninja
 
   lint:
+    needs: do_python
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -203,6 +267,7 @@ jobs:
         ./scripts/check_python_lint.sh python test scripts
 
   build_and_test:
+    needs: do_python_test
     runs-on: ${{matrix.os}}
     strategy:
       matrix:

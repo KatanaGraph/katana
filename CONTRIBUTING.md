@@ -701,6 +701,28 @@ correct the errors they check for. Take a look at the GitHub workflow
 definitions under `.github` directory to see what script and build parameters
 are used.
 
+## Manually Controlling CI Jobs
+
+You can disable CI jobs selectively on a given PR using "magic words" in the PR
+body text. All magic words are case-insensitive. Changing the magic words will
+not cause jobs to run. You will need to manually trigger the jobs to runs again
+either by triggering a rerun as above or by pushing a new commit.
+
+| Magic word            | Jobs skipped:                     |
+|---------------------- |---------------------------------- |
+| `[no test]`           | build and test jobs               |
+| `[no package]`        | packaging jobs                    |
+| `[no Python]`         | all Python jobs                   |
+| `[no Python test]`    | Python build and test jobs        |
+| `[no Python package]` | Python packaging jobs             |
+| `[no C++]`            | all C++ jobs                      |
+| `[no C++ test]`       | C++ build and test jobs           |
+| `[no C++ package]`    | C++ packaging jobs                |
+
+Github natively supports disabling CI entirely for specific commits as
+documented at:
+https://docs.github.com/en/actions/guides/about-continuous-integration#skipping-workflow-runs
+
 ## Caching
 
 GitHub actions allows for build data to be cached between CI runs. For

@@ -18,49 +18,13 @@ jobs:
       - name: Info
         run: echo "${{ github.event.pull_request.body }}"
 
-  do_package:
-    if: |
-      github.event_name != 'pull_request' ||
-      (
-        !contains(github.event.pull_request.body, '[no package]')
-      )
-    runs-on: ubuntu-latest
-    steps:
-      - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
-
-  do_cpp_package:
-    needs:
-      - do_package
-      - do_cpp
-    if: |
-      github.event_name != 'pull_request' ||
-      (
-        !contains(github.event.pull_request.body, '[no C++ package]')
-      )
-    runs-on: ubuntu-latest
-    steps:
-      - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
-
-  do_test:
-    if: |
-      github.event_name != 'pull_request' ||
-      (
-        !contains(github.event.pull_request.body, '[no test]')
-      )
-    runs-on: ubuntu-latest
-    steps:
-      - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
-
   do_cpp_test:
     needs:
-      - do_test
       - do_cpp
     if: |
       github.event_name != 'pull_request' ||
       (
+        !contains(github.event.pull_request.body, '[no test]') &&
         !contains(github.event.pull_request.body, '[no C++ test]')
       )
     runs-on: ubuntu-latest

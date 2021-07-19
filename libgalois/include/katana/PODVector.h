@@ -20,6 +20,8 @@
 #ifndef KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
 #define KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
 
+#include <sys/mman.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -50,7 +52,7 @@ namespace katana {
  * If the allocation is large and of known size, then check katana::NUMAArray.
  * Read CONTRIBUTING.md for a more detailed comparison between these types.
  */
-template <typename _Tp>
+template <typename _Tp, bool pinned = false>
 class PODVector {
   _Tp* data_;
   size_t capacity_;
@@ -145,15 +147,25 @@ public:
   void shrink_to_fit() {
     if (size_ == 0) {
       if (data_ != NULL) {
+        if constexpr (pinned) {
+          munlock(data_, capacity_ * sizeof(_Tp));
+        }
         free(data_);
         data_ = NULL;
         capacity_ = 0;
       }
     } else if (size_ < capacity_) {
+      if constexpr (pinned) {
+        munlock(data_, capacity_ * sizeof(_Tp));
+      }
       capacity_ = std::max(size_, kMinNonZeroCapacity);
-      _Tp* new_data_ = static_cast<_Tp*>(
-          realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
+      const size_t new_bytes = capacity_ * sizeof(_Tp);
+      _Tp* new_data_ =
+          static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
       KATANA_LOG_DEBUG_ASSERT(new_data_);
+      if constexpr (pinned) {
+        mlock(new_data_, new_bytes);
+      }
       data_ = new_data_;
     }
   }
@@ -163,8 +175,13 @@ public:
       return;
     }
 
-    // When reallocing, don't pay for elements greater than size_
-    shrink_to_fit();
+    // The price of unpinning&pinning again exceeds the savings below
+    if constexpr (!pinned) {
+      // When reallocing, don't pay for elements greater than size_
+      shrink_to_fit();
+    }
+
+    [[maybe_unused]] const size_t old_bytes = capacity_ * sizeof(_Tp);
 
     // reset capacity_ because its previous value need not be a power-of-2
     capacity_ = kMinNonZeroCapacity;
@@ -173,9 +190,18 @@ public:
       capacity_ <<= 1;
     }
 
-    _Tp* new_data_ = static_cast<_Tp*>(
-        realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
+    if constexpr (pinned) {
+      if (data_ != nullptr) {
+        munlock(data_, old_bytes);
+      }
+    }
+    const size_t new_bytes = capacity_ * sizeof(_Tp);
+    _Tp* new_data_ =
+        static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
     KATANA_LOG_DEBUG_ASSERT(new_data_);
+    if constexpr (pinned) {
+      mlock(new_data_, new_bytes);
+    }
     data_ = new_data_;
   }
 

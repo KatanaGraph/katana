@@ -243,35 +243,6 @@ cdef class PropertyGraphBase:
         """
         handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
 
-    def mark_all_properties_persistent(self):
-        """
-        Mark all properties (node and edge) to be stored when this graph is written.
-
-        :see: :py:meth:`~katana.property_graph.PropertyGraph.write`
-        """
-        self.underlying_property_graph().MarkAllPropertiesPersistent()
-
-    def mark_node_properties_persistent(self, *node_props):
-        """
-        Rename all node properties and specify which should be stored when this graph is written.
-
-        Properties are "named" by position. An empty string means don't persist that property.
-
-        :see: :py:meth:`~katana.property_graph.PropertyGraph.write`
-        """
-        handle_result_void(self.underlying_property_graph().MarkNodePropertiesPersistent([<str>s for s in node_props]))
-
-    def mark_edge_properties_persistent(self, *edge_props):
-        """
-        Rename all edge properties and specify which should be stored when this graph is written.
-
-        Properties are "named" by position, so an empty string means don't persist that
-        property.
-
-        :see: :py:meth:`~katana.property_graph.PropertyGraph.write`
-        """
-        handle_result_void(self.underlying_property_graph().MarkEdgePropertiesPersistent([<str>s for s in edge_props]))
-
     @property
     def path(self):
         """
@@ -327,10 +298,10 @@ cdef class PropertyGraph(PropertyGraphBase):
             opts.partition_id_to_load = part_to_load
         if node_properties is not None:
             node_props = _convert_string_list(node_properties)
-            opts.node_properties = &node_props
+            opts.node_properties = node_props
         if edge_properties is not None:
             edge_props = _convert_string_list(edge_properties)
-            opts.edge_properties = &edge_props
+            opts.edge_properties = edge_props
         path_str = <string>bytes(str(path), "utf-8")
         with nogil:
             self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, opts))

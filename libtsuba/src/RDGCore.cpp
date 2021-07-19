@@ -129,7 +129,7 @@ RDGCore::Equals(const RDGCore& other) const {
 }
 
 katana::Result<void>
-RDGCore::RemoveNodeProperty(uint32_t i) {
+RDGCore::RemoveNodeProperty(int i) {
   auto result = node_properties_->RemoveColumn(i);
   if (!result.ok()) {
     return KATANA_ERROR(
@@ -144,7 +144,7 @@ RDGCore::RemoveNodeProperty(uint32_t i) {
 }
 
 katana::Result<void>
-RDGCore::RemoveEdgeProperty(uint32_t i) {
+RDGCore::RemoveEdgeProperty(int i) {
   auto result = edge_properties_->RemoveColumn(i);
   if (!result.ok()) {
     return KATANA_ERROR(

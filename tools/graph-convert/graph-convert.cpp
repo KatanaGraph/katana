@@ -2990,8 +2990,6 @@ struct Gr2Kg : public Conversion {
       }
     }
 
-    pg->MarkAllPropertiesPersistent();
-
     katana::gPrint("Edge Schema : ", pg->edge_schema()->ToString(), "\n");
     katana::gPrint("Node Schema : ", pg->node_schema()->ToString(), "\n");
 

@@ -392,8 +392,8 @@ katana::PropertyGraph::Copy(
   // TODO(gill): This should copy the RDG in memory without reloading from storage.
   tsuba::RDGLoadOptions opts;
   opts.partition_id_to_load = partition_id();
-  opts.node_properties = &node_properties;
-  opts.edge_properties = &edge_properties;
+  opts.node_properties = node_properties;
+  opts.edge_properties = edge_properties;
 
   return Make(rdg_dir(), opts);
 }
@@ -721,8 +721,32 @@ katana::PropertyGraph::RemoveNodeProperty(const std::string& prop_name) {
 }
 
 katana::Result<void>
-katana::PropertyGraph::UnloadNodeProperty(int prop_idx) {
-  return rdg_.UnloadNodeProperty(prop_idx);
+katana::PropertyGraph::UnloadNodeProperty(int i) {
+  return rdg_.UnloadNodeProperty(i);
+}
+
+katana::Result<void>
+katana::PropertyGraph::LoadNodeProperty(const std::string& name, int i) {
+  return rdg_.LoadNodeProperty(name, i);
+}
+/// Load a node property by name if it is absent and append its column to
+/// the table do nothing otherwise
+katana::Result<void>
+katana::PropertyGraph::EnsureNodePropertyLoaded(const std::string& name) {
+  if (HasNodeProperty(name)) {
+    return katana::ResultSuccess();
+  }
+  return LoadNodeProperty(name);
+}
+
+std::vector<std::string>
+katana::PropertyGraph::ListNodeProperties() const {
+  return rdg_.ListNodeProperties();
+}
+
+std::vector<std::string>
+katana::PropertyGraph::ListEdgeProperties() const {
+  return rdg_.ListEdgeProperties();
 }
 
 katana::Result<void>
@@ -781,8 +805,23 @@ katana::PropertyGraph::RemoveEdgeProperty(const std::string& prop_name) {
 }
 
 katana::Result<void>
-katana::PropertyGraph::UnloadEdgeProperty(int prop_idx) {
-  return rdg_.UnloadEdgeProperty(prop_idx);
+katana::PropertyGraph::UnloadEdgeProperty(int i) {
+  return rdg_.UnloadEdgeProperty(i);
+}
+
+katana::Result<void>
+katana::PropertyGraph::LoadEdgeProperty(const std::string& name, int i) {
+  return rdg_.LoadEdgeProperty(name, i);
+}
+
+/// Load an edge property by name if it is absent and append its column to
+/// the table do nothing otherwise
+katana::Result<void>
+katana::PropertyGraph::EnsureEdgePropertyLoaded(const std::string& name) {
+  if (HasEdgeProperty(name)) {
+    return katana::ResultSuccess();
+  }
+  return LoadEdgeProperty(name);
 }
 
 katana::Result<void>

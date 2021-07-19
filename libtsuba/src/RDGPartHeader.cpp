@@ -95,66 +95,20 @@ RDGPartHeader::Write(
   return katana::ResultSuccess();
 }
 
-// const * so that they are nullable
-katana::Result<void>
-RDGPartHeader::PrunePropsTo(
-    const std::vector<std::string>* node_properties,
-    const std::vector<std::string>* edge_properties) {
-  if (node_properties != nullptr) {
-    std::unordered_map<std::string, const PropStorageInfo&> node_paths;
-    for (const PropStorageInfo& m : node_prop_info_list_) {
-      node_paths.insert({m.name, m});
-    }
-
-    std::vector<PropStorageInfo> next_node_prop_info_list;
-    for (const std::string& s : *node_properties) {
-      auto it = node_paths.find(s);
-      if (it == node_paths.end()) {
-        return KATANA_ERROR(
-            ErrorCode::PropertyNotFound, "node property {} not found", s);
-      }
-
-      next_node_prop_info_list.emplace_back(it->second);
-    }
-    node_prop_info_list_ = next_node_prop_info_list;
-  }
-
-  if (edge_properties != nullptr) {
-    std::unordered_map<std::string, const PropStorageInfo&> edge_paths;
-    for (const PropStorageInfo& m : edge_prop_info_list_) {
-      edge_paths.insert({m.name, m});
-    }
-
-    std::vector<PropStorageInfo> next_edge_prop_info_list;
-    for (const std::string& s : *edge_properties) {
-      auto it = edge_paths.find(s);
-      if (it == edge_paths.end()) {
-        return KATANA_ERROR(
-            ErrorCode::PropertyNotFound, "failed: edge property {} not found",
-            s);
-      }
-
-      next_edge_prop_info_list.emplace_back(it->second);
-    }
-    edge_prop_info_list_ = next_edge_prop_info_list;
-  }
-  return katana::ResultSuccess();
-}
-
 katana::Result<void>
 RDGPartHeader::Validate() const {
   for (const auto& md : node_prop_info_list_) {
-    if (md.path.find('/') != std::string::npos) {
+    if (md.path().find('/') != std::string::npos) {
       return KATANA_ERROR(
           ErrorCode::InvalidArgument,
-          "node_property path doesn't contain a slash (/): {}", md.path);
+          "node_property path doesn't contain a slash (/): {}", md.path());
     }
   }
   for (const auto& md : edge_prop_info_list_) {
-    if (md.path.find('/') != std::string::npos) {
+    if (md.path().find('/') != std::string::npos) {
       return KATANA_ERROR(
           ErrorCode::InvalidArgument,
-          "edge_property path doesn't contain a slash (/): {}", md.path);
+          "edge_property path doesn't contain a slash (/): {}", md.path());
     }
   }
   if (topology_path_.empty()) {
@@ -169,66 +123,15 @@ RDGPartHeader::Validate() const {
 }
 
 void
-RDGPartHeader::MarkAllPropertiesPersistent() {
-  std::for_each(
-      node_prop_info_list_.begin(), node_prop_info_list_.end(),
-      [](auto& p) { return p.persist = true; });
-
-  std::for_each(
-      edge_prop_info_list_.begin(), edge_prop_info_list_.end(),
-      [](auto& p) { return p.persist = true; });
-}
-
-katana::Result<void>
-RDGPartHeader::MarkNodePropertiesPersistent(
-    const std::vector<std::string>& persist_node_props) {
-  if (persist_node_props.size() > node_prop_info_list_.size()) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument,
-        "failed: persist props sz: {} names, rdg.node_prop_info_list_ sz: {}",
-        persist_node_props.size(), node_prop_info_list_.size());
-  }
-  for (uint32_t i = 0; i < persist_node_props.size(); ++i) {
-    if (!persist_node_props[i].empty()) {
-      node_prop_info_list_[i].name = persist_node_props[i];
-      node_prop_info_list_[i].path = "";
-      node_prop_info_list_[i].persist = true;
-      KATANA_LOG_DEBUG("node persist {}", node_prop_info_list_[i].name);
-    }
-  }
-  return katana::ResultSuccess();
-}
-
-katana::Result<void>
-RDGPartHeader::MarkEdgePropertiesPersistent(
-    const std::vector<std::string>& persist_edge_props) {
-  if (persist_edge_props.size() > edge_prop_info_list_.size()) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument,
-        "persist props sz: {} names, rdg.edge_prop_info_list_ sz: {}",
-        persist_edge_props.size(), edge_prop_info_list_.size());
-  }
-  for (uint32_t i = 0; i < persist_edge_props.size(); ++i) {
-    if (!persist_edge_props[i].empty()) {
-      edge_prop_info_list_[i].name = persist_edge_props[i];
-      edge_prop_info_list_[i].path = "";
-      edge_prop_info_list_[i].persist = true;
-      KATANA_LOG_DEBUG("edge persist {}", edge_prop_info_list_[i].name);
-    }
-  }
-  return katana::ResultSuccess();
-}
-
-void
 RDGPartHeader::UnbindFromStorage() {
   for (PropStorageInfo& prop : node_prop_info_list_) {
-    prop.path = "";
+    prop.NoteModify();
   }
   for (PropStorageInfo& prop : edge_prop_info_list_) {
-    prop.path = "";
+    prop.NoteModify();
   }
   for (PropStorageInfo& prop : part_prop_info_list_) {
-    prop.path = "";
+    prop.NoteModify();
   }
   topology_path_ = "";
 }
@@ -240,9 +143,7 @@ void
 tsuba::to_json(json& j, const std::vector<tsuba::PropStorageInfo>& vec_pmd) {
   j = json::array();
   for (const auto& pmd : vec_pmd) {
-    if (pmd.persist) {
-      j.push_back(pmd);
-    }
+    j.push_back(pmd);
   }
 }
 
@@ -312,14 +213,12 @@ tsuba::from_json(const json& j, tsuba::PartitionMetadata& pmd) {
 
 void
 tsuba::from_json(const nlohmann::json& j, tsuba::PropStorageInfo& propmd) {
-  j.at(0).get_to(propmd.name);
-  j.at(1).get_to(propmd.path);
+  j.at(0).get_to(propmd.name_);
+  j.at(1).get_to(propmd.path_);
+  propmd.state_ = PropStorageInfo::State::kAbsent;
 }
 
 void
 tsuba::to_json(json& j, const tsuba::PropStorageInfo& propmd) {
-  if (propmd.persist) {
-    j = json{propmd.name, propmd.path};
-  }
-  // creates a null value if property wasn't supposed to be persisted
+  j = json{propmd.name(), propmd.path()};
 }

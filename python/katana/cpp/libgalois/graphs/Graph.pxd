@@ -16,8 +16,8 @@ from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
 cdef extern from "tsuba/RDG.h" namespace "tsuba" nogil:
     cdef struct RDGLoadOptions:
         optional[uint32_t] partition_id_to_load
-        const vector[string]* node_properties
-        const vector[string]* edge_properties
+        optional[vector[string]] node_properties
+        optional[vector[string]] edge_properties
 
 
 # Omit the exception specifications here to

@@ -76,12 +76,20 @@ tsuba::LoadPropertySlice(
 katana::Result<void>
 tsuba::AddProperties(
     const katana::Uri& uri,
-    const std::vector<tsuba::PropStorageInfo>& properties, ReadGroup* grp,
+    const std::vector<tsuba::PropStorageInfo*>& properties, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn) {
-  for (const tsuba::PropStorageInfo& prop : properties) {
-    const std::string& name = prop.name;
-    const katana::Uri& path = uri.Join(prop.path);
+  for (tsuba::PropStorageInfo* prop : properties) {
+    if (!prop->IsAbsent()) {
+      return KATANA_ERROR(
+          ErrorCode::Exists, "property {} must be absent to be added",
+          std::quoted(prop->name()));
+    }
+    const std::string& name = prop->name();
+    const katana::Uri& path = uri.Join(prop->path());
+
+    prop->NoteLoad();
+
     std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
         std::async(
             std::launch::async,
@@ -124,15 +132,27 @@ tsuba::AddProperties(
 katana::Result<void>
 tsuba::AddPropertySlice(
     const katana::Uri& dir,
-    const std::vector<tsuba::PropStorageInfo>& properties,
+    const std::vector<tsuba::PropStorageInfo*>& properties,
     std::pair<uint64_t, uint64_t> range, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn) {
   uint64_t begin = range.first;
   uint64_t size = range.second - range.first;
-  for (const tsuba::PropStorageInfo& prop : properties) {
-    const std::string& name = prop.name;
-    const katana::Uri& path = dir.Join(prop.path);
+  for (tsuba::PropStorageInfo* prop : properties) {
+    if (!prop->IsAbsent()) {
+      return KATANA_ERROR(
+          ErrorCode::Exists, "property {} must be absent to be added",
+          std::quoted(prop->name()));
+    }
+    const std::string& name = prop->name();
+    const katana::Uri& path = dir.Join(prop->path());
+
+    prop->NoteLoad();
+
+    // since this property is going to be sliced it has no on disk form, so
+    // immediately mark it dirty
+    prop->NoteModify();
+
     std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
         std::async(
             std::launch::async,

@@ -2,6 +2,7 @@
 #define KATANA_LIBTSUBA_RDGPARTHEADER_H_
 
 #include <cassert>
+#include <optional>
 #include <vector>
 
 #include <arrow/api.h>
@@ -16,11 +17,87 @@
 
 namespace tsuba {
 
-struct PropStorageInfo {
-  std::string name;
-  std::string path;
-  bool persist{false};
-  bool written_out{false};
+/// PropStorageInfo objects track the state of properties, and sanity check their
+/// transitions. N.b., It does not "DO" the transitions, this structure is purely
+/// for bookkeeping
+///
+/// Properties have 3 states:
+///  * Absent - exists in storage but is not in memory
+///  * Clean  - in memory and matches what is in storage
+///  * Dirty  - in memory but does not match what is in storage
+///
+/// The state machine looks like this:
+///
+/// EXISTING                                     NEW
+/// PROPERTY          modify                   PROPERTY
+///   |   +---------------------------------+     |
+///   |   |              +-------+  modify  |     |
+///   |   |     +------->| Clean +------+   |     |
+///   |   | load|        +-+-----+      |   |     |
+///   |   |     |          |   ^        v   v     |
+///   |  +------+-+        |   |       +-------+  |
+///   +->| Absent |<-------+   +-------+ Dirty |<-+
+///      +--------+  unload     write  +-------+
+///
+/// Properties either start out in storage as part of an RDG on disk
+/// (EXISTING PROPERTY) or start out in memory as part of an RDG in
+/// memory (NEW PROPERTY)
+class PropStorageInfo {
+  enum class State {
+    kAbsent,
+    kClean,
+    kDirty,
+  };
+
+public:
+  PropStorageInfo(std::string name)
+      : name_(std::move(name)), path_(), state_(State::kDirty) {}
+
+  PropStorageInfo(std::string name, std::string path)
+      : name_(std::move(name)),
+        path_(std::move(path)),
+        state_(State::kAbsent) {}
+
+  void NoteLoad() {
+    KATANA_LOG_ASSERT(state_ == State::kAbsent);
+    state_ = State::kClean;
+  }
+
+  void NoteModify() {
+    path_.clear();
+    state_ = State::kDirty;
+  }
+
+  void NoteWrite(std::string_view new_path) {
+    KATANA_LOG_ASSERT(state_ == State::kDirty);
+    path_ = new_path;
+    state_ = State::kClean;
+  }
+
+  void NoteUnload() {
+    KATANA_LOG_ASSERT(state_ == State::kClean);
+    state_ = State::kAbsent;
+  }
+
+  bool IsAbsent() const { return state_ == State::kAbsent; }
+
+  bool IsClean() const { return state_ == State::kClean; }
+
+  bool IsDirty() const { return state_ == State::kDirty; }
+
+  const std::string& name() const { return name_; }
+  const std::string& path() const { return path_; }
+
+  friend void to_json(nlohmann::json& j, const PropStorageInfo& propmd);
+  friend void from_json(const nlohmann::json& j, PropStorageInfo& propmd);
+
+  // required for json
+  PropStorageInfo() = default;
+
+private:
+  std::string name_;
+  std::string path_;
+  State state_;
 };
 
 class KATANA_EXPORT RDGPartHeader {
@@ -28,10 +105,6 @@ public:
   static katana::Result<RDGPartHeader> Make(const katana::Uri& partition_path);
 
   katana::Result<void> Validate() const;
-
-  katana::Result<void> PrunePropsTo(
-      const std::vector<std::string>* node_props,
-      const std::vector<std::string>* edge_props);
 
   katana::Result<void> Write(
       RDGHandle handle, WriteGroup* writes,
@@ -43,27 +116,43 @@ public:
   // Property manipulation
   //
 
-  void AddNodePropStorageInfo(PropStorageInfo&& pmd) {
+  katana::Result<std::vector<PropStorageInfo*>> SelectNodeProperties(
+      const std::optional<std::vector<std::string>>& names = std::nullopt) {
+    return SelectProperties(&node_prop_info_list_, names);
+  }
+
+  katana::Result<std::vector<PropStorageInfo*>> SelectEdgeProperties(
+      const std::optional<std::vector<std::string>>& names = std::nullopt) {
+    return SelectProperties(&edge_prop_info_list_, names);
+  }
+
+  katana::Result<std::vector<PropStorageInfo*>> SelectPartitionProperties() {
+    return SelectProperties(&part_prop_info_list_, std::nullopt);
+  }
+
+  void UpsertNodePropStorageInfo(PropStorageInfo&& pmd) {
     auto pmd_it = std::find_if(
         node_prop_info_list_.begin(), node_prop_info_list_.end(),
-        [&](const PropStorageInfo& my_pmd) { return my_pmd.name == pmd.name; });
+        [&](const PropStorageInfo& my_pmd) {
+          return my_pmd.name() == pmd.name();
+        });
     if (pmd_it == node_prop_info_list_.end()) {
       node_prop_info_list_.emplace_back(std::move(pmd));
     } else {
-      // If we already have a record, clear the path so we will rewrite it
-      pmd_it->path = "";
+      pmd_it->IsDirty();
     }
   }
 
-  void AddEdgePropStorageInfo(PropStorageInfo&& pmd) {
+  void UpsertEdgePropStorageInfo(PropStorageInfo&& pmd) {
     auto pmd_it = std::find_if(
         edge_prop_info_list_.begin(), edge_prop_info_list_.end(),
-        [&](const PropStorageInfo& my_pmd) { return my_pmd.name == pmd.name; });
+        [&](const PropStorageInfo& my_pmd) {
+          return my_pmd.name() == pmd.name();
+        });
     if (pmd_it == edge_prop_info_list_.end()) {
       edge_prop_info_list_.emplace_back(std::move(pmd));
     } else {
-      // If we already have a record, clear the path so we will rewrite it
-      pmd_it->path = "";
+      pmd_it->IsDirty();
     }
   }
 
@@ -78,18 +167,6 @@ public:
     KATANA_LOG_DEBUG_ASSERT(i < p.size());
     p.erase(p.begin() + i);
   }
-
-  //
-  // Property persistence
-  //
-
-  void MarkAllPropertiesPersistent();
-
-  katana::Result<void> MarkNodePropertiesPersistent(
-      const std::vector<std::string>& persist_node_props);
-
-  katana::Result<void> MarkEdgePropertiesPersistent(
-      const std::vector<std::string>& persist_edge_props);
 
   //
   // Accessors/Mutators
@@ -134,6 +211,53 @@ public:
   friend void from_json(const nlohmann::json& j, RDGPartHeader& header);
 
 private:
+  static katana::Result<std::vector<PropStorageInfo*>> DoSelectProperties(
+      std::vector<PropStorageInfo>* storage_info,
+      const std::vector<std::string>& names) {
+    std::unordered_map<std::string, std::pair<PropStorageInfo*, bool>>
+        name_to_slot;
+    for (auto& prop : *storage_info) {
+      name_to_slot.emplace(prop.name(), std::make_pair(&prop, false));
+    }
+
+    std::vector<PropStorageInfo*> properties;
+    for (const auto& name : names) {
+      auto it = name_to_slot.find(name);
+      if (it == name_to_slot.end()) {
+        return KATANA_ERROR(
+            ErrorCode::PropertyNotFound, "no property named {}",
+            std::quoted(name));
+      }
+      if (it->second.second) {
+        return KATANA_ERROR(
+            ErrorCode::InvalidArgument, "property cannot be loaded twice ({})",
+            std::quoted(name));
+      }
+      it->second.second = true;
+      properties.emplace_back(it->second.first);
+    }
+    return properties;
+  }
+
+  static katana::Result<std::vector<PropStorageInfo*>> DoSelectProperties(
+      std::vector<PropStorageInfo>* storage_info) {
+    // all of the properties
+    std::vector<PropStorageInfo*> properties;
+    for (auto& prop : *storage_info) {
+      properties.emplace_back(&prop);
+    }
+    return properties;
+  }
+
+  static katana::Result<std::vector<PropStorageInfo*>> SelectProperties(
+      std::vector<PropStorageInfo>* storage_info,
+      const std::optional<std::vector<std::string>>& names) {
+    if (names) {
+      return DoSelectProperties(storage_info, names.value());
+    }
+    return DoSelectProperties(storage_info);
+  }
+
   static katana::Result<RDGPartHeader> MakeJson(
       const katana::Uri& partition_path);
 

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <arrow/api.h>
@@ -25,7 +26,7 @@ namespace tsuba {
 
 class RDGManifest;
 class RDGCore;
-struct PropStorageInfo;
+class PropStorageInfo;
 
 struct KATANA_EXPORT RDGLoadOptions {
   /// Which partition of the RDG on storage should be loaded
@@ -34,10 +35,10 @@ struct KATANA_EXPORT RDGLoadOptions {
   std::optional<uint32_t> partition_id_to_load;
   /// List of node properties that should be loaded
   /// nullptr means all node properties will be loaded
-  const std::vector<std::string>* node_properties{nullptr};
+  std::optional<std::vector<std::string>> node_properties{std::nullopt};
   /// List of edge properties that should be loaded
   /// nullptr means all edge properties will be loaded
-  const std::vector<std::string>* edge_properties{nullptr};
+  std::optional<std::vector<std::string>> edge_properties{std::nullopt};
 };
 
 class KATANA_EXPORT RDG {
@@ -114,15 +115,32 @@ public:
   katana::Result<void> RemoveNodeProperty(uint32_t i);
   katana::Result<void> RemoveEdgeProperty(uint32_t i);
 
+  /// Ensure the node property at index `i` was written back to storage
+  /// then free its memory
   katana::Result<void> UnloadNodeProperty(uint32_t i);
+
+  /// Ensure the edge property at index `i` was written back to storage
+  /// then free its memory
   katana::Result<void> UnloadEdgeProperty(uint32_t i);
 
-  void MarkAllPropertiesPersistent();
+  /// Load node property with a particular name and insert it into the
+  /// property table at index. If index is greater than the last column
+  /// index in the table, it is put in the last slot. A given property
+  /// cannot be loaded more than once
+  katana::Result<void> LoadNodeProperty(
+      const std::string& name,
+      uint32_t i = std::numeric_limits<uint32_t>::max());
 
-  katana::Result<void> MarkNodePropertiesPersistent(
-      const std::vector<std::string>& persist_node_props);
-  katana::Result<void> MarkEdgePropertiesPersistent(
-      const std::vector<std::string>& persist_edge_props);
+  /// Load edge property with a particular name and insert it into the
+  /// property table at index. If index is greater than the last column
+  /// index in the table, it is put in the last slot. A given property
+  /// cannot be loaded more than once
+  katana::Result<void> LoadEdgeProperty(
+      const std::string& name,
+      uint32_t i = std::numeric_limits<uint32_t>::max());
+
+  std::vector<std::string> ListNodeProperties() const;
+  std::vector<std::string> ListEdgeProperties() const;
 
   /// Explain to graph how it is derived from previous version
   void AddLineage(const std::string& command_line);
@@ -228,7 +246,10 @@ private:
 
   void InitEmptyTables();
 
-  katana::Result<void> DoMake(const katana::Uri& metadata_dir);
+  katana::Result<void> DoMake(
+      const std::vector<PropStorageInfo*>& node_props,
+      const std::vector<PropStorageInfo*>& edge_props,
+      const katana::Uri& metadata_dir);
 
   static katana::Result<RDG> Make(
       const RDGManifest& manifest, const RDGLoadOptions& opts);

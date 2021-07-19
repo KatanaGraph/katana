@@ -26,36 +26,14 @@ jobs:
       - name: Info
         run: echo "${{ github.event.pull_request.body }}"
 
-  do_package:
-    if: |
-      github.event_name != 'pull_request' ||
-      (
-        !contains(github.event.pull_request.body, '[no package]')
-      )
-    runs-on: ubuntu-latest
-    steps:
-      - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
-
   do_python_package:
     needs:
-      - do_package
       - do_python
     if: |
       github.event_name != 'pull_request' ||
       (
+        !contains(github.event.pull_request.body, '[no package]') &&
         !contains(github.event.pull_request.body, '[no Python package]')
-      )
-    runs-on: ubuntu-latest
-    steps:
-      - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
-
-  do_test:
-    if: |
-      github.event_name != 'pull_request' ||
-      (
-        !contains(github.event.pull_request.body, '[no test]')
       )
     runs-on: ubuntu-latest
     steps:
@@ -64,11 +42,11 @@ jobs:
 
   do_python_test:
     needs:
-      - do_test
       - do_python
     if: |
       github.event_name != 'pull_request' ||
       (
+        !contains(github.event.pull_request.body, '[no test]') &&
         !contains(github.event.pull_request.body, '[no Python test]')
       )
     runs-on: ubuntu-latest

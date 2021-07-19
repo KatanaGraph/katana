@@ -18,9 +18,9 @@
  */
 
 /**
- * @file katana/DynamicBitsetCommon.h
+ * @file katana/DynamicBitset.h
  *
- * Contains the DynamicBitsetCommon class and most of its implementation.
+ * Contains the DynamicBitset class and most of its implementation.
  */
 
 #ifndef KATANA_LIBGALOIS_KATANA_DYNAMICBITSET_H_
@@ -39,36 +39,22 @@
 #include "katana/config.h"
 
 namespace katana {
-
-template <bool for_gpu>
-class KATANA_EXPORT DynamicBitsetCommon;
-
-template <typename integer, bool for_gpu>
-struct KATANA_EXPORT DynamicBitsetHelper {
-  static std::vector<integer> GetOffsets(
-      const DynamicBitsetCommon<for_gpu>& bitset);
-
-  static void AppendOffsets(
-      const DynamicBitsetCommon<for_gpu>& bitset, std::vector<integer>* vec);
-};
-
 /**
  * Concurrent dynamically allocated bitset
  **/
-template <bool for_gpu = false>
-class KATANA_EXPORT DynamicBitsetCommon {
-  katana::PODVector<katana::CopyableAtomic<uint64_t>, for_gpu> bitvec_{};
+class KATANA_EXPORT DynamicBitset {
+  katana::PODVector<katana::CopyableAtomic<uint64_t>> bitvec_;
   size_t num_bits_{0};
 
 public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
-  DynamicBitsetCommon() = default;
+  explicit DynamicBitset(const bool pinned = false) : bitvec_(pinned){};
 
-  DynamicBitsetCommon(DynamicBitsetCommon&& bitset)
+  DynamicBitset(DynamicBitset&& bitset)
       : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {}
 
-  DynamicBitsetCommon& operator=(DynamicBitsetCommon&& bitset) {
+  DynamicBitset& operator=(DynamicBitset&& bitset) {
     bitvec_ = std::move(bitset.bitvec_);
     num_bits_ = bitset.num_bits_;
     bitset.num_bits_ = 0;
@@ -277,7 +263,7 @@ public:
   }
 
   // assumes bit_vector is not updated (set) in parallel
-  void bitwise_or(const DynamicBitsetCommon& other);
+  void bitwise_or(const DynamicBitset& other);
 
   // assumes bit_vector is not updated (set) in parallel
   void bitwise_not();
@@ -289,7 +275,7 @@ public:
    *
    * @param other Other bitset to do bitwise and with
    */
-  void bitwise_and(const DynamicBitsetCommon& other);
+  void bitwise_and(const DynamicBitset& other);
 
   /**
    * Does an IN-PLACE bitwise and of 2 passed in bitsets and saves to this
@@ -298,15 +284,14 @@ public:
    * @param other1 Bitset to and with other 2
    * @param other2 Bitset to and with other 1
    */
-  void bitwise_and(
-      const DynamicBitsetCommon& other1, const DynamicBitsetCommon& other2);
+  void bitwise_and(const DynamicBitset& other1, const DynamicBitset& other2);
 
   /**
    * Does an IN-PLACE bitwise xor of this bitset and another bitset
    *
    * @param other Other bitset to do bitwise xor with
    */
-  void bitwise_xor(const DynamicBitsetCommon& other);
+  void bitwise_xor(const DynamicBitset& other);
 
   /**
    * Does an IN-PLACE bitwise and of 2 passed in bitsets and saves to this
@@ -315,8 +300,7 @@ public:
    * @param other1 Bitset to xor with other 2
    * @param other2 Bitset to xor with other 1
    */
-  void bitwise_xor(
-      const DynamicBitsetCommon& other1, const DynamicBitsetCommon& other2);
+  void bitwise_xor(const DynamicBitset& other1, const DynamicBitset& other2);
 
   /**
    * Count how many bits are set in the bitset
@@ -333,9 +317,7 @@ public:
    * @returns vector with offsets into set bits
    */
   template <typename integer>
-  std::vector<integer> GetOffsets() const {
-    return DynamicBitsetHelper<integer, for_gpu>::GetOffsets(*this);
-  }
+  std::vector<integer> GetOffsets() const;
 
   /**
    * Given a vector, appends the set bits in this bitset in order
@@ -343,16 +325,26 @@ public:
    * Do NOT call in a parallel region as it uses katana::on_each.
    */
   template <typename integer>
-  void AppendOffsets(std::vector<integer>* vec) const {
-    return DynamicBitsetHelper<integer, for_gpu>::AppendOffsets(*this, vec);
-  }
+  void AppendOffsets(std::vector<integer>* vec) const;
 
   //! this is defined to
   using tt_is_copyable = int;
 };
 
+template <>
+std::vector<uint32_t> DynamicBitset::GetOffsets() const;
+
+template <>
+std::vector<uint64_t> DynamicBitset::GetOffsets() const;
+
+template <>
+void DynamicBitset::AppendOffsets(std::vector<uint32_t>* offsets) const;
+
+template <>
+void DynamicBitset::AppendOffsets(std::vector<uint64_t>* offsets) const;
+
 //! An empty bitset object; used mainly by InvalidBitsetFn
-extern katana::DynamicBitsetCommon<false> EmptyBitset;
+extern katana::DynamicBitset EmptyBitset;
 
 //! A structure representing an empty bitset.
 struct KATANA_EXPORT InvalidBitsetFn {
@@ -360,14 +352,10 @@ struct KATANA_EXPORT InvalidBitsetFn {
   static constexpr bool is_valid() { return false; }
 
   //! Returns the empty bitset
-  static katana::DynamicBitsetCommon<false>& get() { return EmptyBitset; }
+  static katana::DynamicBitset& get() { return EmptyBitset; }
 
   //! No-op since it's an empty bitset
   static void reset_range(size_t, size_t) {}
 };
-
-using DynamicBitset = DynamicBitsetCommon<false>;
-using DynamicBitsetForGpu = DynamicBitsetCommon<true>;
-
 }  // namespace katana
 #endif

@@ -18,19 +18,17 @@
  */
 
 /**
- * @file DynamicBitsetCommon.cpp
+ * @file DynamicBitset.cpp
  */
 
 #include "katana/DynamicBitset.h"
 
 #include "katana/Galois.h"
 
-KATANA_EXPORT katana::DynamicBitsetCommon<false> katana::EmptyBitset;
+KATANA_EXPORT katana::DynamicBitset katana::EmptyBitset(false);
 
-template <bool for_gpu>
 void
-katana::DynamicBitsetCommon<for_gpu>::bitwise_or(
-    const DynamicBitsetCommon& other) {
+katana::DynamicBitset::bitwise_or(const DynamicBitset& other) {
   KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
@@ -38,18 +36,15 @@ katana::DynamicBitsetCommon<for_gpu>::bitwise_or(
       [&](size_t i) { bitvec_[i] |= other_bitvec[i]; }, katana::no_stats());
 }
 
-template <bool for_gpu>
 void
-katana::DynamicBitsetCommon<for_gpu>::bitwise_not() {
+katana::DynamicBitset::bitwise_not() {
   katana::do_all(
       katana::iterate(size_t{0}, bitvec_.size()),
       [&](size_t i) { bitvec_[i] = ~bitvec_[i]; }, katana::no_stats());
 }
 
-template <bool for_gpu>
 void
-katana::DynamicBitsetCommon<for_gpu>::bitwise_and(
-    const DynamicBitsetCommon<for_gpu>& other) {
+katana::DynamicBitset::bitwise_and(const DynamicBitset& other) {
   KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
@@ -57,11 +52,9 @@ katana::DynamicBitsetCommon<for_gpu>::bitwise_and(
       [&](size_t i) { bitvec_[i] &= other_bitvec[i]; }, katana::no_stats());
 }
 
-template <bool for_gpu>
 void
-katana::DynamicBitsetCommon<for_gpu>::bitwise_and(
-    const DynamicBitsetCommon<for_gpu>& other1,
-    const DynamicBitsetCommon<for_gpu>& other2) {
+katana::DynamicBitset::bitwise_and(
+    const DynamicBitset& other1, const DynamicBitset& other2) {
   KATANA_LOG_DEBUG_ASSERT(size() == other1.size());
   KATANA_LOG_DEBUG_ASSERT(size() == other2.size());
   const auto& other_bitvec1 = other1.get_vec();
@@ -73,10 +66,8 @@ katana::DynamicBitsetCommon<for_gpu>::bitwise_and(
       katana::no_stats());
 }
 
-template <bool for_gpu>
 void
-katana::DynamicBitsetCommon<for_gpu>::bitwise_xor(
-    const DynamicBitsetCommon<for_gpu>& other) {
+katana::DynamicBitset::bitwise_xor(const DynamicBitset& other) {
   KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
@@ -84,11 +75,9 @@ katana::DynamicBitsetCommon<for_gpu>::bitwise_xor(
       [&](size_t i) { bitvec_[i] ^= other_bitvec[i]; }, katana::no_stats());
 }
 
-template <bool for_gpu>
 void
-katana::DynamicBitsetCommon<for_gpu>::bitwise_xor(
-    const DynamicBitsetCommon<for_gpu>& other1,
-    const DynamicBitsetCommon<for_gpu>& other2) {
+katana::DynamicBitset::bitwise_xor(
+    const DynamicBitset& other1, const DynamicBitset& other2) {
   KATANA_LOG_DEBUG_ASSERT(size() == other1.size());
   KATANA_LOG_DEBUG_ASSERT(size() == other2.size());
   const auto& other_bitvec1 = other1.get_vec();
@@ -100,9 +89,8 @@ katana::DynamicBitsetCommon<for_gpu>::bitwise_xor(
       katana::no_stats());
 }
 
-template <bool for_gpu>
 size_t
-katana::DynamicBitsetCommon<for_gpu>::count() const {
+katana::DynamicBitset::count() const {
   katana::GAccumulator<size_t> ret;
   katana::do_all(
       katana::iterate(bitvec_.begin(), bitvec_.end()),
@@ -121,11 +109,10 @@ katana::DynamicBitsetCommon<for_gpu>::count() const {
 }
 
 namespace {
-template <typename Integer, bool for_gpu>
+template <typename Integer>
 void
 ComputeOffsets(
-    const katana::DynamicBitsetCommon<for_gpu>& bitset,
-    std::vector<Integer>* offsets) {
+    const katana::DynamicBitset& bitset, std::vector<Integer>* offsets) {
   // TODO uint32_t is somewhat dangerous; change in the future
   uint32_t activeThreads = katana::getActiveThreads();
   std::vector<Integer> tPrefixBitCounts(activeThreads);
@@ -177,39 +164,30 @@ ComputeOffsets(
 }
 }  //namespace
 
-template <bool for_gpu>
-struct katana::DynamicBitsetHelper<uint32_t, for_gpu> {
-  std::vector<uint32_t> GetOffsets(
-      const katana::DynamicBitsetCommon<for_gpu>& bitset) {
-    std::vector<uint32_t> offsets;
-    ComputeOffsets<uint32_t>(bitset, &offsets);
-    return offsets;
-  }
-  void AppendOffsets(
-      const katana::DynamicBitsetCommon<for_gpu>& bitset,
-      std::vector<uint32_t>* offsets) {
-    ComputeOffsets<uint32_t>(bitset, offsets);
-  }
-};
-template struct katana::DynamicBitsetHelper<uint32_t, true>;
-template struct katana::DynamicBitsetHelper<uint32_t, false>;
+template <>
+std::vector<uint32_t>
+katana::DynamicBitset::GetOffsets<uint32_t>() const {
+  std::vector<uint32_t> offsets;
+  ComputeOffsets<uint32_t>(*this, &offsets);
+  return offsets;
+}
 
-template <bool for_gpu>
-struct katana::DynamicBitsetHelper<uint64_t, for_gpu> {
-  std::vector<uint64_t> GetOffsets(
-      const katana::DynamicBitsetCommon<for_gpu>& bitset) {
-    std::vector<uint64_t> offsets;
-    ComputeOffsets<uint64_t>(bitset, &offsets);
-    return offsets;
-  }
-  void AppendOffsets(
-      const katana::DynamicBitsetCommon<for_gpu>& bitset,
-      std::vector<uint64_t>* offsets) {
-    ComputeOffsets<uint64_t>(bitset, offsets);
-  }
-};
-template struct katana::DynamicBitsetHelper<uint64_t, true>;
-template struct katana::DynamicBitsetHelper<uint64_t, false>;
+template <>
+std::vector<uint64_t>
+katana::DynamicBitset::GetOffsets<uint64_t>() const {
+  std::vector<uint64_t> offsets;
+  ComputeOffsets<uint64_t>(*this, &offsets);
+  return offsets;
+}
 
-template class katana::DynamicBitsetCommon<true>;
-template class katana::DynamicBitsetCommon<false>;
+template <>
+void
+katana::DynamicBitset::AppendOffsets(std::vector<uint32_t>* offsets) const {
+  ComputeOffsets<uint32_t>(*this, offsets);
+}
+
+template <>
+void
+katana::DynamicBitset::AppendOffsets(std::vector<uint64_t>* offsets) const {
+  ComputeOffsets<uint64_t>(*this, offsets);
+}

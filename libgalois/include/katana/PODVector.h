@@ -52,11 +52,12 @@ namespace katana {
  * If the allocation is large and of known size, then check katana::NUMAArray.
  * Read CONTRIBUTING.md for a more detailed comparison between these types.
  */
-template <typename _Tp, bool pinned = false>
+template <typename _Tp>
 class PODVector {
   _Tp* data_;
   size_t capacity_;
   size_t size_;
+  bool pinned_;
 
   constexpr static size_t kMinNonZeroCapacity = 8;
 
@@ -73,25 +74,33 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  PODVector() : data_(NULL), capacity_(0), size_(0) {}
+  explicit PODVector(const bool pinned = false)
+      : data_(NULL), capacity_(0), size_(0), pinned_(pinned) {}
 
   template <class InputIterator>
-  PODVector(InputIterator first, InputIterator last)
-      : data_(NULL), capacity_(0), size_(0) {
+  PODVector(InputIterator first, InputIterator last, const bool pinned)
+      : data_(NULL), capacity_(0), size_(0), pinned_(pinned) {
     size_t to_add = last - first;
     resize(to_add);
     std::copy_n(first, to_add, begin());
   }
 
-  PODVector(size_t n) : data_(NULL), capacity_(0), size_(0) { resize(n); }
+  explicit PODVector(size_t n, const bool pinned)
+      : data_(NULL), capacity_(0), size_(0), pinned_(pinned) {
+    resize(n);
+  }
 
   //! disabled (shallow) copy constructor
   PODVector(const PODVector&) = delete;
 
   //! move constructor
   PODVector(PODVector&& v)
-      : data_(v.data_), capacity_(v.capacity_), size_(v.size_) {
+      : data_(v.data_),
+        capacity_(v.capacity_),
+        size_(v.size_),
+        pinned_(v.pinned_) {
     v.data_ = NULL;
+    v.pinned_ = false;
     v.capacity_ = 0;
     v.size_ = 0;
   }
@@ -102,19 +111,27 @@ public:
   //! move assignment operator
   PODVector& operator=(PODVector&& v) {
     if (data_ != NULL) {
+      if (pinned_) {
+        munlock(data_, capacity_ * sizeof(_Tp));
+      }
       free(data_);
     }
     data_ = v.data_;
     capacity_ = v.capacity_;
     size_ = v.size_;
+    pinned_ = v.pinned_;
     v.data_ = NULL;
     v.capacity_ = 0;
     v.size_ = 0;
+    v.pinned_ = false;
     return *this;
   }
 
   ~PODVector() {
     if (data_ != NULL) {
+      if (pinned_) {
+        munlock(data_, capacity_ * sizeof(_Tp));
+      }
       free(data_);
     }
   }
@@ -147,7 +164,7 @@ public:
   void shrink_to_fit() {
     if (size_ == 0) {
       if (data_ != NULL) {
-        if constexpr (pinned) {
+        if (pinned_) {
           munlock(data_, capacity_ * sizeof(_Tp));
         }
         free(data_);
@@ -155,7 +172,7 @@ public:
         capacity_ = 0;
       }
     } else if (size_ < capacity_) {
-      if constexpr (pinned) {
+      if (pinned_) {
         munlock(data_, capacity_ * sizeof(_Tp));
       }
       capacity_ = std::max(size_, kMinNonZeroCapacity);
@@ -163,7 +180,7 @@ public:
       _Tp* new_data_ =
           static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
       KATANA_LOG_DEBUG_ASSERT(new_data_);
-      if constexpr (pinned) {
+      if (pinned_) {
         mlock(new_data_, new_bytes);
       }
       data_ = new_data_;
@@ -176,7 +193,7 @@ public:
     }
 
     // The price of unpinning&pinning again exceeds the savings below
-    if constexpr (!pinned) {
+    if (!pinned_) {
       // When reallocing, don't pay for elements greater than size_
       shrink_to_fit();
     }
@@ -190,7 +207,7 @@ public:
       capacity_ <<= 1;
     }
 
-    if constexpr (pinned) {
+    if (pinned_) {
       if (data_ != nullptr) {
         munlock(data_, old_bytes);
       }
@@ -199,7 +216,7 @@ public:
     _Tp* new_data_ =
         static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
     KATANA_LOG_DEBUG_ASSERT(new_data_);
-    if constexpr (pinned) {
+    if (pinned_) {
       mlock(new_data_, new_bytes);
     }
     data_ = new_data_;

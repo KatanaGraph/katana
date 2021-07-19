@@ -483,7 +483,7 @@ struct StructProperty
     auto type = res.ValueOrDie();
     arrow::FixedSizeBinaryBuilder builder(type);
     // TODO(lhc): replace this with AppendEmptyValues() on Arrow >= 3.0.
-    katana::PODVector<uint8_t> data(sizeof(T) * num_rows);
+    katana::PODVector<uint8_t> data(sizeof(T) * num_rows, false);
 
     if (auto res = builder.AppendValues(data.data(), num_rows); !res.ok()) {
       return KATANA_ERROR(

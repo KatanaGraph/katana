@@ -25,7 +25,7 @@
 
 #include "katana/Galois.h"
 
-KATANA_EXPORT katana::DynamicBitset katana::EmptyBitset(false);
+KATANA_EXPORT katana::DynamicBitset katana::EmptyBitset;
 
 void
 katana::DynamicBitset::bitwise_or(const DynamicBitset& other) {

@@ -298,7 +298,7 @@ BetweennessCentralityLevel(
   }
 
   katana::NUMAArray<BCLevelNodeDataTy> graph_data;
-  katana::DynamicBitset active_edges(false);
+  katana::DynamicBitset active_edges;
   // graph initialization, then main loop
   LevelInitializeGraph(&graph, &graph_data, &active_edges);
 

@@ -287,8 +287,8 @@ SynchronousDirectOpt(
 
   Loop loop;
 
-  katana::DynamicBitset front_bitset(false);
-  katana::DynamicBitset next_bitset(false);
+  katana::DynamicBitset front_bitset;
+  katana::DynamicBitset next_bitset;
 
   uint32_t num_nodes = graph.size();
   uint64_t num_edges = graph.num_edges();

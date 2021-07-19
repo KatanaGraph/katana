@@ -36,6 +36,8 @@
 
 namespace katana {
 
+enum class MemoryPinType : uint8_t { Usual = 0, Pinned = 1 };
+
 /**
  * A specialization of std::vector of plain-old-datatype (POD) objects that
  * does not initialize/construct or destruct the objects.
@@ -74,19 +76,30 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  explicit PODVector(const bool pinned = false)
-      : data_(NULL), capacity_(0), size_(0), pinned_(pinned) {}
+  explicit PODVector(const MemoryPinType mpt = MemoryPinType::Usual)
+      : data_(NULL),
+        capacity_(0),
+        size_(0),
+        pinned_(mpt == MemoryPinType::Pinned) {}
 
   template <class InputIterator>
-  PODVector(InputIterator first, InputIterator last, const bool pinned)
-      : data_(NULL), capacity_(0), size_(0), pinned_(pinned) {
+  PODVector(
+      InputIterator first, InputIterator last,
+      const MemoryPinType mpt = MemoryPinType::Usual)
+      : data_(NULL),
+        capacity_(0),
+        size_(0),
+        pinned_(mpt == MemoryPinType::Pinned) {
     size_t to_add = last - first;
     resize(to_add);
     std::copy_n(first, to_add, begin());
   }
 
-  explicit PODVector(size_t n, const bool pinned)
-      : data_(NULL), capacity_(0), size_(0), pinned_(pinned) {
+  explicit PODVector(size_t n, const MemoryPinType mpt = MemoryPinType::Usual)
+      : data_(NULL),
+        capacity_(0),
+        size_(0),
+        pinned_(mpt == MemoryPinType::Pinned) {
     resize(n);
   }
 

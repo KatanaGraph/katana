@@ -653,7 +653,7 @@ ParallelCreateEdges(
 
         std::vector<GNode> repr_node_ids(
             kLoneNodesCoarsenFactor, std::numeric_limits<GNode>::max());
-        katana::DynamicBitset new_coarsen_node_filter(false);
+        katana::DynamicBitset new_coarsen_node_filter;
         new_coarsen_node_filter.resize(kLoneNodesCoarsenFactor);
 
         // 1) Find minimum node id from a match.
@@ -714,7 +714,7 @@ ParallelCreateEdges(
         }
         uint32_t num_hedges = fine_graphs[i]->GetHedges();
         uint32_t tot_size = fine_graphs[i]->size();
-        katana::DynamicBitset new_coarsen_node_filter(false);
+        katana::DynamicBitset new_coarsen_node_filter;
         new_coarsen_node_filter.resize(tot_size);
 
         // Set nodes which were newly included in a match.
@@ -987,7 +987,7 @@ Coarsen(
   std::vector<uint32_t> current_num_nodes(num_partitions);
   std::vector<uint32_t> new_num_nodes(num_partitions);
   std::vector<MetisGraph*> final_graph(num_partitions, nullptr);
-  katana::DynamicBitset graph_is_done(false);
+  katana::DynamicBitset graph_is_done;
 
   graph_is_done.resize(num_partitions);
   graph_is_done.reset();

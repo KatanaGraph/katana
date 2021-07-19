@@ -49,7 +49,8 @@ class KATANA_EXPORT DynamicBitset {
 public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
-  explicit DynamicBitset(const bool pinned = false) : bitvec_(pinned){};
+  explicit DynamicBitset(const MemoryPinType mpt = MemoryPinType::Usual)
+      : bitvec_(mpt){};
 
   DynamicBitset(DynamicBitset&& bitset)
       : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {}

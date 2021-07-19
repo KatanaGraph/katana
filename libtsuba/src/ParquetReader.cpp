@@ -411,8 +411,6 @@ tsuba::ParquetReader::FixTable(std::shared_ptr<arrow::Table>&& _table) {
   std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
   arrow::SchemaBuilder schema_builder;
   for (int i = 0, size = table->num_columns(); i < size; ++i) {
-    if (table->num_rows() > 0) {
-    }
     auto fixed_column_res = HandleBadParquetTypes(table->column(i));
     if (!fixed_column_res) {
       return fixed_column_res.error();

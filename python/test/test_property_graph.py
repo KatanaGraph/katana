@@ -18,8 +18,6 @@ def test_load(property_graph):
 
 
 def test_write(property_graph):
-    # TODO(amp): mark_all_properties_persistent shouldn't be required. Why is it?
-    property_graph.mark_all_properties_persistent()
     with TemporaryDirectory() as tmpdir:
         property_graph.write(tmpdir)
         old_property_graph = property_graph
@@ -36,8 +34,6 @@ def test_write(property_graph):
 # TODO(amp): Reinstant this test once it matches the actual RDG semantics.
 @pytest.mark.skip("Does not work. Underlying semantics may be wrong or different.")
 def test_commit(property_graph):
-    # TODO(amp): mark_all_properties_persistent shouldn't be required. Why is it?
-    property_graph.mark_all_properties_persistent()
     with TemporaryDirectory() as tmpdir:
         property_graph.path = tmpdir
         property_graph.write()
@@ -210,7 +206,6 @@ def test_load_graphml():
 def test_load_graphml_write():
     input_file = Path(__file__).parent.parent.parent / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
     pg = PropertyGraph.from_graphml(input_file)
-    pg.mark_all_properties_persistent()
     with TemporaryDirectory() as tmpdir:
         pg.write(tmpdir)
         del pg

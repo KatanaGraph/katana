@@ -79,47 +79,27 @@ StoreArrowArrayAtName(
   return new_path.BaseName();
 }
 
-katana::Result<std::vector<tsuba::PropStorageInfo>>
+katana::Result<void>
 WriteProperties(
-    const arrow::Table& props,
-    const std::vector<tsuba::PropStorageInfo>& prop_info,
+    const arrow::Table& props, std::vector<tsuba::PropStorageInfo*> prop_info,
     const katana::Uri& dir, tsuba::WriteGroup* desc) {
   const auto& schema = props.schema();
 
   std::vector<std::string> next_paths;
-  int in_memory_idx = 0;
   for (size_t i = 0, n = prop_info.size(); i < n; ++i) {
-    if (prop_info[i].written_out) {
+    if (!prop_info[i]->IsDirty()) {
       continue;
     }
-    int col_idx = in_memory_idx++;
-    if (!prop_info[i].persist || !prop_info[i].path.empty()) {
-      continue;
-    }
-    auto name = prop_info[i].name.empty() ? schema->field(col_idx)->name()
-                                          : prop_info[i].name;
-    auto name_res =
-        StoreArrowArrayAtName(props.column(col_idx), dir, name, desc);
-    if (!name_res) {
-      return name_res.error().WithContext("storing arrow array");
-    }
-    next_paths.emplace_back(name_res.value());
+    std::string name = prop_info[i]->name().empty() ? schema->field(i)->name()
+                                                    : prop_info[i]->name();
+    std::string path =
+        KATANA_CHECKED(StoreArrowArrayAtName(props.column(i), dir, name, desc));
+
+    prop_info[i]->WasWritten(path);
   }
   TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
 
-  if (next_paths.empty()) {
-    return prop_info;
-  }
-
-  std::vector<tsuba::PropStorageInfo> next_properties = prop_info;
-  auto it = next_paths.begin();
-  for (auto& v : next_properties) {
-    if (v.persist && v.path.empty()) {
-      v.path = *it++;
-    }
-  }
-
-  return next_properties;
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>
@@ -174,10 +154,8 @@ AddNodePropStorageInfo(
     tsuba::RDGCore* core, const std::shared_ptr<arrow::Table>& props) {
   const auto& schema = props->schema();
   for (int i = 0, end = props->num_columns(); i < end; ++i) {
-    core->part_header().AddNodePropStorageInfo(tsuba::PropStorageInfo{
-        .name = schema->field(i)->name(),
-        .path = "",
-    });
+    core->part_header().UpsertNodePropStorageInfo(
+        tsuba::PropStorageInfo(schema->field(i)->name()));
   }
 }
 
@@ -186,10 +164,8 @@ AddEdgePropStorageInfo(
     tsuba::RDGCore* core, const std::shared_ptr<arrow::Table>& props) {
   const auto& schema = props->schema();
   for (int i = 0, end = props->num_columns(); i < end; ++i) {
-    core->part_header().AddEdgePropStorageInfo(tsuba::PropStorageInfo{
-        .name = schema->field(i)->name(),
-        .path = "",
-    });
+    core->part_header().UpsertEdgePropStorageInfo(
+        tsuba::PropStorageInfo(schema->field(i)->name()));
   }
 }
 
@@ -201,6 +177,7 @@ tsuba::RDG::AddPartitionMetadataArray(
   auto field = props->schema()->field(0);
   const std::string& name = field->name();
   std::shared_ptr<arrow::ChunkedArray> col = props->column(0);
+
   if (name.find(kMirrorNodesPropName) == 0) {
     AddMirrorNodes(std::move(col));
   } else if (name.find(kMasterNodesPropName) == 0) {
@@ -259,84 +236,53 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
-  for (unsigned i = 0; i < mirror_nodes_.size(); ++i) {
-    auto name = MirrorPropName(i);
-    auto mirr_res = StoreArrowArrayAtName(mirror_nodes_[i], dir, name, desc);
-    if (!mirr_res) {
-      return mirr_res.error().WithContext("storing mirrors[{}] arrow array", i);
-    }
-    next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = name,
-        .path = std::move(mirr_res.value()),
-        .persist = true,
-    });
+  for (size_t i = 0; i < mirror_nodes_.size(); ++i) {
+    std::string name = MirrorPropName(i);
+    std::string path = KATANA_CHECKED_CONTEXT(
+        StoreArrowArrayAtName(mirror_nodes_[i], dir, name, desc), "storing {}",
+        name);
+    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
-  for (unsigned i = 0; i < master_nodes_.size(); ++i) {
-    auto name = MasterPropName(i);
-    auto mast_res = StoreArrowArrayAtName(master_nodes_[i], dir, name, desc);
-    if (!mast_res) {
-      return mast_res.error().WithContext("storing masters arrow array");
-    }
-    next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = name,
-        .path = std::move(mast_res.value()),
-        .persist = true,
-    });
+  for (size_t i = 0; i < master_nodes_.size(); ++i) {
+    std::string name = MasterPropName(i);
+    std::string path = KATANA_CHECKED_CONTEXT(
+        StoreArrowArrayAtName(master_nodes_[i], dir, name, desc), "storing {}",
+        name);
+    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
   if (host_to_owned_global_node_ids_ != nullptr) {
-    auto h2nod_res = StoreArrowArrayAtName(
-        host_to_owned_global_node_ids_, dir, kHostToOwnedGlobalNodeIDsPropName,
-        desc);
-    if (!h2nod_res) {
-      return h2nod_res.error();
-    }
-    next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = kHostToOwnedGlobalNodeIDsPropName,
-        .path = std::move(h2nod_res.value()),
-        .persist = true,
-    });
+    std::string name = kHostToOwnedGlobalNodeIDsPropName;
+    std::string path = KATANA_CHECKED_CONTEXT(
+        StoreArrowArrayAtName(host_to_owned_global_node_ids_, dir, name, desc),
+        "storing {}", name);
+    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
   if (host_to_owned_global_edge_ids_ != nullptr) {
-    auto h2edg_res = StoreArrowArrayAtName(
-        host_to_owned_global_edge_ids_, dir, kHostToOwnedGlobalEdgeIDsPropName,
-        desc);
-    if (!h2edg_res) {
-      return h2edg_res.error();
-    }
-    next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = kHostToOwnedGlobalEdgeIDsPropName,
-        .path = std::move(h2edg_res.value()),
-        .persist = true,
-    });
+    std::string name = kHostToOwnedGlobalEdgeIDsPropName;
+    std::string path = KATANA_CHECKED_CONTEXT(
+        StoreArrowArrayAtName(host_to_owned_global_edge_ids_, dir, name, desc),
+        "storing {}", name);
+    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
   if (local_to_user_id_ != nullptr) {
-    auto l2u_res = StoreArrowArrayAtName(
-        local_to_user_id_, dir, kLocalToUserIDPropName, desc);
-    if (!l2u_res) {
-      return l2u_res.error();
-    }
-    next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = kLocalToUserIDPropName,
-        .path = std::move(l2u_res.value()),
-        .persist = true,
-    });
+    std::string name = kLocalToUserIDPropName;
+    std::string path = KATANA_CHECKED_CONTEXT(
+        StoreArrowArrayAtName(local_to_user_id_, dir, name, desc), "storing {}",
+        name);
+    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
   if (local_to_global_id_ != nullptr) {
-    auto l2g_res = StoreArrowArrayAtName(
-        local_to_global_id_, dir, kLocalToGlobalIDPropName, desc);
-    if (!l2g_res) {
-      return l2g_res.error().WithContext("storing l2g arrow array");
-    }
-    next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = kLocalToGlobalIDPropName,
-        .path = std::move(l2g_res.value()),
-        .persist = true,
-    });
+    std::string name = kLocalToGlobalIDPropName;
+    std::string path = KATANA_CHECKED_CONTEXT(
+        StoreArrowArrayAtName(
+            local_to_global_id_, dir, kLocalToGlobalIDPropName, desc),
+        "storing {}", name);
+    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
   return next_properties;
@@ -361,38 +307,37 @@ tsuba::RDG::DoStore(
     core_->part_header().set_topology_path(t_path.BaseName());
   }
 
-  auto node_write_result = WriteProperties(
-      *core_->node_properties(), core_->part_header().node_prop_info_list(),
-      handle.impl_->rdg_manifest().dir(), write_group.get());
-  if (!node_write_result) {
-    return node_write_result.error().WithContext(
-        "failed to write node properties");
+  std::vector<std::string> node_prop_names;
+  for (const auto& field : core_->node_properties()->fields()) {
+    node_prop_names.emplace_back(field->name());
   }
 
-  // update node properties with newly written locations
-  core_->part_header().set_node_prop_info_list(
-      std::move(node_write_result.value()));
+  std::vector<PropStorageInfo*> node_props_to_store = KATANA_CHECKED(
+      core_->part_header().SelectNodeProperties(node_prop_names));
 
-  auto edge_write_result = WriteProperties(
-      *core_->edge_properties(), core_->part_header().edge_prop_info_list(),
-      handle.impl_->rdg_manifest().dir(), write_group.get());
-  if (!edge_write_result) {
-    return edge_write_result.error().WithContext(
-        "failed to write edge properties");
+  KATANA_CHECKED_CONTEXT(
+      WriteProperties(
+          *core_->node_properties(), node_props_to_store,
+          handle.impl_->rdg_manifest().dir(), write_group.get()),
+      "writing node properties");
+
+  std::vector<std::string> edge_prop_names;
+  for (const auto& field : core_->edge_properties()->fields()) {
+    edge_prop_names.emplace_back(field->name());
   }
 
-  // update edge properties with newly written locations
-  core_->part_header().set_edge_prop_info_list(
-      std::move(edge_write_result.value()));
+  std::vector<PropStorageInfo*> edge_props_to_store = KATANA_CHECKED(
+      core_->part_header().SelectEdgeProperties(edge_prop_names));
 
-  auto part_write_result =
-      WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get());
+  KATANA_CHECKED_CONTEXT(
+      WriteProperties(
+          *core_->edge_properties(), edge_props_to_store,
+          handle.impl_->rdg_manifest().dir(), write_group.get()),
+      "writing edge properties");
 
-  if (!part_write_result) {
-    return part_write_result.error().WithContext("failed to write part arrays");
-  }
-  core_->part_header().set_part_properties(
-      std::move(part_write_result.value()));
+  core_->part_header().set_part_properties(KATANA_CHECKED_CONTEXT(
+      WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get()),
+      "writing partition metadata"));
 
   //If a view type has been set, use it otherwise pass in the default view type
   if (view_type_.empty()) {
@@ -420,25 +365,27 @@ tsuba::RDG::DoStore(
 }
 
 katana::Result<void>
-tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
+tsuba::RDG::DoMake(
+    const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
+    const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
+    const katana::Uri& metadata_dir) {
   ReadGroup grp;
-  auto node_result = AddProperties(
-      metadata_dir, core_->part_header().node_prop_info_list(), &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddNodeProperties(props);
-      });
-  if (!node_result) {
-    return node_result.error().WithContext("populating node properties");
-  }
 
-  auto edge_result = AddProperties(
-      metadata_dir, core_->part_header().edge_prop_info_list(), &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddEdgeProperties(props);
-      });
-  if (!edge_result) {
-    return edge_result.error().WithContext("populating edge properties");
-  }
+  KATANA_CHECKED_CONTEXT(
+      AddProperties(
+          metadata_dir, node_props_to_be_loaded, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+            return rdg->core_->AddNodeProperties(props);
+          }),
+      "populating node properties");
+
+  KATANA_CHECKED_CONTEXT(
+      AddProperties(
+          metadata_dir, edge_props_to_be_loaded, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+            return rdg->core_->AddEdgeProperties(props);
+          }),
+      "populating edge properties");
 
   katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
   if (auto res = core_->topology_file_storage().Bind(t_path.string(), true);
@@ -448,23 +395,22 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
 
   rdg_dir_ = metadata_dir;
 
-  const std::vector<PropStorageInfo>& part_prop_info_list =
-      core_->part_header().part_prop_info_list();
-  if (part_prop_info_list.empty()) {
+  std::vector<PropStorageInfo*> part_info =
+      KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
+
+  if (part_info.empty()) {
     return grp.Finish();
   }
 
-  auto part_result = AddProperties(
-      metadata_dir, part_prop_info_list, &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->AddPartitionMetadataArray(props);
-      });
-  if (!part_result) {
-    return part_result.error();
-  }
-  if (auto res = grp.Finish(); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED_CONTEXT(
+      AddProperties(
+          metadata_dir, part_info, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+            return rdg->AddPartitionMetadataArray(props);
+          }),
+      "populating partition metadata");
+
+  KATANA_CHECKED(grp.Finish());
 
   if (local_to_user_id_->length() == 0) {
     // for backward compatibility
@@ -523,13 +469,13 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
 
   RDG rdg(std::make_unique<RDGCore>(std::move(part_header_res.value())));
 
-  if (auto res = rdg.core_->part_header().PrunePropsTo(
-          opts.node_properties, opts.edge_properties);
-      !res) {
-    return res.error();
-  }
+  std::vector<PropStorageInfo*> node_props = KATANA_CHECKED(
+      rdg.core_->part_header().SelectNodeProperties(opts.node_properties));
 
-  if (auto res = rdg.DoMake(manifest.dir()); !res) {
+  std::vector<PropStorageInfo*> edge_props = KATANA_CHECKED(
+      rdg.core_->part_header().SelectEdgeProperties(opts.edge_properties));
+
+  if (auto res = rdg.DoMake(node_props, edge_props, manifest.dir()); !res) {
     return res.error();
   }
 
@@ -654,22 +600,23 @@ tsuba::RDG::UpsertEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
 }
 
 katana::Result<void>
-tsuba::RDG::RemoveNodeProperty(uint32_t i) {
+tsuba::RDG::RemoveNodeProperty(int i) {
   return core_->RemoveNodeProperty(i);
 }
 
 katana::Result<void>
-tsuba::RDG::RemoveEdgeProperty(uint32_t i) {
+tsuba::RDG::RemoveEdgeProperty(int i) {
   return core_->RemoveEdgeProperty(i);
 }
 
 namespace {
+
 katana::Result<std::shared_ptr<arrow::Table>>
 UnloadProperty(
-    const std::shared_ptr<arrow::Table>& props, uint32_t i,
+    const std::shared_ptr<arrow::Table>& props, int i,
     std::vector<tsuba::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
-  if (i > static_cast<uint32_t>(props->num_columns())) {
+  if (i < 0 || i > props->num_columns()) {
     return KATANA_ERROR(
         katana::ErrorCode::InvalidArgument, "property index out of bounds");
   }
@@ -677,24 +624,75 @@ UnloadProperty(
 
   auto psi_it = std::find_if(
       prop_info_list->begin(), prop_info_list->end(),
-      [&](const tsuba::PropStorageInfo& psi) { return psi.name == name; });
+      [&](const tsuba::PropStorageInfo& psi) { return psi.name() == name; });
 
   KATANA_LOG_ASSERT(psi_it != prop_info_list->end());
 
   tsuba::PropStorageInfo& prop_info = *psi_it;
 
-  prop_info.path = KATANA_CHECKED(
-      StoreArrowArrayAtName(props->column(i), dir, name, nullptr));
-  prop_info.persist = true;
-  prop_info.written_out = true;
+  KATANA_LOG_ASSERT(!prop_info.IsAbsent());
+
+  if (prop_info.IsDirty()) {
+    std::string path = KATANA_CHECKED(
+        StoreArrowArrayAtName(props->column(i), dir, name, nullptr));
+    prop_info.WasWritten(path);
+  }
+
+  prop_info.WasUnloaded();
 
   return KATANA_CHECKED(props->RemoveColumn(i));
+}
+
+katana::Result<std::shared_ptr<arrow::Table>>
+LoadProperty(
+    const std::shared_ptr<arrow::Table>& props, const std::string name, int i,
+    std::vector<tsuba::PropStorageInfo>* prop_info_list,
+    const katana::Uri& dir) {
+  if (i < 0 || i > props->num_columns()) {
+    i = props->num_columns();
+  }
+
+  auto psi_it = std::find_if(
+      prop_info_list->begin(), prop_info_list->end(),
+      [&](const tsuba::PropStorageInfo& psi) { return psi.name() == name; });
+
+  if (psi_it == prop_info_list->end()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::PropertyNotFound, "no property named {}",
+        std::quoted(name));
+  }
+
+  tsuba::PropStorageInfo& prop_info = *psi_it;
+
+  if (!prop_info.IsAbsent()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument, "property {} already loaded",
+        std::quoted(name));
+  }
+
+  std::shared_ptr<arrow::Table> new_table;
+
+  KATANA_CHECKED(tsuba::AddProperties(
+      dir, {&prop_info}, nullptr,
+      [&](const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
+        if (props->num_columns() > 0) {
+          new_table = KATANA_CHECKED(
+              props->AddColumn(i, col->field(0), col->column(0)));
+        } else {
+          new_table = col;
+        }
+        return katana::ResultSuccess();
+      }));
+
+  KATANA_LOG_ASSERT(prop_info.IsClean());
+
+  return new_table;
 }
 
 }  // namespace
 
 katana::Result<void>
-tsuba::RDG::UnloadNodeProperty(uint32_t i) {
+tsuba::RDG::UnloadNodeProperty(int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(UnloadProperty(
       node_properties(), i, &core_->part_header().node_prop_info_list(),
       rdg_dir()));
@@ -703,7 +701,7 @@ tsuba::RDG::UnloadNodeProperty(uint32_t i) {
 }
 
 katana::Result<void>
-tsuba::RDG::UnloadEdgeProperty(uint32_t i) {
+tsuba::RDG::UnloadEdgeProperty(int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(UnloadProperty(
       edge_properties(), i, &core_->part_header().edge_prop_info_list(),
       rdg_dir()));
@@ -711,21 +709,40 @@ tsuba::RDG::UnloadEdgeProperty(uint32_t i) {
   return katana::ResultSuccess();
 }
 
-void
-tsuba::RDG::MarkAllPropertiesPersistent() {
-  core_->part_header().MarkAllPropertiesPersistent();
+katana::Result<void>
+tsuba::RDG::LoadNodeProperty(const std::string& name, int i) {
+  std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
+      node_properties(), name, i, &core_->part_header().node_prop_info_list(),
+      rdg_dir()));
+  core_->set_node_properties(std::move(new_props));
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>
-tsuba::RDG::MarkNodePropertiesPersistent(
-    const std::vector<std::string>& persist_node_props) {
-  return core_->part_header().MarkNodePropertiesPersistent(persist_node_props);
+tsuba::RDG::LoadEdgeProperty(const std::string& name, int i) {
+  std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
+      edge_properties(), name, i, &core_->part_header().edge_prop_info_list(),
+      rdg_dir()));
+  core_->set_edge_properties(std::move(new_props));
+  return katana::ResultSuccess();
 }
 
-katana::Result<void>
-tsuba::RDG::MarkEdgePropertiesPersistent(
-    const std::vector<std::string>& persist_edge_props) {
-  return core_->part_header().MarkEdgePropertiesPersistent(persist_edge_props);
+std::vector<std::string>
+tsuba::RDG::ListNodeProperties() const {
+  std::vector<std::string> result;
+  for (const auto& prop : core_->part_header().node_prop_info_list()) {
+    result.emplace_back(prop.name());
+  }
+  return result;
+}
+
+std::vector<std::string>
+tsuba::RDG::ListEdgeProperties() const {
+  std::vector<std::string> result;
+  for (const auto& prop : core_->part_header().edge_prop_info_list()) {
+    result.emplace_back(prop.name());
+  }
+  return result;
 }
 
 const tsuba::PartitionMetadata&

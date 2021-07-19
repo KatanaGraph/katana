@@ -1892,7 +1892,6 @@ katana::WritePropertyGraph(
         "edge prop: ({}) {}", field->type()->ToString(), field->name());
   }
 
-  prop_graph.MarkAllPropertiesPersistent();
   auto result = prop_graph.Write(dir, "libkatana_galois");
   if (!result) {
     return result.error().WithContext("writing to fs");

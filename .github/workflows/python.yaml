@@ -6,15 +6,14 @@ on:
     - master
   pull_request:
 
+# Cancel any previous runs with the same key.
+concurrency:
+  # Example key: Repository Structure CI-refs/pull/1381/merge
+  #   or Repository Structure CI-<owner>-<sha> for pushes
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || format('{0}-{1}', github.repository_owner, github.sha) }}
+  cancel-in-progress: true
+
 jobs:
-# Canceling other workflows doesn't work on the open repo because it requires write permissions.
-#  cancel_previous:
-#    runs-on: ubuntu-latest
-#    steps:
-#    - uses: styfle/cancel-workflow-action@0.6.0
-#      if: ${{ github.event_name == 'pull_request' }}
-#      with:
-#        access_token: ${{ github.token }}
   do_python:
     if: |
       github.event_name != 'pull_request' ||

@@ -49,6 +49,7 @@ class KATANA_EXPORT DynamicBitset {
 public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
+  //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
   explicit DynamicBitset(const MemoryPinType mpt = MemoryPinType::Swappable)
       : bitvec_(mpt){};
 

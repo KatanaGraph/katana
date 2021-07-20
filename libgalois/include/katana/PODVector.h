@@ -139,6 +139,7 @@ public:
   //! move assignment operator
   PODVector& operator=(PODVector&& v) {
     if (data_ != NULL) {
+      //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
       MaybeUnpin(data_, capacity_ * sizeof(_Tp));
       free(data_);
     }
@@ -152,6 +153,7 @@ public:
 
   ~PODVector() {
     if (data_ != NULL) {
+      //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
       MaybeUnpin(data_, capacity_ * sizeof(_Tp));
       free(data_);
     }
@@ -185,6 +187,7 @@ public:
   void shrink_to_fit() {
     if (size_ == 0) {
       if (data_ != NULL) {
+        //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
         MaybeUnpin(data_, capacity_ * sizeof(_Tp));
         free(data_);
         data_ = NULL;
@@ -194,6 +197,7 @@ public:
       MaybeUnpin(data_, capacity_ * sizeof(_Tp));
       capacity_ = std::max(size_, kMinNonZeroCapacity);
       const size_t new_bytes = capacity_ * sizeof(_Tp);
+      //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
       _Tp* new_data_ =
           static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
       KATANA_LOG_ASSERT(new_data_);
@@ -227,6 +231,7 @@ public:
     }
 
     const size_t new_bytes = capacity_ * sizeof(_Tp);
+    //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
     _Tp* new_data_ =
         static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
     KATANA_LOG_ASSERT(new_data_);

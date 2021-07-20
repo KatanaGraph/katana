@@ -31,12 +31,11 @@
 #include <type_traits>
 #include <utility>
 
+#include "katana/CpuGpuSwitch.h"
 #include "katana/Logging.h"
 #include "katana/config.h"
 
 namespace katana {
-
-enum class MemoryPinType : uint8_t { Usual = 0, Pinned = 1 };
 
 /**
  * A specialization of std::vector of plain-old-datatype (POD) objects that
@@ -59,9 +58,39 @@ class PODVector {
   _Tp* data_;
   size_t capacity_;
   size_t size_;
-  bool pinned_;
+  MemoryPinType mpt_;
 
   constexpr static size_t kMinNonZeroCapacity = 8;
+
+  // Resources must be already moved or destroyed before this call. It just resets the values.
+  void Clear() {
+    data_ = NULL;
+    mpt_ = MemoryPinType::Swappable;
+    capacity_ = 0;
+    size_ = 0;
+  }
+
+  void MaybePin(void* ptr, const size_t n_bytes) {
+    if (mpt_ == MemoryPinType::Pinned) {
+      if (mlock(ptr, n_bytes) != 0) {
+        KATANA_WARN_ONCE(
+            "Failed to pin host memory for use on a GPU. Error: {}", errno);
+        // Prevent any more pinning and unpinning for this object
+        mpt_ = MemoryPinType::Swappable;
+      }
+    }
+  }
+
+  void MaybeUnpin(void* ptr, const size_t n_bytes) {
+    if (mpt_ == MemoryPinType::Pinned) {
+      if (munlock(ptr, n_bytes) != 0) {
+        KATANA_WARN_ONCE(
+            "Failed to unpin host memory after use on a GPU. Error: {}", errno);
+        // Prevent any more pinning and unpinning for this object
+        mpt_ = MemoryPinType::Swappable;
+      }
+    }
+  }
 
 public:
   typedef _Tp value_type;
@@ -76,30 +105,22 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  explicit PODVector(const MemoryPinType mpt = MemoryPinType::Usual)
-      : data_(NULL),
-        capacity_(0),
-        size_(0),
-        pinned_(mpt == MemoryPinType::Pinned) {}
+  explicit PODVector(const MemoryPinType mpt = MemoryPinType::Swappable)
+      : data_(NULL), capacity_(0), size_(0), mpt_(mpt) {}
 
   template <class InputIterator>
   PODVector(
       InputIterator first, InputIterator last,
-      const MemoryPinType mpt = MemoryPinType::Usual)
-      : data_(NULL),
-        capacity_(0),
-        size_(0),
-        pinned_(mpt == MemoryPinType::Pinned) {
+      const MemoryPinType mpt = MemoryPinType::Swappable)
+      : data_(NULL), capacity_(0), size_(0), mpt_(mpt) {
     size_t to_add = last - first;
     resize(to_add);
     std::copy_n(first, to_add, begin());
   }
 
-  explicit PODVector(size_t n, const MemoryPinType mpt = MemoryPinType::Usual)
-      : data_(NULL),
-        capacity_(0),
-        size_(0),
-        pinned_(mpt == MemoryPinType::Pinned) {
+  explicit PODVector(
+      size_t n, const MemoryPinType mpt = MemoryPinType::Swappable)
+      : data_(NULL), capacity_(0), size_(0), mpt_(mpt) {
     resize(n);
   }
 
@@ -108,14 +129,8 @@ public:
 
   //! move constructor
   PODVector(PODVector&& v)
-      : data_(v.data_),
-        capacity_(v.capacity_),
-        size_(v.size_),
-        pinned_(v.pinned_) {
-    v.data_ = NULL;
-    v.pinned_ = false;
-    v.capacity_ = 0;
-    v.size_ = 0;
+      : data_(v.data_), capacity_(v.capacity_), size_(v.size_), mpt_(v.mpt_) {
+    v.Clear();
   }
 
   //! disabled (shallow) copy assignment operator
@@ -124,27 +139,20 @@ public:
   //! move assignment operator
   PODVector& operator=(PODVector&& v) {
     if (data_ != NULL) {
-      if (pinned_) {
-        munlock(data_, capacity_ * sizeof(_Tp));
-      }
+      MaybeUnpin(data_, capacity_ * sizeof(_Tp));
       free(data_);
     }
     data_ = v.data_;
     capacity_ = v.capacity_;
     size_ = v.size_;
-    pinned_ = v.pinned_;
-    v.data_ = NULL;
-    v.capacity_ = 0;
-    v.size_ = 0;
-    v.pinned_ = false;
+    mpt_ = v.mpt_;
+    v.Clear();
     return *this;
   }
 
   ~PODVector() {
     if (data_ != NULL) {
-      if (pinned_) {
-        munlock(data_, capacity_ * sizeof(_Tp));
-      }
+      MaybeUnpin(data_, capacity_ * sizeof(_Tp));
       free(data_);
     }
   }
@@ -177,25 +185,19 @@ public:
   void shrink_to_fit() {
     if (size_ == 0) {
       if (data_ != NULL) {
-        if (pinned_) {
-          munlock(data_, capacity_ * sizeof(_Tp));
-        }
+        MaybeUnpin(data_, capacity_ * sizeof(_Tp));
         free(data_);
         data_ = NULL;
         capacity_ = 0;
       }
     } else if (size_ < capacity_) {
-      if (pinned_) {
-        munlock(data_, capacity_ * sizeof(_Tp));
-      }
+      MaybeUnpin(data_, capacity_ * sizeof(_Tp));
       capacity_ = std::max(size_, kMinNonZeroCapacity);
       const size_t new_bytes = capacity_ * sizeof(_Tp);
       _Tp* new_data_ =
           static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
-      KATANA_LOG_DEBUG_ASSERT(new_data_);
-      if (pinned_) {
-        mlock(new_data_, new_bytes);
-      }
+      KATANA_LOG_ASSERT(new_data_);
+      MaybePin(new_data_, new_bytes);
       data_ = new_data_;
     }
   }
@@ -206,12 +208,12 @@ public:
     }
 
     // The price of unpinning&pinning again exceeds the savings below
-    if (!pinned_) {
+    if (mpt_ == MemoryPinType::Swappable) {
       // When reallocing, don't pay for elements greater than size_
       shrink_to_fit();
     }
 
-    [[maybe_unused]] const size_t old_bytes = capacity_ * sizeof(_Tp);
+    const size_t old_bytes = capacity_ * sizeof(_Tp);
 
     // reset capacity_ because its previous value need not be a power-of-2
     capacity_ = kMinNonZeroCapacity;
@@ -220,18 +222,15 @@ public:
       capacity_ <<= 1;
     }
 
-    if (pinned_) {
-      if (data_ != nullptr) {
-        munlock(data_, old_bytes);
-      }
+    if (data_ != nullptr) {
+      MaybeUnpin(data_, old_bytes);
     }
+
     const size_t new_bytes = capacity_ * sizeof(_Tp);
     _Tp* new_data_ =
         static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
-    KATANA_LOG_DEBUG_ASSERT(new_data_);
-    if (pinned_) {
-      mlock(new_data_, new_bytes);
-    }
+    KATANA_LOG_ASSERT(new_data_);
+    MaybePin(new_data_, new_bytes);
     data_ = new_data_;
   }
 
@@ -279,7 +278,7 @@ public:
   void insert(
       [[maybe_unused]] iterator position, InputIterator first,
       InputIterator last) {
-    KATANA_LOG_DEBUG_ASSERT(position == end());
+    KATANA_LOG_ASSERT(position == end());
     size_t to_add = last - first;
     if (to_add > 0) {
       size_t old_size = size_;

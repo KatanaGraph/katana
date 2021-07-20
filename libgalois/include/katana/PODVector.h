@@ -20,8 +20,6 @@
 #ifndef KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
 #define KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
 
-#include <sys/mman.h>
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>

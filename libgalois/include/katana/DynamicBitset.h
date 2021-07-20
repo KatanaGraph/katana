@@ -50,8 +50,9 @@ public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
   //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
-  explicit DynamicBitset(const MemoryPinType mpt = MemoryPinType::Swappable)
-      : bitvec_(mpt){};
+  explicit DynamicBitset(
+      const BaseHostAllocator& bha = swappable_host_allocator)
+      : bitvec_(bha){};
 
   DynamicBitset(DynamicBitset&& bitset)
       : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {}

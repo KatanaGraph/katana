@@ -12,6 +12,7 @@ set(sources
         src/CommBackend.cpp
         src/Env.cpp
         src/ErrorCode.cpp
+        src/HostAllocator.cpp
         src/HTTP.cpp
         src/JSON.cpp
         src/Logging.cpp

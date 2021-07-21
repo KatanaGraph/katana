@@ -123,56 +123,132 @@ struct BuilderVisitorBaseType {
 /// };
 /// Arrow's type_traits.h offers tools to use SFINAE to differentiate
 /// types and write appropriate Call functions for each type
-template <class VisitorBaseType, class VisitorType>
-katana::Result<typename std::decay_t<VisitorType>::ReturnType>
-VisitArrowInternal(
-    typename VisitorBaseType::ParamBase param, VisitorType&& visitor) {
-  switch (VisitorBaseType::Type(param)->id()) {
-#define TYPE_CASE(EnumType)                                                    \
-  case arrow::Type::EnumType: {                                                \
-    using ArrowType =                                                          \
-        typename arrow::TypeIdTraits<arrow::Type::EnumType>::Type;             \
-    return visitor.template Call<ArrowType>(                                   \
-        VisitorBaseType::template Cast<arrow::Type::EnumType>(param));         \
+template <class ...ArrowTypes>
+struct Wrapper {
+  // TODO:(Rob) properly avoid copying with std::move/forward
+  // TODO:(Rob) Switch the make_index_sequence to size of processed + 1
+  template <class VisitorType, class ...Processed, size_t ...I>
+  static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
+  VisitArrowInternal(
+      VisitorType&& visitor, std::tuple<Processed...>&& processed,
+      std::index_sequence<I...>) {
+    return visitor.template Call<ArrowTypes...>(std::get<I>(processed)...);
   }
-    TYPE_CASE(INT8)
-    TYPE_CASE(UINT8)
-    TYPE_CASE(INT16)
-    TYPE_CASE(UINT16)
-    TYPE_CASE(INT32)
-    TYPE_CASE(UINT32)
-    TYPE_CASE(INT64)
-    TYPE_CASE(UINT64)
-    TYPE_CASE(FLOAT)
-    TYPE_CASE(DOUBLE)
-    TYPE_CASE(BOOL)
-    TYPE_CASE(DATE32)     // since UNIX epoch in days
-    TYPE_CASE(DATE64)     // since UNIX epoch in millis
-    TYPE_CASE(TIME32)     // since midnight in seconds or millis
-    TYPE_CASE(TIME64)     // since midnight in micros or nanos
-    TYPE_CASE(TIMESTAMP)  // since UNIX epoch in seconds or smaller
-    TYPE_CASE(STRING)     // TODO(daniel) DEPRECATED
-    TYPE_CASE(LARGE_STRING)
-    TYPE_CASE(STRUCT)
-    TYPE_CASE(LIST)  // TODO(daniel) DEPRECATED
-    TYPE_CASE(LARGE_LIST)
-    TYPE_CASE(NA)
+
+
+  template <class VisitorBaseType, class VisitorType, class ...Processed>
+  static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
+  VisitArrowInternal(
+      VisitorType&& visitor, std::tuple<Processed...>&& processed,
+      typename VisitorBaseType::ParamBase param) {
+    switch (VisitorBaseType::Type(param)->id()) {
+#define TYPE_CASE(EnumType)                                                      \
+    case arrow::Type::EnumType: {                                                \
+      using ArrowType =                                                          \
+          typename arrow::TypeIdTraits<arrow::Type::EnumType>::Type;             \
+      auto new_processed = std::tuple_cat(processed,                             \
+          std::make_tuple(VisitorBaseType::template                              \
+            Cast<arrow::Type::EnumType>(param)));                                \
+      return Wrapper<ArrowTypes..., ArrowType>::template VisitArrowInternal(     \
+          std::forward<VisitorType>(visitor), std::move(new_processed),          \
+          std::make_index_sequence<sizeof...(Processed)>);                       \
+    }
+      TYPE_CASE(INT8)
+      TYPE_CASE(UINT8)
+      TYPE_CASE(INT16)
+      TYPE_CASE(UINT16)
+      TYPE_CASE(INT32)
+      TYPE_CASE(UINT32)
+      TYPE_CASE(INT64)
+      TYPE_CASE(UINT64)
+      TYPE_CASE(FLOAT)
+      TYPE_CASE(DOUBLE)
+      TYPE_CASE(BOOL)
+      TYPE_CASE(DATE32)     // since UNIX epoch in days
+      TYPE_CASE(DATE64)     // since UNIX epoch in millis
+      TYPE_CASE(TIME32)     // since midnight in seconds or millis
+      TYPE_CASE(TIME64)     // since midnight in micros or nanos
+      TYPE_CASE(TIMESTAMP)  // since UNIX epoch in seconds or smaller
+      TYPE_CASE(STRING)     // TODO(daniel) DEPRECATED
+      TYPE_CASE(LARGE_STRING)
+      TYPE_CASE(STRUCT)
+      TYPE_CASE(LIST)  // TODO(daniel) DEPRECATED
+      TYPE_CASE(LARGE_LIST)
+      TYPE_CASE(NA)
 #undef TYPE_CASE
-  default:
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
-        "unsupported Arrow type encountered ({})",
-        VisitorBaseType::Type(param)->ToString());
+    default:
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError,
+          "unsupported Arrow type encountered ({})",
+          VisitorBaseType::Type(param)->ToString());
+    }
   }
-}
+
+  template <class VisitorBaseType, class VisitorType, class ...Processed, class ...Unprocessed>
+  static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
+  VisitArrowInternal(
+      VisitorType&& visitor, std::tuple<Processed...> processed,
+      typename VisitorBaseType::ParamBase param, Unprocessed... unprocessed) {
+    switch (VisitorBaseType::Type(param)->id()) {
+#define TYPE_CASE(EnumType)                                                      \
+    case arrow::Type::EnumType: {                                                \
+      using ArrowType =                                                          \
+          typename arrow::TypeIdTraits<arrow::Type::EnumType>::Type;             \
+      auto new_processed = std::tuple_cat(processed,                             \
+          std::make_tuple(VisitorBaseType::template                              \
+            Cast<arrow::Type::EnumType>(param)));                                \
+      return Wrapper<ArrowTypes..., ArrowType>::template                         \
+                                  VisitArrowInternal<VisitorBaseType>(           \
+            std::forward<VisitorType>(visitor), std::move(new_processed),        \
+            unprocessed...);                                                     \
+    }
+      TYPE_CASE(INT8)
+      TYPE_CASE(UINT8)
+      TYPE_CASE(INT16)
+      TYPE_CASE(UINT16)
+      TYPE_CASE(INT32)
+      TYPE_CASE(UINT32)
+      TYPE_CASE(INT64)
+      TYPE_CASE(UINT64)
+      TYPE_CASE(FLOAT)
+      TYPE_CASE(DOUBLE)
+      TYPE_CASE(BOOL)
+      TYPE_CASE(DATE32)     // since UNIX epoch in days
+      TYPE_CASE(DATE64)     // since UNIX epoch in millis
+      TYPE_CASE(TIME32)     // since midnight in seconds or millis
+      TYPE_CASE(TIME64)     // since midnight in micros or nanos
+      TYPE_CASE(TIMESTAMP)  // since UNIX epoch in seconds or smaller
+      TYPE_CASE(STRING)     // TODO(daniel) DEPRECATED
+      TYPE_CASE(LARGE_STRING)
+      TYPE_CASE(STRUCT)
+      TYPE_CASE(LIST)  // TODO(daniel) DEPRECATED
+      TYPE_CASE(LARGE_LIST)
+      TYPE_CASE(NA)
+#undef TYPE_CASE
+    default:
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError,
+          "unsupported Arrow type encountered ({})",
+          VisitorBaseType::Type(param)->ToString());
+    }
+  }
+};
 
 }  // namespace internal
+
+// TODO(Rob) make sure that all types are the same with an enable_if recursion
+// use sizeof... to determine proper size of vector
+// put args in vector one-by-one during recursion
+//template <class VisitorType, class ...Args>
+//auto
+//VisitArrow(VisitorType&& visitor, Args... args) {
+  
 
 template <class VisitorType>
 auto
 VisitArrow(const arrow::Array& array, VisitorType&& visitor) {
-  return internal::VisitArrowInternal<internal::ArrayVisitorBaseType>(
-      array, std::forward<VisitorType>(visitor));
+  return internal::Wrapper<>::template VisitArrowInternal<internal::ArrayVisitorBaseType>(
+      std::forward<VisitorType>(visitor), std::tuple<>{}, array);
 }
 
 template <class VisitorType>
@@ -186,8 +262,8 @@ VisitArrow(const std::shared_ptr<arrow::Array>& array, VisitorType&& visitor) {
 template <class VisitorType>
 auto
 VisitArrow(const arrow::Scalar& scalar, VisitorType&& visitor) {
-  return internal::VisitArrowInternal<internal::ScalarVisitorBaseType>(
-      scalar, std::forward<VisitorType>(visitor));
+  return internal::Wrapper<>::template VisitArrowInternal<internal::ScalarVisitorBaseType>(
+      std::forward<VisitorType>(visitor), std::tuple<>{}, scalar);
 }
 
 template <class VisitorType>
@@ -203,8 +279,8 @@ template <class VisitorType>
 auto
 VisitArrow(arrow::ArrayBuilder* builder, VisitorType&& visitor) {
   KATANA_LOG_DEBUG_ASSERT(builder);
-  return internal::VisitArrowInternal<internal::BuilderVisitorBaseType>(
-      builder, std::forward<VisitorType>(visitor));
+  return internal::Wrapper<>::template VisitArrowInternal<internal::BuilderVisitorBaseType>(
+      std::forward<VisitorType>(visitor), std::tuple<>{}, builder);
 }
 
 template <class VisitorType>

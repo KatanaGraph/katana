@@ -106,15 +106,14 @@ struct BuilderVisitorBaseType {
 /// Arrow's type_traits.h offers tools to use SFINAE to differentiate
 /// types and write appropriate Call functions for each type
 
-
 // The Wrapper struct is used to keep track of the ArrowType for each argument
-// as we recursively cast each argument. The ArrowTypes are then used as 
+// as we recursively cast each argument. The ArrowTypes are then used as
 // template arguments to the Call method of the Visitor class
-template <class ...ArrowTypes>
+template <class... ArrowTypes>
 struct Wrapper {
   // This function calls the visitor's templated Call method with the properly
   // casted arguments and template parameters
-  template <class VisitorType, class ...Processed, size_t ...I>
+  template <class VisitorType, class... Processed, size_t... I>
   static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
   VisitArrowInternalCall(
       VisitorType&& visitor, std::tuple<Processed...>&& processed,
@@ -128,34 +127,35 @@ struct Wrapper {
   // arguments to process (base case), it calls the Visitor class's Call
   // function with template parameters ArrowTypes... and arguments
   // Processed...
-  template <class VisitorBaseType, class VisitorType, class ...Processed, 
-           class ...Unprocessed>
+  template <
+      class VisitorBaseType, class VisitorType, class... Processed,
+      class... Unprocessed>
   static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
   VisitArrowInternal(
       VisitorType&& visitor, std::tuple<Processed&&...>&& processed,
-      typename VisitorBaseType::ParamBase&& param, Unprocessed&&... unprocessed) {
+      typename VisitorBaseType::ParamBase&& param,
+      Unprocessed&&... unprocessed) {
     switch (VisitorBaseType::Type(param)->id()) {
-#define TYPE_CASE(EnumType)                                                      \
-    case arrow::Type::EnumType: {                                                \
-      using ArrowType =                                                          \
-          typename arrow::TypeIdTraits<arrow::Type::EnumType>::Type;             \
-      using ParamType = typename VisitorBaseType::template ParamType<ArrowType>; \
-      auto new_processed = std::tuple_cat(                                       \
-          processed,                                                             \
-          std::tuple<ParamType>(std::move(static_cast<ParamType>(param)))        \
-      );                                                                         \
-      if constexpr (!sizeof...(Unprocessed)) /*base case*/{                      \
-        return Wrapper<ArrowTypes..., ArrowType>::template                       \
-          VisitArrowInternalCall(                                                \
-            std::forward<VisitorType>(visitor), std::move(new_processed),        \
-            std::make_index_sequence<sizeof...(Processed)+1>{});                 \
-      } else /*inductive case*/{                                                 \
-        return Wrapper<ArrowTypes..., ArrowType>::template                       \
-          VisitArrowInternal<VisitorBaseType>(                                   \
-            std::forward<VisitorType>(visitor), std::move(new_processed),        \
-            std::forward<Unprocessed>(unprocessed)...);                          \
-      }                                                                          \
-    }
+#define TYPE_CASE(EnumType)                                                    \
+  case arrow::Type::EnumType: {                                                \
+    using ArrowType =                                                          \
+        typename arrow::TypeIdTraits<arrow::Type::EnumType>::Type;             \
+    using ParamType = typename VisitorBaseType::template ParamType<ArrowType>; \
+    auto new_processed = std::tuple_cat(                                       \
+        processed,                                                             \
+        std::tuple<ParamType>(std::move(static_cast<ParamType>(param))));      \
+    if constexpr (!sizeof...(Unprocessed)) /*base case*/ {                     \
+      return Wrapper<ArrowTypes..., ArrowType>::                               \
+          template VisitArrowInternalCall(                                     \
+              std::forward<VisitorType>(visitor), std::move(new_processed),    \
+              std::make_index_sequence<sizeof...(Processed) + 1>{});           \
+    } else /*inductive case*/ {                                                \
+      return Wrapper<ArrowTypes..., ArrowType>::template VisitArrowInternal<   \
+          VisitorBaseType>(                                                    \
+          std::forward<VisitorType>(visitor), std::move(new_processed),        \
+          std::forward<Unprocessed>(unprocessed)...);                          \
+    }                                                                          \
+  }
       TYPE_CASE(INT8)
       TYPE_CASE(UINT8)
       TYPE_CASE(INT16)
@@ -190,21 +190,23 @@ struct Wrapper {
 
 }  // namespace internal
 
-template <class VisitorType, class Arg0, class ...Args>
+template <class VisitorType, class Arg0, class... Args>
 std::enable_if_t<
-  std::is_same_v<Arg0, arrow::Array&>
-  && std::conjunction_v<std::is_same<Arg0, Args>...>,
-  katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
+    std::is_same_v<Arg0, arrow::Array&> &&
+        std::conjunction_v<std::is_same<Arg0, Args>...>,
+    katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
 VisitArrow(VisitorType&& visitor, Arg0 array, Args... args) {
-  return internal::Wrapper<>::template VisitArrowInternal<internal::ArrayVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{}, std::forward<Arg0>(array),
-      std::forward<Args>(args)...);
+  return internal::Wrapper<>::template VisitArrowInternal<
+      internal::ArrayVisitorBaseType>(
+      std::forward<VisitorType>(visitor), std::tuple<>{},
+      std::forward<Arg0>(array), std::forward<Args>(args)...);
 }
 
 template <class VisitorType>
 auto
 VisitArrow(const arrow::Array& array, VisitorType&& visitor) {
-  return internal::Wrapper<>::template VisitArrowInternal<internal::ArrayVisitorBaseType>(
+  return internal::Wrapper<>::template VisitArrowInternal<
+      internal::ArrayVisitorBaseType>(
       std::forward<VisitorType>(visitor), std::tuple<>{}, std::move(array));
 }
 
@@ -216,21 +218,23 @@ VisitArrow(const std::shared_ptr<arrow::Array>& array, VisitorType&& visitor) {
   return VisitArrow(ref, std::forward<VisitorType>(visitor));
 }
 
-template <class VisitorType, class Arg0, class ...Args>
+template <class VisitorType, class Arg0, class... Args>
 std::enable_if_t<
-  std::is_same_v<Arg0, arrow::Scalar&>
-  && std::conjunction_v<std::is_same<Arg0, Args>...>, 
-  katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
+    std::is_same_v<Arg0, arrow::Scalar&> &&
+        std::conjunction_v<std::is_same<Arg0, Args>...>,
+    katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
 VisitArrow(VisitorType&& visitor, Arg0 scalar, Args... args) {
-  return internal::Wrapper<>::template VisitArrowInternal<internal::ArrayVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{}, std::forward<Arg0>(scalar),
-      std::forward<Args>(args)...);
+  return internal::Wrapper<>::template VisitArrowInternal<
+      internal::ArrayVisitorBaseType>(
+      std::forward<VisitorType>(visitor), std::tuple<>{},
+      std::forward<Arg0>(scalar), std::forward<Args>(args)...);
 }
 
 template <class VisitorType>
 auto
 VisitArrow(const arrow::Scalar& scalar, VisitorType&& visitor) {
-  return internal::Wrapper<>::template VisitArrowInternal<internal::ScalarVisitorBaseType>(
+  return internal::Wrapper<>::template VisitArrowInternal<
+      internal::ScalarVisitorBaseType>(
       std::forward<VisitorType>(visitor), std::tuple<>{}, std::move(scalar));
 }
 
@@ -243,22 +247,24 @@ VisitArrow(
   return VisitArrow(ref, std::forward<VisitorType>(visitor));
 }
 
-template <class VisitorType, class Arg0, class ...Args>
+template <class VisitorType, class Arg0, class... Args>
 std::enable_if_t<
-  std::is_same_v<Arg0, arrow::ArrayBuilder*>
-  && std::conjunction_v<std::is_same<Arg0, Args>...>, 
-  katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
+    std::is_same_v<Arg0, arrow::ArrayBuilder*> &&
+        std::conjunction_v<std::is_same<Arg0, Args>...>,
+    katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
 VisitArrow(VisitorType&& visitor, Arg0 builder, Args... args) {
-  return internal::Wrapper<>::template VisitArrowInternal<internal::ArrayVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{}, std::forward<Arg0>(builder),
-      std::forward<Args>(args)...);
+  return internal::Wrapper<>::template VisitArrowInternal<
+      internal::ArrayVisitorBaseType>(
+      std::forward<VisitorType>(visitor), std::tuple<>{},
+      std::forward<Arg0>(builder), std::forward<Args>(args)...);
 }
 
 template <class VisitorType>
 auto
 VisitArrow(arrow::ArrayBuilder* builder, VisitorType&& visitor) {
   KATANA_LOG_DEBUG_ASSERT(builder);
-  return internal::Wrapper<>::template VisitArrowInternal<internal::BuilderVisitorBaseType>(
+  return internal::Wrapper<>::template VisitArrowInternal<
+      internal::BuilderVisitorBaseType>(
       std::forward<VisitorType>(visitor), std::tuple<>{}, std::move(builder));
 }
 

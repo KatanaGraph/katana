@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
-#include <exception>
+#include <new>
 #include <utility>
 
 #include "katana/config.h"

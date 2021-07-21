@@ -165,23 +165,27 @@ private:
 /// comprise the physical representation of the logical property graph.
 class KATANA_EXPORT PropertyGraph {
 public:
-  /// TypeSetID uniquely identifies/contains a combination/set of types
-  /// TypeSetID is represented using 8 bits
-  /// TypeSetID for nodes is distinct from TypeSetID for edges
-  using TypeSetID = uint8_t;
-  static constexpr TypeSetID kUnknownType = TypeSetID{0};
-  static constexpr TypeSetID kInvalidType =
-      std::numeric_limits<TypeSetID>::max();
-  /// A set of TypeSetIDs
-  using SetOfTypeSetIDs =
-      std::bitset<std::numeric_limits<TypeSetID>::max() + 1>;
-  /// A set of type names
-  using SetOfTypeNames = std::unordered_set<std::string>;
-  /// A map from TypeSetID to the set of the type names it contains
-  using TypeSetIDToSetOfTypeNamesMap = std::vector<SetOfTypeNames>;
-  /// A map from the type name to the set of the TypeSetIDs that contain it
-  using TypeNameToSetOfTypeSetIDsMap =
-      std::unordered_map<std::string, SetOfTypeSetIDs>;
+  /// EntityTypeID uniquely identifies an entity (node or edge) type
+  /// EntityTypeID for nodes is distinct from EntityTypeID for edges
+  /// This type may either be an atomic type or an intersection of atomic types
+  /// EntityTypeID is represented using 8 bits
+  using EntityTypeID = uint8_t;
+  static constexpr EntityTypeID kUnknownType = EntityTypeID{0};
+  static constexpr EntityTypeID kInvalidType =
+      std::numeric_limits<EntityTypeID>::max();
+  /// A set of EntityTypeIDs
+  using SetOfEntityTypeIDs =
+      std::bitset<std::numeric_limits<EntityTypeID>::max() + 1>;
+  /// A map from EntityTypeID to a set of EntityTypeIDs
+  using EntityTypeIDToSetOfEntityTypeIDsMap = std::vector<SetOfEntityTypeIDs>;
+  /// A map from the atomic type name to its EntityTypeID
+  /// (that does not intersect any other atomic type)
+  using AtomicTypeNameToEntityTypeIDMap =
+      std::unordered_map<std::string, EntityTypeID>;
+  /// A map from the atomic type's EntityTypeID to its name
+  /// (that does not intersect any other atomic type)
+  using EntityTypeIDToAtomicTypeNameMap =
+      std::unordered_map<EntityTypeID, std::string>;
 
   // Pass through topology API
   using node_iterator = GraphTopology::node_iterator;
@@ -213,24 +217,42 @@ private:
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
 
-  /// A map from the node TypeSetID to
-  /// the set of the node type names it contains
-  TypeSetIDToSetOfTypeNamesMap node_type_set_id_to_type_names_;
-  /// A map from the edge TypeSetID to
-  /// the set of the edge type names it contains
-  TypeSetIDToSetOfTypeNamesMap edge_type_set_id_to_type_names_;
+  /// A map from the node EntityTypeID to
+  /// the set of atomic entity type IDs it intersects
+  EntityTypeIDToSetOfEntityTypeIDsMap
+      node_entity_type_id_to_atomic_entity_type_ids_;
+  /// A map from the edge EntityTypeID to
+  /// the set of atomic entity type IDs it intersects
+  EntityTypeIDToSetOfEntityTypeIDsMap
+      edge_entity_type_id_to_atomic_entity_type_ids_;
 
-  /// A map from the node type name
-  /// to the set of the node TypeSetIDs that contain it
-  TypeNameToSetOfTypeSetIDsMap node_type_name_to_type_set_ids_;
-  /// A map from the edge type name
-  /// to the set of the edge TypeSetIDs that contain it
-  TypeNameToSetOfTypeSetIDsMap edge_type_name_to_type_set_ids_;
+  /// A map from the node atomic EntityTypeID
+  /// to the set of the node EntityTypeIDs that intersect it
+  EntityTypeIDToSetOfEntityTypeIDsMap
+      node_atomic_entity_type_id_to_entity_type_ids_;
+  /// A map from the edge atomic EntityTypeID
+  /// to the set of the edge EntityTypeIDs that intersect it
+  EntityTypeIDToSetOfEntityTypeIDsMap
+      edge_atomic_entity_type_id_to_entity_type_ids_;
 
-  /// The node TypeSetID for each node in the graph
-  katana::NUMAArray<TypeSetID> node_type_set_id_;
-  /// The edge TypeSetID for each edge in the graph
-  katana::NUMAArray<TypeSetID> edge_type_set_id_;
+  /// A map from the atomic node type name to its EntityTypeID
+  /// (that does not intersect any other atomic type)
+  AtomicTypeNameToEntityTypeIDMap node_atomic_type_name_to_entity_type_id_;
+  /// A map from the atomic edge type name to its EntityTypeID
+  /// (that does not intersect any other atomic type)
+  AtomicTypeNameToEntityTypeIDMap edge_atomic_type_name_to_entity_type_id_;
+
+  /// A map from the node EntityTypeID to its type name if it is an atomic type
+  /// (that does not intersect any other atomic type)
+  EntityTypeIDToAtomicTypeNameMap node_atomic_entity_type_id_to_type_name_;
+  /// A map from the edge EntityTypeID to its type name if it is an atomic type
+  /// (that does not intersect any other atomic type)
+  EntityTypeIDToAtomicTypeNameMap edge_atomic_entity_type_id_to_type_name_;
+
+  /// The node EntityTypeID for each node's most specific type
+  katana::NUMAArray<EntityTypeID> node_entity_type_id_;
+  /// The edge EntityTypeID for each edge's most specific type
+  katana::NUMAArray<EntityTypeID> edge_entity_type_id_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
@@ -405,11 +427,11 @@ public:
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties) const;
 
-  /// Construct node & edge TypeSetIDs from node & edge properties
-  /// Also constructs metadata to convert between types and TypeSetIDs
-  /// Assumes all boolean or uint8 properties are types
+  /// Construct node & edge EntityTypeIDs from node & edge properties
+  /// Also constructs metadata to convert between atomic types and EntityTypeIDs
+  /// Assumes all boolean or uint8 properties are atomic types
   /// TODO(roshan) move this to be a part of Make()
-  Result<void> ConstructTypeSetIDs();
+  Result<void> ConstructEntityTypeIDs();
 
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 
@@ -483,80 +505,174 @@ public:
     return edge_properties()->schema();
   }
 
-  /// \returns the number of node types
-  size_t GetNodeTypesNum() const {
-    return node_type_name_to_type_set_ids_.size();
+  /// \returns the number of node atomic types
+  size_t GetNumNodeAtomicTypes() const {
+    return node_atomic_type_name_to_entity_type_id_.size();
   }
 
-  /// \returns the number of edge types
-  size_t GetEdgeTypesNum() const {
-    return edge_type_name_to_type_set_ids_.size();
+  /// \returns the number of edge atomic types
+  size_t GetNumEdgeAtomicTypes() const {
+    return edge_atomic_type_name_to_entity_type_id_.size();
   }
 
-  /// \returns true if a node type with @param name exists
-  /// NB: no node may have this type
+  /// \returns the number of node entity types (including kUnknownType)
+  size_t GetNumNodeEntityTypes() const {
+    return node_entity_type_id_to_atomic_entity_type_ids_.size();
+  }
+
+  /// \returns the number of edge entity types (including kUnknownType)
+  size_t GetNumEdgeEntityTypes() const {
+    return edge_entity_type_id_to_atomic_entity_type_ids_.size();
+  }
+
+  /// \returns true iff a node atomic type @param name exists
+  /// NB: no node may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of nodes with the type
-  bool HasNodeType(const std::string& name) const {
-    return node_type_name_to_type_set_ids_.count(name) == 1;
+  bool HasAtomicNodeType(const std::string& name) const {
+    return node_atomic_type_name_to_entity_type_id_.count(name) == 1;
   }
 
-  /// \returns true if an edge type with @param name exists
-  /// NB: no edge may have this type
+  /// \returns true iff an edge atomic type with @param name exists
+  /// NB: no edge may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of edges with the type
-  bool HasEdgeType(const std::string& name) const {
-    return edge_type_name_to_type_set_ids_.count(name) == 1;
+  bool HasAtomicEdgeType(const std::string& name) const {
+    return edge_atomic_type_name_to_entity_type_id_.count(name) == 1;
   }
 
-  /// \returns the set of node TypeSetIDs that contain
-  /// the node type with @param name
+  /// \returns true iff a node entity type @param node_entity_type_id exists
+  /// NB: even if it exists, it may not be the most specific type for any node
+  /// (returns true for kUnknownType)
+  bool HasNodeEntityType(EntityTypeID node_entity_type_id) const {
+    return node_entity_type_id <
+           node_entity_type_id_to_atomic_entity_type_ids_.size();
+  }
+
+  /// \returns true iff an edge entity type @param node_entity_type_id exists
+  /// NB: even if it exists, it may not be the most specific type for any edge
+  /// (returns true for kUnknownType)
+  bool HasEdgeEntityType(EntityTypeID edge_entity_type_id) const {
+    return edge_entity_type_id <
+           edge_entity_type_id_to_atomic_entity_type_ids_.size();
+  }
+
+  /// \returns the node EntityTypeID for an atomic node type with name
+  /// @param name
   /// (assumes that the node type exists)
-  const SetOfTypeSetIDs& NodeTypeNameToTypeSetIDs(
-      const std::string& name) const {
-    return node_type_name_to_type_set_ids_.at(name);
+  EntityTypeID GetNodeEntityTypeID(const std::string& name) const {
+    return node_atomic_type_name_to_entity_type_id_.at(name);
   }
 
-  /// \returns the set of edge TypeSetIDs that contain
-  /// the edge type with @param name
+  /// \returns the edge EntityTypeID for an atomic edge type with name
+  /// @param name
   /// (assumes that the edge type exists)
-  const SetOfTypeSetIDs& EdgeTypeNameToTypeSetIDs(
-      const std::string& name) const {
-    return edge_type_name_to_type_set_ids_.at(name);
+  EntityTypeID GetEdgeEntityTypeID(const std::string& name) const {
+    return edge_atomic_type_name_to_entity_type_id_.at(name);
   }
 
-  /// \returns the number of node TypeSetIDs (including kUnknownType)
-  size_t GetNodeTypeSetIDsNum() const {
-    return node_type_set_id_to_type_names_.size();
+  /// \returns the name of the atomic type if the node EntityTypeID
+  /// @param node_entity_type_id is an atomic type,
+  /// nullopt otherwise
+  std::optional<std::string> GetNodeAtomicTypeName(
+      EntityTypeID node_entity_type_id) const {
+    auto found =
+        node_atomic_entity_type_id_to_type_name_.find(node_entity_type_id);
+    if (found != node_atomic_entity_type_id_to_type_name_.cend()) {
+      return found->second;
+    }
+    return std::nullopt;
   }
 
-  /// \returns the number of edge TypeSetIDs (including kUnknownType)
-  size_t GetEdgeTypeSetIDsNum() const {
-    return edge_type_set_id_to_type_names_.size();
+  /// \returns the name of the atomic type if the edge EntityTypeID
+  /// @param edge_entity_type_id is an atomic type,
+  /// nullopt otherwise
+  std::optional<std::string> GetEdgeAtomicTypeName(
+      EntityTypeID edge_entity_type_id) const {
+    auto found =
+        edge_atomic_entity_type_id_to_type_name_.find(edge_entity_type_id);
+    if (found != edge_atomic_entity_type_id_to_type_name_.cend()) {
+      return found->second;
+    }
+    return std::nullopt;
   }
 
-  /// \returns the set of node type names that contain
-  /// the node TypeSetID @param node_type_set_id
-  /// (assumes that the node TypeSetID exists)
-  const SetOfTypeNames& NodeTypeSetIDToTypeNames(
-      TypeSetID node_type_set_id) const {
-    return node_type_set_id_to_type_names_.at(node_type_set_id);
+  /// \returns the set of node entity types that intersect
+  /// the node atomic type @param node_entity_type_id
+  /// (assumes that the node atomic type exists)
+  const SetOfEntityTypeIDs& GetNodeSupertypes(
+      EntityTypeID node_entity_type_id) const {
+    return node_atomic_entity_type_id_to_entity_type_ids_.at(
+        node_entity_type_id);
   }
 
-  /// \returns the set of edge type names that contain
-  /// the edge TypeSetID @param edge_type_set_id
-  /// (assumes that the edge TypeSetID exists)
-  const SetOfTypeNames& EdgeTypeSetIDToTypeNames(
-      TypeSetID edge_type_set_id) const {
-    return edge_type_set_id_to_type_names_.at(edge_type_set_id);
+  /// \returns the set of edge entity types that intersect
+  /// the edge atomic type @param edge_entity_type_id
+  /// (assumes that the edge atomic type exists)
+  const SetOfEntityTypeIDs& GetEdgeSupertypes(
+      EntityTypeID edge_entity_type_id) const {
+    return edge_atomic_entity_type_id_to_entity_type_ids_.at(
+        edge_entity_type_id);
   }
 
-  /// \return returns the node TypeSetID for @param node
-  TypeSetID GetNodeTypeSetID(Node node) const {
-    return node_type_set_id_[node];
+  /// \returns the set of atomic node types that are intersected
+  /// by the node entity type @param node_entity_type_id
+  /// (assumes that the node entity type exists)
+  const SetOfEntityTypeIDs& GetNodeAtomicSubtypes(
+      EntityTypeID node_entity_type_id) const {
+    return node_entity_type_id_to_atomic_entity_type_ids_.at(
+        node_entity_type_id);
   }
 
-  /// \return returns the edge TypeSetID for @param edge
-  TypeSetID GetEdgeTypeSetID(Edge edge) const {
-    return edge_type_set_id_[edge];
+  /// \returns the set of atomic edge types that are intersected
+  /// by the edge entity type @param edge_entity_type_id
+  /// (assumes that the edge entity type exists)
+  const SetOfEntityTypeIDs& GetEdgeAtomicSubtypes(
+      EntityTypeID edge_entity_type_id) const {
+    return edge_entity_type_id_to_atomic_entity_type_ids_.at(
+        edge_entity_type_id);
+  }
+
+  /// \returns true iff the node type @param sub_type is a
+  /// sub-type of the node type @param super_type
+  /// (assumes that the sub_type and super_type EntityTypeIDs exists)
+  bool IsNodeSubtypeOf(EntityTypeID sub_type, EntityTypeID super_type) const {
+    const auto& super_atomic_types = GetNodeAtomicSubtypes(super_type);
+    const auto& sub_atomic_types = GetNodeAtomicSubtypes(sub_type);
+    // return true if sub_atomic_types is a subset of super_atomic_types
+    return (sub_atomic_types & super_atomic_types) == sub_atomic_types;
+  }
+
+  /// \returns true iff the edge type @param sub_type is a
+  /// sub-type of the edge type @param super_type
+  /// (assumes that the sub_type and super_type EntityTypeIDs exists)
+  bool IsEdgeSubtypeOf(EntityTypeID sub_type, EntityTypeID super_type) const {
+    const auto& super_atomic_types = GetEdgeAtomicSubtypes(super_type);
+    const auto& sub_atomic_types = GetEdgeAtomicSubtypes(sub_type);
+    // return true if sub_atomic_types is a subset of super_atomic_types
+    return (sub_atomic_types & super_atomic_types) == sub_atomic_types;
+  }
+
+  /// \return returns the most specific node entity type for @param node
+  EntityTypeID GetTypeOfNode(Node node) const {
+    return node_entity_type_id_[node];
+  }
+
+  /// \return returns the most specific edge entity type for @param edge
+  EntityTypeID GetTypeOfEdge(Edge edge) const {
+    return edge_entity_type_id_[edge];
+  }
+
+  /// \return true iff the node @param node has the given entity type
+  /// @param node_entity_type_id (need not be the most specific type)
+  /// (assumes that the node entity type exists)
+  bool DoesNodeHaveType(Node node, EntityTypeID node_entity_type_id) const {
+    return IsNodeSubtypeOf(node_entity_type_id, GetTypeOfNode(node));
+  }
+
+  /// \return true iff the edge @param edge has the given entity type
+  /// @param edge_entity_type_id (need not be the most specific type)
+  /// (assumes that the edge entity type exists)
+  bool DoesEdgeHaveType(Edge edge, EntityTypeID edge_entity_type_id) const {
+    return IsEdgeSubtypeOf(edge_entity_type_id, GetTypeOfEdge(edge));
   }
 
   // Return type dictated by arrow
@@ -851,7 +967,7 @@ KATANA_EXPORT Result<std::unique_ptr<PropertyGraph>>
 CreateTransposeGraphTopology(const GraphTopology& topology);
 
 class KATANA_EXPORT EdgeTypeIndex : public GraphTopologyTypes {
-  using EdgeTypeInternal = PropertyGraph::TypeSetID;
+  using EdgeTypeInternal = PropertyGraph::EntityTypeID;
   /// map an integer id to each unique edge edge_type in the graph, such that, the
   /// integer ids assigned are contiguous, i.e., 0 .. num_unique_types-1
   using EdgeTypeIDToIndexMap = std::unordered_map<EdgeTypeInternal, uint32_t>;
@@ -920,7 +1036,7 @@ private:
 class KATANA_EXPORT EdgeShuffleTopology : public GraphTopology {
   using Base = GraphTopology;
   using OrigEdgeIDMap = katana::NUMAArray<Edge>;
-  using EdgeTypeID = PropertyGraph::TypeSetID;
+  using EdgeTypeID = PropertyGraph::EntityTypeID;
 
 public:
   EdgeShuffleTopology() = default;
@@ -982,7 +1098,7 @@ class KATANA_EXPORT EdgeTypeAwareTopology : public GraphTopologyTypes {
   // orig_edge_ids_
 
 protected:
-  using EdgeTypeID = PropertyGraph::TypeSetID;
+  using EdgeTypeID = PropertyGraph::EntityTypeID;
 
 public:
   EdgeTypeAwareTopology() = default;

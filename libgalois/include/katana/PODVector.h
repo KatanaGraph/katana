@@ -56,12 +56,12 @@ class PODVector {
   _Tp* data_;
   size_t capacity_;
   size_t size_;
-  const BaseHostAllocator* bha_;
+  const HostAllocator* bha_;
 
   constexpr static size_t kMinNonZeroCapacity = 8;
 
   // Resources must be already moved or destroyed before this call. It just resets the values.
-  void Clear() {
+  void Reset() {
     data_ = NULL;
     bha_ = &swappable_host_allocator;
     capacity_ = 0;
@@ -81,13 +81,13 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  explicit PODVector(const BaseHostAllocator& bha = swappable_host_allocator)
+  explicit PODVector(const HostAllocator& bha = swappable_host_allocator)
       : data_(NULL), capacity_(0), size_(0), bha_(&bha) {}
 
   template <class InputIterator>
   PODVector(
       InputIterator first, InputIterator last,
-      const BaseHostAllocator& bha = swappable_host_allocator)
+      const HostAllocator& bha = swappable_host_allocator)
       : data_(NULL), capacity_(0), size_(0), bha_(&bha) {
     size_t to_add = last - first;
     resize(to_add);
@@ -95,7 +95,7 @@ public:
   }
 
   explicit PODVector(
-      size_t n, const BaseHostAllocator& bha = swappable_host_allocator)
+      size_t n, const HostAllocator& bha = swappable_host_allocator)
       : data_(NULL), capacity_(0), size_(0), bha_(&bha) {
     resize(n);
   }
@@ -106,7 +106,7 @@ public:
   //! move constructor
   PODVector(PODVector&& v)
       : data_(v.data_), capacity_(v.capacity_), size_(v.size_), bha_(v.bha_) {
-    v.Clear();
+    v.Reset();
   }
 
   //! disabled (shallow) copy assignment operator
@@ -119,7 +119,7 @@ public:
     capacity_ = v.capacity_;
     size_ = v.size_;
     bha_ = v.bha_;
-    v.Clear();
+    v.Reset();
     return *this;
   }
 
@@ -186,7 +186,6 @@ public:
     }
 
     const size_t new_bytes = capacity_ * sizeof(_Tp);
-    //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
     _Tp* new_data_ = static_cast<_Tp*>(
         bha_->Realloc(reinterpret_cast<void*>(data_), new_bytes));
     KATANA_LOG_ASSERT(new_data_);

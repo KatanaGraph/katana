@@ -2,10 +2,15 @@
 
 namespace katana {
 
-HostAllocator::~HostAllocator() {}
+HostHeap::~HostHeap() {}
 
-SwappableHostAllocator::~SwappableHostAllocator() {}
+SwappableHostHeap::~SwappableHostHeap() {}
 
-const SwappableHostAllocator swappable_host_allocator;
+SwappableHostHeap swappable_host_heap;
+
+SwappableHostHeap*
+GetSwappableHostHeap() {
+  return &swappable_host_heap;
+}
 
 }  // namespace katana

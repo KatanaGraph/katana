@@ -56,14 +56,14 @@ class PODVector {
   _Tp* data_;
   size_t capacity_;
   size_t size_;
-  const HostAllocator* bha_;
+  HostAllocator<_Tp> host_alloc_;
 
   constexpr static size_t kMinNonZeroCapacity = 8;
 
-  // Resources must be already moved or destroyed before this call. It just resets the values.
+  //! Resources must be already moved or destroyed before this call. It just resets the values.
   void Reset() {
     data_ = NULL;
-    bha_ = &swappable_host_allocator;
+    host_alloc_ = HostAllocator<_Tp>(GetSwappableHostHeap());
     capacity_ = 0;
     size_ = 0;
   }
@@ -81,22 +81,26 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  explicit PODVector(const HostAllocator& bha = swappable_host_allocator)
-      : data_(NULL), capacity_(0), size_(0), bha_(&bha) {}
+  explicit PODVector(
+      const HostAllocator<_Tp>& host_alloc =
+          HostAllocator<_Tp>(GetSwappableHostHeap()))
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {}
 
   template <class InputIterator>
   PODVector(
       InputIterator first, InputIterator last,
-      const HostAllocator& bha = swappable_host_allocator)
-      : data_(NULL), capacity_(0), size_(0), bha_(&bha) {
+      const HostAllocator<_Tp>& host_alloc =
+          HostAllocator<_Tp>(GetSwappableHostHeap()))
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {
     size_t to_add = last - first;
     resize(to_add);
     std::copy_n(first, to_add, begin());
   }
 
   explicit PODVector(
-      size_t n, const HostAllocator& bha = swappable_host_allocator)
-      : data_(NULL), capacity_(0), size_(0), bha_(&bha) {
+      size_t n, const HostAllocator<_Tp>& host_alloc =
+                    HostAllocator<_Tp>(GetSwappableHostHeap()))
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {
     resize(n);
   }
 
@@ -105,7 +109,10 @@ public:
 
   //! move constructor
   PODVector(PODVector&& v)
-      : data_(v.data_), capacity_(v.capacity_), size_(v.size_), bha_(v.bha_) {
+      : data_(v.data_),
+        capacity_(v.capacity_),
+        size_(v.size_),
+        host_alloc_(v.host_alloc_) {
     v.Reset();
   }
 
@@ -114,16 +121,16 @@ public:
 
   //! move assignment operator
   PODVector& operator=(PODVector&& v) {
-    bha_->Free(data_);
+    host_alloc_.Free(data_);
     data_ = v.data_;
     capacity_ = v.capacity_;
     size_ = v.size_;
-    bha_ = v.bha_;
+    host_alloc_ = v.host_alloc_;
     v.Reset();
     return *this;
   }
 
-  ~PODVector() { bha_->Free(data_); }
+  ~PODVector() { host_alloc_.Free(data_); }
 
   // iterators:
   iterator begin() { return iterator(&data_[0]); }
@@ -153,15 +160,13 @@ public:
   void shrink_to_fit() {
     if (size_ == 0) {
       if (data_ != NULL) {
-        bha_->Free(data_);
+        host_alloc_.Free(data_);
         data_ = NULL;
         capacity_ = 0;
       }
     } else if (size_ < capacity_) {
       capacity_ = std::max(size_, kMinNonZeroCapacity);
-      const size_t new_bytes = capacity_ * sizeof(_Tp);
-      _Tp* new_data_ = static_cast<_Tp*>(
-          bha_->Realloc(reinterpret_cast<void*>(data_), new_bytes));
+      _Tp* new_data_ = host_alloc_.Realloc(data_, capacity_);
       KATANA_LOG_ASSERT(new_data_);
       data_ = new_data_;
     }
@@ -173,7 +178,7 @@ public:
     }
 
     // The price of unpinning&pinning again exceeds the savings below
-    if (bha_->GetType() == MemoryPinType::Swappable) {
+    if (host_alloc_.IsFastAlloc()) {
       // When reallocing, don't pay for elements greater than size_
       shrink_to_fit();
     }
@@ -185,9 +190,7 @@ public:
       capacity_ <<= 1;
     }
 
-    const size_t new_bytes = capacity_ * sizeof(_Tp);
-    _Tp* new_data_ = static_cast<_Tp*>(
-        bha_->Realloc(reinterpret_cast<void*>(data_), new_bytes));
+    _Tp* new_data_ = host_alloc_.Realloc(data_, capacity_);
     KATANA_LOG_ASSERT(new_data_);
     data_ = new_data_;
   }

@@ -49,8 +49,11 @@ class KATANA_EXPORT DynamicBitset {
 public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
-  explicit DynamicBitset(const HostAllocator& bha = swappable_host_allocator)
-      : bitvec_(bha){};
+  explicit DynamicBitset(
+      const HostAllocator<katana::CopyableAtomic<uint64_t>>& host_alloc =
+          HostAllocator<katana::CopyableAtomic<uint64_t>>(
+              GetSwappableHostHeap()))
+      : bitvec_(host_alloc){};
 
   DynamicBitset(DynamicBitset&& bitset)
       : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {}

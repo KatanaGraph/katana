@@ -10,8 +10,6 @@
 
 namespace katana {
 
-enum class MemoryPinType { Swappable = 0, Pinned = 1 };
-
 class KATANA_EXPORT HostHeap {
 public:
   //! Allocate uninitialized items
@@ -22,8 +20,8 @@ public:
   virtual void* Realloc(void* ptr, const size_t new_bytes) = 0;
   //! Release memory
   virtual void Free(void* ptr) = 0;
-  //! Return the runtime memory pin type used by the hh_
-  virtual MemoryPinType GetType() const = 0;
+  //! Return the runtime flag whether allocations are fast (comparing to copying the memory) or not (e.g. because page locking is required)
+  virtual bool IsFastAlloc() const = 0;
 
   virtual ~HostHeap();
 };
@@ -42,7 +40,7 @@ public:
 
   void Free(void* ptr) override { free(ptr); }
 
-  MemoryPinType GetType() const override { return MemoryPinType::Swappable; }
+  bool IsFastAlloc() const override { return true; }
 
   ~SwappableHostHeap() override;
 };
@@ -108,7 +106,7 @@ public:
   void Free(pointer ptr) { hh_->Free(ptr); }
 
   //! Return true if allocation is fast compared to copying the memory
-  bool IsFastAlloc() const { return hh_->GetType() != MemoryPinType::Pinned; }
+  bool IsFastAlloc() const { return hh_->IsFastAlloc(); }
 
   inline void construct(pointer ptr, const_reference val) const {
     new (ptr) Ty(val);

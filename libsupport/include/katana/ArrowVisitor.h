@@ -253,7 +253,6 @@ struct Wrapper {
 
 }  // namespace internal
 
-// TODO(Rob) make sure that all types are the same with an enable_if recursion
 template <class VisitorType, class Arg0, class ...Args>
 std::enable_if_t<
   std::is_same_v<Arg0, arrow::Array&>

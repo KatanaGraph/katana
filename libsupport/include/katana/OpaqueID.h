@@ -197,7 +197,7 @@ struct OpaqueIDLinear : public OpaqueIDOrderedWithValue<_IDType, _Value> {
 public:
   using OpaqueIDOrderedWithValue<_IDType, _Value>::OpaqueIDOrderedWithValue;
 
-  using DifferenceType = std::make_signed_t<_Value>;
+  using DifferenceType = std::ptrdiff_t;
 
   // iterator traits
   using difference_type = DifferenceType;

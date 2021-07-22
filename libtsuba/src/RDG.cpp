@@ -24,7 +24,6 @@
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
 #include "katana/ArrowInterchange.h"
-#include "katana/Backtrace.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"

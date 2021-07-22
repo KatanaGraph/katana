@@ -19,6 +19,7 @@ set(sources
         src/Random.cpp
         src/Result.cpp
         src/Plugin.cpp
+        src/Signals.cpp
         src/Strings.cpp
         src/URI.cpp
 )

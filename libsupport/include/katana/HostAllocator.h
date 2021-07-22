@@ -58,7 +58,7 @@ class HostAllocator {
   }
 
   template <typename T>
-  std::enable_if_t<std::is_scalar<T>::value> destruct(T* t) const {}
+  std::enable_if_t<std::is_scalar<T>::value> destruct(T*) const {}
 
 public:
   typedef size_t size_type;

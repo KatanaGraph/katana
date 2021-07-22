@@ -5,9 +5,21 @@
 
 #include <backward.hpp>
 
+#include <csignal>
+#include <cstdio>
+
 #include "katana/Logging.h"
+
+namespace {
 // Install signal handlers
 backward::SignalHandling sh;
+
+void
+PrintError(int) {
+  std::fputs("caught SIGPIPE\n", stderr);
+}
+
+}  // namespace
 
 KATANA_EXPORT void
 katana::PrintBacktrace() {
@@ -24,5 +36,5 @@ katana::PrintBacktrace() {
 
 KATANA_EXPORT void
 katana::InitBacktrace() {
-  // Set signal handlers
+  std::signal(SIGPIPE, PrintError);
 }

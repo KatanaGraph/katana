@@ -56,12 +56,16 @@ public:
       : bitvec_(host_alloc){};
 
   DynamicBitset(DynamicBitset&& bitset)
-      : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {}
+      : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {
+    bitset.num_bits_ = 0;
+  }
 
   DynamicBitset& operator=(DynamicBitset&& bitset) {
-    bitvec_ = std::move(bitset.bitvec_);
-    num_bits_ = bitset.num_bits_;
-    bitset.num_bits_ = 0;
+    if (this != &bitset) {
+      bitvec_ = std::move(bitset.bitvec_);
+      num_bits_ = bitset.num_bits_;
+      bitset.num_bits_ = 0;
+    }
     return *this;
   }
 

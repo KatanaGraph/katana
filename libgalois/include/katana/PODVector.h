@@ -121,12 +121,14 @@ public:
 
   //! move assignment operator
   PODVector& operator=(PODVector&& v) {
-    host_alloc_.Free(data_);
-    data_ = v.data_;
-    capacity_ = v.capacity_;
-    size_ = v.size_;
-    host_alloc_ = v.host_alloc_;
-    v.Reset();
+    if (this != &v) {
+      host_alloc_.Free(data_);
+      data_ = v.data_;
+      capacity_ = v.capacity_;
+      size_ = v.size_;
+      host_alloc_ = v.host_alloc_;
+      v.Reset();
+    }
     return *this;
   }
 

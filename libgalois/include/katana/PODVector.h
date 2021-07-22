@@ -63,7 +63,7 @@ class PODVector {
   //! Resources must be already moved or destroyed before this call. It just resets the values.
   void Reset() {
     data_ = NULL;
-    host_alloc_ = HostAllocator<_Tp>(GetSwappableHostHeap());
+    host_alloc_ = HostAllocator<_Tp>{};
     capacity_ = 0;
     size_ = 0;
   }
@@ -81,25 +81,20 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  explicit PODVector(
-      const HostAllocator<_Tp>& host_alloc =
-          HostAllocator<_Tp>(GetSwappableHostHeap()))
+  explicit PODVector(const HostAllocator<_Tp>& host_alloc = {})
       : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {}
 
   template <class InputIterator>
   PODVector(
       InputIterator first, InputIterator last,
-      const HostAllocator<_Tp>& host_alloc =
-          HostAllocator<_Tp>(GetSwappableHostHeap()))
+      const HostAllocator<_Tp>& host_alloc = {})
       : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {
     size_t to_add = last - first;
     resize(to_add);
     std::copy_n(first, to_add, begin());
   }
 
-  explicit PODVector(
-      size_t n, const HostAllocator<_Tp>& host_alloc =
-                    HostAllocator<_Tp>(GetSwappableHostHeap()))
+  explicit PODVector(size_t n, const HostAllocator<_Tp>& host_alloc = {})
       : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {
     resize(n);
   }

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <new>
+#include <type_traits>
 #include <utility>
 
 #include "katana/config.h"
@@ -51,12 +52,13 @@ template <typename Ty>
 class HostAllocator {
   HostHeap* hh_;
 
-  inline void destruct(char*) const {}
-  inline void destruct(wchar_t*) const {}
   template <typename T>
-  inline void destruct(T* t) const {
+  std::enable_if_t<!std::is_scalar<T>::value> destruct(T* t) const {
     t->~T();
   }
+
+  template <typename T>
+  std::enable_if_t<std::is_scalar<T>::value> destruct(T* t) const {}
 
 public:
   typedef size_t size_type;
@@ -72,6 +74,7 @@ public:
     typedef HostAllocator<Other> other;
   };
 
+  HostAllocator() noexcept : hh_(GetSwappableHostHeap()) {}
   explicit HostAllocator(HostHeap* hh) noexcept : hh_(hh) {}
 
   template <class T1>
@@ -79,9 +82,9 @@ public:
     hh_ = rhs.hh_;
   }
 
-  inline pointer address(reference val) const { return &val; }
+  pointer address(reference val) const { return &val; }
 
-  inline const_pointer address(const_reference val) const { return &val; }
+  const_pointer address(const_reference val) const { return &val; }
 
   pointer allocate(size_type size) {
     if (size > max_size())
@@ -108,13 +111,9 @@ public:
   //! Return true if allocation is fast compared to copying the memory
   bool IsFastAlloc() const { return hh_->IsFastAlloc(); }
 
-  inline void construct(pointer ptr, const_reference val) const {
-    new (ptr) Ty(val);
-  }
-
   template <class U, class... Args>
-  inline void construct(U* p, Args&&... args) const {
-    ::new ((void*)p) U(std::forward<Args>(args)...);
+  void construct(U* p, Args&&... args) const {
+    ::new (reinterpret_cast<void*>(p)) U(std::forward<Args>(args)...);
   }
 
   void destroy(pointer ptr) const { destruct(ptr); }

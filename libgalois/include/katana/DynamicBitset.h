@@ -50,9 +50,7 @@ public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
   explicit DynamicBitset(
-      const HostAllocator<katana::CopyableAtomic<uint64_t>>& host_alloc =
-          HostAllocator<katana::CopyableAtomic<uint64_t>>(
-              GetSwappableHostHeap()))
+      const HostAllocator<katana::CopyableAtomic<uint64_t>>& host_alloc = {})
       : bitvec_(host_alloc){};
 
   DynamicBitset(DynamicBitset&& bitset)

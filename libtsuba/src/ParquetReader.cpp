@@ -4,8 +4,10 @@
 #include <memory>
 #include <unordered_map>
 
+#include <arrow/array/util.h>
 #include <arrow/chunked_array.h>
 #include <arrow/type.h>
+#include <arrow/type_fwd.h>
 
 #include "katana/JSON.h"
 #include "tsuba/Errors.h"
@@ -224,15 +226,18 @@ public:
     int64_t last_global_row =
         std::min(KATANA_CHECKED(NumRows()), curr_global_row + slice->length);
 
-    if (last_global_row <= curr_global_row) {
+    if (last_global_row < curr_global_row) {
       return KATANA_ERROR(
           katana::ErrorCode::InvalidArgument,
-          "slice would result in empty table");
+          "slice cannot extend past end of table");
     }
 
-    auto it = std::lower_bound(
-        row_offsets_.begin(), row_offsets_.end(), curr_global_row);
-    size_t idx = std::distance(row_offsets_.begin(), it);
+    size_t idx = 0;
+    for (; idx + 1 < row_offsets_.size(); ++idx) {
+      if (curr_global_row < row_offsets_[idx + 1]) {
+        break;
+      }
+    }
 
     std::vector<std::shared_ptr<arrow::Table>> tables;
 
@@ -257,6 +262,19 @@ public:
       }
       tables.emplace_back(std::move(table));
       curr_global_row = next_table_offset;
+    }
+
+    if (tables.empty()) {
+      KATANA_CHECKED(EnsureReader(0, false));
+      std::shared_ptr<arrow::Schema> schema;
+      KATANA_CHECKED(readers_[idx]->GetSchema(&schema));
+
+      std::vector<std::shared_ptr<arrow::ChunkedArray>> cols;
+      for (const auto& field : schema->fields()) {
+        cols.emplace_back(std::make_shared<arrow::ChunkedArray>(
+            KATANA_CHECKED(arrow::MakeArrayOfNull(field->type(), 0))));
+      }
+      return arrow::Table::Make(schema, cols);
     }
 
     return KATANA_CHECKED(arrow::ConcatenateTables(tables));
@@ -384,12 +402,17 @@ tsuba::ParquetReader::NumRows(const katana::Uri& uri) {
 Result<std::shared_ptr<arrow::Table>>
 tsuba::ParquetReader::FixTable(std::shared_ptr<arrow::Table>&& _table) {
   std::shared_ptr<arrow::Table> table(std::move(_table));
+
+  KATANA_CHECKED(table->Validate());
+
   if (!make_cannonical_) {
     return table;
   }
   std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
   arrow::SchemaBuilder schema_builder;
   for (int i = 0, size = table->num_columns(); i < size; ++i) {
+    if (table->num_rows() > 0) {
+    }
     auto fixed_column_res = HandleBadParquetTypes(table->column(i));
     if (!fixed_column_res) {
       return fixed_column_res.error();

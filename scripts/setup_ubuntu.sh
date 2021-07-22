@@ -15,7 +15,9 @@ if apt-add-repository --help | grep -q -e "--no-update"; then
 fi
 
 
-RELEASE=$(lsb_release --codename | awk '{print $2}')
+RELEASE_CODENAME="$(lsb_release --codename --short)" # "xenial, focal, hirsute"
+RELEASE_ID="$(lsb_release --id --short | tr 'A-Z' 'a-z')" # should always be "ubuntu"
+VERSION=$(lsb_release --release --short | cut -d . -f 1) # numerical major version, 16, 18, 20, etc
 
 SETUP_TOOLCHAIN_VARIANTS=${SETUP_TOOLCHAIN_VARIANTS:-yes}
 
@@ -49,25 +51,39 @@ run_as_original_user() {
 # Add custom repositories
 #
 curl -fL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
-apt-add-repository -y $NO_UPDATE "deb https://apt.kitware.com/ubuntu/ ${RELEASE} main"
+if [ "$VERSION" == "21" ]; then
+    # no hirsute aka 21.04 apt repo yet, use focal one instead
+    apt-add-repository -y $NO_UPDATE "deb https://apt.kitware.com/ubuntu/ focal main"
+else
+    apt-add-repository -y $NO_UPDATE "deb https://apt.kitware.com/ubuntu/ ${RELEASE_CODENAME} main"
+fi
 
 add-apt-repository -y $NO_UPDATE ppa:git-core/ppa
 
 # Clang isn't present in the xenial repos so we need to add the repo
-VERSION=$(lsb_release --release --short | cut -d . -f 1)
-if [ "$VERSION" == "16" ]; then
+# Clang-10 isn't present in the hirsute repos any more, so we need to add the upstream repo
+if [[ "$VERSION" == "16" ||  "$VERSION" == "21" ]]; then
   curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-  apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE}/ llvm-toolchain-${RELEASE}-10 main"
+  apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE_CODENAME}/ llvm-toolchain-${RELEASE_CODENAME}-10 main"
 fi
 
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
   apt-add-repository -y $NO_UPDATE ppa:ubuntu-toolchain-r/test
 fi
 
-RELEASE_ID="$(lsb_release --id --short | tr 'A-Z' 'a-z')"
-RELEASE_CODENAME="$(lsb_release --codename --short)"
-curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-$RELEASE_CODENAME.deb" \
-  --output /tmp/apache-arrow-apt-source-latest.deb
+
+if [ "$VERSION" == "21" ]; then
+    # no hirsute aka 21.04 release of apache arrow yet, use focal one instead
+    # we must also get libre2-5 from focal
+    curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-focal.deb" \
+         --output /tmp/apache-arrow-apt-source-latest.deb
+    curl "http://archive.ubuntu.com/ubuntu/pool/main/r/re2/libre2-5_20200101+dfsg-1build1_amd64.deb" \
+         --output /tmp/libre2-5.deb
+    apt install -yq /tmp/libre2-5.deb && rm /tmp/libre2-5.deb
+else
+    curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-$RELEASE_CODENAME.deb" \
+         --output /tmp/apache-arrow-apt-source-latest.deb
+fi
 apt install -yq /tmp/apache-arrow-apt-source-latest.deb && rm /tmp/apache-arrow-apt-source-latest.deb
 
 #
@@ -91,12 +107,12 @@ else
 fi
 
 run_as_original_user pip3 install --upgrade "pip$PIP_VERSION" "setuptools$SETUPTOOLS_VERSION"
-run_as_original_user pip3 install conan==1.36 PyGithub packaging
+run_as_original_user pip3 install testresources conan==1.36 PyGithub packaging
 
 # Developer tools
 #
 # pkg-config is required to build pyarrow correctly (seems to be a bug)
-DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck pkg-config"
+DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck pkg-config clangd-10"
 # github actions require a more recent git
 GIT=git
 # Library dependencies
@@ -116,7 +132,7 @@ apt install -yq --allow-downgrades \
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
   apt install -yq gcc-9 g++-9 clang-10
   # in newer versions of ubuntu clang++-10 is installed as a part of clang-10
-  if [ "$VERSION" == "16" ]; then
+  if [[ "$VERSION" == "16" ]]; then
     apt install clang++-10
   fi
 fi

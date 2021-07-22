@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <type_traits>
 
 #include <boost/math/tools/precision.hpp>
 
@@ -196,6 +197,8 @@ template <typename _IDType, typename _Value>
 struct OpaqueIDLinear : public OpaqueIDOrderedWithValue<_IDType, _Value> {
 public:
   using OpaqueIDOrderedWithValue<_IDType, _Value>::OpaqueIDOrderedWithValue;
+
+  static_assert(sizeof(_Value) <= sizeof(std::ptrdiff_t), "The ID is too large to safely use ptrdiff_t");
 
   using DifferenceType = std::ptrdiff_t;
 

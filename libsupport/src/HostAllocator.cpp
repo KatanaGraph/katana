@@ -6,10 +6,9 @@ HostHeap::~HostHeap() {}
 
 SwappableHostHeap::~SwappableHostHeap() {}
 
-SwappableHostHeap swappable_host_heap;
-
-SwappableHostHeap*
+HostHeap*
 GetSwappableHostHeap() {
+  static SwappableHostHeap swappable_host_heap;
   return &swappable_host_heap;
 }
 

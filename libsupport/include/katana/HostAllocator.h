@@ -45,7 +45,7 @@ public:
   ~SwappableHostHeap() override;
 };
 
-KATANA_EXPORT SwappableHostHeap* GetSwappableHostHeap();
+KATANA_EXPORT HostHeap* GetSwappableHostHeap();
 
 template <typename Ty>
 class HostAllocator {

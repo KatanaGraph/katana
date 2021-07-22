@@ -116,7 +116,7 @@ struct Wrapper {
   template <class VisitorType, class... Processed, size_t... I>
   static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
   VisitArrowInternalCall(
-      VisitorType&& visitor, std::tuple<Processed...>&& processed,
+      VisitorType&& visitor, std::tuple<Processed&&...>&& processed,
       std::index_sequence<I...>) {
     return visitor.template Call<ArrowTypes...>(std::get<I>(processed)...);
   }
@@ -126,7 +126,7 @@ struct Wrapper {
   // ArrowType information in the Wrapper struct. When there are no more
   // arguments to process (base case), it calls the Visitor class's Call
   // function with template parameters ArrowTypes... and arguments
-  // Processed...
+  // Processed... with the function VisitArrowInternalCall
   template <
       class VisitorBaseType, class VisitorType, class... Processed,
       class... Unprocessed>

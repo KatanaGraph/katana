@@ -6,7 +6,6 @@
 namespace katana {
 // Programmatic interface to print a backtrace
 KATANA_EXPORT void PrintBacktrace();
-KATANA_EXPORT void InitBacktrace();
 }  // end namespace katana
 
 #endif

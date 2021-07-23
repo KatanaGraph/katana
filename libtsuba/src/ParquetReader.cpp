@@ -322,7 +322,7 @@ public:
       concatenated_table =
           concatenated_table->Slice(slice->offset, slice->length);
     }
-    return concatenated_tables;
+    return concatenated_table;
   }
 
 private:

@@ -60,6 +60,10 @@ class HostAllocator {
   template <typename T>
   std::enable_if_t<std::is_scalar<T>::value> destruct(T*) const {}
 
+  // Otherwise the converting copy constructor cannot access the private fields
+  template <class T1>
+  friend class HostAllocator;
+
 public:
   typedef size_t size_type;
   typedef ptrdiff_t difference_type;

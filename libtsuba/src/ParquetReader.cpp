@@ -283,8 +283,6 @@ public:
   Result<std::shared_ptr<arrow::Table>> ReadTable(
       std::vector<int32_t> col_indexes,
       std::optional<tsuba::ParquetReader::Slice> slice = std::nullopt) {
-    
-
     std::vector<std::shared_ptr<arrow::Table>> tables;
 
     for (auto& reader : readers_) {
@@ -321,7 +319,8 @@ public:
 
     auto concatenated_tables = arrow::ConcatenateTables(tables);
     if (slice) {
-	concatenated_tables.ValueOrDie() = concatenated_tables.ValueOrDie()->Slice(slice->offset, slice->length);
+      concatenated_tables.ValueOrDie() =
+          concatenated_tables.ValueOrDie()->Slice(slice->offset, slice->length);
     }
     return KATANA_CHECKED(concatenated_tables);
   }

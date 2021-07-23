@@ -317,12 +317,12 @@ public:
       tables.emplace_back(arrow::Table::Make(arrow::schema(fields), columns));
     }
 
-    auto concatenated_tables = arrow::ConcatenateTables(tables);
+    std::shared_ptr<arrow::Table> concatenated_table = KATANA_CHECKED(arrow::ConcatenateTables(tables));
     if (slice) {
-      concatenated_tables.ValueOrDie() =
-          concatenated_tables.ValueOrDie()->Slice(slice->offset, slice->length);
+      concatenated_table =
+          concatenated_table->Slice(slice->offset, slice->length);
     }
-    return KATANA_CHECKED(concatenated_tables);
+    return concatenated_tables;
   }
 
 private:

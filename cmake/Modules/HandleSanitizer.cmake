@@ -73,6 +73,7 @@ function(add_sanitize_options)
     append_common_sanitizer_flags()
     append("-fsanitize=address,undefined -fno-sanitize-recover=all"
             CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    link_libraries("-fsanitize=address,undefined -fno-sanitize-recover=all")
   elseif (KATANA_USE_SANITIZER STREQUAL "Leaks")
     append_common_sanitizer_flags()
     append("-fsanitize=leak" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

@@ -20,8 +20,6 @@
 #ifndef KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
 #define KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
 
-#include <sys/mman.h>
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -31,7 +29,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "katana/CpuGpuSwitch.h"
+#include "katana/HostAllocator.h"
 #include "katana/Logging.h"
 #include "katana/config.h"
 
@@ -58,38 +56,16 @@ class PODVector {
   _Tp* data_;
   size_t capacity_;
   size_t size_;
-  MemoryPinType mpt_;
+  HostAllocator<_Tp> host_alloc_;
 
   constexpr static size_t kMinNonZeroCapacity = 8;
 
-  // Resources must be already moved or destroyed before this call. It just resets the values.
-  void Clear() {
+  //! Resources must be already moved or destroyed before this call. It just resets the values.
+  void Reset() {
     data_ = NULL;
-    mpt_ = MemoryPinType::Swappable;
+    host_alloc_ = HostAllocator<_Tp>{};
     capacity_ = 0;
     size_ = 0;
-  }
-
-  void MaybePin(void* ptr, const size_t n_bytes) {
-    if (mpt_ == MemoryPinType::Pinned) {
-      if (mlock(ptr, n_bytes) != 0) {
-        KATANA_WARN_ONCE(
-            "Failed to pin host memory for use on a GPU. Error: {}", errno);
-        // Prevent any more pinning and unpinning for this object
-        mpt_ = MemoryPinType::Swappable;
-      }
-    }
-  }
-
-  void MaybeUnpin(void* ptr, const size_t n_bytes) {
-    if (mpt_ == MemoryPinType::Pinned) {
-      if (munlock(ptr, n_bytes) != 0) {
-        KATANA_WARN_ONCE(
-            "Failed to unpin host memory after use on a GPU. Error: {}", errno);
-        // Prevent any more pinning and unpinning for this object
-        mpt_ = MemoryPinType::Swappable;
-      }
-    }
   }
 
 public:
@@ -105,22 +81,21 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  explicit PODVector(const MemoryPinType mpt = MemoryPinType::Swappable)
-      : data_(NULL), capacity_(0), size_(0), mpt_(mpt) {}
+  explicit PODVector(const HostAllocator<_Tp>& host_alloc = {})
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {}
 
   template <class InputIterator>
   PODVector(
       InputIterator first, InputIterator last,
-      const MemoryPinType mpt = MemoryPinType::Swappable)
-      : data_(NULL), capacity_(0), size_(0), mpt_(mpt) {
+      const HostAllocator<_Tp>& host_alloc = {})
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {
     size_t to_add = last - first;
     resize(to_add);
     std::copy_n(first, to_add, begin());
   }
 
-  explicit PODVector(
-      size_t n, const MemoryPinType mpt = MemoryPinType::Swappable)
-      : data_(NULL), capacity_(0), size_(0), mpt_(mpt) {
+  explicit PODVector(size_t n, const HostAllocator<_Tp>& host_alloc = {})
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {
     resize(n);
   }
 
@@ -129,8 +104,11 @@ public:
 
   //! move constructor
   PODVector(PODVector&& v)
-      : data_(v.data_), capacity_(v.capacity_), size_(v.size_), mpt_(v.mpt_) {
-    v.Clear();
+      : data_(v.data_),
+        capacity_(v.capacity_),
+        size_(v.size_),
+        host_alloc_(v.host_alloc_) {
+    v.Reset();
   }
 
   //! disabled (shallow) copy assignment operator
@@ -138,26 +116,18 @@ public:
 
   //! move assignment operator
   PODVector& operator=(PODVector&& v) {
-    if (data_ != NULL) {
-      //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
-      MaybeUnpin(data_, capacity_ * sizeof(_Tp));
-      free(data_);
+    if (this != &v) {
+      host_alloc_.Free(data_);
+      data_ = v.data_;
+      capacity_ = v.capacity_;
+      size_ = v.size_;
+      host_alloc_ = v.host_alloc_;
+      v.Reset();
     }
-    data_ = v.data_;
-    capacity_ = v.capacity_;
-    size_ = v.size_;
-    mpt_ = v.mpt_;
-    v.Clear();
     return *this;
   }
 
-  ~PODVector() {
-    if (data_ != NULL) {
-      //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
-      MaybeUnpin(data_, capacity_ * sizeof(_Tp));
-      free(data_);
-    }
-  }
+  ~PODVector() { host_alloc_.Free(data_); }
 
   // iterators:
   iterator begin() { return iterator(&data_[0]); }
@@ -187,21 +157,14 @@ public:
   void shrink_to_fit() {
     if (size_ == 0) {
       if (data_ != NULL) {
-        //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
-        MaybeUnpin(data_, capacity_ * sizeof(_Tp));
-        free(data_);
+        host_alloc_.Free(data_);
         data_ = NULL;
         capacity_ = 0;
       }
     } else if (size_ < capacity_) {
-      MaybeUnpin(data_, capacity_ * sizeof(_Tp));
       capacity_ = std::max(size_, kMinNonZeroCapacity);
-      const size_t new_bytes = capacity_ * sizeof(_Tp);
-      //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
-      _Tp* new_data_ =
-          static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
+      _Tp* new_data_ = host_alloc_.Realloc(data_, capacity_);
       KATANA_LOG_ASSERT(new_data_);
-      MaybePin(new_data_, new_bytes);
       data_ = new_data_;
     }
   }
@@ -212,12 +175,10 @@ public:
     }
 
     // The price of unpinning&pinning again exceeds the savings below
-    if (mpt_ == MemoryPinType::Swappable) {
+    if (host_alloc_.IsFastAlloc()) {
       // When reallocing, don't pay for elements greater than size_
       shrink_to_fit();
     }
-
-    const size_t old_bytes = capacity_ * sizeof(_Tp);
 
     // reset capacity_ because its previous value need not be a power-of-2
     capacity_ = kMinNonZeroCapacity;
@@ -226,16 +187,8 @@ public:
       capacity_ <<= 1;
     }
 
-    if (data_ != nullptr) {
-      MaybeUnpin(data_, old_bytes);
-    }
-
-    const size_t new_bytes = capacity_ * sizeof(_Tp);
-    //TODO (serge): change to a polymorphic allocator to switch between pinned and swappable memory
-    _Tp* new_data_ =
-        static_cast<_Tp*>(realloc(reinterpret_cast<void*>(data_), new_bytes));
+    _Tp* new_data_ = host_alloc_.Realloc(data_, capacity_);
     KATANA_LOG_ASSERT(new_data_);
-    MaybePin(new_data_, new_bytes);
     data_ = new_data_;
   }
 

@@ -7,8 +7,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "katana/config.h"
 #include "katana/Logging.h"
+#include "katana/config.h"
 
 namespace katana {
 

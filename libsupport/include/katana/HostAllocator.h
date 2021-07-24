@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "katana/config.h"
+#include "katana/Logging.h"
 
 namespace katana {
 
@@ -79,11 +80,14 @@ public:
   };
 
   HostAllocator() noexcept : hh_(GetSwappableHostHeap()) {}
-  explicit HostAllocator(HostHeap* hh) noexcept : hh_(hh) {}
+  explicit HostAllocator(HostHeap* hh) noexcept : hh_(hh) {
+    KATANA_LOG_ASSERT(hh_ != nullptr);
+  }
 
   template <class T1>
   HostAllocator(const HostAllocator<T1>& rhs) noexcept {
     hh_ = rhs.hh_;
+    KATANA_LOG_ASSERT(hh_ != nullptr);
   }
 
   pointer address(reference val) const { return &val; }

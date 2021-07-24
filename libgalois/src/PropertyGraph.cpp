@@ -219,14 +219,15 @@ GetTypeSetIDsFromProperties(
   }
 
   // collect the list of unique combination of types
+  using EntityType = katana::gstl::Vector<int>;
   // NB: cannot use unordered_set without defining a hash function for vectors;
   // performance is not affected here because the set is very small (<=256)
-  katana::gstl::Set<katana::gstl::Vector<int>> type_combinations;
-  katana::PerThreadStorage<katana::gstl::Set<katana::gstl::Vector<int>>>
-      type_combinations_pts;
+  using EntityTypeSet = katana::gstl::Set<EntityType>;
+  EntityTypeSet type_combinations;
+  katana::PerThreadStorage<EntityTypeSet> type_combinations_pts;
   katana::do_all(
       katana::iterate(int64_t{0}, properties->num_rows()), [&](int64_t row) {
-        katana::gstl::Vector<int> field_indices;
+        EntityType field_indices;
         for (auto bool_property : bool_properties) {
           if (bool_property.array->IsValid(row) &&
               bool_property.array->Value(row)) {
@@ -240,21 +241,26 @@ GetTypeSetIDsFromProperties(
           }
         }
         if (field_indices.size() > 1) {
-          katana::gstl::Set<katana::gstl::Vector<int>>&
-              local_type_combinations = *type_combinations_pts.getLocal();
+          EntityTypeSet& local_type_combinations =
+              *type_combinations_pts.getLocal();
           local_type_combinations.emplace(field_indices);
         }
       });
   for (unsigned t = 0, n = katana::activeThreads; t < n; t++) {
-    katana::gstl::Set<katana::gstl::Vector<int>>& remote_type_combinations =
+    EntityTypeSet& remote_type_combinations =
         *type_combinations_pts.getRemote(t);
     for (auto& type_combination : remote_type_combinations) {
       type_combinations.emplace(type_combination);
     }
   }
+  // deallocate PerThreadStorage in parallel
+  katana::on_each([&](unsigned, unsigned) {
+    EntityTypeSet& local_type_combinations = *type_combinations_pts.getLocal();
+    local_type_combinations = EntityTypeSet();
+  });
 
   // assign a new ID to each unique combination of types
-  for (const katana::gstl::Vector<int>& field_indices : type_combinations) {
+  for (const EntityType& field_indices : type_combinations) {
     katana::PropertyGraph::TypeSetID new_type_set_id =
         type_set_id_to_type_names->size();
     type_field_indices_to_id.emplace(
@@ -294,7 +300,7 @@ GetTypeSetIDsFromProperties(
 
   // assign the type ID for each row
   katana::do_all(katana::iterate(int64_t{0}, num_rows), [&](int64_t row) {
-    katana::gstl::Vector<int> field_indices;
+    EntityType field_indices;
     for (auto bool_property : bool_properties) {
       if (bool_property.array->IsValid(row) &&
           bool_property.array->Value(row)) {

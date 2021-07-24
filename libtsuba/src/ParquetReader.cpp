@@ -283,12 +283,6 @@ public:
   Result<std::shared_ptr<arrow::Table>> ReadTable(
       std::vector<int32_t> col_indexes,
       std::optional<tsuba::ParquetReader::Slice> slice = std::nullopt) {
-    if (slice) {
-      return KATANA_ERROR(
-          katana::ErrorCode::NotImplemented,
-          "column subset read not implemented for slice! Sorry!");
-    }
-
     std::vector<std::shared_ptr<arrow::Table>> tables;
 
     for (auto& reader : readers_) {
@@ -322,7 +316,14 @@ public:
       }
       tables.emplace_back(arrow::Table::Make(arrow::schema(fields), columns));
     }
-    return KATANA_CHECKED(arrow::ConcatenateTables(tables));
+
+    std::shared_ptr<arrow::Table> concatenated_table =
+        KATANA_CHECKED(arrow::ConcatenateTables(tables));
+    if (slice) {
+      concatenated_table =
+          concatenated_table->Slice(slice->offset, slice->length);
+    }
+    return concatenated_table;
   }
 
 private:

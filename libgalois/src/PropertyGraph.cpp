@@ -137,6 +137,15 @@ WriteTopology(const katana::GraphTopology& topology) {
   return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
 }
 
+template <typename ArrowType>
+struct PropertyColumn {
+  int field_index;
+  std::shared_ptr<ArrowType> array;
+
+  PropertyColumn(int i, std::shared_ptr<ArrowType>& a)
+      : field_index(i), array(a) {}
+};
+
 /// Assumes all boolean or uint8 properties are types
 katana::Result<katana::NUMAArray<katana::PropertyGraph::TypeSetID>>
 GetTypeSetIDsFromProperties(
@@ -158,6 +167,10 @@ GetTypeSetIDsFromProperties(
 
   // collect the list of types
   std::vector<int> type_field_indices;
+  using BoolPropertyColumn = PropertyColumn<arrow::BooleanArray>;
+  std::vector<BoolPropertyColumn> bool_properties;
+  using UInt8PropertyColumn = PropertyColumn<arrow::UInt8Array>;
+  std::vector<UInt8PropertyColumn> uint8_properties;
   const std::shared_ptr<arrow::Schema>& schema = properties->schema();
   KATANA_LOG_DEBUG_ASSERT(schema->num_fields() == properties->num_columns());
   for (int i = 0, n = schema->num_fields(); i < n; i++) {
@@ -165,9 +178,18 @@ GetTypeSetIDsFromProperties(
 
     // a bool or uint8 property is (always) considered a type
     // TODO(roshan) make this customizable by the user
-    if (current_field->type()->Equals(arrow::boolean()) ||
-        current_field->type()->Equals(arrow::uint8())) {
+    if (current_field->type()->Equals(arrow::boolean())) {
       type_field_indices.push_back(i);
+      std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
+      auto bool_property =
+          std::static_pointer_cast<arrow::BooleanArray>(property);
+      bool_properties.emplace_back(i, bool_property);
+    } else if (current_field->type()->Equals(arrow::uint8())) {
+      type_field_indices.push_back(i);
+      std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
+      auto uint8_property =
+          std::static_pointer_cast<arrow::UInt8Array>(property);
+      uint8_properties.emplace_back(i, uint8_property);
     }
   }
 
@@ -205,21 +227,16 @@ GetTypeSetIDsFromProperties(
   katana::do_all(
       katana::iterate(int64_t{0}, properties->num_rows()), [&](int64_t row) {
         katana::gstl::Vector<int> field_indices;
-        for (int i : type_field_indices) {
-          std::shared_ptr<arrow::Array> property =
-              properties->column(i)->chunk(0);
-          if (property->type()->Equals(arrow::boolean())) {
-            auto bool_property =
-                std::static_pointer_cast<arrow::BooleanArray>(property);
-            if (bool_property->IsValid(row) && bool_property->Value(row)) {
-              field_indices.emplace_back(i);
-            }
-          } else if (property->type()->Equals(arrow::uint8())) {
-            auto uint8_property =
-                std::static_pointer_cast<arrow::UInt8Array>(property);
-            if (uint8_property->IsValid(row) && uint8_property->Value(row)) {
-              field_indices.emplace_back(i);
-            }
+        for (auto bool_property : bool_properties) {
+          if (bool_property.array->IsValid(row) &&
+              bool_property.array->Value(row)) {
+            field_indices.emplace_back(bool_property.field_index);
+          }
+        }
+        for (auto uint8_property : uint8_properties) {
+          if (uint8_property.array->IsValid(row) &&
+              uint8_property.array->Value(row)) {
+            field_indices.emplace_back(uint8_property.field_index);
           }
         }
         if (field_indices.size() > 1) {
@@ -278,21 +295,16 @@ GetTypeSetIDsFromProperties(
   // assign the type ID for each row
   katana::do_all(katana::iterate(int64_t{0}, num_rows), [&](int64_t row) {
     katana::gstl::Vector<int> field_indices;
-    for (int i : type_field_indices) {
-      std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
-
-      if (property->type()->Equals(arrow::boolean())) {
-        auto bool_property =
-            std::static_pointer_cast<arrow::BooleanArray>(property);
-        if (bool_property->IsValid(row) && bool_property->Value(row)) {
-          field_indices.emplace_back(i);
-        }
-      } else if (property->type()->Equals(arrow::uint8())) {
-        auto uint8_property =
-            std::static_pointer_cast<arrow::UInt8Array>(property);
-        if (uint8_property->IsValid(row) && uint8_property->Value(row)) {
-          field_indices.emplace_back(i);
-        }
+    for (auto bool_property : bool_properties) {
+      if (bool_property.array->IsValid(row) &&
+          bool_property.array->Value(row)) {
+        field_indices.emplace_back(bool_property.field_index);
+      }
+    }
+    for (auto uint8_property : uint8_properties) {
+      if (uint8_property.array->IsValid(row) &&
+          uint8_property.array->Value(row)) {
+        field_indices.emplace_back(uint8_property.field_index);
       }
     }
     if (field_indices.empty()) {

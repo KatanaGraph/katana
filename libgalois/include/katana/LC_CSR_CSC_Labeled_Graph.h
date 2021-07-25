@@ -411,7 +411,7 @@ public:
    * current infrastructure only supports sorting those 2 arrays at
    * the moment).
    */
-  void SortVectorByDataThenDst(std::vector<uint64_t>& vector_to_sort) {
+  void SortVectorByDataThenDst(katana::NUMAArray<uint64_t>& vector_to_sort) {
     katana::do_all(
         katana::iterate(uint64_t{0}, this->size()),
         [&](size_t node_id) {

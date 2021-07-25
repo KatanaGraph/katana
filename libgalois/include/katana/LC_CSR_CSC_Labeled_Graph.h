@@ -70,9 +70,9 @@ protected:
   std::unordered_map<EdgeTy, uint32_t> edgeLabelToIndexMap;
 
   //! out degrees of the data graph
-  katana::gstl::Vector<uint32_t> degrees_;  // TODO: change these to NUMAArray
+  NUMAArray<uint32_t> degrees_;
   //! in degrees of the data graph
-  katana::gstl::Vector<uint32_t> in_degrees_;
+  NUMAArray<uint32_t> in_degrees_;
 
 public:
   using node_data_const_reference =

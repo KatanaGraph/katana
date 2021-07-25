@@ -110,7 +110,10 @@ public:
       RDGHandle handle, WriteGroup* writes,
       RDG::RDGVersioningPolicy retain_version) const;
 
-  void UnbindFromStorage();
+  /// Mark all in-memory properties dirty so that they can be written
+  /// out, copy out-of-memory properties
+  katana::Result<void> ChangeStorageLocation(
+      const katana::Uri& old_location, const katana::Uri& new_location);
 
   //
   // Property manipulation

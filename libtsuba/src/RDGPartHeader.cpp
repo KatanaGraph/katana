@@ -26,6 +26,18 @@ const char* kPartProperyMetaKey = "kg.v1.part_property_meta";
 
 // special partition property names
 
+katana::Result<void>
+CopyProperty(
+    tsuba::PropStorageInfo* prop, const katana::Uri& old_location,
+    const katana::Uri& new_location) {
+  katana::Uri old_path = old_location.Join(prop->path());
+  katana::Uri new_path = new_location.Join(prop->path());
+  tsuba::FileView fv;
+
+  KATANA_CHECKED(fv.Bind(old_path.string(), true));
+  return tsuba::FileStore(new_path.string(), fv.ptr<uint8_t>(), fv.size());
+}
+
 }  // namespace
 
 namespace tsuba {
@@ -122,18 +134,32 @@ RDGPartHeader::Validate() const {
   return katana::ResultSuccess();
 }
 
-void
-RDGPartHeader::UnbindFromStorage() {
+katana::Result<void>
+RDGPartHeader::ChangeStorageLocation(
+    const katana::Uri& old_location, const katana::Uri& new_location) {
   for (PropStorageInfo& prop : node_prop_info_list_) {
-    prop.WasModified();
+    if (prop.IsAbsent()) {
+      KATANA_CHECKED(CopyProperty(&prop, old_location, new_location));
+    } else {
+      prop.WasModified();
+    }
   }
   for (PropStorageInfo& prop : edge_prop_info_list_) {
-    prop.WasModified();
+    if (prop.IsAbsent()) {
+      KATANA_CHECKED(CopyProperty(&prop, old_location, new_location));
+    } else {
+      prop.WasModified();
+    }
   }
   for (PropStorageInfo& prop : part_prop_info_list_) {
-    prop.WasModified();
+    if (prop.IsAbsent()) {
+      KATANA_CHECKED(CopyProperty(&prop, old_location, new_location));
+    } else {
+      prop.WasModified();
+    }
   }
   topology_path_ = "";
+  return katana::ResultSuccess();
 }
 
 }  // namespace tsuba

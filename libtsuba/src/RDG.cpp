@@ -522,7 +522,8 @@ tsuba::RDG::Store(
       handle.impl_->rdg_manifest().policy_id(), tsuba::Comm()->Num,
       core_->part_header().metadata().policy_id_, versioning_action);
   if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
-    core_->part_header().UnbindFromStorage();
+    KATANA_CHECKED(core_->part_header().ChangeStorageLocation(
+        rdg_dir_, handle.impl_->rdg_manifest().dir()));
   }
 
   auto desc_res = WriteGroup::Make();

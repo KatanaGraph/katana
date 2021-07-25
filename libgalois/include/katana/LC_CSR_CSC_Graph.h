@@ -156,9 +156,8 @@ protected:
         });
 
     // prefix sum calculation of the edge index array
-    for (uint32_t n = 1; n < BaseGraph::numNodes; ++n) {
-      dataBuffer[n] += dataBuffer[n - 1];
-    }
+    katana::ParallelSTL::partial_sum(
+        dataBuffer.begin(), dataBuffer.end(), dataBuffer.begin());
 
     // copy over the new tranposed edge index data
     inEdgeIndData.allocateInterleaved(BaseGraph::numNodes);

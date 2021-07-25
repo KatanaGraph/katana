@@ -451,8 +451,9 @@ public:
    * Returns in-degrees in a vector; useful if in-degrees need to be accessed
    * quickly (1 memory access instead of 2 from subtracting begin and end).
    */
-  gstl::Vector<uint32_t> countInDegrees() const {
-    gstl::Vector<uint32_t> savedInDegrees(BaseGraph::numNodes);
+  NUMAArray<uint32_t> countInDegrees() const {
+    NUMAArray<uint32_t> savedInDegrees;
+    savedInDegrees.allocateInterleaved(BaseGraph::numNodes);
     katana::do_all(
         katana::iterate(this->begin(), this->end()),
         [&](unsigned v) { savedInDegrees[v] = this->getInDegree(v); },

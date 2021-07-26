@@ -191,7 +191,8 @@ protected:
     }
 
     katana::do_all(
-        katana::iterate(UINT64_C(0), BaseGraph::numNodes), [&](uint64_t src) {
+        katana::iterate(UINT64_C(0), BaseGraph::numNodes),
+        [&](uint64_t src) {
           // e = start index into edge array for a particular node
           uint64_t e = (src == 0) ? 0 : BaseGraph::edgeIndData[src - 1];
 
@@ -208,7 +209,8 @@ protected:
             createEdgeData(e_new, e);
             e++;
           }
-        });
+        },
+        katana::steal());
   }
 
 public:

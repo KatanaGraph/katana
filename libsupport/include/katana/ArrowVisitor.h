@@ -126,13 +126,16 @@ struct Wrapper {
   // ArrowType information in the Wrapper struct. When there are no more
   // arguments to process (base case), it calls the Visitor class's Call
   // function with template parameters ArrowTypes... and arguments
-  // Processed...
+  // Processed... with the function VisitArrowInternalCall
+  // TODO(Rob): May be more efficent to use a dummy variable to seperate
+  //            Processed and Unprocessed args instead of storing the
+  //            Processed args in a tuple
   template <
       class VisitorBaseType, class VisitorType, class... Processed,
       class... Unprocessed>
   static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
   VisitArrowInternal(
-      VisitorType&& visitor, std::tuple<Processed&&...>&& processed,
+      VisitorType&& visitor, std::tuple<Processed...>&& processed,
       typename VisitorBaseType::ParamBase&& param,
       Unprocessed&&... unprocessed) {
     switch (VisitorBaseType::Type(param)->id()) {
@@ -188,12 +191,23 @@ struct Wrapper {
   }
 };
 
+template <typename T>
+using is_visit_arrow_base_t = typename std::disjunction<
+    std::is_same<T, arrow::Array&>,
+    std::is_same<T, arrow::Scalar&>,
+    std::is_same<T, arrow::ArrayBuilder*>>;
+
 }  // namespace internal
 
+// VisitArrow call that supports multiple args of type
+// arrow::Array&, arrow::Scalar&, and/or arrow::Builder*
+// (args can be any combination of these types)
 template <class VisitorType, class Arg0, class... Args>
 std::enable_if_t<
-    std::is_same_v<Arg0, arrow::Array&> &&
-        std::conjunction_v<std::is_same<Arg0, Args>...>,
+    std::conjunction_v<
+        internal::is_visit_arrow_base_t<Arg0>,
+        internal::is_visit_arrow_base_t<Args>...
+    >,
     katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
 VisitArrow(VisitorType&& visitor, Arg0 array, Args... args) {
   return internal::Wrapper<>::template VisitArrowInternal<
@@ -202,6 +216,7 @@ VisitArrow(VisitorType&& visitor, Arg0 array, Args... args) {
       std::forward<Arg0>(array), std::forward<Args>(args)...);
 }
 
+// Single arg VisitArrow functions provided for backwards compatability
 template <class VisitorType>
 auto
 VisitArrow(const arrow::Array& array, VisitorType&& visitor) {
@@ -216,18 +231,6 @@ VisitArrow(const std::shared_ptr<arrow::Array>& array, VisitorType&& visitor) {
   KATANA_LOG_DEBUG_ASSERT(array);
   const arrow::Array& ref = *(array.get());
   return VisitArrow(ref, std::forward<VisitorType>(visitor));
-}
-
-template <class VisitorType, class Arg0, class... Args>
-std::enable_if_t<
-    std::is_same_v<Arg0, arrow::Scalar&> &&
-        std::conjunction_v<std::is_same<Arg0, Args>...>,
-    katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
-VisitArrow(VisitorType&& visitor, Arg0 scalar, Args... args) {
-  return internal::Wrapper<>::template VisitArrowInternal<
-      internal::ArrayVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{},
-      std::forward<Arg0>(scalar), std::forward<Args>(args)...);
 }
 
 template <class VisitorType>
@@ -245,18 +248,6 @@ VisitArrow(
   KATANA_LOG_DEBUG_ASSERT(scalar);
   const arrow::Scalar& ref = *(scalar.get());
   return VisitArrow(ref, std::forward<VisitorType>(visitor));
-}
-
-template <class VisitorType, class Arg0, class... Args>
-std::enable_if_t<
-    std::is_same_v<Arg0, arrow::ArrayBuilder*> &&
-        std::conjunction_v<std::is_same<Arg0, Args>...>,
-    katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
-VisitArrow(VisitorType&& visitor, Arg0 builder, Args... args) {
-  return internal::Wrapper<>::template VisitArrowInternal<
-      internal::ArrayVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{},
-      std::forward<Arg0>(builder), std::forward<Args>(args)...);
 }
 
 template <class VisitorType>

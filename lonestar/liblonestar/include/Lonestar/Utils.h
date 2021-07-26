@@ -38,8 +38,8 @@ MakeFileGraph(
   }
 
   tsuba::RDGLoadOptions opts;
-  opts.node_properties = &node_properties;
-  opts.edge_properties = &edge_properties;
+  opts.node_properties = node_properties;
+  opts.edge_properties = edge_properties;
   auto pfg_result = katana::PropertyGraph::Make(rdg_name, opts);
   if (!pfg_result) {
     KATANA_LOG_FATAL("cannot make graph: {}", pfg_result.error());

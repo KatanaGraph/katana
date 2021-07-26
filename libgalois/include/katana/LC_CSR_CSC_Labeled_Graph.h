@@ -70,9 +70,9 @@ protected:
   std::unordered_map<EdgeTy, uint32_t> edgeLabelToIndexMap;
 
   //! out degrees of the data graph
-  katana::gstl::Vector<uint32_t> degrees_;  // TODO: change these to NUMAArray
+  NUMAArray<uint32_t> degrees_;
   //! in degrees of the data graph
-  katana::gstl::Vector<uint32_t> in_degrees_;
+  NUMAArray<uint32_t> in_degrees_;
 
 public:
   using node_data_const_reference =
@@ -411,7 +411,7 @@ public:
    * current infrastructure only supports sorting those 2 arrays at
    * the moment).
    */
-  void SortVectorByDataThenDst(std::vector<uint64_t>& vector_to_sort) {
+  void SortVectorByDataThenDst(katana::NUMAArray<uint64_t>& vector_to_sort) {
     katana::do_all(
         katana::iterate(uint64_t{0}, this->size()),
         [&](size_t node_id) {

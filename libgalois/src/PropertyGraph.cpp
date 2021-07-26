@@ -137,6 +137,15 @@ WriteTopology(const katana::GraphTopology& topology) {
   return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
 }
 
+template <typename ArrowType>
+struct PropertyColumn {
+  int field_index;
+  std::shared_ptr<ArrowType> array;
+
+  PropertyColumn(int i, std::shared_ptr<ArrowType>& a)
+      : field_index(i), array(a) {}
+};
+
 /// Assumes all boolean or uint8 properties are types
 katana::Result<katana::NUMAArray<katana::PropertyGraph::TypeSetID>>
 GetTypeSetIDsFromProperties(
@@ -158,6 +167,10 @@ GetTypeSetIDsFromProperties(
 
   // collect the list of types
   std::vector<int> type_field_indices;
+  using BoolPropertyColumn = PropertyColumn<arrow::BooleanArray>;
+  std::vector<BoolPropertyColumn> bool_properties;
+  using UInt8PropertyColumn = PropertyColumn<arrow::UInt8Array>;
+  std::vector<UInt8PropertyColumn> uint8_properties;
   const std::shared_ptr<arrow::Schema>& schema = properties->schema();
   KATANA_LOG_DEBUG_ASSERT(schema->num_fields() == properties->num_columns());
   for (int i = 0, n = schema->num_fields(); i < n; i++) {
@@ -165,9 +178,18 @@ GetTypeSetIDsFromProperties(
 
     // a bool or uint8 property is (always) considered a type
     // TODO(roshan) make this customizable by the user
-    if (current_field->type()->Equals(arrow::boolean()) ||
-        current_field->type()->Equals(arrow::uint8())) {
+    if (current_field->type()->Equals(arrow::boolean())) {
       type_field_indices.push_back(i);
+      std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
+      auto bool_property =
+          std::static_pointer_cast<arrow::BooleanArray>(property);
+      bool_properties.emplace_back(i, bool_property);
+    } else if (current_field->type()->Equals(arrow::uint8())) {
+      type_field_indices.push_back(i);
+      std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
+      auto uint8_property =
+          std::static_pointer_cast<arrow::UInt8Array>(property);
+      uint8_properties.emplace_back(i, uint8_property);
     }
   }
 
@@ -197,47 +219,48 @@ GetTypeSetIDsFromProperties(
   }
 
   // collect the list of unique combination of types
+  using EntityType = katana::gstl::Vector<int>;
   // NB: cannot use unordered_set without defining a hash function for vectors;
   // performance is not affected here because the set is very small (<=256)
-  katana::gstl::Set<katana::gstl::Vector<int>> type_combinations;
-  katana::PerThreadStorage<katana::gstl::Set<katana::gstl::Vector<int>>>
-      type_combinations_pts;
+  using EntityTypeSet = katana::gstl::Set<EntityType>;
+  EntityTypeSet type_combinations;
+  katana::PerThreadStorage<EntityTypeSet> type_combinations_pts;
   katana::do_all(
       katana::iterate(int64_t{0}, properties->num_rows()), [&](int64_t row) {
-        katana::gstl::Vector<int> field_indices;
-        for (int i : type_field_indices) {
-          std::shared_ptr<arrow::Array> property =
-              properties->column(i)->chunk(0);
-          if (property->type()->Equals(arrow::boolean())) {
-            auto bool_property =
-                std::static_pointer_cast<arrow::BooleanArray>(property);
-            if (bool_property->IsValid(row) && bool_property->Value(row)) {
-              field_indices.emplace_back(i);
-            }
-          } else if (property->type()->Equals(arrow::uint8())) {
-            auto uint8_property =
-                std::static_pointer_cast<arrow::UInt8Array>(property);
-            if (uint8_property->IsValid(row) && uint8_property->Value(row)) {
-              field_indices.emplace_back(i);
-            }
+        EntityType field_indices;
+        for (auto bool_property : bool_properties) {
+          if (bool_property.array->IsValid(row) &&
+              bool_property.array->Value(row)) {
+            field_indices.emplace_back(bool_property.field_index);
+          }
+        }
+        for (auto uint8_property : uint8_properties) {
+          if (uint8_property.array->IsValid(row) &&
+              uint8_property.array->Value(row)) {
+            field_indices.emplace_back(uint8_property.field_index);
           }
         }
         if (field_indices.size() > 1) {
-          katana::gstl::Set<katana::gstl::Vector<int>>&
-              local_type_combinations = *type_combinations_pts.getLocal();
+          EntityTypeSet& local_type_combinations =
+              *type_combinations_pts.getLocal();
           local_type_combinations.emplace(field_indices);
         }
       });
   for (unsigned t = 0, n = katana::activeThreads; t < n; t++) {
-    katana::gstl::Set<katana::gstl::Vector<int>>& remote_type_combinations =
+    EntityTypeSet& remote_type_combinations =
         *type_combinations_pts.getRemote(t);
     for (auto& type_combination : remote_type_combinations) {
       type_combinations.emplace(type_combination);
     }
   }
+  // deallocate PerThreadStorage in parallel
+  katana::on_each([&](unsigned, unsigned) {
+    EntityTypeSet& local_type_combinations = *type_combinations_pts.getLocal();
+    local_type_combinations = EntityTypeSet();
+  });
 
   // assign a new ID to each unique combination of types
-  for (const katana::gstl::Vector<int>& field_indices : type_combinations) {
+  for (const EntityType& field_indices : type_combinations) {
     katana::PropertyGraph::TypeSetID new_type_set_id =
         type_set_id_to_type_names->size();
     type_field_indices_to_id.emplace(
@@ -277,22 +300,17 @@ GetTypeSetIDsFromProperties(
 
   // assign the type ID for each row
   katana::do_all(katana::iterate(int64_t{0}, num_rows), [&](int64_t row) {
-    katana::gstl::Vector<int> field_indices;
-    for (int i : type_field_indices) {
-      std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
-
-      if (property->type()->Equals(arrow::boolean())) {
-        auto bool_property =
-            std::static_pointer_cast<arrow::BooleanArray>(property);
-        if (bool_property->IsValid(row) && bool_property->Value(row)) {
-          field_indices.emplace_back(i);
-        }
-      } else if (property->type()->Equals(arrow::uint8())) {
-        auto uint8_property =
-            std::static_pointer_cast<arrow::UInt8Array>(property);
-        if (uint8_property->IsValid(row) && uint8_property->Value(row)) {
-          field_indices.emplace_back(i);
-        }
+    EntityType field_indices;
+    for (auto bool_property : bool_properties) {
+      if (bool_property.array->IsValid(row) &&
+          bool_property.array->Value(row)) {
+        field_indices.emplace_back(bool_property.field_index);
+      }
+    }
+    for (auto uint8_property : uint8_properties) {
+      if (uint8_property.array->IsValid(row) &&
+          uint8_property.array->Value(row)) {
+        field_indices.emplace_back(uint8_property.field_index);
       }
     }
     if (field_indices.empty()) {
@@ -392,8 +410,8 @@ katana::PropertyGraph::Copy(
   // TODO(gill): This should copy the RDG in memory without reloading from storage.
   tsuba::RDGLoadOptions opts;
   opts.partition_id_to_load = partition_id();
-  opts.node_properties = &node_properties;
-  opts.edge_properties = &edge_properties;
+  opts.node_properties = node_properties;
+  opts.edge_properties = edge_properties;
 
   return Make(rdg_dir(), opts);
 }
@@ -721,8 +739,32 @@ katana::PropertyGraph::RemoveNodeProperty(const std::string& prop_name) {
 }
 
 katana::Result<void>
-katana::PropertyGraph::UnloadNodeProperty(int prop_idx) {
-  return rdg_.UnloadNodeProperty(prop_idx);
+katana::PropertyGraph::UnloadNodeProperty(int i) {
+  return rdg_.UnloadNodeProperty(i);
+}
+
+katana::Result<void>
+katana::PropertyGraph::LoadNodeProperty(const std::string& name, int i) {
+  return rdg_.LoadNodeProperty(name, i);
+}
+/// Load a node property by name if it is absent and append its column to
+/// the table do nothing otherwise
+katana::Result<void>
+katana::PropertyGraph::EnsureNodePropertyLoaded(const std::string& name) {
+  if (HasNodeProperty(name)) {
+    return katana::ResultSuccess();
+  }
+  return LoadNodeProperty(name);
+}
+
+std::vector<std::string>
+katana::PropertyGraph::ListNodeProperties() const {
+  return rdg_.ListNodeProperties();
+}
+
+std::vector<std::string>
+katana::PropertyGraph::ListEdgeProperties() const {
+  return rdg_.ListEdgeProperties();
 }
 
 katana::Result<void>
@@ -781,8 +823,23 @@ katana::PropertyGraph::RemoveEdgeProperty(const std::string& prop_name) {
 }
 
 katana::Result<void>
-katana::PropertyGraph::UnloadEdgeProperty(int prop_idx) {
-  return rdg_.UnloadEdgeProperty(prop_idx);
+katana::PropertyGraph::UnloadEdgeProperty(int i) {
+  return rdg_.UnloadEdgeProperty(i);
+}
+
+katana::Result<void>
+katana::PropertyGraph::LoadEdgeProperty(const std::string& name, int i) {
+  return rdg_.LoadEdgeProperty(name, i);
+}
+
+/// Load an edge property by name if it is absent and append its column to
+/// the table do nothing otherwise
+katana::Result<void>
+katana::PropertyGraph::EnsureEdgePropertyLoaded(const std::string& name) {
+  if (HasEdgeProperty(name)) {
+    return katana::ResultSuccess();
+  }
+  return LoadEdgeProperty(name);
 }
 
 katana::Result<void>

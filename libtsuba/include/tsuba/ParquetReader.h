@@ -82,10 +82,6 @@ private:
   katana::Result<std::shared_ptr<arrow::Table>> FixTable(
       std::shared_ptr<arrow::Table>&& _table);
 
-  katana::Result<std::shared_ptr<arrow::Table>> DoFilteredTableRead(
-      parquet::arrow::FileReader* reader, const arrow::Schema& schema,
-      const std::vector<int32_t>& filter);
-
   std::optional<Slice> slice_;
   bool make_cannonical_;
 };

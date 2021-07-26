@@ -33,9 +33,9 @@ public:
   katana::Result<void> UpsertEdgeProperties(
       const std::shared_ptr<arrow::Table>& props);
 
-  katana::Result<void> RemoveNodeProperty(uint32_t i);
+  katana::Result<void> RemoveNodeProperty(int i);
 
-  katana::Result<void> RemoveEdgeProperty(uint32_t i);
+  katana::Result<void> RemoveEdgeProperty(int i);
 
   //
   // Accessors and Mutators

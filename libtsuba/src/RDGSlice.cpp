@@ -8,6 +8,8 @@
 
 katana::Result<void>
 tsuba::RDGSlice::DoMake(
+    const std::optional<std::vector<std::string>>& node_props,
+    const std::optional<std::vector<std::string>>& edge_props,
     const katana::Uri& metadata_dir, const SliceArg& slice) {
   ReadGroup grp;
   katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
@@ -19,19 +21,22 @@ tsuba::RDGSlice::DoMake(
     return res.error();
   }
 
-  auto node_result = AddPropertySlice(
-      metadata_dir, core_->part_header().node_prop_info_list(),
-      slice.node_range, &grp,
+  // all of the properties
+  std::vector<PropStorageInfo*> node_properties =
+      KATANA_CHECKED(core_->part_header().SelectNodeProperties(node_props));
+
+  KATANA_CHECKED(AddPropertySlice(
+      metadata_dir, node_properties, slice.node_range, &grp,
       [rdg = this](const std::shared_ptr<arrow::Table>& props) {
         return rdg->core_->AddNodeProperties(props);
-      });
-  if (!node_result) {
-    return node_result.error();
-  }
+      }));
+
+  // all of the properties
+  std::vector<PropStorageInfo*> edge_properties =
+      KATANA_CHECKED(core_->part_header().SelectEdgeProperties(edge_props));
 
   auto edge_result = AddPropertySlice(
-      metadata_dir, core_->part_header().edge_prop_info_list(),
-      slice.edge_range, &grp,
+      metadata_dir, edge_properties, slice.edge_range, &grp,
       [rdg = this](const std::shared_ptr<arrow::Table>& props) {
         return rdg->core_->AddEdgeProperties(props);
       });
@@ -45,8 +50,8 @@ tsuba::RDGSlice::DoMake(
 katana::Result<tsuba::RDGSlice>
 tsuba::RDGSlice::Make(
     RDGHandle handle, const SliceArg& slice,
-    const std::vector<std::string>* node_props,
-    const std::vector<std::string>* edge_props) {
+    const std::optional<std::vector<std::string>>& node_props,
+    const std::optional<std::vector<std::string>>& edge_props) {
   const RDGManifest& manifest = handle.impl_->rdg_manifest();
   if (manifest.num_hosts() != 1) {
     return KATANA_ERROR(
@@ -55,22 +60,13 @@ tsuba::RDGSlice::Make(
   }
   katana::Uri partition_path(manifest.PartitionFileName(0));
 
-  auto part_header_res = RDGPartHeader::Make(partition_path);
-  if (!part_header_res) {
-    return part_header_res.error().WithContext(
-        "error reading metadata from {}", partition_path);
-  }
+  auto part_header = KATANA_CHECKED(RDGPartHeader::Make(partition_path));
 
-  RDGSlice rdg_slice(
-      std::make_unique<RDGCore>(std::move(part_header_res.value())));
+  RDGSlice rdg_slice(std::make_unique<RDGCore>(std::move(part_header)));
 
   if (auto res =
-          rdg_slice.core_->part_header().PrunePropsTo(node_props, edge_props);
+          rdg_slice.DoMake(node_props, edge_props, manifest.dir(), slice);
       !res) {
-    return res.error();
-  }
-
-  if (auto res = rdg_slice.DoMake(manifest.dir(), slice); !res) {
     return res.error();
   }
 

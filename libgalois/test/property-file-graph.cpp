@@ -45,17 +45,11 @@ TestRoundTrip() {
   auto add_edge_throw_away_result = g->AddEdgeProperties(edge_throw_away_props);
   KATANA_LOG_ASSERT(add_edge_throw_away_result);
 
-  // don't persist throwaway properties
-
   std::shared_ptr<arrow::Table> node_props =
       MakeProps<ValueType>("node-name", test_length);
 
   auto add_node_result = g->AddNodeProperties(node_props);
   KATANA_LOG_ASSERT(add_node_result);
-
-  auto mark_node_persistent =
-      g->MarkNodePropertiesPersistent({"", "node-name"});
-  KATANA_LOG_ASSERT(mark_node_persistent);
 
   std::shared_ptr<arrow::Table> edge_props =
       MakeProps<ValueType>("edge-name", test_length);
@@ -63,13 +57,16 @@ TestRoundTrip() {
   auto add_edge_result = g->AddEdgeProperties(edge_props);
   KATANA_LOG_ASSERT(add_edge_result);
 
-  auto mark_edge_persistent =
-      g->MarkEdgePropertiesPersistent({"", "edge-name"});
-  KATANA_LOG_ASSERT(mark_edge_persistent);
-
   auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string rdg_dir(uri_res.value().path());  // path() because local
+
+  // don't persist throwaway properties
+  auto remove_node_throw_away_res = g->RemoveNodeProperty("node-throw-away");
+  KATANA_LOG_ASSERT(remove_node_throw_away_res);
+
+  auto remove_edge_throw_away_res = g->RemoveEdgeProperty("edge-throw-away");
+  KATANA_LOG_ASSERT(remove_edge_throw_away_res);
 
   auto write_result = g->Write(rdg_dir, command_line);
 
@@ -162,24 +159,15 @@ MakePFGFile(const std::string& n1name) {
   auto add_node_result = g->AddNodeProperties(node_props);
   KATANA_LOG_ASSERT(add_node_result);
 
-  auto mark_node_persistent = g->MarkNodePropertiesPersistent({n0name});
-  KATANA_LOG_ASSERT(mark_node_persistent);
-
   add_node_result = g->AddNodeProperties(MakeProps<V1>(n1name, test_length));
   if (!add_node_result) {
     return "";
   }
 
-  mark_node_persistent = g->MarkNodePropertiesPersistent({n1name});
-  KATANA_LOG_ASSERT(mark_node_persistent);
-
   std::shared_ptr<arrow::Table> edge_props = MakeProps<V0>(e0name, test_length);
 
   auto add_edge_result = g->AddEdgeProperties(edge_props);
   KATANA_LOG_ASSERT(add_edge_result);
-
-  auto mark_edge_persistent = g->MarkEdgePropertiesPersistent({e0name});
-  KATANA_LOG_ASSERT(mark_edge_persistent);
 
   auto unique_result = katana::Uri::MakeRand("/tmp/propertygraphtests");
   KATANA_LOG_ASSERT(unique_result);

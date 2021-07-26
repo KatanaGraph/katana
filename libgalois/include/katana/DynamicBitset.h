@@ -43,21 +43,27 @@ namespace katana {
  * Concurrent dynamically allocated bitset
  **/
 class KATANA_EXPORT DynamicBitset {
-  katana::PODVector<katana::CopyableAtomic<uint64_t>> bitvec_{};
+  katana::PODVector<katana::CopyableAtomic<uint64_t>> bitvec_;
   size_t num_bits_{0};
 
 public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
-  DynamicBitset() = default;
+  explicit DynamicBitset(
+      const HostAllocator<katana::CopyableAtomic<uint64_t>>& host_alloc = {})
+      : bitvec_(host_alloc){};
 
   DynamicBitset(DynamicBitset&& bitset)
-      : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {}
+      : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {
+    bitset.num_bits_ = 0;
+  }
 
   DynamicBitset& operator=(DynamicBitset&& bitset) {
-    bitvec_ = std::move(bitset.bitvec_);
-    num_bits_ = bitset.num_bits_;
-    bitset.num_bits_ = 0;
+    if (this != &bitset) {
+      bitvec_ = std::move(bitset.bitvec_);
+      num_bits_ = bitset.num_bits_;
+      bitset.num_bits_ = 0;
+    }
     return *this;
   }
 

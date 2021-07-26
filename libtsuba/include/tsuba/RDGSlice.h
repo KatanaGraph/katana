@@ -36,13 +36,13 @@ public:
 
   static katana::Result<RDGSlice> Make(
       RDGHandle handle, const SliceArg& slice,
-      const std::vector<std::string>* node_props = nullptr,
-      const std::vector<std::string>* edge_props = nullptr);
+      const std::optional<std::vector<std::string>>& node_props = std::nullopt,
+      const std::optional<std::vector<std::string>>& edge_props = std::nullopt);
 
   static katana::Result<RDGSlice> Make(
       const std::string& rdg_manifest_path, const SliceArg& slice,
-      const std::vector<std::string>* node_props = nullptr,
-      const std::vector<std::string>* edge_props = nullptr);
+      const std::optional<std::vector<std::string>>& node_props = std::nullopt,
+      const std::optional<std::vector<std::string>>& edge_props = std::nullopt);
 
   const std::shared_ptr<arrow::Table>& node_properties() const;
   const std::shared_ptr<arrow::Table>& edge_properties() const;
@@ -56,6 +56,8 @@ private:
   RDGSlice(std::unique_ptr<RDGCore>&& core);
 
   katana::Result<void> DoMake(
+      const std::optional<std::vector<std::string>>& node_props,
+      const std::optional<std::vector<std::string>>& edge_props,
       const katana::Uri& metadata_dir, const SliceArg& slice);
 
   //

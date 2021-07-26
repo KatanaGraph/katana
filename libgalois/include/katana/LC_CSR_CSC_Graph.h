@@ -156,9 +156,8 @@ protected:
         });
 
     // prefix sum calculation of the edge index array
-    for (uint32_t n = 1; n < BaseGraph::numNodes; ++n) {
-      dataBuffer[n] += dataBuffer[n - 1];
-    }
+    katana::ParallelSTL::partial_sum(
+        dataBuffer.begin(), dataBuffer.end(), dataBuffer.begin());
 
     // copy over the new tranposed edge index data
     inEdgeIndData.allocateInterleaved(BaseGraph::numNodes);
@@ -192,7 +191,8 @@ protected:
     }
 
     katana::do_all(
-        katana::iterate(UINT64_C(0), BaseGraph::numNodes), [&](uint64_t src) {
+        katana::iterate(UINT64_C(0), BaseGraph::numNodes),
+        [&](uint64_t src) {
           // e = start index into edge array for a particular node
           uint64_t e = (src == 0) ? 0 : BaseGraph::edgeIndData[src - 1];
 
@@ -209,7 +209,8 @@ protected:
             createEdgeData(e_new, e);
             e++;
           }
-        });
+        },
+        katana::steal());
   }
 
 public:
@@ -451,8 +452,9 @@ public:
    * Returns in-degrees in a vector; useful if in-degrees need to be accessed
    * quickly (1 memory access instead of 2 from subtracting begin and end).
    */
-  gstl::Vector<uint32_t> countInDegrees() const {
-    gstl::Vector<uint32_t> savedInDegrees(BaseGraph::numNodes);
+  NUMAArray<uint32_t> countInDegrees() const {
+    NUMAArray<uint32_t> savedInDegrees;
+    savedInDegrees.allocateInterleaved(BaseGraph::numNodes);
     katana::do_all(
         katana::iterate(this->begin(), this->end()),
         [&](unsigned v) { savedInDegrees[v] = this->getInDegree(v); },

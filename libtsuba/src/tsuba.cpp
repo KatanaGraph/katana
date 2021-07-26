@@ -2,10 +2,10 @@
 
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
-#include "katana/Backtrace.h"
 #include "katana/CommBackend.h"
 #include "katana/Env.h"
 #include "katana/Plugin.h"
+#include "katana/Signals.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
 
@@ -244,7 +244,7 @@ tsuba::GetRDGDir(tsuba::RDGHandle handle) {
 
 katana::Result<void>
 tsuba::Init(katana::CommBackend* comm) {
-  katana::InitBacktrace();
+  katana::InitSignalHandlers();
   return GlobalState::Init(comm);
 }
 

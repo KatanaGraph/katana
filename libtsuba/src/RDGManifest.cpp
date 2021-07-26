@@ -230,13 +230,13 @@ RDGManifest::FileNames() {
     } else {
       auto header = std::move(header_res.value());
       for (const auto& node_prop : header.node_prop_info_list()) {
-        fnames.emplace(node_prop.path);
+        fnames.emplace(node_prop.path());
       }
       for (const auto& edge_prop : header.edge_prop_info_list()) {
-        fnames.emplace(edge_prop.path);
+        fnames.emplace(edge_prop.path());
       }
       for (const auto& part_prop : header.part_prop_info_list()) {
-        fnames.emplace(part_prop.path);
+        fnames.emplace(part_prop.path());
       }
       // Duplicates eliminated by set
       fnames.emplace(header.topology_path());

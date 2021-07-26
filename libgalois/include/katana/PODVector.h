@@ -29,6 +29,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "katana/HostAllocator.h"
 #include "katana/Logging.h"
 #include "katana/config.h"
 
@@ -55,8 +56,17 @@ class PODVector {
   _Tp* data_;
   size_t capacity_;
   size_t size_;
+  HostAllocator<_Tp> host_alloc_;
 
   constexpr static size_t kMinNonZeroCapacity = 8;
+
+  //! Resources must be already moved or destroyed before this call. It just resets the values.
+  void Reset() {
+    data_ = NULL;
+    host_alloc_ = HostAllocator<_Tp>{};
+    capacity_ = 0;
+    size_ = 0;
+  }
 
 public:
   typedef _Tp value_type;
@@ -71,27 +81,34 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  PODVector() : data_(NULL), capacity_(0), size_(0) {}
+  explicit PODVector(const HostAllocator<_Tp>& host_alloc = {})
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {}
 
   template <class InputIterator>
-  PODVector(InputIterator first, InputIterator last)
-      : data_(NULL), capacity_(0), size_(0) {
+  PODVector(
+      InputIterator first, InputIterator last,
+      const HostAllocator<_Tp>& host_alloc = {})
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {
     size_t to_add = last - first;
     resize(to_add);
     std::copy_n(first, to_add, begin());
   }
 
-  PODVector(size_t n) : data_(NULL), capacity_(0), size_(0) { resize(n); }
+  explicit PODVector(size_t n, const HostAllocator<_Tp>& host_alloc = {})
+      : data_(NULL), capacity_(0), size_(0), host_alloc_(host_alloc) {
+    resize(n);
+  }
 
   //! disabled (shallow) copy constructor
   PODVector(const PODVector&) = delete;
 
   //! move constructor
   PODVector(PODVector&& v)
-      : data_(v.data_), capacity_(v.capacity_), size_(v.size_) {
-    v.data_ = NULL;
-    v.capacity_ = 0;
-    v.size_ = 0;
+      : data_(v.data_),
+        capacity_(v.capacity_),
+        size_(v.size_),
+        host_alloc_(v.host_alloc_) {
+    v.Reset();
   }
 
   //! disabled (shallow) copy assignment operator
@@ -99,23 +116,18 @@ public:
 
   //! move assignment operator
   PODVector& operator=(PODVector&& v) {
-    if (data_ != NULL) {
-      free(data_);
+    if (this != &v) {
+      host_alloc_.Free(data_);
+      data_ = v.data_;
+      capacity_ = v.capacity_;
+      size_ = v.size_;
+      host_alloc_ = v.host_alloc_;
+      v.Reset();
     }
-    data_ = v.data_;
-    capacity_ = v.capacity_;
-    size_ = v.size_;
-    v.data_ = NULL;
-    v.capacity_ = 0;
-    v.size_ = 0;
     return *this;
   }
 
-  ~PODVector() {
-    if (data_ != NULL) {
-      free(data_);
-    }
-  }
+  ~PODVector() { host_alloc_.Free(data_); }
 
   // iterators:
   iterator begin() { return iterator(&data_[0]); }
@@ -145,15 +157,14 @@ public:
   void shrink_to_fit() {
     if (size_ == 0) {
       if (data_ != NULL) {
-        free(data_);
+        host_alloc_.Free(data_);
         data_ = NULL;
         capacity_ = 0;
       }
     } else if (size_ < capacity_) {
       capacity_ = std::max(size_, kMinNonZeroCapacity);
-      _Tp* new_data_ = static_cast<_Tp*>(
-          realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
-      KATANA_LOG_DEBUG_ASSERT(new_data_);
+      _Tp* new_data_ = host_alloc_.Realloc(data_, capacity_);
+      KATANA_LOG_ASSERT(new_data_);
       data_ = new_data_;
     }
   }
@@ -163,8 +174,11 @@ public:
       return;
     }
 
-    // When reallocing, don't pay for elements greater than size_
-    shrink_to_fit();
+    // The price of unpinning&pinning again exceeds the savings below
+    if (host_alloc_.IsFastAlloc()) {
+      // When reallocing, don't pay for elements greater than size_
+      shrink_to_fit();
+    }
 
     // reset capacity_ because its previous value need not be a power-of-2
     capacity_ = kMinNonZeroCapacity;
@@ -173,9 +187,8 @@ public:
       capacity_ <<= 1;
     }
 
-    _Tp* new_data_ = static_cast<_Tp*>(
-        realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
-    KATANA_LOG_DEBUG_ASSERT(new_data_);
+    _Tp* new_data_ = host_alloc_.Realloc(data_, capacity_);
+    KATANA_LOG_ASSERT(new_data_);
     data_ = new_data_;
   }
 
@@ -223,7 +236,7 @@ public:
   void insert(
       [[maybe_unused]] iterator position, InputIterator first,
       InputIterator last) {
-    KATANA_LOG_DEBUG_ASSERT(position == end());
+    KATANA_LOG_ASSERT(position == end());
     size_t to_add = last - first;
     if (to_add > 0) {
       size_t old_size = size_;

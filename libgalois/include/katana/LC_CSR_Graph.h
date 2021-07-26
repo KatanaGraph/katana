@@ -1037,8 +1037,9 @@ public:
    * Return degrees in a vector; useful if degrees need to be accessed quickly
    * (1 memory access instead of 2 from subtracting begin and end)
    */
-  gstl::Vector<uint32_t> countDegrees() const {
-    gstl::Vector<uint32_t> savedDegrees(numNodes);
+  NUMAArray<uint32_t> countDegrees() const {
+    NUMAArray<uint32_t> savedDegrees;
+    savedDegrees.allocateInterleaved(numNodes);
     katana::do_all(
         katana::iterate(this->begin(), this->end()),
         [&](unsigned v) { savedDegrees[v] = this->getDegree(v); },

@@ -648,25 +648,6 @@ public:
     return array;
   }
 
-  void MarkAllPropertiesPersistent() {
-    return rdg_.MarkAllPropertiesPersistent();
-  }
-
-  /// MarkNodePropertiesPersistent indicates which node properties will be
-  /// serialized when this graph is written.
-  ///
-  /// Properties are "named" by position, so an empty string means don't persist that
-  /// property.
-  Result<void> MarkNodePropertiesPersistent(
-      const std::vector<std::string>& persist_node_props) {
-    return rdg_.MarkNodePropertiesPersistent(persist_node_props);
-  }
-
-  Result<void> MarkEdgePropertiesPersistent(
-      const std::vector<std::string>& persist_edge_props) {
-    return rdg_.MarkEdgePropertiesPersistent(persist_edge_props);
-  }
-
   const GraphTopology& topology() const noexcept { return topology_; }
 
   /// Add Node properties that do not exist in the current graph
@@ -693,6 +674,25 @@ public:
   /// memory it was using
   Result<void> UnloadEdgeProperty(int i);
   Result<void> UnloadEdgeProperty(const std::string& prop_name);
+
+  /// Load a node property by name put it in the table at index i
+  /// if i is not a valid index, append the column to the end of the table
+  Result<void> LoadNodeProperty(const std::string& name, int i = -1);
+
+  /// Load an edge property by name put it in the table at index i
+  /// if i is not a valid index, append the column to the end of the table
+  Result<void> LoadEdgeProperty(const std::string& name, int i = -1);
+
+  /// Load a node property by name if it is absent and append its column to
+  /// the table do nothing otherwise
+  Result<void> EnsureNodePropertyLoaded(const std::string& name);
+
+  /// Load an edge property by name if it is absent and append its column to
+  /// the table do nothing otherwise
+  Result<void> EnsureEdgePropertyLoaded(const std::string& name);
+
+  std::vector<std::string> ListNodeProperties() const;
+  std::vector<std::string> ListEdgeProperties() const;
 
   /// Remove all node properties
   void DropNodeProperties() { rdg_.DropNodeProperties(); }

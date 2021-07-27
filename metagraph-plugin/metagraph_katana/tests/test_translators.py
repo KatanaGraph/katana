@@ -1,36 +1,6 @@
-# content of tests/test_top.py
 import pytest
-import sys
-import os
-import pandas as pd
-import numpy as np
-# sys.path.append('/home/pengfei/metagraph_katanagraph_integration/metagraph_pytest/metagraph_katana_plugin') # repalce it with package installations
-# from katana_translators import *
-# from pathlib import Path
-
-
-# from executing.executing import NodeFinder
-import katana.local
-from katana.example_utils import get_input
-from katana.galois import set_active_threads
-from katana.property_graph import PropertyGraph
-# from pathlib import Path
-from icecream import ic
-import numpy as np
-import pandas as pd
-# import pyarrow as pa
-import csv
-from scipy.sparse import csr_matrix
-
-
 import metagraph as mg
-from metagraph import translator
-from metagraph.plugins import has_networkx
-from metagraph.plugins.python.types import dtype_casting
-from metagraph.plugins.networkx.types import NetworkXGraph
 
-
-# directed graph
 @pytest.fixture(autouse=True)
 def kg_from_nx_di_8_12(nx_weighted_directed_8_12):
     pg_test_case = mg.translate(nx_weighted_directed_8_12, mg.wrappers.Graph.KatanaGraph)
@@ -51,7 +21,6 @@ def test_num_edges(kg_from_nx_di_8_12):
     assert kg_from_nx_di_8_12.value.num_edges() == edges_total
     assert kg_from_nx_di_8_12.value.num_edges() == 12
 
-# to add: translate a undirected graph
 
 def test_topology(kg_from_nx_di_8_12):
     assert kg_from_nx_di_8_12.value.edges(0) == range(0, 3)
@@ -65,14 +34,12 @@ def test_topology(kg_from_nx_di_8_12):
     assert [kg_from_nx_di_8_12.value.get_edge_dest(i) for i in kg_from_nx_di_8_12.value.edges(4)] == [7]
     assert [kg_from_nx_di_8_12.value.get_edge_dest(i) for i in kg_from_nx_di_8_12.value.edges(5)] == [6, 7]
 
-# to add: translate a undirected graph
 
 
 def test_schema(kg_from_nx_di_8_12):
     assert len(kg_from_nx_di_8_12.value.node_schema()) == 0
     assert len(kg_from_nx_di_8_12.value.edge_schema()) == 1
 
-# to add: translate a undirected graph
 
 def test_edge_property_directed(kg_from_nx_di_8_12):
     assert kg_from_nx_di_8_12.value.edge_schema()[0].name == 'value_from_translator'
@@ -86,14 +53,8 @@ def nx_from_kg_rmat15_cleaned_di(kg_rmat15_cleaned_di):
     return mg.translate(kg_rmat15_cleaned_di, mg.wrappers.Graph.NetworkXGraph)
 
 
-
-# to do, make this work by finding a cleaned graph that removes disconnected nodes
-# this one would fail
-# def test_num_nodes(nx_from_kg_rmat15_cleaned_di):
-#     assert len(list(nx_from_kg_rmat15_cleaned_di.value.nodes(data=True))) == 32768
 def test_num_nodes(nx_from_kg_rmat15_cleaned_di, kg_rmat15_cleaned_di):
     nlist = [each_node[0] for each_node in list(nx_from_kg_rmat15_cleaned_di.value.nodes(data=True))]
-    # print (nlist[0:5])
     num_no_edge_nodes = 0
     for nid in kg_rmat15_cleaned_di.value:
         if nid not in nlist:

@@ -1,28 +1,8 @@
 import pytest
-import sys
-import os
-import pandas as pd
+from pytest import approx
 import numpy as np
-
-# from executing.executing import NodeFinder
-import katana.local
-from katana.example_utils import get_input
-from katana.galois import set_active_threads
-from katana.property_graph import PropertyGraph
-# from pathlib import Path
-from icecream import ic
-import numpy as np
-import pandas as pd
-# import pyarrow as pa
-import csv
-from scipy.sparse import csr_matrix
-# from pyarrow import Schema, table
-
 import metagraph as mg
-from metagraph import translator
-from metagraph.plugins import has_networkx
-from metagraph.plugins.python.types import dtype_casting
-from metagraph.plugins.networkx.types import NetworkXGraph
+
 
 from katana.lonestar.analytics.bfs import verify_bfs
 from katana.analytics import (
@@ -85,18 +65,10 @@ def kg_from_nx_ud_8_12(nx_weighted_undirected_8_12):
 # mg.algos.traversal.bfs_iter(graph: Graph, source_node: NodeID, depth_limit: int = - 1) → Vector
 # results of the 2 versions are compared
 def test_bfs(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
-    # ic(mg.plan.algos.traversal.bfs_iter(nx_weighted_directed_8_12, 0)) # No translation is needed because we already have a concrete implementation which takes a NetworkXGraph as input.
-    # ic(mg.plan.algos.traversal.bfs_iter(kg_from_nx_di_8_12, 0)) # No translation is needed because we already have a concrete implementation which takes a KatanaGraph as input.
     bfs1_nx = mg.algos.traversal.bfs_iter(nx_weighted_directed_8_12, 0)
-    # ic(bfs1_nx)
-    # ic(type(bfs1_nx))
     bfs2_nx = mg.algos.traversal.bfs_iter(nx_weighted_directed_8_12, 2)
-    # ic(bfs2_nx)
-    # ic(type(bfs2))
     bfs1_kg =  mg.algos.traversal.bfs_iter(kg_from_nx_di_8_12, 0, 2**30 - 1)
     bfs2_kg = mg.algos.traversal.bfs_iter(kg_from_nx_di_8_12, 2, 2**30 - 1)
-    # ic(bfs1_kg)
-    # ic(bfs2_kg)
     assert bfs1_kg.tolist() == bfs1_nx.tolist()
     assert bfs2_kg.tolist() == bfs2_nx.tolist()
     assert bfs1_kg.tolist() == [0, 1, 3, 4, 7]
@@ -129,8 +101,6 @@ def test_sssp_bellman_ford(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
     assert isinstance(distances_nx, dict)
     assert parents_nx == {0: 0, 1: 0, 3: 0, 4: 3, 7: 4}
     assert distances_nx == {0: 0, 1: 4, 3: 2, 4: 3, 7: 7}
-    # ic (mg.plan.algos.traversal.bellman_ford(nx_weighted_directed_8_12, src_node)) # no translation
-    # ic (mg.plan.algos.traversal.bellman_ford(kg_from_nx_di_8_12, src_node)) # translation required
     parents_kg, distances_kg = mg.algos.traversal.bellman_ford(kg_from_nx_di_8_12, src_node)
     assert parents_nx == parents_kg
     assert distances_nx == distances_kg
@@ -149,10 +119,6 @@ def test_sssp_dijkstra(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
     assert isinstance(distances_nx, dict)
     assert parents_nx == {1: 1, 3: 1, 4: 3, 7: 4}
     assert distances_nx == {1: 0, 3: 3, 4: 4, 7: 8}
-    # ic (parents_nx)
-    # ic (distances_nx)
-    # ic (mg.plan.algos.traversal.dijkstra(nx_weighted_directed_8_12, src_node)) # no translation
-    # ic (mg.plan.algos.traversal.dijkstra(kg_from_nx_di_8_12, src_node)) # translation required
     parents_kg, distances_kg = mg.algos.traversal.dijkstra(kg_from_nx_di_8_12, src_node)
     assert parents_nx == parents_kg
     assert distances_nx == distances_kg
@@ -162,35 +128,31 @@ def test_sssp_dijkstra(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
 # mg.algos.clustering.connected_components(graph: Graph(is_directed=False)) → NodeMap
 # the results of these 2 approaches are compared:
 # (1) katanagraph->nxgraph + nx's connected_components (2) nxgraph + nx's connected_components
-def test_cc(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
+def test_connected_components(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
     cc_nx = mg.algos.clustering.connected_components(nx_weighted_undirected_8_12)
     cc_kg = mg.algos.clustering.connected_components(kg_from_nx_ud_8_12)
     assert isinstance(cc_kg, dict)
     assert isinstance(cc_kg, dict)
     assert cc_kg == cc_nx
-    # ic (mg.plan.algos.clustering.connected_components(nx_weighted_undirected_8_12))
-    # ic (mg.plan.algos.clustering.connected_components(kg_from_nx_ud_8_12))
 
 
 # PageRank
 # mg.algos.centrality.pagerank(graph: Graph(edge_type=’map’, edge_dtype={‘int’, ‘float’}), damping: float = 0.85, maxiter: int = 50, tolerance: float = 1e-05) → NodeMap
 # the results of these 2 approaches are compared:
 # (1) katanagraph->nxgraph + nx's PageRank (2) nxgraph + nx's PageRank
-def test_pr(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
+def test_pagerank(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
     pr_nx = mg.algos.centrality.pagerank(nx_weighted_directed_8_12)
     pr_kg = mg.algos.centrality.pagerank(kg_from_nx_di_8_12)
     assert isinstance(pr_nx, dict)
     assert isinstance(pr_kg, dict)
     assert pr_nx == pr_kg
-    # ic (mg.plan.algos.centrality.pagerank(nx_weighted_directed_8_12))
-    # ic (mg.plan.algos.centrality.pagerank(kg_from_nx_di_8_12))
     
 
 # betweenness centrality
 # mg.algos.centrality.betweenness(graph: Graph(edge_type=’map’, edge_dtype={‘int’, ‘float’}), nodes: Optional[NodeSet] = None, normalize: bool = False) → NodeMap
 # the results of these 2 approaches are compared:
 # (1) katanagraph->nxgraph + nx's betweenness centrality (2) nxgraph + nx's betweenness centrality
-def test_bc(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
+def test_betweenness_centrality(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
     bc_nx = mg.algos.centrality.betweenness(nx_weighted_directed_8_12)
     bc_kg = mg.algos.centrality.betweenness(kg_from_nx_di_8_12)
     assert isinstance(bc_nx, dict)
@@ -201,7 +163,7 @@ def test_bc(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
 # mg.algos.clustering.triangle_count(graph: Graph(is_directed=False)) → int
 # the results of these 2 approaches are compared:
 # (1) katanagraph->nxgraph + nx's triangle counting (2) nxgraph + nx's triangle counting
-def test_tc(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
+def test_triangle_counting(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
     tc_nx = mg.algos.clustering.triangle_count(nx_weighted_undirected_8_12)
     tc_kg = mg.algos.clustering.triangle_count(kg_from_nx_ud_8_12)
     assert isinstance(tc_nx, int)
@@ -213,7 +175,7 @@ def test_tc(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
 # mg.algos.clustering.louvain_community(graph: Graph(is_directed=False, edge_type=’map’, edge_dtype={‘int’, ‘float’})) → Tuple[NodeMap, float]
 # the results of these 2 approaches are compared:
 # (1) katanagraph->nxgraph + nx's Louvain community detection (2) nxgraph + nx's Louvain community detection
-def test_lc(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
+def test_louvain_community_detection(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
     lc_nx = mg.algos.clustering.louvain_community(nx_weighted_undirected_8_12)
     lc_kg = mg.algos.clustering.louvain_community(kg_from_nx_ud_8_12)
     assert isinstance(lc_nx[0], dict)
@@ -228,7 +190,7 @@ def test_lc(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
 # mg.algos.subgraph.extract_subgraph(graph: Graph, nodes: NodeSet) → Graph
 # the results of these 2 approaches are compared:
 # (1) katanagraph->nxgraph + nx's subgraph extraction (2) nxgraph + nx's subgraph extraction
-def test_se(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
+def test_subgraph_extraction(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
     se_nx = mg.algos.subgraph.extract_subgraph(nx_weighted_directed_8_12, {0,2,3})
     se_kg = mg.algos.subgraph.extract_subgraph(kg_from_nx_di_8_12, {0,2,3})
     assert isinstance(se_nx, mg.wrappers.Graph.NetworkXGraph)
@@ -240,14 +202,46 @@ def test_se(nx_weighted_directed_8_12, kg_from_nx_di_8_12):
 # mg.algos.clustering.label_propagation_community(graph: Graph(is_directed=False)) → NodeMap
 # the results of these 2 approaches are compared:
 # (1) katanagraph->nxgraph + nx's label_propagation_community (2) nxgraph + nx's label_propagation_community
-def test_cd(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
+def test_labal_propagation(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
     cd_nx = mg.algos.clustering.label_propagation_community(nx_weighted_undirected_8_12)
     cd_kg = mg.algos.clustering.label_propagation_community(kg_from_nx_ud_8_12)
     assert isinstance(cd_nx, dict)
     assert isinstance(cd_kg, dict)
     assert cd_nx == cd_kg
 
-# local clustering coefficient
-
-
 # Jaccard similarity
+# mg.algos.traversal.jaccard(graph: Graph(is_directed=True, edge_type=’map’, edge_dtype={‘int’, ‘float’}, edge_has_negative_weights=False), compare_node: NodeID) -> Vector
+# the results of these 2 approaches are compared:
+# (1) katana graph + katana graph's Jaccard similarity (2) nxgraph->katana graph  + katana graph 's Jaccard similarity
+def test_jaccard_similarity(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
+    compare_node = 0
+    prop_name = 'jaccard_prop_with_'+str(compare_node)
+    jcd_nx = mg.algos.traversal.jaccard(nx_weighted_undirected_8_12, compare_node)
+    jcd_kg = mg.algos.traversal.jaccard(kg_from_nx_ud_8_12, compare_node)
+    assert isinstance(jcd_nx, np.ndarray)
+    assert isinstance(jcd_kg, np.ndarray)
+    assert jcd_nx.tolist() == jcd_kg.tolist()
+    assert jcd_kg[compare_node] == 1
+    # below are the additional tests done by katana, feel free to comment them
+    node_schema = kg_from_nx_ud_8_12.value.node_schema()
+    node_schema.names[len(node_schema)-1] == prop_name
+    assert node_schema[len(node_schema)-1].name == prop_name
+    jaccard_assert_valid(kg_from_nx_ud_8_12.value, compare_node, prop_name)
+    stats = JaccardStatistics(kg_from_nx_ud_8_12.value, compare_node, prop_name)
+    assert stats.max_similarity == approx(0.5)
+    assert stats.min_similarity == approx(0)
+
+
+# local clustering coefficient
+# mg.algos.clustering.local_clustering_coefficient(graph: Graph(is_directed=False, edge_type='map', edge_dtype={'int', 'float'}, edge_has_negative_weights=False), prop_name: str='output') -> Vector
+# the results of these 2 approaches are compared:
+# (1) katana graph + katana graph's local clustering coefficient (2) nxgraph->katana graph  + katana graph 's local clustering coefficient
+def test_local_clustering_coefficient(nx_weighted_undirected_8_12, kg_from_nx_ud_8_12):
+    prop_name = 'output_prop'
+    lcc_nx = mg.algos.clustering.local_clustering_coefficient(nx_weighted_undirected_8_12, prop_name)
+    lcc_kg = mg.algos.clustering.local_clustering_coefficient(kg_from_nx_ud_8_12, prop_name)
+    assert isinstance(lcc_nx, np.ndarray)
+    assert isinstance(lcc_kg, np.ndarray)
+    assert lcc_kg.tolist() == lcc_nx.tolist()
+    assert lcc_kg[-1] == 0
+    assert not np.any(np.isnan(lcc_kg))

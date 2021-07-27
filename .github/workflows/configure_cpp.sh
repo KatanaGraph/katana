@@ -16,7 +16,7 @@ case $OS in
     GPU_ARGS="$GPU_ARGS -DCMAKE_CUDA_ARCHITECTURES=\"75\""
     GPU_ARGS="$GPU_ARGS -DCMAKE_CUDA_COMPILER=\"/usr/local/cuda/bin/nvcc\""
     GPU_ARGS="$GPU_ARGS -DKATANA_NUM_TEST_GPUS=2"
-    if ["$CI_BUILD_TYPE" == "Sanitizer"]; then
+    if [ "$CI_BUILD_TYPE" == "Sanitizer" ]; then
       GPU_ARGS="$GPU_ARGS -DCMAKE_LINKER=$CXX"
       GPU_ARGS="$GPU_ARGS -DCMAKE_CUDA_LINK_EXECUTABLE=\"<CMAKE_LINKER> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>\""
     fi

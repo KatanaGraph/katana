@@ -13,9 +13,18 @@ case $OS in
 esac
 
 case "$CXX" in
-  *clang++*)   CC=${CXX/clang++/clang} ;;
-  *g++*)       CC=${CXX/g++/gcc};;
-  *-gnu-c++*)  CC=${CXX/c++/cc};;
+  *clang++*)
+    CC=${CXX/clang++/clang}
+    CUDA=$CXX
+    ;;
+  *g++*)
+    CC=${CXX/g++/gcc}
+    CUDA="/usr/local/cuda/bin/nvcc"
+    ;;
+  *-gnu-c++*)
+    CC=${CXX/c++/cc}
+    CUDA="/usr/local/cuda/bin/nvcc"
+    ;;
 esac
 
 case $CI_BUILD_TYPE in
@@ -45,8 +54,11 @@ fi
 cmake -S . -B $BUILD_DIR \
   -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
   $CMAKE_TOOLCHAIN_ARG \
-  -DCMAKE_CXX_COMPILER="$CXX" \
   -DCMAKE_C_COMPILER="$CC" \
+  -DCMAKE_CXX_COMPILER="$CXX" \
+  -DCMAKE_CUDA_COMPILER="$CUDA" \
+  -DCMAKE_C_COMPILER_LAUNCHER=ccache \
   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+  -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
   -DKATANA_USE_SANITIZER="$SANITIZER" \
   "$@"

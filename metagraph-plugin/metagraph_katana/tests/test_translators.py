@@ -1,5 +1,6 @@
-import pytest
 import metagraph as mg
+import pytest
+
 
 @pytest.fixture(autouse=True)
 def kg_from_nx_di_8_12(nx_weighted_directed_8_12):
@@ -13,6 +14,7 @@ def test_num_nodes(kg_from_nx_di_8_12):
         nodes_total += 1
     assert kg_from_nx_di_8_12.value.num_nodes() == nodes_total
     assert kg_from_nx_di_8_12.value.num_nodes() == 8
+
 
 def test_num_edges(kg_from_nx_di_8_12):
     edges_total = 0
@@ -35,17 +37,30 @@ def test_topology(kg_from_nx_di_8_12):
     assert [kg_from_nx_di_8_12.value.get_edge_dest(i) for i in kg_from_nx_di_8_12.value.edges(5)] == [6, 7]
 
 
-
 def test_schema(kg_from_nx_di_8_12):
     assert len(kg_from_nx_di_8_12.value.node_schema()) == 0
     assert len(kg_from_nx_di_8_12.value.edge_schema()) == 1
 
 
 def test_edge_property_directed(kg_from_nx_di_8_12):
-    assert kg_from_nx_di_8_12.value.edge_schema()[0].name == 'value_from_translator'
-    assert kg_from_nx_di_8_12.value.get_edge_property(0) == kg_from_nx_di_8_12.value.get_edge_property('value_from_translator')
-    assert kg_from_nx_di_8_12.value.get_edge_property('value_from_translator').tolist() == [4, 2, 7, 3, 5, 5, 2, 8, 1, 4, 4, 6]
-
+    assert kg_from_nx_di_8_12.value.edge_schema()[0].name == "value_from_translator"
+    assert kg_from_nx_di_8_12.value.get_edge_property(0) == kg_from_nx_di_8_12.value.get_edge_property(
+        "value_from_translator"
+    )
+    assert kg_from_nx_di_8_12.value.get_edge_property("value_from_translator").tolist() == [
+        4,
+        2,
+        7,
+        3,
+        5,
+        5,
+        2,
+        8,
+        1,
+        4,
+        4,
+        6,
+    ]
 
 
 @pytest.fixture(autouse=True)
@@ -58,15 +73,19 @@ def test_num_nodes(nx_from_kg_rmat15_cleaned_di, kg_rmat15_cleaned_di):
     num_no_edge_nodes = 0
     for nid in kg_rmat15_cleaned_di.value:
         if nid not in nlist:
-            assert kg_rmat15_cleaned_di.value.edges(nid) == range(0,0)
+            assert kg_rmat15_cleaned_di.value.edges(nid) == range(0, 0)
             num_no_edge_nodes += 1
     assert num_no_edge_nodes + len(nlist) == kg_rmat15_cleaned_di.value.num_nodes()
+
 
 def test_num_edges(nx_from_kg_rmat15_cleaned_di):
     assert len(list(nx_from_kg_rmat15_cleaned_di.value.edges(data=True))) == 363194
 
+
 def test_num_edges(nx_from_kg_rmat15_cleaned_di, kg_rmat15_cleaned_di):
-    edge_dict_count = {(each_e[0], each_e[1]):0 for each_e in list(nx_from_kg_rmat15_cleaned_di.value.edges(data=True))}
+    edge_dict_count = {
+        (each_e[0], each_e[1]): 0 for each_e in list(nx_from_kg_rmat15_cleaned_di.value.edges(data=True))
+    }
     num_same_src_dest_edges = 0
     for src in kg_rmat15_cleaned_di.value:
         for dest in [kg_rmat15_cleaned_di.value.get_edge_dest(e) for e in kg_rmat15_cleaned_di.value.edges(src)]:

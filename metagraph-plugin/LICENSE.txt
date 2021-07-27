@@ -1,6 +1,6 @@
 The 3-Clause BSD License
 
-Copyright 2018 The University of Texas at Austin
+Copyright 2021, Katana Graph, Inc
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 

@@ -71,9 +71,9 @@ function(add_sanitize_options)
   elseif (KATANA_USE_SANITIZER STREQUAL "Address;Undefined" OR
           KATANA_USE_SANITIZER STREQUAL "Undefined;Address")
     append_common_sanitizer_flags()
-    append("-fsanitize=address,undefined -fno-sanitize-recover=all"
+    append("-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
             CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    link_libraries("-fsanitize=address,undefined -fno-sanitize-recover=all")
+    link_libraries("-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
   elseif (KATANA_USE_SANITIZER STREQUAL "Leaks")
     append_common_sanitizer_flags()
     append("-fsanitize=leak" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

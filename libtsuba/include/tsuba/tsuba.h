@@ -93,7 +93,8 @@ KATANA_EXPORT katana::Result<RDGStat> Stat(const std::string& rdg_name);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViewsForBranch(
     const std::string& rdg_dir, bool find_max_version, 
-    RDGVersion& version, bool* is_intermiate_version);
+    // TODO(wkyu) should not copy version, but ...
+    RDGVersion version, bool* is_intermiate_version);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViews(
     const std::string& rdg_dir);

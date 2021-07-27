@@ -176,14 +176,15 @@ tsuba::Stat(const std::string& rdg_name) {
 katana::Result<std::vector<tsuba::RDGView>>
 tsuba::ListAvailableViewsForBranch(const std::string& rdg_dir, 
     bool find_max_version,
-    RDGVersion & version, bool* is_intermiate_version) {
+    RDGVersion version, bool* is_intermiate_version) {
 
   std::vector<tsuba::RDGView> views_found;
   KATANA_LOG_DEBUG("ListAvailableViews for a branch");
 
   // For a path to the directory targeted by version
   std::string target_dir = rdg_dir;
-  std::vector<std::string> branches = version.GetBranchIDs();
+  /*std::vector<std::string> */
+  auto branches = version.GetBranchIDs();
   for (auto & branch : branches) {
     if (branch !="") {
       target_dir += "/";

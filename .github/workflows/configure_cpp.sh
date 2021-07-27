@@ -7,7 +7,7 @@ CI_BUILD_TYPE=$3
 BUILD_DIR=$4
 shift 4
 
-GPU_ARGS = ""
+GPU_ARGS=""
 case $OS in
   *macOS*) export PATH=$PATH:/usr/local/opt/llvm/bin ;;
   *-gpu)

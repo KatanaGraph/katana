@@ -51,7 +51,7 @@ public:
   static const GlobalState& Get();
 };
 
-katana::CommBackend* Comm();
+KATANA_EXPORT katana::CommBackend* Comm();
 FileStorage* FS(std::string_view uri);
 
 /// Execute cb on one host, if it succeeds return success if not print

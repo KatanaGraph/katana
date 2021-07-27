@@ -12,6 +12,7 @@
 #include <system_error>
 
 #include <boost/filesystem.hpp>
+#include <boost/system/error_code.hpp>
 
 #include "GlobalState.h"
 #include "katana/Logging.h"
@@ -41,14 +42,15 @@ tsuba::LocalStorage::WriteFile(
       if (err) {
         return KATANA_ERROR(
             std::error_code(err.value(), err.category()),
-            "creating parent directories");
+            "creating parent directories: {}", err.message());
       }
     }
   }
 
   std::ofstream ofile(uri);
   if (!ofile.good()) {
-    return KATANA_ERROR(ErrorCode::LocalStorageError, "opening file");
+    return KATANA_ERROR(
+        ErrorCode::LocalStorageError, "opening file: {}", strerror(errno));
   }
   ofile.write(reinterpret_cast<const char*>(data), size); /* NOLINT */
   if (!ofile.good()) {

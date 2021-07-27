@@ -6,64 +6,18 @@ from metagraph.plugins.core.types import Graph, Vector
 from metagraph.plugins.networkx.types import NetworkXGraph
 from metagraph.plugins.numpy.types import NumpyNodeMap, NumpyVectorType
 
-from katana.analytics import (
-    BetweennessCentralityPlan,
-    BetweennessCentralityStatistics,
-    BfsStatistics,
-    ConnectedComponentsStatistics,
-    IndependentSetPlan,
-    IndependentSetStatistics,
-    JaccardPlan,
-    JaccardStatistics,
-    KCoreStatistics,
-    KTrussStatistics,
-    LouvainClusteringStatistics,
-    PagerankStatistics,
-    SsspStatistics,
-    TriangleCountPlan,
-    betweenness_centrality,
-    bfs,
-    bfs_assert_valid,
-    connected_components,
-    connected_components_assert_valid,
-    find_edge_sorted_by_dest,
-    independent_set,
-    independent_set_assert_valid,
-    jaccard,
-    jaccard_assert_valid,
-    k_core,
-    k_core_assert_valid,
-    k_truss,
-    k_truss_assert_valid,
-    local_clustering_coefficient,
-    louvain_clustering,
-    louvain_clustering_assert_valid,
-    pagerank,
-    pagerank_assert_valid,
-    sort_all_edges_by_dest,
-    sort_nodes_by_degree,
-    sssp,
-    sssp_assert_valid,
-    subgraph_extraction,
-    triangle_count,
-)
+from katana.analytics import bfs, jaccard, local_clustering_coefficient
+
 from katana.property_graph import PropertyGraph
 
 from .types import KatanaGraph
 
 
+
+
 # breadth-first search,
 @concrete_algorithm("traversal.bfs_iter")
 def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> NumpyVectorType:
-    """
-    breadth-first search (mg.algos.traversal.bfs_iter)
-        Parameters:
-            graph: Graph
-            source_node: NodeID
-            depth_limit: int = - 1
-        Returns:
-            Vector
-    """
     bfs_prop_name = "bfs_prop_start_from_" + str(source_node)
     start_node = source_node
     bfs(graph.value, start_node, bfs_prop_name)
@@ -73,7 +27,8 @@ def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> Nu
     bfs_arr = np.array([each[0] for each in sorted_list])
     return bfs_arr
 
-
+# TODO(pengfei):
+# add sphinx doc style
 # single-source shortest path
 # connected components
 # PageRank
@@ -83,7 +38,7 @@ def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> Nu
 # subgraph extraction
 # community detection using label propagation\
 
-# Jaccard similarity
+
 @abstract_algorithm("traversal.jaccard")
 def jaccard_similarity(
     graph: Graph(is_directed=False, edge_type="map", edge_dtype={"int", "float"}, edge_has_negative_weights=False),
@@ -100,7 +55,6 @@ def jaccard_similarity_kg(graph: KatanaGraph, compare_node: NodeID) -> NumpyVect
     return jaccard_similarities
 
 
-# local clustering coefficient
 @abstract_algorithm("clustering.local_clustering_coefficient")
 def local_clustering(
     graph: Graph(is_directed=False, edge_type="map", edge_dtype={"int", "float"}, edge_has_negative_weights=False),

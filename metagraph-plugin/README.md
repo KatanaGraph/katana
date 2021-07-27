@@ -30,7 +30,6 @@ Test
 ===============
 To check the installation is successful, you can run the test cases by:
 
-
 ```Shell
 $BUILD_DIR/python_env.sh pytest metagraph_katana/tests/ -s
 ```
@@ -41,6 +40,7 @@ Examples
 
 Loading Katana Graph
 ------------------
+
 ```
 import metagraph as mg
 from katana.property_graph import PropertyGraph

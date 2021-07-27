@@ -14,22 +14,28 @@ from .types import KatanaGraph
 @translator
 def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
     aprops = NetworkXGraph.Type.compute_abstract_properties(x, {"node_dtype", "node_type", "edge_type", "is_directed"})
-    # ic(aprops)
     is_weighted = aprops["edge_type"] == "map"
+    # get the edge list directly from the NetworkX Graph
     elist_raw = list(x.value.edges(data=True))
+    # sort the eddge list and node list
     if aprops["is_directed"]:
         elist = sorted(elist_raw, key=lambda each: (each[0], each[1]))
     else:
         inv_elist = [(each[1], each[0], each[2]) for each in elist_raw]
         elist = sorted(elist_raw + inv_elist, key=lambda each: (each[0], each[1]))
     nlist = sorted(list(x.value.nodes(data=True)), key=lambda each: each[0])
+    # build the CSR format from the edge list (weight, (src, dst))
     row = np.array([each_edge[0] for each_edge in elist])
     col = np.array([each_edge[1] for each_edge in elist])
     data = np.array([each_edge[2]["weight"] for each_edge in elist])
     csr = csr_matrix((data, (row, col)), shape=(len(nlist), len(nlist)))
+    # call the katana api to build a PropertyGraph (unweighted) from the CSR format
+    # noting that the first 0 in csr.indptr is excluded
     pg = PropertyGraph.from_csr(csr.indptr[1:], csr.indices)
+    # add the edge weight as a new property
     t = pa.table(dict(value_from_translator=data))
     pg.add_edge_property(t)
+    # use the metagraph's Graph warpper to wrap the PropertyGraph
     return KatanaGraph(
         pg_graph=pg,
         is_weighted=is_weighted,

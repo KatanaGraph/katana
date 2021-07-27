@@ -19,6 +19,7 @@ class KatanaGraph(GraphWrapper, abstract=Graph):
         node_weight_index=None,
         node_dtype=None,
         edge_dtype="int",
+        has_neg_weight=False
     ):
         super().__init__()
         self._assert_instance(pg_graph, PropertyGraph)
@@ -29,6 +30,7 @@ class KatanaGraph(GraphWrapper, abstract=Graph):
         self.node_weight_index = node_weight_index
         self.node_dtype = node_dtype
         self.edge_dtype = edge_dtype
+        self.has_neg_weight = has_neg_weight
 
     def copy(self):
         return KatanaGraph(copy.deepcopy(self.value), self.is_weighted, self.is_directed)
@@ -57,7 +59,7 @@ class KatanaGraph(GraphWrapper, abstract=Graph):
                 if prop == "edge_dtype":
                     ret[prop] = obj.edge_dtype if obj.is_weighted else None
                 if prop == "edge_has_negative_weights":
-                    ret[prop] = False
+                    ret[prop] = obj.has_neg_weight #TODO(pengfei): cover the neg-weight case, and add neg-weight test cases.
             return ret
 
         @classmethod

@@ -7,6 +7,7 @@
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/config.h"
+#include "katana/RDGVersion.h"
 
 namespace tsuba {
 
@@ -89,6 +90,10 @@ struct KATANA_EXPORT RDGStat {
 
 /// Get Information about the graph
 KATANA_EXPORT katana::Result<RDGStat> Stat(const std::string& rdg_name);
+
+KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViewsForBranch(
+    const std::string& rdg_dir, bool find_max_version, 
+    RDGVersion& version, bool* is_intermiate_version);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViews(
     const std::string& rdg_dir);

@@ -199,6 +199,9 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
+  Result<void> WriteBranch(
+      const std::string& uri, const std::string& command_line);
+
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
@@ -457,6 +460,7 @@ public:
   /// parts of the original read location of the graph.
   Result<void> Commit(const std::string& command_line);
   Result<void> WriteView(const std::string& command_line);
+  Result<void> WriteBranch(const std::string& command_line);
   /// Tell the RDG where it's data is coming from
   Result<void> InformPath(const std::string& input_path);
 

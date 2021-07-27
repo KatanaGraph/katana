@@ -107,12 +107,16 @@ CommitRDG(
     tsuba::RDG::RDGVersioningPolicy versioning_action,
     const tsuba::RDGLineage& lineage, std::unique_ptr<tsuba::WriteGroup> desc) {
   katana::CommBackend* comm = tsuba::Comm();
+  // Add another option to add a branch
   tsuba::RDGManifest new_manifest =
       (versioning_action == tsuba::RDG::RetainVersion)
           ? handle.impl_->rdg_manifest().SameVersion(
                 comm->Num, policy_id, transposed, lineage)
-          : handle.impl_->rdg_manifest().NextVersion(
-                comm->Num, policy_id, transposed, lineage);
+      : ((versioning_action == tsuba::RDG::IncrementVersion) 
+	  ? handle.impl_->rdg_manifest().NextVersion(
+                comm->Num, policy_id, transposed, lineage)
+          : handle.impl_->rdg_manifest().NextBranch(
+                comm->Num, policy_id, transposed, lineage));
 
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);

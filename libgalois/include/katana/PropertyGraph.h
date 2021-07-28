@@ -15,6 +15,7 @@
 #include "katana/ErrorCode.h"
 #include "katana/Iterators.h"
 #include "katana/NUMAArray.h"
+#include "katana/PropertyIndex.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"
 
@@ -253,6 +254,12 @@ private:
   katana::NUMAArray<EntityTypeID> node_entity_type_id_;
   /// The edge EntityTypeID for each edge's most specific type
   katana::NUMAArray<EntityTypeID> edge_entity_type_id_;
+
+  // List of node and edge indexes on this graph.
+  std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
+      node_indexes_;
+  std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
+      edge_indexes_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
@@ -925,6 +932,24 @@ public:
   node_iterator GetEdgeDest(const edge_iterator& edge) const {
     auto node_id = topology().edge_dest(*edge);
     return node_iterator(node_id);
+  }
+
+  // Creates an index over a node property.
+  Result<void> MakeNodeIndex(const std::string& column_name);
+
+  // Creates an index over an edge property.
+  Result<void> MakeEdgeIndex(const std::string& column_name);
+
+  // Returns the list of node indexes.
+  const std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>&
+  node_indexes() const {
+    return node_indexes_;
+  }
+
+  // Returns the list of edge indexes.
+  const std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>&
+  edge_indexes() const {
+    return edge_indexes_;
   }
 };
 

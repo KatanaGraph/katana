@@ -66,10 +66,10 @@ class KATANA_EXPORT RDGManifest {
   {
 #if 0
     // TODO (wkyu): fix this with a copy constructor
-    version_.ver_numbers_ = version.ver_numbers_; 
-    version_.branch_ids_ = version.branch_ids_;
-    previous_version_.ver_numbers_ = previous_version.ver_numbers_; 
-    previous_version_.branch_ids_ = previous_version.branch_ids_;
+    version_.numbers_ = version.numbers_; 
+    version_.branches_ = version.branches_;
+    previous_version_.numbers_ = previous_version.numbers_; 
+    previous_version_.branches_ = previous_version.branches_;
 #endif
   }
 
@@ -90,7 +90,7 @@ public:
   RDGManifest NextVersion(
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
-    RDGVersion next_version(version_.ver_numbers_, version_.branch_ids_);
+    RDGVersion next_version(version_.numbers_, version_.branches_);
     next_version.SetNextVersion();
     return RDGManifest(
         next_version, version_, num_hosts, policy_id, transpose, dir_, lineage);
@@ -101,7 +101,7 @@ public:
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
 
-    RDGVersion next_version(version_.ver_numbers_, version_.branch_ids_);
+    RDGVersion next_version(version_.numbers_, version_.branches_);
     next_version.SetBranchPoint(katana::RandomAlphanumericString(12));
 
     return RDGManifest(

@@ -255,10 +255,10 @@ tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
       {"version", manifest.version_.ToVectorString()},
       {"previous_version", manifest.previous_version_.ToVectorString()},
 #else
-      {"version_nums", manifest.version_.ver_numbers_},
-      {"version_ids", manifest.version_.branch_ids_},
-      {"previous_version_nums", manifest.previous_version_.ver_numbers_},
-      {"previous_version_ids", manifest.previous_version_.branch_ids_},
+      {"version_nums", manifest.version_.numbers_},
+      {"version_ids", manifest.version_.branches_},
+      {"previous_version_nums", manifest.previous_version_.numbers_},
+      {"previous_version_ids", manifest.previous_version_.branches_},
 #endif
       {"num_hosts", manifest.num_hosts_},
       {"policy_id", manifest.policy_id_},
@@ -271,18 +271,18 @@ void
 tsuba::from_json(const json& j, tsuba::RDGManifest& manifest) {
   uint32_t magic;
   j.at("magic").get_to(magic);
-  j.at("version_nums").get_to(manifest.version_.ver_numbers_);
-  j.at("version_ids").get_to(manifest.version_.branch_ids_);
+  j.at("version_nums").get_to(manifest.version_.numbers_);
+  j.at("version_ids").get_to(manifest.version_.branches_);
   j.at("num_hosts").get_to(manifest.num_hosts_);
 
   // these values are temporarily optional
   if (auto it = j.find("previous_version_nums"); it != j.end()) {
     /*it->get_to(manifest.previous_version_.ToVectorString());*/
-    it->get_to(manifest.previous_version_.ver_numbers_);
+    it->get_to(manifest.previous_version_.numbers_);
   }
   if (auto it = j.find("previous_version_ids"); it != j.end()) {
     /*it->get_to(manifest.previous_version_.ToVectorString());*/
-    it->get_to(manifest.previous_version_.branch_ids_);
+    it->get_to(manifest.previous_version_.branches_);
   }
 
   if (auto it = j.find("policy_id"); it != j.end()) {

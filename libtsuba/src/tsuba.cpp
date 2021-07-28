@@ -199,7 +199,7 @@ tsuba::ListAvailableViewsForBranch(const std::string& rdg_dir,
     return list_res.error();
   }
 
-  std::vector<uint64_t> long_ver_nums = version.GetBranchNumbers();
+  std::vector<uint64_t> long_ver_nums = version.GetVersionNumbers();
   // TODO(wkyu): assert the correctness of the first few branch numbers. 
   uint64_t target_version = long_ver_nums[long_ver_nums.size()-1];
   uint64_t max_version = target_version;

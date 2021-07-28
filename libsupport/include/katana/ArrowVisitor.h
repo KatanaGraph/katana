@@ -193,8 +193,7 @@ struct Wrapper {
 
 template <typename T>
 using is_visit_arrow_base_t = typename std::disjunction<
-    std::is_same<T, arrow::Array&>,
-    std::is_same<T, arrow::Scalar&>,
+    std::is_same<T, arrow::Array&>, std::is_same<T, arrow::Scalar&>,
     std::is_same<T, arrow::ArrayBuilder*>>;
 
 }  // namespace internal
@@ -206,8 +205,7 @@ template <class VisitorType, class Arg0, class... Args>
 std::enable_if_t<
     std::conjunction_v<
         internal::is_visit_arrow_base_t<Arg0>,
-        internal::is_visit_arrow_base_t<Args>...
-    >,
+        internal::is_visit_arrow_base_t<Args>...>,
     katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
 VisitArrow(VisitorType&& visitor, Arg0 array, Args... args) {
   return internal::Wrapper<>::template VisitArrowInternal<

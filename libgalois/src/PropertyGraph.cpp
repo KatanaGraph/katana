@@ -866,6 +866,72 @@ katana::PropertyGraph::InformPath(const std::string& input_path) {
   return ResultSuccess();
 }
 
+// Build an index over nodes.
+katana::Result<void>
+katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
+  for (const auto& existing_index : node_indexes_) {
+    if (existing_index->column_name() == column_name) {
+      return KATANA_ERROR(
+          katana::ErrorCode::AlreadyExists,
+          "Index already exists for column {}", column_name);
+    }
+  }
+
+  // Get a view of the property.
+  std::shared_ptr<arrow::ChunkedArray> chunked_property =
+      GetNodeProperty(column_name);
+  if (!chunked_property) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "No such property: {}", column_name);
+  }
+  KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
+  std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
+
+  // Create an index based on the type of the field.
+  std::unique_ptr<katana::PropertyIndex<GraphTopology::Node>> index =
+      KATANA_CHECKED(katana::MakeTypedIndex<katana::GraphTopology::Node>(
+          column_name, num_nodes(), property));
+
+  KATANA_CHECKED(index->BuildFromProperty());
+
+  node_indexes_.push_back(std::move(index));
+
+  return katana::ResultSuccess();
+}
+
+// Build an index over edges.
+katana::Result<void>
+katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
+  for (const auto& existing_index : edge_indexes_) {
+    if (existing_index->column_name() == column_name) {
+      return KATANA_ERROR(
+          katana::ErrorCode::AlreadyExists,
+          "Index already exists for column {}", column_name);
+    }
+  }
+
+  // Get a view of the property.
+  std::shared_ptr<arrow::ChunkedArray> chunked_property =
+      GetEdgeProperty(column_name);
+  if (!chunked_property) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "No such property: {}", column_name);
+  }
+  KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
+  std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
+
+  // Create an index based on the type of the field.
+  std::unique_ptr<katana::PropertyIndex<katana::GraphTopology::Edge>> index =
+      KATANA_CHECKED(katana::MakeTypedIndex<katana::GraphTopology::Edge>(
+          column_name, num_edges(), property));
+
+  KATANA_CHECKED(index->BuildFromProperty());
+
+  edge_indexes_.push_back(std::move(index));
+
+  return katana::ResultSuccess();
+}
+
 katana::Result<std::unique_ptr<katana::NUMAArray<uint64_t>>>
 katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   // TODO(amber): This function will soon change so that it produces a new sorted

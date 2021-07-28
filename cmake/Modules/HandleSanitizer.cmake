@@ -47,6 +47,9 @@ function(add_sanitize_options)
     endif()
   endmacro()
 
+  append("-shared-libsan" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  link_libraries("-shared-libsan")
+
   if (KATANA_USE_SANITIZER STREQUAL "Address")
     append_common_sanitizer_flags()
     append("-fsanitize=address" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -71,7 +74,7 @@ function(add_sanitize_options)
   elseif (KATANA_USE_SANITIZER STREQUAL "Address;Undefined" OR
           KATANA_USE_SANITIZER STREQUAL "Undefined;Address")
     append_common_sanitizer_flags()
-    append("-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+    append("-fsanitize=address,undefined -fno-sanitize-recover=all"
             CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     link_libraries("-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
   elseif (KATANA_USE_SANITIZER STREQUAL "Leaks")

@@ -75,6 +75,7 @@ public:
         atomic_entity_type_id_to_entity_type_ids_(
             std::move(atomic_entity_type_id_to_entity_type_ids)) {}
 
+  // TODO(amber): delete this method. It's risky 
   void Reset() {
     atomic_entity_type_id_to_type_name_.clear();
     atomic_type_name_to_entity_type_id_.clear();
@@ -194,8 +195,19 @@ public:
     return (sub_atomic_types & super_atomic_types) == sub_atomic_types;
   }
 
+  const EntityTypeIDToSetOfEntityTypeIDsMap&
+  GetEntityTypeIDToAtomicEntityTypeIDs() {
+    return entity_type_id_to_atomic_entity_type_ids_;
+  }
+
+  const EntityTypeIDToAtomicTypeNameMap& GetEntityTypeIDToAtomicTypeNameMap() {
+    return atomic_entity_type_id_to_type_name_;
+  }
+
 private:
   void Init() {
+    // TODO(amber): add a sentinel name for kUnknownEntityType to the maps that hold atomic
+    // ID names
     // assume kUnknownEntityType is 0
     static_assert(kUnknownEntityType == 0);
     // add kUnknownEntityType

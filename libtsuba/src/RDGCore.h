@@ -79,6 +79,30 @@ public:
     topology_file_storage_ = std::move(topology_file_storage);
   }
 
+  const FileView& node_entity_type_id_array_file_storage() const {
+    return node_entity_type_id_array_file_storage_;
+  }
+  FileView& node_entity_type_id_array_file_storage() {
+    return node_entity_type_id_array_file_storage_;
+  }
+  void set_node_entity_type_id_array_file_storage(
+      FileView&& node_entity_type_id_array_file_storage) {
+    node_entity_type_id_array_file_storage_ =
+        std::move(node_entity_type_id_array_file_storage);
+  }
+
+  const FileView& edge_entity_type_id_array_file_storage() const {
+    return edge_entity_type_id_array_file_storage_;
+  }
+  FileView& edge_entity_type_id_array_file_storage() {
+    return edge_entity_type_id_array_file_storage_;
+  }
+  void set_edge_entity_type_id_array_file_storage(
+      FileView&& edge_entity_type_id_array_file_storage) {
+    edge_entity_type_id_array_file_storage_ =
+        std::move(edge_entity_type_id_array_file_storage);
+  }
+
   const RDGPartHeader& part_header() const { return part_header_; }
   RDGPartHeader& part_header() { return part_header_; }
   void set_part_header(RDGPartHeader&& part_header) {
@@ -88,6 +112,18 @@ public:
   katana::Result<void> RegisterTopologyFile(const std::string& new_top) {
     part_header_.set_topology_path(new_top);
     return topology_file_storage_.Unbind();
+  }
+
+  katana::Result<void> RegisterNodeEntityTypeIdArrayFile(
+      const std::string& new_type_id_array) {
+    part_header_.set_node_entity_type_id_array_path(new_type_id_array);
+    return node_entity_type_id_array_file_storage_.Unbind();
+  }
+
+  katana::Result<void> RegisterEdgeEntityTypeIdArrayFile(
+      const std::string& new_type_id_array) {
+    part_header_.set_edge_entity_type_id_array_path(new_type_id_array);
+    return edge_entity_type_id_array_file_storage_.Unbind();
   }
 
 private:
@@ -101,6 +137,9 @@ private:
   std::shared_ptr<arrow::Table> edge_properties_;
 
   FileView topology_file_storage_;
+
+  FileView node_entity_type_id_array_file_storage_;
+  FileView edge_entity_type_id_array_file_storage_;
 
   RDGPartHeader part_header_;
 };

@@ -53,6 +53,8 @@ public:
   using Node = GraphTopology::Node;
   using Edge = GraphTopology::Edge;
 
+  using EntityTypeIDVec = katana::NUMAArray<EntityTypeID>;
+
 private:
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
@@ -78,14 +80,13 @@ private:
 
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;
-
   /// Manages the relations between the edge entity types
   EntityTypeManager edge_entity_type_manager_;
 
   /// The node EntityTypeID for each node's most specific type
-  katana::NUMAArray<EntityTypeID> node_entity_type_id_;
+  EntityTypeIDVec node_entity_type_ids_;
   /// The edge EntityTypeID for each edge's most specific type
-  katana::NUMAArray<EntityTypeID> edge_entity_type_id_;
+  EntityTypeIDVec edge_entity_type_ids_;
 
   // List of node and edge indexes on this graph.
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
@@ -95,6 +96,7 @@ private:
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
+
   friend class Distribution;
   const tsuba::PartitionMetadata& partition_metadata() const {
     return rdg_.part_metadata();
@@ -240,34 +242,23 @@ public:
 
   PropertyGraph() = default;
 
+  // XXX: WARNING: do not add new constructors. Add Make Functions
   PropertyGraph(
       std::unique_ptr<tsuba::RDGFile>&& rdg_file, tsuba::RDG&& rdg,
-      GraphTopology&& topo) noexcept
-      : rdg_(std::move(rdg)),
-        file_(std::move(rdg_file)),
-        topology_(std::move(topo)) {}
-
-  PropertyGraph(katana::GraphTopology&& topo_to_assign) noexcept
-      : rdg_(), file_(), topology_(std::move(topo_to_assign)) {}
-
-  template <typename PGView>
-  PGView BuildView() noexcept {
-    return pg_view_cache_.BuildView<PGView>(this);
-  }
-
-  PropertyGraph(
-      katana::GraphTopology&& topo_to_assign,
-      NUMAArray<EntityTypeID>&& node_entity_type_id,
-      NUMAArray<EntityTypeID>&& edge_entity_type_id,
+      GraphTopology&& topo, EntityTypeIDVec&& node_entity_type_ids,
+      EntityTypeIDVec&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager) noexcept
-      : rdg_(),
-        file_(),
-        topology_(std::move(topo_to_assign)),
+      : rdg_(std::move(rdg)),
+        file_(std::move(rdg_file)),
+        topology_(std::move(topo)),
         node_entity_type_manager_(std::move(node_type_manager)),
         edge_entity_type_manager_(std::move(edge_type_manager)),
-        node_entity_type_id_(std::move(node_entity_type_id)),
-        edge_entity_type_id_(std::move(edge_entity_type_id)) {}
+        node_entity_type_ids_(std::move(node_entity_type_ids)),
+        edge_entity_type_ids_(std::move(edge_entity_type_ids)) {
+    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == num_edges());
+  }
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
@@ -285,9 +276,8 @@ public:
 
   /// Make a property graph from topology and type arrays
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      GraphTopology&& topo_to_assign,
-      NUMAArray<EntityTypeID>&& node_entity_type_id,
-      NUMAArray<EntityTypeID>&& edge_entity_type_id,
+      GraphTopology&& topo_to_assign, EntityTypeIDVec&& node_entity_type_ids,
+      EntityTypeIDVec&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager);
 
@@ -314,14 +304,14 @@ public:
   /// similar hack in GraphTopology and hopefully makes it clear that these
   /// functions should not be used lightly.
   const EntityTypeID* node_type_data() const noexcept {
-    return node_entity_type_id_.data();
+    return node_entity_type_ids_.data();
   }
   /// This is an unfortunate hack. Due to some technical debt, we need a way to
   /// modify these arrays in place from outside this class. This style mirrors a
   /// similar hack in GraphTopology and hopefully makes it clear that these
   /// functions should not be used lightly.
   const EntityTypeID* edge_type_data() const noexcept {
-    return edge_entity_type_id_.data();
+    return edge_entity_type_ids_.data();
   }
 
   const EntityTypeManager& GetNodeTypeManager() const {
@@ -542,12 +532,12 @@ public:
 
   /// \return returns the most specific node entity type for @param node
   EntityTypeID GetTypeOfNode(Node node) const {
-    return node_entity_type_id_[node];
+    return node_entity_type_ids_[node];
   }
 
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdge(Edge edge) const {
-    return edge_entity_type_id_[edge];
+    return edge_entity_type_ids_[edge];
   }
 
   /// \return true iff the node @param node has the given entity type

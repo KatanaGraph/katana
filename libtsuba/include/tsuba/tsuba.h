@@ -1,9 +1,12 @@
 #ifndef KATANA_LIBTSUBA_TSUBA_TSUBA_H_
 #define KATANA_LIBTSUBA_TSUBA_TSUBA_H_
 
+#include <iterator>
 #include <memory>
+#include <string>
 
 #include "katana/CommBackend.h"
+#include "katana/Iterators.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/config.h"
@@ -27,7 +30,10 @@ public:
   RDGFile(const RDGFile&) = delete;
   RDGFile& operator=(const RDGFile&) = delete;
 
-  RDGFile(RDGFile&& f) noexcept : handle_(f.handle_) {}
+  RDGFile(RDGFile&& f) noexcept : handle_(f.handle_) {
+    f.handle_ = RDGHandle{nullptr};
+  }
+
   RDGFile& operator=(RDGFile&& f) noexcept {
     std::swap(handle_, f.handle_);
     return *this;
@@ -56,6 +62,16 @@ KATANA_EXPORT katana::Result<RDGHandle> Open(
 /// directory associated with handle. Exported to support
 /// out-of-core conversion
 KATANA_EXPORT katana::Uri MakeTopologyFileName(RDGHandle handle);
+
+/// Generate a new canonically named node_entity_type_id file name in the
+/// directory associated with handle. Exported to support
+/// out-of-core conversion
+KATANA_EXPORT katana::Uri MakeNodeEntityTypeIDArrayFileName(RDGHandle handle);
+
+/// Generate a new canonically named edge_entity_type_id file name in the
+/// directory associated with handle. Exported to support
+/// out-of-core conversion
+KATANA_EXPORT katana::Uri MakeEdgeEntityTypeIDArrayFileName(RDGHandle handle);
 
 /// Get the storage directory associated with this handle
 KATANA_EXPORT katana::Uri GetRDGDir(RDGHandle handle);
@@ -98,6 +114,21 @@ KATANA_EXPORT katana::Result<void> Init(katana::CommBackend* comm);
 KATANA_EXPORT katana::Result<void> Init();
 
 KATANA_EXPORT katana::Result<void> Fini();
+
+// For storage of EntityTypeIDs, we use 4 bytes.
+// In memory, we redefine to smallest possible size, where size= 1 byte <= size <= 4 bytes
+using EntityTypeID = uint32_t;
+
+// Storage set of EnityTypeIDs
+using SetOfEntityTypeIDs = std::vector<tsuba::EntityTypeID>;
+
+/// A map from EntityTypeID to a set of EntityTypeIDs
+using EntityTypeIDToSetOfEntityTypeIDsMap =
+    std::unordered_map<tsuba::EntityTypeID, tsuba::SetOfEntityTypeIDs>;
+
+/// A map from Atomic EntityTypeID to Atomic EntityTypeIDs string names
+using EntityTypeIDToAtomicTypeNameMap =
+    std::unordered_map<tsuba::EntityTypeID, std::string>;
 
 }  // namespace tsuba
 

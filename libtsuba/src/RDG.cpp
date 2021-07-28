@@ -3,9 +3,12 @@
 #include <cassert>
 #include <exception>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <regex>
+#include <string>
 #include <unordered_set>
+#include <vector>
 
 #include <arrow/chunked_array.h>
 #include <arrow/filesystem/api.h>
@@ -24,6 +27,7 @@
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
 #include "katana/ArrowInterchange.h"
+#include "katana/ErrorCode.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
@@ -32,6 +36,7 @@
 #include "tsuba/FaultTest.h"
 #include "tsuba/ParquetWriter.h"
 #include "tsuba/ReadGroup.h"
+#include "tsuba/WriteGroup.h"
 #include "tsuba/file.h"
 #include "tsuba/tsuba.h"
 
@@ -268,23 +273,163 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
 }
 
 katana::Result<void>
+tsuba::RDG::DoStoreTopology(
+    RDGHandle handle, std::unique_ptr<FileFrame> topology_ff,
+    std::unique_ptr<WriteGroup>& write_group) {
+  if (!topology_ff && !topology_file_storage().Valid()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "no topology file frame update, but topology_file_storage is invalid");
+  }
+
+  if (topology_ff) {
+    // we have an update, store the passed in memory state
+    katana::Uri path_uri = MakeTopologyFileName(handle);
+    topology_ff->Bind(path_uri.string());
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    write_group->StartStore(std::move(topology_ff));
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    core_->part_header().set_topology_path(path_uri.BaseName());
+  } else if (core_->part_header().topology_path().empty()) {
+    // we don't have an update, but we are persisting in a new location
+    // store our in memory state
+    katana::Uri path_uri = MakeTopologyFileName(handle);
+
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    // depends on `topology_file_storage_` outliving writes
+    write_group->StartStore(
+        path_uri.string(), core_->topology_file_storage().ptr<uint8_t>(),
+        core_->topology_file_storage().size());
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    core_->part_header().set_topology_path(path_uri.BaseName());
+  }
+  // else: no update, not persisting in a new location, so nothing for us to do
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDG::DoStoreNodeEntityTypeIDArray(
+    RDGHandle handle, std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
+    std::unique_ptr<WriteGroup>& write_group) {
+  if (!node_entity_type_id_array_ff &&
+      !node_entity_type_id_array_file_storage().Valid()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "no node_entity_type_id_array file frame update, but "
+        "node_entity_type_id_array_file_storage is invalid");
+  }
+
+  if (node_entity_type_id_array_ff) {
+    // we have an update, store the passed in memory state
+    katana::Uri path_uri = MakeNodeEntityTypeIDArrayFileName(handle);
+    node_entity_type_id_array_ff->Bind(path_uri.string());
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    write_group->StartStore(std::move(node_entity_type_id_array_ff));
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    core_->part_header().set_node_entity_type_id_array_path(
+        path_uri.BaseName());
+  } else if (core_->part_header().node_entity_type_id_array_path().empty()) {
+    // we don't have an update, but we are persisting in a new location
+    // store our in memory state
+    katana::Uri path_uri = MakeNodeEntityTypeIDArrayFileName(handle);
+    node_entity_type_id_array_ff->Bind(path_uri.string());
+
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    // depends on `node_entity_type_id_array_` outliving writes
+    write_group->StartStore(
+        path_uri.string(),
+        core_->node_entity_type_id_array_file_storage().ptr<uint8_t>(),
+        core_->node_entity_type_id_array_file_storage().size());
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    core_->part_header().set_node_entity_type_id_array_path(
+        path_uri.BaseName());
+  }
+  // else: no update, not persisting in a new location, so nothing for us to do
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDG::DoStoreEdgeEntityTypeIDArray(
+    RDGHandle handle, std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
+    std::unique_ptr<WriteGroup>& write_group) {
+  if (!edge_entity_type_id_array_ff &&
+      !edge_entity_type_id_array_file_storage().Valid()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "no edge_entity_type_id_array file frame update, but "
+        "edge_entity_type_id_array_file_storage is invalid");
+  }
+
+  if (edge_entity_type_id_array_ff) {
+    // we have an update, store the passed in memory state
+    katana::Uri path_uri = MakeEdgeEntityTypeIDArrayFileName(handle);
+    edge_entity_type_id_array_ff->Bind(path_uri.string());
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    write_group->StartStore(std::move(edge_entity_type_id_array_ff));
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    core_->part_header().set_edge_entity_type_id_array_path(
+        path_uri.BaseName());
+  } else if (core_->part_header().edge_entity_type_id_array_path().empty()) {
+    // we don't have an update, but we are persisting in a new location
+    // store our in memory state
+    katana::Uri path_uri = MakeEdgeEntityTypeIDArrayFileName(handle);
+    edge_entity_type_id_array_ff->Bind(path_uri.string());
+
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    // depends on `edge_entity_type_id_array_` outliving writes
+    write_group->StartStore(
+        path_uri.string(),
+        core_->edge_entity_type_id_array_file_storage().ptr<uint8_t>(),
+        core_->edge_entity_type_id_array_file_storage().size());
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    core_->part_header().set_edge_entity_type_id_array_path(
+        path_uri.BaseName());
+  }
+  // else: no update, not persisting in a new location, so nothing for us to do
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
 tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
-  if (core_->part_header().topology_path().empty()) {
-    // No topology file; create one
-    katana::Uri t_path = MakeTopologyFileName(handle);
-
+  if (core_->part_header().node_entity_type_id_array_path().empty()) {
+    // No node_entity_type_id_array file; create one
+    katana::Uri node_entity_type_id_array_path =
+        MakeNodeEntityTypeIDArrayFileName(handle);
     TSUBA_PTP(internal::FaultSensitivity::Normal);
 
-    // depends on `topology_file_storage_` outliving writes
+    // depends on `node_entity_type_id_array_` outliving writes
     write_group->StartStore(
-        t_path.string(), core_->topology_file_storage().ptr<uint8_t>(),
-        core_->topology_file_storage().size());
+        node_entity_type_id_array_path.string(),
+        core_->node_entity_type_id_array_file_storage().ptr<uint8_t>(),
+        core_->node_entity_type_id_array_file_storage().size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
-    core_->part_header().set_topology_path(t_path.BaseName());
+    core_->part_header().set_node_entity_type_id_array_path(
+        node_entity_type_id_array_path.BaseName());
   }
+
+  if (core_->part_header().edge_entity_type_id_array_path().empty()) {
+    // No edge_entity_type_id_array file; create one
+    katana::Uri edge_entity_type_id_array_path =
+        MakeEdgeEntityTypeIDArrayFileName(handle);
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+
+    // depends on `edge_entity_type_id_array_` outliving writes
+    write_group->StartStore(
+        edge_entity_type_id_array_path.string(),
+        core_->edge_entity_type_id_array_file_storage().ptr<uint8_t>(),
+        core_->edge_entity_type_id_array_file_storage().size());
+    TSUBA_PTP(internal::FaultSensitivity::Normal);
+    core_->part_header().set_edge_entity_type_id_array_path(
+        edge_entity_type_id_array_path.BaseName());
+  }
+
+  core_->part_header().update_storage_format_version();
 
   std::vector<std::string> node_prop_names;
   for (const auto& field : core_->node_properties()->fields()) {
@@ -400,23 +545,42 @@ tsuba::RDG::DoMake(
     return res.error();
   }
 
-  rdg_dir_ = metadata_dir;
+  if (core_->part_header().EntityTypeIDsOutsideProperties()) {
+    katana::Uri node_entity_type_id_array_path = metadata_dir.Join(
+        core_->part_header().node_entity_type_id_array_path());
+    if (auto res = core_->node_entity_type_id_array_file_storage().Bind(
+            node_entity_type_id_array_path.string(), true);
+        !res) {
+      return res.error();
+    }
 
-  std::vector<PropStorageInfo*> part_info =
-      KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
+    katana::Uri edge_entity_type_id_array_path = metadata_dir.Join(
+        core_->part_header().edge_entity_type_id_array_path());
+    if (auto res = core_->edge_entity_type_id_array_file_storage().Bind(
+            edge_entity_type_id_array_path.string(), true);
+        !res) {
+      return res.error();
+    }
+    rdg_dir_ = metadata_dir;
 
-  if (part_info.empty()) {
-    return grp.Finish();
+  } else {
+    rdg_dir_ = metadata_dir;
+
+    std::vector<PropStorageInfo*> part_info =
+        KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
+
+    if (part_info.empty()) {
+      return grp.Finish();
+    }
+
+    KATANA_CHECKED_CONTEXT(
+        AddProperties(
+            metadata_dir, part_info, &grp,
+            [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+              return rdg->AddPartitionMetadataArray(props);
+            }),
+        "populating partition metadata");
   }
-
-  KATANA_CHECKED_CONTEXT(
-      AddProperties(
-          metadata_dir, part_info, &grp,
-          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-            return rdg->AddPartitionMetadataArray(props);
-          }),
-      "populating partition metadata");
-
   KATANA_CHECKED(grp.Finish());
 
   if (local_to_user_id_->length() == 0) {
@@ -458,8 +622,12 @@ tsuba::RDG::DoMake(
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
-  KATANA_CHECKED(core_->EnsureNodeTypesLoaded(rdg_dir_));
-  KATANA_CHECKED(core_->EnsureEdgeTypesLoaded(rdg_dir_));
+  if (!core_->part_header().EntityTypeIDsOutsideProperties()) {
+    // only need to perform these checks on graphs with types in
+    // the properties tables
+    KATANA_CHECKED(core_->EnsureNodeTypesLoaded(rdg_dir_));
+    KATANA_CHECKED(core_->EnsureEdgeTypesLoaded(rdg_dir_));
+  }
 
   return katana::ResultSuccess();
 }
@@ -494,6 +662,11 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   return RDG(std::move(rdg));
 }
 
+bool
+tsuba::RDG::EntityTypeIDsOutsideProperties() const {
+  return core_->part_header().EntityTypeIDsOutsideProperties();
+}
+
 katana::Result<void>
 tsuba::RDG::Validate() const {
   if (auto res = core_->part_header().Validate(); !res) {
@@ -519,7 +692,12 @@ tsuba::RDG::Make(RDGHandle handle, const RDGLoadOptions& opts) {
 katana::Result<void>
 tsuba::RDG::Store(
     RDGHandle handle, const std::string& command_line,
-    RDGVersioningPolicy versioning_action, std::unique_ptr<FileFrame> ff) {
+    RDGVersioningPolicy versioning_action,
+    std::unique_ptr<FileFrame> topology_ff,
+    std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
+    std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
+    const katana::EntityTypeManager& node_entity_type_manager,
+    const katana::EntityTypeManager& edge_entity_type_manager) {
   if (!handle.impl_->AllowsWrite()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "handle does not allow write");
@@ -544,16 +722,25 @@ tsuba::RDG::Store(
   // All write buffers must outlive desc
   std::unique_ptr<WriteGroup> desc = std::move(desc_res.value());
 
-  if (ff) {
-    katana::Uri t_path =
-        handle.impl_->rdg_manifest().dir().RandFile("topology");
-
-    ff->Bind(t_path.string());
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-    desc->StartStore(std::move(ff));
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-    core_->part_header().set_topology_path(t_path.BaseName());
+  auto res = DoStoreTopology(handle, std::move(topology_ff), desc);
+  if (!res) {
+    return res.error();
   }
+
+  res = DoStoreNodeEntityTypeIDArray(
+      handle, std::move(node_entity_type_id_array_ff), desc);
+  if (!res) {
+    return res.error();
+  }
+
+  res = DoStoreEdgeEntityTypeIDArray(
+      handle, std::move(edge_entity_type_id_array_ff), desc);
+  if (!res) {
+    return res.error();
+  }
+
+  core_->part_header().StoreNodeEntityTypeManager(node_entity_type_manager);
+  core_->part_header().StoreEdgeEntityTypeManager(edge_entity_type_manager);
 
   return DoStore(handle, command_line, versioning_action, std::move(desc));
 }
@@ -807,6 +994,60 @@ tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
         "new topology file must be in this RDG's directory ({})", rdg_dir_);
   }
   return core_->RegisterTopologyFile(new_top.BaseName());
+}
+
+const tsuba::FileView&
+tsuba::RDG::node_entity_type_id_array_file_storage() const {
+  return core_->node_entity_type_id_array_file_storage();
+}
+
+katana::Result<katana::EntityTypeManager>
+tsuba::RDG::node_entity_type_manager() const {
+  return core_->part_header().GetNodeEntityTypeManager();
+}
+
+katana::Result<katana::EntityTypeManager>
+tsuba::RDG::edge_entity_type_manager() const {
+  return core_->part_header().GetEdgeEntityTypeManager();
+}
+
+katana::Result<void>
+tsuba::RDG::UnbindNodeEntityTypeIdArrayFileStorage() {
+  return core_->node_entity_type_id_array_file_storage().Unbind();
+}
+
+katana::Result<void>
+tsuba::RDG::SetNodeEntityTypeIdArrayFile(const katana::Uri& new_type_id_array) {
+  katana::Uri dir = new_type_id_array.DirName();
+  if (dir != rdg_dir_) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "new Node Entity Type Id file must be in this RDG's directory ({})",
+        rdg_dir_);
+  }
+  return core_->RegisterNodeEntityTypeIdArrayFile(new_type_id_array.BaseName());
+}
+
+const tsuba::FileView&
+tsuba::RDG::edge_entity_type_id_array_file_storage() const {
+  return core_->edge_entity_type_id_array_file_storage();
+}
+
+katana::Result<void>
+tsuba::RDG::UnbindEdgeEntityTypeIdArrayFileStorage() {
+  return core_->edge_entity_type_id_array_file_storage().Unbind();
+}
+
+katana::Result<void>
+tsuba::RDG::SetEdgeEntityTypeIdArrayFile(const katana::Uri& new_type_id_array) {
+  katana::Uri dir = new_type_id_array.DirName();
+  if (dir != rdg_dir_) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "new Edge Entity Type Id file must be in this RDG's directory ({})",
+        rdg_dir_);
+  }
+  return core_->RegisterEdgeEntityTypeIdArrayFile(new_type_id_array.BaseName());
 }
 
 void

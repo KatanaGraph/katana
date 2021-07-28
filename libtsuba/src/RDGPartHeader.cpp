@@ -13,12 +13,27 @@ using json = nlohmann::json;
 
 namespace {
 
-// TODO (witchel) these key are deprecated as part of parquet
 const char* kTopologyPathKey = "kg.v1.topology.path";
 const char* kNodePropertyKey = "kg.v1.node_property";
 const char* kEdgePropertyKey = "kg.v1.edge_property";
 const char* kPartPropertyFilesKey = "kg.v1.part_property_files";
 const char* kPartProperyMetaKey = "kg.v1.part_property_meta";
+const char* kStorageFormatVersionKey = "kg.v1.storage_format_version";
+// Array file at path maps from Node ID to EntityTypeID of that Node
+const char* kNodeEntityTypeIDArrayPathKey = "kg.v1.node_entity_type_id_array";
+// Array file at path maps from Edge ID to EntityTypeID of that Edge
+const char* kEdgeEntityTypeIDArrayPathKey = "kg.v1.edge_entity_type_id_array";
+// Dictionary maps from Node Entity Type ID to set of Node Atomic Entity Type Ids
+const char* kNodeEntityTypeIDDictionaryKey =
+    "kg.v1.node_entity_type_id_dictionary";
+// Dictionary maps from Edge Entity Type ID to set of Edge Atomic Entity Type Ids
+const char* kEdgeEntityTypeIDDictionaryKey =
+    "kg.v1.edge_entity_type_id_dictionary";
+// Name maps from Node Entity Type Id to set of string names for the Node Entity Type Id
+const char* kNodeEntityTypeIDNameKey = "kg.v1.node_entity_type_id_name";
+// Name maps from Atomic Edge Entity Type Id to set of string names for the Edge Entity Type Id
+const char* kEdgeEntityTypeIDNameKey = "kg.v1.edge_entity_type_id_name";
+
 //
 //constexpr std::string_view  mirror_nodes_prop_name = "mirror_nodes";
 //constexpr std::string_view  master_nodes_prop_name = "master_nodes";
@@ -107,6 +122,46 @@ RDGPartHeader::Write(
   return katana::ResultSuccess();
 }
 
+bool
+RDGPartHeader::EntityTypeIDsOutsideProperties() const {
+  return (storage_format_version_ >= kPartitionStorageFormatVersion2);
+}
+
+katana::Result<void>
+RDGPartHeader::ValidateEntityTypeIDStructures() const {
+  if (node_entity_type_id_array_path_.empty()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "node_entity_type_id_array_path is empty");
+  }
+
+  if (edge_entity_type_id_array_path_.empty()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "edge_entity_type_id_array_path is empty");
+  }
+
+  if (node_entity_type_id_dictionary_.empty()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "node_entity_type_id_dictionary_ is empty");
+  }
+
+  if (edge_entity_type_id_dictionary_.empty()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "edge_entity_type_id_dictionary_ is empty");
+  }
+
+  if (node_entity_type_id_name_.empty()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "node_entity_type_id_name_ is empty");
+  }
+
+  if (edge_entity_type_id_name_.empty()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "edge_entity_type_id_name_ is empty");
+  }
+
+  return katana::ResultSuccess();
+}
+
 katana::Result<void>
 RDGPartHeader::Validate() const {
   for (const auto& md : node_prop_info_list_) {
@@ -131,6 +186,11 @@ RDGPartHeader::Validate() const {
         ErrorCode::InvalidArgument,
         "topology_path doesn't contain a slash (/): {}", topology_path_);
   }
+
+  if (EntityTypeIDsOutsideProperties()) {
+    return ValidateEntityTypeIDStructures();
+  }
+
   return katana::ResultSuccess();
 }
 
@@ -181,6 +241,13 @@ tsuba::to_json(json& j, const tsuba::RDGPartHeader& header) {
       {kEdgePropertyKey, header.edge_prop_info_list_},
       {kPartPropertyFilesKey, header.part_prop_info_list_},
       {kPartProperyMetaKey, header.metadata_},
+      {kStorageFormatVersionKey, header.storage_format_version_},
+      {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
+      {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
+      {kNodeEntityTypeIDDictionaryKey, header.edge_entity_type_id_dictionary_},
+      {kEdgeEntityTypeIDDictionaryKey, header.node_entity_type_id_dictionary_},
+      {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
+      {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
   };
 }
 
@@ -191,6 +258,27 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
   j.at(kEdgePropertyKey).get_to(header.edge_prop_info_list_);
   j.at(kPartPropertyFilesKey).get_to(header.part_prop_info_list_);
   j.at(kPartProperyMetaKey).get_to(header.metadata_);
+
+  if (auto it = j.find(kStorageFormatVersionKey); it != j.end()) {
+    it->get_to(header.storage_format_version_);
+  } else {
+    header.storage_format_version_ =
+        RDGPartHeader::kPartitionStorageFormatVersion1;
+  }
+
+  if (header.storage_format_version_ >=
+      RDGPartHeader::kPartitionStorageFormatVersion2) {
+    j.at(kNodeEntityTypeIDArrayPathKey)
+        .get_to(header.node_entity_type_id_array_path_);
+    j.at(kEdgeEntityTypeIDArrayPathKey)
+        .get_to(header.edge_entity_type_id_array_path_);
+    j.at(kNodeEntityTypeIDDictionaryKey)
+        .get_to(header.node_entity_type_id_dictionary_);
+    j.at(kEdgeEntityTypeIDDictionaryKey)
+        .get_to(header.edge_entity_type_id_dictionary_);
+    j.at(kNodeEntityTypeIDNameKey).get_to(header.node_entity_type_id_name_);
+    j.at(kEdgeEntityTypeIDNameKey).get_to(header.edge_entity_type_id_name_);
+  }
 }
 
 void

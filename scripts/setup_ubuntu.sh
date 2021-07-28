@@ -141,4 +141,4 @@ fi
 
 # --no-binary is required to cause the pip package to use the debian package's native binaries.
 # https://lists.apache.org/thread.html/r4d2e768c330b6545649e066a1d9d1846ca7a3ea1d97e265205211166%40%3Cdev.arrow.apache.org%3E
-PYARROW_WITH_PARQUET=1 run_as_original_user pip3 install --no-binary pyarrow 'pyarrow>=4.0<5'
+PYARROW_WITH_PARQUET=1 run_as_original_user pip3 install --no-binary pyarrow 'pyarrow>=4.0,<5.0.0a0'

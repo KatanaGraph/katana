@@ -414,6 +414,14 @@ template <class T>
 using Result = BOOST_OUTCOME_V2_NAMESPACE::std_result<
     T, ErrorInfo, internal::abort_policy>;
 
+// TODO(amber): Remove the function below when we have more recent compilers that
+// can construct Result<T> from T in a function's return statement.
+template <typename T>
+Result<T>
+MakeResult(T&& val) noexcept {
+  return Result<T>(std::forward<T>(val));
+}
+
 /// A CopyableResult is a T or an CopyableErrorInfo.
 template <class T>
 using CopyableResult = BOOST_OUTCOME_V2_NAMESPACE::std_result<

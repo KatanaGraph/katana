@@ -19,15 +19,15 @@ from .types import KatanaGraph
 @concrete_algorithm("traversal.bfs_iter")
 def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> NumpyVectorType:
 '''
-.. py:function:: metagraph.algos.traversal.bfs_iter(graph, source_node, depth_limit)
+    .. py:function:: metagraph.algos.traversal.bfs_iter(graph, source_node, depth_limit)
 
-   Use BFS to traverse a graph given a source node and BFS depth limit (implemented by a Katana Graph API)
+    Use BFS to traverse a graph given a source node and BFS depth limit (implemented by a Katana Graph API)
 
-   :param KatanaGraph graph: The origianl graph to traverse
-   :param NodeID source_node: The starting node for BFS
-   :param int depth: The BFS depth
-   :return: the BFS traversal result in order
-   :rtype: NumpyVectorType
+    :param KatanaGraph graph: The origianl graph to traverse
+    :param NodeID source_node: The starting node for BFS
+    :param int depth: The BFS depth
+    :return: the BFS traversal result in order
+    :rtype: NumpyVectorType
 '''
     bfs_prop_name = "bfs_prop_start_from_" + str(source_node)
     start_node = source_node

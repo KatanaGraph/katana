@@ -13,7 +13,7 @@ With those developer dependencies installed, you can run the following commands
 from the project root directory to build the system:
 
 ```shell
-case $(uname) in Darwin*) ;; *) conan profile update settings.compiler.libcxx=libstdc++11 default ;; esac
+conan profile update settings.compiler.libcxx=libstdc++11 default
 
 mkdir build
 cd build

@@ -11,19 +11,43 @@ struct KATANA_EXPORT RDGVersion {
   std::vector<std::string> branches_;
   uint64_t width_{0};
 
-  /*RDGVersion() = default;*/
-  /*~RDGVersion() = default;*/
+  // TODO(wkyu): to clean up these operators
+#if 0
+  RDGVersion (const RDGVersion & in)  = default;
+  RDGVersion& operator=(const RDGVersion & in)  = default;
+#else
   RDGVersion(const RDGVersion & in) :
     numbers_(in.numbers_),
     branches_(in.branches_),
     width_(in.width_) {}
+
+  RDGVersion& operator=(const RDGVersion & in) {
+    RDGVersion tmp = in;
+    numbers_ = std::move(tmp.numbers_);
+    branches_ = std::move(tmp.branches_),
+    width_ = tmp.width_;
+    return *this;
+  }
+#endif
+
+  bool operator==(const RDGVersion & in) {
+    return (numbers_ == in.numbers_ && branches_ == in.branches_); 
+  }
+
+  bool operator>(const RDGVersion & in) {
+    return numbers_ > in.numbers_;
+  }
+
+  bool operator<(const RDGVersion & in) {
+    return numbers_ < in.numbers_;
+  }
 
   RDGVersion(const std::vector<uint64_t> & vers, 
       const std::vector<std::string> & ids) :
    numbers_ (vers), 
    branches_(ids) { width_ = vers.size()-1; }
 
-  RDGVersion(uint64_t num=0) {
+  explicit RDGVersion(uint64_t num=0) {
     numbers_.emplace_back(num);
     branches_.emplace_back("");
     width_ = 0;
@@ -42,7 +66,7 @@ struct KATANA_EXPORT RDGVersion {
 
   uint64_t 
   LeafVersionNumber() {
-    return numbers_[width_];
+    return numbers_.back();
   }
 
   void

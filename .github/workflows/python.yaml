@@ -3,7 +3,7 @@ name: Python CI
 on:
   push:
     branches:
-    - master
+    - metagraph_px
   pull_request:
 
 jobs:

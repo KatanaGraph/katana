@@ -3,7 +3,7 @@ name: Python CI
 on:
   push:
     branches:
-    - metagraph_px
+    - master
   pull_request:
 
 jobs:
@@ -316,7 +316,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
           . .github/workflows/activate_miniconda.sh
-          cd $HOME/metagraph-plugin && \
+          cd metagraph-plugin && \
           $HOME/build/python_env.sh python setup.py develop && \
           $HOME/build/python_env.sh pytest -s
 

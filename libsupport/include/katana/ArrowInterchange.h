@@ -15,6 +15,8 @@
 ///
 /// NB: The schema for a table returned by TableFromTupleRange will contain
 /// "not null."  We make the type nullable in VectorToArrowTable.
+///
+/// \file
 
 namespace katana {
 

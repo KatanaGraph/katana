@@ -312,6 +312,14 @@ jobs:
           python -c "import katana; katana.for_each;"
           python -c "import katana.analytics; katana.analytics.sssp;"
 
+      - name: Test Metagraph Plugin
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: |
+          cd $HOME/metagraph-plugin && \
+          $HOME/build/python_env.sh python setup.py develop && \
+          $HOME/build/python_env.sh pytest -s
+
+
       - name: Install
         run: |
           . .github/workflows/activate_miniconda.sh

@@ -2,6 +2,9 @@ import metagraph as mg
 import pytest
 
 
+def test_ci_setup():
+    assert False
+
 def test_num_nodes(katanagraph_rmat15_cleaned_di):
     cnt = 0
     for nid in katanagraph_rmat15_cleaned_di.value:

@@ -22,7 +22,6 @@ VERSION=$(lsb_release --release --short | cut -d . -f 1) # numerical major versi
 SETUP_TOOLCHAIN_VARIANTS=${SETUP_TOOLCHAIN_VARIANTS:-yes}
 
 ORIGINAL_USER=${ORIGINAL_USER:-${SUDO_USER:-}}
-
 for arg in "$@"; do
   case "$arg" in
     --no-setup-toolchain-variants) SETUP_TOOLCHAIN_VARIANTS="" ;;
@@ -120,7 +119,12 @@ GIT=git
 # Install llvm via apt instead of as a conan package because existing
 # conan packages do yet enable RTTI, which is required for boost
 # serialization.
-LIBRARIES="libxml2-dev llvm-10-dev libarrow-dev=4.0.1-1 libarrow-python-dev=4.0.1-1 libparquet-dev=4.0.1-1
+LIBRARIES="libxml2-dev
+  llvm-10-dev
+  libarrow-dev=4.0.1-1
+  libarrow-python-dev=4.0.1-1
+  libparquet-dev=4.0.1-1
+  libnuma-dev
   python3-numpy"
 
 apt install -yq --allow-downgrades \

@@ -193,26 +193,29 @@ struct Wrapper {
 
 template <typename T>
 using is_visit_arrow_base_t = typename std::disjunction<
-    std::is_same<T, arrow::Array&>, std::is_same<T, arrow::Scalar&>,
-    std::is_same<T, arrow::ArrayBuilder*>>;
+    std::is_same<std::decay_t<T>, arrow::Array>,
+    std::is_same<std::decay_t<T>, arrow::Scalar&>,
+    std::is_same<std::decay_t<T>, arrow::ArrayBuilder*>>;
 
 }  // namespace internal
 
 // VisitArrow call that supports multiple args of type
 // arrow::Array&, arrow::Scalar&, and/or arrow::Builder*
 // (args can be any combination of these types)
+// TODO(Rob): Also support shared_ptr's of the supported types
 template <class VisitorType, class Arg0, class... Args>
 std::enable_if_t<
     std::conjunction_v<
         internal::is_visit_arrow_base_t<Arg0>,
         internal::is_visit_arrow_base_t<Args>...>,
     katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
-VisitArrow(VisitorType&& visitor, Arg0 array, Args... args) {
+VisitArrow(VisitorType&& visitor, const Arg0& arg0, const Args&... args) {
   return internal::Wrapper<>::template VisitArrowInternal<
       internal::ArrayVisitorBaseType>(
       std::forward<VisitorType>(visitor), std::tuple<>{},
-      std::forward<Arg0>(array), std::forward<Args>(args)...);
+      std::forward<const Arg0>(arg0), std::forward<const Args>(args)...);
 }
+
 
 // Single arg VisitArrow functions provided for backwards compatability
 template <class VisitorType>

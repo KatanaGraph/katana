@@ -36,10 +36,10 @@ try:
     from katana.loop_operators import do_all_operator, for_each_operator, obim_metric
 except ModuleNotFoundError as e:
     if "katana.galois" in str(e):
+        # "TODO(amp): Remove this case once we no longer need support for Ubuntu 16.04.
         warnings.warn(
             "Katana Python extension modules are missing. Some features of katana.remote may still be used, "
             "but this configuration is not fully supported. "
-            "TODO(amp): Remove this case once we nolonger need support for Ubuntu 16.04."
         )
     else:
         raise

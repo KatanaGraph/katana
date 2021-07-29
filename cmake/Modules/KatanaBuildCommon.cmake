@@ -436,7 +436,8 @@ function(add_katana_sphinx_target target_name)
   add_custom_target(
       ${target_name}_sphinx_docs
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
-      COMMAND env KATANA_DOXYGEN_PATH="${PROJECT_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
+      COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
+        -W
         -b html
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}

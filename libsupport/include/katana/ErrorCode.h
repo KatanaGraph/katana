@@ -24,7 +24,7 @@
 /// non-portable, error. An std::error_condition is intended to model a
 /// general class of errors that callers can portably compare against. E.g.,
 ///
-///   if (error_code == error_condition) { .... }
+///     if (error_code == error_condition) { .... }
 ///
 /// The representation of both std::error_code and std::error_condition is the
 /// same: an integer plus a pointer to an std::error_category. You can think of
@@ -43,7 +43,7 @@
 ///   make_error_code for your enum. This function will be found by argument
 ///   dependent lookup so must be in the same namespace as the error enum.
 ///
-/// \file ErrorCode.h
+/// \file
 
 namespace katana {
 
@@ -89,11 +89,11 @@ public:
     case ErrorCode::ArrowError:
       return "arrow error";
     case ErrorCode::JSONParseFailed:
-      return "could not parse json";
+      return "could not parse JSON";
     case ErrorCode::JSONDumpFailed:
-      return "could not dump json";
+      return "could not dump JSON";
     case ErrorCode::HTTPError:
-      return "http operation failed";
+      return "HTTP operation failed";
     case ErrorCode::TODO:
       return "TODO";
     case ErrorCode::PropertyNotFound:
@@ -107,7 +107,7 @@ public:
     case ErrorCode::GraphUpdateFailed:
       return "graph update failed";
     case ErrorCode::FeatureNotEnabled:
-      return "Katana is not built with this feature";
+      return "not built with this feature";
     default:
       return "unknown error";
     }
@@ -140,16 +140,18 @@ public:
   }
 };
 
-/// Return singleton category
+/// GetErrorCodeCategory returns the singleton category
 KATANA_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
 
 }  // namespace katana::internal
 
 namespace std {
 
-/// Tell STL about our error code enum.
+/// \cond DO_NOT_DOCUMENT
+// Tell STL about our error code enum.
 template <>
 struct is_error_code_enum<katana::ErrorCode> : true_type {};
+/// \endcond DO_NOT_DOCUMENT
 
 }  // namespace std
 

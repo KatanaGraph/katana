@@ -47,8 +47,13 @@ function(add_sanitize_options)
     endif()
   endmacro()
 
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libclang_rt.asan-x86_64.so
+    OUTPUT_VARIABLE LIBASAN_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  get_filename_component(LIBASAN_DIR ${LIBASAN_PATH} DIRECTORY)
+
   append("-shared-libsan" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  link_libraries("-shared-libsan")
+  link_libraries("-shared-libsan -rpath ${LIBASAN_DIR}")
 
   if (KATANA_USE_SANITIZER STREQUAL "Address")
     append_common_sanitizer_flags()

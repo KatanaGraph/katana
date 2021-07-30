@@ -80,6 +80,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
 
         @typeof_impl.register(orig_typ)
         def typeof(val, c):
+            # pylint: disable=unused-argument
             return Type()
 
         return Type

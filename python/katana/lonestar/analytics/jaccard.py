@@ -61,7 +61,7 @@ def main():
     timer.start()
     jaccard(g, args.baseNode, args.propertyName)
     timer.stop()
-    # del timer
+    del timer
 
     print("Node {}: {}".format(args.reportNode, g.get_node_property(args.propertyName)[args.reportNode]))
 

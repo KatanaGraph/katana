@@ -34,7 +34,7 @@ set(sources
         src/Profile.cpp
         src/Properties.cpp
         src/PropertyGraph.cpp
-	src/PropertyIndex.cpp
+	      src/PropertyIndex.cpp
         src/PropertyViews.cpp
         src/PtrLock.cpp
         src/SharedMem.cpp

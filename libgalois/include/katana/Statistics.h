@@ -373,7 +373,14 @@ template <typename T>
 void
 ReportParam(
     const std::string& region, const std::string& category, const T& value) {
-  internal::sysStatManager()->AddParam(region, category, gstl::makeStr(value));
+  if (internal::sysStatManager()) {
+    internal::sysStatManager()->AddParam(
+        region, category, gstl::makeStr(value));
+  } else {
+    KATANA_LOG_WARN(
+        "StatManager already shutdown: {}, {}, {}, {}", region, category,
+        StatTotal::str(StatTotal::SINGLE), gstl::makeStr(value));
+  }
 }
 
 template <typename T>
@@ -382,7 +389,13 @@ ReportStat(
     const std::string& region, const std::string& category, const T& value,
     const StatTotal::Type& type,
     std::enable_if_t<std::is_integral_v<T>>* = nullptr) {
-  internal::sysStatManager()->AddInt(region, category, int64_t(value), type);
+  if (internal::sysStatManager()) {
+    internal::sysStatManager()->AddInt(region, category, int64_t(value), type);
+  } else {
+    KATANA_LOG_WARN(
+        "StatManager already shutdown: {}, {}, {}, {}", region, category,
+        StatTotal::str(type), uint64_t(value));
+  }
 }
 
 template <typename T>
@@ -391,7 +404,13 @@ ReportStat(
     const std::string& region, const std::string& category, const T& value,
     const StatTotal::Type& type,
     std::enable_if_t<std::is_floating_point_v<T>>* = nullptr) {
-  internal::sysStatManager()->AddFP(region, category, double(value), type);
+  if (internal::sysStatManager()) {
+    internal::sysStatManager()->AddFP(region, category, double(value), type);
+  } else {
+    KATANA_LOG_WARN(
+        "StatManager already shutdown: {}, {}, {}, {}", region, category,
+        StatTotal::str(type), double(value));
+  }
 }
 
 template <typename T>

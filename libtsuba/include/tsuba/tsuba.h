@@ -91,10 +91,8 @@ struct KATANA_EXPORT RDGStat {
 /// Get Information about the graph
 KATANA_EXPORT katana::Result<RDGStat> Stat(const std::string& rdg_name);
 
-KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViewsForBranch(
-    const std::string& rdg_dir, bool find_max_version, 
-    // TODO(wkyu) should not copy version, but ...
-    RDGVersion version, bool* is_intermiate_version);
+KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViewsForVersion(
+    const std::string& rdg_dir, RDGVersion version, uint64_t* max_version);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViews(
     const std::string& rdg_dir);

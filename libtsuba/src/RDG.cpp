@@ -112,11 +112,15 @@ CommitRDG(
       (versioning_action == tsuba::RDG::RetainVersion)
           ? handle.impl_->rdg_manifest().SameVersion(
                 comm->Num, policy_id, transposed, lineage)
+          : handle.impl_->rdg_manifest().NextVersion(
+                comm->Num, policy_id, transposed, lineage);
+#if 0
       : ((versioning_action == tsuba::RDG::IncrementVersion) 
 	  ? handle.impl_->rdg_manifest().NextVersion(
                 comm->Num, policy_id, transposed, lineage)
           : handle.impl_->rdg_manifest().NextBranch(
                 comm->Num, policy_id, transposed, lineage));
+#endif
 
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
@@ -126,6 +130,9 @@ CommitRDG(
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
 
+  // Extract the branch path for writing
+  std::string branch_path = handle.impl_->rdg_manifest().version().GetBranchPath();
+
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   katana::Result<void> ret = tsuba::OneHostOnly([&]() -> katana::Result<void> {
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
@@ -133,7 +140,7 @@ CommitRDG(
     std::string curr_s = new_manifest.ToJsonString();
     auto res = tsuba::FileStore(
         tsuba::RDGManifest::FileName(
-            handle.impl_->rdg_manifest().dir(),
+            handle.impl_->rdg_manifest().dir().Join(branch_path),
             handle.impl_->rdg_manifest().viewtype(), new_manifest.version())
             .string(),
         reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size());
@@ -141,7 +148,7 @@ CommitRDG(
       return res.error().WithContext(
           "CommitRDG future failed {}",
           tsuba::RDGManifest::FileName(
-              handle.impl_->rdg_manifest().dir(),
+	      handle.impl_->rdg_manifest().dir().Join(branch_path),
               handle.impl_->rdg_manifest().viewtype(), new_manifest.version()));
     }
     return katana::ResultSuccess();
@@ -296,6 +303,9 @@ tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
+  //TODO(wkyu): check through all the files written.
+  std::string branch_path = handle.impl_->rdg_manifest().version().GetBranchPath();
+
   if (core_->part_header().topology_path().empty()) {
     // No topology file; create one
     katana::Uri t_path = MakeTopologyFileName(handle);
@@ -307,7 +317,9 @@ tsuba::RDG::DoStore(
         t_path.string(), core_->topology_file_storage().ptr<uint8_t>(),
         core_->topology_file_storage().size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
-    core_->part_header().set_topology_path(t_path.BaseName());
+
+    //Set branch along with the path 
+    core_->part_header().set_topology_path(branch_path, t_path.BaseName());
   }
 
   std::vector<std::string> node_prop_names;
@@ -321,7 +333,7 @@ tsuba::RDG::DoStore(
   KATANA_CHECKED_CONTEXT(
       WriteProperties(
           *core_->node_properties(), node_props_to_store,
-          handle.impl_->rdg_manifest().dir(), write_group.get()),
+          handle.impl_->rdg_manifest().dir().Join(branch_path), write_group.get()),
       "writing node properties");
 
   std::vector<std::string> edge_prop_names;
@@ -335,11 +347,11 @@ tsuba::RDG::DoStore(
   KATANA_CHECKED_CONTEXT(
       WriteProperties(
           *core_->edge_properties(), edge_props_to_store,
-          handle.impl_->rdg_manifest().dir(), write_group.get()),
+          handle.impl_->rdg_manifest().dir().Join(branch_path), write_group.get()),
       "writing edge properties");
 
   core_->part_header().set_part_properties(KATANA_CHECKED_CONTEXT(
-      WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get()),
+      WritePartArrays(handle.impl_->rdg_manifest().dir().Join(branch_path), write_group.get()),
       "writing partition metadata"));
 
   //If a view type has been set, use it otherwise pass in the default view type
@@ -538,14 +550,17 @@ tsuba::RDG::Store(
   std::unique_ptr<WriteGroup> desc = std::move(desc_res.value());
 
   if (ff) {
-    katana::Uri t_path =
-        handle.impl_->rdg_manifest().dir().RandFile("topology");
+    //Insert the branch directories before any file.
+    std::string branch_path = handle.impl_->rdg_manifest().version().GetBranchPath();
+    katana::Uri t_path = handle.impl_->rdg_manifest().dir().Join(branch_path).RandFile("topology");
 
     ff->Bind(t_path.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     desc->StartStore(std::move(ff));
     TSUBA_PTP(internal::FaultSensitivity::Normal);
-    core_->part_header().set_topology_path(t_path.BaseName());
+    // It is still Ok to take only the base name for topology_path
+    // Assuming prefix+branches are left out.
+    core_->part_header().set_topology_path(branch_path, t_path.BaseName());
   }
 
   return DoStore(handle, command_line, versioning_action, std::move(desc));
@@ -792,12 +807,13 @@ tsuba::RDG::UnbindTopologyFileStorage() {
 katana::Result<void>
 tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
   katana::Uri dir = new_top.DirName();
-  if (dir != rdg_dir_) {
+
+  if (dir != rdg_dir_ && dir != rdg_dir_.Join(branch_path_)) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
-        "new topology file must be in this RDG's directory ({})", rdg_dir_);
+        "new topology file must be in this RDG's directory or its branch ({})", rdg_dir_);
   }
-  return core_->RegisterTopologyFile(new_top.BaseName());
+  return core_->RegisterTopologyFile(branch_path_, new_top.BaseName());
 }
 
 void

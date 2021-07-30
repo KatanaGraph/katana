@@ -174,9 +174,8 @@ tsuba::Stat(const std::string& rdg_name) {
 }
 
 katana::Result<std::vector<tsuba::RDGView>>
-tsuba::ListAvailableViewsForBranch(const std::string& rdg_dir, 
-    bool find_max_version,
-    RDGVersion version, bool* is_intermiate_version) {
+tsuba::ListAvailableViewsForVersion(const std::string& rdg_dir, 
+    RDGVersion version, uint64_t* max_version) {
 
   std::vector<tsuba::RDGView> views_found;
   KATANA_LOG_DEBUG("ListAvailableViews for a branch");
@@ -199,38 +198,27 @@ tsuba::ListAvailableViewsForBranch(const std::string& rdg_dir,
     return list_res.error();
   }
 
-  std::vector<uint64_t> long_ver_nums = version.GetVersionNumbers();
-  // TODO(wkyu): assert the correctness of the first few branch numbers. 
-  uint64_t target_version = long_ver_nums[long_ver_nums.size()-1];
-  uint64_t max_version = target_version;
+  uint64_t target_version = version.GetVersionNumbers().back();
+  uint64_t current_max = 0;
 
-  //TODO (yasser): add an optional parameter to function which if specified is used to set
-  //'target_version' value and will set find_max_version to false
+  // Slight modification from Yasser's code to find only targeted version
   for (const std::string& file : list_res.value()) {
     auto view_type_res = tsuba::RDGManifest::ParseViewNameFromName(file);
     auto view_args_res = tsuba::RDGManifest::ParseViewArgsFromName(file);
     auto view_version_res = tsuba::RDGManifest::ParseVersionFromName(file);
 
     // TODO(wkyu): filter out the directories from the FileList.
-    if (!view_type_res || !view_args_res || !view_version_res ||
-        view_version_res.value() < target_version) {
+    if (!view_type_res || !view_args_res || !view_version_res) {
       continue;
     }
 
-    // Take only the targeted version
-    if (!find_max_version && view_version_res.value() > target_version) {
+    // Update curent_max
+    if (view_version_res.value() > current_max) {
+      current_max = view_version_res.value();
+    }
+
+    if (view_version_res.value() != target_version) {
       continue;
-    }
-
-    if (view_version_res.value() > max_version) {
-      max_version = view_version_res.value();
-    }
-
-    // If RDGManifest version is greater than our current minimum then bump up minimum and
-    // discard previously found views
-    if (find_max_version && (view_version_res.value() > target_version)) {
-      target_version = view_version_res.value();
-      views_found.clear();
     }
 
     std::string rdg_path = fmt::format("{}/{}", target_dir, file);
@@ -257,8 +245,9 @@ tsuba::ListAvailableViewsForBranch(const std::string& rdg_dir,
     });
   }
 
-  // Views cannot be an intermediate if find_max_version is true.
-  *is_intermiate_version = max_version > target_version;
+  // After the search, current_max is the maximum from all views
+  // target_version is the version for Views found.
+  *max_version = current_max;
 
   return views_found;
 }
@@ -279,7 +268,6 @@ tsuba::ListAvailableViews(const std::string& rdg_dir) {
 
   //TODO (yasser): add an optional parameter to function which if specified is used to set
   //'min_version' value and will set find_max_version to false
-
   for (const std::string& file : list_res.value()) {
     auto view_type_res = tsuba::RDGManifest::ParseViewNameFromName(file);
     auto view_args_res = tsuba::RDGManifest::ParseViewArgsFromName(file);
@@ -331,7 +319,9 @@ tsuba::ListAvailableViews(const std::string& rdg_dir) {
 
 katana::Uri
 tsuba::MakeTopologyFileName(tsuba::RDGHandle handle) {
-  return GetRDGDir(handle).RandFile("topology");
+  //Insert the branch directories before any file.
+  std::string branch_path = handle.impl_->rdg_manifest().version().GetBranchPath();
+  return GetRDGDir(handle).Join(branch_path).RandFile("topology");
 }
 
 katana::Uri

@@ -176,7 +176,9 @@ public:
   //
 
   const std::string& topology_path() const { return topology_path_; }
-  void set_topology_path(std::string path) { topology_path_ = std::move(path); }
+  void set_topology_path(std::string branch, std::string path) { 
+    version_branch_ = std::move(branch);
+    topology_path_ = std::move(path); }
 
   const std::vector<PropStorageInfo>& node_prop_info_list() const {
     return node_prop_info_list_;
@@ -271,6 +273,7 @@ private:
   /// Metadata filled in by CuSP, or from storage (meta partition file)
   PartitionMetadata metadata_;
 
+  std::string version_branch_;
   std::string topology_path_;
 };
 

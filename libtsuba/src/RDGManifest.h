@@ -62,16 +62,7 @@ class KATANA_EXPORT RDGManifest {
         num_hosts_(num_hosts),
         policy_id_(policy_id),
         transpose_(transpose),
-        lineage_(std::move(lineage)) 
-  {
-#if 0
-    // TODO (wkyu): fix this with a copy constructor
-    version_.numbers_ = version.numbers_; 
-    version_.branches_ = version.branches_;
-    previous_version_.numbers_ = previous_version.numbers_; 
-    previous_version_.branches_ = previous_version.branches_;
-#endif
-  }
+        lineage_(std::move(lineage)) { }
 
   static katana::Result<RDGManifest> MakeFromStorage(const katana::Uri& uri);
 
@@ -92,18 +83,6 @@ public:
       const RDGLineage& lineage) const {
     RDGVersion next_version(version_.numbers_, version_.branches_);
     next_version.SetNextVersion();
-    return RDGManifest(
-        next_version, version_, num_hosts, policy_id, transpose, dir_, lineage);
-  }
-
-  // TODO(wkyu): need to add next branch
-  RDGManifest NextBranch(
-      uint32_t num_hosts, uint32_t policy_id, bool transpose,
-      const RDGLineage& lineage) const {
-
-    RDGVersion next_version(version_.numbers_, version_.branches_);
-    next_version.SetBranchPoint(katana::RandomAlphanumericString(12));
-
     return RDGManifest(
         next_version, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }

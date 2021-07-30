@@ -41,6 +41,7 @@
 #include "tsuba/CSRTopology.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
+#include "tsuba/tsuba.h"
 
 // TODO: move these enums to a common location for all graph convert tools
 enum ConvertMode {
@@ -2918,6 +2919,16 @@ struct Gr2Kg : public Conversion {
 
     tsuba::RDG rdg;
     rdg.set_rdg_dir(tsuba::GetRDGDir(handle));
+
+    // TODO(wkyu): An issue here. We have to combine branch for things to work
+    // We also need to remove branch for the extracted components to work.
+#if 0
+    tsuba::RDGHandle file_handle = handle;
+
+    std::string branch_path = file_handle.impl_->rdg_manifest().version().GetBranchPath();
+    rdg.set_branch_path(branch_path);
+#endif
+
     if (auto res = rdg.SetTopologyFile(top_file_name); !res) {
       return res.error();
     }

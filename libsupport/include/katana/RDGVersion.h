@@ -3,6 +3,12 @@
 
 #include <cstring>
 #include <iterator>
+#include <fmt/format.h>
+
+/*#include "katana/Result.h"*/
+/*#include "katana/URI.h"*/
+
+const uint64_t kRDGBranchIDLength = (12);
 
 struct KATANA_EXPORT RDGVersion {
   // A version consists of mulitple BranchPoints of width, each in the form of num:id
@@ -30,6 +36,8 @@ struct KATANA_EXPORT RDGVersion {
   }
 #endif
 
+  bool valid() { return (numbers_.back() > 0); }
+
   bool operator==(const RDGVersion & in) {
     return (numbers_ == in.numbers_ && branches_ == in.branches_); 
   }
@@ -54,6 +62,17 @@ struct KATANA_EXPORT RDGVersion {
   }
 
   std::string
+  GetBranchPath() const {
+    // return a subdir formed by branches with a trailing SepChar
+    std::string vec = "";
+    for (uint64_t i=0; i < width_; i ++) {
+      vec += fmt::format("{}", branches_[i]);
+      vec += "/";
+    }
+    return vec; 
+  }
+
+  std::string
   ToVectorString() const {
     // Before the last version, for a pair ver_id,ver_id
     // the last version has no id.
@@ -61,6 +80,7 @@ struct KATANA_EXPORT RDGVersion {
     for (uint64_t i=0; i < width_; i ++) {
       vec += fmt::format("{}_{},", numbers_[i], branches_[i]);
     }
+    // Last one has only the ver number.
     return fmt::format("{}{}", vec, numbers_[width_]);
   }
 

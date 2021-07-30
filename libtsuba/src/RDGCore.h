@@ -78,8 +78,8 @@ public:
     part_header_ = std::move(part_header);
   }
 
-  katana::Result<void> RegisterTopologyFile(const std::string& new_top) {
-    part_header_.set_topology_path(new_top);
+  katana::Result<void> RegisterTopologyFile(const std::string& branch, const std::string& new_top) {
+    part_header_.set_topology_path(branch, new_top);
     return topology_file_storage_.Unbind();
   }
 

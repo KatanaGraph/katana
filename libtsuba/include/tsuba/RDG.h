@@ -43,7 +43,7 @@ struct KATANA_EXPORT RDGLoadOptions {
 
 class KATANA_EXPORT RDG {
 public:
-  enum RDGVersioningPolicy { RetainVersion = 0, ExtendBranch, IncrementVersion };
+  enum RDGVersioningPolicy { RetainVersion = 0, IncrementVersion, ExtendBranch};
   RDG(const RDG& no_copy) = delete;
   RDG& operator=(const RDG& no_dopy) = delete;
 
@@ -164,6 +164,7 @@ public:
 
   const katana::Uri& rdg_dir() const { return rdg_dir_; }
   void set_rdg_dir(const katana::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
+  void set_branch_path(const std::string& branch) { branch_path_ = std::move(branch); }
 
   uint32_t partition_id() const { return partition_id_; }
   void set_partition_id(uint32_t partition_id) { partition_id_ = partition_id; }
@@ -276,6 +277,9 @@ private:
 
   /// name of the graph that was used to load this RDG
   katana::Uri rdg_dir_;
+
+  /// TODO(wkyu): name of the branch for holding a branch of RDG version
+  std::string branch_path_;
   /// which partition of the graph was loaded
   uint32_t partition_id_{std::numeric_limits<uint32_t>::max()};
   // How this graph was derived from the previous version

@@ -148,15 +148,15 @@ struct VisitArrowInternalWrapper {
         processed,                                                             \
         std::tuple<ParamType>(std::move(static_cast<ParamType>(param))));      \
     if constexpr (!sizeof...(Unprocessed)) /*base case*/ {                     \
-      return VisitArrowInternalWrapper<ArrowTypes..., ArrowType>::                               \
+      return VisitArrowInternalWrapper<ArrowTypes..., ArrowType>::             \
           template VisitArrowInternalCall(                                     \
               std::forward<VisitorType>(visitor), std::move(new_processed),    \
               std::make_index_sequence<sizeof...(Processed) + 1>{});           \
     } else /*inductive case*/ {                                                \
-      return VisitArrowInternalWrapper<ArrowTypes..., ArrowType>::template VisitArrowInternal<   \
-          VisitorBaseType>(                                                    \
-          std::forward<VisitorType>(visitor), std::move(new_processed),        \
-          std::forward<Unprocessed>(unprocessed)...);                          \
+      return VisitArrowInternalWrapper<ArrowTypes..., ArrowType>::             \
+          template VisitArrowInternal<VisitorBaseType>(                        \
+              std::forward<VisitorType>(visitor), std::move(new_processed),    \
+              std::forward<Unprocessed>(unprocessed)...);                      \
     }                                                                          \
   }
       TYPE_CASE(INT8)
@@ -193,21 +193,19 @@ struct VisitArrowInternalWrapper {
 
 template <typename T>
 using is_visit_arrow_base_t = typename std::disjunction<
-    std::is_same<std::decay_t<T>, arrow::Array>,
-    std::is_same<std::decay_t<T>, arrow::Scalar&>,
-    std::is_same<std::decay_t<T>, arrow::ArrayBuilder*>>;
+    std::is_same<T, const arrow::Array&>, std::is_same<T, const arrow::Scalar&>,
+    std::is_same<T, arrow::ArrayBuilder*>>;
 
 template <typename T>
 using is_visit_arrow_base_sp_t = typename std::disjunction<
-    std::is_same<std::decay_t<T>, std::shared_ptr<arrow::Array>>,
-    std::is_same<std::decay_t<T>, std::shared_ptr<arrow::Scalar&>>,
-    std::is_same<std::decay_t<T>, std::shared_ptr<arrow::ArrayBuilder*>>>;
+    std::is_same<T, std::shared_ptr<const arrow::Array>>,
+    std::is_same<T, std::shared_ptr<const arrow::Scalar>>,
+    std::is_same<T, std::shared_ptr<arrow::ArrayBuilder*>>>;
 }  // namespace internal
 
 // VisitArrow call that supports multiple args of type
 // arrow::Array&, arrow::Scalar&, and/or arrow::Builder*
 // (args can be any combination of these types)
-// TODO(Rob): Also support shared_ptr's of the supported types
 template <class VisitorType, class Arg0, class... Args>
 std::enable_if_t<
     std::conjunction_v<
@@ -218,9 +216,11 @@ VisitArrow(VisitorType&& visitor, const Arg0& arg0, const Args&... args) {
   return internal::VisitArrowInternalWrapper<>::template VisitArrowInternal<
       internal::ArrayVisitorBaseType>(
       std::forward<VisitorType>(visitor), std::tuple<>{},
-      std::forward<const Arg0>(arg0), std::forward<const Args>(args)...);
+      std::forward<Arg0>(arg0), std::forward<Args>(args)...);
 }
 
+// VisitArrow call that supports shared_ptr args for the same
+// types as above
 template <class VisitorType, class Arg0, class... Args>
 std::enable_if_t<
     std::conjunction_v<
@@ -228,8 +228,7 @@ std::enable_if_t<
         internal::is_visit_arrow_base_sp_t<Args>...>,
     katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
 VisitArrow(VisitorType&& visitor, const Arg0& arg0, const Args&... args) {
-  return VisitArrow(
-      std::forward<VisitorType>(visitor), *arg0, (*args)...);
+  return VisitArrow(std::forward<VisitorType>(visitor), *arg0, (*args)...);
 }
 
 // Single arg VisitArrow functions provided for backwards compatability

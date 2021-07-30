@@ -20,12 +20,11 @@ public:
   static std::unique_ptr<JSONTracer> Make(
       uint32_t host_id = 0, uint32_t num_hosts = 1);
 
-  std::shared_ptr<ProgressSpan> StartSpan(
+  std::unique_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, bool ignore_active_span) override;
-  std::shared_ptr<ProgressSpan> StartSpan(
-      const std::string& span_name,
-      const std::shared_ptr<ProgressSpan>& child_of) override;
-  std::shared_ptr<ProgressSpan> StartSpan(
+  std::unique_ptr<ProgressSpan> StartSpan(
+      const std::string& span_name, ProgressSpan& child_of) override;
+  std::unique_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, const ProgressContext& child_of) override;
 
   std::string Inject(const ProgressContext& ctx) override;
@@ -54,15 +53,16 @@ private:
 class KATANA_EXPORT JSONSpan : public ProgressSpan {
   friend JSONTracer;
 
-  JSONSpan(const std::string& span_name, std::shared_ptr<ProgressSpan> parent);
+  JSONSpan(const std::string& span_name, ProgressSpan* parent);
   JSONSpan(const std::string& span_name, const ProgressContext& parent);
-  static std::shared_ptr<ProgressSpan> Make(
-      const std::string& span_name,
-      const std::shared_ptr<ProgressSpan>& parent);
-  static std::shared_ptr<ProgressSpan> Make(
+  static std::unique_ptr<ProgressSpan> Make(
+      const std::string& span_name, ProgressSpan* parent);
+  static std::unique_ptr<ProgressSpan> Make(
       const std::string& span_name, const ProgressContext& parent);
 
 public:
+  ~JSONSpan() override { Finish(); }
+
   void Close() override;
 
   void SetTags(const Tags& tags) override;

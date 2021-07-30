@@ -11,56 +11,62 @@ katana::ProgressTracer::SetProgressTracer(
   ProgressTracer::tracer_ = std::move(tracer);
 }
 
-void
-katana::ProgressTracer::SetSpan(std::shared_ptr<katana::ProgressSpan> span) {
-  if (span != nullptr) {
-    span->SetActive();
+katana::ProgressScope
+katana::ProgressTracer::StartActiveSpan(const std::string& span_name) {
+  return SetActiveSpan(StartSpan(span_name));
+}
+katana::ProgressScope
+katana::ProgressTracer::StartActiveSpan(
+    const std::string& span_name, const katana::ProgressContext& child_of) {
+  return SetActiveSpan(StartSpan(span_name, child_of));
+}
+
+katana::ProgressScope
+katana::ProgressTracer::SetActiveSpan(
+    std::unique_ptr<katana::ProgressSpan> span) {
+  if (span == nullptr) {
+    KATANA_LOG_FATAL("nullptr span given to Tracer's SetActiveSpan");
   }
+  active_span_ = span.get();
+  return ProgressScope(std::move(span));
+}
+
+void
+katana::ProgressTracer::SetActiveSpan(katana::ProgressSpan* span) {
   active_span_ = span;
   if (active_span_ != nullptr && active_span_->ScopeClosed()) {
     active_span_->Finish();
   }
 }
 
-katana::ProgressScope
-katana::ProgressTracer::StartActiveSpan(
-    const std::string& span_name, bool finish_on_close) {
-  return SetActiveSpan(StartSpan(span_name), finish_on_close);
-}
-katana::ProgressScope
-katana::ProgressTracer::StartActiveSpan(
-    const std::string& span_name, const katana::ProgressContext& child_of,
-    bool finish_on_close) {
-  return SetActiveSpan(StartSpan(span_name, child_of), finish_on_close);
-}
-
-katana::ProgressScope
-katana::ProgressTracer::SetActiveSpan(
-    std::shared_ptr<katana::ProgressSpan> span, bool finish_on_close) {
-  if (span == nullptr) {
-    KATANA_LOG_FATAL("nullptr span given to Tracer's SetActiveSpan");
+std::unique_ptr<katana::ProgressSpan>
+katana::ProgressTracer::StartSpan(const std::string& span_name) {
+  if (active_span_ == nullptr) {
+    return StartSpan(span_name, true);
   }
-  span->SetActive();
-  active_span_ = span;
-  return ProgressScope(span, finish_on_close);
+  return StartSpan(span_name, false);
 }
 
-std::shared_ptr<katana::ProgressSpan>
+katana::ProgressSpan&
 katana::ProgressTracer::GetActiveSpan() {
-  return active_span_;
+  if (active_span_ == nullptr) {
+    if (default_active_span_ == nullptr) {
+      default_active_span_ = StartSpan("unnamed span", true);
+    }
+    return *default_active_span_;
+  }
+  return *active_span_;
 }
 
 katana::ProgressScope::~ProgressScope() {
-  if (span_ != nullptr && finish_on_close_) {
+  if (span_ != nullptr) {
     Close();
   }
 }
 
 void
 katana::ProgressScope::Close() {
-  if (finish_on_close_) {
-    span_->MarkScopeClosed();
-  }
+  span_->MarkScopeClosed();
 }
 
 std::string
@@ -74,29 +80,22 @@ katana::ProgressContext::GetSpanID() const noexcept {
 }
 
 void
-katana::ProgressSpan::MarkScopeClosed() {
-  scope_closed_ = true;
-  if (is_active_span_) {
-    Finish();
-  }
-}
-
-void
-katana::ProgressSpan::SetActive() {
-  std::shared_ptr<ProgressSpan> active =
-      ProgressTracer::GetProgressTracer().GetActiveSpan();
-  if (active != nullptr) {
-    active->is_active_span_ = false;
-  }
-  is_active_span_ = true;
-}
-
-void
 katana::ProgressSpan::LogError(
     const std::string& message, const katana::ErrorInfo& error) {
   Log(message, {{"event", "error"},
                 {"error.kind", error.error_code().message()},
                 {"error.context", fmt::format("{}", error)}});
+}
+
+void
+katana::ProgressSpan::MarkScopeClosed() {
+  if (!scope_closed_) {
+    scope_closed_ = true;
+    ProgressTracer& tracer = ProgressTracer::GetProgressTracer();
+    if (tracer.HasActiveSpan() && this == &tracer.GetActiveSpan()) {
+      Finish();
+    }
+  }
 }
 
 bool
@@ -109,8 +108,10 @@ katana::ProgressSpan::Finish() {
   if (!finished_) {
     finished_ = true;
     Close();
-    if (is_active_span_) {
-      ProgressTracer::GetProgressTracer().SetSpan(parent_);
+
+    ProgressTracer& tracer = ProgressTracer::GetProgressTracer();
+    if (tracer.HasActiveSpan() && this == &tracer.GetActiveSpan()) {
+      tracer.SetActiveSpan(parent_);
     }
   }
 }

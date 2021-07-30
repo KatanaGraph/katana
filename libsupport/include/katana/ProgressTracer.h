@@ -31,11 +31,11 @@
 ///   Then parent ProgressSpans will not be closed until their child ProgressSpan's close
 ///   i.e.
 ///   {
-///      auto scope1 = tracer->StartActiveSpan("1");
-///      auto scope2 = tracer->StartActiveSpan("2");
+///      auto scope1 = tracer.StartActiveSpan("1");
+///      auto scope2 = tracer.StartActiveSpan("2");
 ///      if (err) { return; }
 ///      scope2.Close();
-///      auto scope3 = tracer->StartActiveSpan("3");
+///      auto scope3 = tracer.StartActiveSpan("3");
 ///   }
 ///   Always results in scope2's ProgressSpan finishing before scope1's
 ///   and scope3's ProgressSpan finishing before scope1's if there is no error
@@ -66,10 +66,6 @@ class ProgressSpan;
 class ProgressContext;
 
 class KATANA_EXPORT ProgressTracer {
-  friend class ProgressSpan;
-
-  void SetSpan(std::shared_ptr<ProgressSpan> span);
-
 protected:
   ProgressTracer(uint32_t host_id, uint32_t num_hosts)
       : host_id_(host_id), num_hosts_(num_hosts) {}
@@ -82,35 +78,34 @@ public:
 
   // StartActiveSpan creates a new span. If there is not an active span,
   // create a new top-level span. Otherwise, this function creates a child
-  // span of the active span. By default, the returned scope will finish
-  // the span on close. To change this behavior, set finish_on_close to false.
+  // span of the active span. The returned scope will finish
+  // the span on close..
+  ProgressScope StartActiveSpan(const std::string& span_name);
   ProgressScope StartActiveSpan(
-      const std::string& span_name, bool finish_on_close = true);
-  ProgressScope StartActiveSpan(
-      const std::string& span_name, const ProgressContext& child_of,
-      bool finish_on_close = true);
+      const std::string& span_name, const ProgressContext& child_of);
 
   /// Set the current active thread-local span to provided span
   /// Returns a ProgressScope
-  /// Can specify to not finish the span when the scope goes out of scope
-  /// by RAII by setting finish_on_close=false
+  /// Will finish the span when the scope goes out of scope
+  /// by RAII
   /// Throws a fatal error if called with a nullptr span
-  ProgressScope SetActiveSpan(
-      std::shared_ptr<ProgressSpan> span, bool finish_on_close = true);
+  ProgressScope SetActiveSpan(std::unique_ptr<ProgressSpan> span);
+  /// Set the current active thread-local span to provided span
+  /// Does not throw an error if called with a nullptr span
+  /// Primarily for internal class use or for reactivating a span
+  /// with an existing ProgressScope
+  void SetActiveSpan(ProgressSpan* span);
 
   /// Create a new top level span if ignore_active_span=true and
   /// no child_of value is given
   /// Otherwise creates a child span of the child_of span or active span
   /// Should only be used to handle multiple active spans simultaneously
-  virtual std::shared_ptr<ProgressSpan> StartSpan(
+  virtual std::unique_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, bool ignore_active_span) = 0;
-  std::shared_ptr<ProgressSpan> StartSpan(const std::string& span_name) {
-    return StartSpan(span_name, false);
-  }
-  virtual std::shared_ptr<ProgressSpan> StartSpan(
-      const std::string& span_name,
-      const std::shared_ptr<ProgressSpan>& child_of) = 0;
-  virtual std::shared_ptr<ProgressSpan> StartSpan(
+  std::unique_ptr<ProgressSpan> StartSpan(const std::string& span_name);
+  virtual std::unique_ptr<ProgressSpan> StartSpan(
+      const std::string& span_name, ProgressSpan& child_of) = 0;
+  virtual std::unique_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, const ProgressContext& child_of) = 0;
 
   // For passing spans across process/host boundaries
@@ -123,7 +118,10 @@ public:
 
   /// Get the current scope’s span to add tagging/logging without having
   /// to pass around scopes/spans as parameters
-  virtual std::shared_ptr<ProgressSpan> GetActiveSpan();
+  /// If there is no active span, an unnamed root span of a new trace
+  /// is created (in this case the program is probably not using tracing)
+  virtual ProgressSpan& GetActiveSpan();
+  bool HasActiveSpan() { return active_span_ != nullptr; }
   uint32_t GetHostID() { return host_id_; }
   uint32_t GetNumHosts() { return num_hosts_; }
 
@@ -135,16 +133,16 @@ public:
 private:
   static std::unique_ptr<ProgressTracer> tracer_;
 
-  std::shared_ptr<ProgressSpan> active_span_ = nullptr;
+  ProgressSpan* active_span_ = nullptr;
   uint32_t host_id_;
   uint32_t num_hosts_;
+  std::unique_ptr<ProgressSpan> default_active_span_ = nullptr;
 };
 
 class KATANA_EXPORT ProgressScope {
   friend class ProgressTracer;
 
-  ProgressScope(std::shared_ptr<ProgressSpan> span, bool finish_on_close)
-      : span_(span), finish_on_close_(finish_on_close) {}
+  ProgressScope(std::unique_ptr<ProgressSpan> span) : span_(std::move(span)) {}
 
 public:
   ~ProgressScope();
@@ -165,8 +163,7 @@ public:
   void Close();
 
 private:
-  std::shared_ptr<ProgressSpan> span_;
-  bool finish_on_close_ = false;
+  std::unique_ptr<ProgressSpan> span_;
 };
 
 class KATANA_EXPORT ProgressContext {
@@ -178,17 +175,14 @@ public:
 };
 
 class KATANA_EXPORT ProgressSpan {
-  friend class ProgressTracer;
-  friend class ProgressScope;
-
-  void SetActive();
-  void MarkScopeClosed();
   virtual void Close() = 0;
 
 protected:
-  ProgressSpan(std::shared_ptr<ProgressSpan> parent) : parent_(parent) {}
+  ProgressSpan(ProgressSpan* parent) : parent_(parent) {}
 
 public:
+  /// If Finish has not already been called for the ProgressSpan, it's
+  /// destructor must do so.
   virtual ~ProgressSpan() = default;
 
   /// Adds a tag to the span.
@@ -207,6 +201,8 @@ public:
   /// Get span's context for propagating across process boundaries
   virtual const ProgressContext& GetContext() const noexcept = 0;
 
+  /// Primarily for internal class use only
+  void MarkScopeClosed();
   virtual bool ScopeClosed();
 
   /// Every ProgressSpan started must be finished
@@ -222,8 +218,7 @@ public:
   void Finish();
 
 private:
-  std::shared_ptr<ProgressSpan> parent_ = nullptr;
-  bool is_active_span_ = false;
+  ProgressSpan* parent_ = nullptr;
   bool finished_ = false;
   bool scope_closed_ = false;
 };

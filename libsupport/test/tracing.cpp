@@ -36,29 +36,23 @@ main() {
       writing_scope.span().SetError();
     }
     auto span = tracer.StartSpan("is not initially active");
-    auto span_scope = tracer.SetActiveSpan(span);
-    auto no_raii_scope = tracer.StartActiveSpan("no raii", false);
+    auto span_scope = tracer.SetActiveSpan(std::move(span));
   }
-  tracer.GetActiveSpan()->Log("no raii is the active span");
-  tracer.GetActiveSpan()->Finish();
-
   scope.Close();
-  auto scope2 = tracer.StartActiveSpan("first span of second trace", false);
+
+  auto scope2 = tracer.StartActiveSpan("first span of second trace");
   std::string carrier = tracer.Inject(scope2.span().GetContext());
   std::unique_ptr<katana::ProgressContext> ctx = tracer.Extract(carrier);
   scope2.span().Log(
       "testing contexts",
       {{"trace_id", ctx->GetTraceID()}, {"span_id", ctx->GetSpanID()}});
-  scope2.Close();  // this does nothing since open_on_close was set to false
 
-  auto root_span = tracer.StartSpan("root span of new trace", true);
-  auto scope3 = tracer.SetActiveSpan(root_span);
-  tracer.GetActiveSpan()->Log("the new root span of trace 3 is active");
+  auto root_span = tracer.StartSpan("root span of third trace", true);
+  auto scope3 = tracer.SetActiveSpan(std::move(root_span));
+  tracer.GetActiveSpan().Log("the new root span of trace 3 is active");
 
   auto scope2_child =
       tracer.StartActiveSpan("child of trace 2's root by context", *ctx);
-  tracer.GetActiveSpan()->Log("child span of trace 2 is active");
+  tracer.GetActiveSpan().Log("child span of trace 2 is active");
   scope2_child.Close();
-  root_span->Finish();
-  scope2.span().Finish();
 }

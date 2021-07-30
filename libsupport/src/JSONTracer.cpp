@@ -239,26 +239,28 @@ BuildJSON(
 
 std::unique_ptr<katana::JSONTracer>
 katana::JSONTracer::Make(uint32_t host_id, uint32_t num_hosts) {
-  JSONTracer tracer{host_id, num_hosts};
-  return std::make_unique<JSONTracer>(std::move(tracer));
+  return std::unique_ptr<JSONTracer>(new JSONTracer(host_id, num_hosts));
 }
 
-std::shared_ptr<katana::ProgressSpan>
+std::unique_ptr<katana::ProgressSpan>
 katana::JSONTracer::StartSpan(
     const std::string& span_name, bool ignore_active_span) {
   if (ignore_active_span) {
-    return JSONSpan::Make(span_name, std::shared_ptr<JSONSpan>{nullptr});
+    return JSONSpan::Make(span_name, nullptr);
   }
-  return JSONSpan::Make(
-      span_name, ProgressTracer::GetProgressTracer().GetActiveSpan());
+  ProgressTracer& tracer = ProgressTracer::GetProgressTracer();
+  ProgressSpan* parent = nullptr;
+  if (tracer.HasActiveSpan()) {
+    parent = &tracer.GetActiveSpan();
+  }
+  return JSONSpan::Make(span_name, parent);
 }
-std::shared_ptr<katana::ProgressSpan>
+std::unique_ptr<katana::ProgressSpan>
 katana::JSONTracer::StartSpan(
-    const std::string& span_name,
-    const std::shared_ptr<katana::ProgressSpan>& child_of) {
-  return JSONSpan::Make(span_name, child_of);
+    const std::string& span_name, katana::ProgressSpan& child_of) {
+  return JSONSpan::Make(span_name, &child_of);
 }
-std::shared_ptr<katana::ProgressSpan>
+std::unique_ptr<katana::ProgressSpan>
 katana::JSONTracer::StartSpan(
     const std::string& span_name, const katana::ProgressContext& child_of) {
   return JSONSpan::Make(span_name, child_of);
@@ -277,19 +279,17 @@ katana::JSONTracer::Extract(const std::string& carrier) {
   } else {
     std::string trace_id = carrier.substr(0, split);
     std::string span_id = carrier.substr(split + 1);
-    JSONContext context{trace_id, span_id};
-    return std::make_unique<JSONContext>(std::move(context));
+    return std::unique_ptr<JSONContext>(new JSONContext(trace_id, span_id));
   }
 }
 
 std::unique_ptr<katana::ProgressContext>
 katana::JSONContext::Clone() const noexcept {
-  JSONContext ctx{trace_id_, span_id_};
-  return std::make_unique<JSONContext>(std::move(ctx));
+  return std::unique_ptr<JSONContext>(new JSONContext(trace_id_, span_id_));
 }
 
 katana::JSONSpan::JSONSpan(
-    const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent)
+    const std::string& span_name, katana::ProgressSpan* parent)
     : ProgressSpan(parent), context_(JSONContext{"", ""}) {
   auto& tracer = ProgressTracer::GetProgressTracer();
 
@@ -297,7 +297,7 @@ katana::JSONSpan::JSONSpan(
   std::string trace_id;
   std::string host_data;
   if (parent != nullptr) {
-    auto parent_span = std::static_pointer_cast<JSONSpan>(parent);
+    auto parent_span = reinterpret_cast<JSONSpan*>(parent);
     parent_span_id = parent_span->GetContext().GetSpanID();
     trace_id = parent_span->GetContext().GetTraceID();
   } else {
@@ -342,18 +342,15 @@ katana::JSONSpan::JSONSpan(
   std::cerr << output_json;
 }
 
-std::shared_ptr<katana::ProgressSpan>
+std::unique_ptr<katana::ProgressSpan>
 katana::JSONSpan::Make(
-    const std::string& span_name,
-    const std::shared_ptr<katana::ProgressSpan>& parent) {
-  JSONSpan span{span_name, parent};
-  return std::make_shared<JSONSpan>(std::move(span));
+    const std::string& span_name, katana::ProgressSpan* parent) {
+  return std::unique_ptr<JSONSpan>(new JSONSpan(span_name, parent));
 }
-std::shared_ptr<katana::ProgressSpan>
+std::unique_ptr<katana::ProgressSpan>
 katana::JSONSpan::Make(
     const std::string& span_name, const katana::ProgressContext& parent) {
-  JSONSpan span{span_name, parent};
-  return std::make_shared<JSONSpan>(std::move(span));
+  return std::unique_ptr<JSONSpan>(new JSONSpan(span_name, parent));
 }
 
 void

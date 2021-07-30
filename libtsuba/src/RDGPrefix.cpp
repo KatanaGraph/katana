@@ -11,6 +11,12 @@ namespace tsuba {
 
 katana::Result<tsuba::RDGPrefix>
 RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
+
+  std::string branch="";
+  RDGVersion version = manifest.version();
+  if (version.valid())
+    branch = version.GetBranchPath();
+
   auto meta_res = RDGPartHeader::Make(manifest.PartitionFileName(0));
   if (!meta_res) {
     return meta_res.error();
@@ -21,7 +27,7 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
     return RDGPrefix{};
   }
 
-  katana::Uri t_path = manifest.dir().Join(part_header.topology_path());
+  katana::Uri t_path = manifest.dir().Join(branch).Join(part_header.topology_path());
 
   CSRTopologyHeader gr_header;
   if (auto res = FileGet(t_path.string(), &gr_header); !res) {
@@ -41,6 +47,7 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
       sizeof(gr_header) + (gr_header.num_nodes * sizeof(uint64_t)));
 }
 
+// TODO(wkyu): RDGPrefix is only for one host
 katana::Result<tsuba::RDGPrefix>
 RDGPrefix::Make(RDGHandle handle) {
   if (handle.impl_->rdg_manifest().num_hosts() != 1) {

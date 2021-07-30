@@ -63,8 +63,11 @@ struct KATANA_EXPORT RDGVersion {
 
   std::string
   GetBranchPath() const {
-    // return a subdir formed by branches with a trailing SepChar
     std::string vec = "";
+    if (numbers_.back() > 0)
+      return vec;
+
+    // return a subdir formed by branches with a trailing SepChar
     for (uint64_t i=0; i < width_; i ++) {
       vec += fmt::format("{}", branches_[i]);
       vec += "/";

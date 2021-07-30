@@ -54,6 +54,7 @@ Result<tsuba::RDGManifest>
 RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   tsuba::FileView fv;
 
+  // Not adding branch_path because uri includes the full path to manifest
   if (auto res = fv.Bind(uri.string(), true); !res) {
     return res.error();
   }
@@ -110,7 +111,7 @@ RDGManifest::PartitionFileName(
 katana::Uri
 RDGManifest::PartitionFileName(
     const katana::Uri& uri, uint32_t node_id, RDGVersion version) {
-  return uri.Join(
+  return uri.Join(version.GetBranchPath()).Join(
       PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
 }
 
@@ -119,7 +120,7 @@ RDGManifest::PartitionFileName(
     const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
     RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(!IsManifestUri(uri));
-  return uri.Join(PartitionFileName(view_type, node_id, version));
+  return uri.Join(version.GetBranchPath()).Join(PartitionFileName(view_type, node_id, version));
 }
 
 katana::Uri
@@ -141,7 +142,7 @@ RDGManifest::FileName(
     const katana::Uri& uri, const std::string& view_name, RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
-  return uri.Join(fmt::format(
+  return uri.Join(version.GetBranchPath()).Join(fmt::format(
       "katana_{}_{}.manifest", ToVersionString(version.LeafVersionNumber()), view_name));
 }
 

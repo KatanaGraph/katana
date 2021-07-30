@@ -245,7 +245,7 @@ private:
   katana::Result<void> DoMake(
       const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
       const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
-      const katana::Uri& metadata_dir);
+      const RDGManifest& manifest);
 
   static katana::Result<RDG> Make(
       const RDGManifest& manifest, const RDGLoadOptions& opts);
@@ -277,8 +277,7 @@ private:
 
   /// name of the graph that was used to load this RDG
   katana::Uri rdg_dir_;
-
-  /// TODO(wkyu): name of the branch for holding a branch of RDG version
+  /// name of the branch for holding a branch of RDG version
   std::string branch_path_;
   /// which partition of the graph was loaded
   uint32_t partition_id_{std::numeric_limits<uint32_t>::max()};

@@ -367,8 +367,9 @@ tsuba::RDG::DoStore(
     return write_result.error().WithContext("failed to write metadata");
   }
 
-  // Update lineage and commit
+  // Update lineage, branch_path_ and commit
   lineage_.AddCommandLine(command_line);
+  branch_path_ = std::move(branch_path);
   if (auto res = CommitRDG(
           handle, core_->part_header().metadata().policy_id_,
           core_->part_header().metadata().transposed_, versioning_action,
@@ -383,12 +384,16 @@ katana::Result<void>
 tsuba::RDG::DoMake(
     const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
     const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
-    const katana::Uri& metadata_dir) {
+    const RDGManifest& manifest) {
   ReadGroup grp;
+
+  katana::Uri metadata_dir = manifest.dir();
+  RDGVersion version = manifest.version();
+  std::string branch = version.GetBranchPath();
 
   KATANA_CHECKED_CONTEXT(
       AddProperties(
-          metadata_dir, node_props_to_be_loaded, &grp,
+          metadata_dir.Join(branch), node_props_to_be_loaded, &grp,
           [rdg = this](const std::shared_ptr<arrow::Table>& props) {
             return rdg->core_->AddNodeProperties(props);
           }),
@@ -396,19 +401,20 @@ tsuba::RDG::DoMake(
 
   KATANA_CHECKED_CONTEXT(
       AddProperties(
-          metadata_dir, edge_props_to_be_loaded, &grp,
+          metadata_dir.Join(branch), edge_props_to_be_loaded, &grp,
           [rdg = this](const std::shared_ptr<arrow::Table>& props) {
             return rdg->core_->AddEdgeProperties(props);
           }),
       "populating edge properties");
 
-  katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
+  katana::Uri t_path = metadata_dir.Join(branch).Join(core_->part_header().topology_path());
   if (auto res = core_->topology_file_storage().Bind(t_path.string(), true);
       !res) {
     return res.error();
   }
 
   rdg_dir_ = metadata_dir;
+  branch_path_ = branch;
 
   std::vector<PropStorageInfo*> part_info =
       KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
@@ -419,7 +425,7 @@ tsuba::RDG::DoMake(
 
   KATANA_CHECKED_CONTEXT(
       AddProperties(
-          metadata_dir, part_info, &grp,
+          metadata_dir.Join(branch), part_info, &grp,
           [rdg = this](const std::shared_ptr<arrow::Table>& props) {
             return rdg->AddPartitionMetadataArray(props);
           }),
@@ -490,7 +496,7 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   std::vector<PropStorageInfo*> edge_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectEdgeProperties(opts.edge_properties));
 
-  if (auto res = rdg.DoMake(node_props, edge_props, manifest.dir()); !res) {
+  if (auto res = rdg.DoMake(node_props, edge_props, manifest); !res) {
     return res.error();
   }
 

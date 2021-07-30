@@ -359,6 +359,7 @@ katana::GraphTopology::Copy(const GraphTopology& that) noexcept {
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
+  // TODO(wkyu): find the version or pass in the version
   auto topo_result = MapTopology(rdg.topology_file_storage());
   if (!topo_result) {
     return topo_result.error();

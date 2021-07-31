@@ -909,7 +909,6 @@ private:
       : edge_type_to_index_map_(std::move(edge_type_to_index)),
         edge_index_to_type_map_(std::move(edge_index_to_type)) {
     KATANA_LOG_ASSERT(
-        edge_index_to_type_map_.size() > 0 &&
         edge_index_to_type_map_.size() == edge_type_to_index_map_.size());
   }
 
@@ -998,11 +997,12 @@ public:
   static EdgeTypeAwareTopology MakeFromTransposeTopology(
       const PropertyGraph* pg, const EdgeTypeIndex* edge_type_index);
 
-  // TODO(amber): logic needs fixing for the case when there are nodes but no edges
   uint64_t num_nodes() const noexcept {
-    if (adj_indices_.size() == 0) {
-      return 0;
-    }  // corner case: graph with 0 edges
+    // corner case: graph with 0 edges
+    if (edge_type_index_->num_unique_types() == 0) {
+      KATANA_LOG_DEBUG_ASSERT(num_edges() == 0);
+      return adj_indices_.size();
+    }
     return adj_indices_.size() / edge_type_index_->num_unique_types();
   }
 

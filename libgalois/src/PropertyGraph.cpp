@@ -918,7 +918,7 @@ katana::FindEdgeSortedByDest(
 
   constexpr size_t kBinarySearchThreshold = 64;
 
-  if (e_range.size() < kBinarySearchThreshold) {
+  if (e_range.size() <= kBinarySearchThreshold) {
     auto iter = std::find_if(
         e_range.begin(), e_range.end(),
         [&](const GraphTopology::Edge& e) { return topo.edge_dest(e) == dst; });
@@ -1208,8 +1208,7 @@ katana::EdgeTypeIndex::Make(const katana::PropertyGraph* pg) noexcept {
   });
 
   return EdgeTypeIndex{
-      std::move(edge_type_to_index), std::move(edge_index_to_type),
-      num_edge_types};
+      std::move(edge_type_to_index), std::move(edge_index_to_type)};
 }
 
 katana::EdgeShuffleTopology
@@ -1277,7 +1276,7 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
           orig_edge_ids[e_new] = e;
         }
       },
-      katana::no_stats());
+      katana::steal(), katana::no_stats());
 
   return EdgeShuffleTopology{
       pg, std::move(out_indices), std::move(out_dests),

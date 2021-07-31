@@ -91,8 +91,6 @@ public:
     return adj_indices_ == that.adj_indices_ && dests_ == that.dests_;
   }
 
-  // Edge accessors
-
   /// Gets the edge range of some node.
   ///
   /// \param node node to get the edge range of
@@ -853,14 +851,15 @@ KATANA_EXPORT Result<std::unique_ptr<PropertyGraph>>
 CreateTransposeGraphTopology(const GraphTopology& topology);
 
 class KATANA_EXPORT EdgeTypeIndex : public GraphTopologyTypes {
-  using EdgeTypeIntern = PropertyGraph::TypeSetID;
-  // map an integer id to each unique edge edge_type in the graph
-  using EdgeTypeIDToIndexMap = std::unordered_map<EdgeTypeIntern, uint32_t>;
-  // each index refers to a unique edge edge_type in the graph
-  using EdgeIndexToTypeIDMap = std::vector<EdgeTypeIntern>;
+  using EdgeTypeInternal = PropertyGraph::TypeSetID;
+  /// map an integer id to each unique edge edge_type in the graph, such that, the
+  /// integer ids assigned are contiguous, i.e., 0 .. num_unique_types-1
+  using EdgeTypeIDToIndexMap = std::unordered_map<EdgeTypeInternal, uint32_t>;
+  /// reverse map that allows looking up edge_type using its integer index
+  using EdgeIndexToTypeIDMap = std::vector<EdgeTypeInternal>;
 
 public:
-  using EdgeTypeID = EdgeTypeIntern;
+  using EdgeTypeID = EdgeTypeInternal;
   using EdgeTypeIDRange =
       katana::StandardRange<EdgeIndexToTypeIDMap::const_iterator>;
 
@@ -874,18 +873,18 @@ public:
   static EdgeTypeIndex Make(const PropertyGraph* pg) noexcept;
 
   EdgeTypeID GetType(uint32_t index) const noexcept {
-    KATANA_LOG_ASSERT(index < num_unique_edge_types_);
-    KATANA_LOG_ASSERT(size_t(index) < edge_index_to_type_map_.size());
+    KATANA_LOG_DEBUG_ASSERT(size_t(index) < edge_index_to_type_map_.size());
     return edge_index_to_type_map_[index];
   }
 
   uint32_t GetIndex(const EdgeTypeID& edge_type) const noexcept {
-    KATANA_LOG_ASSERT(edge_type_to_index_map_.count(edge_type) > 0);
-    // return edge_type_to_index_map_[edge_type];
-    return edge_type_to_index_map_.find(edge_type)->second;
+    KATANA_LOG_DEBUG_ASSERT(edge_type_to_index_map_.count(edge_type) > 0);
+    return edge_type_to_index_map_.at(edge_type);
   }
 
-  uint32_t num_unique_types() const noexcept { return num_unique_edge_types_; }
+  size_t num_unique_types() const noexcept {
+    return edge_index_to_type_map_.size();
+  }
 
   /// @param edge_type: edge_type to check
   /// @returns true iff there exists some edge in the graph with that edge_type
@@ -906,19 +905,16 @@ public:
 private:
   EdgeTypeIndex(
       EdgeTypeIDToIndexMap&& edge_type_to_index,
-      EdgeIndexToTypeIDMap&& edge_index_to_type,
-      uint32_t num_edge_types) noexcept
+      EdgeIndexToTypeIDMap&& edge_index_to_type) noexcept
       : edge_type_to_index_map_(std::move(edge_type_to_index)),
-        edge_index_to_type_map_(std::move(edge_index_to_type)),
-        num_unique_edge_types_(num_edge_types) {
-    KATANA_LOG_DEBUG_ASSERT(
-        num_edge_types == edge_index_to_type_map_.size() &&
-        num_edge_types == edge_type_to_index_map_.size());
+        edge_index_to_type_map_(std::move(edge_index_to_type)) {
+    KATANA_LOG_ASSERT(
+        edge_index_to_type_map_.size() > 0 &&
+        edge_index_to_type_map_.size() == edge_type_to_index_map_.size());
   }
 
   EdgeTypeIDToIndexMap edge_type_to_index_map_;
   EdgeIndexToTypeIDMap edge_index_to_type_map_;
-  uint32_t num_unique_edge_types_ = 0u;
 };
 
 // TODO(amber): make OrigEdgeIDMap optional via template argument
@@ -1246,11 +1242,6 @@ class KATANA_EXPORT EdgeTypeAwareBiDirTopology : public EdgeTypeAwareTopology {
 
 public:
   static EdgeTypeAwareBiDirTopology Make(const PropertyGraph* pg) noexcept {
-    // EdgeTypeIndex edge_type_index = EdgeTypeIndex::Make(pg);
-    // OutTopoBase out_topo = OutTopoBase::MakeFromDefaultTopology(pg, &edge_type_index);
-    // EdgeTypeAwareTopology in_topo = EdgeTypeAwareTopology::MakeFromTransposeTopology(pg, &edge_type_index);
-    // return EdgeTypeAwareBiDirTopology{std::move(edge_type_index), std::move(out_topo), std::move(in_topo)};
-
     auto edge_type_index =
         std::make_unique<EdgeTypeIndex>(EdgeTypeIndex::Make(pg));
     return EdgeTypeAwareBiDirTopology{pg, std::move(edge_type_index)};
@@ -1296,6 +1287,10 @@ public:
   /// searching for the key via the node's outgoing or incoming edges.
   /// If not found, returns nothing.
   edges_range FindAllEdgesSingleType(Node src, Node dst) const {
+    // TODO: Similar to IsConnectedWithEdgeType, we should be able to switch
+    // between searching out going topology or incoming topology. However, incoming
+    // topology will return a different range of incoming edges instead of outgoing
+    // edges. Can we convert easily between outing and incoming edge range
     if (OutTopoBase::degree(src) == 0 || in_topo_.degree(dst) == 0) {
       return MakeStandardRange<edge_iterator>(Edge{0}, Edge{0});
     }

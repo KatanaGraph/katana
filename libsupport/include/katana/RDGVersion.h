@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iterator>
 #include <fmt/format.h>
+#include <iostream>
 
 /*#include "katana/Result.h"*/
 /*#include "katana/URI.h"*/

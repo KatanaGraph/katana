@@ -385,6 +385,7 @@ MakePropertyGraph(
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
+  // TODO(wkyu): fix the error for this one.
   auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();

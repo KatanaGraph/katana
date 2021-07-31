@@ -73,7 +73,7 @@ ExtractDirName(std::string_view path) {
 
 std::string
 AddRandComponent(const std::string& str) {
-#if 0
+#if 1
   std::string name(str);
   name += "-";
   name += katana::RandomAlphanumericString(12);

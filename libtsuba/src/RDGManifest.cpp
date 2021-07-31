@@ -59,6 +59,8 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
     return res.error();
   }
 
+  /*std::cout <<"uri: " <<uri.string() <<std::endl;*/
+
   tsuba::RDGManifest manifest(uri.DirName());
   auto manifest_res = katana::JsonParse<tsuba::RDGManifest>(fv, &manifest);
 
@@ -69,6 +71,9 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   auto manifest_name = uri.BaseName();
   auto view_name = ParseViewNameFromName(manifest_name);
   auto view_args = ParseViewArgsFromName(manifest_name);
+  auto version_num = ParseVersionFromName(manifest_name);
+
+  //std::cout <<"manifest_name : " <<manifest_name <<"num: " << version_num.value() <<std::endl;
 
   if (view_name) {
     manifest.set_viewtype(view_name.value());
@@ -79,6 +84,17 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   } else {
     manifest.set_viewargs(std::vector<std::string>());
   }
+
+  if (version_num) {
+    manifest.set_version(std::move(RDGVersion(version_num.value())));
+  } 
+#if 0
+  else {
+    // TODO(wkyu): unnecessary though.
+    manifest.set_version(std::move(RDGVersion()));
+  }
+#endif
+
   return manifest;
 }
 
@@ -250,6 +266,8 @@ RDGManifest::FileNames() {
 
 void
 tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
+  RDGVersion ver = manifest.version_;
+  RDGVersion prev = manifest.previous_version_; 
   j = json{
       {"magic", kRDGMagicNo},
       {"version_nums", manifest.version_.numbers_},
@@ -267,17 +285,22 @@ void
 tsuba::from_json(const json& j, tsuba::RDGManifest& manifest) {
   uint32_t magic;
   j.at("magic").get_to(magic);
-  j.at("version_nums").get_to(manifest.version_.numbers_);
-  j.at("version_ids").get_to(manifest.version_.branches_);
+  if (auto it = j.find("version"); it != j.end()) {
+    j.at("version").get_to(manifest.version_.numbers_.back());
+  } else {
+    j.at("version_nums").get_to(manifest.version_.numbers_);
+    j.at("version_ids").get_to(manifest.version_.branches_);
+  }
   j.at("num_hosts").get_to(manifest.num_hosts_);
 
   // these values are temporarily optional
-  if (auto it = j.find("previous_version_nums"); it != j.end()) {
-    /*it->get_to(manifest.previous_version_.ToVectorString());*/
+  if (auto it = j.find("previous_version"); it != j.end()) {
+    it->get_to(manifest.previous_version_.numbers_.back());
+  } else if (auto it = j.find("previous_version_nums"); it != j.end()) {
     it->get_to(manifest.previous_version_.numbers_);
   }
+
   if (auto it = j.find("previous_version_ids"); it != j.end()) {
-    /*it->get_to(manifest.previous_version_.ToVectorString());*/
     it->get_to(manifest.previous_version_.branches_);
   }
 

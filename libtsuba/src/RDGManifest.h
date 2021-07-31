@@ -116,6 +116,7 @@ public:
   const std::string& viewtype() const { return view_type_; }
   void set_viewtype(std::string v) { view_type_ = v; }
   void set_viewargs(std::vector<std::string> v) { view_args_ = v; }
+  void set_version(RDGVersion val) { version_ = val; }
   const std::string& view_type() const { return view_type_; }
   bool transpose() const { return transpose_; }
 

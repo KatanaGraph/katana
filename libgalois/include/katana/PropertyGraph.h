@@ -997,13 +997,12 @@ public:
   static EdgeTypeAwareTopology MakeFromTransposeTopology(
       const PropertyGraph* pg, const EdgeTypeIndex* edge_type_index);
 
-  // TODO(amber): logic needs fixing for the case when there are nodes but no edges
-  // This will result in edge_type_index_->num_unique_types() == 0 and allocate
-  // adj_indices_ of size 0, even when graph has non-zero number of nodes.
   uint64_t num_nodes() const noexcept {
-    if (adj_indices_.size() == 0) {
-      return 0;
-    }  // corner case: graph with 0 edges
+    // corner case: graph with 0 edges
+    if (edge_type_index_->num_unique_types() == 0) {
+      KATANA_LOG_DEBUG_ASSERT(num_edges() == 0);
+      return adj_indices_.size();
+    }
     return adj_indices_.size() / edge_type_index_->num_unique_types();
   }
 

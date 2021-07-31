@@ -1363,6 +1363,24 @@ katana::EdgeTypeAwareTopology::AdjIndexArray
 katana::EdgeTypeAwareTopology::CreatePerEdgeTypeAdjacencyIndex(
     const PropertyGraph* pg, const EdgeTypeIndex* edge_type_index,
     const EdgeShuffleTopology& topo) noexcept {
+  if (topo.num_nodes() == 0) {
+    KATANA_LOG_VASSERT(
+        topo.num_edges() == 0, "Found graph with edges but no nodes");
+    return AdjIndexArray{};
+  }
+
+  if (edge_type_index->num_unique_types() == 0) {
+    KATANA_LOG_VASSERT(
+        topo.num_edges() == 0, "Found graph with edges but no edge types");
+    // Graph has some nodes but no edges. We copy the original adjacency in this
+    // case
+    AdjIndexArray copy_adj;
+    copy_adj.allocateInterleaved(topo.num_nodes());
+    katana::ParallelSTL::copy(
+        topo.adj_data(), topo.adj_data() + topo.num_nodes(), copy_adj.begin());
+    return copy_adj;
+  }
+
   const size_t sz = topo.num_nodes() * edge_type_index->num_unique_types();
   AdjIndexArray adj_indices;
   adj_indices.allocateInterleaved(sz);

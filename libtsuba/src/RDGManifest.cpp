@@ -252,15 +252,10 @@ void
 tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
   j = json{
       {"magic", kRDGMagicNo},
-#if 0
-      {"version", manifest.version_.ToVectorString()},
-      {"previous_version", manifest.previous_version_.ToVectorString()},
-#else
       {"version_nums", manifest.version_.numbers_},
       {"version_ids", manifest.version_.branches_},
       {"previous_version_nums", manifest.previous_version_.numbers_},
       {"previous_version_ids", manifest.previous_version_.branches_},
-#endif
       {"num_hosts", manifest.num_hosts_},
       {"policy_id", manifest.policy_id_},
       {"transpose", manifest.transpose_},

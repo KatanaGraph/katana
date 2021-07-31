@@ -73,7 +73,6 @@ ExtractDirName(std::string_view path) {
 
 std::string
 AddRandComponent(const std::string& str) {
-  // TODO(wkyu) change the order to have random String first. 
 #if 0
   std::string name(str);
   name += "-";
@@ -219,9 +218,6 @@ Uri::RandFile(std::string_view prefix) const {
   if (empty()) {
     return Uri();
   }
-
-  // TODO(wkyu): insert banch between 
-  // scheme_, path_, branches, prefix
   return Uri(scheme_, NewPath(path_, prefix));
 }
 

@@ -107,20 +107,12 @@ CommitRDG(
     tsuba::RDG::RDGVersioningPolicy versioning_action,
     const tsuba::RDGLineage& lineage, std::unique_ptr<tsuba::WriteGroup> desc) {
   katana::CommBackend* comm = tsuba::Comm();
-  // Add another option to add a branch
   tsuba::RDGManifest new_manifest =
       (versioning_action == tsuba::RDG::RetainVersion)
           ? handle.impl_->rdg_manifest().SameVersion(
                 comm->Num, policy_id, transposed, lineage)
           : handle.impl_->rdg_manifest().NextVersion(
                 comm->Num, policy_id, transposed, lineage);
-#if 0
-      : ((versioning_action == tsuba::RDG::IncrementVersion) 
-	  ? handle.impl_->rdg_manifest().NextVersion(
-                comm->Num, policy_id, transposed, lineage)
-          : handle.impl_->rdg_manifest().NextBranch(
-                comm->Num, policy_id, transposed, lineage));
-#endif
 
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
@@ -564,8 +556,6 @@ tsuba::RDG::Store(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     desc->StartStore(std::move(ff));
     TSUBA_PTP(internal::FaultSensitivity::Normal);
-    // It is still Ok to take only the base name for topology_path
-    // Assuming prefix+branches are left out.
     core_->part_header().set_topology_path(branch_path, t_path.BaseName());
   }
 

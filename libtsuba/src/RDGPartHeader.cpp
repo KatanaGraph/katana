@@ -97,11 +97,6 @@ RDGPartHeader::Write(
   if (retain_version == tsuba::RDG::RDGVersioningPolicy::IncrementVersion) {
     next_version.SetNextVersion();
   } 
-#if 0
-  else if (retain_version == tsuba::RDG::RDGVersioningPolicy::ExtendBranch) {
-    next_version.SetBranchPoint(katana::RandomAlphanumericString(12));
-  }
-#endif
 
   KATANA_LOG_DEBUG("Next verison: {}", next_version);
   ff->Bind(RDGManifest::PartitionFileName(

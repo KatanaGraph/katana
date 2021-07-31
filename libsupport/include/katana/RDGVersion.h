@@ -18,7 +18,7 @@ struct KATANA_EXPORT RDGVersion {
   uint64_t width_{0};
 
   // TODO(wkyu): to clean up these operators
-#if 0
+#if 1
   RDGVersion (const RDGVersion & in)  = default;
   RDGVersion& operator=(const RDGVersion & in)  = default;
 #else
@@ -35,8 +35,6 @@ struct KATANA_EXPORT RDGVersion {
     return *this;
   }
 #endif
-
-  bool valid() { return (numbers_.back() > 0); }
 
   bool operator==(const RDGVersion & in) {
     return (numbers_ == in.numbers_ && branches_ == in.branches_); 
@@ -67,18 +65,17 @@ struct KATANA_EXPORT RDGVersion {
     if (numbers_.back() > 0)
       return vec;
 
-    // return a subdir formed by branches with a trailing SepChar
+    // return a subdir formed by branches without a trailing SepChar
     for (uint64_t i=0; i < width_; i ++) {
       vec += fmt::format("{}", branches_[i]);
-      vec += "/";
+      if ((i+1) < width_)
+	vec += "/";
     }
     return vec; 
   }
 
   std::string
   ToVectorString() const {
-    // Before the last version, for a pair ver_id,ver_id
-    // the last version has no id.
     std::string vec = "";
     for (uint64_t i=0; i < width_; i ++) {
       vec += fmt::format("{}_{},", numbers_[i], branches_[i]);
@@ -100,7 +97,7 @@ struct KATANA_EXPORT RDGVersion {
   void
   SetBranchPoint(const std::string& name) {
     branches_[width_] = name;
-    // record the version for the branch
+    // 1 to begin a branch
     numbers_.emplace_back(1);
     branches_.emplace_back("");
     width_ ++;

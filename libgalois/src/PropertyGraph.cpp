@@ -550,14 +550,6 @@ katana::PropertyGraph::WriteView(
       uri, command_line, tsuba::RDG::RDGVersioningPolicy::RetainVersion);
 }
 
-// Create an alias RDG for a new branch from the same version
-katana::Result<void>
-katana::PropertyGraph::WriteBranch(
-    const std::string& uri, const std::string& command_line) {
-  return ConductWriteOp(
-      uri, command_line, tsuba::RDG::RDGVersioningPolicy::ExtendBranch);
-}
-
 katana::Result<void>
 katana::PropertyGraph::WriteGraph(
     const std::string& uri, const std::string& command_line) {
@@ -583,14 +575,6 @@ katana::PropertyGraph::WriteView(const std::string& command_line) {
   // WriteView occurs once, and only before any Commit/Write operation
   KATANA_LOG_DEBUG_ASSERT(file_ == nullptr);
   return WriteView(rdg_.rdg_dir().string(), command_line);
-}
-
-katana::Result<void>
-katana::PropertyGraph::WriteBranch(const std::string& command_line) {
-  // WriteView occurs once, and only before any Commit/Write operation
-  // TODO(wkyu): check further on the following Commit/Write operation.
-  KATANA_LOG_DEBUG_ASSERT(file_ == nullptr);
-  return WriteBranch(rdg_.rdg_dir().string(), command_line);
 }
 
 bool

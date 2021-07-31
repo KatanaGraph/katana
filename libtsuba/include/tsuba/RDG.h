@@ -43,7 +43,7 @@ struct KATANA_EXPORT RDGLoadOptions {
 
 class KATANA_EXPORT RDG {
 public:
-  enum RDGVersioningPolicy { RetainVersion = 0, IncrementVersion, ExtendBranch};
+  enum RDGVersioningPolicy { RetainVersion = 0, IncrementVersion};
   RDG(const RDG& no_copy) = delete;
   RDG& operator=(const RDG& no_dopy) = delete;
 

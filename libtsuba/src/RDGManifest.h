@@ -27,10 +27,6 @@ class KATANA_EXPORT RDGManifest {
   // Persisted
   //
 
-  // vectorized versioning scheme for 1st Branch
-  // version_[0], version_[1] : 
-  // branch_id [0] : 10-char ID
-  // previous_version_ [0] = version_[0]
   RDGVersion version_;
   RDGVersion previous_version_;
 

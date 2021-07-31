@@ -909,7 +909,6 @@ private:
       : edge_type_to_index_map_(std::move(edge_type_to_index)),
         edge_index_to_type_map_(std::move(edge_index_to_type)) {
     KATANA_LOG_ASSERT(
-        edge_index_to_type_map_.size() > 0 &&
         edge_index_to_type_map_.size() == edge_type_to_index_map_.size());
   }
 
@@ -999,6 +998,8 @@ public:
       const PropertyGraph* pg, const EdgeTypeIndex* edge_type_index);
 
   // TODO(amber): logic needs fixing for the case when there are nodes but no edges
+  // This will result in edge_type_index_->num_unique_types() == 0 and allocate
+  // adj_indices_ of size 0, even when graph has non-zero number of nodes.
   uint64_t num_nodes() const noexcept {
     if (adj_indices_.size() == 0) {
       return 0;

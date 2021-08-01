@@ -1,4 +1,4 @@
-
+from libc.stdint cimport uintptr_t
 from libcpp.memory cimport unique_ptr
 
 from katana.cpp.libgalois.Barrier cimport Barrier as CBarrier
@@ -40,6 +40,12 @@ cdef class Barrier:
         name = self.underlying().name()
         return "<" + str(name, "ascii") + " @ " + hex(<size_t>self.underlying()) + ">"
 
+    @property
+    def address(self):
+        """
+        Internal.
+        """
+        return <uintptr_t>self.underlying()
 
 cdef class _FastBarrier(Barrier):
     """
@@ -125,3 +131,23 @@ cdef class SimpleBarrier(Barrier):
 
     cdef CBarrier* underlying(self) nogil except NULL:
         return self._underlying.get()
+
+
+# Numba Wrappers
+
+import ctypes
+
+from katana.numba_support.wrappers import SimpleNumbaPointerWrapper
+
+Barrier_numba_type_wrapper = SimpleNumbaPointerWrapper(Barrier)
+Barrier_numba_type = Barrier_numba_type_wrapper.Type
+
+
+cdef void _numba_Barrier_wait(CBarrier *self) nogil:
+    self.Wait()
+
+Barrier_numba_type_wrapper.register_method(
+    "wait",
+    ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_void_p),
+    addr=<uintptr_t>&_numba_Barrier_wait,
+)

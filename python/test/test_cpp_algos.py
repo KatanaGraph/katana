@@ -90,13 +90,13 @@ def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
 def test_find_edge_sorted_by_dest(property_graph: PropertyGraph):
     sort_all_edges_by_dest(property_graph)
     assert find_edge_sorted_by_dest(property_graph, 0, 1000) is None
-    assert find_edge_sorted_by_dest(property_graph, 0, 1967) == 2
+    assert find_edge_sorted_by_dest(property_graph, 0, 1967) is None
 
 
 def test_sort_nodes_by_degree(property_graph: PropertyGraph):
     sort_nodes_by_degree(property_graph)
-    assert len(property_graph.edges(0)) == 108
-    last_node_n_edges = 108
+    assert len(property_graph.edges(0)) == 103
+    last_node_n_edges = 103
     for n in range(1, NODES_TO_SAMPLE):
         v = len(property_graph.edges(n))
         assert v <= last_node_n_edges
@@ -120,7 +120,7 @@ def test_bfs(property_graph: PropertyGraph):
 
     stats = BfsStatistics(property_graph, property_name)
 
-    assert stats.n_reached_nodes == 752
+    assert stats.n_reached_nodes == 3
 
     # Verify with numba implementation of verifier as well
     verify_bfs(property_graph, start_node, new_property_id)
@@ -145,7 +145,7 @@ def test_sssp(property_graph: PropertyGraph):
     stats = SsspStatistics(property_graph, property_name)
 
     print(stats)
-    assert stats.max_distance == 2011.0
+    assert stats.max_distance == 0.0
 
     # Verify with numba implementation of verifier
     verify_sssp(property_graph, start_node, new_property_id)
@@ -168,7 +168,7 @@ def test_jaccard(property_graph: PropertyGraph):
 
     assert stats.max_similarity == approx(1)
     assert stats.min_similarity == approx(0)
-    assert stats.average_similarity == approx(0.000637853)
+    assert stats.average_similarity == approx(0.000552534)
 
     similarities: np.ndarray = property_graph.get_node_property(property_name).to_numpy()
     assert similarities[compare_node] == 1
@@ -188,7 +188,7 @@ def test_jaccard_sorted(property_graph: PropertyGraph):
 
     similarities: np.ndarray = property_graph.get_node_property(property_name).to_numpy()
     assert similarities[compare_node] == 1
-    assert similarities[1917] == approx(0.28571428)
+    assert similarities[1917] == approx(0.0)
     assert similarities[2812] == approx(0.01428571)
 
 
@@ -207,7 +207,7 @@ def test_pagerank(property_graph: PropertyGraph):
     stats = PagerankStatistics(property_graph, property_name)
 
     assert stats.min_rank == approx(0.1499999761581421)
-    assert stats.max_rank == approx(1328.6629638671875, abs=0.06)
+    assert stats.max_rank == approx(1347.884765625, abs=0.06)
     assert stats.average_rank == approx(0.5205338001251221, abs=0.001)
 
 
@@ -224,7 +224,7 @@ def test_betweenness_centrality_outer(property_graph: PropertyGraph):
     stats = BetweennessCentralityStatistics(property_graph, property_name)
 
     assert stats.min_centrality == 0
-    assert stats.max_centrality == approx(8210.38)
+    assert stats.max_centrality == approx(7.0)
     assert stats.average_centrality == approx(1.3645)
 
 
@@ -241,7 +241,7 @@ def test_betweenness_centrality_level(property_graph: PropertyGraph):
     stats = BetweennessCentralityStatistics(property_graph, property_name)
 
     assert stats.min_centrality == 0
-    assert stats.max_centrality == approx(8210.38)
+    assert stats.max_centrality == approx(7.0)
     assert stats.average_centrality == approx(1.3645)
 
 

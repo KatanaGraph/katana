@@ -77,8 +77,8 @@ def test_get_node_property_index_exception(property_graph):
 def test_get_node_property(property_graph):
     prop1 = property_graph.get_node_property(3)
     assert prop1[10].as_py() is None
-    prop2 = property_graph.get_node_property("length")
     # TODO re-enable this
+    # prop2 = property_graph.get_node_property("length")
     # assert prop1 == prop2
 
 
@@ -127,8 +127,8 @@ def test_upsert_node_property(property_graph):
 def test_get_edge_property(property_graph):
     prop1 = property_graph.get_edge_property(15)
     assert not prop1[10].as_py()
-    prop2 = property_graph.get_edge_property("IS_SUBCLASS_OF")
     # TODO re-enable this test
+    # prop2 = property_graph.get_edge_property("IS_SUBCLASS_OF")
     # assert prop1 == prop2
 
 

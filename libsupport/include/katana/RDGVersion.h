@@ -4,18 +4,16 @@
 #include <cstring>
 #include <iostream>
 #include <iterator>
+#include <vector>
 
 #include <fmt/format.h>
 
-/*#include "katana/Result.h"*/
-/*#include "katana/URI.h"*/
+#include "katana/config.h"
+
 namespace katana {
 
-const uint64_t kRDGBranchIDLength = (12);
-
-class KATANA_EXPORT RDGVersion {
-public:
-  // A version consists of mulitple BranchPoints of width, each in the form of num:id
+struct KATANA_EXPORT RDGVersion {
+  // A vectorized version in the form of num:id
   // The last one has an empty branch "".
   std::vector<uint64_t> numbers_;
   std::vector<std::string> branches_;
@@ -37,67 +35,23 @@ public:
   }
 #endif
 
-  bool operator==(const RDGVersion& in) {
-    return (numbers_ == in.numbers_ && branches_ == in.branches_);
-  }
-
-  bool operator>(const RDGVersion& in) { return numbers_ > in.numbers_; }
-
-  bool operator<(const RDGVersion& in) { return numbers_ < in.numbers_; }
-
   RDGVersion(
-      const std::vector<uint64_t>& vers, const std::vector<std::string>& ids)
-      : numbers_(vers), branches_(ids) {
-    width_ = vers.size() - 1;
-  }
-
-  explicit RDGVersion(uint64_t num = 0) {
-    numbers_.emplace_back(num);
-    branches_.emplace_back("");
-    width_ = 0;
-  }
-
-  std::string GetBranchPath() const {
-    std::string vec = "";
-    if (numbers_.back() > 0)
-      return vec;
-
-    // return a subdir formed by branches without a trailing SepChar
-    for (uint64_t i = 0; i < width_; i++) {
-      vec += fmt::format("{}", branches_[i]);
-      if ((i + 1) < width_)
-        vec += "/";
-    }
-    return vec;
-  }
-
-  std::string ToVectorString() const {
-    std::string vec = "";
-    for (uint64_t i = 0; i < width_; i++) {
-      vec += fmt::format("{}_{},", numbers_[i], branches_[i]);
-    }
-    // Last one has only the ver number.
-    return fmt::format("{}{}", vec, numbers_[width_]);
-  }
-
-  uint64_t LeafVersionNumber() { return numbers_.back(); }
-
-  void SetNextVersion() { numbers_[width_]++; }
-
-  void SetBranchPoint(const std::string& name) {
-    branches_[width_] = name;
-    // 1 to begin a branch
-    numbers_.emplace_back(1);
-    branches_.emplace_back("");
-    width_++;
-  }
-
-  std::vector<uint64_t>& GetVersionNumbers() { return numbers_; }
-
-  std::vector<std::string>& GetBranchIDs() { return branches_; }
+      const std::vector<uint64_t>& vers, const std::vector<std::string>& ids);
+  explicit RDGVersion(uint64_t num = 0);
+  std::string GetBranchPath() const;
+  std::string ToVectorString() const;
+  uint64_t LeafVersionNumber();
+  void SetNextVersion();
+  void SetBranchPoint(const std::string& name);
+  std::vector<uint64_t>& GetVersionNumbers();
+  std::vector<std::string>& GetBranchIDs();
 };
 
-// Check the example from URI.h on comparitors and formatter.
+KATANA_EXPORT bool operator==(const RDGVersion& lhs, const RDGVersion& rhs);
+KATANA_EXPORT bool operator>(const RDGVersion& lhs, const RDGVersion& rhs);
+KATANA_EXPORT bool operator<(const RDGVersion& lhs, const RDGVersion& rhs);
 
-} 
+// Check the example from URI.h on comparators and formatter.
+
+}  // namespace katana
 #endif

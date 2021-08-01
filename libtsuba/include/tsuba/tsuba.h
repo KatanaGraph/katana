@@ -92,7 +92,8 @@ struct KATANA_EXPORT RDGStat {
 KATANA_EXPORT katana::Result<RDGStat> Stat(const std::string& rdg_name);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViewsForVersion(
-    const std::string& rdg_dir, katana::RDGVersion version, uint64_t* max_version);
+    const std::string& rdg_dir, katana::RDGVersion version,
+    uint64_t* max_version);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViews(
     const std::string& rdg_dir);

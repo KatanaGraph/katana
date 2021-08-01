@@ -100,7 +100,8 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
 
 Result<RDGManifest>
 RDGManifest::Make(
-    const katana::Uri& uri, const std::string& view_type, katana::RDGVersion version) {
+    const katana::Uri& uri, const std::string& view_type,
+    katana::RDGVersion version) {
   return MakeFromStorage(FileName(uri, view_type, version));
 }
 
@@ -117,7 +118,8 @@ RDGManifest::Make(const katana::Uri& uri) {
 
 std::string
 RDGManifest::PartitionFileName(
-    const std::string& view_type, uint32_t node_id, katana::RDGVersion version) {
+    const std::string& view_type, uint32_t node_id,
+    katana::RDGVersion version) {
   KATANA_LOG_ASSERT(!view_type.empty());
   return fmt::format(
       "part_{}_{}_{}", ToVersionString(version.LeafVersionNumber()), view_type,
@@ -156,7 +158,8 @@ RDGManifest::ToJsonString() const {
 // e.g., rdg_dir == s3://witchel-tests-east2/fault/simple/
 katana::Uri
 RDGManifest::FileName(
-    const katana::Uri& uri, const std::string& view_name, katana::RDGVersion version) {
+    const katana::Uri& uri, const std::string& view_name,
+    katana::RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
   return uri.Join(version.GetBranchPath())

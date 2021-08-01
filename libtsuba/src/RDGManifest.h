@@ -50,8 +50,9 @@ class KATANA_EXPORT RDGManifest {
   }
 
   RDGManifest(
-      katana::RDGVersion version, katana::RDGVersion previous_version, uint32_t num_hosts,
-      uint32_t policy_id, bool transpose, katana::Uri dir, RDGLineage lineage)
+      katana::RDGVersion version, katana::RDGVersion previous_version,
+      uint32_t num_hosts, uint32_t policy_id, bool transpose, katana::Uri dir,
+      RDGLineage lineage)
       : dir_(std::move(dir)),
         version_(version),
         previous_version_(previous_version),
@@ -63,7 +64,8 @@ class KATANA_EXPORT RDGManifest {
   static katana::Result<RDGManifest> MakeFromStorage(const katana::Uri& uri);
 
   static std::string PartitionFileName(
-      const std::string& view_type, uint32_t node_id, katana::RDGVersion version);
+      const std::string& view_type, uint32_t node_id,
+      katana::RDGVersion version);
 
   std::string view_specifier() const {
     if (view_args_.size())
@@ -106,7 +108,8 @@ public:
   /// \param version is the version of the RDG to load
   /// \returns the constructed RDGManifest and the directory of its contents
   static katana::Result<RDGManifest> Make(
-      const katana::Uri& uri, const std::string& view_type, katana::RDGVersion version);
+      const katana::Uri& uri, const std::string& view_type,
+      katana::RDGVersion version);
 
   const katana::Uri& dir() const { return dir_; }
   katana::RDGVersion version() const { return version_; }
@@ -128,7 +131,8 @@ public:
 
   // Canonical naming
   static katana::Uri FileName(
-      const katana::Uri& uri, const std::string& view_type, katana::RDGVersion version);
+      const katana::Uri& uri, const std::string& view_type,
+      katana::RDGVersion version);
 
   static katana::Uri PartitionFileName(
       const katana::Uri& uri, uint32_t node_id, katana::RDGVersion version);

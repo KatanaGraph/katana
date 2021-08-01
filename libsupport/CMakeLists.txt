@@ -22,6 +22,7 @@ set(sources
         src/Signals.cpp
         src/Strings.cpp
         src/URI.cpp
+        src/RDGVersion.cpp
 )
 
 target_sources(katana_support PRIVATE ${sources})

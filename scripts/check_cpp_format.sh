@@ -17,7 +17,7 @@ fi
 ROOTS="$@"
 FAILED=
 PRUNE_PATHS=${PRUNE_PATHS:-}
-PRUNE_NAMES="build*"
+PRUNE_NAMES="build* .#*"
 
 emit_prunes() {
   { for p in ${PRUNE_PATHS}; do echo "-path ${p} -prune -o"; done; \

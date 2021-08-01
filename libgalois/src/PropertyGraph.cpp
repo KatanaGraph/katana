@@ -3,6 +3,7 @@
 #include <sys/mman.h>
 
 #include "katana/ArrowInterchange.h"
+#include "katana/Iterators.h"
 #include "katana/Logging.h"
 #include "katana/Loops.h"
 #include "katana/PerThreadStorage.h"
@@ -880,19 +881,25 @@ katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   auto* out_dests_data = const_cast<GraphTopology::Node*>(topo.dest_data());
 
   katana::do_all(
-      katana::iterate(uint64_t{0}, pg->topology().num_nodes()),
-      [&](uint64_t n) {
-        const auto e_beg = *pg->topology().edge_begin(n);
-        const auto e_end = *pg->topology().edge_end(n);
-        // IMPORTANT: Must sort permutation vector before dest array
+      katana::iterate(pg->topology().all_nodes()),
+      [&](GraphTopology::Node n) {
+        const auto e_beg = *pg->topology().edges(n).begin();
+        const auto e_end = *pg->topology().edges(n).end();
+
+        auto sort_iter_beg = katana::make_zip_iterator(
+            out_dests_data + e_beg, permutation_vec->begin() + e_beg);
+        auto sort_iter_end = katana::make_zip_iterator(
+            out_dests_data + e_end, permutation_vec->begin() + e_end);
+
         std::sort(
-            permutation_vec->begin() + e_beg, permutation_vec->begin() + e_end,
-            [&](uint64_t a, uint64_t b) {
-              return out_dests_data[a] < out_dests_data[b];
+            sort_iter_beg, sort_iter_end,
+            [&](const auto& tup1, const auto& tup2) {
+              auto d1 = std::get<0>(tup1);
+              auto d2 = std::get<0>(tup2);
+              static_assert(std::is_same_v<decltype(d1), GraphTopology::Node>);
+              static_assert(std::is_same_v<decltype(d1), GraphTopology::Node>);
+              return d1 < d2;
             });
-        std::sort(
-            out_dests_data + e_beg, out_dests_data + e_end,
-            std::less<GraphTopology::Node>{});
       },
       katana::steal());
 
@@ -906,30 +913,24 @@ katana::GraphTopology::Edge
 katana::FindEdgeSortedByDest(
     const PropertyGraph* graph, const GraphTopology::Node src,
     const GraphTopology::Node dst) {
-  using edge_iterator = GraphTopology::edge_iterator;
-
   const auto& topo = graph->topology();
-  const edge_iterator e_beg = topo.edge_begin(src);
-  const edge_iterator e_end = topo.edge_end(src);
+  auto e_range = topo.edges(src);
 
-  constexpr int BINARY_SEARCH_THRESHOLD = 100;
+  constexpr size_t kBinarySearchThreshold = 64;
 
-  if (std::distance(e_beg, e_end) < BINARY_SEARCH_THRESHOLD) {
-    auto iter = std::find_if(e_beg, e_end, [&](const GraphTopology::Edge& e) {
-      return topo.edge_dest(e) == dst;
-    });
+  if (e_range.size() <= kBinarySearchThreshold) {
+    auto iter = std::find_if(
+        e_range.begin(), e_range.end(),
+        [&](const GraphTopology::Edge& e) { return topo.edge_dest(e) == dst; });
 
     return *iter;
 
   } else {
-    auto comparator = [&](const GraphTopology::Edge& e,
-                          const GraphTopology::Node& d) {
-      return topo.edge_dest(e) < d;
-    };
+    auto iter = std::lower_bound(
+        e_range.begin(), e_range.end(), dst,
+        EdgeDestComparator<GraphTopology>{&topo});
 
-    auto iter = std::lower_bound(e_beg, e_end, dst, comparator);
-
-    return topo.edge_dest(iter) == dst ? *iter : *e_end;
+    return topo.edge_dest(*iter) == dst ? *iter : *e_range.end();
   }
 }
 
@@ -945,7 +946,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   katana::NUMAArray<DegreeNodePair> dn_pairs;
   dn_pairs.allocateInterleaved(num_nodes);
 
-  katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](size_t node) {
+  katana::do_all(katana::iterate(topo.all_nodes()), [&](auto node) {
     size_t node_degree = pg->edges(node).size();
     dn_pairs[node] = DegreeNodePair(node_degree, node);
   });
@@ -978,8 +979,8 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   auto* out_indices_data = const_cast<GraphTopology::Edge*>(topo.adj_data());
 
   katana::do_all(
-      katana::iterate(uint64_t{0}, num_nodes),
-      [&](uint32_t old_node_id) {
+      katana::iterate(topo.all_nodes()),
+      [&](auto old_node_id) {
         uint32_t new_node_id = old_to_new_mapping[old_node_id];
 
         // get the start location of this reindex'd nodes edges
@@ -1004,15 +1005,13 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
 
   //Update the underlying PropertyGraph topology
   // TODO(amber): eliminate these copies since we will be returning a new topology
-  katana::do_all(
-      katana::iterate(uint64_t{0}, num_nodes), [&](uint32_t node_id) {
-        out_indices_data[node_id] = new_prefix_sum[node_id];
-      });
+  katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](auto node_id) {
+    out_indices_data[node_id] = new_prefix_sum[node_id];
+  });
 
-  katana::do_all(
-      katana::iterate(uint64_t{0}, num_edges), [&](uint32_t edge_id) {
-        out_dests_data[edge_id] = new_out_dest[edge_id];
-      });
+  katana::do_all(katana::iterate(uint64_t{0}, num_edges), [&](auto edge_id) {
+    out_dests_data[edge_id] = new_out_dest[edge_id];
+  });
 
   return katana::ResultSuccess();
 }
@@ -1030,19 +1029,17 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
 
   out_indices.allocateInterleaved(topology.num_nodes());
   // Store the out-degree of nodes from original graph
-  katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_nodes()), [&](uint64_t n) {
-        auto edges = topology.edges(n);
-        out_indices[n] = (*edges.end() - *edges.begin());
-      });
+  katana::do_all(katana::iterate(topology.all_nodes()), [&](auto n) {
+    auto edges = topology.edges(n);
+    out_indices[n] = (*edges.end() - *edges.begin());
+  });
 
   katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_nodes()),
-      [&](uint64_t n) {
-        auto edges = topology.edges(n);
+      katana::iterate(topology.all_nodes()),
+      [&](auto n) {
         // update the out_indices for the symmetric topology
-        for (auto e = edges.begin(); e != edges.end(); ++e) {
-          auto dest = topology.edge_dest(*e);
+        for (auto e : topology.edges(n)) {
+          auto dest = topology.edge_dest(e);
           // Do not add reverse edge for self-loops
           if (n != dest) {
             __sync_fetch_and_add(&(out_indices[dest]), 1);
@@ -1070,8 +1067,8 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
   out_dests.allocateInterleaved(num_edges_symmetric);
   // Update graph topology with the original edges + reverse edges
   katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_nodes()),
-      [&](uint64_t src) {
+      katana::iterate(topology.all_nodes()),
+      [&](auto src) {
         // get all outgoing edges (excluding self edges) of a particular
         // node and add reverse edges.
         for (GraphTopology::Edge e : topology.edges(src)) {
@@ -1120,8 +1117,8 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
   // Keep a copy of old destinaton ids and compute number of
   // in-coming edges for the new prefix sum of out_indices.
   katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_edges()),
-      [&](uint64_t e) {
+      katana::iterate(topology.all_edges()),
+      [&](auto e) {
         // Counting outgoing edges in the tranpose graph by
         // counting incoming edges in the original graph
         auto dest = topology.edge_dest(e);
@@ -1135,18 +1132,20 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
 
   katana::NUMAArray<uint64_t> out_dests_offset;
   out_dests_offset.allocateInterleaved(topology.num_nodes());
-  // Reuse out_indices_tmp for computing new destination positions
+
+  // temporary buffer for storing the starting point of each node's transpose
+  // adjacency
   out_dests_offset[0] = 0;
   katana::do_all(
       katana::iterate(uint64_t{1}, topology.num_nodes()),
       [&](uint64_t n) { out_dests_offset[n] = out_indices[n - 1]; },
       katana::no_stats());
 
-  // Update large_array_out_dests_ with the new destination ids
+  // Update out_dests with the new destination ids
   // of the transposed graphs
   katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_nodes()),
-      [&](uint64_t src) {
+      katana::iterate(topology.all_nodes()),
+      [&](auto src) {
         // get all outgoing edges of a particular
         // node and reverse the edges.
         for (GraphTopology::Edge e : topology.edges(src)) {
@@ -1157,7 +1156,6 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
           auto e_new = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
           // Save src as destination
           out_dests[e_new] = src;
-          // TODO (gill) copy edge data to the transposed graph
         }
       },
       katana::no_stats());
@@ -1167,4 +1165,263 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
       std::make_unique<katana::PropertyGraph>(std::move(transpose_topo));
 
   return std::unique_ptr<PropertyGraph>(std::move(transpose_pg));
+}
+
+katana::EdgeTypeIndex
+katana::EdgeTypeIndex::Make(const katana::PropertyGraph* pg) noexcept {
+  EdgeTypeIDToIndexMap edge_type_to_index;
+  EdgeIndexToTypeIDMap edge_index_to_type;
+
+  katana::PerThreadStorage<katana::gstl::Set<EdgeTypeID>> edgeTypes;
+
+  const auto& topo = pg->topology();
+
+  katana::do_all(
+      katana::iterate(Edge{0}, topo.num_edges()),
+      [&](const Edge& e) {
+        EdgeTypeID type = pg->GetEdgeTypeSetID(e);
+        edgeTypes.getLocal()->insert(type);
+      },
+      katana::no_stats());
+
+  // ordered map
+  std::set<EdgeTypeID> mergedSet;
+  for (uint32_t i = 0; i < katana::activeThreads; ++i) {
+    auto& edgeTypesSet = *edgeTypes.getRemote(i);
+    for (auto edgeType : edgeTypesSet) {
+      mergedSet.insert(edgeType);
+    }
+  }
+
+  // unordered map
+  uint32_t num_edge_types = 0u;
+  for (const auto& edgeType : mergedSet) {
+    edge_type_to_index[edgeType] = num_edge_types++;
+    edge_index_to_type.emplace_back(edgeType);
+  }
+
+  // TODO(amber): introduce a per-thread-container type that frees memory
+  // correctly
+  katana::on_each([&](unsigned, unsigned) {
+    // free up memory by resetting
+    *edgeTypes.getLocal() = gstl::Set<EdgeTypeID>();
+  });
+
+  return EdgeTypeIndex{
+      std::move(edge_type_to_index), std::move(edge_index_to_type)};
+}
+
+katana::EdgeShuffleTopology
+katana::EdgeShuffleTopology::MakeTransposeCopy(
+    const katana::PropertyGraph* pg) {
+  KATANA_LOG_DEBUG_ASSERT(pg);
+
+  const auto& topology = pg->topology();
+  if (topology.empty()) {
+    return EdgeShuffleTopology{};
+  }
+
+  katana::NUMAArray<GraphTopology::Edge> out_indices;
+  katana::NUMAArray<GraphTopology::Node> out_dests;
+  katana::NUMAArray<GraphTopology::Edge> orig_edge_ids;
+  katana::NUMAArray<GraphTopology::Edge> out_dests_offset;
+
+  out_indices.allocateInterleaved(topology.num_nodes());
+  out_dests.allocateInterleaved(topology.num_edges());
+  orig_edge_ids.allocateInterleaved(topology.num_edges());
+  out_dests_offset.allocateInterleaved(topology.num_nodes());
+
+  katana::ParallelSTL::fill(out_indices.begin(), out_indices.end(), Edge{0});
+
+  // Keep a copy of old destinaton ids and compute number of
+  // in-coming edges for the new prefix sum of out_indices.
+  katana::do_all(
+      katana::iterate(topology.all_edges()),
+      [&](Edge e) {
+        // Counting outgoing edges in the tranpose graph by
+        // counting incoming edges in the original graph
+        auto dest = topology.edge_dest(e);
+        __sync_add_and_fetch(&(out_indices[dest]), 1);
+      },
+      katana::no_stats());
+
+  // Prefix sum calculation of the edge index array
+  katana::ParallelSTL::partial_sum(
+      out_indices.begin(), out_indices.end(), out_indices.begin());
+
+  // temporary buffer for storing the starting point of each node's transpose
+  // adjacency
+  out_dests_offset[0] = 0;
+  katana::do_all(
+      katana::iterate(Edge{1}, Edge{topology.num_nodes()}),
+      [&](Edge n) { out_dests_offset[n] = out_indices[n - 1]; },
+      katana::no_stats());
+
+  // Update out_dests with the new destination ids
+  // of the transposed graphs
+  katana::do_all(
+      katana::iterate(topology.all_nodes()),
+      [&](auto src) {
+        // get all outgoing edges of a particular
+        // node and reverse the edges.
+        for (GraphTopology::Edge e : topology.edges(src)) {
+          // e = start index into edge array for a particular node
+          // Destination node
+          auto dest = topology.edge_dest(e);
+          // Location to save edge
+          auto e_new = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
+          // Save src as destination
+          out_dests[e_new] = src;
+          // remember the original edge ID to look up properties
+          orig_edge_ids[e_new] = e;
+        }
+      },
+      katana::steal(), katana::no_stats());
+
+  return EdgeShuffleTopology{
+      pg, std::move(out_indices), std::move(out_dests),
+      std::move(orig_edge_ids)};
+}
+
+katana::EdgeShuffleTopology
+katana::EdgeShuffleTopology::MakeOriginalCopy(const katana::PropertyGraph* pg) {
+  GraphTopology copy_topo = GraphTopology::Copy(pg->topology());
+
+  OrigEdgeIDMap orig_edge_ids;
+  orig_edge_ids.allocateInterleaved(copy_topo.num_edges());
+  katana::ParallelSTL::iota(
+      orig_edge_ids.begin(), orig_edge_ids.end(), Edge{0});
+
+  return EdgeShuffleTopology{
+      pg, std::move(copy_topo.GetAdjIndices()), std::move(copy_topo.GetDests()),
+      std::move(orig_edge_ids)};
+}
+
+katana::EdgeTypeAwareTopology
+katana::EdgeTypeAwareTopology::MakeFromDefaultTopology(
+    const katana::PropertyGraph* pg,
+    const katana::EdgeTypeIndex* edge_type_index) {
+  EdgeShuffleTopology copy_topo = EdgeShuffleTopology::MakeOriginalCopy(pg);
+  KATANA_LOG_DEBUG_ASSERT(copy_topo.num_edges() == pg->topology().num_edges());
+
+  copy_topo.SortEdgesByTypeThenDest();
+  AdjIndexArray adj_indices =
+      CreatePerEdgeTypeAdjacencyIndex(pg, edge_type_index, copy_topo);
+
+  return katana::EdgeTypeAwareTopology{
+      pg, edge_type_index, std::move(adj_indices),
+      std::move(copy_topo.GetDests()), std::move(copy_topo.GetOrigEdgeIDs())};
+}
+
+void
+katana::EdgeShuffleTopology::SortEdgesByTypeThenDest() noexcept {
+  katana::do_all(
+      katana::iterate(Base::all_nodes()),
+      [&](Node node) {
+        // get this node's first and last edge
+        auto e_beg = *Base::edges(node).begin();
+        auto e_end = *Base::edges(node).end();
+
+        // get iterators to locations to sort in the vector
+        auto begin_sort_iter = katana::make_zip_iterator(
+            orig_edge_ids_.begin() + e_beg, Base::GetDests().begin() + e_beg);
+
+        auto end_sort_iter = katana::make_zip_iterator(
+            orig_edge_ids_.begin() + e_end, Base::GetDests().begin() + e_end);
+
+        // rearrange vector indices based on how the destinations of this
+        // graph will eventually be sorted sort function not based on vector
+        // being passed, but rather the type and destination of the graph
+        std::sort(
+            begin_sort_iter, end_sort_iter,
+            [&](const auto& tup1, const auto& tup2) {
+              // get edge type and destinations
+              auto e1 = std::get<0>(tup1);
+              auto e2 = std::get<0>(tup2);
+              static_assert(std::is_same_v<decltype(e1), GraphTopology::Edge>);
+              static_assert(std::is_same_v<decltype(e2), GraphTopology::Edge>);
+
+              EdgeTypeID data1 = prop_graph_->GetEdgeTypeSetID(e1);
+              EdgeTypeID data2 = prop_graph_->GetEdgeTypeSetID(e2);
+              if (data1 != data2) {
+                return data1 < data2;
+              }
+
+              auto dst1 = std::get<1>(tup1);
+              auto dst2 = std::get<1>(tup2);
+              static_assert(
+                  std::is_same_v<decltype(dst1), GraphTopology::Node>);
+              static_assert(
+                  std::is_same_v<decltype(dst2), GraphTopology::Node>);
+              return dst1 < dst2;
+            });
+      },
+      katana::steal(), katana::no_stats());
+}
+
+katana::EdgeTypeAwareTopology::AdjIndexArray
+katana::EdgeTypeAwareTopology::CreatePerEdgeTypeAdjacencyIndex(
+    const PropertyGraph* pg, const EdgeTypeIndex* edge_type_index,
+    const EdgeShuffleTopology& topo) noexcept {
+  if (topo.num_nodes() == 0) {
+    KATANA_LOG_VASSERT(
+        topo.num_edges() == 0, "Found graph with edges but no nodes");
+    return AdjIndexArray{};
+  }
+
+  if (edge_type_index->num_unique_types() == 0) {
+    KATANA_LOG_VASSERT(
+        topo.num_edges() == 0, "Found graph with edges but no edge types");
+    // Graph has some nodes but no edges. We copy the original adjacency in this
+    // case
+    AdjIndexArray copy_adj;
+    copy_adj.allocateInterleaved(topo.num_nodes());
+    katana::ParallelSTL::copy(
+        topo.adj_data(), topo.adj_data() + topo.num_nodes(), copy_adj.begin());
+    return copy_adj;
+  }
+
+  const size_t sz = topo.num_nodes() * edge_type_index->num_unique_types();
+  AdjIndexArray adj_indices;
+  adj_indices.allocateInterleaved(sz);
+
+  katana::do_all(
+      katana::iterate(topo.all_nodes()),
+      [&](Node N) {
+        auto offset = N * edge_type_index->num_unique_types();
+        uint32_t index = 0;
+        for (auto e : topo.edges(N)) {
+          // Since we sort the edges, we must use the
+          // original_edge_id because EdgeShuffleTopology rearranges the edges
+          const auto type = pg->GetEdgeTypeSetID(topo.original_edge_id(e));
+          while (type != edge_type_index->GetType(index)) {
+            adj_indices[offset + index] = e;
+            index++;
+            KATANA_LOG_DEBUG_ASSERT(
+                index < edge_type_index->num_unique_types());
+          }
+        }
+        auto e = *topo.edges(N).end();
+        while (index < edge_type_index->num_unique_types()) {
+          adj_indices[offset + index] = e;
+          index++;
+        }
+      },
+      katana::no_stats(), katana::steal());
+
+  return adj_indices;
+}
+
+katana::EdgeTypeAwareTopology
+katana::EdgeTypeAwareTopology::MakeFromTransposeTopology(
+    const katana::PropertyGraph* pg,
+    const katana::EdgeTypeIndex* edge_type_index) {
+  EdgeShuffleTopology tpose_topo = EdgeShuffleTopology::MakeTransposeCopy(pg);
+  tpose_topo.SortEdgesByTypeThenDest();
+  AdjIndexArray adj_indices =
+      CreatePerEdgeTypeAdjacencyIndex(pg, edge_type_index, tpose_topo);
+
+  return EdgeTypeAwareTopology{
+      pg, edge_type_index, std::move(adj_indices),
+      std::move(tpose_topo.GetDests()), std::move(tpose_topo.GetOrigEdgeIDs())};
 }

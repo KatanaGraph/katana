@@ -1,22 +1,13 @@
-==================================
-Galois Parallel Programming System
-==================================
-
-.. automodule:: katana
-   :no-index:
-   :no-members:
-
-:Version: |release|
+======
+Katana
+======
 
 .. toctree::
-   katana
-   katana.analytics
-   katana.atomic
-   katana.datastructures
-   katana.property_graph
-   katana.timer
+   
+   reference/index
+   contributing/index
 
-Indices and tables
+Indices and Tables
 ==================
 
 * :ref:`genindex`

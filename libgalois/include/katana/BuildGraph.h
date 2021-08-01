@@ -2,6 +2,8 @@
 #define KATANA_LIBGALOIS_KATANA_BUILDGRAPH_H_
 
 /// Construct a PropertyGraph in memory.
+///
+/// \file
 
 #include <functional>
 #include <iostream>

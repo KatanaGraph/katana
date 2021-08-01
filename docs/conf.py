@@ -9,10 +9,6 @@ import pathlib
 import os
 import katana
 
-# Breathe takes a minute or two to parse Doxygen output. If you aren't editing
-# C++ documents, set this environment variable for faster edit-render loops.
-cxx_disabled = os.environ.get("KATANA_DOCS_DISABLE_CXX", False)
-
 doxygen_path = os.environ["KATANA_DOXYGEN_PATH"]
 
 # -- General configuration ---------------------------------------------------
@@ -33,11 +29,9 @@ extensions = [
     "sphinx_tabs.tabs"
 ]
 
-if cxx_disabled:
-    breathe_projects = {}
-else:
-    breathe_default_project = "katana"
-    breathe_projects = {"katana": str(pathlib.Path(doxygen_path))}
+breathe_default_project = "katana"
+breathe_projects = {"katana": str(pathlib.Path(doxygen_path))}
+breathe_default_members = ('members', 'undoc-members')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

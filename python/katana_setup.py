@@ -31,10 +31,9 @@ class RequirementError(RuntimeError):
     def __str__(self):
         return (
             super().__str__()
-            + " (Normal Katana builds should use cmake to start the build and NOT directly call setup.py "
-            "(cmake calls setup.py as needed). See Python.md or "
-            "https://github.com/KatanaGraph/katana/blob/master/Python.md#building-katana-python for Python build "
-            "instructions.)"
+            + " (Normal Katana builds should use cmake to start the build and NOT directly call setup.py. "
+            "cmake calls setup.py as needed. See docs/contributing/building.rst "
+            "for Python build instructions.)"
         )
 
 

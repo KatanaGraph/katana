@@ -246,7 +246,7 @@ RDGManifest::FileNames() {
     if (!header_res) {
       KATANA_LOG_DEBUG(
           "problem uri: {} host: {} ver: {} view_name: {}  : {}", header_uri, i,
-          version(), view_specifier(), header_res.error());
+          version().LeafVersionNumber(), view_specifier(), header_res.error());
     } else {
       auto header = std::move(header_res.value());
       for (const auto& node_prop : header.node_prop_info_list()) {

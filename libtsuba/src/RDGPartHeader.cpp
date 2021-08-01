@@ -98,7 +98,7 @@ RDGPartHeader::Write(
     next_version.SetNextVersion();
   }
 
-  KATANA_LOG_DEBUG("Next verison: {}", next_version);
+  KATANA_LOG_DEBUG("Next verison: {}", next_version.LeafVersionNumber());
   ff->Bind(
       RDGManifest::PartitionFileName(
           handle.impl_->rdg_manifest().viewtype(),

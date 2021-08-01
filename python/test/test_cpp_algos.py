@@ -189,7 +189,7 @@ def test_jaccard_sorted(property_graph: PropertyGraph):
     similarities: np.ndarray = property_graph.get_node_property(property_name).to_numpy()
     assert similarities[compare_node] == 1
     assert similarities[1917] == approx(0.0)
-    assert similarities[2812] == approx(0.01428571)
+    assert similarities[2812] == approx(0.0)
 
 
 def test_pagerank(property_graph: PropertyGraph):

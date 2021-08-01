@@ -43,7 +43,7 @@ struct KATANA_EXPORT RDGLoadOptions {
 
 class KATANA_EXPORT RDG {
 public:
-  enum RDGVersioningPolicy { RetainVersion = 0, IncrementVersion};
+  enum RDGVersioningPolicy { RetainVersion = 0, IncrementVersion };
   RDG(const RDG& no_copy) = delete;
   RDG& operator=(const RDG& no_dopy) = delete;
 
@@ -164,7 +164,9 @@ public:
 
   const katana::Uri& rdg_dir() const { return rdg_dir_; }
   void set_rdg_dir(const katana::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
-  void set_branch_path(const std::string& branch) { branch_path_ = std::move(branch); }
+  void set_branch_path(const std::string& branch) {
+    branch_path_ = std::move(branch);
+  }
 
   uint32_t partition_id() const { return partition_id_; }
   void set_partition_id(uint32_t partition_id) { partition_id_ = partition_id; }

@@ -123,7 +123,8 @@ CommitRDG(
   comm->Barrier();
 
   // Extract the branch path for writing
-  std::string branch_path = handle.impl_->rdg_manifest().version().GetBranchPath();
+  std::string branch_path =
+      handle.impl_->rdg_manifest().version().GetBranchPath();
 
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   katana::Result<void> ret = tsuba::OneHostOnly([&]() -> katana::Result<void> {
@@ -140,7 +141,7 @@ CommitRDG(
       return res.error().WithContext(
           "CommitRDG future failed {}",
           tsuba::RDGManifest::FileName(
-	      handle.impl_->rdg_manifest().dir().Join(branch_path),
+              handle.impl_->rdg_manifest().dir().Join(branch_path),
               handle.impl_->rdg_manifest().viewtype(), new_manifest.version()));
     }
     return katana::ResultSuccess();
@@ -296,7 +297,8 @@ tsuba::RDG::DoStore(
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
   //TODO(wkyu): check through all the files written.
-  std::string branch_path = handle.impl_->rdg_manifest().version().GetBranchPath();
+  std::string branch_path =
+      handle.impl_->rdg_manifest().version().GetBranchPath();
 
   if (core_->part_header().topology_path().empty()) {
     // No topology file; create one
@@ -310,7 +312,7 @@ tsuba::RDG::DoStore(
         core_->topology_file_storage().size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
 
-    //Set branch along with the path 
+    //Set branch along with the path
     core_->part_header().set_topology_path(branch_path, t_path.BaseName());
   }
 
@@ -325,7 +327,8 @@ tsuba::RDG::DoStore(
   KATANA_CHECKED_CONTEXT(
       WriteProperties(
           *core_->node_properties(), node_props_to_store,
-          handle.impl_->rdg_manifest().dir().Join(branch_path), write_group.get()),
+          handle.impl_->rdg_manifest().dir().Join(branch_path),
+          write_group.get()),
       "writing node properties");
 
   std::vector<std::string> edge_prop_names;
@@ -339,11 +342,14 @@ tsuba::RDG::DoStore(
   KATANA_CHECKED_CONTEXT(
       WriteProperties(
           *core_->edge_properties(), edge_props_to_store,
-          handle.impl_->rdg_manifest().dir().Join(branch_path), write_group.get()),
+          handle.impl_->rdg_manifest().dir().Join(branch_path),
+          write_group.get()),
       "writing edge properties");
 
   core_->part_header().set_part_properties(KATANA_CHECKED_CONTEXT(
-      WritePartArrays(handle.impl_->rdg_manifest().dir().Join(branch_path), write_group.get()),
+      WritePartArrays(
+          handle.impl_->rdg_manifest().dir().Join(branch_path),
+          write_group.get()),
       "writing partition metadata"));
 
   //If a view type has been set, use it otherwise pass in the default view type
@@ -399,7 +405,8 @@ tsuba::RDG::DoMake(
           }),
       "populating edge properties");
 
-  katana::Uri t_path = metadata_dir.Join(branch).Join(core_->part_header().topology_path());
+  katana::Uri t_path =
+      metadata_dir.Join(branch).Join(core_->part_header().topology_path());
   if (auto res = core_->topology_file_storage().Bind(t_path.string(), true);
       !res) {
     return res.error();
@@ -549,8 +556,12 @@ tsuba::RDG::Store(
 
   if (ff) {
     //Insert the branch directories before any file.
-    std::string branch_path = handle.impl_->rdg_manifest().version().GetBranchPath();
-    katana::Uri t_path = handle.impl_->rdg_manifest().dir().Join(branch_path).RandFile("topology");
+    std::string branch_path =
+        handle.impl_->rdg_manifest().version().GetBranchPath();
+    katana::Uri t_path = handle.impl_->rdg_manifest()
+                             .dir()
+                             .Join(branch_path)
+                             .RandFile("topology");
 
     ff->Bind(t_path.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -807,7 +818,8 @@ tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
   if (dir != rdg_dir_ && dir != rdg_dir_.Join(branch_path_)) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
-        "new topology file must be in this RDG's directory or its branch ({})", rdg_dir_);
+        "new topology file must be in this RDG's directory or its branch ({})",
+        rdg_dir_);
   }
   return core_->RegisterTopologyFile(branch_path_, new_top.BaseName());
 }

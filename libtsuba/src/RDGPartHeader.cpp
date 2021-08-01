@@ -96,13 +96,15 @@ RDGPartHeader::Write(
   RDGVersion next_version = handle.impl_->rdg_manifest().version();
   if (retain_version == tsuba::RDG::RDGVersioningPolicy::IncrementVersion) {
     next_version.SetNextVersion();
-  } 
+  }
 
   KATANA_LOG_DEBUG("Next verison: {}", next_version);
-  ff->Bind(RDGManifest::PartitionFileName(
-               handle.impl_->rdg_manifest().viewtype(),
-               handle.impl_->rdg_manifest().dir().Join(next_version.GetBranchPath()), Comm()->ID, next_version)
-               .string());
+  ff->Bind(
+      RDGManifest::PartitionFileName(
+          handle.impl_->rdg_manifest().viewtype(),
+          handle.impl_->rdg_manifest().dir().Join(next_version.GetBranchPath()),
+          Comm()->ID, next_version)
+          .string());
 
   writes->StartStore(std::move(ff));
   TSUBA_PTP(internal::FaultSensitivity::Normal);

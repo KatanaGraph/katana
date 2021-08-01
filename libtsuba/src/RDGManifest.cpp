@@ -87,7 +87,7 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
 
   if (version_num) {
     manifest.set_version(std::move(RDGVersion(version_num.value())));
-  } 
+  }
 #if 0
   else {
     // TODO(wkyu): unnecessary though.
@@ -127,8 +127,8 @@ RDGManifest::PartitionFileName(
 katana::Uri
 RDGManifest::PartitionFileName(
     const katana::Uri& uri, uint32_t node_id, RDGVersion version) {
-  return uri.Join(version.GetBranchPath()).Join(
-      PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
+  return uri.Join(version.GetBranchPath())
+      .Join(PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
 }
 
 katana::Uri
@@ -136,7 +136,8 @@ RDGManifest::PartitionFileName(
     const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
     RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(!IsManifestUri(uri));
-  return uri.Join(version.GetBranchPath()).Join(PartitionFileName(view_type, node_id, version));
+  return uri.Join(version.GetBranchPath())
+      .Join(PartitionFileName(view_type, node_id, version));
 }
 
 katana::Uri
@@ -158,8 +159,10 @@ RDGManifest::FileName(
     const katana::Uri& uri, const std::string& view_name, RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
-  return uri.Join(version.GetBranchPath()).Join(fmt::format(
-      "katana_{}_{}.manifest", ToVersionString(version.LeafVersionNumber()), view_name));
+  return uri.Join(version.GetBranchPath())
+      .Join(fmt::format(
+          "katana_{}_{}.manifest", ToVersionString(version.LeafVersionNumber()),
+          view_name));
 }
 
 // if it doesn't name a manifest file, assume it's meant to be a managed URI
@@ -267,7 +270,7 @@ RDGManifest::FileNames() {
 void
 tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
   RDGVersion ver = manifest.version_;
-  RDGVersion prev = manifest.previous_version_; 
+  RDGVersion prev = manifest.previous_version_;
   j = json{
       {"magic", kRDGMagicNo},
       {"version_nums", manifest.version_.numbers_},

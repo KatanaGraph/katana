@@ -4,8 +4,8 @@
 #include "RDGHandleImpl.h"
 #include "katana/CommBackend.h"
 #include "katana/Env.h"
-#include "katana/RDGVersion.h"
 #include "katana/Plugin.h"
+#include "katana/RDGVersion.h"
 #include "katana/Signals.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
@@ -174,9 +174,8 @@ tsuba::Stat(const std::string& rdg_name) {
 }
 
 katana::Result<std::vector<tsuba::RDGView>>
-tsuba::ListAvailableViewsForVersion(const std::string& rdg_dir, 
-    RDGVersion version, uint64_t* max_version) {
-
+tsuba::ListAvailableViewsForVersion(
+    const std::string& rdg_dir, RDGVersion version, uint64_t* max_version) {
   std::vector<tsuba::RDGView> views_found;
   KATANA_LOG_DEBUG("ListAvailableViews for a branch");
 
@@ -184,8 +183,8 @@ tsuba::ListAvailableViewsForVersion(const std::string& rdg_dir,
   std::string target_dir = rdg_dir;
   /*std::vector<std::string> */
   auto branches = version.GetBranchIDs();
-  for (auto & branch : branches) {
-    if (branch !="") {
+  for (auto& branch : branches) {
+    if (branch != "") {
       target_dir += "/";
       target_dir += branch;
     }
@@ -251,7 +250,6 @@ tsuba::ListAvailableViewsForVersion(const std::string& rdg_dir,
 
   return views_found;
 }
-
 
 katana::Result<std::vector<tsuba::RDGView>>
 tsuba::ListAvailableViews(const std::string& rdg_dir) {
@@ -321,7 +319,8 @@ tsuba::ListAvailableViews(const std::string& rdg_dir) {
 katana::Uri
 tsuba::MakeTopologyFileName(tsuba::RDGHandle handle) {
   //Insert the branch directories before any file.
-  std::string branch_path = handle.impl_->rdg_manifest().version().GetBranchPath();
+  std::string branch_path =
+      handle.impl_->rdg_manifest().version().GetBranchPath();
   return GetRDGDir(handle).Join(branch_path).RandFile("topology");
 }
 

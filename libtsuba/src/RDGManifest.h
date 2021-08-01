@@ -50,7 +50,7 @@ class KATANA_EXPORT RDGManifest {
   }
 
   RDGManifest(
-      RDGVersion version, RDGVersion previous_version, uint32_t num_hosts, 
+      RDGVersion version, RDGVersion previous_version, uint32_t num_hosts,
       uint32_t policy_id, bool transpose, katana::Uri dir, RDGLineage lineage)
       : dir_(std::move(dir)),
         version_(version),
@@ -58,7 +58,7 @@ class KATANA_EXPORT RDGManifest {
         num_hosts_(num_hosts),
         policy_id_(policy_id),
         transpose_(transpose),
-        lineage_(std::move(lineage)) { }
+        lineage_(std::move(lineage)) {}
 
   static katana::Result<RDGManifest> MakeFromStorage(const katana::Uri& uri);
 

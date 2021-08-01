@@ -176,9 +176,10 @@ public:
   //
 
   const std::string& topology_path() const { return topology_path_; }
-  void set_topology_path(std::string branch, std::string path) { 
+  void set_topology_path(std::string branch, std::string path) {
     version_branch_ = std::move(branch);
-    topology_path_ = std::move(path); }
+    topology_path_ = std::move(path);
+  }
 
   const std::vector<PropStorageInfo>& node_prop_info_list() const {
     return node_prop_info_list_;

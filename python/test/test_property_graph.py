@@ -128,7 +128,7 @@ def test_get_edge_property(property_graph):
     assert not prop1[10].as_py()
     prop2 = property_graph.get_edge_property("IS_SUBCLASS_OF")
     # TODO re-enable this test
-    #assert prop1 == prop2
+    # assert prop1 == prop2
 
 
 def test_get_edge_property_chunked(property_graph):

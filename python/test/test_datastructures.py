@@ -31,7 +31,13 @@ def test_InsertBag_simple(typ):
 
 
 def test_InsertBag_opaque():
-    dt = np.dtype([("x", np.float32), ("y", np.int8),], align=True)
+    dt = np.dtype(
+        [
+            ("x", np.float32),
+            ("y", np.int8),
+        ],
+        align=True,
+    )
     T = InsertBag[dt]
     assert issubclass(T, InsertBag)
     bag = T()
@@ -65,7 +71,13 @@ def test_InsertBag_parallel(typ):
 
 
 def test_InsertBag_parallel_opaque():
-    dt = np.dtype([("x", np.float32), ("y", np.int16),], align=True)
+    dt = np.dtype(
+        [
+            ("x", np.float32),
+            ("y", np.int16),
+        ],
+        align=True,
+    )
     T = InsertBag[dt]
     bag = T()
 
@@ -95,7 +107,13 @@ def test_NUMAArray_simple(typ):
 
 
 def test_NUMAArray_opaque():
-    dt = np.dtype([("x", np.float32), ("y", np.int16),], align=True)
+    dt = np.dtype(
+        [
+            ("x", np.float32),
+            ("y", np.int16),
+        ],
+        align=True,
+    )
     T = NUMAArray[dt]
     assert issubclass(T, NUMAArray)
     arr = T()
@@ -118,7 +136,13 @@ def test_NUMAArray_opaque():
 
 
 def test_NUMAArray_opaque_extra_space():
-    dt = np.dtype([("x", np.int8), ("y", np.int8),], align=True)
+    dt = np.dtype(
+        [
+            ("x", np.int8),
+            ("y", np.int8),
+        ],
+        align=True,
+    )
     arr = NUMAArray[dt]()
     arr.allocateInterleaved(5)
     arr[0] = (1, 2)
@@ -202,7 +226,13 @@ def test_NUMAArray_numpy_parallel(typ):
 
 
 def test_NUMAArray_numpy_parallel_opaque():
-    dt = np.dtype([("x", np.float32), ("y", np.int16),], align=True)
+    dt = np.dtype(
+        [
+            ("x", np.float32),
+            ("y", np.int16),
+        ],
+        align=True,
+    )
     T = NUMAArray[dt]
     arr = T()
     arr.allocateInterleaved(1000)
@@ -229,7 +259,13 @@ def test_InsertBag_numba_type():
 
     assert isinstance(InsertBag_numba_type[int], numba.types.Type)
 
-    dt = np.dtype([("x", np.float32), ("y", np.int8),], align=True)
+    dt = np.dtype(
+        [
+            ("x", np.float32),
+            ("y", np.int8),
+        ],
+        align=True,
+    )
     assert isinstance(InsertBag_numba_type[dt], numba.types.Type)
 
 
@@ -240,5 +276,11 @@ def test_NUMAArray_numba_type():
 
     assert isinstance(NUMAArray_numba_type[int], numba.types.Type)
 
-    dt = np.dtype([("x", np.float32), ("y", np.int8),], align=True)
+    dt = np.dtype(
+        [
+            ("x", np.float32),
+            ("y", np.int8),
+        ],
+        align=True,
+    )
     assert isinstance(NUMAArray_numba_type[dt], numba.types.Type)

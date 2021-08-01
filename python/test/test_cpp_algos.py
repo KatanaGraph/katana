@@ -172,8 +172,8 @@ def test_jaccard(property_graph: PropertyGraph):
 
     similarities: np.ndarray = property_graph.get_node_property(property_name).to_numpy()
     assert similarities[compare_node] == 1
-    assert similarities[1917] == approx(0.28571428)
-    assert similarities[2812] == approx(0.01428571)
+    assert similarities[1917] == approx(0.0)
+    assert similarities[2812] == approx(0.0)
 
 
 def test_jaccard_sorted(property_graph: PropertyGraph):
@@ -208,7 +208,7 @@ def test_pagerank(property_graph: PropertyGraph):
 
     assert stats.min_rank == approx(0.1499999761581421)
     assert stats.max_rank == approx(1347.884765625, abs=0.06)
-    assert stats.average_rank == approx(0.5205338001251221, abs=0.001)
+    assert stats.average_rank == approx(0.5215466022491455, abs=0.001)
 
 
 def test_betweenness_centrality_outer(property_graph: PropertyGraph):
@@ -225,7 +225,7 @@ def test_betweenness_centrality_outer(property_graph: PropertyGraph):
 
     assert stats.min_centrality == 0
     assert stats.max_centrality == approx(7.0)
-    assert stats.average_centrality == approx(1.3645)
+    assert stats.average_centrality == approx(0.000534295046236366)
 
 
 def test_betweenness_centrality_level(property_graph: PropertyGraph):
@@ -242,7 +242,7 @@ def test_betweenness_centrality_level(property_graph: PropertyGraph):
 
     assert stats.min_centrality == 0
     assert stats.max_centrality == approx(7.0)
-    assert stats.average_centrality == approx(1.3645)
+    assert stats.average_centrality == approx(0.000534295046236366)
 
 
 def test_triangle_count():

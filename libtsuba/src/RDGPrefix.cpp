@@ -11,7 +11,7 @@ namespace tsuba {
 
 katana::Result<tsuba::RDGPrefix>
 RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
-  RDGVersion version = manifest.version();
+  katana::RDGVersion version = manifest.version();
   std::string branch = version.GetBranchPath();
 
   auto meta_res = RDGPartHeader::Make(manifest.PartitionFileName(0));

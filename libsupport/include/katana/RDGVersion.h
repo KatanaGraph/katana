@@ -9,10 +9,12 @@
 
 /*#include "katana/Result.h"*/
 /*#include "katana/URI.h"*/
+namespace katana {
 
 const uint64_t kRDGBranchIDLength = (12);
 
-struct KATANA_EXPORT RDGVersion {
+class KATANA_EXPORT RDGVersion {
+public:
   // A version consists of mulitple BranchPoints of width, each in the form of num:id
   // The last one has an empty branch "".
   std::vector<uint64_t> numbers_;
@@ -94,4 +96,8 @@ struct KATANA_EXPORT RDGVersion {
 
   std::vector<std::string>& GetBranchIDs() { return branches_; }
 };
+
+// Check the example from URI.h on comparitors and formatter.
+
+} 
 #endif

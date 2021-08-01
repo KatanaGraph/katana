@@ -86,12 +86,12 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   }
 
   if (version_num) {
-    manifest.set_version(std::move(RDGVersion(version_num.value())));
+    manifest.set_version(std::move(katana::RDGVersion(version_num.value())));
   }
 #if 0
   else {
     // TODO(wkyu): unnecessary though.
-    manifest.set_version(std::move(RDGVersion()));
+    manifest.set_version(std::move(katana::RDGVersion()));
   }
 #endif
 
@@ -100,7 +100,7 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
 
 Result<RDGManifest>
 RDGManifest::Make(
-    const katana::Uri& uri, const std::string& view_type, RDGVersion version) {
+    const katana::Uri& uri, const std::string& view_type, katana::RDGVersion version) {
   return MakeFromStorage(FileName(uri, view_type, version));
 }
 
@@ -117,7 +117,7 @@ RDGManifest::Make(const katana::Uri& uri) {
 
 std::string
 RDGManifest::PartitionFileName(
-    const std::string& view_type, uint32_t node_id, RDGVersion version) {
+    const std::string& view_type, uint32_t node_id, katana::RDGVersion version) {
   KATANA_LOG_ASSERT(!view_type.empty());
   return fmt::format(
       "part_{}_{}_{}", ToVersionString(version.LeafVersionNumber()), view_type,
@@ -126,7 +126,7 @@ RDGManifest::PartitionFileName(
 
 katana::Uri
 RDGManifest::PartitionFileName(
-    const katana::Uri& uri, uint32_t node_id, RDGVersion version) {
+    const katana::Uri& uri, uint32_t node_id, katana::RDGVersion version) {
   return uri.Join(version.GetBranchPath())
       .Join(PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
 }
@@ -134,7 +134,7 @@ RDGManifest::PartitionFileName(
 katana::Uri
 RDGManifest::PartitionFileName(
     const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
-    RDGVersion version) {
+    katana::RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(!IsManifestUri(uri));
   return uri.Join(version.GetBranchPath())
       .Join(PartitionFileName(view_type, node_id, version));
@@ -156,7 +156,7 @@ RDGManifest::ToJsonString() const {
 // e.g., rdg_dir == s3://witchel-tests-east2/fault/simple/
 katana::Uri
 RDGManifest::FileName(
-    const katana::Uri& uri, const std::string& view_name, RDGVersion version) {
+    const katana::Uri& uri, const std::string& view_name, katana::RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
   return uri.Join(version.GetBranchPath())
@@ -269,8 +269,8 @@ RDGManifest::FileNames() {
 
 void
 tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
-  RDGVersion ver = manifest.version_;
-  RDGVersion prev = manifest.previous_version_;
+  katana::RDGVersion ver = manifest.version_;
+  katana::RDGVersion prev = manifest.previous_version_;
   j = json{
       {"magic", kRDGMagicNo},
       {"version_nums", manifest.version_.numbers_},

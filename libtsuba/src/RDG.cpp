@@ -386,7 +386,7 @@ tsuba::RDG::DoMake(
   ReadGroup grp;
 
   katana::Uri metadata_dir = manifest.dir();
-  RDGVersion version = manifest.version();
+  katana::RDGVersion version = manifest.version();
   std::string branch = version.GetBranchPath();
 
   KATANA_CHECKED_CONTEXT(

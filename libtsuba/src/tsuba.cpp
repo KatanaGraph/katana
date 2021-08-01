@@ -175,7 +175,7 @@ tsuba::Stat(const std::string& rdg_name) {
 
 katana::Result<std::vector<tsuba::RDGView>>
 tsuba::ListAvailableViewsForVersion(
-    const std::string& rdg_dir, RDGVersion version, uint64_t* max_version) {
+    const std::string& rdg_dir, katana::RDGVersion version, uint64_t* max_version) {
   std::vector<tsuba::RDGView> views_found;
   KATANA_LOG_DEBUG("ListAvailableViews for a branch");
 

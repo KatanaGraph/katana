@@ -93,7 +93,7 @@ RDGPartHeader::Write(
   }
 
   // Assume the same version unless an increment or branch is requested.
-  RDGVersion next_version = handle.impl_->rdg_manifest().version();
+  katana::RDGVersion next_version = handle.impl_->rdg_manifest().version();
   if (retain_version == tsuba::RDG::RDGVersioningPolicy::IncrementVersion) {
     next_version.SetNextVersion();
   }

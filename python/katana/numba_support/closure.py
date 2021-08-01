@@ -7,6 +7,7 @@ from numba import njit, typeof, types
 from numba.experimental import jitclass
 from numba.extending import lower_builtin, type_callable
 
+from katana.numba_support import exec_in_file
 from katana.numba_support.galois_compiler import OperatorCompiler, cfunc
 from katana.timer import StatTimer
 
@@ -54,7 +55,7 @@ class _ClosureInstance:
     """
 
     def __init__(self, func, return_type, bound_args, unbound_args):
-        Environment = self._build_environment(bound_args)
+        Environment = self._build_environment(func, bound_args)
         store_struct = self._build_store_struct(Environment)
         load_struct = self._build_load_struct(Environment)
         wrapper = self._build_wrapper(func, load_struct, return_type, bound_args, unbound_args)
@@ -64,7 +65,7 @@ class _ClosureInstance:
         self.wrapper = wraps(func)(wrapper)
 
     @staticmethod
-    def _build_environment(bound_args):
+    def _build_environment(func, bound_args):
         """
         Construct a numba jitclass structure with elements named arg1 ... argn with types bound_args[1...n].
         """
@@ -80,7 +81,7 @@ class Environment():
     def __init__(self, {env_args}):
         {assign_env}
 """
-        exec(src, exec_glbls)
+        exec_in_file(f"{func.__name__}_Environment_{id(func)}", src, exec_glbls)
         return exec_glbls["Environment"]
 
     @staticmethod
@@ -102,7 +103,7 @@ def wrapper({unbound_pass_args} userdata):
     userdata = load_struct(userdata)
     return func({extract_env} {unbound_pass_args})
 """
-        exec(src, exec_glbls)
+        exec_in_file(f"{func.__name__}_wrapper_{id(func)}", src, exec_glbls)
         return exec_glbls["wrapper"]
 
     @staticmethod

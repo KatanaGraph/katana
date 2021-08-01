@@ -25,6 +25,7 @@ from numba.extending import (
 
 from ..util import wraps_class
 from ..util.template_type import find_size_for_dtype
+from . import exec_in_file
 
 _logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         func = typ(addr or addr_found)
 
         if dtype_arguments is None:
-            dtype_arguments = [False] * len(func.argtypes)
+            dtype_arguments = [False] * (len(func.argtypes) - 1)
         # if not isinstance(dtype_arguments, list) or len(dtype_arguments) != len(func.argtypes):
         #     raise ValueError("dtype_arguments must have one element per argument of the function: "
         #         f"{func_name} ({typ}, {dtype_arguments})")
@@ -130,7 +131,7 @@ def overload(self, {arguments}):
         return func(self.ptr, {arguments_construct})
     return impl
 """
-        exec(src, exec_glbls)
+        exec_in_file(f"{self.type_name}_{id(self)}_overload_{func_name}", src, exec_glbls)
         return exec_glbls["overload"]
 
     @abstractmethod

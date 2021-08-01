@@ -1,3 +1,6 @@
+from libc.stdint cimport uintptr_t
+
+
 cdef class DynamicBitset:
     def __init__(self, num_bits):
         """Initializes the bitset and sets its size to the given number of bits."""
@@ -67,3 +70,65 @@ cdef class DynamicBitset:
     def count(self):
         """Counts how many bits are set in the bitset."""
         return self.underlying.count()
+
+    @property
+    def address(self):
+        return <uintptr_t>&self.underlying
+
+
+# Number wrappers
+
+from libc.stdint cimport uint8_t, uint64_t, uintptr_t
+
+import ctypes
+
+from katana.dynamic_bitset cimport CDynamicBitset, DynamicBitset
+
+from katana.numba_support.wrappers import SimpleNumbaPointerWrapper
+
+DynamicBitset_numba_type_wrapper = SimpleNumbaPointerWrapper(DynamicBitset, override_module_name=__name__)
+DynamicBitset_numba_type = DynamicBitset_numba_type_wrapper.Type
+
+
+cdef uint64_t size(CDynamicBitset *self) nogil:
+    return self.size()
+
+DynamicBitset_numba_type_wrapper.register_method(
+    "size",
+    ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_void_p),
+    addr=<uintptr_t>&size,
+)
+
+
+cdef uint8_t get_item(CDynamicBitset *self, uint64_t key) nogil:
+    if key < 0 or key >= self.size():
+        raise IndexError(key)
+
+    return <uint8_t>self.test(key)
+
+DynamicBitset_numba_type_wrapper.register_method(
+    "get_item",
+    ctypes.CFUNCTYPE(ctypes.c_uint8, ctypes.c_void_p, ctypes.c_uint64),
+    addr=<uintptr_t>&get_item,
+)
+
+
+cdef uint8_t set_item(CDynamicBitset *self, uint64_t key, uint8_t value) nogil:
+    if key < 0 or key >= self.size():
+        raise IndexError(key)
+
+    if not value:
+        self.reset(key)
+    else:
+        self.set(key)
+    return 0
+
+DynamicBitset_numba_type_wrapper.register_method(
+    "set_item",
+    ctypes.CFUNCTYPE(ctypes.c_uint8, ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint8),
+    addr=<uintptr_t>&set_item,
+    dtype_arguments=(False, False),
+)
+
+# Import the numba overloads last. They must be in a real Python file and they depend on the definitions above
+import katana._dynamic_bitset_numba

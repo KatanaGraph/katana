@@ -76,13 +76,13 @@ AddRandComponent(const std::string& str) {
 #if 0
   std::string name(str);
   name += "-";
-  name += katana::RandomAlphanumericString(12);
+  name += katana::RandomAlphanumericString(kRandomIDLength);
 #else
   std::string name = ExtractDirName(str);
   if (name != "") {
     name += katana::Uri::kSepChar;
   }
-  name += katana::RandomAlphanumericString(12);
+  name += katana::RandomAlphanumericString(kRandomIDLength);
   name += "-";
   name += ExtractFileName(str);
 #endif

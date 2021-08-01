@@ -1,9 +1,5 @@
 #include "katana/RDGVersion.h"
 
-namespace {
-const uint64_t kRDGBranchIDLength = (12);
-}
-
 namespace katana {
 
 RDGVersion::RDGVersion(

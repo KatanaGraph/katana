@@ -31,7 +31,8 @@ main() {
   std::vector<std::string> results(128);
   for (int i = 0; i < 128; ++i) {
     threads.emplace_back([&generators, &results, i]() {
-      results[i] = katana::RandomAlphanumericString(katana::kRandomIDLength, &generators[i]);
+      results[i] = katana::RandomAlphanumericString(
+          katana::kRandomIDLength, &generators[i]);
     });
   }
 

@@ -180,6 +180,10 @@ public:
   /// Remove all edge properties
   void DropEdgeProperties();
 
+  std::shared_ptr<arrow::Schema> full_node_schema() const;
+
+  std::shared_ptr<arrow::Schema> full_edge_schema() const;
+
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
       const {
     return master_nodes_;

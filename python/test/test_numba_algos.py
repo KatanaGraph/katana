@@ -11,7 +11,7 @@ def test_bfs(property_graph: PropertyGraph):
 
     bfs_sync_pg(property_graph, start_node, property_name)
 
-    num_node_properties = len(property_graph.node_schema())
+    num_node_properties = len(property_graph.loaded_node_schema())
     new_property_id = num_node_properties - 1
     verify_bfs(property_graph, start_node, new_property_id)
 
@@ -26,7 +26,7 @@ def test_sssp(property_graph):
 
     sssp(property_graph, start_node, weight_name, 6, property_name)
 
-    num_node_properties = len(property_graph.node_schema())
+    num_node_properties = len(property_graph.loaded_node_schema())
     new_property_id = num_node_properties - 1
     verify_sssp(property_graph, start_node, new_property_id)
 

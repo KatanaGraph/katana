@@ -149,7 +149,7 @@ def main():
     print("Node {}: {}".format(args.reportNode, graph.get_node_property(args.propertyName)[args.reportNode]))
 
     if not args.noverify:
-        numNodeProperties = len(graph.node_schema())
+        numNodeProperties = len(graph.loaded_node_schema())
         newPropertyId = numNodeProperties - 1
         verify_sssp(graph, args.startNode, newPropertyId)
 

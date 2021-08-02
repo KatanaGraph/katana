@@ -141,21 +141,21 @@ RDGPartHeader::ChangeStorageLocation(
     if (prop.IsAbsent()) {
       KATANA_CHECKED(CopyProperty(&prop, old_location, new_location));
     } else {
-      prop.WasModified();
+      prop.WasModified(prop.type());
     }
   }
   for (PropStorageInfo& prop : edge_prop_info_list_) {
     if (prop.IsAbsent()) {
       KATANA_CHECKED(CopyProperty(&prop, old_location, new_location));
     } else {
-      prop.WasModified();
+      prop.WasModified(prop.type());
     }
   }
   for (PropStorageInfo& prop : part_prop_info_list_) {
     if (prop.IsAbsent()) {
       KATANA_CHECKED(CopyProperty(&prop, old_location, new_location));
     } else {
-      prop.WasModified();
+      prop.WasModified(prop.type());
     }
   }
   topology_path_ = "";

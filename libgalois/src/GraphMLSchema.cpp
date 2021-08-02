@@ -386,8 +386,8 @@ katana::graphml::ExportGraph(
   xmlTextWriterPtr writer = CreateGraphmlFile(outfile);
 
   // export schema
-  std::shared_ptr<arrow::Schema> node_schema = graph->node_schema();
-  std::shared_ptr<arrow::Schema> edge_schema = graph->edge_schema();
+  std::shared_ptr<arrow::Schema> node_schema = graph->loaded_node_schema();
+  std::shared_ptr<arrow::Schema> edge_schema = graph->loaded_edge_schema();
 
   std::vector<uint64_t> node_property_indexes;
   std::vector<uint64_t> node_label_indexes;

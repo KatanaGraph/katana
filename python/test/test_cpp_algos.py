@@ -109,7 +109,7 @@ def test_bfs(property_graph: PropertyGraph):
 
     bfs(property_graph, start_node, property_name)
 
-    node_schema: Schema = property_graph.node_schema()
+    node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
@@ -133,7 +133,7 @@ def test_sssp(property_graph: PropertyGraph):
 
     sssp(property_graph, start_node, weight_name, property_name)
 
-    node_schema: Schema = property_graph.node_schema()
+    node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
@@ -157,7 +157,7 @@ def test_jaccard(property_graph: PropertyGraph):
 
     jaccard(property_graph, compare_node, property_name)
 
-    node_schema: Schema = property_graph.node_schema()
+    node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
@@ -197,7 +197,7 @@ def test_pagerank(property_graph: PropertyGraph):
 
     pagerank(property_graph, property_name)
 
-    node_schema: Schema = property_graph.node_schema()
+    node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
@@ -216,7 +216,7 @@ def test_betweenness_centrality_outer(property_graph: PropertyGraph):
 
     betweenness_centrality(property_graph, property_name, 16, BetweennessCentralityPlan.outer())
 
-    node_schema: Schema = property_graph.node_schema()
+    node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
@@ -233,7 +233,7 @@ def test_betweenness_centrality_level(property_graph: PropertyGraph):
 
     betweenness_centrality(property_graph, property_name, 16, BetweennessCentralityPlan.level())
 
-    node_schema: Schema = property_graph.node_schema()
+    node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
@@ -395,7 +395,7 @@ def test_busy_wait(property_graph: PropertyGraph):
 
     bfs(property_graph, start_node, property_name)
 
-    node_schema: Schema = property_graph.node_schema()
+    node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name

@@ -24,7 +24,7 @@ def time_block(run_name):
 
 
 def check_schema(property_graph: PropertyGraph, property_name):
-    node_schema: Schema = property_graph.node_schema()
+    node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name

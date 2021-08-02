@@ -1883,11 +1883,11 @@ katana::WritePropertyGraph(
 katana::Result<void>
 katana::WritePropertyGraph(
     katana::PropertyGraph& prop_graph, const std::string& dir) {
-  for (const auto& field : prop_graph.node_schema()->fields()) {
+  for (const auto& field : prop_graph.loaded_node_schema()->fields()) {
     KATANA_LOG_VERBOSE(
         "node prop: ({}) {}", field->type()->ToString(), field->name());
   }
-  for (const auto& field : prop_graph.edge_schema()->fields()) {
+  for (const auto& field : prop_graph.loaded_edge_schema()->fields()) {
     KATANA_LOG_VERBOSE(
         "edge prop: ({}) {}", field->type()->ToString(), field->name());
   }

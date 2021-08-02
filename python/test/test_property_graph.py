@@ -13,8 +13,8 @@ from katana.property_graph import PropertyGraph
 def test_load(property_graph):
     assert property_graph.num_nodes() == 29946
     assert property_graph.num_edges() == 43072
-    assert len(property_graph.node_schema()) == 31
-    assert len(property_graph.edge_schema()) == 18
+    assert len(property_graph.loaded_node_schema()) == 31
+    assert len(property_graph.loaded_edge_schema()) == 18
 
 
 def test_write(property_graph):
@@ -25,8 +25,8 @@ def test_write(property_graph):
         property_graph = PropertyGraph(tmpdir)
     assert property_graph.num_nodes() == 29946
     assert property_graph.num_edges() == 43072
-    assert len(property_graph.node_schema()) == 31
-    assert len(property_graph.edge_schema()) == 18
+    assert len(property_graph.loaded_node_schema()) == 31
+    assert len(property_graph.loaded_edge_schema()) == 18
 
     assert property_graph == old_property_graph
 
@@ -41,8 +41,8 @@ def test_commit(property_graph):
         property_graph = PropertyGraph(tmpdir)
     assert property_graph.num_nodes() == 29092
     assert property_graph.num_edges() == 39283
-    assert len(property_graph.node_schema()) == 31
-    assert len(property_graph.edge_schema()) == 19
+    assert len(property_graph.loaded_node_schema()) == 31
+    assert len(property_graph.loaded_edge_schema()) == 19
 
 
 def test_get_edge_dest(property_graph):
@@ -92,10 +92,10 @@ def test_get_node_property_chunked(property_graph):
 
 def test_remove_node_property(property_graph):
     property_graph.remove_node_property(10)
-    assert len(property_graph.node_schema()) == 30
+    assert len(property_graph.loaded_node_schema()) == 30
     property_graph.remove_node_property("length")
-    assert len(property_graph.node_schema()) == 29
-    assert property_graph.node_schema()[4].name == "email"
+    assert len(property_graph.loaded_node_schema()) == 29
+    assert property_graph.loaded_node_schema()[4].name == "email"
 
 
 def test_add_node_property_exception(property_graph):
@@ -108,7 +108,7 @@ def test_add_node_property_exception(property_graph):
 def test_add_node_property(property_graph):
     t = pyarrow.table(dict(new_prop=range(property_graph.num_nodes())))
     property_graph.add_node_property(t)
-    assert len(property_graph.node_schema()) == 32
+    assert len(property_graph.loaded_node_schema()) == 32
     assert property_graph.get_node_property_chunked("new_prop") == pyarrow.chunked_array(
         [range(property_graph.num_nodes())]
     )
@@ -116,10 +116,10 @@ def test_add_node_property(property_graph):
 
 
 def test_upsert_node_property(property_graph):
-    prop = property_graph.node_schema().names[0]
+    prop = property_graph.loaded_node_schema().names[0]
     t = pyarrow.table({prop: range(property_graph.num_nodes())})
     property_graph.upsert_node_property(t)
-    assert len(property_graph.node_schema()) == 31
+    assert len(property_graph.loaded_node_schema()) == 31
     assert property_graph.get_node_property_chunked(prop) == pyarrow.chunked_array([range(property_graph.num_nodes())])
     assert property_graph.get_node_property(prop) == pyarrow.array(range(property_graph.num_nodes()))
 
@@ -142,10 +142,10 @@ def test_get_edge_property_chunked(property_graph):
 
 def test_remove_edge_property(property_graph):
     property_graph.remove_edge_property(7)
-    assert len(property_graph.edge_schema()) == 17
+    assert len(property_graph.loaded_edge_schema()) == 17
     property_graph.remove_edge_property("classYear")
-    assert len(property_graph.edge_schema()) == 16
-    assert property_graph.edge_schema()[3].name == "HAS_CREATOR"
+    assert len(property_graph.loaded_edge_schema()) == 16
+    assert property_graph.loaded_edge_schema()[3].name == "HAS_CREATOR"
 
 
 def test_add_edge_property_exception(property_graph):
@@ -158,7 +158,7 @@ def test_add_edge_property_exception(property_graph):
 def test_add_edge_property(property_graph):
     t = pyarrow.table(dict(new_prop=range(property_graph.num_edges())))
     property_graph.add_edge_property(t)
-    assert len(property_graph.edge_schema()) == 19
+    assert len(property_graph.loaded_edge_schema()) == 19
     assert property_graph.get_edge_property_chunked("new_prop") == pyarrow.chunked_array(
         [range(property_graph.num_edges())]
     )
@@ -166,10 +166,10 @@ def test_add_edge_property(property_graph):
 
 
 def test_upsert_edge_property(property_graph):
-    prop = property_graph.edge_schema().names[0]
+    prop = property_graph.loaded_edge_schema().names[0]
     t = pyarrow.table({prop: range(property_graph.num_edges())})
     property_graph.upsert_edge_property(t)
-    assert len(property_graph.edge_schema()) == 18
+    assert len(property_graph.loaded_edge_schema()) == 18
     assert property_graph.get_edge_property_chunked(prop) == pyarrow.chunked_array([range(property_graph.num_edges())])
     assert property_graph.get_edge_property(prop) == pyarrow.array(range(property_graph.num_edges()))
 

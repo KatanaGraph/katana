@@ -27,8 +27,21 @@ tsuba::RDGSlice::DoMake(
 
   KATANA_CHECKED(AddPropertySlice(
       metadata_dir, node_properties, slice.node_range, &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddNodeProperties(props);
+      [rdg = this](
+          const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
+        std::shared_ptr<arrow::Table> prop_table =
+            rdg->core_->node_properties();
+
+        if (prop_table && prop_table->num_columns() > 0) {
+          for (int i = 0; i < props->num_columns(); ++i) {
+            prop_table = KATANA_CHECKED(prop_table->AddColumn(
+                prop_table->num_columns(), props->field(i), props->column(i)));
+          }
+        } else {
+          prop_table = props;
+        }
+        rdg->core_->set_node_properties(std::move(prop_table));
+        return katana::ResultSuccess();
       }));
 
   // all of the properties
@@ -37,8 +50,21 @@ tsuba::RDGSlice::DoMake(
 
   auto edge_result = AddPropertySlice(
       metadata_dir, edge_properties, slice.edge_range, &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddEdgeProperties(props);
+      [rdg = this](
+          const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
+        std::shared_ptr<arrow::Table> prop_table =
+            rdg->core_->edge_properties();
+
+        if (prop_table && prop_table->num_columns() > 0) {
+          for (int i = 0; i < props->num_columns(); ++i) {
+            prop_table = KATANA_CHECKED(prop_table->AddColumn(
+                prop_table->num_columns(), props->field(i), props->column(i)));
+          }
+        } else {
+          prop_table = props;
+        }
+        rdg->core_->set_edge_properties(std::move(prop_table));
+        return katana::ResultSuccess();
       });
   if (!edge_result) {
     return edge_result.error();

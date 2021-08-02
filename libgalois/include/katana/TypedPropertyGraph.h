@@ -234,7 +234,8 @@ template <typename NodeProps, typename EdgeProps>
 Result<TypedPropertyGraph<NodeProps, EdgeProps>>
 TypedPropertyGraph<NodeProps, EdgeProps>::Make(PropertyGraph* pg) {
   return TypedPropertyGraph<NodeProps, EdgeProps>::Make(
-      pg, pg->node_schema()->field_names(), pg->edge_schema()->field_names());
+      pg, pg->loaded_node_schema()->field_names(),
+      pg->loaded_edge_schema()->field_names());
 }
 
 }  // namespace katana

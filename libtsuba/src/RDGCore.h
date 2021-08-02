@@ -37,6 +37,11 @@ public:
 
   katana::Result<void> RemoveEdgeProperty(int i);
 
+  // type info will be missing for properties that weren't loaded
+  // make sure it's not missing
+  katana::Result<void> EnsureNodeTypesLoaded(const katana::Uri& rdg_dir);
+  katana::Result<void> EnsureEdgeTypesLoaded(const katana::Uri& rdg_dir);
+
   //
   // Accessors and Mutators
   //
@@ -58,10 +63,12 @@ public:
   void drop_node_properties() {
     std::vector<std::shared_ptr<arrow::Array>> empty;
     node_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
+    part_header_.set_node_prop_info_list({});
   }
   void drop_edge_properties() {
     std::vector<std::shared_ptr<arrow::Array>> empty;
     edge_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
+    part_header_.set_edge_prop_info_list({});
   }
 
   const FileView& topology_file_storage() const {

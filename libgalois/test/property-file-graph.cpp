@@ -86,17 +86,19 @@ TestRoundTrip() {
 
   std::unique_ptr<katana::PropertyGraph> g2 = std::move(make_result.value());
 
-  KATANA_LOG_ASSERT(g2->GetNumNodeProperties() == 1);
+  KATANA_LOG_VASSERT(
+      g2->GetNumNodeProperties() == 1, "found {} properties",
+      g2->GetNumNodeProperties());
   KATANA_LOG_ASSERT(g2->GetNumEdgeProperties() == 1);
 
-  KATANA_LOG_ASSERT(g2->edge_schema()->field(0)->name() == "edge-name");
-  KATANA_LOG_ASSERT(g2->node_schema()->field(0)->name() == "node-name");
+  KATANA_LOG_ASSERT(g2->loaded_edge_schema()->field(0)->name() == "edge-name");
+  KATANA_LOG_ASSERT(g2->loaded_node_schema()->field(0)->name() == "node-name");
 
   // the throwaway type was int64; make sure we didn't alias
   KATANA_LOG_ASSERT(
-      g2->edge_schema()->field(0)->type()->Equals(arrow::int32()));
+      g2->loaded_edge_schema()->field(0)->type()->Equals(arrow::int32()));
   KATANA_LOG_ASSERT(
-      g2->node_schema()->field(0)->type()->Equals(arrow::int32()));
+      g2->loaded_node_schema()->field(0)->type()->Equals(arrow::int32()));
 
   std::shared_ptr<arrow::ChunkedArray> node_property = g2->GetNodeProperty(0);
   std::shared_ptr<arrow::ChunkedArray> edge_property = g2->GetEdgeProperty(0);

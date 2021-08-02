@@ -71,7 +71,8 @@ MakeNodePropertyViews(
 template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
 MakeNodePropertyViews(const PropertyGraph* pg) {
-  return MakeNodePropertyViews<PropTuple>(pg, pg->node_schema()->field_names());
+  return MakeNodePropertyViews<PropTuple>(
+      pg, pg->loaded_node_schema()->field_names());
 }
 
 /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.
@@ -93,7 +94,8 @@ MakeEdgePropertyViews(
 template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
 MakeEdgePropertyViews(const PropertyGraph* pg) {
-  return MakeEdgePropertyViews<PropTuple>(pg, pg->edge_schema()->field_names());
+  return MakeEdgePropertyViews<PropTuple>(
+      pg, pg->loaded_edge_schema()->field_names());
 }
 
 }  // namespace katana::internal

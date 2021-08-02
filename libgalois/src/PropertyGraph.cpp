@@ -415,7 +415,8 @@ katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Copy() const {
-  return Copy(node_schema()->field_names(), edge_schema()->field_names());
+  return Copy(
+      loaded_node_schema()->field_names(), loaded_edge_schema()->field_names());
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>

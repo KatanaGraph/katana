@@ -56,6 +56,10 @@ public:
   katana::Result<std::shared_ptr<arrow::Table>> ReadTable(
       const katana::Uri& uri, const std::vector<int32_t>& column_bitmap);
 
+  /// read only the schema from a parquet file in storage
+  katana::Result<std::shared_ptr<arrow::Schema>> GetSchema(
+      const katana::Uri& uri);
+
   /// read a column part of a table from storage
   /// n.b. support for the `slice` read option is missing here
   ///   \param uri an identifier for a parquet file
@@ -81,6 +85,9 @@ private:
 
   katana::Result<std::shared_ptr<arrow::Table>> FixTable(
       std::shared_ptr<arrow::Table>&& _table);
+
+  katana::Result<std::shared_ptr<arrow::Schema>> FixSchema(
+      const std::shared_ptr<arrow::Schema>& schema);
 
   std::optional<Slice> slice_;
   bool make_cannonical_;

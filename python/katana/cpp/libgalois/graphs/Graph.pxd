@@ -144,8 +144,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
         GraphTopology& topology()
 
-        shared_ptr[CSchema] node_schema()
-        shared_ptr[CSchema] edge_schema()
+        shared_ptr[CSchema] loaded_node_schema()
+        shared_ptr[CSchema] loaded_edge_schema()
 
         shared_ptr[CTable] node_properties()
         shared_ptr[CTable] edge_properties()

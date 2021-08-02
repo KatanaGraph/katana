@@ -10,6 +10,7 @@
 #include "katana/JSON.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
+#include "tsuba/Errors.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/RDG.h"
 #include "tsuba/WriteGroup.h"
@@ -50,22 +51,27 @@ class PropStorageInfo {
   };
 
 public:
-  PropStorageInfo(std::string name)
-      : name_(std::move(name)), path_(), state_(State::kDirty) {}
+  PropStorageInfo(std::string name, std::shared_ptr<arrow::DataType> type)
+      : name_(std::move(name)),
+        path_(),
+        type_(std::move(type)),
+        state_(State::kDirty) {}
 
   PropStorageInfo(std::string name, std::string path)
       : name_(std::move(name)),
         path_(std::move(path)),
         state_(State::kAbsent) {}
 
-  void WasLoaded() {
+  void WasLoaded(const std::shared_ptr<arrow::DataType>& type) {
     KATANA_LOG_ASSERT(state_ == State::kAbsent);
     state_ = State::kClean;
+    type_ = type;
   }
 
-  void WasModified() {
+  void WasModified(const std::shared_ptr<arrow::DataType>& type) {
     path_.clear();
     state_ = State::kDirty;
+    type_ = type;
   }
 
   void WasWritten(std::string_view new_path) {
@@ -87,6 +93,16 @@ public:
 
   const std::string& name() const { return name_; }
   const std::string& path() const { return path_; }
+  const std::shared_ptr<arrow::DataType>& type() const { return type_; }
+
+  // since we don't have type info in the header don't know the
+  // type when this would have been constructed. Allow others to
+  // fix up the type in this case, required until we can get the type
+  // from PartHeader files
+  void set_type(std::shared_ptr<arrow::DataType> type) {
+    KATANA_LOG_ASSERT(state_ == State::kAbsent);
+    type_ = std::move(type);
+  }
 
   friend void to_json(nlohmann::json& j, const PropStorageInfo& propmd);
   friend void from_json(const nlohmann::json& j, PropStorageInfo& propmd);
@@ -97,6 +113,7 @@ public:
 private:
   std::string name_;
   std::string path_;
+  std::shared_ptr<arrow::DataType> type_;
   State state_;
 };
 
@@ -165,10 +182,36 @@ public:
     p.erase(p.begin() + i);
   }
 
+  katana::Result<void> RemoveNodeProperty(const std::string& name) {
+    auto& p = node_prop_info_list_;
+    auto it = std::find_if(p.begin(), p.end(), [&](const PropStorageInfo& psi) {
+      return psi.name() == name;
+    });
+    if (it == p.end()) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::PropertyNotFound, "no such node property");
+    }
+    p.erase(it);
+    return katana::ResultSuccess();
+  }
+
   void RemoveEdgeProperty(uint32_t i) {
     auto& p = edge_prop_info_list_;
     KATANA_LOG_DEBUG_ASSERT(i < p.size());
     p.erase(p.begin() + i);
+  }
+
+  katana::Result<void> RemoveEdgeProperty(const std::string& name) {
+    auto& p = edge_prop_info_list_;
+    auto it = std::find_if(p.begin(), p.end(), [&](const PropStorageInfo& psi) {
+      return psi.name() == name;
+    });
+    if (it == p.end()) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::PropertyNotFound, "no such edge property");
+    }
+    p.erase(it);
+    return katana::ResultSuccess();
   }
 
   //

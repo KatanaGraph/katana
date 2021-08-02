@@ -91,17 +91,17 @@ cdef class PropertyGraphBase:
         """
         return self.topology().num_edges()
 
-    def node_schema(self):
+    def loaded_node_schema(self):
         """
-        Return the `pyarrow` schema for the node properties stored with this graph.
+        Return the `pyarrow` schema for the node properties loaded for this graph.
         """
-        return pyarrow_wrap_schema(self.underlying_property_graph().node_schema())
+        return pyarrow_wrap_schema(self.underlying_property_graph().loaded_node_schema())
 
-    def edge_schema(self):
+    def loaded_edge_schema(self):
         """
-        Return the `pyarrow` schema for the edge properties stored with this graph.
+        Return the `pyarrow` schema for the edge properties loaded for this graph.
         """
-        return pyarrow_wrap_schema(self.underlying_property_graph().edge_schema())
+        return pyarrow_wrap_schema(self.underlying_property_graph().loaded_edge_schema())
 
     @staticmethod
     cdef uint64_t _property_name_to_id(object prop, Schema schema) except -1:
@@ -123,13 +123,13 @@ cdef class PropertyGraphBase:
         """
         Return the index (ID) of a node property specified by name. If an index is provided, it is returned.
         """
-        return PropertyGraph._property_name_to_id(prop, self.node_schema())
+        return PropertyGraph._property_name_to_id(prop, self.loaded_node_schema())
 
     def edge_property_name_to_id(self, prop):
         """
         Return the index (ID) of a edge property specified by name. If an index is provided, it is returned.
         """
-        return PropertyGraph._property_name_to_id(prop, self.edge_schema())
+        return PropertyGraph._property_name_to_id(prop, self.loaded_edge_schema())
 
     def __iter__(self):
         """
@@ -178,7 +178,7 @@ cdef class PropertyGraphBase:
         `get_node_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
-            self.underlying_property_graph().GetNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema()))
+            self.underlying_property_graph().GetNodeProperty(PropertyGraph._property_name_to_id(prop, self.loaded_node_schema()))
         )
 
     def get_edge_property(self, prop):
@@ -196,7 +196,7 @@ cdef class PropertyGraphBase:
         `get_edge_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
-            self.underlying_property_graph().GetEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema()))
+            self.underlying_property_graph().GetEdgeProperty(PropertyGraph._property_name_to_id(prop, self.loaded_edge_schema()))
         )
 
     def add_node_property(self, table):
@@ -235,13 +235,13 @@ cdef class PropertyGraphBase:
         """
         Remove a node property from the graph by name or index.
         """
-        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema())))
+        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(PropertyGraph._property_name_to_id(prop, self.loaded_node_schema())))
 
     def remove_edge_property(self, prop):
         """
         Remove an edge property from the graph by name or index.
         """
-        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
+        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.loaded_edge_schema())))
 
     @property
     def path(self):

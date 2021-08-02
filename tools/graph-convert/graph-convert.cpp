@@ -2990,8 +2990,10 @@ struct Gr2Kg : public Conversion {
       }
     }
 
-    katana::gPrint("Edge Schema : ", pg->edge_schema()->ToString(), "\n");
-    katana::gPrint("Node Schema : ", pg->node_schema()->ToString(), "\n");
+    katana::gPrint(
+        "Edge Schema : ", pg->loaded_edge_schema()->ToString(), "\n");
+    katana::gPrint(
+        "Node Schema : ", pg->loaded_node_schema()->ToString(), "\n");
 
     if (auto r = pg->Write(out_file_name, "cmd"); !r) {
       KATANA_LOG_FATAL("Failed to write property file graph: {}", r.error());

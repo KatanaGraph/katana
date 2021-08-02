@@ -497,12 +497,24 @@ public:
   /// Report the differences between two graphs
   std::string ReportDiff(const PropertyGraph* other) const;
 
-  std::shared_ptr<arrow::Schema> node_schema() const {
+  /// get the schema for loaded node properties
+  std::shared_ptr<arrow::Schema> loaded_node_schema() const {
     return node_properties()->schema();
   }
 
-  std::shared_ptr<arrow::Schema> edge_schema() const {
+  /// get the schema for all node properties (includes unloaded properties)
+  std::shared_ptr<arrow::Schema> full_node_schema() const {
+    return rdg_.full_node_schema();
+  }
+
+  /// get the schema for loaded edge properties
+  std::shared_ptr<arrow::Schema> loaded_edge_schema() const {
     return edge_properties()->schema();
+  }
+
+  /// get the schema for all edge properties (includes unloaded properties)
+  std::shared_ptr<arrow::Schema> full_edge_schema() const {
+    return rdg_.full_edge_schema();
   }
 
   /// \returns the number of node atomic types
@@ -677,10 +689,14 @@ public:
 
   // Return type dictated by arrow
   /// Returns the number of node properties
-  int32_t GetNumNodeProperties() const { return node_schema()->num_fields(); }
+  int32_t GetNumNodeProperties() const {
+    return loaded_node_schema()->num_fields();
+  }
 
   /// Returns the number of edge properties
-  int32_t GetNumEdgeProperties() const { return edge_schema()->num_fields(); }
+  int32_t GetNumEdgeProperties() const {
+    return loaded_edge_schema()->num_fields();
+  }
 
   // num_rows() == num_nodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
@@ -700,12 +716,12 @@ public:
 
   /// \returns true if a node property/type with @param name exists
   bool HasNodeProperty(const std::string& name) const {
-    return node_schema()->GetFieldIndex(name) != -1;
+    return loaded_node_schema()->GetFieldIndex(name) != -1;
   }
 
   /// \returns true if an edge property/type with @param name exists
   bool HasEdgeProperty(const std::string& name) const {
-    return edge_schema()->GetFieldIndex(name) != -1;
+    return loaded_edge_schema()->GetFieldIndex(name) != -1;
   }
 
   /// Get a node property by name.
@@ -718,7 +734,7 @@ public:
   }
 
   std::string GetNodePropertyName(int32_t i) const {
-    return node_schema()->field(i)->name();
+    return loaded_node_schema()->field(i)->name();
   }
 
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
@@ -727,7 +743,7 @@ public:
   }
 
   std::string GetEdgePropertyName(int32_t i) const {
-    return edge_schema()->field(i)->name();
+    return loaded_edge_schema()->field(i)->name();
   }
 
   /// Get a node property by name and cast it to a type.
@@ -830,7 +846,7 @@ public:
         .ropv =
             {
                 .const_g = this,
-                .schema_fn = &PropertyGraph::node_schema,
+                .schema_fn = &PropertyGraph::loaded_node_schema,
                 .property_fn_int = &PropertyGraph::GetNodeProperty,
                 .property_fn_str = &PropertyGraph::GetNodeProperty,
                 .property_num_fn = &PropertyGraph::GetNumNodeProperties,
@@ -845,7 +861,7 @@ public:
   ReadOnlyPropertyView NodeReadOnlyPropertyView() const {
     return ReadOnlyPropertyView{
         .const_g = this,
-        .schema_fn = &PropertyGraph::node_schema,
+        .schema_fn = &PropertyGraph::loaded_node_schema,
         .property_fn_int = &PropertyGraph::GetNodeProperty,
         .property_fn_str = &PropertyGraph::GetNodeProperty,
         .property_num_fn = &PropertyGraph::GetNumNodeProperties,
@@ -857,7 +873,7 @@ public:
         .ropv =
             {
                 .const_g = this,
-                .schema_fn = &PropertyGraph::edge_schema,
+                .schema_fn = &PropertyGraph::loaded_edge_schema,
                 .property_fn_int = &PropertyGraph::GetEdgeProperty,
                 .property_fn_str = &PropertyGraph::GetEdgeProperty,
                 .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
@@ -872,7 +888,7 @@ public:
   ReadOnlyPropertyView EdgeReadOnlyPropertyView() const {
     return ReadOnlyPropertyView{
         .const_g = this,
-        .schema_fn = &PropertyGraph::edge_schema,
+        .schema_fn = &PropertyGraph::loaded_edge_schema,
         .property_fn_int = &PropertyGraph::GetEdgeProperty,
         .property_fn_str = &PropertyGraph::GetEdgeProperty,
         .property_num_fn = &PropertyGraph::GetNumEdgeProperties,

@@ -17,7 +17,7 @@ RDGVersion::RDGVersion(uint64_t num) {
 std::string
 RDGVersion::GetBranchPath() const {
   std::string vec = "";
-  if (numbers_.back() > 0)
+  if (numbers_.back() <= 0)
     return vec;
 
   // return a subdir formed by branches without a trailing SepChar

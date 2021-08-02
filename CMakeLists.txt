@@ -19,6 +19,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 endif()
 
 if(KATANA_USE_SANITIZER)
+  determine_libasan_path()
   add_subdirectory(libsanitize)
 endif()
 

@@ -6,6 +6,13 @@ include(CheckCXXCompilerFlag)
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
+function(determine_libasan_path)
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libclang_rt.asan-x86_64.so
+    OUTPUT_VARIABLE LIBASAN_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(KATANA_LIBASAN_PATH "${LIBASAN_PATH}" PARENT_SCOPE)
+endfunction()
+
 
 function(add_sanitize_options)
   if(NOT KATANA_USE_SANITIZER)
@@ -47,11 +54,7 @@ function(add_sanitize_options)
     endif()
   endmacro()
 
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libclang_rt.asan-x86_64.so
-    OUTPUT_VARIABLE LIBASAN_PATH
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(KATANA_LIBASAN_PATH "${LIBASAN_PATH}" PARENT_SCOPE)
-  get_filename_component(LIBASAN_DIR ${LIBASAN_PATH} DIRECTORY)
+  get_filename_component(LIBASAN_DIR ${KATANA_LIBASAN_PATH} DIRECTORY)
 
   append("-shared-libsan" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   link_libraries("-shared-libsan -rpath ${LIBASAN_DIR}")

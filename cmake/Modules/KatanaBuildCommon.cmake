@@ -33,7 +33,6 @@ set(KATANA_USE_TUNE "intel;generic;auto" CACHE STRING "Semi-colon separated list
   Default: 'intel;generic;auto' which tries to optimize for the most recent Intel processors, then falls back to
   optimizing for the most common processors and then to optimizing for the processor selected by KATANA_USE_ARCH")
 set(KATANA_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
-set(KATANA_CPU_ASAN_OPTIONS "symbolize=1:detect_leaks=1:fast_unwind_on_malloc=0" CACHE STRING "Address sanitizer options to run CPU tests with")
 # This option is automatically handled by CMake.
 # It makes add_library build a shared lib unless STATIC is explicitly specified.
 set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")

@@ -13,7 +13,7 @@ katana::ProgressTracer::SetProgressTracer(
 
 katana::ProgressScope
 katana::ProgressTracer::StartActiveSpan(const std::string& span_name) {
-  return SetActiveSpan(StartSpan(span_name));
+  return SetActiveSpan(StartSpan(span_name, active_span_));
 }
 katana::ProgressScope
 katana::ProgressTracer::StartActiveSpan(
@@ -21,41 +21,35 @@ katana::ProgressTracer::StartActiveSpan(
   return SetActiveSpan(StartSpan(span_name, child_of));
 }
 
-katana::ProgressScope
-katana::ProgressTracer::SetActiveSpan(
-    std::unique_ptr<katana::ProgressSpan> span) {
-  if (span == nullptr) {
-    KATANA_LOG_FATAL("nullptr span given to Tracer's SetActiveSpan");
-  }
-  active_span_ = span.get();
-  return ProgressScope(std::move(span));
-}
-
 void
-katana::ProgressTracer::SetActiveSpan(katana::ProgressSpan* span) {
-  active_span_ = span;
-  if (active_span_ != nullptr && active_span_->ScopeClosed()) {
-    active_span_->Finish();
+katana::ProgressTracer::FinishActiveSpan() {
+  if (active_span_ != nullptr) {
+    if (!active_span_->IsFinished()) {
+      active_span_->Finish();
+    }
+    active_span_ = active_span_->GetParentSpan();
+    if (active_span_ != nullptr && active_span_->ScopeClosed()) {
+      active_span_->Finish();
+    }
   }
-}
-
-std::unique_ptr<katana::ProgressSpan>
-katana::ProgressTracer::StartSpan(const std::string& span_name) {
-  if (active_span_ == nullptr) {
-    return StartSpan(span_name, true);
-  }
-  return StartSpan(span_name, false);
 }
 
 katana::ProgressSpan&
 katana::ProgressTracer::GetActiveSpan() {
   if (active_span_ == nullptr) {
     if (default_active_span_ == nullptr) {
-      default_active_span_ = StartSpan("unnamed span", true);
+      default_active_span_ = StartSpan("unnamed span", nullptr);
     }
     return *default_active_span_;
   }
   return *active_span_;
+}
+
+katana::ProgressScope
+katana::ProgressTracer::SetActiveSpan(
+    std::shared_ptr<katana::ProgressSpan> span) {
+  active_span_ = span;
+  return ProgressScope(std::move(span));
 }
 
 katana::ProgressScope::~ProgressScope() {
@@ -111,7 +105,7 @@ katana::ProgressSpan::Finish() {
 
     ProgressTracer& tracer = ProgressTracer::GetProgressTracer();
     if (tracer.HasActiveSpan() && this == &tracer.GetActiveSpan()) {
-      tracer.SetActiveSpan(parent_);
+      tracer.FinishActiveSpan();
     }
   }
 }

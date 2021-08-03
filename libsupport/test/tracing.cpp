@@ -35,8 +35,8 @@ main() {
       writing_scope.span().LogError("error writing", GetError().error());
       writing_scope.span().SetError();
     }
-    auto span = tracer.StartSpan("is not initially active");
-    auto span_scope = tracer.SetActiveSpan(std::move(span));
+    auto span = tracer.StartSpan(
+        "is not initially active", tracer.GetActiveSpan().GetContext());
   }
   scope.Close();
 
@@ -46,13 +46,12 @@ main() {
   scope2.span().Log(
       "testing contexts",
       {{"trace_id", ctx->GetTraceID()}, {"span_id", ctx->GetSpanID()}});
-
-  auto root_span = tracer.StartSpan("root span of third trace", true);
-  auto scope3 = tracer.SetActiveSpan(std::move(root_span));
-  tracer.GetActiveSpan().Log("the new root span of trace 3 is active");
-
   auto scope2_child =
       tracer.StartActiveSpan("child of trace 2's root by context", *ctx);
   tracer.GetActiveSpan().Log("child span of trace 2 is active");
   scope2_child.Close();
+  scope2.Close();
+
+  auto scope3 = tracer.StartActiveSpan("root span of third trace");
+  tracer.GetActiveSpan().Log("the new root span of trace 3 is active");
 }

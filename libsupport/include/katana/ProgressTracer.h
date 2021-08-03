@@ -10,6 +10,24 @@
 #include "katana/Result.h"
 #include "katana/config.h"
 
+/// OpenTracing Overview
+///
+/// The following classes are based on/from the OpenTracing
+/// specifications which can be found here: https://opentracing.io/docs/overview/
+///
+/// In short spans are units of work with a defined start and stop point which
+/// we can add timestamped logs to as well as tags for the overall span (or unit of work)
+///
+/// Each Scope is "in charge of" a span for its lifetime, and closes the span when it
+/// goes out of scope or the developer calls Close on it
+/// Whenever possible scopes should be used instead of raw spans
+///
+/// Tracers are used to control span logic, they create spans and maintain
+/// the active span for ease of use for the developer
+///
+/// Contexts are typically used to pass spans across process/thread boundaries
+///
+///
 /// This tracer does not currently support thread-local tracers or concurrency controls
 /// Functions should only be used in a single-threaded context
 ///
@@ -37,8 +55,8 @@
 ///      scope2.Close();
 ///      auto scope3 = tracer.StartActiveSpan("3");
 ///   }
-///   Always results in scope2's ProgressSpan finishing before scope1's
-///   and scope3's ProgressSpan finishing before scope1's if there is no error
+///   This always results in scope2's ProgressSpan finishing before scope1's ProgressSpan
+///   If there is no error, scope3's ProgressSpan will always finish before scope1's ProgressSpan
 
 namespace katana {
 
@@ -66,12 +84,12 @@ class ProgressSpan;
 class ProgressContext;
 
 class KATANA_EXPORT ProgressTracer {
-protected:
-  ProgressTracer(uint32_t host_id, uint32_t num_hosts)
-      : host_id_(host_id), num_hosts_(num_hosts) {}
-
 public:
   virtual ~ProgressTracer() = default;
+  ProgressTracer(const ProgressTracer&) = delete;
+  ProgressTracer(ProgressTracer&&) = delete;
+  ProgressTracer& operator=(const ProgressTracer&) = delete;
+  ProgressTracer& operator=(ProgressTracer&&) = delete;
 
   static ProgressTracer& GetProgressTracer() { return *tracer_; }
   static void SetProgressTracer(std::unique_ptr<ProgressTracer> tracer);
@@ -79,34 +97,21 @@ public:
   // StartActiveSpan creates a new span. If there is not an active span,
   // create a new top-level span. Otherwise, this function creates a child
   // span of the active span. The returned scope will finish
-  // the span on close..
+  // the span on close
   ProgressScope StartActiveSpan(const std::string& span_name);
   ProgressScope StartActiveSpan(
       const std::string& span_name, const ProgressContext& child_of);
-
-  /// Set the current active thread-local span to provided span
-  /// Returns a ProgressScope
-  /// Will finish the span when the scope goes out of scope
-  /// by RAII
-  /// Throws a fatal error if called with a nullptr span
-  ProgressScope SetActiveSpan(std::unique_ptr<ProgressSpan> span);
-  /// Set the current active thread-local span to provided span
-  /// Does not throw an error if called with a nullptr span
-  /// Primarily for internal class use or for reactivating a span
-  /// with an existing ProgressScope
-  void SetActiveSpan(ProgressSpan* span);
 
   /// Create a new top level span if ignore_active_span=true and
   /// no child_of value is given
   /// Otherwise creates a child span of the child_of span or active span
   /// Should only be used to handle multiple active spans simultaneously
-  virtual std::unique_ptr<ProgressSpan> StartSpan(
-      const std::string& span_name, bool ignore_active_span) = 0;
-  std::unique_ptr<ProgressSpan> StartSpan(const std::string& span_name);
-  virtual std::unique_ptr<ProgressSpan> StartSpan(
-      const std::string& span_name, ProgressSpan& child_of) = 0;
-  virtual std::unique_ptr<ProgressSpan> StartSpan(
+  virtual std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, const ProgressContext& child_of) = 0;
+
+  /// Calls finish on the active span, its parent is set to be active
+  /// Primarily for internal use only, preferred to use ProgressSpan's Finish function
+  void FinishActiveSpan();
 
   // For passing spans across process/host boundaries
   // These functions are needed, but are implemented now for
@@ -130,20 +135,24 @@ public:
   /// flushed
   virtual void Close() = 0;
 
+protected:
+  ProgressTracer(uint32_t host_id, uint32_t num_hosts)
+      : host_id_(host_id), num_hosts_(num_hosts) {}
+
 private:
+  virtual std::shared_ptr<ProgressSpan> StartSpan(
+      const std::string& span_name, std::shared_ptr<ProgressSpan> child_of) = 0;
+  ProgressScope SetActiveSpan(std::shared_ptr<ProgressSpan> span);
+
   static std::unique_ptr<ProgressTracer> tracer_;
 
-  ProgressSpan* active_span_ = nullptr;
+  std::shared_ptr<ProgressSpan> active_span_ = nullptr;
   uint32_t host_id_;
   uint32_t num_hosts_;
-  std::unique_ptr<ProgressSpan> default_active_span_ = nullptr;
+  std::shared_ptr<ProgressSpan> default_active_span_ = nullptr;
 };
 
 class KATANA_EXPORT ProgressScope {
-  friend class ProgressTracer;
-
-  ProgressScope(std::unique_ptr<ProgressSpan> span) : span_(std::move(span)) {}
-
 public:
   ~ProgressScope();
   ProgressScope(const ProgressScope&) = delete;
@@ -163,7 +172,11 @@ public:
   void Close();
 
 private:
-  std::unique_ptr<ProgressSpan> span_;
+  friend class ProgressTracer;
+
+  ProgressScope(std::shared_ptr<ProgressSpan> span) : span_(std::move(span)) {}
+
+  std::shared_ptr<ProgressSpan> span_;
 };
 
 class KATANA_EXPORT ProgressContext {
@@ -175,15 +188,14 @@ public:
 };
 
 class KATANA_EXPORT ProgressSpan {
-  virtual void Close() = 0;
-
-protected:
-  ProgressSpan(ProgressSpan* parent) : parent_(parent) {}
-
 public:
   /// If Finish has not already been called for the ProgressSpan, it's
   /// destructor must do so.
   virtual ~ProgressSpan() = default;
+  ProgressSpan(const ProgressSpan&) = delete;
+  ProgressSpan(ProgressSpan&&) = delete;
+  ProgressSpan& operator=(const ProgressSpan&) = delete;
+  ProgressSpan& operator=(ProgressSpan&&) = delete;
 
   /// Adds a tag to the span.
   virtual void SetTags(const Tags& tags) = 0;
@@ -204,6 +216,8 @@ public:
   /// Primarily for internal class use only
   void MarkScopeClosed();
   virtual bool ScopeClosed();
+  bool IsFinished() { return finished_; }
+  const std::shared_ptr<ProgressSpan>& GetParentSpan() { return parent_; }
 
   /// Every ProgressSpan started must be finished
   ///
@@ -217,8 +231,14 @@ public:
   /// having unfinished children ProgressSpans
   void Finish();
 
+protected:
+  ProgressSpan(std::shared_ptr<ProgressSpan> parent)
+      : parent_(std::move(parent)) {}
+
 private:
-  ProgressSpan* parent_ = nullptr;
+  virtual void Close() = 0;
+
+  std::shared_ptr<ProgressSpan> parent_ = nullptr;
   bool finished_ = false;
   bool scope_closed_ = false;
 };

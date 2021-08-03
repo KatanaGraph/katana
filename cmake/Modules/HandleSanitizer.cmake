@@ -6,6 +6,13 @@ include(CheckCXXCompilerFlag)
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
+function(determine_libasan_path)
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libclang_rt.asan-x86_64.so
+    OUTPUT_VARIABLE LIBASAN_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(KATANA_LIBASAN_PATH "${LIBASAN_PATH}" PARENT_SCOPE)
+endfunction()
+
 
 function(add_sanitize_options)
   if(NOT KATANA_USE_SANITIZER)
@@ -47,6 +54,11 @@ function(add_sanitize_options)
     endif()
   endmacro()
 
+  get_filename_component(LIBASAN_DIR ${KATANA_LIBASAN_PATH} DIRECTORY)
+
+  append("-shared-libsan" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  link_libraries("-shared-libsan -rpath ${LIBASAN_DIR}")
+
   if (KATANA_USE_SANITIZER STREQUAL "Address")
     append_common_sanitizer_flags()
     append("-fsanitize=address" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -71,7 +83,7 @@ function(add_sanitize_options)
   elseif (KATANA_USE_SANITIZER STREQUAL "Address;Undefined" OR
           KATANA_USE_SANITIZER STREQUAL "Undefined;Address")
     append_common_sanitizer_flags()
-    append("-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+    append("-fsanitize=address,undefined -fno-sanitize-recover=all"
             CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     link_libraries("-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
   elseif (KATANA_USE_SANITIZER STREQUAL "Leaks")

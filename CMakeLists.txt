@@ -18,6 +18,11 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   add_katana_doxygen_target()
 endif()
 
+if(KATANA_USE_SANITIZER)
+  determine_libasan_path()
+  add_subdirectory(libsanitize)
+endif()
+
 add_sanitize_options()
 add_sanitize_blacklist(config/sanitizers/ubsan_blacklist.txt.in)
 

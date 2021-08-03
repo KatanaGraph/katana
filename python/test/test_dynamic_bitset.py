@@ -1,3 +1,4 @@
+import numba
 import pytest
 
 from katana.dynamic_bitset import DynamicBitset
@@ -14,6 +15,19 @@ def dbs():
 
 def test_set(dbs):
     dbs[10] = 1
+    assert dbs[10]
+
+
+def test_numba(dbs):
+    @numba.njit()
+    def do_numba(dbs):
+        dbs[10] = 1
+        dbs[10] = True
+        return dbs[10], dbs[11]
+
+    a, b = do_numba(dbs)
+    assert a
+    assert not b
     assert dbs[10]
 
 

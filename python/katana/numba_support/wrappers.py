@@ -25,6 +25,7 @@ from numba.extending import (
 
 from ..util import wraps_class
 from ..util.template_type import find_size_for_dtype
+from . import exec_in_file
 
 _logger = logging.getLogger(__name__)
 
@@ -56,26 +57,21 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         self.orig_type = orig_typ
 
     def _build_model(self, Type):
+        # pylint: disable=unused-variable
         @register_model(Type)
         class Model(models.StructModel):
             def __init__(self, dmm, fe_type):
                 members = [("ptr", numba.types.voidptr)]
                 models.StructModel.__init__(self, dmm, fe_type, members)
 
-        _ = Model
-
         make_attribute_wrapper(Type, "ptr", "ptr")
 
         @imputils.lower_constant(Type)
         def constant(context, builder, ty, pyval):
-            _ = context
-            _ = builder
-            _ = ty
+            # pylint: disable=unused-argument
             ptr = ir.Constant(ir.IntType(64), self.get_value_address(pyval)).inttoptr(ir.PointerType(ir.IntType(8)))
             ret = ir.Constant.literal_struct((ptr,))
             return ret
-
-        _ = constant
 
     def _build_typing(self, orig_typ):
         @wraps_class(orig_typ, "<numba type>")
@@ -85,24 +81,27 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
 
         @typeof_impl.register(orig_typ)
         def typeof(val, c):
-            _ = val
-            _ = c
+            # pylint: disable=unused-argument
             return Type()
-
-        _ = typeof
 
         return Type
 
     def register_method(self, func_name, typ, cython_func_name=None, addr=None, dtype_arguments=None):
-        addr_found = get_cython_function_address_with_defaults(
-            cython_func_name, self.override_module_name, self.type_name + "_" + func_name,
-        )
-        if addr:
+        addr_found = None
+        if cython_func_name:
+            addr_found = get_cython_function_address_with_defaults(
+                cython_func_name, self.override_module_name, self.type_name + "_" + func_name,
+            )
+        if addr and addr_found:
             assert addr == addr_found
-        func = typ(addr_found)
+        func = typ(addr or addr_found)
 
         if dtype_arguments is None:
-            dtype_arguments = [False] * len(func.argtypes)
+            dtype_arguments = [False] * (len(func.argtypes) - 1)
+        # if not isinstance(dtype_arguments, list) or len(dtype_arguments) != len(func.argtypes):
+        #     raise ValueError("dtype_arguments must have one element per argument of the function: "
+        #         f"{func_name} ({typ}, {dtype_arguments})")
+
         _logger.debug(
             "%r.register_method: %r, %r: %r%r, %x, %r",
             self,
@@ -113,9 +112,13 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
             addr_found,
             cython_func_name,
         )
-        exec_glbls = dict(self=self, func_name=func_name, func=func)
-        exec_glbls["overload_method"] = overload_method
-        exec_glbls["construct_dtype_on_stack"] = construct_dtype_on_stack
+        exec_glbls = dict(
+            self=self,
+            func_name=func_name,
+            func=func,
+            overload_method=overload_method,
+            construct_dtype_on_stack=construct_dtype_on_stack,
+        )
         arguments = ", ".join(f"arg{i}" for i, _ in enumerate(dtype_arguments))
         arguments_construct = ", ".join(
             f"construct_dtype_on_stack(self, arg{i})" if is_dtype else f"arg{i}"
@@ -128,7 +131,7 @@ def overload(self, {arguments}):
         return func(self.ptr, {arguments_construct})
     return impl
 """
-        exec(src, exec_glbls)
+        exec_in_file(f"{self.type_name}_{id(self)}_overload_{func_name}", src, exec_glbls)
         return exec_glbls["overload"]
 
     @abstractmethod
@@ -149,15 +152,13 @@ class SimpleNumbaPointerWrapper(NumbaPointerWrapper):
         super().__init__(orig_typ, override_module_name)
 
         @unbox(self.Type)
-        def unbox_(typ, obj, c):
+        def unbox_func(typ, obj, c):
             ptr_obj = c.pyapi.object_getattr_string(obj, "address")
             ctx = cgutils.create_struct_proxy(typ)(c.context, c.builder)
             ctx.ptr = c.pyapi.long_as_voidptr(ptr_obj)
             c.pyapi.decref(ptr_obj)
             is_error = cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
             return NativeValue(ctx._getvalue(), is_error=is_error)
-
-        _ = unbox_
 
     def get_value_address(self, pyval):
         return pyval.address
@@ -198,11 +199,9 @@ class DtypeNumbaPointerWrapper(SimpleNumbaPointerWrapper):
                 super().__init__(dtype=dtype, name=orig_typ.__name__)
 
         @typeof_impl.register(orig_typ)
-        def typeof_(val, c):
+        def typeof_func(val, c):
             _ = c
             return Type(val.dtype)
-
-        _ = typeof_
 
         return Type
 
@@ -233,8 +232,6 @@ class NativeNumbaPointerWrapper(NumbaPointerWrapper):
             )
             return NativeValue(ctx._getvalue())
 
-        _ = unbox_type
-
         return addr_func
 
     def get_value_address(self, pyval):
@@ -246,13 +243,12 @@ def construct_dtype_on_stack(self, values):
     (Numba compiled only) Return a stack allocated instance of the self.dtype (self must be a DtypeParametricType) with
     the field values taken from the tuple `values`.
     """
-    raise NotImplementedError("Not callable from Python")
+    raise RuntimeError("Not callable from Python")
 
 
 @type_callable(construct_dtype_on_stack)
 def type_construct_dtype_on_stack(context):
-    _ = context
-
+    # pylint: disable=unused-argument
     def typer(self, values):
         if isinstance(self, DtypeParametricType) and isinstance(values, numba.types.BaseTuple):
             return numba.types.voidptr

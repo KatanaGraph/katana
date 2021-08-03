@@ -256,13 +256,6 @@ cdef class PropertyGraphBase:
     def path(self, path):
         handle_result_void(self.underlying_property_graph().InformPath(bytes(str(path), encoding="UTF-8")))
 
-    @property
-    def address(self):
-        """
-        Internal.
-        """
-        return <uint64_t>self.underlying_property_graph()
-
 
 cdef class PropertyGraph(PropertyGraphBase):
     """
@@ -360,3 +353,10 @@ cdef class PropertyGraph(PropertyGraphBase):
             CGraph.GraphTopology(move(edge_indices_numa.underlying), move(edge_destinations_numa.underlying))
         )
         return PropertyGraph.make(pg)
+
+    @property
+    def address(self):
+        """
+        Internal.
+        """
+        return <uint64_t>self.underlying_property_graph()

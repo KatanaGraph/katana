@@ -217,6 +217,8 @@ def assemble_traces(args):
 
     stream = len(args.log) == 0
     for line in fileinput.input(args.log[0] if not stream else ("-",)):
+        if line[0] == '"':
+            continue
         try:
             json_line = json.loads(line.strip())
             trace_id = json_line["trace_id"]

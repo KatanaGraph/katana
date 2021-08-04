@@ -24,11 +24,13 @@ katana::ProgressTracer::StartActiveSpan(
 void
 katana::ProgressTracer::FinishActiveSpan() {
   if (active_span_ != nullptr) {
-    if (!active_span_->IsFinished()) {
-      active_span_->Finish();
+    auto old_active_span = active_span_;
+    active_span_ = old_active_span->GetParentSpan();
+    if (!old_active_span->IsFinished()) {
+      old_active_span->Finish();
     }
-    active_span_ = active_span_->GetParentSpan();
-    if (active_span_ != nullptr && active_span_->ScopeClosed()) {
+    if (active_span_ != nullptr &&
+        (active_span_->ScopeClosed() || active_span_->IsFinished())) {
       active_span_->Finish();
     }
   }
@@ -102,10 +104,9 @@ katana::ProgressSpan::Finish() {
   if (!finished_) {
     finished_ = true;
     Close();
-
-    ProgressTracer& tracer = ProgressTracer::GetProgressTracer();
-    if (tracer.HasActiveSpan() && this == &tracer.GetActiveSpan()) {
-      tracer.FinishActiveSpan();
-    }
+  }
+  ProgressTracer& tracer = ProgressTracer::GetProgressTracer();
+  if (tracer.HasActiveSpan() && this == &tracer.GetActiveSpan()) {
+    tracer.FinishActiveSpan();
   }
 }

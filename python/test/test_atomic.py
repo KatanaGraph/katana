@@ -4,18 +4,18 @@ import numpy as np
 import pytest
 
 from katana import do_all, do_all_operator
-from katana.local.atomic import (
+from katana.local import (
     GAccumulator,
     GReduceLogicalAnd,
     GReduceLogicalOr,
     GReduceMax,
     GReduceMin,
+    NUMAArray,
     atomic_add,
     atomic_max,
     atomic_min,
     atomic_sub,
 )
-from katana.local.datastructures import NUMAArray
 
 dtypes_int = [
     pytest.param(np.int64, id="int64"),

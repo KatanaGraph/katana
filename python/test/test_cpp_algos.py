@@ -8,6 +8,7 @@ from pytest import approx, raises
 from katana import GaloisError
 from katana.example_data import get_input
 from katana.galois import set_busy_wait
+from katana.local import PropertyGraph
 from katana.local.analytics import (
     BetweennessCentralityPlan,
     BetweennessCentralityStatistics,
@@ -49,7 +50,6 @@ from katana.local.analytics import (
     subgraph_extraction,
     triangle_count,
 )
-from katana.local.property_graph import PropertyGraph
 
 NODES_TO_SAMPLE = 10
 

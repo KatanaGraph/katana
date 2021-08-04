@@ -105,7 +105,7 @@ def test_do_all(modes):
 
 @pytest.mark.parametrize("modes", simple_modes)
 def test_do_all_opaque(modes):
-    from katana.local.datastructures import InsertBag
+    from katana.local import InsertBag
 
     @do_all_operator()
     def f(out, s):
@@ -125,7 +125,7 @@ def test_do_all_opaque(modes):
 @pytest.mark.parametrize("modes", simple_modes)
 @pytest.mark.parametrize("typ", types)
 def test_do_all_specific_type(modes, typ):
-    from katana.local.datastructures import InsertBag
+    from katana.local import InsertBag
 
     @do_all_operator()
     def f(out, i):
@@ -170,7 +170,7 @@ def test_for_each(modes):
 
 @pytest.mark.parametrize("modes", simple_modes)
 def test_for_each_opaque(modes):
-    from katana.local.datastructures import InsertBag
+    from katana.local import InsertBag
 
     @for_each_operator()
     def f(out, s, ctx):

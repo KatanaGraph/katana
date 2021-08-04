@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from katana import do_all, do_all_operator
-from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
+from katana.local import AllocationPolicy, InsertBag, NUMAArray
 
 types = [
     pytest.param(int, id="int"),

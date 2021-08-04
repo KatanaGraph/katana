@@ -13,7 +13,7 @@ from katana.local.atomic import (
     atomic_sub,
 )
 from katana.local.barrier import Barrier, SimpleBarrier, get_fast_barrier
-from katana.local.datastructures import InsertBag, NUMAArray
+from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.local.dynamic_bitset import DynamicBitset
 from katana.local.property_graph import PropertyGraph
 
@@ -35,4 +35,5 @@ __all__ = [
     "atomic_sub",
     "get_fast_barrier",
     "initialize",
+    "AllocationPolicy",
 ]

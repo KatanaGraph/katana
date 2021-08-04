@@ -5,7 +5,7 @@ import pytest
 import katana.local
 from katana.example_data import get_input
 from katana.galois import set_active_threads
-from katana.local.property_graph import PropertyGraph
+from katana.local import PropertyGraph
 
 katana.local.initialize()
 

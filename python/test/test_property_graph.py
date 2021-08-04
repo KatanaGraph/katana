@@ -7,7 +7,7 @@ import pyarrow
 import pytest
 
 from katana import TsubaError, do_all, do_all_operator
-from katana.local.property_graph import PropertyGraph
+from katana.local import PropertyGraph
 
 
 def test_load(property_graph):

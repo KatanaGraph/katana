@@ -19,10 +19,9 @@ Katana is released under the BSD-3-Clause license.
 Installing
 ==========
 
-The easiest way to get Katana is to install the Conda packages. See the [Conda
-User
-Guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
-for details on how to install Conda. 
+The easiest way to get Katana is to install the Conda packages. See the
+[Conda User Guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
+for details on how to install Conda.
 
 ```bash
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -32,7 +31,7 @@ bash Miniconda3-latest-Linux-x86_64.sh
 Then, install Katana
 
 ```bash
-conda install -c katanagraph/label/dev katana katana-python
+conda install -c katanagraph/label/dev -c conda-forge katana-python
 ```
 
 Currently, only development versions are available through Conda. These builds
@@ -87,26 +86,30 @@ Here are the dependencies for the optional features:
 Documentation
 =============
 
-To build documentation for this project, see the documentation 
+To build documentation for this project, see the documentation
 [instructions](docs/contributing/documentation.rst).
 
-Using Katana as a Library 
+Using Katana as a Library
 =========================
 
 There are two common ways to use Katana as a library. One way is to copy this
 repository into your own CMake project, typically using a git submodule. Then
-you can put the following in your CMakeLists.txt:
+you can put the following in your `CMakeLists.txt`:
 
 ```CMake
-add_subdirectory(galois EXCLUDE_FROM_ALL)
+add_subdirectory(katana EXCLUDE_FROM_ALL)
 add_executable(app ...)
 target_link_libraries(app Katana::galois)
 ```
 
 The other common method is to install Katana outside your project and import it
-as a package.
+as a package. If you install the `katana-cpp` Conda package as follows, `Katana` cmake package will be available:
 
-If you want to install Katana, assuming that you wish to install it under
+```Shell
+conda install -c katanagraph/label/dev -c conda-forge katana-python
+```
+
+If you want to build and install Katana, assuming that you wish to install it under
 `INSTALL_DIR`:
 
 ```Shell
@@ -114,7 +117,8 @@ cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR $SRC_DIR
 make install
 ```
 
-Then, you can put something like the following in CMakeLists.txt:
+With Katana installed either from a package or from source, you can put something
+like the following in your `CMakeLists.txt`:
 
 ```CMake
 list(APPEND CMAKE_PREFIX_PATH ${INSTALL_DIR})

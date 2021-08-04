@@ -4,35 +4,11 @@
 #include <iterator>
 #include <sstream>
 
+#include <arrow/array/concatenate.h>
+
 #include "katana/Random.h"
 
 namespace {
-
-katana::Result<std::shared_ptr<arrow::ChunkedArray>>
-IndexedTake(
-    const std::shared_ptr<arrow::ChunkedArray>& original,
-    std::shared_ptr<arrow::Array> indices) {
-  // Use Take to select those indices
-  arrow::Datum take = KATANA_CHECKED(arrow::compute::Take(original, indices));
-  std::shared_ptr<arrow::ChunkedArray> chunked = take.chunked_array();
-  KATANA_LOG_ASSERT(chunked->num_chunks() == 1);
-  return chunked;
-}
-
-katana::Result<std::shared_ptr<arrow::Array>>
-Indices(const std::shared_ptr<arrow::ChunkedArray>& original) {
-  int64_t length = original->length();
-  // Build indices array, reusable across properties
-  arrow::CTypeTraits<int64_t>::BuilderType builder;
-  KATANA_CHECKED_CONTEXT(
-      builder.Reserve(length), "arrow builder reserve failed type: {}",
-      original->type()->name());
-  for (int64_t i = 0; i < length; ++i) {
-    builder.UnsafeAppend(i);
-  }
-  std::shared_ptr<arrow::Array> indices = KATANA_CHECKED(builder.Finish());
-  return indices;
-}
 
 uint64_t
 ApproxArrayDataMemUse(const std::shared_ptr<arrow::ArrayData>& data) {
@@ -70,14 +46,6 @@ ApproxArrayDataMemUse(const std::shared_ptr<arrow::ArrayData>& data) {
   return total_mem_use;
 }
 
-katana::Result<std::shared_ptr<arrow::Array>>
-Unchunk(const std::shared_ptr<arrow::ChunkedArray>& original) {
-  std::shared_ptr<arrow::Array> indices = KATANA_CHECKED(Indices(original));
-  std::shared_ptr<arrow::ChunkedArray> chunked =
-      KATANA_CHECKED(IndexedTake(original, indices));
-  return chunked->chunk(0);
-}
-
 }  // anonymous namespace
 
 std::shared_ptr<arrow::ChunkedArray>
@@ -104,23 +72,24 @@ katana::DiffFormatTo(
         a0->type()->name(), a1->type()->name());
     return;
   }
-  auto maybe_b0 = Unchunk(a0);
-  if (!maybe_b0) {
+
+  auto maybe_b0 = arrow::Concatenate(a0->chunks());
+  if (!maybe_b0.ok()) {
     fmt::format_to(
         std::back_inserter(buf),
         "failed conversion of chunked array to array type: {} reason: {}",
-        a0->type()->name(), maybe_b0.error());
+        a0->type()->name(), maybe_b0.status().message());
     return;
   }
-  auto b0 = maybe_b0.value();
-  auto maybe_b1 = Unchunk(a1);
-  if (!maybe_b1) {
+  auto b0 = maybe_b0.ValueUnsafe();
+  auto maybe_b1 = arrow::Concatenate(a1->chunks());
+  if (!maybe_b1.ok()) {
     fmt::format_to(
         std::back_inserter(buf),
         "failed conversion of chunked array to array type: {} reason: {}",
-        a1->type()->name(), maybe_b1.error());
+        a1->type()->name(), maybe_b1.status().message());
   }
-  auto b1 = maybe_b1.value();
+  auto b1 = maybe_b1.ValueUnsafe();
 
   arrow::EqualOptions equal_options;
   // TODO (witchel) create a bounded length streambuf so this won't waste memory when

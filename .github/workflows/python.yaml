@@ -316,8 +316,9 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
           . .github/workflows/activate_miniconda.sh && \
-          conda install -c insomniapx metagraph-katana && \
-          cd metagraph-plugin && \ 
+          cd metagraph-plugin && \
+          conda env create -f katana-metagraph.yml && \
+          conda activate katana-metagraph && \
           pytest metagraph_katana/tests
 
       - name: Install

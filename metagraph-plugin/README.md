@@ -17,15 +17,10 @@ Highlights include:
 Installation
 ===============
 
-First install the dependency together
+First install the dependency together with the plugin
 
 ```Shell
-conda env create -f katana.yml
-```
-
-Activate the conda environment and install the plugin
-```Shell
-conda install -c insomniapx metagraph-katana
+conda env create -f katana-metagraph.yml
 ```
 
 Test
@@ -33,7 +28,7 @@ Test
 To check the installation is successful, you can run the test cases by:
 
 ```Shell
-conda activate katana
+conda activate katana-metagraph
 pytest metagraph_katana/tests/ -s
 ```
 

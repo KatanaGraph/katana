@@ -8,8 +8,8 @@ Python Library
 
 .. toctree::
    katana
-   katana.analytics
-   katana.atomic
-   katana.datastructures
-   katana.property_graph
+   katana.local.analytics
+   katana.local.atomic
+   katana.local.datastructures
+   katana.local.property_graph
    katana.timer

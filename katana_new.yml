@@ -1,0 +1,13 @@
+# A simple Conda environment which supports Katana in Jupyter.
+# Install with:
+#   conda env create -f https://raw.githubusercontent.com/KatanaGraph/katana/master/katana.yml
+name: katana_new
+channels:
+  - katanagraph/label/dev
+  - conda-forge
+  - defaults
+dependencies:
+  - katana-cpp>=0.1.12.dev
+  - katana-python>=0.1.12.dev
+  - katana-tools>=0.1.12.dev
+  - jupyter

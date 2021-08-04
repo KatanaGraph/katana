@@ -1,0 +1,14 @@
+# Install with:
+#   conda env create -f katana.yml
+name: katana
+channels:
+  - katanagraph/label/dev
+  - conda-forge
+  - metagraph
+  - defaults
+dependencies:
+  - katana-cpp>=0.1.12.dev
+  - katana-python>=0.1.12.dev
+  - katana-tools>=0.1.12.dev
+  - pytest
+  - metagraph

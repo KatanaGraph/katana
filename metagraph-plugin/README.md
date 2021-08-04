@@ -17,21 +17,24 @@ Highlights include:
 Installation
 ===============
 
-First follow this repo [Katana Graph](https://github.com/KatanaGraph/katana) to install the python environment. Then run:
+First install the dependency together
 
 ```Shell
-$BUILD_DIR/python_env.sh python setup.py develop
+conda env create -f katana.yml
 ```
 
-to install the plugin.
-
+Activate the conda environment and install the plugin
+```Shell
+conda install -c insomniapx metagraph-katana
+```
 
 Test
 ===============
 To check the installation is successful, you can run the test cases by:
 
 ```Shell
-$BUILD_DIR/python_env.sh pytest metagraph_katana/tests/ -s
+conda activate katana
+pytest metagraph_katana/tests/ -s
 ```
 
 
@@ -72,6 +75,5 @@ bfs_kg = mg.algos.traversal.bfs_iter(katanagraph, 0) # run bfs using Katana Grap
 ```
 
 More examples can be found in the metagraph_katana/tests/ folder
-
 
 

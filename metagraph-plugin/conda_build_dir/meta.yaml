@@ -1,0 +1,33 @@
+{% set name = "metagraph-katana" %}
+{% set version = "0.0.4" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  url: https://test-files.pythonhosted.org/packages/7f/d4/e58bf7dfbcc027a8ef8f024b2f97e4c5af7b86593fcbc7ca92e89e74044f/metagraph-katana-0.0.4.tar.gz
+  sha256: 2de7e89819edc7841e44615d2b3a5c3121dc8fce854fdd92d574582ce7662f90
+
+build:
+  number: 0
+
+requirements:
+  #build:
+  #- katana
+  host:
+    - pip
+    - python
+    #- katana
+  run:
+    - python
+
+test:
+  imports:
+    - os
+
+about:
+  home: https://github.com/KatanaGraph/katana
+  license: BSD
+  license_family: BSD
+  summary: metagraph-katana plugin

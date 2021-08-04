@@ -40,7 +40,7 @@ def run(root_dir, template_file, output_file):
         nested_statements=nested_statements,
         partial=partial,
         indent=indent,
-        **generator_conf.exports
+        **generator_conf.exports,
     )
     template = template_env.get_template(str(template_file))
     output = template.render()
@@ -67,7 +67,7 @@ def run(root_dir, template_file, output_file):
 # Cache jinja environments to allow caching inside the environment. But don't cache many in case they get big.
 @lru_cache(2)
 def _get_jinja_environment(root_dir):
-    template_loader = jinja2.FileSystemLoader(searchpath=str(root_dir))
+    template_loader = jinja2.FileSystemLoader(searchpath=[str(root_dir), str(f"{root_dir}/katana")])
     template_env = jinja2.Environment(loader=template_loader)
     return template_env
 

@@ -1,0 +1,25 @@
+from katana.local._property_graph import PropertyGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from libc.stdint cimport uint32_t, uint64_t
+from cython.operator cimport dereference as deref
+
+{% import "native_interfacing/numba_wrapper_support.jinja" as numba %}
+
+{{numba.header()}}
+
+{% call numba.class_("PropertyGraph", "_PropertyGraph") %}
+{% call numba.method_with_body("num_nodes", "uint64_t", []) %}
+    return self.topology().num_nodes()
+{% endcall %}
+{% call numba.method_with_body("num_edges", "uint64_t", []) %}
+    return self.topology().num_edges()
+{% endcall %}
+{% call numba.method_with_body("edge_index", "uint64_t", ["uint64_t"]) %}
+    return deref(self.topology().edges(arg1).end())
+{% endcall %}
+{% call numba.method_with_body("get_edge_dest", "uint64_t", ["uint64_t"]) %}
+    return self.topology().edge_dest(arg1)
+{% endcall %}
+{% endcall %}
+
+{{numba.register_all_wrappers()}}

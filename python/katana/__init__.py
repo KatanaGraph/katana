@@ -32,7 +32,6 @@ try:
     __version__ = katana.galois.get_version()
 
     from katana._loops import OrderedByIntegerMetric, PerSocketChunkFIFO, UserContext, do_all, for_each
-    from katana.barrier import Barrier
     from katana.loop_operators import do_all_operator, for_each_operator, obim_metric
 except ModuleNotFoundError as e:
     if "katana.galois" in str(e):
@@ -53,7 +52,6 @@ except ImportError as e:
 
 
 __all__ = [
-    "Barrier",
     "GaloisError",
     "OrderedByIntegerMetric",
     "PerSocketChunkFIFO",

@@ -4,8 +4,8 @@ import numba
 import numba.core.ccallback
 import numba.types
 
-from .numba_support.closure import Closure, ClosureBuilder
-from .numba_support.galois_compiler import OperatorCompiler
+from katana.native_interfacing.closure import Closure, ClosureBuilder
+from katana.native_interfacing.katana_compiler import OperatorCompiler
 
 __all__ = [
     "do_all_operator",
@@ -145,5 +145,3 @@ def is_obim_metric_closure(v):
 
 # Import the numba wrappers people are likely to need.
 # TODO: This imports should probably be elsewhere, but this will work for now.
-import katana.numba_support.galois
-import katana.numba_support.pyarrow

@@ -1,7 +1,7 @@
-from .cpp.libgalois.Galois cimport GetThreadPool
-from .cpp.libgalois.Galois cimport getActiveThreads as c_getActiveTheads
-from .cpp.libgalois.Galois cimport getVersion as c_getVersion
-from .cpp.libgalois.Galois cimport setActiveThreads as c_setActiveThreads
+from katana.cpp.libgalois.Galois cimport GetThreadPool
+from katana.cpp.libgalois.Galois cimport getActiveThreads as c_getActiveTheads
+from katana.cpp.libgalois.Galois cimport getVersion as c_getVersion
+from katana.cpp.libgalois.Galois cimport setActiveThreads as c_setActiveThreads
 
 __all__ = ["set_active_threads", "get_version"]
 

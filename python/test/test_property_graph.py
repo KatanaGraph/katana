@@ -7,7 +7,7 @@ import pyarrow
 import pytest
 
 from katana import TsubaError, do_all, do_all_operator
-from katana.property_graph import PropertyGraph
+from katana.local.property_graph import PropertyGraph
 
 
 def test_load(property_graph):
@@ -199,14 +199,16 @@ def test_from_csr_k3():
     assert pg.get_edge_dest(5) == 1
 
 
+@pytest.mark.required_env("KATANA_SOURCE_DIR")
 def test_load_graphml():
-    input_file = Path(__file__).parent.parent.parent / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
+    input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
     pg = PropertyGraph.from_graphml(input_file)
     assert pg.get_node_property(0)[1].as_py() == "Keanu Reeves"
 
 
+@pytest.mark.required_env("KATANA_SOURCE_DIR")
 def test_load_graphml_write():
-    input_file = Path(__file__).parent.parent.parent / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
+    input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
     pg = PropertyGraph.from_graphml(input_file)
     with TemporaryDirectory() as tmpdir:
         pg.write(tmpdir)

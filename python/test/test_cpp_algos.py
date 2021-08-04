@@ -1,10 +1,14 @@
+from test.lonestar.bfs import verify_bfs
+from test.lonestar.sssp import verify_sssp
+
 import numpy as np
-import pytest
 from pyarrow import Schema, table
 from pytest import approx, raises
 
 from katana import GaloisError
-from katana.analytics import (
+from katana.example_data import get_input
+from katana.galois import set_busy_wait
+from katana.local.analytics import (
     BetweennessCentralityPlan,
     BetweennessCentralityStatistics,
     BfsStatistics,
@@ -45,11 +49,7 @@ from katana.analytics import (
     subgraph_extraction,
     triangle_count,
 )
-from katana.example_utils import get_input
-from katana.galois import set_busy_wait
-from katana.lonestar.analytics.bfs import verify_bfs
-from katana.lonestar.analytics.sssp import verify_sssp
-from katana.property_graph import PropertyGraph
+from katana.local.property_graph import PropertyGraph
 
 NODES_TO_SAMPLE = 10
 

@@ -80,6 +80,7 @@ class _ClosureInstance:
 class Environment():
     def __init__(self, {env_args}):
         {assign_env}
+        pass
 """
         exec_in_file(f"{func.__name__}_Environment_{id(func)}", src, exec_glbls)
         return exec_glbls["Environment"]

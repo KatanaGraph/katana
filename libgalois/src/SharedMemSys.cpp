@@ -20,6 +20,7 @@
 #include "katana/SharedMemSys.h"
 
 #include "katana/CommBackend.h"
+#include "katana/JSONTracer.h"
 #include "katana/Logging.h"
 #include "katana/Plugin.h"
 #include "katana/SharedMem.h"
@@ -43,6 +44,7 @@ katana::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
   if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
     KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
+  katana::ProgressTracer::SetProgressTracer(katana::JSONTracer::Make());
 
   katana::internal::setSysStatManager(&impl_->stat_manager);
 }
@@ -54,6 +56,7 @@ katana::SharedMemSys::~SharedMemSys() {
   if (auto fini_good = tsuba::Fini(); !fini_good) {
     KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
   }
+  katana::ProgressTracer::GetProgressTracer().Close();
   // This will finalize plugins irreversibly, reinitialization may not work.
   FinalizePlugins();
 }

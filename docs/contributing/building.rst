@@ -4,22 +4,24 @@
 Building
 ========
 
+If you are building katana-enterprise make sure to also read the `enterprise build addenda <enterprise-building>`_.
+
 Setting up a Build
 ==================
 
-The quickest way to start hacking on Katana is to look at
+The quickest way to start hacking on Katana is to follow the Conda instructions below.
+If you have issues with missing system level dependencies, look at
 ``scripts/setup_dev_ubuntu.sh`` and use that as the basis for installing a
 development environment on your own machine.
-
 The Katana repo supports both Conan and Conda for installing additional library
-dependencies on top of the system libraries dependencies installed by
-``scripts/setup_dev_ubuntu.sh``.
+dependencies.
+If you plan to use Conda, do **not** run ``scripts/setup_dev_ubuntu.sh``.
 
-If you are not familar with either of Conan or Conda, follow the instructions
+If you are not familiar with either of Conan or Conda, follow the instructions
 for Conda.
 
 .. warning::
-   
+
    Conan and conda builds are incompatible. If you mix artifacts, build
    directories, configuration, etc. from one system to the other, you will get
    build and linker errors, and possibly, dynamic library loading errors.
@@ -32,8 +34,11 @@ See the `Conda User Guide <https://docs.conda.io/projects/conda/en/latest/user-g
 
 .. code-block:: bash
 
-   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+   curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
    bash Miniconda3-latest-Linux-x86_64.sh
+
+.. warning::
+    To avoid subtle dependency issues, make sure you download Miniconda instead of Anaconda.
 
 You will need to log out and back in again to ensure conda is properly
 configured. Then create and activate the development environment:
@@ -42,9 +47,15 @@ configured. Then create and activate the development environment:
 
    SRC_DIR=<repo/root>
    conda config --add channels conda-forge
-   conda env create --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
+   # Create the environment
+   conda create --name katana-dev
+   # Install the dependencies
+   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
    conda activate katana-dev
    conda install numactl-devel-cos6-x86_64 # For x86_64 builds
+
+The ``conda env update`` line can be run later to update your environment. Deactivate your environment
+``conda deactivate``, then run the update commands, then reactivate ``conda activate katana-dev``.
 
 Now, run ``cmake`` to configure your build directory and ``make`` to build Katana.
 
@@ -58,6 +69,9 @@ Now, run ``cmake`` to configure your build directory and ``make`` to build Katan
 
 This will build Katana and place the built libraries and executables in
 ``$BUILD_DIR``.
+
+For the Conda builds, using ``scripts/setup_dev_ubuntu.sh`` is **not** recommended; it can install a conflicting
+version of pyarrow.
 
 Conda Performance
 ^^^^^^^^^^^^^^^^^
@@ -80,6 +94,8 @@ It is an installer, similar to miniconda, which installs an environment with con
 
 Conan
 -----
+
+For the Conan build you must run ``scripts/setup_dev_ubuntu.sh``, as this build depends on many system level packages.
 
 After running ``scripts/setup_dev_ubuntu.sh``, run the following commands from
 the project source directory to build the system:
@@ -210,7 +226,7 @@ in docker.
    scripts/build_in_container.py -B $BUILD_DIR --type conda
 
 where ``$BUILD_DIR`` is a path at which to place the resulting build directory.
-Build types other than `conda` may be supported in the future.
+Build types other than ``conda`` may be supported in the future.
 You can also pass build targets to the command.
 
 For example,
@@ -220,4 +236,4 @@ For example,
    scripts/build_in_container.py -B ~/katana-build --type conda docs
 
 will build the documentation (C++ and Python). The documentation will be in
-`~/katana-build/docs/*_python`.
+``~/katana-build/docs/*_python``.

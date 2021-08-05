@@ -1,7 +1,7 @@
 import numba
 import pytest
 
-from katana.dynamic_bitset import DynamicBitset
+from katana.local import DynamicBitset
 
 __all__ = []
 

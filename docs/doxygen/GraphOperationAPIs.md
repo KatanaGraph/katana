@@ -181,7 +181,7 @@ The Cython code has two sections: A description of the C++ API in Cython, and Py
 
 The Python wrapper for your operation will go in the Python package (in either the open or enterprise).
 The operation should appear in a subpackage of `katana`.
-The analytics appear in `katana.analytics`, and other categories of operation should consider the same convention.
+The analytics appear in `katana.local.analytics`, and other categories of operation should consider the same convention.
 Though if there is a reason to place them elsewhere that is fine.
 
 *Note:*
@@ -366,7 +366,7 @@ cdef class [Operation]Statistics:
 
 ### Complete Example: SSSP Cython
 
-See [python/katana/analytics/_sssp.pyx](../python/katana/analytics/_sssp.pyx).
+See [python/katana/local/analytics/_sssp.pyx](../python/katana/local/analytics/_sssp.pyx).
 
 ### Building the Cython code
 
@@ -390,7 +390,7 @@ All operations will depend on `plan`, but some may also depend on other modules
 ### Exporting in Python
 
 To provide easy access to your operation, you should add it to a higher-level module.
-For instance, `katana.analytics` in `katana/analytics/__init__.py`.
+For instance, `katana.local.analytics` in `katana/analytics/__init__.py`.
 
 Add the following to the appropriate module:
 

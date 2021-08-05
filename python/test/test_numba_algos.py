@@ -1,8 +1,9 @@
-from katana.analytics import BfsStatistics, SsspStatistics, bfs_assert_valid, sssp_assert_valid
-from katana.lonestar.analytics.bfs import bfs_sync_pg, verify_bfs
-from katana.lonestar.analytics.jaccard import jaccard
-from katana.lonestar.analytics.sssp import sssp, verify_sssp
-from katana.property_graph import PropertyGraph
+from test.lonestar.bfs import bfs_sync_pg, verify_bfs
+from test.lonestar.jaccard import jaccard
+from test.lonestar.sssp import sssp, verify_sssp
+
+from katana.local import PropertyGraph
+from katana.local.analytics import BfsStatistics, SsspStatistics, sssp_assert_valid
 
 
 def test_bfs(property_graph: PropertyGraph):

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from katana import do_all, do_all_operator
-from katana.datastructures import AllocationPolicy, InsertBag, NUMAArray
+from katana.local import AllocationPolicy, InsertBag, NUMAArray
 
 types = [
     pytest.param(int, id="int"),
@@ -225,7 +225,7 @@ def test_NUMAArray_numpy_parallel_opaque():
 def test_InsertBag_numba_type():
     import numba.types
 
-    from katana.datastructures import InsertBag_numba_type
+    from katana.local.datastructures import InsertBag_numba_type
 
     assert isinstance(InsertBag_numba_type[int], numba.types.Type)
 
@@ -236,7 +236,7 @@ def test_InsertBag_numba_type():
 def test_NUMAArray_numba_type():
     import numba.types
 
-    from katana.datastructures import NUMAArray_numba_type
+    from katana.local.datastructures import NUMAArray_numba_type
 
     assert isinstance(NUMAArray_numba_type[int], numba.types.Type)
 

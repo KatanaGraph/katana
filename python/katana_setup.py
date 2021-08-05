@@ -299,7 +299,7 @@ def process_jinja_file(filename, build_source_root):
 
     # TODO(amp): Ideally this would only process the jinja file when the inputs change. But it's fast and I'm lazy.
     #  https://jinja.palletsprojects.com/en/2.11.x/api/#jinja2.meta.find_referenced_templates
-    regenerated = generate_from_jinja.run("python" / filename.parent, filename.name, output_file)
+    regenerated = generate_from_jinja.run("python", filename, output_file)
     if regenerated:
         print(f"Processed {filename} with Jinja2.")
     return output_file

@@ -46,7 +46,7 @@ RUN set -eu ; . /activate_miniconda.sh; set -x ; \
     ${CONDA_CLEAN}
 
 RUN set -eu ; . /activate_miniconda.sh; set -x ; \
-    python -c "import katana.analytics; katana.analytics.bfs; print(katana.__version__)"
+    python -c "import katana.local.analytics; katana.local.analytics.bfs; print(katana.__version__)"
 
 FROM pre_install AS test_tools
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"

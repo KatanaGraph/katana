@@ -6,6 +6,7 @@
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
 #include "katana/Loops.h"
+#include "katana/NUMAArray.h"
 #include "katana/PerThreadStorage.h"
 #include "katana/Platform.h"
 #include "katana/Properties.h"
@@ -411,6 +412,16 @@ katana::PropertyGraph::Make(
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
   return std::make_unique<katana::PropertyGraph>(std::move(topo_to_assign));
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
+    katana::GraphTopology&& topo_to_assign,
+    NUMAArray<EntityTypeID>&& node_entity_type_id,
+    NUMAArray<EntityTypeID>&& edge_entity_type_id) {
+  return std::make_unique<katana::PropertyGraph>(
+      std::move(topo_to_assign), std::move(node_entity_type_id),
+      std::move(edge_entity_type_id));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>

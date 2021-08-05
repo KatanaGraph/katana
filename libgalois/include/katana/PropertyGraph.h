@@ -408,6 +408,16 @@ public:
   PropertyGraph(katana::GraphTopology&& topo_to_assign) noexcept
       : rdg_(), file_(), topology_(std::move(topo_to_assign)) {}
 
+  PropertyGraph(
+      katana::GraphTopology&& topo_to_assign,
+      NUMAArray<EntityTypeID> node_entity_type_id,
+      NUMAArray<EntityTypeID> edge_entity_type_id) noexcept
+      : rdg_(),
+        file_(),
+        topology_(std::move(topo_to_assign)),
+        node_entity_type_id_(std::move(node_entity_type_id)),
+        edge_entity_type_id_(std::move(edge_entity_type_id)) {}
+
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -421,6 +431,16 @@ public:
   /// Make a property graph from topology
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign);
+
+  /// Make a property graph from topology and type arrays
+  /// TODO (scober): This Make variant should also pass an EntityTypeManager
+  /// (once that class has been defined). The equivalent in the current code
+  /// base would be to pass all 8 of the PropertyGraph-internal maps that
+  /// manipulate EntityTypeIDs. Yuck.
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      GraphTopology&& topo_to_assign,
+      NUMAArray<EntityTypeID>&& node_entity_type_id,
+      NUMAArray<EntityTypeID>&& edge_entity_type_id);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.
@@ -439,6 +459,21 @@ public:
   /// Assumes all boolean or uint8 properties are atomic types
   /// TODO(roshan) move this to be a part of Make()
   Result<void> ConstructEntityTypeIDs();
+
+  /// This is an unfortunate hack. Due to some technical debt, we need a way to
+  /// modify these arrays in place from outside this class. This style mirrors a
+  /// similar hack in GraphTopology and hopefully makes it clear that these
+  /// functions should not be used lightly.
+  const EntityTypeID* node_type_data() const noexcept {
+    return node_entity_type_id_.data();
+  }
+  /// This is an unfortunate hack. Due to some technical debt, we need a way to
+  /// modify these arrays in place from outside this class. This style mirrors a
+  /// similar hack in GraphTopology and hopefully makes it clear that these
+  /// functions should not be used lightly.
+  const EntityTypeID* edge_type_data() const noexcept {
+    return edge_entity_type_id_.data();
+  }
 
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 

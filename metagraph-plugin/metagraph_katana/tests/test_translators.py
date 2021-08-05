@@ -38,12 +38,12 @@ def test_topology(kg_from_nx_di_8_12):
 
 
 def test_schema(kg_from_nx_di_8_12):
-    assert len(kg_from_nx_di_8_12.value.node_schema()) == 0
-    assert len(kg_from_nx_di_8_12.value.edge_schema()) == 1
+    assert len(kg_from_nx_di_8_12.value.loaded_node_schema()) == 0
+    assert len(kg_from_nx_di_8_12.value.loaded_edge_schema()) == 1
 
 
 def test_edge_property_directed(kg_from_nx_di_8_12):
-    assert kg_from_nx_di_8_12.value.edge_schema()[0].name == "value_from_translator"
+    assert kg_from_nx_di_8_12.value.loaded_edge_schema()[0].name == "value_from_translator"
     assert kg_from_nx_di_8_12.value.get_edge_property(0) == kg_from_nx_di_8_12.value.get_edge_property(
         "value_from_translator"
     )

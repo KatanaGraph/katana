@@ -19,19 +19,19 @@ def test_num_edges(katanagraph_rmat15_cleaned_di):
 
 
 def test_node_schema(katanagraph_rmat15_cleaned_di):
-    assert "names" in dir(katanagraph_rmat15_cleaned_di.value.node_schema())
-    assert "types" in dir(katanagraph_rmat15_cleaned_di.value.node_schema())
-    assert len(katanagraph_rmat15_cleaned_di.value.node_schema()) == 0
+    assert "names" in dir(katanagraph_rmat15_cleaned_di.value.loaded_node_schema())
+    assert "types" in dir(katanagraph_rmat15_cleaned_di.value.loaded_node_schema())
+    assert len(katanagraph_rmat15_cleaned_di.value.loaded_node_schema()) == 0
 
 
 def test_edge_schema(katanagraph_rmat15_cleaned_di):
-    assert "names" in dir(katanagraph_rmat15_cleaned_di.value.edge_schema())
-    assert "types" in dir(katanagraph_rmat15_cleaned_di.value.edge_schema())
-    assert len(katanagraph_rmat15_cleaned_di.value.edge_schema()) == 1
+    assert "names" in dir(katanagraph_rmat15_cleaned_di.value.loaded_edge_schema())
+    assert "types" in dir(katanagraph_rmat15_cleaned_di.value.loaded_edge_schema())
+    assert len(katanagraph_rmat15_cleaned_di.value.loaded_edge_schema()) == 1
 
 
 def test_edge_property(katanagraph_rmat15_cleaned_di):
-    assert katanagraph_rmat15_cleaned_di.value.edge_schema()[0].name == "value"
+    assert katanagraph_rmat15_cleaned_di.value.loaded_edge_schema()[0].name == "value"
     assert katanagraph_rmat15_cleaned_di.value.get_edge_property(0) == katanagraph_rmat15_cleaned_di.value.get_edge_property("value")
     assert katanagraph_rmat15_cleaned_di.value.get_edge_property("value").to_pandas()[0] == 339302416426
 

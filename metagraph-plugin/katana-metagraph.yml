@@ -1,5 +1,5 @@
 # Install with:
-#   conda env create -f kkatana-metagraph.yml
+#   conda env create -f katana-metagraph.yml
 name: katana-metagraph
 channels:
   - katanagraph/label/dev
@@ -12,5 +12,5 @@ dependencies:
   - katana-python>=0.1.12.dev
   - katana-tools>=0.1.12.dev
   - pytest
-  - metagraph
+  - metagraph=0.2.6
   - metagraph-katana=0.0.5

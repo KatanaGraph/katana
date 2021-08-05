@@ -74,8 +74,8 @@ public:
    */
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
-    constexpr size_t prop_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_index>(node_view_).GetValue(node);
+    constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
+    return std::get<prop_col_index>(node_view_).GetValue(node);
   }
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
@@ -90,8 +90,8 @@ public:
    */
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
-    constexpr size_t prop_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_index>(node_view_).GetValue(node);
+    constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
+    return std::get<prop_col_index>(node_view_).GetValue(node);
   }
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(
@@ -107,8 +107,8 @@ public:
    */
   template <typename EdgeIndex>
   PropertyReferenceType<EdgeIndex> GetEdgeData(const edge_iterator& edge) {
-    constexpr size_t prop_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_index>(edge_view_).GetValue(*edge);
+    constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
+    return std::get<prop_col_index>(edge_view_).GetValue(*edge);
   }
 
   /**
@@ -120,8 +120,8 @@ public:
   template <typename EdgeIndex>
   PropertyConstReferenceType<EdgeIndex> GetEdgeData(
       const edge_iterator& edge) const {
-    constexpr size_t prop_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_index>(edge_view_).GetValue(*edge);
+    constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
+    return std::get<prop_col_index>(edge_view_).GetValue(*edge);
   }
 
   /**
@@ -190,6 +190,89 @@ public:
       PropertyGraph* pg);
 };
 
+template <typename PGView, typename NodeProps, typename EdgeProps>
+class TypedPropertyGraphView : public PGView {
+  using NodeView = PropertyViewTuple<NodeProps>;
+  using EdgeView = PropertyViewTuple<EdgeProps>;
+
+  NodeView node_view_;
+  EdgeView edge_view_;
+
+  TypedPropertyGraphView(
+      const PGView& pg_view, NodeView&& node_view, EdgeView&& edge_view)
+      : PGView(pg_view),
+        node_view_(std::move(node_view)),
+        edge_view_(std::move(edge_view)) {}
+
+public:
+  using node_properties = NodeProps;
+  using edge_properties = EdgeProps;
+  using node_iterator = typename PGView::node_iterator;
+  using edge_iterator = typename PGView::edge_iterator;
+  using edges_range = typename PGView::edges_range;
+  using iterator = typename PGView::iterator;
+  using Node = typename PGView::Node;
+  using Edge = typename PGView::Edge;
+
+  /**
+   * Gets the node data.
+   *
+   * @param node node to get the data of
+   * @returns reference to the node data
+   */
+  template <typename NodeIndex>
+  PropertyReferenceType<NodeIndex> GetData(const Node& node) {
+    constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
+    return std::get<prop_col_index>(node_view_)
+        .GetValue(PGView::node_property_index(node));
+  }
+
+  /**
+   * Gets the node data.
+   *
+   * @param node node to get the data of
+   * @returns const reference to the node data
+   */
+  template <typename NodeIndex>
+  PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
+    constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
+    return std::get<prop_col_index>(node_view_)
+        .GetValue(PGView::node_property_index(node));
+  }
+
+  /**
+   * Gets the edge data.
+   *
+   * @param edge edge iterator to get the data of
+   * @returns reference to the edge data
+   */
+  template <typename EdgeIndex>
+  PropertyReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) {
+    constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
+    return std::get<prop_col_index>(edge_view_)
+        .GetValue(PGView::edge_property_index(edge));
+  }
+
+  /**
+   * Gets the edge data.
+   *
+   * @param edge edge iterator to get the data of
+   * @returns const reference to the edge data
+   */
+  template <typename EdgeIndex>
+  PropertyConstReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) const {
+    constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
+    return std::get<prop_col_index>(edge_view_)
+        .GetValue(PGView::edge_property_index(edge));
+  }
+
+  static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
+      PropertyGraph* pg, const std::vector<std::string>& node_properties,
+      const std::vector<std::string>& edge_properties);
+  static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
+      PropertyGraph* pg);
+};
+
 /**
    * Finds a node in the sorted edgelist of some other node using binary search.
    *
@@ -238,6 +321,38 @@ TypedPropertyGraph<NodeProps, EdgeProps>::Make(PropertyGraph* pg) {
       pg->loaded_edge_schema()->field_names());
 }
 
+template <typename PGView, typename NodeProps, typename EdgeProps>
+Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
+TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
+    PropertyGraph* pg, const std::vector<std::string>& node_properties,
+    const std::vector<std::string>& edge_properties) {
+  auto pg_view = pg->BuildView<PGView>();
+  KATANA_LOG_DEBUG_ASSERT(pg);
+  auto node_view_result =
+      internal::MakeNodePropertyViews<NodeProps>(pg, node_properties);
+  if (!node_view_result) {
+    return node_view_result.error();
+  }
+
+  auto edge_view_result =
+      internal::MakeEdgePropertyViews<EdgeProps>(pg, edge_properties);
+  if (!edge_view_result) {
+    return edge_view_result.error();
+  }
+
+  return TypedPropertyGraphView(
+      pg_view, std::move(node_view_result.value()),
+      std::move(edge_view_result.value()));
+}
+
+template <typename PGView, typename NodeProps, typename EdgeProps>
+Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
+TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(PropertyGraph* pg) {
+  auto pg_view = pg->BuildView<PGView>();
+  return TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
+      pg_view, pg->loaded_node_schema()->field_names(),
+      pg->loaded_edge_schema()->field_names());
+}
 }  // namespace katana
 
 #endif

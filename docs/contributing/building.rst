@@ -13,7 +13,8 @@ The quickest way to start hacking on Katana is to follow the Conda instructions 
 If you have issues with missing system level dependencies, look at
 ``scripts/setup_dev_ubuntu.sh`` and use that as the basis for installing a
 development environment on your own machine.
-The Katana repo supports both Conan and Conda for installing additional library.
+The Katana repo supports both Conan and Conda for installing additional library
+dependencies.
 If you plan to use Conda, do **not** run ``scripts/setup_dev_ubuntu.sh``.
 
 If you are not familiar with either of Conan or Conda, follow the instructions
@@ -94,7 +95,7 @@ It is an installer, similar to miniconda, which installs an environment with con
 Conan
 -----
 
-For the Conan build you must run, ``scripts/setup_dev_ubuntu.sh`` as this build depends on many system level packages.
+For the Conan build you must run ``scripts/setup_dev_ubuntu.sh``, as this build depends on many system level packages.
 
 After running ``scripts/setup_dev_ubuntu.sh``, run the following commands from
 the project source directory to build the system:

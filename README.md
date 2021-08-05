@@ -103,14 +103,18 @@ target_link_libraries(app Katana::galois)
 ```
 
 The other common method is to install Katana outside your project and import it
-as a package. If you install the `katana-cpp` Conda package as follows, `Katana` cmake package will be available:
+as a CMake package.
+
+The Katana CMake package is available through the katana-cpp Conda package,
+which is a dependency of the katana-python Conda package. You can install both
+with:
 
 ```Shell
 conda install -c katanagraph/label/dev -c conda-forge katana-python
 ```
 
-If you want to build and install Katana, assuming that you wish to install it under
-`INSTALL_DIR`:
+Alternatively, you can install Katana from source. The following command will
+build and install Katana into `INSTALL_DIR`:
 
 ```Shell
 cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR $SRC_DIR

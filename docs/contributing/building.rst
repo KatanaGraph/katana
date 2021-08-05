@@ -1,21 +1,22 @@
 .. _building:
 
-======================
-Building (open-source)
-======================
+========
+Building
+========
+
+If you are building katana-enterprise make sure to also read the `enterprise build addenda <enterprise-building>`_.
 
 Setting up a Build
 ==================
 
-The quickest way to start hacking on Katana is to look at
+The quickest way to start hacking on Katana is to follow the Conda instructions below.
+If you have issues with missing system level dependencies, look at
 ``scripts/setup_dev_ubuntu.sh`` and use that as the basis for installing a
 development environment on your own machine.
+The Katana repo supports both Conan and Conda for installing additional library.
+If you plan to use Conda, do **not** run ``scripts/setup_dev_ubuntu.sh``.
 
-The Katana repo supports both Conan and Conda for installing additional library
-dependencies on top of the system libraries dependencies installed by
-``scripts/setup_dev_ubuntu.sh``.
-
-If you are not familar with either of Conan or Conda, follow the instructions
+If you are not familiar with either of Conan or Conda, follow the instructions
 for Conda.
 
 .. warning::
@@ -32,11 +33,11 @@ See the `Conda User Guide <https://docs.conda.io/projects/conda/en/latest/user-g
 
 .. code-block:: bash
 
-   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+   curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
    bash Miniconda3-latest-Linux-x86_64.sh
 
-(There have been confusing issues associates with using Anaconda instead of Miniconda.
-Make sure to use Miniconda3, *not* Anaconda3!)
+.. warning::
+    To avoid subtle dependency issues, make sure you download Miniconda instead of Anaconda.
 
 You will need to log out and back in again to ensure conda is properly
 configured. Then create and activate the development environment:
@@ -68,6 +69,9 @@ Now, run ``cmake`` to configure your build directory and ``make`` to build Katan
 This will build Katana and place the built libraries and executables in
 ``$BUILD_DIR``.
 
+For the Conda builds, using ``scripts/setup_dev_ubuntu.sh`` is **not** recommended; it can install a conflicting
+version of pyarrow.
+
 Conda Performance
 ^^^^^^^^^^^^^^^^^
 
@@ -89,6 +93,8 @@ It is an installer, similar to miniconda, which installs an environment with con
 
 Conan
 -----
+
+For the Conan build you must run, ``scripts/setup_dev_ubuntu.sh`` as this build depends on many system level packages.
 
 After running ``scripts/setup_dev_ubuntu.sh``, run the following commands from
 the project source directory to build the system:

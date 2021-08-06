@@ -52,35 +52,38 @@ file_suffixes = {".cpp", ".h", ".cu", ".cuh"}
 
 
 # Create the task queue
-tasks = queue.SimpleQueue()
-check_failed = False
+tasks = queue.Queue()
 
 # Launch consumer threads
-def consumer_entry():
-    global check_failed
-    while True:
-        item = tasks.get()
-        if item is None:
-            tasks.put(None)
-            return
-        if fix:
-            print("fixing ", item)
-            cmd = clang_format + " -style=file -i " + item
-        else:
-            cmd = "{} -style=file -output-replacements-xml \"{}\" | grep '<replacement ' > /dev/null".format(
-                clang_format, item
-            )
-        exit_code = os.system(cmd)
-        if not fix and exit_code == 0:
-            check_failed = True
-            print(item, " NOT OK")
+class Consumer:
+    def __init__(self):
+        self.thread = threading.Thread(target=self.entry)
+        self.check_failed = False
+
+    def entry(self):
+        while True:
+            item = tasks.get()
+            if item is None:
+                tasks.put(None)
+                return
+            if fix:
+                print("fixing ", item)
+                cmd = clang_format + " -style=file -i " + item
+            else:
+                cmd = "{} -style=file -output-replacements-xml \"{}\" | grep '<replacement ' > /dev/null".format(
+                    clang_format, item
+                )
+            exit_code = os.system(cmd)
+            if not fix and exit_code == 0:
+                self.check_failed = True
+                print(item, " NOT OK")
 
 
-threads = []
+consumers = []
 for i in range(multiprocessing.cpu_count()):
-    cur_thread = threading.Thread(target=consumer_entry)
-    threads.append(cur_thread)
-    cur_thread.start()
+    cur_cons = Consumer()
+    consumers.append(cur_cons)
+    cur_cons.thread.start()
 
 # Traverse the directory trees
 def needs_formatting(file_name: str) -> bool:
@@ -121,8 +124,10 @@ for root in roots:
 
 # Finalize the processing
 tasks.put(None)
-for thread in threads:
-    thread.join()
+check_failed = False
+for consumer in consumers:
+    consumer.thread.join()
+    check_failed = check_failed or consumer.check_failed
 
 # Return proper exit code
 sys.exit(1 if check_failed else 0)

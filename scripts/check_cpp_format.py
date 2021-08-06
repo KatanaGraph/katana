@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
-import sys
-import os
-import io
-import queue
-import multiprocessing
-import threading
 import fnmatch
+import io
+import multiprocessing
+import os
+import queue
+import sys
+import threading
 
 # Parse command-line arguments
 if len(sys.argv) == 1:

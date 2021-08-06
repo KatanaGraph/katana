@@ -10,11 +10,11 @@ import threading
 
 # Parse command-line arguments
 if len(sys.argv) == 1:
-    print('Usage: check_cpp_format.py [-fix] <paths>')
+    print("Usage: check_cpp_format.py [-fix] <paths>")
     sys.exit()
 i_arg = 1
 fix = False
-if sys.argv[i_arg] == '-fix':
+if sys.argv[i_arg] == "-fix":
     fix = True
     i_arg += 1
 roots = []
@@ -23,16 +23,16 @@ for root in sys.argv[i_arg:]:
 
 # Parse environment variables
 prune_paths = set()
-if 'PRUNE_PATHS' in os.environ:
+if "PRUNE_PATHS" in os.environ:
     last_token = io.StringIO()
     in_quotes = False
-    for ch in os.environ['PRUNE_PATHS']:
+    for ch in os.environ["PRUNE_PATHS"]:
         if ch in ["'", '"']:
             if last_token.tell() != 0:
                 prune_paths.add(last_token.getvalue())
                 last_token = io.StringIO()
             in_quotes = not in_quotes
-        elif ch == ' ':
+        elif ch == " ":
             if in_quotes:
                 last_token.write(ch)
             elif last_token.tell() != 0:
@@ -44,11 +44,11 @@ if 'PRUNE_PATHS' in os.environ:
     if last_token.tell() != 0:
         prune_paths.add(last_token.getvalue())
         last_token = io.StringIO()
-clang_format = os.environ.get('CLANG_FORMAT', 'clang-format')
+clang_format = os.environ.get("CLANG_FORMAT", "clang-format")
 
 # Hard-coded constants
-prune_names = {'build*', '.#*'}
-file_suffixes = {'.cpp', '.h', '.cu', '.cuh'}
+prune_names = {"build*", ".#*"}
+file_suffixes = {".cpp", ".h", ".cu", ".cuh"}
 
 
 # Create the task queue
@@ -64,14 +64,17 @@ def consumer_entry():
             tasks.put(None)
             return
         if fix:
-            print('fixing ', item)
-            cmd = clang_format + ' -style=file -i ' + item
+            print("fixing ", item)
+            cmd = clang_format + " -style=file -i " + item
         else:
-            cmd = '{} -style=file -output-replacements-xml "{}" | grep \'<replacement \' > /dev/null'.format(clang_format, item)
+            cmd = "{} -style=file -output-replacements-xml \"{}\" | grep '<replacement ' > /dev/null".format(
+                clang_format, item
+            )
         exit_code = os.system(cmd)
         if not fix and exit_code == 0:
             check_failed = True
-            print(item, ' NOT OK')
+            print(item, " NOT OK")
+
 
 threads = []
 for i in range(multiprocessing.cpu_count()):
@@ -85,6 +88,7 @@ def needs_formatting(file_name: str) -> bool:
         if file_name.endswith(suffix):
             return True
     return False
+
 
 for root in roots:
     for dir_path, dir_names, file_names in os.walk(root):

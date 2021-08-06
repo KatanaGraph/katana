@@ -1,0 +1,22 @@
+# This is a configuration file for Coverage.py
+# (i.e., tool that collect code coverage for Python code)
+# https://coverage.readthedocs.io/en/coverage-5.5/config.html
+
+[run]
+# The following option is needed because we are collecting from multiple processes.
+parallel=True
+# https://cython.readthedocs.io/en/latest/src/tutorial/profiling_tutorial.html#enabling-coverage-analysis
+plugins = Cython.Coverage
+
+[report]
+# https://coverage.readthedocs.io/en/coverage-5.5/config.html#report
+show_missing=True
+skip_empty=False
+ignore_errors=True
+
+[html]
+# Location/directory for html files
+directory=build/pythoncov
+
+# Title for the report page
+title="Python Code Coverage"

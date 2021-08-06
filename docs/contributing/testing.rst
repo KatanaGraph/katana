@@ -112,6 +112,22 @@ See the `pytest-notebook
 documentation <https://pytest-notebook.readthedocs.io/en/latest/user_guide/tutorial_config.html>`_
 for more options.
 
+Coverage
+=========
+
+Collecting coverage is enabled for Python.  You can use the following
+sequence of commands to obtain (html) coverage report:
+
+.. code-block::
+
+   export COVERAGE_RCFILE="$SRC_DIR/.coveragerc
+   export COVERAGE_PROCESS_START=$COVERAGE_RCFILE
+   $BUILD_DIR/python_env.sh coverage run -m pytest python/test -s
+   coverage combine
+   coverage html
+
+The output is available in ``$BUILD_DIR/pythoncov``.
+
 Debugging
 =========
 

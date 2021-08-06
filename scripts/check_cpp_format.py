@@ -5,6 +5,7 @@ import io
 import multiprocessing
 import os
 import queue
+import subprocess
 import sys
 import threading
 
@@ -68,13 +69,12 @@ class Consumer:
                 return
             if fix:
                 print("fixing ", item)
-                cmd = clang_format + " -style=file -i " + item
+                cmd = [clang_format, " -style=file -i ", item]
             else:
-                cmd = "{} -style=file -output-replacements-xml \"{}\" | grep '<replacement ' > /dev/null".format(
-                    clang_format, item
-                )
-            exit_code = os.system(cmd)
-            if not fix and exit_code == 0:
+                cmd = [clang_format, "-style=file", "-output-replacements-xml", item]
+
+            completed = subprocess.run(cmd, capture_output=True, check=False)
+            if not fix and (completed.returncode != 0 or ("<replacement " in str(completed.stdout))):
                 self.check_failed = True
                 print(item, " NOT OK")
 

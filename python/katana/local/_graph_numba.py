@@ -1,11 +1,9 @@
-import ctypes
-
 from numba import types
 from numba.extending import overload, overload_method
 
 from ._property_graph_numba_native import PropertyGraph_numba_wrapper
 
-# PropertyGraph
+# Graph
 
 
 @overload(len)

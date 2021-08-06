@@ -3,8 +3,8 @@ import pyarrow
 
 from katana import do_all, do_all_operator
 from katana.galois import set_active_threads
-from katana.local.atomic import GAccumulator, GReduceLogicalOr, atomic_min
-from katana.local.property_graph import PropertyGraph
+from katana.local import Graph
+from katana.local.atomic import ReduceLogicalOr, ReduceSum, atomic_min
 from katana.timer import StatTimer
 
 
@@ -19,7 +19,7 @@ def initialize_cc_pull_operator(comp_current: np.ndarray, nid):
 
 
 @do_all_operator()
-def cc_pull_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarray, nid):
+def cc_pull_topo_operator(graph: Graph, changed, comp_current: np.ndarray, nid):
     for ii in graph.edges(nid):
         dst = graph.get_edge_dest(ii)
         # Pull the minimum component from your neighbors
@@ -29,7 +29,7 @@ def cc_pull_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarra
             changed.update(True)
 
 
-def cc_pull_topo(graph: PropertyGraph, property_name):
+def cc_pull_topo(graph: Graph, property_name):
     print("Executing Pull algo\n")
     num_nodes = graph.num_nodes()
 
@@ -44,7 +44,7 @@ def cc_pull_topo(graph: PropertyGraph, property_name):
     )
 
     # Execute while component ids are updated
-    changed = GReduceLogicalOr()
+    changed = ReduceLogicalOr()
     changed.update(True)
     while changed.reduce():
         changed.reset()
@@ -62,14 +62,14 @@ def cc_pull_topo(graph: PropertyGraph, property_name):
 ## NOTE: Requires symmetric graph
 ################################################
 @do_all_operator()
-def initialize_cc_push_operator(graph: PropertyGraph, comp_current: np.ndarray, comp_old: np.ndarray, nid):
+def initialize_cc_push_operator(graph: Graph, comp_current: np.ndarray, comp_old: np.ndarray, nid):
     # Initialize each node in its own component
     comp_current[nid] = nid
     comp_old[nid] = graph.num_nodes()
 
 
 @do_all_operator()
-def cc_push_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarray, comp_old: np.ndarray, nid):
+def cc_push_topo_operator(graph: Graph, changed, comp_current: np.ndarray, comp_old: np.ndarray, nid):
     if comp_old[nid] > comp_current[nid]:
         comp_old[nid] = comp_current[nid]
         # Indicates that update happened
@@ -81,7 +81,7 @@ def cc_push_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarra
             atomic_min(comp_current, dst, new_comp)
 
 
-def cc_push_topo(graph: PropertyGraph, property_name):
+def cc_push_topo(graph: Graph, property_name):
     print("Executing Push algo\n")
     num_nodes = graph.num_nodes()
 
@@ -100,7 +100,7 @@ def cc_push_topo(graph: PropertyGraph, property_name):
     )
 
     # Execute while component ids are updated
-    changed = GReduceLogicalOr()
+    changed = ReduceLogicalOr()
     changed.update(True)
     while changed.reduce():
         changed.reset()
@@ -121,15 +121,15 @@ def cc_push_topo(graph: PropertyGraph, property_name):
 ## Components found in the graph
 ################################################
 @do_all_operator()
-def verify_cc_operator(num_components: GAccumulator[int], data, nid):
+def verify_cc_operator(num_components: ReduceSum[int], data, nid):
     # Component id == node id
     if data[nid] == nid:
         num_components.update(1)
 
 
-def verify_cc(graph: PropertyGraph, property_id: int):
+def verify_cc(graph: Graph, property_id: int):
     chunk_array = graph.get_node_property(property_id)
-    num_components = GAccumulator[int](0)
+    num_components = ReduceSum[int](0)
 
     do_all(
         range(len(chunk_array)), verify_cc_operator(num_components, chunk_array), loop_name="num_components",
@@ -156,7 +156,7 @@ def main():
 
     print("Using threads:", set_active_threads(args.threads))
 
-    graph = PropertyGraph(args.input)
+    graph = Graph(args.input)
 
     if args.algoType == "push":
         cc_push_topo(graph, args.propertyName)

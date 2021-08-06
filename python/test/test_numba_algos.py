@@ -2,11 +2,11 @@ from test.lonestar.bfs import bfs_sync_pg, verify_bfs
 from test.lonestar.jaccard import jaccard
 from test.lonestar.sssp import sssp, verify_sssp
 
-from katana.local import PropertyGraph
+from katana.local import Graph
 from katana.local.analytics import BfsStatistics, SsspStatistics, sssp_assert_valid
 
 
-def test_bfs(property_graph: PropertyGraph):
+def test_bfs(property_graph: Graph):
     start_node = 0
     property_name = "NewProp"
 

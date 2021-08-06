@@ -271,8 +271,8 @@ with nogil:
 
 {% macro handle_iterable(inner, iterable, args, loop_variable_type) -%}
 {{"FATAL: loop_variable_type already set to: " + loop_variable_type if loop_variable_type}}
-from katana.local._property_graph import PropertyGraph
-if isinstance(iterable, PropertyGraph):
+from katana.local._graph import Graph
+if isinstance(iterable, Graph):
     iterable = range(iterable.num_nodes())
 
 if isinstance(iterable, range) and iterable.step == 1:

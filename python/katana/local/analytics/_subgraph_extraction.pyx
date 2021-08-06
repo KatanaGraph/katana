@@ -16,7 +16,7 @@ from pyarrow.lib cimport to_shared
 
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -81,7 +81,7 @@ cdef shared_ptr[_PropertyGraph] handle_result_property_graph(Result[unique_ptr[_
     return to_shared(res.value())
 
 
-def subgraph_extraction(PropertyGraph pg, node_vec, SubGraphExtractionPlan plan = SubGraphExtractionPlan()) -> PropertyGraph:
+def subgraph_extraction(Graph pg, node_vec, SubGraphExtractionPlan plan = SubGraphExtractionPlan()) -> Graph:
     """
     Given a set of node ids, this algorithm constructs a new sub-graph which contains all nodes in the set and edges
     between them.
@@ -89,4 +89,4 @@ def subgraph_extraction(PropertyGraph pg, node_vec, SubGraphExtractionPlan plan 
     cdef vector[uint32_t] vec = [<uint32_t>n for n in node_vec]
     with nogil:
         v = handle_result_property_graph(SubGraphExtraction(pg.underlying_property_graph(), vec, plan.underlying_))
-    return PropertyGraph.make(v)
+    return Graph.make(v)

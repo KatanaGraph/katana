@@ -12,7 +12,7 @@ cdef _convert_string_list(l)
 #
 # Python Property Graph
 #
-cdef class PropertyGraphBase:
+cdef class GraphBase:
     cdef _PropertyGraph * underlying_property_graph(self) nogil except NULL
 
     @staticmethod
@@ -27,11 +27,11 @@ cdef class PropertyGraphBase:
 
     cpdef uint64_t get_edge_dest(PropertyGraphInterface, uint64_t)
 
-cdef class PropertyGraph(PropertyGraphBase):
+cdef class Graph(GraphBase):
     cdef:
         shared_ptr[_PropertyGraph] _underlying_property_graph
 
     cdef _PropertyGraph * underlying_property_graph(self) nogil except NULL
 
     @staticmethod
-    cdef PropertyGraph make(shared_ptr[_PropertyGraph] u)
+    cdef Graph make(shared_ptr[_PropertyGraph] u)

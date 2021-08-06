@@ -2,9 +2,9 @@ import numpy as np
 import pyarrow
 
 from katana import do_all, do_all_operator
+from katana.local import Graph
 from katana.local.atomic import atomic_add
 from katana.local.datastructures import AllocationPolicy, NUMAArray
-from katana.local.property_graph import PropertyGraph
 
 
 @do_all_operator()
@@ -13,7 +13,7 @@ def initialize_in_degree(nin, nid):
 
 
 @do_all_operator()
-def count_in_and_out_degree(graph: PropertyGraph, nout, nin, nid):
+def count_in_and_out_degree(graph: Graph, nout, nin, nid):
     out_degree = 0
     for edge in graph.edges(nid):
         out_degree += 1
@@ -23,7 +23,7 @@ def count_in_and_out_degree(graph: PropertyGraph, nout, nin, nid):
 
 
 @do_all_operator()
-def count_weighted_in_and_out_degree(graph: PropertyGraph, nout, nin, weight_array, nid):
+def count_weighted_in_and_out_degree(graph: Graph, nout, nin, weight_array, nid):
     out_degree = 0
     for edge in graph.edges(nid):
         weight = weight_array[edge]
@@ -33,13 +33,13 @@ def count_weighted_in_and_out_degree(graph: PropertyGraph, nout, nin, weight_arr
     nout[nid] = out_degree
 
 
-def calculate_degree(graph: PropertyGraph, in_degree_property, out_degree_property, weight_property=None):
+def calculate_degree(graph: Graph, in_degree_property, out_degree_property, weight_property=None):
     """
     Calculate the (potentially weighted) in and out degrees of a graph.
     The function will modify the given graph by adding two new node properties,
     one for the in degree and one for the out degree. Nothing is returned.
     Parameters:
-        graph: a PropertyGraph
+        graph: a Graph
         in_degree_property: the property name for the in degree
         out_degree_property: the property name for the out degree
         weight_property: an edge property to use in calculating the weighted degree

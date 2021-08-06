@@ -25,7 +25,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -132,12 +132,12 @@ cdef class JaccardPlan(Plan):
         return JaccardPlan.make(_JaccardPlan.Unsorted())
 
 
-def jaccard(PropertyGraph pg, size_t compare_node, str output_property_name,
+def jaccard(Graph pg, size_t compare_node, str output_property_name,
             JaccardPlan plan = JaccardPlan()):
     """
     Compute the Jaccard Similarity between `compare_node` and all nodes in the graph.
 
-    :type pg: PropertyGraph
+    :type pg: Graph
     :param pg: The graph to analyze.
     :type compare_node: node ID
     :param compare_node: The node to compare to all nodes.
@@ -152,7 +152,7 @@ def jaccard(PropertyGraph pg, size_t compare_node, str output_property_name,
         handle_result_void(Jaccard(pg.underlying_property_graph(), compare_node, output_property_name_cstr, plan.underlying_))
 
 
-def jaccard_assert_valid(PropertyGraph pg, size_t compare_node, str output_property_name):
+def jaccard_assert_valid(Graph pg, size_t compare_node, str output_property_name):
     """
     Raise an exception if the Jaccard Similarity results in `pg` are invalid. This is not an exhaustive check, just a
     sanity check.
@@ -180,7 +180,7 @@ cdef class JaccardStatistics:
     """
     cdef _JaccardStatistics underlying
 
-    def __init__(self, PropertyGraph pg, size_t compare_node, str output_property_name):
+    def __init__(self, Graph pg, size_t compare_node, str output_property_name):
         output_property_name_bytes = bytes(output_property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:

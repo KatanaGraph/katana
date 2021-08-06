@@ -3,7 +3,7 @@ import pyarrow
 
 from katana import do_all, do_all_operator
 from katana.galois import set_active_threads
-from katana.local.property_graph import PropertyGraph
+from katana.local import Graph
 from katana.timer import StatTimer
 
 
@@ -55,7 +55,7 @@ def main():
 
     print("Using threads:", set_active_threads(args.threads))
 
-    g = PropertyGraph(args.input)
+    g = Graph(args.input)
 
     timer = StatTimer("Jaccard (Property Graph) Numba")
     timer.start()

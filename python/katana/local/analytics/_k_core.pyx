@@ -25,7 +25,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -106,11 +106,11 @@ cdef class KCorePlan(Plan):
         return KCorePlan.make(_KCorePlan.Asynchronous())
 
 
-def k_core(PropertyGraph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan()) -> int:
+def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan()) -> int:
     """
     Compute nodes which are in the k-core of pg. The pg must be symmetric.
 
-    :type pg: PropertyGraph
+    :type pg: Graph
     :param pg: The graph to analyze.
     :param k_core_number: k. The minimum degree of nodes in the resulting core.
     :type output_property_name: str
@@ -125,7 +125,7 @@ def k_core(PropertyGraph pg, uint32_t k_core_number, str output_property_name, K
     return v
 
 
-def k_core_assert_valid(PropertyGraph pg, uint32_t k_core_number, str output_property_name):
+def k_core_assert_valid(Graph pg, uint32_t k_core_number, str output_property_name):
     """
     Raise an exception if the k-core results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
 
@@ -149,7 +149,7 @@ cdef class KCoreStatistics:
     """
     cdef _KCoreStatistics underlying
 
-    def __init__(self, PropertyGraph pg, uint32_t k_core_number, str output_property_name):
+    def __init__(self, Graph pg, uint32_t k_core_number, str output_property_name):
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_KCoreStatistics(_KCoreStatistics.Compute(

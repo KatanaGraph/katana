@@ -8,7 +8,7 @@ from pytest import approx, raises
 from katana import GaloisError
 from katana.example_data import get_input
 from katana.galois import set_busy_wait
-from katana.local import PropertyGraph
+from katana.local import Graph
 from katana.local.analytics import (
     BetweennessCentralityPlan,
     BetweennessCentralityStatistics,
@@ -54,7 +54,7 @@ from katana.local.analytics import (
 NODES_TO_SAMPLE = 10
 
 
-def test_assert_valid(property_graph: PropertyGraph):
+def test_assert_valid(property_graph: Graph):
     property_name = "NewProp"
     start_node = 0
 
@@ -71,7 +71,7 @@ def test_assert_valid(property_graph: PropertyGraph):
         bfs_assert_valid(property_graph, start_node, "Prop2")
 
 
-def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
+def test_sort_all_edges_by_dest(property_graph: Graph):
     original_dests = [
         [property_graph.get_edge_dest(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)
     ]
@@ -87,13 +87,13 @@ def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
         assert original_dests[n] == new_dests[n]
 
 
-def test_find_edge_sorted_by_dest(property_graph: PropertyGraph):
+def test_find_edge_sorted_by_dest(property_graph: Graph):
     sort_all_edges_by_dest(property_graph)
     assert find_edge_sorted_by_dest(property_graph, 0, 1000) is None
     assert find_edge_sorted_by_dest(property_graph, 0, 1967) is None
 
 
-def test_sort_nodes_by_degree(property_graph: PropertyGraph):
+def test_sort_nodes_by_degree(property_graph: Graph):
     sort_nodes_by_degree(property_graph)
     assert len(property_graph.edges(0)) == 103
     last_node_n_edges = 103
@@ -103,7 +103,7 @@ def test_sort_nodes_by_degree(property_graph: PropertyGraph):
         last_node_n_edges = v
 
 
-def test_bfs(property_graph: PropertyGraph):
+def test_bfs(property_graph: Graph):
     property_name = "NewProp"
     start_node = 0
 
@@ -126,7 +126,7 @@ def test_bfs(property_graph: PropertyGraph):
     verify_bfs(property_graph, start_node, new_property_id)
 
 
-def test_sssp(property_graph: PropertyGraph):
+def test_sssp(property_graph: Graph):
     property_name = "NewProp"
     weight_name = "workFrom"
     start_node = 0
@@ -151,7 +151,7 @@ def test_sssp(property_graph: PropertyGraph):
     verify_sssp(property_graph, start_node, new_property_id)
 
 
-def test_jaccard(property_graph: PropertyGraph):
+def test_jaccard(property_graph: Graph):
     property_name = "NewProp"
     compare_node = 0
 
@@ -176,7 +176,7 @@ def test_jaccard(property_graph: PropertyGraph):
     assert similarities[2812] == approx(0.0)
 
 
-def test_jaccard_sorted(property_graph: PropertyGraph):
+def test_jaccard_sorted(property_graph: Graph):
     sort_all_edges_by_dest(property_graph)
 
     property_name = "NewProp"
@@ -192,7 +192,7 @@ def test_jaccard_sorted(property_graph: PropertyGraph):
     assert similarities[2812] == approx(0.0)
 
 
-def test_pagerank(property_graph: PropertyGraph):
+def test_pagerank(property_graph: Graph):
     property_name = "NewProp"
 
     pagerank(property_graph, property_name)
@@ -211,7 +211,7 @@ def test_pagerank(property_graph: PropertyGraph):
     assert stats.average_rank == approx(0.5215466022491455, abs=0.001)
 
 
-def test_betweenness_centrality_outer(property_graph: PropertyGraph):
+def test_betweenness_centrality_outer(property_graph: Graph):
     property_name = "NewProp"
 
     betweenness_centrality(property_graph, property_name, 16, BetweennessCentralityPlan.outer())
@@ -228,7 +228,7 @@ def test_betweenness_centrality_outer(property_graph: PropertyGraph):
     assert stats.average_centrality == approx(0.000534295046236366)
 
 
-def test_betweenness_centrality_level(property_graph: PropertyGraph):
+def test_betweenness_centrality_level(property_graph: Graph):
     property_name = "NewProp"
 
     betweenness_centrality(property_graph, property_name, 16, BetweennessCentralityPlan.level())
@@ -246,7 +246,7 @@ def test_betweenness_centrality_level(property_graph: PropertyGraph):
 
 
 def test_triangle_count():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
     original_first_edge_list = [property_graph.get_edge_dest(e) for e in property_graph.edges(0)]
     n = triangle_count(property_graph)
     assert n == 282617
@@ -265,7 +265,7 @@ def test_triangle_count():
 
 
 def test_triangle_count_presorted():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
     sort_nodes_by_degree(property_graph)
     sort_all_edges_by_dest(property_graph)
     n = triangle_count(property_graph, TriangleCountPlan.node_iteration(relabeling=False, edges_sorted=True))
@@ -273,7 +273,7 @@ def test_triangle_count_presorted():
 
 
 def test_independent_set():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
 
     independent_set(property_graph, "output")
 
@@ -289,7 +289,7 @@ def test_independent_set():
 
 
 def test_connected_components():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
 
     connected_components(property_graph, "output")
 
@@ -304,7 +304,7 @@ def test_connected_components():
 
 
 def test_k_core():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
 
     k_core(property_graph, 10, "output")
 
@@ -316,7 +316,7 @@ def test_k_core():
 
 
 def test_k_truss():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
 
     k_truss(property_graph, 10, "output")
 
@@ -328,7 +328,7 @@ def test_k_truss():
 
 
 def test_k_truss_fail():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
 
     with raises(GaloisError):
         k_truss(property_graph, 2, "output")
@@ -338,7 +338,7 @@ def test_k_truss_fail():
 
 
 def test_louvain_clustering():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
 
     louvain_clustering(property_graph, "value", "output")
 
@@ -353,10 +353,10 @@ def test_louvain_clustering():
 
 
 def test_local_clustering_coefficient():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
 
     local_clustering_coefficient(property_graph, "output")
-    property_graph: PropertyGraph
+    property_graph: Graph
     out = property_graph.get_node_property("output")
 
     assert out[-1].as_py() == 0
@@ -364,7 +364,7 @@ def test_local_clustering_coefficient():
 
 
 def test_subgraph_extraction():
-    property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    property_graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
     sort_all_edges_by_dest(property_graph)
     nodes = [1, 3, 11, 120]
 
@@ -379,7 +379,7 @@ def test_subgraph_extraction():
 
     pg = subgraph_extraction(property_graph, nodes)
 
-    assert isinstance(pg, PropertyGraph)
+    assert isinstance(pg, Graph)
     assert len(pg) == len(nodes)
     assert pg.num_edges() == 6
 
@@ -388,7 +388,7 @@ def test_subgraph_extraction():
         assert [pg.get_edge_dest(e) for e in pg.edges(i)] == expected_edges[i]
 
 
-def test_busy_wait(property_graph: PropertyGraph):
+def test_busy_wait(property_graph: Graph):
     set_busy_wait()
     property_name = "NewProp"
     start_node = 0

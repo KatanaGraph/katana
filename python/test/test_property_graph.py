@@ -7,7 +7,7 @@ import pyarrow
 import pytest
 
 from katana import TsubaError, do_all, do_all_operator
-from katana.local import PropertyGraph
+from katana.local import Graph
 
 
 def test_load(property_graph):
@@ -22,7 +22,7 @@ def test_write(property_graph):
         property_graph.write(tmpdir)
         old_property_graph = property_graph
         del property_graph
-        property_graph = PropertyGraph(tmpdir)
+        property_graph = Graph(tmpdir)
     assert property_graph.num_nodes() == 29946
     assert property_graph.num_edges() == 43072
     assert len(property_graph.loaded_node_schema()) == 31
@@ -38,7 +38,7 @@ def test_commit(property_graph):
         property_graph.path = tmpdir
         property_graph.write()
         del property_graph
-        property_graph = PropertyGraph(tmpdir)
+        property_graph = Graph(tmpdir)
     assert property_graph.num_nodes() == 29092
     assert property_graph.num_edges() == 39283
     assert len(property_graph.loaded_node_schema()) == 31
@@ -175,7 +175,7 @@ def test_upsert_edge_property(property_graph):
 
 
 def test_from_csr():
-    pg = PropertyGraph.from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
+    pg = Graph.from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
     assert pg.num_nodes() == 2
     assert pg.num_edges() == 1
     assert list(pg.edges(0)) == [0]
@@ -183,7 +183,7 @@ def test_from_csr():
 
 
 def test_from_csr_int16():
-    pg = PropertyGraph.from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
+    pg = Graph.from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
     assert pg.num_nodes() == 2
     assert pg.num_edges() == 1
     assert list(pg.edges(0)) == [0]
@@ -191,7 +191,7 @@ def test_from_csr_int16():
 
 
 def test_from_csr_k3():
-    pg = PropertyGraph.from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
+    pg = Graph.from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
     assert pg.num_nodes() == 3
     assert pg.num_edges() == 6
     assert list(pg.edges(2)) == [4, 5]
@@ -202,30 +202,30 @@ def test_from_csr_k3():
 @pytest.mark.required_env("KATANA_SOURCE_DIR")
 def test_load_graphml():
     input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
-    pg = PropertyGraph.from_graphml(input_file)
+    pg = Graph.from_graphml(input_file)
     assert pg.get_node_property(0)[1].as_py() == "Keanu Reeves"
 
 
 @pytest.mark.required_env("KATANA_SOURCE_DIR")
 def test_load_graphml_write():
     input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
-    pg = PropertyGraph.from_graphml(input_file)
+    pg = Graph.from_graphml(input_file)
     with TemporaryDirectory() as tmpdir:
         pg.write(tmpdir)
         del pg
-        property_graph = PropertyGraph(tmpdir)
+        property_graph = Graph(tmpdir)
         assert property_graph.path == f"file://{tmpdir}"
     assert property_graph.get_node_property(0)[1].as_py() == "Keanu Reeves"
 
 
 def test_load_invalid_path():
     with pytest.raises(TsubaError):
-        PropertyGraph("non-existent")
+        Graph("non-existent")
 
 
 def test_load_directory():
     with pytest.raises(TsubaError):
-        PropertyGraph("/tmp")
+        Graph("/tmp")
 
 
 def test_load_garbage_file():
@@ -233,7 +233,7 @@ def test_load_garbage_file():
         fi.write(b"Test")
         fi.flush()
         with pytest.raises(TsubaError):
-            PropertyGraph(fi.name)
+            Graph(fi.name)
 
 
 def test_simple_algorithm(property_graph):

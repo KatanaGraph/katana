@@ -1,4 +1,4 @@
-import katana.local._property_graph_numba
-from katana.local._property_graph import PropertyGraph
+import katana.local._graph_numba
+from katana.local._graph import Graph
 
-__all__ = ["PropertyGraph"]
+__all__ = ["Graph"]

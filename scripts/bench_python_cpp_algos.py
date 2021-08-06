@@ -10,7 +10,7 @@ from pyarrow import Schema
 import katana.galois
 import katana.local
 from katana import analytics
-from katana.property_graph import PropertyGraph
+from katana.property_graph import Graph
 
 # TODO(amp): This script needs to be tested in CI.
 
@@ -23,14 +23,14 @@ def time_block(run_name):
     print(f"[TIMER] Time to run {run_name} : {round((timer_algo_end - timer_algo_start), 2)} seconds")
 
 
-def check_schema(property_graph: PropertyGraph, property_name):
+def check_schema(property_graph: Graph, property_name):
     node_schema: Schema = property_graph.loaded_node_schema()
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
 
 
-def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
+def run_bfs(property_graph: Graph, input_args, source_node_file):
     property_name = "NewProp"
     start_node = input_args["source_node"]
 
@@ -68,7 +68,7 @@ def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
         property_graph.remove_node_property(property_name)
 
 
-def run_sssp(property_graph: PropertyGraph, input_args, source_node_file):
+def run_sssp(property_graph: Graph, input_args, source_node_file):
     property_name = "NewProp"
     start_node = input_args["source_node"]
     edge_prop_name = input_args["edge_wt"]
@@ -108,7 +108,7 @@ def run_sssp(property_graph: PropertyGraph, input_args, source_node_file):
         property_graph.remove_node_property(property_name)
 
 
-def run_jaccard(property_graph: PropertyGraph, input_args):
+def run_jaccard(property_graph: Graph, input_args):
     property_name = "NewProp"
     compare_node = input_args["source_node"]
 
@@ -127,7 +127,7 @@ def run_jaccard(property_graph: PropertyGraph, input_args):
     property_graph.remove_node_property(property_name)
 
 
-def run_pagerank(property_graph: PropertyGraph, _input_args):
+def run_pagerank(property_graph: Graph, _input_args):
     property_name = "NewProp"
 
     tolerance = 0.0001
@@ -148,7 +148,7 @@ def run_pagerank(property_graph: PropertyGraph, _input_args):
     property_graph.remove_node_property(property_name)
 
 
-def run_bc(property_graph: PropertyGraph, input_args, source_node_file, num_sources):
+def run_bc(property_graph: Graph, input_args, source_node_file, num_sources):
     property_name = "NewProp"
     start_node = input_args["source_node"]
 
@@ -190,7 +190,7 @@ def run_bc(property_graph: PropertyGraph, input_args, source_node_file, num_sour
         property_graph.remove_node_property(property_name)
 
 
-def run_tc(property_graph: PropertyGraph, _input_args):
+def run_tc(property_graph: Graph, _input_args):
     analytics.sort_all_edges_by_dest(property_graph)
     tc_plan = analytics.TriangleCountPlan.ordered_count(edges_sorted=True)
 
@@ -200,7 +200,7 @@ def run_tc(property_graph: PropertyGraph, _input_args):
     print(f"STATS:\nNumber of Triangles: {n}")
 
 
-def run_cc(property_graph: PropertyGraph, _input_args):
+def run_cc(property_graph: Graph, _input_args):
     property_name = "NewProp"
 
     with time_block("connected components"):
@@ -215,7 +215,7 @@ def run_cc(property_graph: PropertyGraph, _input_args):
     property_graph.remove_node_property(property_name)
 
 
-def run_kcore(property_graph: PropertyGraph, _input_args):
+def run_kcore(property_graph: Graph, _input_args):
     property_name = "NewProp"
     k = 10
 
@@ -231,7 +231,7 @@ def run_kcore(property_graph: PropertyGraph, _input_args):
     property_graph.remove_node_property(property_name)
 
 
-def run_louvain(property_graph: PropertyGraph, input_args):
+def run_louvain(property_graph: Graph, input_args):
     property_name = "NewProp"
     edge_prop_name = input_args["edge_wt"]
 
@@ -304,8 +304,8 @@ def run_all_gap(args):
 
     def load_graph(graph_path, edge_properties=None):
         print(f"Running {args.application} on graph: {graph_path}")
-        with time_block("read propertyGraph"):
-            graph = PropertyGraph(graph_path, edge_properties=edge_properties, node_properties=[])
+        with time_block("read Graph"):
+            graph = Graph(graph_path, edge_properties=edge_properties, node_properties=[])
         print(f"#Nodes: {len(graph)}, #Edges: {graph.num_edges()}")
         return graph
 

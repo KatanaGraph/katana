@@ -1,41 +1,12 @@
 #!/bin/bash
 
-CLANG_FORMAT=${CLANG_FORMAT:-clang-format}
-set -e
+# Taken from https://stackoverflow.com/a/246128/1915854
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 
-if [ $# -eq 0 ]; then
-  echo "$(basename $0) [-fix] <paths>" >&2
-  exit 1
-fi
-
-FIX=
-if [ "$1" == "-fix" ]; then
-  FIX=1
-  shift 1
-fi
-
-ROOTS="$@"
-FAILED=
-PRUNE_PATHS=${PRUNE_PATHS:-}
-PRUNE_NAMES="build* .#*"
-
-emit_prunes() {
-  { for p in ${PRUNE_PATHS}; do echo "-path ${p} -prune -o"; done; \
-    for p in ${PRUNE_NAMES}; do echo "-name ${p} -prune -o"; done; } | xargs
-}
-
-while read -d '' filename; do
-  if [ -n "${FIX}" ]; then
-    echo "fixing ${filename}"
-    ${CLANG_FORMAT} -style=file -i "${filename}"
-  else
-    if ${CLANG_FORMAT} -style=file -output-replacements-xml "${filename}" | grep '<replacement ' > /dev/null; then
-      echo "${filename} NOT OK"
-      FAILED=1
-    fi
-  fi
-done < <(find ${ROOTS} $(emit_prunes) -name '*.cpp' -print0 -o -name '*.h' -print0 -o -name '*.cu' -print0 -o -name '*.cuh' -print0)
-
-if [ -n "${FAILED}" ]; then
-  exit 1
-fi
+python3 ${DIR}/check_cpp_format.py "$@"

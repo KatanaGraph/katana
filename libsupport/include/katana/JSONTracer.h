@@ -12,10 +12,14 @@
 
 namespace katana {
 
+using OutputCB = std::function<void(const std::string&)>;
+
 class KATANA_EXPORT JSONTracer : public ProgressTracer {
 public:
   static std::unique_ptr<JSONTracer> Make(
       uint32_t host_id = 0, uint32_t num_hosts = 1);
+  static std::unique_ptr<JSONTracer> Make(
+      uint32_t host_id, uint32_t num_hosts, OutputCB out_callback);
 
   std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, const ProgressContext& child_of) override;
@@ -26,12 +30,14 @@ public:
   void Close() override {}
 
 private:
-  JSONTracer(uint32_t host_id = 0, uint32_t num_hosts = 1)
-      : ProgressTracer(host_id, num_hosts) {}
+  JSONTracer(uint32_t host_id, uint32_t num_hosts, OutputCB out_callback)
+      : ProgressTracer(host_id, num_hosts), out_callback_(out_callback) {}
 
   std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name,
       std::shared_ptr<ProgressSpan> child_of) override;
+
+  OutputCB out_callback_;
 };
 
 class KATANA_EXPORT JSONContext : public ProgressContext {
@@ -66,16 +72,23 @@ public:
 private:
   friend JSONTracer;
 
-  JSONSpan(const std::string& span_name, std::shared_ptr<ProgressSpan> parent);
-  JSONSpan(const std::string& span_name, const ProgressContext& parent);
+  JSONSpan(
+      const std::string& span_name, std::shared_ptr<ProgressSpan> parent,
+      OutputCB out_callback);
+  JSONSpan(
+      const std::string& span_name, const ProgressContext& parent,
+      OutputCB out_callback);
   static std::shared_ptr<ProgressSpan> Make(
-      const std::string& span_name, std::shared_ptr<ProgressSpan> parent);
+      const std::string& span_name, std::shared_ptr<ProgressSpan> parent,
+      OutputCB out_callback);
   static std::shared_ptr<ProgressSpan> Make(
-      const std::string& span_name, const ProgressContext& parent);
+      const std::string& span_name, const ProgressContext& parent,
+      OutputCB out_callback);
 
   void Close() override;
 
   JSONContext context_;
+  OutputCB out_callback_;
 };
 
 }  // namespace katana

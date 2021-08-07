@@ -10,6 +10,10 @@
 #include "katana/Result.h"
 #include "katana/config.h"
 
+/// This tracer does not currently support thread-local tracers or concurrency controls
+/// Starting/Finishing span functions should only be used in a single-threaded context
+/// However, logging and tagging existing spans are thread-safe in the JSONTracer
+///
 /// OpenTracing Overview
 ///
 /// The following classes are based on/from the OpenTracing
@@ -28,8 +32,6 @@
 /// Contexts are typically used to pass spans across process/thread boundaries
 ///
 ///
-/// This tracer does not currently support thread-local tracers or concurrency controls
-/// Functions should only be used in a single-threaded context
 ///
 /// Best Practices:
 ///   If possible always avoid creating raw ProgressSpans from ProgressTracer

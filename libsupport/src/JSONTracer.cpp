@@ -7,10 +7,12 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <regex>
 
 #include <arrow/memory_pool.h>
 
+#include "katana/Random.h"
 #include "katana/Time.h"
 
 #if __linux__
@@ -20,6 +22,7 @@
 namespace {
 
 const std::regex kRssRegex("^Rss\\w+:\\s+([0-9]+) kB");
+std::mutex output_mutex;
 
 struct HostStats {
   long nprocs{};
@@ -87,14 +90,9 @@ GetHostStats() {
 
 #endif
 
-// TODO (Patrick)
-// This function is included for debugging purposes while
-// the tracing infrastructure is added and tested
-uint32_t id = 0;
 std::string
-GenerateID(uint32_t host_id) {
-  id++;
-  return std::to_string(host_id * 1000 + id);
+GenerateID() {
+  return katana::RandomAlphanumericString(15);
 }
 
 std::string
@@ -235,17 +233,32 @@ BuildJSON(
   return fmt::to_string(buf);
 }
 
+void
+OutputJSON(katana::OutputCB out_callback, const std::string& output) {
+  std::lock_guard<std::mutex> lock(output_mutex);
+  out_callback(output);
+}
+
 }  // namespace
 
 std::unique_ptr<katana::JSONTracer>
 katana::JSONTracer::Make(uint32_t host_id, uint32_t num_hosts) {
-  return std::unique_ptr<JSONTracer>(new JSONTracer(host_id, num_hosts));
+  return std::unique_ptr<JSONTracer>(new JSONTracer(
+      host_id, num_hosts,
+      [](const std::string& output) { std::cout << output; }));
+}
+
+std::unique_ptr<katana::JSONTracer>
+katana::JSONTracer::Make(
+    uint32_t host_id, uint32_t num_hosts, katana::OutputCB out_callback) {
+  return std::unique_ptr<JSONTracer>(
+      new JSONTracer(host_id, num_hosts, out_callback));
 }
 
 std::shared_ptr<katana::ProgressSpan>
 katana::JSONTracer::StartSpan(
     const std::string& span_name, const katana::ProgressContext& child_of) {
-  return JSONSpan::Make(span_name, child_of);
+  return JSONSpan::Make(span_name, child_of, out_callback_);
 }
 
 std::string
@@ -269,7 +282,7 @@ std::shared_ptr<katana::ProgressSpan>
 katana::JSONTracer::StartSpan(
     const std::string& span_name,
     std::shared_ptr<katana::ProgressSpan> child_of) {
-  return JSONSpan::Make(span_name, std::move(child_of));
+  return JSONSpan::Make(span_name, std::move(child_of), out_callback_);
 }
 
 std::unique_ptr<katana::ProgressContext>
@@ -286,8 +299,7 @@ katana::JSONSpan::SetTags(const katana::Tags& tags) {
 
   std::string output_json = BuildJSON(
       GetContext().GetTraceID(), span_data, log_data, tag_data, host_data);
-
-  std::cerr << output_json;
+  OutputJSON(out_callback_, output_json);
 }
 
 void
@@ -299,15 +311,15 @@ katana::JSONSpan::Log(const std::string& message, const katana::Tags& tags) {
 
   std::string output_json = BuildJSON(
       GetContext().GetTraceID(), span_data, log_data, tag_data, host_data);
-
-  std::cerr << output_json;
+  OutputJSON(out_callback_, output_json);
 }
 
 katana::JSONSpan::JSONSpan(
-    const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent)
-    : ProgressSpan(parent), context_(JSONContext{"", ""}) {
-  auto& tracer = ProgressTracer::GetProgressTracer();
-
+    const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent,
+    OutputCB out_callback)
+    : ProgressSpan(parent),
+      context_(JSONContext{"", ""}),
+      out_callback_(out_callback) {
   std::string parent_span_id{"null"};
   std::string trace_id;
   std::string host_data;
@@ -316,10 +328,10 @@ katana::JSONSpan::JSONSpan(
     parent_span_id = parent_span->GetContext().GetSpanID();
     trace_id = parent_span->GetContext().GetTraceID();
   } else {
-    trace_id = GenerateID(tracer.GetHostID());
+    trace_id = GenerateID();
     host_data = GetHostStatsJSON();
   }
-  std::string span_id = GenerateID(tracer.GetHostID());
+  std::string span_id = GenerateID();
   context_ = JSONContext(trace_id, span_id);
 
   std::string message{"start"};
@@ -330,18 +342,18 @@ katana::JSONSpan::JSONSpan(
 
   std::string output_json =
       BuildJSON(trace_id, span_data, log_data, tag_data, host_data);
-
-  std::cerr << output_json;
+  OutputJSON(out_callback_, output_json);
 }
 
 katana::JSONSpan::JSONSpan(
-    const std::string& span_name, const katana::ProgressContext& parent)
-    : ProgressSpan(nullptr), context_(JSONContext{"", ""}) {
-  auto& tracer = ProgressTracer::GetProgressTracer();
-
+    const std::string& span_name, const katana::ProgressContext& parent,
+    OutputCB out_callback)
+    : ProgressSpan(nullptr),
+      context_(JSONContext{"", ""}),
+      out_callback_(out_callback) {
   std::string parent_span_id = parent.GetSpanID();
   std::string trace_id = parent.GetTraceID();
-  std::string span_id = GenerateID(tracer.GetHostID());
+  std::string span_id = GenerateID();
   context_ = JSONContext(trace_id, span_id);
 
   std::string message{"start"};
@@ -353,20 +365,22 @@ katana::JSONSpan::JSONSpan(
 
   std::string output_json =
       BuildJSON(trace_id, span_data, log_data, tag_data, host_data);
-
-  std::cerr << output_json;
+  OutputJSON(out_callback_, output_json);
 }
 
 std::shared_ptr<katana::ProgressSpan>
 katana::JSONSpan::Make(
-    const std::string& span_name,
-    std::shared_ptr<katana::ProgressSpan> parent) {
-  return std::shared_ptr<JSONSpan>(new JSONSpan(span_name, std::move(parent)));
+    const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent,
+    OutputCB out_callback) {
+  return std::shared_ptr<JSONSpan>(
+      new JSONSpan(span_name, std::move(parent), out_callback));
 }
 std::shared_ptr<katana::ProgressSpan>
 katana::JSONSpan::Make(
-    const std::string& span_name, const katana::ProgressContext& parent) {
-  return std::shared_ptr<JSONSpan>(new JSONSpan(span_name, parent));
+    const std::string& span_name, const katana::ProgressContext& parent,
+    OutputCB out_callback) {
+  return std::shared_ptr<JSONSpan>(
+      new JSONSpan(span_name, parent, out_callback));
 }
 
 void
@@ -380,6 +394,5 @@ katana::JSONSpan::Close() {
 
   std::string output_json = BuildJSON(
       GetContext().GetTraceID(), span_data, log_data, tag_data, host_data);
-
-  std::cerr << output_json;
+  OutputJSON(out_callback_, output_json);
 }

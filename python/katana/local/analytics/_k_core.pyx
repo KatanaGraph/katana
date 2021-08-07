@@ -110,7 +110,7 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
     """
     Compute nodes which are in the k-core of pg. The pg must be symmetric.
 
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :param k_core_number: k. The minimum degree of nodes in the resulting core.
     :type output_property_name: str

@@ -11,5 +11,5 @@ Python Library
    katana.local.analytics
    katana.local.atomic
    katana.local.datastructures
-   katana.local.property_graph
+   katana.local.graph
    katana.timer

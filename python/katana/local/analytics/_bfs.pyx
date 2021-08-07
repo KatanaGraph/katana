@@ -164,7 +164,7 @@ def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = 
     Compute the Breadth-First Search parents on `pg` using `start_node` as the source. The computed parents are
     written to the property `output_property_name`.
 
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type start_node: Node ID
     :param start_node: The source node.

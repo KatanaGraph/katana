@@ -51,4 +51,4 @@ cdef class LC_CSR_Graph_{{template_name}}:
 {{wrap_LC_CSR_Graph_primitive("Undirected_" + node_type + "_" + edge_type, node_type, edge_type, "template_parameter_false")}}
 {% endmacro %}
 
-{% include "local/graphs.instantiations.jinja" %}
+{% include "local/legacy/graphs.instantiations.jinja" %}

@@ -1,8 +1,7 @@
 import numpy as np
 import pyarrow
 
-from katana import do_all, do_all_operator
-from katana.galois import set_active_threads
+from katana import do_all, do_all_operator, set_active_threads
 from katana.local import Graph
 from katana.local.atomic import ReduceLogicalOr, ReduceSum, atomic_min
 from katana.timer import StatTimer

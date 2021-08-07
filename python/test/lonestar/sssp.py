@@ -9,8 +9,8 @@ from katana import (
     for_each,
     for_each_operator,
     obim_metric,
+    set_active_threads,
 )
-from katana.galois import set_active_threads
 from katana.local import Graph
 from katana.local.atomic import ReduceMax, ReduceSum, atomic_min
 from katana.local.datastructures import InsertBag

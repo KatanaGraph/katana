@@ -129,7 +129,7 @@ def independent_set(Graph pg, str output_property_name,
     this function and may not exist before the call. The created property has type uint8_t.
 
 
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.

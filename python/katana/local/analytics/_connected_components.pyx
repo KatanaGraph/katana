@@ -249,7 +249,7 @@ def connected_components(Graph pg, str output_property_name,
     """
     Compute the Connected-components for `pg`. `pg` must be symmetric.
 
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.

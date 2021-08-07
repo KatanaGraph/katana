@@ -125,7 +125,7 @@ def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussP
     """
     Compute the k-truss for pg. `pg` must be symmetric.
 
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :param k_truss_number: k. The number of triangles that each edge must be part of.
     :type output_property_name: str

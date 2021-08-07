@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-from katana import do_all, do_all_operator
-from katana.galois import get_active_threads, set_active_threads
+from katana import do_all, do_all_operator, get_active_threads, set_active_threads
 from katana.local import SimpleBarrier, get_fast_barrier
 
 

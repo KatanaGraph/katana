@@ -137,7 +137,7 @@ def jaccard(Graph pg, size_t compare_node, str output_property_name,
     """
     Compute the Jaccard Similarity between `compare_node` and all nodes in the graph.
 
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type compare_node: node ID
     :param compare_node: The node to compare to all nodes.

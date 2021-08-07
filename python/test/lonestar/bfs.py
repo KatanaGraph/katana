@@ -98,7 +98,7 @@ def main():
     import argparse
 
     import katana.local
-    from katana.galois import set_active_threads
+    from katana import set_active_threads
 
     katana.local.initialize()
 

@@ -15,7 +15,7 @@ from katana.local.atomic import (
 from katana.local.barrier import Barrier, SimpleBarrier, get_fast_barrier
 from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.local.dynamic_bitset import DynamicBitset
-from katana.local.property_graph import Graph
+from katana.local.graph import Graph
 
 __all__ = [
     "Barrier",

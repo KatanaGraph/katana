@@ -184,7 +184,7 @@ def triangle_count(Graph pg,  TriangleCountPlan plan = TriangleCountPlan()) -> i
     """
     Count the triangles in `pg`.
 
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type plan: TriangleCountPlan
     :param plan: The execution plan to use.

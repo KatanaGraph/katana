@@ -171,7 +171,7 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
     """
     Compute the Page Rank of each node in the graph.
 
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to store the rank. This property must not already exist.

@@ -131,7 +131,7 @@ cdef class BetweennessCentralityPlan(Plan):
 def betweenness_centrality(Graph pg, str output_property_name, sources = None,
              BetweennessCentralityPlan plan = BetweennessCentralityPlan()):
     """
-    :type pg: Graph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.

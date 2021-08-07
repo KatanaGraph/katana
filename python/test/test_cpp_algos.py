@@ -5,9 +5,8 @@ import numpy as np
 from pyarrow import Schema, table
 from pytest import approx, raises
 
-from katana import GaloisError
+from katana import GaloisError, set_busy_wait
 from katana.example_data import get_input
-from katana.galois import set_busy_wait
 from katana.local import Graph
 from katana.local.analytics import (
     BetweennessCentralityPlan,

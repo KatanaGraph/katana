@@ -3,8 +3,8 @@ import os
 import pytest
 
 import katana.local
+from katana import set_active_threads
 from katana.example_data import get_input
-from katana.galois import set_active_threads
 from katana.local import Graph
 
 katana.local.initialize()

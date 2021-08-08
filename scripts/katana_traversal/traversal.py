@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 import fnmatch
 import io
 import multiprocessing
@@ -8,6 +7,7 @@ import subprocess
 import sys
 import threading
 import typing
+from abc import ABC, abstractmethod
 
 
 class FileVisitor(ABC):

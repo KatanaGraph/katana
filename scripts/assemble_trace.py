@@ -3,6 +3,7 @@
 import argparse
 import fileinput
 import json
+import os
 
 
 class Reference:
@@ -196,20 +197,20 @@ class Trace:
         return trace
 
 
-def get_traces_json(traces):
-    traces_json = dict()
+def get_traces_jsons(traces):
+    traces_jsons = []
 
-    trace_jsons = []
     for _, trace in traces.items():
-        trace_jsons.append(trace.get_json())
-    traces_json["data"] = trace_jsons
+        trace_json = dict()
 
-    traces_json["total"] = 0
-    traces_json["limit"] = 0
-    traces_json["offset"] = 0
-    traces_json["errors"] = None
+        trace_json["data"] = [trace.get_json()]
+        trace_json["total"] = 0
+        trace_json["limit"] = 0
+        trace_json["offset"] = 0
+        trace_json["errors"] = None
 
-    return traces_json
+        traces_jsons.append(trace_json)
+    return traces_jsons
 
 
 def assemble_traces(args):
@@ -247,14 +248,24 @@ def assemble_traces(args):
     return traces
 
 
+def output_traces(outdir, traces_jsons):
+    for trace_json in traces_jsons:
+        trace_id = trace_json["data"][0]["traceID"]
+        outfile = os.path.join(outdir, trace_id + ".trace.json")
+        with open(outfile, "w") as f:
+            f.write(json.dumps(trace_json, indent=2))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("log", metavar="FILE", nargs="*", help="Log to read, if none provided reads from stdin")
-    parser.add_argument("--outfile", metavar="FILE", help="File to write assembled trace to")
+    parser.add_argument("--outdir", metavar="DIR", help="Directory to write assembled traces to, defaults to cwd")
     args = parser.parse_args()
 
     traces = assemble_traces(args)
-    traces_json = get_traces_json(traces)
+    traces_jsons = get_traces_jsons(traces)
 
-    with open(args.outfile, "w") as outfile:
-        outfile.write(json.dumps(traces_json, indent=2))
+    outdir = args.outdir
+    if not outdir:
+        outdir = os.getcwd()
+    output_traces(outdir, traces_jsons)

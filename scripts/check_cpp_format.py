@@ -24,7 +24,8 @@ tasks = queue.Queue()
 
 
 class Consumer:
-    def __init__(self):
+    def __init__(self, index: int):
+        self.index = index
         self.thread = threading.Thread(target=self.entry)
         self.check_failed = False
 
@@ -94,8 +95,9 @@ if __name__ == "__main__":
 
     # Launch consumers
     consumers = []
-    for i in range(multiprocessing.cpu_count()):
-        cur_cons = Consumer()
+    n_logical_cores = multiprocessing.cpu_count()
+    for i in range(n_logical_cores):
+        cur_cons = Consumer(i)
         consumers.append(cur_cons)
         cur_cons.thread.start()
 

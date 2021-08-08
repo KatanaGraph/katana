@@ -51,7 +51,7 @@ KATANA_EXPORT katana::Result<RDGHandle> Open(
     const std::string& rdg_name, uint32_t flags);
 
 KATANA_EXPORT katana::Result<RDGHandle> Open(
-    const std::string& rdg_name, uint64_t version, uint32_t flags);
+    const std::string& rdg_name, katana::RDGVersion version, uint32_t flags);
 
 /// Generate a new canonically named topology file name in the
 /// directory associated with handle. Exported to support

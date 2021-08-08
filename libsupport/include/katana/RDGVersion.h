@@ -15,9 +15,8 @@ namespace katana {
 struct KATANA_EXPORT RDGVersion {
   // A vectorized version in the form of num:id
   // The last one has an empty branch "".
-  std::vector<uint64_t> numbers_;
-  std::vector<std::string> branches_;
-  uint64_t width_{0};
+  std::vector<uint64_t> numbers_{0};
+  std::vector<std::string> branches_{""};
 
   // TODO(wkyu): to clean up these operators
 #if 1
@@ -25,12 +24,12 @@ struct KATANA_EXPORT RDGVersion {
   RDGVersion& operator=(const RDGVersion& in) = default;
 #else
   RDGVersion(const RDGVersion& in)
-      : numbers_(in.numbers_), branches_(in.branches_), width_(in.width_) {}
+      : numbers_(in.numbers_), branches_(in.branches_) {}
 
   RDGVersion& operator=(const RDGVersion& in) {
     RDGVersion tmp = in;
     numbers_ = std::move(tmp.numbers_);
-    branches_ = std::move(tmp.branches_), width_ = tmp.width_;
+    branches_ = std::move(tmp.branches_);
     return *this;
   }
 #endif

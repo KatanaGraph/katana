@@ -202,6 +202,7 @@ private:
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
+  katana::RDGVersion version_{katana::RDGVersion(0)};
 
   /// A map from the node TypeSetID to
   /// the set of the node type names it contains
@@ -373,6 +374,11 @@ public:
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
       std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
+
+  /// Make a property graph from an RDG name with Version.
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      const std::string& rdg_name, katana::RDGVersion version,
+      const tsuba::RDGLoadOptions& opts);
 
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -649,6 +655,8 @@ public:
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }
+  void SetVersion(const katana::RDGVersion& val) { version_ = val; }
+  katana::RDGVersion& GetVersion() { return version_; }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);

@@ -27,6 +27,35 @@ FileList(const std::string& dir) {
 }
 
 katana::Result<katana::Uri>
+FindManifestFileForVersion(const katana::Uri& name, katana::RDGVersion target) {
+  KATANA_LOG_DEBUG_ASSERT(!tsuba::RDGManifest::IsManifestUri(name));
+
+  auto list_res = FileList(name.string());
+  if (!list_res) {
+    return list_res.error();
+  }
+
+  uint64_t targeted_version = target.LeafVersionNumber();
+  std::string found_manifest;
+  for (const std::string& file : list_res.value()) {
+    if (auto res = tsuba::RDGManifest::ParseVersionFromName(file); res) {
+      uint64_t new_version = res.value();
+      if (new_version == targeted_version) {
+        found_manifest = file;
+        break;
+      }
+    }
+  }
+  if (found_manifest.empty()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::NotFound,
+        "failed: could not find manifest file in {} for version {}", name,
+        targeted_version);
+  }
+  return name.Join(found_manifest);
+}
+
+katana::Result<katana::Uri>
 FindLatestManifestFile(const katana::Uri& name) {
   KATANA_LOG_DEBUG_ASSERT(!tsuba::RDGManifest::IsManifestUri(name));
   auto list_res = FileList(name.string());
@@ -57,10 +86,21 @@ FindLatestManifestFile(const katana::Uri& name) {
 
 katana::Result<tsuba::RDGHandle>
 tsuba::Open(const std::string& rdg_name, uint32_t flags) {
+  katana::RDGVersion target = katana::RDGVersion(0);
+  return tsuba::Open(rdg_name, target, flags);
+}
+
+katana::Result<tsuba::RDGHandle>
+tsuba::Open(
+    const std::string& rdg_name, katana::RDGVersion target, uint32_t flags) {
   if (!OpenFlagsValid(flags)) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "invalid value for flags ({:#x})", flags);
   }
+
+  KATANA_LOG_DEBUG(
+      "Finding version {} for rdg_name {}\n", target.LeafVersionNumber(),
+      rdg_name);
 
   auto uri_res = katana::Uri::Make(rdg_name);
   if (!uri_res) {
@@ -74,15 +114,33 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
       return manifest_res.error();
     }
 
+    if (target.LeafVersionNumber() &&
+        manifest_res.value().version().LeafVersionNumber() !=
+            target.LeafVersionNumber()) {
+      KATANA_LOG_DEBUG(
+          "Incorrect version {} for target {}\n",
+          manifest_res.value().version().LeafVersionNumber(),
+          target.LeafVersionNumber());
+    }
+
     return RDGHandle{
         .impl_ = new RDGHandleImpl(flags, std::move(manifest_res.value()))};
   }
 
-  auto latest_uri = FindLatestManifestFile(uri);
+  // Add the targeted branch before search
+  auto long_uri_res = katana::Uri::Make(rdg_name + target.GetBranchPath());
+  if (!long_uri_res) {
+    return long_uri_res.error();
+  }
+  katana::Uri long_uri = std::move(long_uri_res.value());
+
+  auto latest_uri = target.LeafVersionNumber()
+                        ? FindManifestFileForVersion(long_uri, target)
+                        : FindLatestManifestFile(long_uri);
   if (!latest_uri) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "failed to find latest RDGManifest at {}",
-        uri.string());
+        long_uri.string());
   }
 
   auto manifest_res = tsuba::RDGManifest::Make(latest_uri.value());
@@ -115,6 +173,9 @@ tsuba::Create(const std::string& name) {
   katana::CommBackend* comm = Comm();
   if (comm->ID == 0) {
     std::string s = manifest.ToJsonString();
+    KATANA_LOG_DEBUG(
+        "tsuba::create manifest version {}\n",
+        manifest.version().LeafVersionNumber());
     if (auto res = tsuba::FileStore(
             tsuba::RDGManifest::FileName(
                 uri, tsuba::kDefaultRDGViewType, manifest.version())
@@ -178,7 +239,8 @@ tsuba::ListAvailableViewsForVersion(
     const std::string& rdg_dir, katana::RDGVersion version,
     uint64_t* max_version) {
   std::vector<tsuba::RDGView> views_found;
-  KATANA_LOG_DEBUG("ListAvailableViews for a branch");
+  KATANA_LOG_DEBUG(
+      "ListAvailableViews for a branch {}", version.LeafVersionNumber());
 
   // For a path to the directory targeted by version
   std::string target_dir = rdg_dir;
@@ -248,6 +310,10 @@ tsuba::ListAvailableViewsForVersion(
   // After the search, current_max is the maximum from all views
   // target_version is the version for Views found.
   *max_version = current_max;
+
+  KATANA_LOG_DEBUG(
+      "ListAvailableViews for a branch {} max {}", version.LeafVersionNumber(),
+      current_max);
 
   return views_found;
 }

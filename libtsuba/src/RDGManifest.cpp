@@ -162,6 +162,9 @@ RDGManifest::FileName(
     katana::RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
+  KATANA_LOG_DEBUG(
+      "FileName: katana_{}_{}.manifest",
+      ToVersionString(version.LeafVersionNumber()), view_name);
   return uri.Join(version.GetBranchPath())
       .Join(fmt::format(
           "katana_{}_{}.manifest", ToVersionString(version.LeafVersionNumber()),

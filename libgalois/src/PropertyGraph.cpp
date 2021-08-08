@@ -359,7 +359,8 @@ katana::GraphTopology::Copy(const GraphTopology& that) noexcept {
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
-  // TODO(wkyu): find the version or pass in the version
+  // TODO(wkyu): specify the version for an RDGFile
+  // auto topo_result = MapTopology(GetVersion(), rdg.topology_file_storage());
   auto topo_result = MapTopology(rdg.topology_file_storage());
   if (!topo_result) {
     return topo_result.error();
@@ -384,9 +385,10 @@ MakePropertyGraph(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
-  // TODO(wkyu): fix the error for this one.
-  auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
+    const std::string& rdg_name, katana::RDGVersion version,
+    const tsuba::RDGLoadOptions& opts) {
+  // Have to specify the version here instead of a generic Open for the latest RDGFile
+  auto handle = tsuba::Open(rdg_name, version, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();
   }
@@ -394,6 +396,12 @@ katana::PropertyGraph::Make(
   return MakePropertyGraph(
       std::make_unique<tsuba::RDGFile>(handle.value()), opts);
 }
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
+    const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
+  return Make(rdg_name, katana::RDGVersion(0), opts);
+};
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
@@ -518,6 +526,9 @@ katana::PropertyGraph::DoWrite(
     if (!result) {
       return result.error();
     }
+
+    KATANA_LOG_DEBUG("WriteTopology FF created \n");
+
     return rdg_.Store(
         handle, command_line, versioning_action, std::move(result.value()));
   }
@@ -529,7 +540,10 @@ katana::Result<void>
 katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
-  auto open_res = tsuba::Open(uri, tsuba::kReadWrite);
+  KATANA_LOG_DEBUG(
+      "writing loaded {} version {} command_line {}\n", uri,
+      GetVersion().LeafVersionNumber(), command_line);
+  auto open_res = tsuba::Open(uri, GetVersion(), tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
   }
@@ -567,6 +581,7 @@ katana::PropertyGraph::Commit(const std::string& command_line) {
     }
     return WriteGraph(rdg_.rdg_dir().string(), command_line);
   }
+  KATANA_LOG_DEBUG("Commit Graph command_line {}\n", command_line);
   return DoWrite(
       *file_, command_line, tsuba::RDG::RDGVersioningPolicy::IncrementVersion);
 }

@@ -10,9 +10,6 @@ from abc import ABC, abstractmethod
 
 
 class FileVisitor(ABC):
-    def __init__(self, consumer):
-        self.consumer = consumer
-
     # Returns False if the check has failed for this file
     @abstractmethod
     def visit(self, file_path: str) -> bool:
@@ -28,7 +25,7 @@ class Pivot:
         self.file_visitor = file_visitor
         self.roots = roots
         self.prune_names = prune_names
-        self.tasks = queue.Queue
+        self.tasks = queue.Queue()
         self.prune_paths = set()
         if "PRUNE_PATHS" in os.environ:
             # We get on input the paths in quotes, and the paths may contain spaces

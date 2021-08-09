@@ -115,9 +115,9 @@ CommitRDG(
                 comm->Num, policy_id, transposed, lineage);
 
   KATANA_LOG_DEBUG(
-      "CommitRDG manifest version old {} new {}\n",
-      handle.impl_->rdg_manifest().version().LeafVersionNumber(),
-      new_manifest.version().LeafVersionNumber());
+      "CommitRDG manifest version old {} new {}; ",
+      handle.impl_->rdg_manifest().version().ToVectorString(),
+      new_manifest.version().ToVectorString());
 
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
@@ -302,7 +302,7 @@ tsuba::RDG::DoStore(
     std::unique_ptr<WriteGroup> write_group) {
   std::string branch = handle.impl_->rdg_manifest().version().GetBranchPath();
   KATANA_LOG_DEBUG(
-      "Store for version {} branch {}\n",
+      "store for version {} branch {}; ",
       handle.impl_->rdg_manifest().version().ToVectorString(), branch);
 
   if (core_->part_header().topology_path().empty()) {
@@ -310,7 +310,7 @@ tsuba::RDG::DoStore(
     katana::Uri t_path = MakeTopologyFileName(handle);
 
     KATANA_LOG_DEBUG(
-        "topology path {} for version {}\n", t_path.path(),
+        "topology path {} for version {}; ", t_path.path(),
         handle.impl_->rdg_manifest().version().ToVectorString());
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -547,12 +547,13 @@ tsuba::RDG::Store(
   // We trust the partitioner to give us a valid graph, but we
   // report our assumptions
   KATANA_LOG_DEBUG(
-      "RDG::Store manifest.num_hosts: {} version {} manifest.policy_id: {}"
-      "num_hosts: {} policy_id: {} versioning_action {}",
+      "RDG::Store manifest.num_hosts: {} version {} manifest.policy_id: {} "
+      "num_hosts: {} policy_id: {} versioning_action {}; ",
       handle.impl_->rdg_manifest().num_hosts(),
-      handle.impl_->rdg_manifest().version().LeafVersionNumber(),
+      handle.impl_->rdg_manifest().version().ToVectorString(),
       handle.impl_->rdg_manifest().policy_id(), tsuba::Comm()->Num,
       core_->part_header().metadata().policy_id_, versioning_action);
+
   if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
     KATANA_CHECKED(core_->part_header().ChangeStorageLocation(
         rdg_dir_, handle.impl_->rdg_manifest().dir()));
@@ -570,6 +571,10 @@ tsuba::RDG::Store(
     std::string branch = handle.impl_->rdg_manifest().version().GetBranchPath();
     katana::Uri t_path =
         handle.impl_->rdg_manifest().dir().Join(branch).RandFile("topology");
+
+    KATANA_LOG_DEBUG(
+        "RDG::Store t_path for branch {} of version {} ", t_path.string(),
+        branch, handle.impl_->rdg_manifest().version().ToVectorString());
 
     ff->Bind(t_path.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);

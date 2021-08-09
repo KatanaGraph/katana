@@ -96,6 +96,7 @@ FileView::Bind(
   file_size_ = buf.size;
   fetches_ = std::make_unique<std::vector<FillingRange>>();
   if (auto res = Fill(begin, in_end, resolve); !res) {
+    KATANA_LOG_DEBUG("failed to read {}; ", filename_);
     return res.error().WithContext("reading content");
   }
 

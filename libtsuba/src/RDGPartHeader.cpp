@@ -95,14 +95,14 @@ RDGPartHeader::Write(
   // Assume the same version unless an increment or branch is requested.
   katana::RDGVersion next_version = handle.impl_->rdg_manifest().version();
   KATANA_LOG_DEBUG(
-      "PartHeader current version: {} action {}",
-      next_version.LeafVersionNumber(), retain_version);
+      "PartHeader current version: {} action {}", next_version.ToVectorString(),
+      retain_version);
   if (retain_version == tsuba::RDG::RDGVersioningPolicy::IncrementVersion) {
     next_version.SetNextVersion();
   }
 
   KATANA_LOG_DEBUG(
-      "PartHeader next version: {}", next_version.LeafVersionNumber());
+      "PartHeader next version: {}; ", next_version.ToVectorString());
   ff->Bind(
       RDGManifest::PartitionFileName(
           handle.impl_->rdg_manifest().viewtype(),

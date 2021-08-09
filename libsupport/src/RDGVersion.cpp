@@ -8,10 +8,7 @@ RDGVersion::RDGVersion(
     const std::vector<uint64_t>& vers, const std::vector<std::string>& ids)
     : numbers_(vers), branches_(ids) {}
 
-RDGVersion::RDGVersion(uint64_t num) {
-  numbers_.emplace_back(num);
-  branches_.emplace_back("");
-}
+RDGVersion::RDGVersion(uint64_t num) { numbers_.back() = num; }
 
 std::string
 RDGVersion::GetBranchPath() const {
@@ -53,7 +50,7 @@ RDGVersion::SetBranchPoint(const std::string& name) {
   branches_.back() = name;
   // 1 to begin a branch
   numbers_.emplace_back(1);
-  branches_.emplace_back("");
+  branches_.emplace_back(".");
 }
 
 std::vector<uint64_t>&

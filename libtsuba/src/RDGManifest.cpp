@@ -66,6 +66,10 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
     return manifest_res.error().WithContext("cannot parse {}", uri.string());
   }
 
+  KATANA_LOG_DEBUG(
+      "parsed URI {} dir {} base {}", uri.string(), uri.DirName(),
+      uri.BaseName());
+
   auto manifest_name = uri.BaseName();
   auto view_name = ParseViewNameFromName(manifest_name);
   auto view_args = ParseViewArgsFromName(manifest_name);
@@ -82,6 +86,7 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   }
 
   if (version_num) {
+    // TODO(wkyu): need to include the version branch
     manifest.set_version(std::move(katana::RDGVersion(version_num.value())));
   }
 
@@ -153,8 +158,9 @@ RDGManifest::FileName(
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
   KATANA_LOG_DEBUG(
-      "FileName: katana_{}_{}.manifest",
-      ToVersionString(version.LeafVersionNumber()), view_name);
+      "FileName: katana_{}_{}.manifest version {}",
+      ToVersionString(version.LeafVersionNumber()), view_name,
+      version.ToVectorString());
   return uri.Join(version.GetBranchPath())
       .Join(fmt::format(
           "katana_{}_{}.manifest", ToVersionString(version.LeafVersionNumber()),

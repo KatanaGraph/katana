@@ -527,12 +527,13 @@ katana::PropertyGraph::DoWrite(
       return result.error();
     }
 
-    KATANA_LOG_DEBUG("WriteTopology FF created \n");
+    KATANA_LOG_DEBUG("DoWrite: written Topology FF for handle ");
 
     return rdg_.Store(
         handle, command_line, versioning_action, std::move(result.value()));
   }
 
+  KATANA_LOG_DEBUG("DoWrite: not written Topology for handle ");
   return rdg_.Store(handle, command_line, versioning_action);
 }
 
@@ -541,18 +542,22 @@ katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
   KATANA_LOG_DEBUG(
-      "writing loaded {} version {} command_line {}\n", uri,
-      GetVersion().LeafVersionNumber(), command_line);
+      "ConductWriteOp: writing loaded {} from current version {} "
+      " with command_line {} action {}; ",
+      uri, GetVersion().ToVectorString(), command_line, versioning_action);
   auto open_res = tsuba::Open(uri, GetVersion(), tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
   }
   auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
 
+  // TODO(wkyu): need to store the path info the RDGFile
   if (auto res = DoWrite(*new_file, command_line, versioning_action); !res) {
     return res.error();
   }
 
+  // TODO(wkyu): time to point loaded_version_, file_
+  // based on the newly written PropertyGraph.
   file_ = std::move(new_file);
 
   return katana::ResultSuccess();

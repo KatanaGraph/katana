@@ -147,7 +147,13 @@ Uri::Make(const std::string& str) {
   std::string scheme(sub_match[1]);
   std::string path(sub_match[2]);
   if (scheme.empty()) {
+#if 0
     return MakeFromFile(path);
+#else
+    // until a way to fsync path is found.
+    uint64_t pos = str.find(path);
+    return Uri(kFileScheme, str.substr(pos));
+#endif
   }
   return Uri(scheme, path);
 }

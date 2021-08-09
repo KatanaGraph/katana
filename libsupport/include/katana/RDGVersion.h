@@ -16,7 +16,7 @@ struct KATANA_EXPORT RDGVersion {
   // A vectorized version in the form of num:id
   // The last one has an empty branch "".
   std::vector<uint64_t> numbers_{0};
-  std::vector<std::string> branches_{""};
+  std::vector<std::string> branches_{"."};
 
   // TODO(wkyu): to clean up these operators
 #if 1

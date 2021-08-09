@@ -39,7 +39,7 @@ in terms of feedback latency, to run these checks locally first.
 * ``scripts/check_python_format.sh .``: applies ``black`` to format python code.
 
 We also have a ``clang-tidy`` and ``pylint`` configuration. Both these are useful
-tools for checking your code locally but they are not currently by continuous
+tools for checking your code locally but they are not currently used by continuous
 integration.
 
 None of these checks are exhaustive (on their own or combined)!

@@ -16,7 +16,7 @@ ignore_errors=True
 
 [html]
 # Location/directory for html files
-directory=build/pythoncov
+directory=pythoncov
 
 # Title for the report page
 title="Python Code Coverage"

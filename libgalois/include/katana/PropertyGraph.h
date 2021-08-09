@@ -360,11 +360,15 @@ public:
 
   PropertyGraph(
       katana::GraphTopology&& topo_to_assign,
-      NUMAArray<EntityTypeID> node_entity_type_id,
-      NUMAArray<EntityTypeID> edge_entity_type_id) noexcept
+      NUMAArray<EntityTypeID>&& node_entity_type_id,
+      NUMAArray<EntityTypeID>&& edge_entity_type_id,
+      EntityTypeManager&& node_type_manager,
+      EntityTypeManager&& edge_type_manager) noexcept
       : rdg_(),
         file_(),
         topology_(std::move(topo_to_assign)),
+        node_entity_type_manager_(std::move(node_type_manager)),
+        edge_entity_type_manager_(std::move(edge_type_manager)),
         node_entity_type_id_(std::move(node_entity_type_id)),
         edge_entity_type_id_(std::move(edge_entity_type_id)) {}
 
@@ -390,7 +394,9 @@ public:
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign,
       NUMAArray<EntityTypeID>&& node_entity_type_id,
-      NUMAArray<EntityTypeID>&& edge_entity_type_id);
+      NUMAArray<EntityTypeID>&& edge_entity_type_id,
+      EntityTypeManager&& node_type_manager,
+      EntityTypeManager&& edge_type_manager);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.

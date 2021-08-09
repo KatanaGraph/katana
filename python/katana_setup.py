@@ -373,8 +373,6 @@ def cythonize(module_list, *, source_root, **kwargs):
     extension_options = load_lang_config("CXX")
     extension_options["include_dirs"].append(numpy.get_include())
     extension_options["include_dirs"].append(pyarrow.get_include())
-    if os.environ.get("COVERAGE_RCFILE"):
-        extension_options["define_macros"] = [("CYTHON_TRACE", "1"), ("CYTHON_TRACE_NOGIL", "1")]
 
     if not extension_options["extra_compile_args"]:
         extension_options["extra_compile_args"] = ["-std=c++17", "-Werror"]
@@ -435,7 +433,7 @@ setActiveThreads(1)
         modules,
         nthreads=int(os.environ.get("CMAKE_BUILD_PARALLEL_LEVEL", "0")),
         language_level="3",
-        compiler_directives={"binding": True, "linetrace": True},
+        compiler_directives={"binding": True},
         **kwargs,
     )
 

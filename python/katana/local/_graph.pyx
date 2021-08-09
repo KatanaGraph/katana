@@ -38,7 +38,7 @@ cdef CGraph.GraphComponents handle_result_GraphComponents(Result[CGraph.GraphCom
 
 # TODO(amp): Wrap Copy
 
-cdef class PropertyGraphBase:
+cdef class GraphBase:
     """
     A property graph loaded into memory.
     """
@@ -46,7 +46,7 @@ cdef class PropertyGraphBase:
         with gil:
             raise NotImplementedError()
 
-    def write(self, path = None, str command_line = "katana.property_graph.PropertyGraph"):
+    def write(self, path = None, str command_line = "katana.property_graph.Graph"):
         """
         Write the property graph to the specified path or URL (or the original path it was loaded from if path is
         not provided). Provide lineage information in the form of a command line.
@@ -64,13 +64,13 @@ cdef class PropertyGraphBase:
         with nogil:
             handle_result_void(self.underlying_property_graph().Write(path_str, command_line_str))
 
-    cdef const GraphTopology* topology(PropertyGraph self):
+    cdef const GraphTopology* topology(Graph self):
         return &self.underlying_property_graph().topology()
 
-    cpdef uint64_t num_nodes(PropertyGraph self):
+    cpdef uint64_t num_nodes(Graph self):
         return self.topology().num_nodes()
 
-    def __eq__(self, PropertyGraph other):
+    def __eq__(self, Graph other):
         return self.underlying_property_graph().Equals(other.underlying_property_graph())
 
     def __len__(self):
@@ -83,7 +83,7 @@ cdef class PropertyGraphBase:
         """
         return self.num_nodes()
 
-    cpdef uint64_t num_edges(PropertyGraph self):
+    cpdef uint64_t num_edges(Graph self):
         """
         Return the number of edges in the graph.
 
@@ -123,13 +123,13 @@ cdef class PropertyGraphBase:
         """
         Return the index (ID) of a node property specified by name. If an index is provided, it is returned.
         """
-        return PropertyGraph._property_name_to_id(prop, self.loaded_node_schema())
+        return Graph._property_name_to_id(prop, self.loaded_node_schema())
 
     def edge_property_name_to_id(self, prop):
         """
         Return the index (ID) of a edge property specified by name. If an index is provided, it is returned.
         """
-        return PropertyGraph._property_name_to_id(prop, self.loaded_edge_schema())
+        return Graph._property_name_to_id(prop, self.loaded_edge_schema())
 
     def __iter__(self):
         """
@@ -153,7 +153,7 @@ cdef class PropertyGraphBase:
         edge_range = self.topology().edges(n)
         return range(deref(edge_range.begin()), deref(edge_range.end()))
 
-    cpdef uint64_t get_edge_dest(PropertyGraph self, uint64_t e):
+    cpdef uint64_t get_edge_dest(Graph self, uint64_t e):
         """
         Return the destination node ID of the edge `e`.
 
@@ -178,7 +178,7 @@ cdef class PropertyGraphBase:
         `get_node_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
-            self.underlying_property_graph().GetNodeProperty(PropertyGraph._property_name_to_id(prop, self.loaded_node_schema()))
+            self.underlying_property_graph().GetNodeProperty(Graph._property_name_to_id(prop, self.loaded_node_schema()))
         )
 
     def get_edge_property(self, prop):
@@ -196,7 +196,7 @@ cdef class PropertyGraphBase:
         `get_edge_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
-            self.underlying_property_graph().GetEdgeProperty(PropertyGraph._property_name_to_id(prop, self.loaded_edge_schema()))
+            self.underlying_property_graph().GetEdgeProperty(Graph._property_name_to_id(prop, self.loaded_edge_schema()))
         )
 
     def add_node_property(self, table):
@@ -235,13 +235,13 @@ cdef class PropertyGraphBase:
         """
         Remove a node property from the graph by name or index.
         """
-        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(PropertyGraph._property_name_to_id(prop, self.loaded_node_schema())))
+        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(Graph._property_name_to_id(prop, self.loaded_node_schema())))
 
     def remove_edge_property(self, prop):
         """
         Remove an edge property from the graph by name or index.
         """
-        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.loaded_edge_schema())))
+        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(Graph._property_name_to_id(prop, self.loaded_edge_schema())))
 
     @property
     def path(self):
@@ -257,7 +257,7 @@ cdef class PropertyGraphBase:
         handle_result_void(self.underlying_property_graph().InformPath(bytes(str(path), encoding="UTF-8")))
 
 
-cdef class PropertyGraph(PropertyGraphBase):
+cdef class Graph(GraphBase):
     """
     A property graph loaded into memory.
     """
@@ -300,8 +300,8 @@ cdef class PropertyGraph(PropertyGraphBase):
             self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, opts))
 
     @staticmethod
-    cdef PropertyGraph make(shared_ptr[_PropertyGraph] u):
-        f = <PropertyGraph>PropertyGraph.__new__(PropertyGraph)
+    cdef Graph make(shared_ptr[_PropertyGraph] u):
+        f = <Graph>Graph.__new__(Graph)
         f._underlying_property_graph = u
         return f
 
@@ -315,7 +315,7 @@ cdef class PropertyGraph(PropertyGraphBase):
         :param chunk_size: Chunk size for in memory representations during conversion. Generally this term can be
             ignored, but it can be decreased to reduce memory usage when converting large inputs.
         :type chunk_size: int
-        :returns: the new :py:class:`~katana.property_graph.PropertyGraph`
+        :returns: the new :py:class:`~katana.property_graph.Graph`
         """
         path_str = <string>bytes(str(path), "utf-8")
         with nogil:
@@ -323,13 +323,13 @@ cdef class PropertyGraph(PropertyGraphBase):
                 CGraph.ConvertToPropertyGraph(
                 move(handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False)))
                 ))
-        return PropertyGraph.make(pg)
+        return Graph.make(pg)
 
 
     @staticmethod
     def from_csr(edge_indices, edge_destinations):
         """
-        Create a new `PropertyGraph` from a raw Compressed Sparse Row representation.
+        Create a new `Graph` from a raw Compressed Sparse Row representation.
 
         :param edge_indices: The indicies of the first edge for each node in the destinations vector.
         :type edge_indices: `numpy.ndarray` or another type supporting the buffer protocol. Element type must be an
@@ -337,7 +337,7 @@ cdef class PropertyGraph(PropertyGraphBase):
         :param edge_destinations: The destinations of edges in the new graph.
         :type edge_destinations: `numpy.ndarray` or another type supporting the buffer protocol. Element type must be an
             integer.
-        :returns: the new :py:class:`~katana.property_graph.PropertyGraph`
+        :returns: the new :py:class:`~katana.property_graph.Graph`
         """
         cdef datastructures.NUMAArray_uint64_t edge_indices_numa = datastructures.NUMAArray_uint64_t(
             len(edge_indices), datastructures.AllocationPolicy.INTERLEAVED
@@ -352,7 +352,7 @@ cdef class PropertyGraph(PropertyGraphBase):
         cdef shared_ptr[_PropertyGraph] pg = make_shared[CGraph._PropertyGraph](
             CGraph.GraphTopology(move(edge_indices_numa.underlying), move(edge_destinations_numa.underlying))
         )
-        return PropertyGraph.make(pg)
+        return Graph.make(pg)
 
     @property
     def address(self):

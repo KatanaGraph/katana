@@ -27,7 +27,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -121,11 +121,11 @@ cdef class KTrussPlan(Plan):
         return KTrussPlan.make(_KTrussPlan.BspCoreThenTruss())
 
 
-def k_truss(PropertyGraph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan()) -> int:
+def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan()) -> int:
     """
     Compute the k-truss for pg. `pg` must be symmetric.
 
-    :type pg: PropertyGraph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :param k_truss_number: k. The number of triangles that each edge must be part of.
     :type output_property_name: str
@@ -140,7 +140,7 @@ def k_truss(PropertyGraph pg, uint32_t k_truss_number, str output_property_name,
     return v
 
 
-def k_truss_assert_valid(PropertyGraph pg, uint32_t k_truss_number, str output_property_name):
+def k_truss_assert_valid(Graph pg, uint32_t k_truss_number, str output_property_name):
     """
     Raise an exception if the k-truss results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
 
@@ -164,7 +164,7 @@ cdef class KTrussStatistics:
     """
     cdef _KTrussStatistics underlying
 
-    def __init__(self, PropertyGraph pg, uint32_t k_truss_number, str output_property_name):
+    def __init__(self, Graph pg, uint32_t k_truss_number, str output_property_name):
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_KTrussStatistics(_KTrussStatistics.Compute(

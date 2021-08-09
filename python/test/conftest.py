@@ -3,9 +3,9 @@ import os
 import pytest
 
 import katana.local
+from katana import set_active_threads
 from katana.example_data import get_input
-from katana.galois import set_active_threads
-from katana.local import PropertyGraph
+from katana.local import Graph
 
 katana.local.initialize()
 
@@ -22,8 +22,8 @@ def pytest_runtest_setup(item: "pytest.hookspec.Item"):
 
 
 @pytest.fixture
-def property_graph():
-    g = PropertyGraph(get_input("propertygraphs/ldbc_003"))
+def graph():
+    g = Graph(get_input("propertygraphs/ldbc_003"))
     return g
 
 

@@ -9,11 +9,11 @@ from katana import (
     for_each,
     for_each_operator,
     obim_metric,
+    set_active_threads,
 )
-from katana.galois import set_active_threads
-from katana.local.atomic import GAccumulator, GReduceMax, atomic_min
+from katana.local import Graph
+from katana.local.atomic import ReduceMax, ReduceSum, atomic_min
 from katana.local.datastructures import InsertBag
-from katana.local.property_graph import PropertyGraph
 from katana.timer import StatTimer
 
 
@@ -24,7 +24,7 @@ def dtype_info(t):
     return np.iinfo(t)
 
 
-def create_distance_array(g: PropertyGraph, source, length_property):
+def create_distance_array(g: Graph, source, length_property):
     a = np.empty(len(g), dtype=dtype_of_pyarrow_array(g.get_edge_property(length_property)))
     # TODO(amp): Remove / 4
     infinity = dtype_info(a.dtype).max / 4
@@ -40,7 +40,7 @@ def dtype_of_pyarrow_array(a):
 
 
 @for_each_operator()
-def sssp_operator(g: PropertyGraph, dists: np.ndarray, edge_weights, item, ctx: UserContext):
+def sssp_operator(g: Graph, dists: np.ndarray, edge_weights, item, ctx: UserContext):
     if dists[item.src] < item.dist:
         return
     for ii in g.edges(item.src):
@@ -57,7 +57,7 @@ def obim_indexer(shift, item):
     return item.dist >> shift
 
 
-def sssp(graph: PropertyGraph, source, length_property, shift, property_name):
+def sssp(graph: Graph, source, length_property, shift, property_name):
     dists = create_distance_array(graph, source, length_property)
 
     # Define the struct type here so it can depend on the type of the weight property
@@ -82,23 +82,23 @@ def sssp(graph: PropertyGraph, source, length_property, shift, property_name):
 
 
 @do_all_operator()
-def not_visited_operator(infinity: int, not_visited: GAccumulator[int], data, nid):
+def not_visited_operator(infinity: int, not_visited: ReduceSum[int], data, nid):
     val = data[nid]
     if val == infinity:
         not_visited.update(1)
 
 
 @do_all_operator()
-def max_dist_operator(infinity: int, max_dist: GReduceMax[int], data, nid):
+def max_dist_operator(infinity: int, max_dist: ReduceMax[int], data, nid):
     val = data[nid]
     if val != infinity:
         max_dist.update(val)
 
 
-def verify_sssp(graph: PropertyGraph, _source_i: int, property_id: int):
+def verify_sssp(graph: Graph, _source_i: int, property_id: int):
     prop_array = graph.get_node_property(property_id)
-    not_visited = GAccumulator[int](0)
-    max_dist = GReduceMax[int]()
+    not_visited = ReduceSum[int](0)
+    max_dist = ReduceMax[int]()
     # TODO(amp): Remove / 4
     infinity = dtype_info(dtype_of_pyarrow_array(prop_array)).max / 4
 
@@ -141,7 +141,7 @@ def main():
 
     print("Using threads:", set_active_threads(args.threads))
 
-    graph = PropertyGraph(args.input)
+    graph = Graph(args.input)
 
     sssp(graph, args.startNode, args.edgeWeightProperty, args.shift, args.propertyName)
 

@@ -5,8 +5,8 @@ from test.lonestar.calculate_degree import calculate_degree
 import numpy as np
 
 from katana import do_all, do_all_operator
-from katana.local.atomic import GAccumulator
-from katana.local.property_graph import PropertyGraph
+from katana.local import Graph
+from katana.local.atomic import ReduceSum
 
 
 class DegreeType(Enum):
@@ -16,11 +16,11 @@ class DegreeType(Enum):
 
 @do_all_operator()
 def sum_degree_operator(
-    graph: PropertyGraph,
+    graph: Graph,
     source_degree,
-    sum_source: GAccumulator[np.uint64],
+    sum_source: ReduceSum[np.uint64],
     destination_degree,
-    sum_destination: GAccumulator[np.uint64],
+    sum_destination: ReduceSum[np.uint64],
     nid,
 ):
     for edge in graph.edges(nid):
@@ -29,13 +29,13 @@ def sum_degree_operator(
         sum_destination.update(destination_degree[dst])
 
 
-def average_degree(graph: PropertyGraph, num_edges: int, source_degree, destination_degree):
+def average_degree(graph: Graph, num_edges: int, source_degree, destination_degree):
     """
     Calculate the average in or out degree for the source and destination nodes
     Returns the result as a tuple in the form (average degree for source, average degree for destination)
     """
-    sum_source_degrees = GAccumulator[np.uint64](0)
-    sum_destination_degrees = GAccumulator[np.uint64](0)
+    sum_source_degrees = ReduceSum[np.uint64](0)
+    sum_destination_degrees = ReduceSum[np.uint64](0)
     do_all(
         range(graph.num_nodes()),
         sum_degree_operator(graph, source_degree, sum_source_degrees, destination_degree, sum_destination_degrees),
@@ -46,14 +46,14 @@ def average_degree(graph: PropertyGraph, num_edges: int, source_degree, destinat
 
 @do_all_operator()
 def degree_assortativity_coefficient_operator(
-    graph: PropertyGraph,
+    graph: Graph,
     source_degree,
     source_average,
     destination_degree,
     destination_average,
-    product_of_dev: GAccumulator[float],
-    square_of_source_dev: GAccumulator[float],
-    square_of_destination_dev: GAccumulator[float],
+    product_of_dev: ReduceSum[float],
+    square_of_source_dev: ReduceSum[float],
+    square_of_destination_dev: ReduceSum[float],
     nid,
 ):
     # deviation of source node from average
@@ -67,7 +67,7 @@ def degree_assortativity_coefficient_operator(
 
 
 def degree_assortativity_coefficient(
-    graph: PropertyGraph,
+    graph: Graph,
     source_degree_type: DegreeType = DegreeType.OUT,
     destination_degree_type: DegreeType = DegreeType.IN,
     weight=None,
@@ -75,7 +75,7 @@ def degree_assortativity_coefficient(
     """
     Calculates and returns the degree assortativity of a given graph.
     Paramaters:
-       * graph: the PropertyGraph to be analyzed
+       * graph: the Graph to be analyzed
        * source_degree_type: description of degree type to consider for the source node on an edge
             expected values are DegreeType.IN or DegreeType.OUT
        * destination_degree_type: description the degree type to consider for the destination node on an edge
@@ -95,9 +95,9 @@ def degree_assortativity_coefficient(
 
         # Calculate the numerator (product of deviation from mean)
         # and the factors of the denominator (square deviation from mean)
-        product_of_dev = GAccumulator[float](0)
-        square_of_source_dev = GAccumulator[float](0)
-        square_of_destination_dev = GAccumulator[float](0)
+        product_of_dev = ReduceSum[float](0)
+        square_of_source_dev = ReduceSum[float](0)
+        square_of_destination_dev = ReduceSum[float](0)
         do_all(
             range(graph.num_nodes()),
             degree_assortativity_coefficient_operator(

@@ -1,16 +1,15 @@
 import numpy as np
 import pyarrow
 
-from katana import do_all, do_all_operator, for_each, for_each_operator
-from katana.galois import set_active_threads
-from katana.local.atomic import GAccumulator, atomic_sub
+from katana import do_all, do_all_operator, for_each, for_each_operator, set_active_threads
+from katana.local import Graph
+from katana.local.atomic import ReduceSum, atomic_sub
 from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
-from katana.local.property_graph import PropertyGraph
 from katana.timer import StatTimer
 
 
 @do_all_operator()
-def compute_degree_count_operator(graph: PropertyGraph, current_degree, nid):
+def compute_degree_count_operator(graph: Graph, current_degree, nid):
     """
     Operator to initialize degree fields in graph with current degree. Since symmetric,
     out edge count is equivalent to in-edge count.
@@ -28,7 +27,7 @@ def setup_initial_worklist_operator(
 
 
 @for_each_operator()
-def compute_async_kcore_operator(graph: PropertyGraph, current_degree, k_core_num, nid, ctx):
+def compute_async_kcore_operator(graph: Graph, current_degree, k_core_num, nid, ctx):
     # Decrement degree of all the neighbors of dead node
     for ii in graph.edges(nid):
         dst = graph.get_edge_dest(ii)
@@ -38,7 +37,7 @@ def compute_async_kcore_operator(graph: PropertyGraph, current_degree, k_core_nu
             ctx.push(dst)
 
 
-def kcore_async(graph: PropertyGraph, k_core_num, property_name):
+def kcore_async(graph: Graph, k_core_num, property_name):
     num_nodes = graph.num_nodes()
     initial_worklist = InsertBag[np.uint64]()
     current_degree = NUMAArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
@@ -72,16 +71,16 @@ def kcore_async(graph: PropertyGraph, k_core_num, property_name):
 
 
 @do_all_operator()
-def sanity_check_operator(alive_nodes: GAccumulator[int], data, k_core_num, nid):
+def sanity_check_operator(alive_nodes: ReduceSum[int], data, k_core_num, nid):
     val = data[nid]
     if val >= k_core_num:
         alive_nodes.update(1)
 
 
-def verify_kcore(graph: PropertyGraph, property_name: str, k_core_num: int):
+def verify_kcore(graph: Graph, property_name: str, k_core_num: int):
     """Check output sanity"""
     chunk_array = graph.get_node_property(property_name)
-    alive_nodes = GAccumulator[float](0)
+    alive_nodes = ReduceSum[float](0)
 
     do_all(
         range(len(chunk_array)),
@@ -111,7 +110,7 @@ def main():
 
     print("Using threads:", set_active_threads(args.threads))
 
-    graph = PropertyGraph(args.input)
+    graph = Graph(args.input)
 
     kcore_async(graph, args.kcore, args.propertyName)
 

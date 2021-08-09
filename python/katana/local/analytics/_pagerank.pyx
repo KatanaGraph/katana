@@ -28,7 +28,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -167,11 +167,11 @@ cdef class PagerankPlan(Plan):
         return PagerankPlan.make(_PagerankPlan.PushSynchronous(tolerance, max_iterations, alpha))
 
 
-def pagerank(PropertyGraph pg, str output_property_name, PagerankPlan plan = PagerankPlan()):
+def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPlan()):
     """
     Compute the Page Rank of each node in the graph.
 
-    :type pg: PropertyGraph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to store the rank. This property must not already exist.
@@ -184,7 +184,7 @@ def pagerank(PropertyGraph pg, str output_property_name, PagerankPlan plan = Pag
         handle_result_void(Pagerank(pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
 
 
-def pagerank_assert_valid(PropertyGraph pg, str output_property_name):
+def pagerank_assert_valid(Graph pg, str output_property_name):
     """
     Raise an exception if the pagerank results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
 
@@ -211,7 +211,7 @@ cdef class PagerankStatistics:
     """
     cdef _PagerankStatistics underlying
 
-    def __init__(self, PropertyGraph pg, str output_property_name):
+    def __init__(self, Graph pg, str output_property_name):
         output_property_name_bytes = bytes(output_property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:

@@ -30,7 +30,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -244,12 +244,12 @@ cdef class ConnectedComponentsPlan(Plan):
             edge_tile_size, neighbor_sample_size, component_sample_frequency))
 
 
-def connected_components(PropertyGraph pg, str output_property_name,
+def connected_components(Graph pg, str output_property_name,
                          ConnectedComponentsPlan plan = ConnectedComponentsPlan()) -> int:
     """
     Compute the Connected-components for `pg`. `pg` must be symmetric.
 
-    :type pg: PropertyGraph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
@@ -261,7 +261,7 @@ def connected_components(PropertyGraph pg, str output_property_name,
         v = handle_result_void(ConnectedComponents(pg.underlying_property_graph(), output_property_name_str, plan.underlying_))
     return v
 
-def connected_components_assert_valid(PropertyGraph pg, str output_property_name):
+def connected_components_assert_valid(Graph pg, str output_property_name):
     """
     Raise an exception if the Connected Components results in `pg` with the given parameters appear to be incorrect.
     This is not an exhaustive check, just a sanity check.
@@ -285,7 +285,7 @@ cdef class ConnectedComponentsStatistics:
     """
     cdef _ConnectedComponentsStatistics underlying
 
-    def __init__(self, PropertyGraph pg, str output_property_name):
+    def __init__(self, Graph pg, str output_property_name):
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_ConnectedComponentsStatistics(_ConnectedComponentsStatistics.Compute(

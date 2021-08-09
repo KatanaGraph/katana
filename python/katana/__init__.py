@@ -27,14 +27,15 @@ import katana.plugin
 from katana.plugin import installed_plugins
 
 try:
-    import katana.galois
+    import katana.globals
+    from katana.globals import get_active_threads, set_active_threads, set_busy_wait
 
-    __version__ = katana.galois.get_version()
+    __version__ = katana.globals.get_version()
 
     from katana._loops import OrderedByIntegerMetric, PerSocketChunkFIFO, UserContext, do_all, for_each
     from katana.loop_operators import do_all_operator, for_each_operator, obim_metric
 except ModuleNotFoundError as e:
-    if "katana.galois" in str(e):
+    if "katana.katana_static_state" in str(e):
         # "TODO(amp): Remove this case once we no longer need support for Ubuntu 16.04.
         warnings.warn(
             "Katana Python extension modules are missing. Some features of katana.remote may still be used, "
@@ -64,6 +65,9 @@ __all__ = [
     "for_each_operator",
     "installed_plugins",
     "obim_metric",
+    "get_active_threads",
+    "set_active_threads",
+    "set_busy_wait",
 ]
 
 

@@ -3,9 +3,9 @@ import pyarrow
 from numba import jit
 
 from katana import do_all, do_all_operator
-from katana.local.atomic import GAccumulator, GReduceMax
+from katana.local import Graph
+from katana.local.atomic import ReduceMax, ReduceSum
 from katana.local.datastructures import InsertBag
-from katana.local.property_graph import PropertyGraph
 from katana.timer import StatTimer
 
 # Use the same infinity as C++ bfs
@@ -13,7 +13,7 @@ distance_infinity = (2 ** 32) // 4
 
 
 @jit(nopython=True)
-def initialize(graph: PropertyGraph, source: int, distance: np.ndarray):
+def initialize(graph: Graph, source: int, distance: np.ndarray):
     num_nodes = graph.num_nodes()
     for n in range(num_nodes):
         if n == source:
@@ -23,23 +23,23 @@ def initialize(graph: PropertyGraph, source: int, distance: np.ndarray):
 
 
 @do_all_operator()
-def not_visited_operator(not_visited: GAccumulator[int], data, nid):
+def not_visited_operator(not_visited: ReduceSum[int], data, nid):
     val = data[nid]
     if val >= distance_infinity:
         not_visited.update(1)
 
 
 @do_all_operator()
-def max_dist_operator(max_dist: GReduceMax[int], data, nid):
+def max_dist_operator(max_dist: ReduceMax[int], data, nid):
     val = data[nid]
     if val < distance_infinity:
         max_dist.update(val)
 
 
-def verify_bfs(graph: PropertyGraph, _source_i: int, property_id: int):
+def verify_bfs(graph: Graph, _source_i: int, property_id: int):
     chunk_array = graph.get_node_property(property_id)
-    not_visited = GAccumulator[int](0)
-    max_dist = GReduceMax[int]()
+    not_visited = ReduceSum[int](0)
+    max_dist = ReduceMax[int]()
 
     do_all(
         range(len(chunk_array)), not_visited_operator(not_visited, chunk_array), loop_name="not_visited_op",
@@ -59,7 +59,7 @@ def verify_bfs(graph: PropertyGraph, _source_i: int, property_id: int):
 
 @do_all_operator()
 def bfs_sync_operator_pg(
-    graph: PropertyGraph, next_level: InsertBag[np.uint64], next_level_number: int, distance: np.ndarray, nid,
+    graph: Graph, next_level: InsertBag[np.uint64], next_level_number: int, distance: np.ndarray, nid,
 ):
     for ii in graph.edges(nid):
         dst = graph.get_edge_dest(ii)
@@ -68,7 +68,7 @@ def bfs_sync_operator_pg(
             next_level.push(dst)
 
 
-def bfs_sync_pg(graph: PropertyGraph, source, property_name):
+def bfs_sync_pg(graph: Graph, source, property_name):
     next_level_number = 0
 
     curr_level = InsertBag[np.uint64]()
@@ -98,7 +98,7 @@ def main():
     import argparse
 
     import katana.local
-    from katana.galois import set_active_threads
+    from katana import set_active_threads
 
     katana.local.initialize()
 
@@ -114,7 +114,7 @@ def main():
 
     print("Using threads:", set_active_threads(args.threads))
 
-    graph = PropertyGraph(args.input)
+    graph = Graph(args.input)
 
     bfs_sync_pg(graph, args.startNode, args.propertyName)
 

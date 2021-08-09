@@ -27,7 +27,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -159,12 +159,12 @@ cdef class BfsPlan(Plan):
         return BfsPlan.make(_BfsPlan.SynchronousDirectOpt(alpha, beta))
 
 
-def bfs(PropertyGraph pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):
+def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):
     """
     Compute the Breadth-First Search parents on `pg` using `start_node` as the source. The computed parents are
     written to the property `output_property_name`.
 
-    :type pg: PropertyGraph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type start_node: Node ID
     :param start_node: The source node.
@@ -178,7 +178,7 @@ def bfs(PropertyGraph pg, uint32_t start_node, str output_property_name, BfsPlan
     with nogil:
         handle_result_void(Bfs(pg.underlying_property_graph(), start_node, output_property_name_cstr, plan.underlying_))
 
-def bfs_assert_valid(PropertyGraph pg, uint32_t start_node, str property_name):
+def bfs_assert_valid(Graph pg, uint32_t start_node, str property_name):
     """
     Raise an exception if the BFS results in `pg` appear to be incorrect. This is not an
     exhaustive check, just a sanity check.
@@ -202,7 +202,7 @@ cdef class BfsStatistics:
     """
     cdef _BfsStatistics underlying
 
-    def __init__(self, PropertyGraph pg, str property_name):
+    def __init__(self, Graph pg, str property_name):
         output_property_name_bytes = bytes(property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:

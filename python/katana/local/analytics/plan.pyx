@@ -61,7 +61,7 @@ cdef class Statistics:
         """
         Compute the appropriate statistics for the algorithm the subclass is associated with.
 
-        :type pg: katana.property_graph.PropertyGraph
+        :type pg: katana.local.Graph
         :param pg: The property graph containing the algorithm outputs.
         :param args...: Additional parameters needed to compute statistics, including output property names.
         """

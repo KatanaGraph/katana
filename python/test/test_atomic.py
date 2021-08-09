@@ -5,12 +5,12 @@ import pytest
 
 from katana import do_all, do_all_operator
 from katana.local import (
-    GAccumulator,
-    GReduceLogicalAnd,
-    GReduceLogicalOr,
-    GReduceMax,
-    GReduceMin,
     NUMAArray,
+    ReduceLogicalAnd,
+    ReduceLogicalOr,
+    ReduceMax,
+    ReduceMin,
+    ReduceSum,
     atomic_add,
     atomic_max,
     atomic_min,
@@ -32,9 +32,9 @@ types = [
 ]
 
 acc_types = [
-    pytest.param(GAccumulator, 15, id="GAccumulator"),
-    pytest.param(GReduceMax, 10, id="GReduceMax"),
-    pytest.param(GReduceMin, 2, id="GReduceMin"),
+    pytest.param(ReduceSum, 15, id="ReduceSum"),
+    pytest.param(ReduceMax, 10, id="ReduceMax"),
+    pytest.param(ReduceMin, 2, id="ReduceMin"),
 ]
 
 
@@ -51,8 +51,8 @@ def test_accumulator_simple(acc_type, res, typ):
     assert acc.reduce() == 10
 
 
-def test_GAccumulator_parallel(threads_many):
-    T = GAccumulator[int]
+def test_ReduceSum_parallel(threads_many):
+    T = ReduceSum[int]
     acc = T()
 
     @do_all_operator()
@@ -63,8 +63,8 @@ def test_GAccumulator_parallel(threads_many):
     assert acc.reduce() == 499500
 
 
-def test_GReduceMax_parallel(threads_many):
-    T = GReduceMax[int]
+def test_ReduceMax_parallel(threads_many):
+    T = ReduceMax[int]
     acc = T()
 
     @do_all_operator()
@@ -75,8 +75,8 @@ def test_GReduceMax_parallel(threads_many):
     assert acc.reduce() == 500
 
 
-def test_GReduceMin_parallel(threads_many):
-    T = GReduceMin[float]
+def test_ReduceMin_parallel(threads_many):
+    T = ReduceMin[float]
     acc = T()
 
     @do_all_operator()
@@ -87,8 +87,8 @@ def test_GReduceMin_parallel(threads_many):
     assert acc.reduce() == -50.0
 
 
-def test_GReduceLogicalOr_parallel(threads_many):
-    T = GReduceLogicalOr
+def test_ReduceLogicalOr_parallel(threads_many):
+    T = ReduceLogicalOr
     acc = T()
 
     @do_all_operator()
@@ -99,8 +99,8 @@ def test_GReduceLogicalOr_parallel(threads_many):
     assert acc.reduce() is True
 
 
-def test_GReduceLogicalAnd_parallel(threads_many):
-    T = GReduceLogicalAnd
+def test_ReduceLogicalAnd_parallel(threads_many):
+    T = ReduceLogicalAnd
     acc = T()
 
     @do_all_operator()
@@ -111,8 +111,8 @@ def test_GReduceLogicalAnd_parallel(threads_many):
     assert acc.reduce() is False
 
 
-def test_GReduceLogicalOr_simple():
-    T = GReduceLogicalOr
+def test_ReduceLogicalOr_simple():
+    T = ReduceLogicalOr
     acc = T()
     acc.update(True)
     acc.update(False)
@@ -124,8 +124,8 @@ def test_GReduceLogicalOr_simple():
     assert acc.reduce() is False
 
 
-def test_GReduceLogicalAnd_simple():
-    T = GReduceLogicalAnd
+def test_ReduceLogicalAnd_simple():
+    T = ReduceLogicalAnd
     acc = T()
     acc.update(True)
     acc.update(False)

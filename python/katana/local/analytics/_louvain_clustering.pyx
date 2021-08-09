@@ -26,7 +26,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -171,7 +171,7 @@ cdef class LouvainClusteringPlan(Plan):
         return LouvainClusteringPlan.make(_LouvainClusteringPlan.Deterministic(
             enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size))
 
-def louvain_clustering(PropertyGraph pg, str edge_weight_property_name, str output_property_name, LouvainClusteringPlan plan = LouvainClusteringPlan()):
+def louvain_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LouvainClusteringPlan plan = LouvainClusteringPlan()):
     """
     Compute the Louvain Clustering for pg.
     The edge weights are taken from the property named
@@ -187,7 +187,7 @@ def louvain_clustering(PropertyGraph pg, str edge_weight_property_name, str outp
         handle_result_void(LouvainClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
 
 
-def louvain_clustering_assert_valid(PropertyGraph pg, str edge_weight_property_name, str output_property_name ):
+def louvain_clustering_assert_valid(Graph pg, str edge_weight_property_name, str output_property_name ):
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
@@ -207,7 +207,7 @@ cdef _LouvainClusteringStatistics handle_result_LouvainClusteringStatistics(Resu
 cdef class LouvainClusteringStatistics:
     cdef _LouvainClusteringStatistics underlying
 
-    def __init__(self, PropertyGraph pg,
+    def __init__(self, Graph pg,
             str edge_weight_property_name,
             str output_property_name
             ):

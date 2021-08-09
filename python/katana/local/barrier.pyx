@@ -4,7 +4,7 @@ from libcpp.memory cimport unique_ptr
 from katana.cpp.libgalois.Barrier cimport Barrier as CBarrier
 from katana.cpp.libgalois.Barrier cimport CreateSimpleBarrier, GetBarrier
 
-from katana.galois import get_active_threads
+from katana import get_active_threads
 
 
 cdef class Barrier:

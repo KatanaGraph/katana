@@ -1,16 +1,14 @@
-import ctypes
-
 from numba import types
 from numba.extending import overload, overload_method
 
-from ._property_graph_numba_native import PropertyGraph_numba_wrapper
+from katana.local._graph_numba_native import Graph_numba_wrapper
 
-# PropertyGraph
+# Graph
 
 
 @overload(len)
-def overload_PropertyGraph_len(self):
-    if isinstance(self, PropertyGraph_numba_wrapper.Type):
+def overload_Graph_len(self):
+    if isinstance(self, Graph_numba_wrapper.Type):
 
         def impl(self):
             return self.num_nodes()
@@ -19,8 +17,8 @@ def overload_PropertyGraph_len(self):
     return None
 
 
-@overload_method(PropertyGraph_numba_wrapper.Type, "nodes")
-def overload_PropertyGraph_nodes(self):
+@overload_method(Graph_numba_wrapper.Type, "nodes")
+def overload_Graph_nodes(self):
     _ = self
 
     def impl(self):
@@ -29,8 +27,8 @@ def overload_PropertyGraph_nodes(self):
     return impl
 
 
-@overload_method(PropertyGraph_numba_wrapper.Type, "edges")
-def overload_PropertyGraph_edges(self, n):
+@overload_method(Graph_numba_wrapper.Type, "edges")
+def overload_Graph_edges(self, n):
     if isinstance(n, types.Integer) and not n.signed:
         _ = self
 

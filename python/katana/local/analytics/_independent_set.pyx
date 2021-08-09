@@ -25,7 +25,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -121,7 +121,7 @@ cdef class IndependentSetPlan(Plan):
         return IndependentSetPlan.make(_IndependentSetPlan.EdgeTiledPriority())
 
 
-def independent_set(PropertyGraph pg, str output_property_name,
+def independent_set(Graph pg, str output_property_name,
              IndependentSetPlan plan = IndependentSetPlan()):
     """
     Find a maximal (not the maximum) independent set in the graph and create an indicator property that is true for
@@ -129,7 +129,7 @@ def independent_set(PropertyGraph pg, str output_property_name,
     this function and may not exist before the call. The created property has type uint8_t.
 
 
-    :type pg: PropertyGraph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
@@ -142,7 +142,7 @@ def independent_set(PropertyGraph pg, str output_property_name,
         handle_result_void(IndependentSet(pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
 
 
-def independent_set_assert_valid(PropertyGraph pg, str output_property_name):
+def independent_set_assert_valid(Graph pg, str output_property_name):
     """
     Raise an exception if the Independent Set results in `pg` are invalid. This is not an exhaustive check, just a
     sanity check.
@@ -168,7 +168,7 @@ cdef class IndependentSetStatistics:
     """
     cdef _IndependentSetStatistics underlying
 
-    def __init__(self, PropertyGraph pg, str output_property_name):
+    def __init__(self, Graph pg, str output_property_name):
         output_property_name_bytes = bytes(output_property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:

@@ -1,4 +1,4 @@
-from katana.local._property_graph import PropertyGraph
+from katana.local._graph import Graph
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from libc.stdint cimport uint32_t, uint64_t
 from cython.operator cimport dereference as deref
@@ -7,7 +7,7 @@ from cython.operator cimport dereference as deref
 
 {{numba.header()}}
 
-{% call numba.class_("PropertyGraph", "_PropertyGraph") %}
+{% call numba.class_("Graph", "_PropertyGraph") %}
 {% call numba.method_with_body("num_nodes", "uint64_t", []) %}
     return self.topology().num_nodes()
 {% endcall %}

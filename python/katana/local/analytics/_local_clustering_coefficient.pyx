@@ -18,7 +18,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_void
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -152,7 +152,7 @@ cdef class LocalClusteringCoefficientPlan(Plan):
              edges_sorted, _relabeling_from_python(relabeling)))
 
 
-def local_clustering_coefficient(PropertyGraph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan()):
+def local_clustering_coefficient(Graph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan()):
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
         handle_result_void(LocalClusteringCoefficient(pg.underlying_property_graph(), output_property_name_str, plan.underlying_))

@@ -1,11 +1,10 @@
 import numpy as np
 import pyarrow
 
-from katana import do_all, do_all_operator
-from katana.galois import set_active_threads
-from katana.local.atomic import GAccumulator, GReduceLogicalOr, GReduceMax, GReduceMin, atomic_add
+from katana import do_all, do_all_operator, set_active_threads
+from katana.local import Graph
+from katana.local.atomic import ReduceLogicalOr, ReduceMax, ReduceMin, ReduceSum, atomic_add
 from katana.local.datastructures import AllocationPolicy, NUMAArray
-from katana.local.property_graph import PropertyGraph
 from katana.timer import StatTimer
 
 # Constants for Pagerank
@@ -22,7 +21,7 @@ def initialize_residual_operator(rank, nout, delta, residual, nid):
 
 
 @do_all_operator()
-def compute_out_deg_operator(graph: PropertyGraph, nout, nid):
+def compute_out_deg_operator(graph: Graph, nout, nid):
     """Operator for computing outdegree of nodes in the Graph"""
     for ii in graph.edges(nid):
         dst = graph.get_edge_dest(ii)
@@ -42,7 +41,7 @@ def compute_pagerank_pull_delta_operator(rank, nout, delta, residual, tolerance,
 
 
 @do_all_operator()
-def compute_pagerank_pull_residual_operator(graph: PropertyGraph, delta, residual, nid):
+def compute_pagerank_pull_residual_operator(graph: Graph, delta, residual, nid):
     total = 0
     for ii in graph.edges(nid):
         dst = graph.get_edge_dest(ii)
@@ -53,7 +52,7 @@ def compute_pagerank_pull_residual_operator(graph: PropertyGraph, delta, residua
         residual[nid] = total
 
 
-def pagerank_pull_sync_residual(graph: PropertyGraph, maxIterations, tolerance, property_name):
+def pagerank_pull_sync_residual(graph: Graph, maxIterations, tolerance, property_name):
     num_nodes = graph.num_nodes()
 
     rank = NUMAArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
@@ -76,7 +75,7 @@ def pagerank_pull_sync_residual(graph: PropertyGraph, maxIterations, tolerance, 
 
     print("Out-degree of 0: ", nout[0])
 
-    changed = GReduceLogicalOr(True)
+    changed = ReduceLogicalOr(True)
     iterations = 0
     timer = StatTimer("Pagerank: Property Graph Numba: " + property_name)
     timer.start()
@@ -107,7 +106,7 @@ def pagerank_pull_sync_residual(graph: PropertyGraph, maxIterations, tolerance, 
 
 @do_all_operator()
 def sanity_check_operator(
-    sum_rank: GAccumulator[int], max_rank: GReduceMax[int], min_rank: GReduceMin[int], data, nid,
+    sum_rank: ReduceSum[int], max_rank: ReduceMax[int], min_rank: ReduceMin[int], data, nid,
 ):
     val = data[nid]
     sum_rank.update(val)
@@ -115,12 +114,12 @@ def sanity_check_operator(
     min_rank.update(val)
 
 
-def verify_pr(graph: PropertyGraph, property_name: str, topn: int):
+def verify_pr(graph: Graph, property_name: str, topn: int):
     """Check output sanity"""
     chunk_array = graph.get_node_property(property_name)
-    sum_rank = GAccumulator[float](0)
-    max_rank = GReduceMax[float]()
-    min_rank = GReduceMin[float]()
+    sum_rank = ReduceSum[float](0)
+    max_rank = ReduceMax[float]()
+    min_rank = ReduceMin[float]()
 
     do_all(
         range(len(chunk_array)),
@@ -161,7 +160,7 @@ def main():
 
     print("Using threads:", set_active_threads(args.threads))
 
-    graph = PropertyGraph(args.input)
+    graph = Graph(args.input)
 
     pagerank_pull_sync_residual(graph, args.maxIterations, args.tolerance, args.propertyName)
 

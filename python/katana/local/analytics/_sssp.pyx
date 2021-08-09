@@ -28,7 +28,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._property_graph cimport PropertyGraph
+from katana.local._graph cimport Graph
 from katana.local.analytics.plan cimport Plan, Statistics, _Plan
 
 
@@ -134,16 +134,16 @@ cdef class SsspPlan(Plan):
         f.underlying_ = u
         return f
 
-    def __init__(self, graph: PropertyGraph = None):
+    def __init__(self, graph: Graph = None):
         """
         Construct a plan optimized for `graph` using heuristics, or using default parameter values.
         """
         if graph is None:
             self.underlying_ = _SsspPlan()
         else:
-            if not isinstance(graph, PropertyGraph):
+            if not isinstance(graph, Graph):
                 raise TypeError(graph)
-            self.underlying_ = _SsspPlan((<PropertyGraph>graph).underlying_property_graph())
+            self.underlying_ = _SsspPlan((<Graph>graph).underlying_property_graph())
 
     Algorithm = _SsspAlgorithm
 
@@ -243,13 +243,13 @@ cdef class SsspPlan(Plan):
         return SsspPlan.make(_SsspPlan.TopologicalTile(edge_tile_size))
 
 
-def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
+def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
          SsspPlan plan = SsspPlan()):
     """
     Compute the Single-Source Shortest Path on `pg` using `start_node` as the source. The computed path lengths are
     written to the property `output_property_name`.
 
-    :type pg: PropertyGraph
+    :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type start_node: Node ID
     :param start_node: The source node.
@@ -266,7 +266,7 @@ def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str
         handle_result_void(Sssp(pg.underlying_property_graph(), start_node, edge_weight_property_name_str,
                                 output_property_name_str, plan.underlying_))
 
-def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
+def sssp_assert_valid(Graph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
     """
     Raise an exception if the SSSP results in `pg` with the given parameters appear to be incorrect. This is not an
     exhaustive check, just a sanity check.
@@ -292,7 +292,7 @@ cdef class SsspStatistics(Statistics):
     """
     cdef _SsspStatistics underlying
 
-    def __init__(self, PropertyGraph pg, str output_property_name):
+    def __init__(self, Graph pg, str output_property_name):
         """
         :param pg: The graph on which `sssp` was called.
         :param output_property_name: The output property name passed to `sssp`.

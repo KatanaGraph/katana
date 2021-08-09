@@ -47,8 +47,8 @@ def get_input(rel_path) -> Path:
     """
     Download the standard Galois inputs (with local caching on disk) and return a path to a file in that archive.
 
-    >>> from katana.property_graph import PropertyGraph
-    ... graph = PropertyGraph(get_input("propertygraphs/ldbc_003"))
+    >>> from katana.local import Graph
+    ... graph = Graph(get_input("propertygraphs/ldbc_003"))
     """
     path = get_inputs_directory() / rel_path
     if path.exists():

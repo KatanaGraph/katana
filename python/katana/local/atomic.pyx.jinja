@@ -9,7 +9,7 @@ The instantiations are:
 * `{{inst.element_py_type}}` (with C element type {{inst.element_c_type}})
 {% endfor %}
 
-The instantiation is selected by indexing the type, for example `GAccumulator[int]` or `GReduceMin[np.uint64]`.
+The instantiation is selected by indexing the type, for example `ReduceSum[int]` or `ReduceMin[np.uint64]`.
 
 """
 
@@ -24,11 +24,11 @@ from katana.native_interfacing.numpy_atomic import atomic_add, atomic_sub, atomi
 {{type_instantiation_imports}}
 
 __all__ = [
-    "GAccumulator",
-    "GReduceMax",
-    "GReduceMin",
-    "GReduceLogicalOr",
-    "GReduceLogicalAnd",
+    "ReduceSum",
+    "ReduceMax",
+    "ReduceMin",
+    "ReduceLogicalOr",
+    "ReduceLogicalAnd",
     "atomic_add",
     "atomic_sub",
     "atomic_max",
@@ -39,12 +39,12 @@ __all__ = [
 
 {{numba.header()}}
 
-{% macro wrap_reducible(name, element_type, underlying_type, english_operator) %}
-{% if not underlying_type -%}
-{% set underlying_type %}atomic.{{name}}[{{element_type}}]{% endset -%}
+{% macro wrap_reducible(name, element_type, is_template, english_operator, c_name) %}
+{% if is_template -%}
+{% set underlying_type %}atomic.{{c_name}}[{{element_type}}]{% endset -%}
 {% set class_name %}{{name}}_{{element_type}}{% endset -%}
 {% else -%}
-{% set underlying_type %}atomic.{{underlying_type}}{% endset -%}
+{% set underlying_type %}atomic.{{c_name}}{% endset -%}
 {% set class_name %}{{name}}{% endset -%}
 {% endif -%}
 cdef class {{class_name}}:
@@ -114,20 +114,20 @@ cdef class {{class_name}}:
 {% endcall %}
 {% endmacro %}
 
-{% for reducible, english_operator in [("GAccumulator", "addition"),
-                                       ("GReduceMax", "maximum"),
-                                       ("GReduceMin", "minimum")] %}
+{% for reducible, c_name, english_operator in [("ReduceSum", "GAccumulator", "addition"),
+                                               ("ReduceMax", "GReduceMax", "maximum"),
+                                               ("ReduceMin", "GReduceMin", "minimum")] %}
 _{{reducible}}_types = {}
 {% for inst in primitive_type_instantiations %}
-{{wrap_reducible(reducible, inst.element_c_type, None, english_operator)}}
+{{wrap_reducible(reducible, inst.element_c_type, True, english_operator, c_name)}}
 _{{reducible}}_types[{{inst.element_py_type}}] = {{reducible}}_{{inst.type_scab}}
 {% endfor %}
 {{reducible}} = make_template_type1("{{reducible}}", _{{reducible}}_types)
 {% endfor %}
 
-{% for reducible, english_operator in [("GReduceLogicalAnd", "logical and"),
-                                       ("GReduceLogicalOr", "logical or")] %}
-{{wrap_reducible(reducible, "bint", reducible, english_operator)}}
+{% for reducible, english_operator in [("ReduceLogicalAnd", "logical and"),
+                                       ("ReduceLogicalOr", "logical or")] %}
+{{wrap_reducible(reducible, "bint", False, english_operator, "G" + reducible)}}
 {% endfor %}
 
 {{numba.register_all_wrappers()}}

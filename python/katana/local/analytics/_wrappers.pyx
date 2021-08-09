@@ -39,7 +39,7 @@ cdef unique_ptr[NUMAArray[uint64_t]] handle_result_unique_numaarray_uint64(Resul
 
 # "Algorithms" from Graph
 
-cdef extern from "katana/Graph.h" namespace "katana" nogil:
+cdef extern from "katana/PropertyGraph.h" namespace "katana" nogil:
     Result[unique_ptr[NUMAArray[uint64_t]]] SortAllEdgesByDest(_PropertyGraph* pg);
 
     uint64_t FindEdgeSortedByDest(const _PropertyGraph* graph, uint32_t node, uint32_t node_to_find);

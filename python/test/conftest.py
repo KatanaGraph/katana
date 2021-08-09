@@ -22,7 +22,7 @@ def pytest_runtest_setup(item: "pytest.hookspec.Item"):
 
 
 @pytest.fixture
-def property_graph():
+def graph():
     g = Graph(get_input("propertygraphs/ldbc_003"))
     return g
 

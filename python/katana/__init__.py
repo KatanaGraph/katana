@@ -27,10 +27,10 @@ import katana.plugin
 from katana.plugin import installed_plugins
 
 try:
-    import katana.katana_static_state
-    from katana.katana_static_state import get_active_threads, set_active_threads, set_busy_wait
+    import katana.globals
+    from katana.globals import get_active_threads, set_active_threads, set_busy_wait
 
-    __version__ = katana.katana_static_state.get_version()
+    __version__ = katana.globals.get_version()
 
     from katana._loops import OrderedByIntegerMetric, PerSocketChunkFIFO, UserContext, do_all, for_each
     from katana.loop_operators import do_all_operator, for_each_operator, obim_metric

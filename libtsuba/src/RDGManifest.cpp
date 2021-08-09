@@ -59,8 +59,6 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
     return res.error();
   }
 
-  /*std::cout <<"uri: " <<uri.string() <<std::endl;*/
-
   tsuba::RDGManifest manifest(uri.DirName());
   auto manifest_res = katana::JsonParse<tsuba::RDGManifest>(fv, &manifest);
 
@@ -72,8 +70,6 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   auto view_name = ParseViewNameFromName(manifest_name);
   auto view_args = ParseViewArgsFromName(manifest_name);
   auto version_num = ParseVersionFromName(manifest_name);
-
-  //std::cout <<"manifest_name : " <<manifest_name <<"num: " << version_num.value() <<std::endl;
 
   if (view_name) {
     manifest.set_viewtype(view_name.value());
@@ -88,12 +84,6 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   if (version_num) {
     manifest.set_version(std::move(katana::RDGVersion(version_num.value())));
   }
-#if 0
-  else {
-    // TODO(wkyu): unnecessary though.
-    manifest.set_version(std::move(katana::RDGVersion()));
-  }
-#endif
 
   return manifest;
 }

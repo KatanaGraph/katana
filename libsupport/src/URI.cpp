@@ -73,19 +73,9 @@ ExtractDirName(std::string_view path) {
 
 std::string
 AddRandComponent(const std::string& str) {
-#if 0
   std::string name(str);
   name += "-";
   name += katana::RandomAlphanumericString(katana::kRandomIDLength);
-#else
-  std::string name = ExtractDirName(str);
-  if (name != "") {
-    name += katana::Uri::kSepChar;
-  }
-  name += katana::RandomAlphanumericString(katana::kRandomIDLength);
-  name += "-";
-  name += ExtractFileName(str);
-#endif
   return name;
 }
 

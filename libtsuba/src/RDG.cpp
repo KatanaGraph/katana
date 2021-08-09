@@ -300,15 +300,18 @@ tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
-
   std::string branch = handle.impl_->rdg_manifest().version().GetBranchPath();
   KATANA_LOG_DEBUG(
-      "PartHeader+Properties begin with version {}\n",
-      handle.impl_->rdg_manifest().version().LeafVersionNumber());
+      "Store for version {} branch {}\n",
+      handle.impl_->rdg_manifest().version().ToVectorString(), branch);
 
   if (core_->part_header().topology_path().empty()) {
     // No topology file; create one
     katana::Uri t_path = MakeTopologyFileName(handle);
+
+    KATANA_LOG_DEBUG(
+        "topology path {} for version {}\n", t_path.path(),
+        handle.impl_->rdg_manifest().version().ToVectorString());
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
 
@@ -353,6 +356,11 @@ tsuba::RDG::DoStore(
       WritePartArrays(
           handle.impl_->rdg_manifest().dir().Join(branch), write_group.get()),
       "writing partition metadata"));
+
+  KATANA_LOG_DEBUG(
+      "PartitionMetadata path {} for version {}\n",
+      handle.impl_->rdg_manifest().dir().Join(branch).path(),
+      handle.impl_->rdg_manifest().version().ToVectorString());
 
   //If a view type has been set, use it otherwise pass in the default view type
   if (view_type_.empty()) {

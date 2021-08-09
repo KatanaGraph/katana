@@ -704,7 +704,15 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
 katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
-  if (auto res = tsuba::Create(rdg_name); !res) {
+  return Write(rdg_name, command_line, 0);
+}
+
+katana::Result<void>
+katana::PropertyGraph::Write(
+    const std::string& rdg_name, const std::string& command_line,
+    uint64_t first) {
+  if (auto res = tsuba::Create(rdg_name, first); !res) {
+    KATANA_LOG_DEBUG("failed to create the first manifest file\n");
     return res.error();
   }
   return WriteGraph(rdg_name, command_line);

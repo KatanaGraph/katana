@@ -99,8 +99,8 @@ tsuba::Open(
   }
 
   KATANA_LOG_DEBUG(
-      "Finding version {} for rdg_name {}\n", target.LeafVersionNumber(),
-      rdg_name);
+      "Finding leaf_version {} from long_version {} for rdg_name {}\n",
+      target.LeafVersionNumber(), target.ToVectorString(), rdg_name);
 
   auto uri_res = katana::Uri::Make(rdg_name);
   if (!uri_res) {
@@ -120,7 +120,7 @@ tsuba::Open(
       KATANA_LOG_DEBUG(
           "Incorrect version {} for target {}\n",
           manifest_res.value().version().LeafVersionNumber(),
-          target.LeafVersionNumber());
+          target.ToVectorString());
     }
 
     return RDGHandle{
@@ -128,18 +128,19 @@ tsuba::Open(
   }
 
   // Add the targeted branch before search
-  auto long_uri_res = katana::Uri::Make(rdg_name + target.GetBranchPath());
+  auto long_uri_res = katana::Uri::Make(rdg_name);
   if (!long_uri_res) {
     return long_uri_res.error();
   }
-  katana::Uri long_uri = std::move(long_uri_res.value());
+  katana::Uri long_uri =
+      std::move(long_uri_res.value()).Join(target.GetBranchPath());
 
   auto latest_uri = target.LeafVersionNumber()
                         ? FindManifestFileForVersion(long_uri, target)
                         : FindLatestManifestFile(long_uri);
   if (!latest_uri) {
     return KATANA_ERROR(
-        ErrorCode::InvalidArgument, "failed to find latest RDGManifest at {}",
+        ErrorCode::InvalidArgument, "failed to find latest RDGManifest at {}\n",
         long_uri.string());
   }
 
@@ -159,7 +160,7 @@ tsuba::Close(RDGHandle handle) {
 }
 
 katana::Result<void>
-tsuba::Create(const std::string& name) {
+tsuba::Create(const std::string& name, uint64_t first) {
   auto uri_res = katana::Uri::Make(name);
   if (!uri_res) {
     return uri_res.error();
@@ -167,14 +168,17 @@ tsuba::Create(const std::string& name) {
   katana::Uri uri = std::move(uri_res.value());
 
   KATANA_LOG_DEBUG_ASSERT(!RDGManifest::IsManifestUri(uri));
+
   // the default construction is the empty RDG
   tsuba::RDGManifest manifest{};
+  if (first)
+    manifest.increment_version();
 
   katana::CommBackend* comm = Comm();
   if (comm->ID == 0) {
     std::string s = manifest.ToJsonString();
     KATANA_LOG_DEBUG(
-        "tsuba::create manifest version {}\n",
+        "tsuba::Create manifest version {}\n",
         manifest.version().LeafVersionNumber());
     if (auto res = tsuba::FileStore(
             tsuba::RDGManifest::FileName(
@@ -240,7 +244,8 @@ tsuba::ListAvailableViewsForVersion(
     uint64_t* max_version) {
   std::vector<tsuba::RDGView> views_found;
   KATANA_LOG_DEBUG(
-      "ListAvailableViews for a branch {}", version.LeafVersionNumber());
+      "ListAvailableViewsForVersion for a branch {}\n",
+      version.LeafVersionNumber());
 
   // For a path to the directory targeted by version
   std::string target_dir = rdg_dir;
@@ -312,8 +317,8 @@ tsuba::ListAvailableViewsForVersion(
   *max_version = current_max;
 
   KATANA_LOG_DEBUG(
-      "ListAvailableViews for a branch {} max {}", version.LeafVersionNumber(),
-      current_max);
+      "ListAvailableViewsForVersion for a branch {} max {}\n",
+      version.LeafVersionNumber(), current_max);
 
   return views_found;
 }

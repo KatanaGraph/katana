@@ -66,7 +66,8 @@ KATANA_EXPORT katana::Result<void> Close(RDGHandle handle);
 
 /// Create an RDG storage location
 /// \param name is storage location prefix that will be used to store the RDG
-KATANA_EXPORT katana::Result<void> Create(const std::string& name);
+KATANA_EXPORT katana::Result<void> Create(
+    const std::string& name, uint64_t first = 0);
 
 /// @brief Describes properties of RDGView
 /// The RDGView will describe will identify the view-type, the arguments used to

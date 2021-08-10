@@ -119,7 +119,7 @@ void
 readGraphDispatch(GraphTy& graph, read_with_aux_graph_tag, FileGraph& f) {
   typedef typename GraphTy::ReadGraphAuxData Aux;
 
-  Aux aux;
+  Aux aux{};
   graph.allocateFrom(f, aux);
 
   ReadGraphConstructNodesFrom<GraphTy, Aux> nodeReader(graph, f, aux);

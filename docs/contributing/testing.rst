@@ -115,12 +115,19 @@ for more options.
 Coverage
 =========
 
-Collecting coverage is enabled for Python.  You can use the following
-sequence of commands to obtain (html) coverage report:
+Collecting coverage is enabled for Python.
+
+Export ``COVERAGE_RCFILE`` before running the build command:
 
 .. code-block::
 
    export COVERAGE_RCFILE="$SRC_DIR/.coveragerc"
+
+Once the build step is done, you can use the following sequence of
+commands to run tests and obtain (html) coverage report:
+
+.. code-block::
+
    export COVERAGE_PROCESS_START="$COVERAGE_RCFILE"
    $BUILD_DIR/python_env.sh coverage run -m pytest python/test -s
    coverage combine

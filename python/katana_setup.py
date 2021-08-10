@@ -441,7 +441,7 @@ setActiveThreads(1)
 def setup_coverage():
     if os.environ.get("COVERAGE_RCFILE"):
         # usercustomize.py will initialize coverage for each Python process (but only if COVERAGE_PROCESS_START is set).
-        with open(Path(os.getcwd()) / "python" / "usercustomize.py", 'w') as f:
+        with open(Path(os.getcwd()) / "python" / "usercustomize.py", "w") as f:
             f.write("import coverage\n")
             f.write("coverage.process_startup()")
 

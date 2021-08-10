@@ -21,11 +21,11 @@ class CppCudaVisitor(FileVisitor):
     def visit(self, file_path: str) -> bool:
         if self.fix:
             print("fixing ", file_path)
-            cmd = [self.clang_format, " -style=file -i ", file_path]
+            cmd = [self.clang_format, "-style=file", "-i", file_path]
         else:
             cmd = [self.clang_format, "-style=file", "-output-replacements-xml", file_path]
 
-        completed = subprocess.run(cmd, capture_output=True, check=False)
+        completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         if not self.fix and (completed.returncode != 0 or ("<replacement " in str(completed.stdout))):
             print(file_path, " NOT OK")
             return False  # Check failed

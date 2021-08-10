@@ -18,14 +18,20 @@ using json = nlohmann::json;
 
 namespace {
 
-Result<uint64_t>
-Parse(const std::string& str) {
+Result<katana::RDGVersion>
+ParseVersion(const std::string& str) {
+#if 0
   uint64_t val = strtoul(str.c_str(), nullptr, 10);
   if (errno == ERANGE) {
     return KATANA_ERROR(
         katana::ResultErrno(), "manifest file found with out of range version");
   }
   return val;
+#else
+  // The length of "vers" is 4.
+  std::string prefix = "vers";
+  return katana::RDGVersion(str.substr(prefix.size()));
+#endif
 }
 
 const int MANIFEST_MATCH_VERS_INDEX = 1;
@@ -37,8 +43,11 @@ namespace {
 const int NODE_ZERO_PADDING_LENGTH = 5;
 const int VERS_ZERO_PADDING_LENGTH = 20;
 std::string
-ToVersionString(uint64_t version) {
-  return fmt::format("vers{0:0{1}d}", version, VERS_ZERO_PADDING_LENGTH);
+ToVersionString(katana::RDGVersion version) {
+  std::string str = version.ToString();
+  std::string leading_zeros = fmt::format("{0:0{1}d}", 0,
+      (VERS_ZERO_PADDING_LENGTH-str.size()));
+  return fmt::format("vers{}{}", leading_zeros, str);
 }
 std::string
 ToNodeString(uint32_t node_id) {
@@ -48,7 +57,8 @@ ToNodeString(uint32_t node_id) {
 namespace tsuba {
 
 const std::regex RDGManifest::kManifestVersion(
-    "katana_vers(?:([0-9]+))_(?:([0-9A-Za-z-]+))\\.manifest$");
+    "katana_(?:(vers[0-9A-Za-z_.]+))_(?:(rdg[0-9A-Za-z-]*))\\.manifest$");
+    //"katana_(?:vers([0-9A-Za-z_]+))_(?:rdg([0-9A-Za-z-]+))\\.manifest$";
 
 Result<tsuba::RDGManifest>
 RDGManifest::MakeFromStorage(const katana::Uri& uri) {
@@ -117,15 +127,14 @@ RDGManifest::PartitionFileName(
     katana::RDGVersion version) {
   KATANA_LOG_ASSERT(!view_type.empty());
   return fmt::format(
-      "part_{}_{}_{}", ToVersionString(version.LeafVersionNumber()), view_type,
+      "part_{}_{}_{}", ToVersionString(version), view_type,
       ToNodeString(node_id));
 }
 
 katana::Uri
 RDGManifest::PartitionFileName(
     const katana::Uri& uri, uint32_t node_id, katana::RDGVersion version) {
-  return uri.Join(version.GetBranchPath())
-      .Join(PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
+  return uri.Join(PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
 }
 
 katana::Uri
@@ -133,8 +142,7 @@ RDGManifest::PartitionFileName(
     const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
     katana::RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(!IsManifestUri(uri));
-  return uri.Join(version.GetBranchPath())
-      .Join(PartitionFileName(view_type, node_id, version));
+  return uri.Join(PartitionFileName(view_type, node_id, version));
 }
 
 katana::Uri
@@ -158,12 +166,12 @@ RDGManifest::FileName(
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
   KATANA_LOG_DEBUG(
-      "FileName: katana_{}_{}.manifest version {}",
-      ToVersionString(version.LeafVersionNumber()), view_name,
-      version.ToVectorString());
-  return uri.Join(version.GetBranchPath())
-      .Join(fmt::format(
-          "katana_{}_{}.manifest", ToVersionString(version.LeafVersionNumber()),
+      "uri {} manifest: katana_{}_{}.manifest version {}; ",
+      uri.string(), ToVersionString(version),
+      view_name, version.ToString());
+  // TODO(wkyu): may need to change the separator as __
+  return uri.Join(fmt::format(
+          "katana_{}_{}.manifest", ToVersionString(version),
           view_name));
 }
 
@@ -174,14 +182,14 @@ RDGManifest::IsManifestUri(const katana::Uri& uri) {
   return res;
 }
 
-Result<uint64_t>
+Result<katana::RDGVersion>
 RDGManifest::ParseVersionFromName(const std::string& file) {
   std::smatch sub_match;
   if (!std::regex_match(file, sub_match, kManifestVersion)) {
     return tsuba::ErrorCode::InvalidArgument;
   }
   //Manifest file
-  return Parse(sub_match[MANIFEST_MATCH_VERS_INDEX]);
+  return ParseVersion(sub_match[MANIFEST_MATCH_VERS_INDEX]);
 }
 
 Result<std::string>
@@ -248,7 +256,7 @@ RDGManifest::FileNames() {
     if (!header_res) {
       KATANA_LOG_DEBUG(
           "problem uri: {} host: {} ver: {} view_name: {}  : {}", header_uri, i,
-          version().LeafVersionNumber(), view_specifier(), header_res.error());
+          version().LeafNumber(), view_specifier(), header_res.error());
     } else {
       auto header = std::move(header_res.value());
       for (const auto& node_prop : header.node_prop_info_list()) {

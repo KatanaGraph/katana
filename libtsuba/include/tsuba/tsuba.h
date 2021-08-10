@@ -6,6 +6,7 @@
 #include "katana/CommBackend.h"
 #include "katana/RDGVersion.h"
 #include "katana/Result.h"
+#include "katana/RDGVersion.h"
 #include "katana/URI.h"
 #include "katana/config.h"
 
@@ -67,14 +68,14 @@ KATANA_EXPORT katana::Result<void> Close(RDGHandle handle);
 /// Create an RDG storage location
 /// \param name is storage location prefix that will be used to store the RDG
 KATANA_EXPORT katana::Result<void> Create(
-    const std::string& name, uint64_t first = 0);
+    const std::string& name, katana::RDGVersion = katana::RDGVersion(0));
 
 /// @brief Describes properties of RDGView
 /// The RDGView will describe will identify the view-type, the arguments used to
 /// create it, where it is stored, and the properties of the partioning strategy
 /// used to distribute its data across the hosts which will load it.
 struct KATANA_EXPORT RDGView {
-  uint64_t view_version{0};
+  katana::RDGVersion view_version{katana::RDGVersion(0)};
   std::string view_type;
   std::string view_args;
   std::string view_path;
@@ -94,7 +95,7 @@ KATANA_EXPORT katana::Result<RDGStat> Stat(const std::string& rdg_name);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViewsForVersion(
     const std::string& rdg_dir, katana::RDGVersion version,
-    uint64_t* max_version);
+    katana::RDGVersion* max_version);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViews(
     const std::string& rdg_dir);

@@ -8,6 +8,7 @@
 #include "katana/JSON.h"
 #include "katana/Logging.h"
 #include "katana/Random.h"
+#include "katana/RDGVersion.h"
 #include "katana/URI.h"
 #include "katana/config.h"
 #include "tsuba/RDGLineage.h"
@@ -80,7 +81,7 @@ public:
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
     katana::RDGVersion next_version(version_.numbers_, version_.branches_);
-    next_version.SetNextVersion();
+    next_version.IncrementNumber();
     return RDGManifest(
         next_version, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }
@@ -120,7 +121,7 @@ public:
   void set_viewtype(std::string v) { view_type_ = v; }
   void set_viewargs(std::vector<std::string> v) { view_args_ = v; }
   void set_version(katana::RDGVersion val) { version_ = val; }
-  void increment_version() { version_.SetNextVersion(); }
+  void increment_version() { version_.IncrementNumber(); }
   const std::string& view_type() const { return view_type_; }
   bool transpose() const { return transpose_; }
 
@@ -142,7 +143,7 @@ public:
       const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
       katana::RDGVersion version);
 
-  static katana::Result<uint64_t> ParseVersionFromName(const std::string& file);
+  static katana::Result<katana::RDGVersion> ParseVersionFromName(const std::string& file);
   static katana::Result<std::string> ParseViewNameFromName(
       const std::string& file);
   static katana::Result<std::vector<std::string>> ParseViewArgsFromName(

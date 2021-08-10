@@ -2920,9 +2920,6 @@ struct Gr2Kg : public Conversion {
     tsuba::RDG rdg;
     rdg.set_rdg_dir(tsuba::GetRDGDir(handle));
 
-    // RDGVersion from {0,""}, with no branch
-    rdg.set_branch_path("");
-
     if (auto res = rdg.SetTopologyFile(top_file_name); !res) {
       return res.error();
     }

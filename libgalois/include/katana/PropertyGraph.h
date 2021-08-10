@@ -457,7 +457,7 @@ public:
   /// first: the beginning version of the manifest
   Result<void> Write(
       const std::string& rdg_name, const std::string& command_line,
-      uint64_t first);
+      katana::RDGVersion version);
 
   /// Create a new storage location for a graph and write everything into it.
   ///

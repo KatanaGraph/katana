@@ -544,7 +544,7 @@ katana::PropertyGraph::ConductWriteOp(
   KATANA_LOG_DEBUG(
       "ConductWriteOp: writing loaded {} from current version {} "
       " with command_line {} action {}; ",
-      uri, GetVersion().ToVectorString(), command_line, versioning_action);
+      uri, GetVersion().ToString(), command_line, versioning_action);
   auto open_res = tsuba::Open(uri, GetVersion(), tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
@@ -586,7 +586,7 @@ katana::PropertyGraph::Commit(const std::string& command_line) {
     }
     return WriteGraph(rdg_.rdg_dir().string(), command_line);
   }
-  KATANA_LOG_DEBUG("Commit Graph command_line {}\n", command_line);
+  KATANA_LOG_DEBUG("Commit Graph command_line {}; ", command_line);
   return DoWrite(
       *file_, command_line, tsuba::RDG::RDGVersioningPolicy::IncrementVersion);
 }
@@ -709,14 +709,14 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
 katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
-  return Write(rdg_name, command_line, 0);
+  return Write(rdg_name, command_line, katana::RDGVersion(0));
 }
 
 katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line,
-    uint64_t first) {
-  if (auto res = tsuba::Create(rdg_name, first); !res) {
+    katana::RDGVersion version) {
+  if (auto res = tsuba::Create(rdg_name, version); !res) {
     KATANA_LOG_DEBUG("failed to create the first manifest file\n");
     return res.error();
   }
@@ -885,13 +885,14 @@ katana::PropertyGraph::UnloadEdgeProperty(const std::string& prop_name) {
 katana::Result<void>
 katana::PropertyGraph::InformPath(const std::string& input_path) {
   if (!rdg_.rdg_dir().empty()) {
-    KATANA_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir(), input_path);
+    KATANA_LOG_DEBUG("rdg dir from {} to {} ", rdg_.rdg_dir(), input_path);
   }
   auto uri_res = katana::Uri::Make(input_path);
   if (!uri_res) {
     return uri_res.error();
   }
 
+  KATANA_LOG_DEBUG("from path {} to uri {} ", input_path, uri_res.value().string());
   rdg_.set_rdg_dir(uri_res.value());
   return ResultSuccess();
 }

@@ -12,7 +12,6 @@ namespace tsuba {
 katana::Result<tsuba::RDGPrefix>
 RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
   katana::RDGVersion version = manifest.version();
-  std::string branch = version.GetBranchPath();
 
   auto meta_res = RDGPartHeader::Make(manifest.PartitionFileName(0));
   if (!meta_res) {
@@ -25,7 +24,7 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
   }
 
   katana::Uri t_path =
-      manifest.dir().Join(branch).Join(part_header.topology_path());
+      manifest.dir().Join(part_header.topology_path());
 
   CSRTopologyHeader gr_header;
   if (auto res = FileGet(t_path.string(), &gr_header); !res) {

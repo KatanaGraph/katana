@@ -10,62 +10,84 @@ RDGVersion::RDGVersion(
 
 RDGVersion::RDGVersion(uint64_t num) { numbers_.back() = num; }
 
-std::string
-RDGVersion::GetBranchPath() const {
-  std::string vec = "";
-  //KATANA_LOG_VERBOSE("number size {}, branch size {}", numbers_.size(), branches_.size());
-  // return a subdir formed by branches without a trailing SepChar
-  for (uint32_t i = 0; (i + 1) < branches_.size(); i++) {
-    vec += fmt::format("{}", branches_[i]);
-    // the last two branches (ID:"") will not need a SepChar
-    if ((i + 2) < branches_.size())
-      vec += "/";
+RDGVersion::RDGVersion(const std::string str) { 
+  std::vector<char> vec(str.begin(), str.end());
+  char* source = vec.data();
+  char* token;
+
+  token = strtok(source, "_");
+  if (token != NULL) {
+    numbers_.clear();
+    branches_.clear();
+    do {
+      numbers_.emplace_back(strtoul(token, nullptr, 10));
+      token = strtok(NULL, "_");
+      if (token != NULL) {
+	branches_.emplace_back(token);
+	token = strtok(NULL, "_");
+      } else {
+	branches_.emplace_back(".");
+	break;
+      }
+    } while (token != NULL);
   }
-  return vec;
 }
 
 std::string
-RDGVersion::ToVectorString() const {
+RDGVersion::ToString() const {
   std::string vec = "";
-  //KATANA_LOG_VERBOSE("number size {}, branch size {}", numbers_.size(), branches_.size());
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
     vec += fmt::format("{}_{},", numbers_[i], branches_[i]);
   }
-  // Last one has only the ver number.
+  // include only the number from the past pair, ignore "."
   return fmt::format("{}{}", vec, numbers_.back());
 }
 
+bool
+RDGVersion::IsNull() {
+  return (numbers_.back()==0);
+}
+
 uint64_t
-RDGVersion::LeafVersionNumber() {
+RDGVersion::LeafNumber() {
   return numbers_.back();
 }
 
 void
-RDGVersion::SetNextVersion() {
+RDGVersion::IncrementNumber() {
   numbers_.back()++;
 }
 
 void
-RDGVersion::SetBranchPoint(const std::string& name) {
+RDGVersion::AddBranch(const std::string& name) {
   branches_.back() = name;
-  // 1 to begin a branch
   numbers_.emplace_back(1);
   branches_.emplace_back(".");
 }
 
 std::vector<uint64_t>&
-RDGVersion::GetVersionNumbers() {
+RDGVersion::GetNumbers() {
   return numbers_;
 }
 
 std::vector<std::string>&
-RDGVersion::GetBranchIDs() {
+RDGVersion::GetBranches() {
   return branches_;
+}
+
+bool
+RDGVersion::ShareBranch(const RDGVersion & in) {
+  return branches_ == in.branches_;
 }
 
 bool
 operator==(const RDGVersion& lhs, const RDGVersion& rhs) {
   return (lhs.numbers_ == rhs.numbers_ && lhs.branches_ == rhs.branches_);
+}
+
+bool
+operator!=(const RDGVersion& lhs, const RDGVersion& rhs) {
+  return (! (lhs == rhs));
 }
 
 bool

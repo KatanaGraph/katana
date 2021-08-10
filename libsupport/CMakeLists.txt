@@ -28,6 +28,7 @@ set(sources
         src/ProgressTracer.cpp
         src/Signals.cpp
         src/Strings.cpp
+        src/TextTracer.cpp
         src/URI.cpp
 )
 

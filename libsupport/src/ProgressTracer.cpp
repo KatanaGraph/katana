@@ -1,13 +1,111 @@
 #include "katana/ProgressTracer.h"
 
+#include <sys/resource.h>
+#include <unistd.h>
+
+#include <fstream>
+#include <regex>
+
 #include "katana/Logging.h"
+
+#if __linux__
+#include <sys/sysinfo.h>
+#endif
 
 std::unique_ptr<katana::ProgressTracer> katana::ProgressTracer::tracer_ =
     nullptr;
 
+katana::ProgressTracer&
+katana::GetTracer() {
+  return katana::ProgressTracer::Get();
+}
+
+#if __linux__
+
+uint64_t
+katana::ProgressTracer::ParseProcSelfRssBytes() {
+  static std::regex kRssRegex("^Rss\\w+:\\s+([0-9]+) kB");
+  std::ifstream proc_self("/proc/self/status");
+
+  // there are 3 relevant vals: RssAnon, RssFile, RssShmem
+  uint32_t rss_vals = 3;
+  uint64_t total_mem = 0;
+  std::string line;
+  while (std::getline(proc_self, line) && rss_vals > 0) {
+    std::smatch sub_match;
+    if (!std::regex_match(line, sub_match, kRssRegex)) {
+      continue;
+    }
+    std::string val = sub_match[1];
+    total_mem += std::strtol(val.c_str(), nullptr, 0);
+    rss_vals -= 1;
+  }
+  if (rss_vals != 0) {
+    KATANA_LOG_ERROR("parsing /proc/self/status for memory failed");
+  }
+  return total_mem * 1024;
+}
+
+katana::HostStats
+katana::ProgressTracer::GetHostStats() {
+  HostStats stats;
+
+  struct sysinfo info;
+  sysinfo(&info);
+
+  char hostname[256];
+  gethostname(hostname, 256);
+
+  stats.ram_gb = info.totalram / 1024 / 1024 / 1024;
+  stats.nprocs = get_nprocs();
+  stats.hostname = hostname;
+
+  return stats;
+}
+
+#else
+
+uint64_t
+katana::ProgressTracer::ParseProcSelfRssBytes() {
+  KATANA_WARN_ONCE(
+      "calculating resident set size is not implemented for this platform");
+  return 0;
+}
+
+HostStats
+katana::ProgressTracer::GetHostStats() {
+  KATANA_WARN_ONCE("getting host stats is not implemented for this platform");
+  HostStats stats;
+  return stats;
+}
+
+#endif
+
+long
+katana::ProgressTracer::GetMaxMem() {
+  struct rusage rusage;
+  getrusage(RUSAGE_SELF, &rusage);
+  return rusage.ru_maxrss;
+}
+
+std::string
+katana::ProgressTracer::GetValue(const katana::Value& value) {
+  if (std::holds_alternative<std::string>(value)) {
+    return "\"" + std::get<std::string>(value) + "\"";
+  } else if (std::holds_alternative<int64_t>(value)) {
+    return std::to_string(std::get<int64_t>(value));
+  } else if (std::holds_alternative<double>(value)) {
+    return std::to_string(std::get<double>(value));
+  } else if (std::holds_alternative<bool>(value)) {
+    return std::get<bool>(value) ? "true" : "false";
+  } else if (std::holds_alternative<uint64_t>(value)) {
+    return std::to_string(std::get<uint64_t>(value));
+  }
+  return std::string{};
+}
+
 void
-katana::ProgressTracer::SetProgressTracer(
-    std::unique_ptr<katana::ProgressTracer> tracer) {
+katana::ProgressTracer::Set(std::unique_ptr<katana::ProgressTracer> tracer) {
   ProgressTracer::tracer_ = std::move(tracer);
 }
 
@@ -87,7 +185,7 @@ void
 katana::ProgressSpan::MarkScopeClosed() {
   if (!scope_closed_) {
     scope_closed_ = true;
-    ProgressTracer& tracer = ProgressTracer::GetProgressTracer();
+    ProgressTracer& tracer = ProgressTracer::Get();
     if (tracer.HasActiveSpan() && this == &tracer.GetActiveSpan()) {
       Finish();
     }
@@ -105,7 +203,7 @@ katana::ProgressSpan::Finish() {
     finished_ = true;
     Close();
   }
-  ProgressTracer& tracer = ProgressTracer::GetProgressTracer();
+  ProgressTracer& tracer = ProgressTracer::Get();
   if (tracer.HasActiveSpan() && this == &tracer.GetActiveSpan()) {
     tracer.FinishActiveSpan();
   }

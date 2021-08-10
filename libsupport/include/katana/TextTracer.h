@@ -1,7 +1,6 @@
-#ifndef KATANA_LIBSUPPORT_KATANA_JSONTRACER_H_
-#define KATANA_LIBSUPPORT_KATANA_JSONTRACER_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_TEXTTRACER_H_
+#define KATANA_LIBSUPPORT_KATANA_TEXTTRACER_H_
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -11,14 +10,10 @@
 
 namespace katana {
 
-using OutputCB = std::function<void(const std::string&)>;
-
-class KATANA_EXPORT JSONTracer : public ProgressTracer {
+class KATANA_EXPORT TextTracer : public ProgressTracer {
 public:
-  static std::unique_ptr<JSONTracer> Make(
+  static std::unique_ptr<TextTracer> Make(
       uint32_t host_id = 0, uint32_t num_hosts = 1);
-  static std::unique_ptr<JSONTracer> Make(
-      uint32_t host_id, uint32_t num_hosts, OutputCB out_callback);
 
   std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, const ProgressContext& child_of) override;
@@ -29,36 +24,34 @@ public:
   void Close() override {}
 
 private:
-  JSONTracer(uint32_t host_id, uint32_t num_hosts, OutputCB out_callback)
-      : ProgressTracer(host_id, num_hosts), out_callback_(out_callback) {}
+  TextTracer(uint32_t host_id, uint32_t num_hosts)
+      : ProgressTracer(host_id, num_hosts) {}
 
   std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name,
       std::shared_ptr<ProgressSpan> child_of) override;
-
-  OutputCB out_callback_;
 };
 
-class KATANA_EXPORT JSONContext : public ProgressContext {
+class KATANA_EXPORT TextContext : public ProgressContext {
 public:
   std::unique_ptr<ProgressContext> Clone() const noexcept override;
   std::string GetTraceID() const noexcept override { return trace_id_; }
   std::string GetSpanID() const noexcept override { return span_id_; }
 
 private:
-  friend class JSONTracer;
-  friend class JSONSpan;
+  friend class TextTracer;
+  friend class TextSpan;
 
-  JSONContext(const std::string& trace_id, const std::string& span_id)
+  TextContext(const std::string& trace_id, const std::string& span_id)
       : trace_id_(trace_id), span_id_(span_id) {}
 
   std::string trace_id_;
   std::string span_id_;
 };
 
-class KATANA_EXPORT JSONSpan : public ProgressSpan {
+class KATANA_EXPORT TextSpan : public ProgressSpan {
 public:
-  ~JSONSpan() override { Finish(); }
+  ~TextSpan() override { Finish(); }
 
   void SetTags(const Tags& tags) override;
 
@@ -69,25 +62,19 @@ public:
   }
 
 private:
-  friend JSONTracer;
+  friend TextTracer;
 
-  JSONSpan(
-      const std::string& span_name, std::shared_ptr<ProgressSpan> parent,
-      OutputCB out_callback);
-  JSONSpan(
-      const std::string& span_name, const ProgressContext& parent,
-      OutputCB out_callback);
+  TextSpan(const std::string& span_name, std::shared_ptr<ProgressSpan> parent);
+  TextSpan(const std::string& span_name, const ProgressContext& parent);
   static std::shared_ptr<ProgressSpan> Make(
-      const std::string& span_name, std::shared_ptr<ProgressSpan> parent,
-      OutputCB out_callback);
+      const std::string& span_name, std::shared_ptr<ProgressSpan> parent);
   static std::shared_ptr<ProgressSpan> Make(
-      const std::string& span_name, const ProgressContext& parent,
-      OutputCB out_callback);
+      const std::string& span_name, const ProgressContext& parent);
 
   void Close() override;
 
-  JSONContext context_;
-  OutputCB out_callback_;
+  TextContext context_;
+  std::string span_name_;
 };
 
 }  // namespace katana

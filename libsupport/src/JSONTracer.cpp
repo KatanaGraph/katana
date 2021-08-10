@@ -1,114 +1,23 @@
 #include "katana/JSONTracer.h"
 
-#include <sys/resource.h>
 #include <sys/time.h>
-#include <unistd.h>
 
 #include <cstring>
-#include <fstream>
 #include <iostream>
 #include <mutex>
-#include <regex>
 
 #include <arrow/memory_pool.h>
 
 #include "katana/Random.h"
 #include "katana/Time.h"
 
-#if __linux__
-#include <sys/sysinfo.h>
-#endif
-
 namespace {
 
-const std::regex kRssRegex("^Rss\\w+:\\s+([0-9]+) kB");
 std::mutex output_mutex;
-
-struct HostStats {
-  long nprocs{};
-  long ram_gb{};
-  std::string hostname;
-};
-
-#if __linux__
-
-uint64_t
-ParseProcSelfRssBytes() {
-  std::ifstream proc_self("/proc/self/status");
-
-  // there are 3 relevant vals: RssAnon, RssFile, RssShmem
-  uint32_t rss_vals = 3;
-  uint64_t total_mem = 0;
-  std::string line;
-  while (std::getline(proc_self, line) && rss_vals > 0) {
-    std::smatch sub_match;
-    if (!std::regex_match(line, sub_match, kRssRegex)) {
-      continue;
-    }
-    std::string val = sub_match[1];
-    total_mem += std::strtol(val.c_str(), nullptr, 0);
-    rss_vals -= 1;
-  }
-  if (rss_vals != 0) {
-    KATANA_LOG_ERROR("parsing /proc/self/status for memory failed");
-  }
-  return total_mem * 1024;
-}
-
-HostStats
-GetHostStats() {
-  HostStats stats;
-
-  struct sysinfo info;
-  sysinfo(&info);
-
-  char hostname[256];
-  gethostname(hostname, 256);
-
-  stats.ram_gb = info.totalram / 1024 / 1024 / 1024;
-  stats.nprocs = get_nprocs();
-  stats.hostname = hostname;
-
-  return stats;
-}
-
-#else
-
-uint64_t
-ParseProcSelfRssBytes() {
-  KATANA_WARN_ONCE(
-      "calculating resident set size is not implemented for this platform");
-  return 0;
-}
-
-HostStats
-GetHostStats() {
-  KATANA_WARN_ONCE("getting host stats is not implemented for this platform");
-  HostStats stats;
-  return stats;
-}
-
-#endif
 
 std::string
 GenerateID() {
   return katana::RandomAlphanumericString(15);
-}
-
-std::string
-GetValue(const katana::Value& value) {
-  if (std::holds_alternative<std::string>(value)) {
-    return "\"" + std::get<std::string>(value) + "\"";
-  } else if (std::holds_alternative<int64_t>(value)) {
-    return std::to_string(std::get<int64_t>(value));
-  } else if (std::holds_alternative<double>(value)) {
-    return std::to_string(std::get<double>(value));
-  } else if (std::holds_alternative<bool>(value)) {
-    return std::get<bool>(value) ? "true" : "false";
-  } else if (std::holds_alternative<uint64_t>(value)) {
-    return std::to_string(std::get<uint64_t>(value));
-  }
-  return std::string{};
 }
 
 std::string
@@ -123,9 +32,9 @@ GetSpanJSON(
   } else {
     fmt::format_to(
         std::back_inserter(buf),
-        "\"span_data\":{{\"span_id\":\"{}\",\"span_name\":\"{}\",\"parent_id\":"
+        "\"span_data\":{{\"span_name\":\"{}\",\"span_id\":\"{}\",\"parent_id\":"
         "\"{}\"}}",
-        span_id, span_name, parent_span_id);
+        span_name, span_id, parent_span_id);
   }
   return fmt::to_string(buf);
 }
@@ -148,8 +57,8 @@ GetSpanJSON(const std::string& span_id, bool finish) {
 std::string
 GetHostStatsJSON() {
   fmt::memory_buffer buf;
-  HostStats host_stats = GetHostStats();
-  auto& tracer = katana::ProgressTracer::GetProgressTracer();
+  katana::HostStats host_stats = katana::ProgressTracer::GetHostStats();
+  auto& tracer = katana::ProgressTracer::Get();
 
   fmt::format_to(
       std::back_inserter(buf),
@@ -178,7 +87,7 @@ GetTagsJSON(const katana::Tags& tags) {
     }
     fmt::format_to(
         std::back_inserter(buf), "{{\"name\":\"{}\",\"value\":{}}}", tag.first,
-        GetValue(tag.second));
+        katana::ProgressTracer::GetValue(tag.second));
   }
   fmt::format_to(std::back_inserter(buf), "]");
   return fmt::to_string(buf);
@@ -187,8 +96,6 @@ GetTagsJSON(const katana::Tags& tags) {
 std::string
 GetLogJSON(const std::string& message) {
   fmt::memory_buffer buf;
-  struct rusage rusage;
-  getrusage(RUSAGE_SELF, &rusage);
 
   auto usec_ts = std::chrono::duration_cast<std::chrono::microseconds>(
                      katana::Now().time_since_epoch())
@@ -198,8 +105,9 @@ GetLogJSON(const std::string& message) {
       "\"log\":{{\"msg\":\"{}\",\"timestamp_us\":{},\"max_mem_gb\":{:.3f}"
       ","
       "\"mem_gb\":{:.3f},\"arrow_mem_gb\":{:.3f}}}",
-      message, usec_ts, rusage.ru_maxrss / 1024.0 / 1024.0,
-      ParseProcSelfRssBytes() / 1024.0 / 1024.0 / 1024.0,
+      message, usec_ts, katana::ProgressTracer::GetMaxMem() / 1024.0 / 1024.0,
+      katana::ProgressTracer::ParseProcSelfRssBytes() / 1024.0 / 1024.0 /
+          1024.0,
       arrow::default_memory_pool()->bytes_allocated() / 1024.0 / 1024.0 /
           1024.0);
 
@@ -212,14 +120,13 @@ BuildJSON(
     const std::string& log_data, const std::string& tag_data,
     const std::string& host_data) {
   fmt::memory_buffer buf;
-  uint32_t host_id = katana::ProgressTracer::GetProgressTracer().GetHostID();
+  uint32_t host_id = katana::ProgressTracer::Get().GetHostID();
   static auto begin = katana::Now();
   auto msec_since_begin = katana::UsSince(begin) / 1000;
 
   fmt::format_to(
-      std::back_inserter(buf),
-      "{{\"trace_id\":\"{}\",\"host\":{},\"offset_ms\":{},{}", trace_id,
-      host_id, msec_since_begin, span_data);
+      std::back_inserter(buf), "{{\"host\":{},\"offset_ms\":{}", host_id,
+      msec_since_begin);
   if (!log_data.empty()) {
     fmt::format_to(std::back_inserter(buf), ",{}", log_data);
   }
@@ -229,7 +136,9 @@ BuildJSON(
   if (!host_data.empty()) {
     fmt::format_to(std::back_inserter(buf), ",{}", host_data);
   }
-  fmt::format_to(std::back_inserter(buf), "}}\n");
+  fmt::format_to(
+      std::back_inserter(buf), ",{},\"trace_id\":\"{}\"}}\n", span_data,
+      trace_id);
   return fmt::to_string(buf);
 }
 
@@ -334,7 +243,7 @@ katana::JSONSpan::JSONSpan(
   std::string span_id = GenerateID();
   context_ = JSONContext(trace_id, span_id);
 
-  std::string message{"start"};
+  const std::string& message = span_name;
 
   std::string span_data = GetSpanJSON(span_id, span_name, parent_span_id);
   std::string log_data = GetLogJSON(message);
@@ -356,7 +265,7 @@ katana::JSONSpan::JSONSpan(
   std::string span_id = GenerateID();
   context_ = JSONContext(trace_id, span_id);
 
-  std::string message{"start"};
+  const std::string& message = span_name;
 
   std::string host_data = GetHostStatsJSON();
   std::string span_data = GetSpanJSON(span_id, span_name, parent_span_id);

@@ -1,22 +1,22 @@
-#include "katana/JSONTracer.h"
+#include "katana/TextTracer.h"
 
 katana::Result<void>
 CreateError() {
-  katana::ProgressTracer::GetProgressTracer().StartActiveSpan("getting error");
+  auto scope = katana::GetTracer().StartActiveSpan("getting error");
   return KATANA_ERROR(
       katana::ErrorCode::ArrowError, "failed to make fixed size type");
 }
 
 katana::Result<void>
 GetError() {
-  katana::ProgressTracer::GetProgressTracer().StartActiveSpan("passing error");
+  auto scope = katana::GetTracer().StartActiveSpan("passing error");
   return CreateError().error().WithContext("passed along by GetError");
 }
 
 int
 main() {
-  katana::ProgressTracer::SetProgressTracer(katana::JSONTracer::Make());
-  auto& tracer = katana::ProgressTracer::GetProgressTracer();
+  katana::ProgressTracer::Set(katana::TextTracer::Make());
+  auto& tracer = katana::GetTracer();
   auto scope = tracer.StartActiveSpan("first span");
   scope.span().SetTags(
       {{"life", static_cast<uint32_t>(42)},

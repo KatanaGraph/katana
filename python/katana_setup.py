@@ -438,12 +438,22 @@ setActiveThreads(1)
     )
 
 
+def setup_coverage():
+    if os.environ.get("COVERAGE_RCFILE"):
+        # usercustomize.py will initialize coverage for each Python process (but only if COVERAGE_PROCESS_START is set).
+        with open(Path(os.getcwd()) / "python" / "usercustomize.py", "w") as f:
+            f.write("import coverage\n")
+            f.write("coverage.process_startup()")
+
+
 def setup(*, source_dir, package_name, additional_requires=None, package_data=None, **kwargs):
     package_data = package_data or {}
     # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
     requires = ["pyarrow (<3.0)", "numpy", "numba (>=0.50,<1.0a0)"]
     if additional_requires:
         requires.extend(additional_requires)
+
+    setup_coverage()
 
     source_dir = Path(source_dir)
 

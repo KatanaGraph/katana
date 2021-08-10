@@ -40,6 +40,7 @@ dependencies:
  - pygithub
  - pytest
  - pylint=2.8.3
+ - coverage
 
 # The dependencies for pytest-notebook are incomplete, add them manually
  - pytest-notebook

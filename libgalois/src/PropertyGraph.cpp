@@ -892,7 +892,8 @@ katana::PropertyGraph::InformPath(const std::string& input_path) {
     return uri_res.error();
   }
 
-  KATANA_LOG_DEBUG("from path {} to uri {} ", input_path, uri_res.value().string());
+  KATANA_LOG_DEBUG(
+      "from path {} to uri {} ", input_path, uri_res.value().string());
   rdg_.set_rdg_dir(uri_res.value());
   return ResultSuccess();
 }

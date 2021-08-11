@@ -20,18 +20,10 @@ namespace {
 
 Result<katana::RDGVersion>
 ParseVersion(const std::string& str) {
-#if 0
-  uint64_t val = strtoul(str.c_str(), nullptr, 10);
-  if (errno == ERANGE) {
-    return KATANA_ERROR(
-        katana::ResultErrno(), "manifest file found with out of range version");
-  }
-  return val;
-#else
   // The length of "vers" is 4.
   std::string prefix = "vers";
-  return katana::RDGVersion(str.substr(prefix.size()));
-#endif
+  std::string version = str.substr(prefix.size());
+  return katana::RDGVersion(version);
 }
 
 const int MANIFEST_MATCH_VERS_INDEX = 1;
@@ -45,8 +37,8 @@ const int VERS_ZERO_PADDING_LENGTH = 20;
 std::string
 ToVersionString(katana::RDGVersion version) {
   std::string str = version.ToString();
-  std::string leading_zeros = fmt::format("{0:0{1}d}", 0,
-      (VERS_ZERO_PADDING_LENGTH-str.size()));
+  std::string leading_zeros =
+      fmt::format("{0:0{1}d}", 0, (VERS_ZERO_PADDING_LENGTH - str.size()));
   return fmt::format("vers{}{}", leading_zeros, str);
 }
 std::string
@@ -58,7 +50,7 @@ namespace tsuba {
 
 const std::regex RDGManifest::kManifestVersion(
     "katana_(?:(vers[0-9A-Za-z_.]+))_(?:(rdg[0-9A-Za-z-]*))\\.manifest$");
-    //"katana_(?:vers([0-9A-Za-z_]+))_(?:rdg([0-9A-Za-z-]+))\\.manifest$";
+//"katana_(?:vers([0-9A-Za-z_]+))_(?:rdg([0-9A-Za-z-]+))\\.manifest$";
 
 Result<tsuba::RDGManifest>
 RDGManifest::MakeFromStorage(const katana::Uri& uri) {
@@ -134,7 +126,8 @@ RDGManifest::PartitionFileName(
 katana::Uri
 RDGManifest::PartitionFileName(
     const katana::Uri& uri, uint32_t node_id, katana::RDGVersion version) {
-  return uri.Join(PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
+  return uri.Join(
+      PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
 }
 
 katana::Uri
@@ -166,13 +159,11 @@ RDGManifest::FileName(
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
   KATANA_LOG_DEBUG(
-      "uri {} manifest: katana_{}_{}.manifest version {}; ",
-      uri.string(), ToVersionString(version),
-      view_name, version.ToString());
+      "uri {} manifest: katana_{}_{}.manifest version {}; ", uri.string(),
+      ToVersionString(version), view_name, version.ToString());
   // TODO(wkyu): may need to change the separator as __
   return uri.Join(fmt::format(
-          "katana_{}_{}.manifest", ToVersionString(version),
-          view_name));
+      "katana_{}_{}.manifest", ToVersionString(version), view_name));
 }
 
 // if it doesn't name a manifest file, assume it's meant to be a managed URI

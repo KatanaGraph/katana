@@ -24,7 +24,7 @@ struct KATANA_EXPORT RDGVersion {
   RDGVersion(
       const std::vector<uint64_t>& nums,
       const std::vector<std::string>& branches);
-  RDGVersion(const std::string str);
+  RDGVersion(const std::string& str);
   explicit RDGVersion(uint64_t num = 0);
   std::string ToString() const;
   uint64_t LeafNumber();

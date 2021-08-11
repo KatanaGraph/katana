@@ -1,9 +1,10 @@
 #include "tsuba/tsuba.h"
 
-#include <iostream>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <iostream>
 
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
@@ -33,7 +34,7 @@ FileList(const std::string& dir) {
 
 katana::Result<katana::Uri>
 FindManifestFileForVersion(const katana::Uri& name, katana::RDGVersion target) {
-  KATANA_LOG_DEBUG("FindManifestFileForVersion target {}; ", target.ToString());
+  //KATANA_LOG_DEBUG("FindManifestFileForVersion target {}; ", target.ToString());
 
   KATANA_LOG_DEBUG_ASSERT(!tsuba::RDGManifest::IsManifestUri(name));
 
@@ -67,7 +68,7 @@ FindManifestFileForVersion(const katana::Uri& name, katana::RDGVersion target) {
 
 katana::Result<katana::Uri>
 FindLatestManifestFile(const katana::Uri& name) {
-  KATANA_LOG_DEBUG("FindLatestManifestFile under {}; ", name);
+  //KATANA_LOG_DEBUG("FindLatestManifestFile under {}; ", name);
   KATANA_LOG_DEBUG_ASSERT(!tsuba::RDGManifest::IsManifestUri(name));
   auto list_res = FileList(name.string());
   if (!list_res) {
@@ -78,16 +79,17 @@ FindLatestManifestFile(const katana::Uri& name) {
   std::string found_manifest;
 
   for (const std::string& file : list_res.value()) {
-    KATANA_LOG_DEBUG("FindLatestManifestFile: try {} for target {}; ", 
-	file, version.ToString());
+    //KATANA_LOG_DEBUG("FindLatestManifestFile: try {} for target {}; ",
+    //	file, version.ToString());
 
     if (auto res = tsuba::RDGManifest::ParseVersionFromName(file); res) {
       auto new_version = res.value();
-      KATANA_LOG_DEBUG("FindLatestManifestFile: parsed {} as {} target {}; ", 
-	  file, new_version.ToString(), version.ToString());
-      // only take a newer version from the same branch 
-      if ((new_version == version) || 
-	  (new_version.ShareBranch(version) && new_version > version)) {
+      KATANA_LOG_DEBUG(
+          "FindLatestManifestFile: parsed {} as next {} upfrom {}; ", file,
+          new_version.LeafNumber(), version.LeafNumber());
+      // only take a newer version from the same branch
+      if ((new_version == version) ||
+          (new_version.ShareBranch(version) && new_version > version)) {
         version = new_version;
         found_manifest = file;
       }
@@ -100,8 +102,8 @@ FindLatestManifestFile(const katana::Uri& name) {
   }
 
   KATANA_LOG_DEBUG(
-      "FindLatestManifestFile: found {} with latest_num {}; ", 
-      found_manifest, version.ToString());
+      "FindLatestManifestFile: found {} with latest_num {}; ", found_manifest,
+      version.LeafNumber());
 
   return name.Join(found_manifest);
 }
@@ -145,12 +147,10 @@ tsuba::Open(
     }
 
     if (target.LeafNumber() &&
-        manifest_res.value().version().LeafNumber() !=
-            target.LeafNumber()) {
+        manifest_res.value().version().LeafNumber() != target.LeafNumber()) {
       KATANA_LOG_DEBUG(
           "Incorrect version {} for target {}\n",
-          manifest_res.value().version().LeafNumber(),
-          target.ToString());
+          manifest_res.value().version().LeafNumber(), target.ToString());
     }
 
     return RDGHandle{
@@ -181,8 +181,8 @@ tsuba::Open(
   // TODO(wkyu): update manifest based on the path and version
   KATANA_LOG_DEBUG(
       "found manifest version {} from latest_uri {} for target {}; ",
-      manifest_res.value().version().ToString(),
-      latest_uri.value().string(), target.ToString());
+      manifest_res.value().version().ToString(), latest_uri.value().string(),
+      target.ToString());
 
   return RDGHandle{
       .impl_ = new RDGHandleImpl(flags, std::move(manifest_res.value()))};
@@ -223,7 +223,8 @@ tsuba::Create(const std::string& name, katana::RDGVersion version) {
 
     KATANA_LOG_DEBUG("tsuba::Create create manifest {}; ", new_uri.path());
     if (auto res = tsuba::FileStore(
-            new_uri.string(), reinterpret_cast<const uint8_t*>(s.data()), s.size());
+            new_uri.string(), reinterpret_cast<const uint8_t*>(s.data()),
+            s.size());
         !res) {
       comm->NotifyFailure();
       return res.error().WithContext(
@@ -248,8 +249,9 @@ tsuba::Create(const std::string& name, katana::RDGVersion version) {
 #else
   std::vector<char> path(PATH_MAX + 1);
   if (realpath(new_uri.path().c_str(), path.data()) == nullptr) {
-    KATANA_LOG_DEBUG("tsuba::Create failed to find manifest {} node {}; ", 
-	new_uri.path(), comm->ID);
+    KATANA_LOG_DEBUG(
+        "tsuba::Create failed to find manifest {} node {}; ", new_uri.path(),
+        comm->ID);
   }
 #endif
   return katana::ResultSuccess();
@@ -319,9 +321,9 @@ tsuba::ListAvailableViewsForVersion(
     auto view_args_res = tsuba::RDGManifest::ParseViewArgsFromName(file);
     auto view_version_res = tsuba::RDGManifest::ParseVersionFromName(file);
 
-    // filter out all versions not in the same branch 
-    if (!view_type_res || !view_args_res || !view_version_res
-	|| !view_version_res.value().ShareBranch(version)) {
+    // filter out all versions not in the same branch
+    if (!view_type_res || !view_args_res || !view_version_res ||
+        !view_version_res.value().ShareBranch(version)) {
       continue;
     }
 
@@ -363,8 +365,8 @@ tsuba::ListAvailableViewsForVersion(
   *max_version = current_max;
 
   KATANA_LOG_DEBUG(
-      "ListAvailableViewsForVersion {} max {} ",
-      version.ToString(), current_max.ToString());
+      "ListAvailableViewsForVersion {} max {} ", version.ToString(),
+      current_max.ToString());
 
   return views_found;
 }
@@ -392,7 +394,7 @@ tsuba::ListAvailableViews(const std::string& rdg_dir) {
 
     // Ignore all versions not in the same branch or trunk
     if (!view_type_res || !view_args_res || !view_version_res ||
-        ! view_version_res.value().ShareBranch(min_version) ||
+        !view_version_res.value().ShareBranch(min_version) ||
         view_version_res.value() < min_version) {
       continue;
     }

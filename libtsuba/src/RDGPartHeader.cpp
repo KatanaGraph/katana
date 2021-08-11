@@ -101,14 +101,11 @@ RDGPartHeader::Write(
     next_version.IncrementNumber();
   }
 
-  KATANA_LOG_DEBUG(
-      "PartHeader next version: {}; ", next_version.ToString());
-  ff->Bind(
-      RDGManifest::PartitionFileName(
-          handle.impl_->rdg_manifest().viewtype(),
-          handle.impl_->rdg_manifest().dir(),
-          Comm()->ID, next_version)
-          .string());
+  KATANA_LOG_DEBUG("PartHeader next version: {}; ", next_version.ToString());
+  ff->Bind(RDGManifest::PartitionFileName(
+               handle.impl_->rdg_manifest().viewtype(),
+               handle.impl_->rdg_manifest().dir(), Comm()->ID, next_version)
+               .string());
 
   writes->StartStore(std::move(ff));
   TSUBA_PTP(internal::FaultSensitivity::Normal);

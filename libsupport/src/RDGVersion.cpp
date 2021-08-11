@@ -10,24 +10,26 @@ RDGVersion::RDGVersion(
 
 RDGVersion::RDGVersion(uint64_t num) { numbers_.back() = num; }
 
-RDGVersion::RDGVersion(const std::string str) { 
+RDGVersion::RDGVersion(const std::string& str) {
   std::vector<char> vec(str.begin(), str.end());
   char* source = vec.data();
   char* token;
 
   token = strtok(source, "_");
+
   if (token != NULL) {
     numbers_.clear();
     branches_.clear();
     do {
-      numbers_.emplace_back(strtoul(token, nullptr, 10));
+      uint64_t val = strtoul(token, nullptr, 10);
+      numbers_.emplace_back(val);
       token = strtok(NULL, "_");
       if (token != NULL) {
-	branches_.emplace_back(token);
-	token = strtok(NULL, "_");
+        branches_.emplace_back(token);
+        token = strtok(NULL, "_");
       } else {
-	branches_.emplace_back(".");
-	break;
+        branches_.emplace_back(".");
+        break;
       }
     } while (token != NULL);
   }
@@ -37,7 +39,7 @@ std::string
 RDGVersion::ToString() const {
   std::string vec = "";
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
-    vec += fmt::format("{}_{},", numbers_[i], branches_[i]);
+    vec += fmt::format("{}_{}_", numbers_[i], branches_[i]);
   }
   // include only the number from the past pair, ignore "."
   return fmt::format("{}{}", vec, numbers_.back());
@@ -45,7 +47,7 @@ RDGVersion::ToString() const {
 
 bool
 RDGVersion::IsNull() {
-  return (numbers_.back()==0);
+  return (numbers_.back() == 0);
 }
 
 uint64_t
@@ -76,7 +78,7 @@ RDGVersion::GetBranches() {
 }
 
 bool
-RDGVersion::ShareBranch(const RDGVersion & in) {
+RDGVersion::ShareBranch(const RDGVersion& in) {
   return branches_ == in.branches_;
 }
 
@@ -87,7 +89,7 @@ operator==(const RDGVersion& lhs, const RDGVersion& rhs) {
 
 bool
 operator!=(const RDGVersion& lhs, const RDGVersion& rhs) {
-  return (! (lhs == rhs));
+  return (!(lhs == rhs));
 }
 
 bool

@@ -349,8 +349,7 @@ tsuba::RDG::DoStore(
       "writing edge properties");
 
   core_->part_header().set_part_properties(KATANA_CHECKED_CONTEXT(
-      WritePartArrays(
-          handle.impl_->rdg_manifest().dir(), write_group.get()),
+      WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get()),
       "writing partition metadata"));
 
   KATANA_LOG_DEBUG(
@@ -409,8 +408,7 @@ tsuba::RDG::DoMake(
           }),
       "populating edge properties");
 
-  katana::Uri t_path =
-      metadata_dir.Join(core_->part_header().topology_path());
+  katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
   if (auto res = core_->topology_file_storage().Bind(t_path.string(), true);
       !res) {
     return res.error();
@@ -822,8 +820,7 @@ tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
   if (dir != rdg_dir_) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
-        "new topology file must be in this RDG's directory ({})",
-        rdg_dir_);
+        "new topology file must be in this RDG's directory ({})", rdg_dir_);
   }
   return core_->RegisterTopologyFile(new_top.BaseName());
 }

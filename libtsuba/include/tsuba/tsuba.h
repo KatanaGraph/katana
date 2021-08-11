@@ -6,7 +6,6 @@
 #include "katana/CommBackend.h"
 #include "katana/RDGVersion.h"
 #include "katana/Result.h"
-#include "katana/RDGVersion.h"
 #include "katana/URI.h"
 #include "katana/config.h"
 

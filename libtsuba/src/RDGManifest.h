@@ -7,8 +7,8 @@
 
 #include "katana/JSON.h"
 #include "katana/Logging.h"
-#include "katana/Random.h"
 #include "katana/RDGVersion.h"
+#include "katana/Random.h"
 #include "katana/URI.h"
 #include "katana/config.h"
 #include "tsuba/RDGLineage.h"
@@ -28,8 +28,8 @@ class KATANA_EXPORT RDGManifest {
   // Persisted
   //
 
-  katana::RDGVersion version_;
-  katana::RDGVersion previous_version_;
+  katana::RDGVersion version_{katana::RDGVersion(0)};
+  katana::RDGVersion previous_version_{katana::RDGVersion(0)};
 
   uint32_t num_hosts_{0};  // 0 is a reserved value for the empty RDG when
   // tsuba views policy_id as zero (not partitioned) or not zero (partitioned
@@ -82,6 +82,7 @@ public:
       const RDGLineage& lineage) const {
     katana::RDGVersion next_version(version_.numbers_, version_.branches_);
     next_version.IncrementNumber();
+    // progress the version numbers
     return RDGManifest(
         next_version, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }
@@ -89,8 +90,10 @@ public:
   RDGManifest SameVersion(
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
+    // retain both current and previous versions
     return RDGManifest(
-        version_, version_, num_hosts, policy_id, transpose, dir_, lineage);
+        version_, previous_version_, num_hosts, policy_id, transpose, dir_,
+        lineage);
   }
 
   bool IsEmptyRDG() const { return num_hosts() == 0; }
@@ -143,7 +146,8 @@ public:
       const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
       katana::RDGVersion version);
 
-  static katana::Result<katana::RDGVersion> ParseVersionFromName(const std::string& file);
+  static katana::Result<katana::RDGVersion> ParseVersionFromName(
+      const std::string& file);
   static katana::Result<std::string> ParseViewNameFromName(
       const std::string& file);
   static katana::Result<std::vector<std::string>> ParseViewArgsFromName(

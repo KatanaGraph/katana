@@ -49,8 +49,7 @@ ToNodeString(uint32_t node_id) {
 namespace tsuba {
 
 const std::regex RDGManifest::kManifestVersion(
-    "katana_(?:(vers[0-9A-Za-z_.]+))_(?:(rdg[0-9A-Za-z-]*))\\.manifest$");
-//"katana_(?:vers([0-9A-Za-z_]+))_(?:rdg([0-9A-Za-z-]+))\\.manifest$";
+    "katana_(?:(vers[0-9A-Za-z_]+))_(?:(rdg[0-9A-Za-z-]*))\\.manifest$");
 
 Result<tsuba::RDGManifest>
 RDGManifest::MakeFromStorage(const katana::Uri& uri) {

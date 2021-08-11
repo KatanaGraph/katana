@@ -427,6 +427,14 @@ public:
     return edge_entity_type_id_.data();
   }
 
+  const EntityTypeManager& GetNodeTypeManager() const {
+    return node_entity_type_manager_;
+  }
+
+  const EntityTypeManager& GetEdgeTypeManager() const {
+    return edge_entity_type_manager_;
+  }
+
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 
   uint32_t partition_id() const { return rdg_.partition_id(); }

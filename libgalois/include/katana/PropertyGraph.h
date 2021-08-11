@@ -268,15 +268,20 @@ public:
   struct ReadOnlyPropertyView {
     const PropertyGraph* const_g;
 
-    std::shared_ptr<arrow::Schema> (PropertyGraph::*schema_fn)() const;
+    std::shared_ptr<arrow::Schema> (PropertyGraph::*loaded_schema_fn)() const;
+    std::shared_ptr<arrow::Schema> (PropertyGraph::*full_schema_fn)() const;
     std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_int)(
         int i) const;
     std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_str)(
         const std::string& str) const;
     int32_t (PropertyGraph::*property_num_fn)() const;
 
-    std::shared_ptr<arrow::Schema> schema() const {
-      return (const_g->*schema_fn)();
+    std::shared_ptr<arrow::Schema> loaded_schema() const {
+      return (const_g->*loaded_schema_fn)();
+    }
+
+    std::shared_ptr<arrow::Schema> full_schema() const {
+      return (const_g->*full_schema_fn)();
     }
 
     std::shared_ptr<arrow::ChunkedArray> GetProperty(int i) const {
@@ -313,7 +318,12 @@ public:
     Result<void> (PropertyGraph::*remove_property_int)(int i);
     Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
 
-    std::shared_ptr<arrow::Schema> schema() const { return ropv.schema(); }
+    std::shared_ptr<arrow::Schema> loaded_schema() const {
+      return ropv.loaded_schema();
+    }
+    std::shared_ptr<arrow::Schema> full_schema() const {
+      return ropv.full_schema();
+    }
 
     std::shared_ptr<arrow::ChunkedArray> GetProperty(int i) const {
       return ropv.GetProperty(i);
@@ -818,7 +828,8 @@ public:
         .ropv =
             {
                 .const_g = this,
-                .schema_fn = &PropertyGraph::loaded_node_schema,
+                .loaded_schema_fn = &PropertyGraph::loaded_node_schema,
+                .full_schema_fn = &PropertyGraph::full_node_schema,
                 .property_fn_int = &PropertyGraph::GetNodeProperty,
                 .property_fn_str = &PropertyGraph::GetNodeProperty,
                 .property_num_fn = &PropertyGraph::GetNumNodeProperties,
@@ -833,7 +844,8 @@ public:
   ReadOnlyPropertyView NodeReadOnlyPropertyView() const {
     return ReadOnlyPropertyView{
         .const_g = this,
-        .schema_fn = &PropertyGraph::loaded_node_schema,
+        .loaded_schema_fn = &PropertyGraph::loaded_node_schema,
+        .full_schema_fn = &PropertyGraph::full_node_schema,
         .property_fn_int = &PropertyGraph::GetNodeProperty,
         .property_fn_str = &PropertyGraph::GetNodeProperty,
         .property_num_fn = &PropertyGraph::GetNumNodeProperties,
@@ -845,7 +857,8 @@ public:
         .ropv =
             {
                 .const_g = this,
-                .schema_fn = &PropertyGraph::loaded_edge_schema,
+                .loaded_schema_fn = &PropertyGraph::loaded_edge_schema,
+                .full_schema_fn = &PropertyGraph::full_edge_schema,
                 .property_fn_int = &PropertyGraph::GetEdgeProperty,
                 .property_fn_str = &PropertyGraph::GetEdgeProperty,
                 .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
@@ -860,7 +873,8 @@ public:
   ReadOnlyPropertyView EdgeReadOnlyPropertyView() const {
     return ReadOnlyPropertyView{
         .const_g = this,
-        .schema_fn = &PropertyGraph::loaded_edge_schema,
+        .loaded_schema_fn = &PropertyGraph::loaded_edge_schema,
+        .full_schema_fn = &PropertyGraph::full_edge_schema,
         .property_fn_int = &PropertyGraph::GetEdgeProperty,
         .property_fn_str = &PropertyGraph::GetEdgeProperty,
         .property_num_fn = &PropertyGraph::GetNumEdgeProperties,

@@ -143,6 +143,7 @@ def new_part_name(path, dst):
     except AttributeError:
         return None
     prefix = f"{path}/" if path[-1] != "/" else path
+    # This format is fine for migrating old versions
     return f"{prefix}part_vers{version:020d}_rdg_node{node:05d}"
 
 

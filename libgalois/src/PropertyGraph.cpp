@@ -720,6 +720,7 @@ katana::PropertyGraph::Write(
     KATANA_LOG_DEBUG("failed to create the first manifest file\n");
     return res.error();
   }
+  // TODO(wkyu): update file_, loaded_version_, branch_path_
   return WriteGraph(rdg_name, command_line);
 }
 

@@ -118,7 +118,7 @@ Coverage
 Collecting coverage is enabled for Python and C++.
 
 Python
------
+------
 
 Export ``COVERAGE_RCFILE`` before running the build command:
 
@@ -139,7 +139,7 @@ commands to run tests and obtain (html) coverage report:
 The output is available in ``$(pwd)/pythoncov``.
 
 C++
------
+---
 
 Include the following options as part of your build command:
 

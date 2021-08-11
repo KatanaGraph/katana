@@ -387,10 +387,6 @@ public:
       GraphTopology&& topo_to_assign);
 
   /// Make a property graph from topology and type arrays
-  /// TODO (scober): This Make variant should also pass an EntityTypeManager
-  /// (once that class has been defined). The equivalent in the current code
-  /// base would be to pass all 8 of the PropertyGraph-internal maps that
-  /// manipulate EntityTypeIDs. Yuck.
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign,
       NUMAArray<EntityTypeID>&& node_entity_type_id,

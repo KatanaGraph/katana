@@ -1120,6 +1120,12 @@ public:
       const PropertyGraph* pg, const EdgeTypeIndex* edge_type_index);
 
   uint64_t num_nodes() const noexcept {
+    // if default constructed, edge_type_index_ is nullptr
+    // TODO(Amber): have the default constructor put edge_type_index_
+    //              in a valid state
+    if (!edge_type_index_) {
+      return adj_indices_.size();
+    }
     // corner case: graph with 0 edges
     if (edge_type_index_->num_unique_types() == 0) {
       KATANA_LOG_DEBUG_ASSERT(num_edges() == 0);

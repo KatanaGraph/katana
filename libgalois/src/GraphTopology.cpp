@@ -395,8 +395,8 @@ katana::PGViewCache::BuildOrGetEdgeTypeIndex(
 template <typename Topo>
 [[maybe_unused]] bool
 CheckTopology(const katana::PropertyGraph* pg, const Topo* t) noexcept {
-  return (pg->num_nodes() == t->num_nodes())
-    && (pg->num_edges() == t->num_edges());
+  return (pg->num_nodes() == t->num_nodes()) &&
+         (pg->num_edges() == t->num_edges());
 }
 
 katana::EdgeShuffleTopology*
@@ -472,7 +472,8 @@ katana::PGViewCache::BuildOrGetEdgeTypeAwareTopo(
     edge_type_aware_topos_.emplace_back(
         EdgeTypeAwareTopology::MakeFrom(pg, edge_type_index, sorted_topo));
 
-    KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, edge_type_aware_topos_.back().get()));
+    KATANA_LOG_DEBUG_ASSERT(
+        CheckTopology(pg, edge_type_aware_topos_.back().get()));
     return edge_type_aware_topos_.back().get();
   }
 }

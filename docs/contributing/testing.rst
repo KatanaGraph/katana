@@ -115,18 +115,21 @@ for more options.
 Coverage
 =========
 
-Collecting coverage is enabled for Python.
+Collecting coverage is enabled for Python and C++.
+
+Python
+-----
 
 Export ``COVERAGE_RCFILE`` before running the build command:
 
-.. code-block::
+.. code-block:: bash
 
    export COVERAGE_RCFILE="$SRC_DIR/.coveragerc"
 
 Once the build step is done, you can use the following sequence of
 commands to run tests and obtain (html) coverage report:
 
-.. code-block::
+.. code-block:: bash
 
    export COVERAGE_PROCESS_START="$COVERAGE_RCFILE"
    $BUILD_DIR/python_env.sh coverage run -m pytest python/test -s
@@ -134,6 +137,34 @@ commands to run tests and obtain (html) coverage report:
    coverage html
 
 The output is available in ``$(pwd)/pythoncov``.
+
+C++
+-----
+
+Include the following options as part of your build command:
+
+.. code-block:: bash
+
+   -DKATANA_ENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+
+After the build is done, binaries will be instrumented to collect
+profiling data.
+
+Now you can run any test that you wish.  For example:
+
+.. code-block:: bash
+
+   ctest -L quick
+
+There are several tools you can use to process obtained profiling data
+after test run.  One option is gcovr.  You can obtain report by
+executing the following command:
+
+.. code-block:: bash
+
+   cd $SRC_DIR
+   gcovr -r . --html
+
 
 Debugging
 =========

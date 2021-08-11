@@ -17,7 +17,7 @@
 /// OpenTracing Overview
 ///
 /// The following classes are based on/from the OpenTracing
-/// specifications which can be found here: https://opentracing.io/docs/overview/
+/// specifications which can be found here: https://opentracing.io/docs/overview/what-is-tracing/
 ///
 /// In short spans are units of work with a defined start and stop point which
 /// we can add timestamped logs to as well as tags for the overall span (or unit of work)
@@ -81,6 +81,12 @@ public:
 };
 using Tags = std::vector<std::pair<std::string, Value>>;
 
+struct HostStats {
+  long nprocs{};
+  long ram_gb{};
+  std::string hostname;
+};
+
 class ProgressScope;
 class ProgressSpan;
 class ProgressContext;
@@ -93,8 +99,13 @@ public:
   ProgressTracer& operator=(const ProgressTracer&) = delete;
   ProgressTracer& operator=(ProgressTracer&&) = delete;
 
-  static ProgressTracer& GetProgressTracer() { return *tracer_; }
-  static void SetProgressTracer(std::unique_ptr<ProgressTracer> tracer);
+  static ProgressTracer& Get() { return *tracer_; }
+  static void Set(std::unique_ptr<ProgressTracer> tracer);
+
+  static uint64_t ParseProcSelfRssBytes();
+  static HostStats GetHostStats();
+  static long GetMaxMem();
+  static std::string GetValue(const Value& value);
 
   // StartActiveSpan creates a new span. If there is not an active span,
   // create a new top-level span. Otherwise, this function creates a child
@@ -153,6 +164,8 @@ private:
   uint32_t num_hosts_;
   std::shared_ptr<ProgressSpan> default_active_span_ = nullptr;
 };
+
+KATANA_EXPORT ProgressTracer& GetTracer();
 
 class KATANA_EXPORT ProgressScope {
 public:

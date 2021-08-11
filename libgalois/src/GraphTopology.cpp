@@ -393,10 +393,10 @@ katana::PGViewCache::BuildOrGetEdgeTypeIndex(
 };
 
 template <typename Topo>
-void
-checkTopo(const katana::PropertyGraph* pg, const Topo* t) noexcept {
-  KATANA_LOG_DEBUG_ASSERT(pg->num_nodes() == t->num_nodes());
-  KATANA_LOG_DEBUG_ASSERT(pg->num_edges() == t->num_edges());
+[[maybe_unused]] bool
+CheckTopology(const katana::PropertyGraph* pg, const Topo* t) noexcept {
+  return (pg->num_nodes() == t->num_nodes())
+    && (pg->num_edges() == t->num_edges());
 }
 
 katana::EdgeShuffleTopology*
@@ -412,12 +412,12 @@ katana::PGViewCache::BuildOrGetEdgeShuffTopo(
       std::find_if(edge_shuff_topos_.begin(), edge_shuff_topos_.end(), pred);
 
   if (it != edge_shuff_topos_.end()) {
-    checkTopo(pg, it->get());
+    KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
     return it->get();
   } else {
     edge_shuff_topos_.emplace_back(
         EdgeShuffleTopology::Make(pg, tpose_kind, sort_kind));
-    checkTopo(pg, edge_shuff_topos_.back().get());
+    KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, edge_shuff_topos_.back().get()));
     return edge_shuff_topos_.back().get();
   }
 }
@@ -438,7 +438,7 @@ katana::PGViewCache::BuildOrGetShuffTopo(
       std::find_if(fully_shuff_topos_.begin(), fully_shuff_topos_.end(), pred);
 
   if (it != fully_shuff_topos_.end()) {
-    checkTopo(pg, it->get());
+    KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
     return it->get();
   } else {
     auto e_topo = BuildOrGetEdgeShuffTopo(pg, tpose_kind, edge_sort_todo);
@@ -447,7 +447,7 @@ katana::PGViewCache::BuildOrGetShuffTopo(
     fully_shuff_topos_.emplace_back(ShuffleTopology::MakeFromTopo(
         pg, *e_topo, node_sort_todo, edge_sort_todo));
 
-    checkTopo(pg, fully_shuff_topos_.back().get());
+    KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, fully_shuff_topos_.back().get()));
     return fully_shuff_topos_.back().get();
   }
 }
@@ -463,7 +463,7 @@ katana::PGViewCache::BuildOrGetEdgeTypeAwareTopo(
       edge_type_aware_topos_.begin(), edge_type_aware_topos_.end(), pred);
 
   if (it != edge_type_aware_topos_.end()) {
-    checkTopo(pg, it->get());
+    KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
     return it->get();
   } else {
     auto sorted_topo = BuildOrGetEdgeShuffTopo(
@@ -472,7 +472,7 @@ katana::PGViewCache::BuildOrGetEdgeTypeAwareTopo(
     edge_type_aware_topos_.emplace_back(
         EdgeTypeAwareTopology::MakeFrom(pg, edge_type_index, sorted_topo));
 
-    checkTopo(pg, edge_type_aware_topos_.back().get());
+    KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, edge_type_aware_topos_.back().get()));
     return edge_type_aware_topos_.back().get();
   }
 }

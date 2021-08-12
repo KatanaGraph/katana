@@ -34,11 +34,14 @@ const int MANIFEST_MATCH_VIEW_INDEX = 2;
 namespace {
 const int NODE_ZERO_PADDING_LENGTH = 5;
 const int VERS_ZERO_PADDING_LENGTH = 20;
+
 std::string
 ToVersionString(katana::RDGVersion version) {
   std::string str = version.ToString();
   std::string leading_zeros =
       fmt::format("{0:0{1}d}", 0, (VERS_ZERO_PADDING_LENGTH - str.size()));
+  KATANA_LOG_DEBUG_ASSERT(
+      leading_zeros.size() + str.size() == VERS_ZERO_PADDING_LENGTH);
   return fmt::format("vers{}{}", leading_zeros, str);
 }
 std::string
@@ -158,9 +161,10 @@ RDGManifest::FileName(
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
   KATANA_LOG_DEBUG(
-      "uri {} manifest: katana_{}_{}.manifest version {}; ", uri.string(),
-      ToVersionString(version), view_name, version.ToString());
-  // TODO(wkyu): double check the name here. May need to change the separator as __
+      "uri {} version {} view {} manifest basename {}; ", uri.string(),
+      version.ToString(), view_name,
+      fmt::format(
+          "katana_{}_{}.manifest", ToVersionString(version), view_name));
   return uri.Join(fmt::format(
       "katana_{}_{}.manifest", ToVersionString(version), view_name));
 }

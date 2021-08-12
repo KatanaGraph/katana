@@ -310,8 +310,8 @@ tsuba::RDG::DoStore(
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
   KATANA_LOG_DEBUG(
-      "store for version {}; ",
-      handle.impl_->rdg_manifest().version().ToString());
+      "store for version {} action {}; ",
+      handle.impl_->rdg_manifest().version().ToString(), versioning_action);
 
   if (core_->part_header().topology_path().empty()) {
     // No topology file; create one

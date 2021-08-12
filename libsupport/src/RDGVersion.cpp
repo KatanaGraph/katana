@@ -11,7 +11,6 @@ RDGVersion::RDGVersion(
 RDGVersion::RDGVersion(uint64_t num) { numbers_.back() = num; }
 
 RDGVersion::RDGVersion(const std::string& src) {
-
   KATANA_LOG_DEBUG_ASSERT(src.size() == 20);
 
   std::string str = src;
@@ -27,8 +26,8 @@ RDGVersion::RDGVersion(const std::string& src) {
     do {
       uint64_t val = strtoul(token, nullptr, 10);
       if (val >= 5) {
-        KATANA_LOG_DEBUG("in str {} found val {} with {}; ", 
-            str, val, ToString());
+        KATANA_LOG_DEBUG(
+            "in str {} found val {} with {}; ", str, val, ToString());
       }
       numbers_.emplace_back(val);
       token = strtok(NULL, "_");
@@ -93,7 +92,7 @@ RDGVersion::ShareBranch(const RDGVersion& in) {
   if (branches_.size() != in.branches_.size())
     return false;
 
-  // TODO(wkyu): to get a correct string comparison 
+    // TODO(wkyu): to get a correct string comparison
 #if 0
   for (uint32_t i = 0; i < branches_.size(); i++) {
     if (0!=(branches_[i].compare(in.branches_[i]))) {
@@ -102,7 +101,7 @@ RDGVersion::ShareBranch(const RDGVersion& in) {
   }
 #else
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
-    if (numbers_[i]!=in.numbers_[i]) {
+    if (numbers_[i] != in.numbers_[i]) {
       return false;
     }
   }
@@ -122,7 +121,7 @@ operator==(const RDGVersion& lhs, const RDGVersion& rhs) {
     }
   }
 #else
-  if (lhs.numbers_ == rhs.numbers_) 
+  if (lhs.numbers_ == rhs.numbers_)
     return true;
   else
     return false;
@@ -147,7 +146,7 @@ operator>(const RDGVersion& lhs, const RDGVersion& rhs) {
     }
   }
 
-  if (lhs.numbers_.size() <= rhs.numbers_.size()) 
+  if (lhs.numbers_.size() <= rhs.numbers_.size())
     return false;
 
   return true;

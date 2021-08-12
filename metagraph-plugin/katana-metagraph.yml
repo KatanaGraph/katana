@@ -12,4 +12,4 @@ dependencies:
   - katana-tools>=0.1.12.dev
   - pytest
   - metagraph=0.2.6
-  - metagraph-katana=0.0.5
+  - metagraph-katana

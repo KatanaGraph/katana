@@ -3,6 +3,7 @@
 #include "AddProperties.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
+#include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
 #include "tsuba/Errors.h"
 
@@ -12,14 +13,30 @@ tsuba::RDGSlice::DoMake(
     const std::optional<std::vector<std::string>>& edge_props,
     const katana::Uri& metadata_dir, const SliceArg& slice) {
   ReadGroup grp;
-  katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
+  katana::Uri topology_path =
+      metadata_dir.Join(core_->part_header().topology_path());
+  katana::Uri node_types_path =
+      metadata_dir.Join(core_->part_header().node_entity_type_id_array_path());
+  katana::Uri edge_types_path =
+      metadata_dir.Join(core_->part_header().edge_entity_type_id_array_path());
 
-  if (auto res = core_->topology_file_storage().Bind(
-          t_path.string(), slice.topo_off, slice.topo_off + slice.topo_size,
-          true);
-      !res) {
-    return res.error();
-  }
+  KATANA_CHECKED_CONTEXT(
+      core_->topology_file_storage().Bind(
+          topology_path.string(), slice.topo_off,
+          slice.topo_off + slice.topo_size, true),
+      "loading topology array");
+  KATANA_CHECKED_CONTEXT(
+      core_->node_entity_type_id_array_file_storage().Bind(
+          node_types_path.string(),
+          slice.node_range.first * sizeof(katana::EntityTypeID),
+          slice.node_range.second * sizeof(katana::EntityTypeID), true),
+      "loading node type id array");
+  KATANA_CHECKED_CONTEXT(
+      core_->edge_entity_type_id_array_file_storage().Bind(
+          edge_types_path.string(),
+          slice.edge_range.first * sizeof(katana::EntityTypeID),
+          slice.edge_range.second * sizeof(katana::EntityTypeID), true),
+      "loading edge type id array");
 
   // all of the properties
   std::vector<PropStorageInfo*> node_properties =
@@ -112,6 +129,16 @@ tsuba::RDGSlice::edge_properties() const {
 const tsuba::FileView&
 tsuba::RDGSlice::topology_file_storage() const {
   return core_->topology_file_storage();
+}
+
+const tsuba::FileView&
+tsuba::RDGSlice::node_entity_type_id_array_file_storage() const {
+  return core_->node_entity_type_id_array_file_storage();
+}
+
+const tsuba::FileView&
+tsuba::RDGSlice::edge_entity_type_id_array_file_storage() const {
+  return core_->edge_entity_type_id_array_file_storage();
 }
 
 tsuba::RDGSlice::RDGSlice(std::unique_ptr<RDGCore>&& core)

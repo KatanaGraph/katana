@@ -3,6 +3,7 @@
 # (This file must be named <something>.yml)
 channels:
  - conda-forge
+ - metagraph
 dependencies:
  - arrow-cpp>=4.0,<5.0.0a0
  - backward-cpp>=1.4
@@ -54,3 +55,4 @@ dependencies:
  - sphinx>=3.5.1,<4
  - sphinx-tabs>=2.1.0
  - zlib>=1.2.11
+ - metagraph=0.2.6

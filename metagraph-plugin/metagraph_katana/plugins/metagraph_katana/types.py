@@ -6,7 +6,7 @@ import numpy as np
 from metagraph.plugins.core.types import Graph
 from metagraph.plugins.core.wrappers import GraphWrapper
 
-from katana.property_graph import PropertyGraph
+import katana.local
 
 
 class KatanaGraph(GraphWrapper, abstract=Graph):
@@ -22,7 +22,7 @@ class KatanaGraph(GraphWrapper, abstract=Graph):
         has_neg_weight=False
     ):
         super().__init__()
-        self._assert_instance(pg_graph, PropertyGraph)
+        self._assert_instance(pg_graph, katana.local.Graph)
         self.value = pg_graph
         self.is_weighted = is_weighted
         self.edge_weight_prop_name = edge_weight_prop_name

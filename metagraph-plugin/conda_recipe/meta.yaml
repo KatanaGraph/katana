@@ -1,13 +1,9 @@
-{% set name = "metagraph-katana" %}
-{% set version = "0.0.5" %}
-
 package:
-  name: "{{ name|lower }}"
-  version: "{{ version }}"
+  name: metagraph-katana
+  version: 0.0.1
 
 source:
-  url: https://files.pythonhosted.org/packages/b2/cf/8faf3ae5b3b107513f8c497462a2f63a9a93ba1c7efbbd86752e5138d80c/metagraph-katana-0.0.5.tar.gz
-  sha256: 27f0d316bf42af1cf400f0dd2cf650cce8b123460982e5796c015ccf065aceab
+  path: ../
 
 build:
   number: 0

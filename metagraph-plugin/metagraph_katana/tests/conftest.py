@@ -3,8 +3,8 @@ import pandas as pd
 import pytest
 
 import katana.local
-from katana.example_utils import get_input
-from katana.property_graph import PropertyGraph
+from katana.example_data import get_input
+from katana.local import Graph
 
 
 # Currently PropertyGraph does not support undirected graphs
@@ -12,7 +12,7 @@ from katana.property_graph import PropertyGraph
 @pytest.fixture(autouse=True)
 def pg_rmat15_cleaned_symmetric():
     katana.local.initialize()
-    pg = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    pg = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
     return pg
 
 

@@ -6,9 +6,7 @@ from metagraph.plugins.core.types import Graph, Vector
 from metagraph.plugins.networkx.types import NetworkXGraph
 from metagraph.plugins.numpy.types import NumpyNodeMap, NumpyVectorType
 
-from katana.analytics import bfs, jaccard, local_clustering_coefficient
-
-from katana.property_graph import PropertyGraph
+from katana.local.analytics import bfs, jaccard, local_clustering_coefficient
 
 from .types import KatanaGraph
 

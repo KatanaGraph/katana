@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import numpy as np
+import pandas
 import pyarrow
 import pytest
 
@@ -108,8 +109,16 @@ def test_add_node_property_exception(graph):
 def test_add_node_property(graph):
     t = pyarrow.table(dict(new_prop=range(graph.num_nodes())))
     graph.add_node_property(t)
-    assert len(graph.loaded_node_schema()) == 32
-    assert graph.get_node_property_chunked("new_prop") == pyarrow.chunked_array([range(graph.num_nodes())])
+    assert graph.get_node_property("new_prop") == pyarrow.array(range(graph.num_nodes()))
+
+
+def test_add_node_property_kwarg(graph):
+    graph.add_node_property(new_prop=range(graph.num_nodes()))
+    assert graph.get_node_property("new_prop") == pyarrow.array(range(graph.num_nodes()))
+
+
+def test_add_node_property_dataframe(graph):
+    graph.add_node_property(pandas.DataFrame(dict(new_prop=range(graph.num_nodes()))))
     assert graph.get_node_property("new_prop") == pyarrow.array(range(graph.num_nodes()))
 
 
@@ -157,7 +166,6 @@ def test_add_edge_property(graph):
     t = pyarrow.table(dict(new_prop=range(graph.num_edges())))
     graph.add_edge_property(t)
     assert len(graph.loaded_edge_schema()) == 19
-    assert graph.get_edge_property_chunked("new_prop") == pyarrow.chunked_array([range(graph.num_edges())])
     assert graph.get_edge_property("new_prop") == pyarrow.array(range(graph.num_edges()))
 
 
@@ -166,7 +174,13 @@ def test_upsert_edge_property(graph):
     t = pyarrow.table({prop: range(graph.num_edges())})
     graph.upsert_edge_property(t)
     assert len(graph.loaded_edge_schema()) == 18
-    assert graph.get_edge_property_chunked(prop) == pyarrow.chunked_array([range(graph.num_edges())])
+    assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
+
+
+def test_upsert_edge_property_dict(graph):
+    prop = graph.loaded_edge_schema().names[0]
+    graph.upsert_edge_property({prop: range(graph.num_edges())})
+    assert len(graph.loaded_edge_schema()) == 18
     assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
 
 

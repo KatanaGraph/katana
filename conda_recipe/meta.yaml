@@ -129,6 +129,7 @@ outputs:
       requires:
         - jupyter
         - pytest
+        - pandas
 
         # The dependencies for pytest-notebook are incomplete, add them manually
         - pytest-notebook

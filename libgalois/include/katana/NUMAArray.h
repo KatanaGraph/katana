@@ -129,6 +129,7 @@ public:
   reference operator[](size_type x) { return data_[x]; }
   void set(difference_type x, const_reference v) { data_[x] = v; }
   size_type size() const { return size_; }
+  bool empty() const { return size() == 0; }
   iterator begin() { return data_; }
   const_iterator begin() const { return data_; }
   iterator end() { return data_ + size_; }

@@ -1,0 +1,37 @@
+package:
+  name: metagraph-katana
+  version: 0.0.1
+
+source:
+  path: ../
+
+build:
+  number: 0
+  noarch: python
+  script: {{ PYTHON }} -m pip install . --no-deps -vv
+
+
+requirements:
+  build:
+    - git
+    - cmake
+  host:
+    - pip
+    - python
+  run:
+    - python
+    - metagraph
+    - katana-cpp>=0.1.12.dev
+    - katana-python>=0.1.12.dev
+    - katana-tools>=0.1.12.dev
+
+test:
+  imports:
+    - metagraph
+    - katana
+
+about:
+  home: https://github.com/KatanaGraph/katana
+  license: BSD-3-Clause
+  license_family: BSD
+  summary: metagraph-katana plugin

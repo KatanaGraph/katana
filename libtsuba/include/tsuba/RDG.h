@@ -88,6 +88,15 @@ public:
     return Store(handle, command_line, IncrementVersion, nullptr);
   }
 
+  /// @brief Chained two versions for a rich lineage
+  /// @param handle :: handle indicating where to store RDG
+  /// @param version :: the new version to be written
+  /// @param previous :: the previous version
+  /// @param command_line :: added to metadata to track lineage of RDG
+  katana::Result<void> ChainVersions(
+      RDGHandle handle, katana::RDGVersion current,
+      katana::RDGVersion previous);
+
   /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
   /// @param handle :: handle indicating where to store RDG
   /// @param command_line :: added to metadata to track lineage of RDG

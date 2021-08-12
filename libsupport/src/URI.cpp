@@ -135,7 +135,6 @@ Uri::MakeFromFile(const std::string& str) {
   if (realpath(str.c_str(), path.data()) == nullptr) {
     return Uri(kFileScheme, str);
   }
-  KATANA_LOG_DEBUG("str {} got a different realpath {}; ", str, path.data());
   return Uri(kFileScheme, path.data());
 }
 

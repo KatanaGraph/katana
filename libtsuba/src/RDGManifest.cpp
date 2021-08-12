@@ -160,7 +160,7 @@ RDGManifest::FileName(
   KATANA_LOG_DEBUG(
       "uri {} manifest: katana_{}_{}.manifest version {}; ", uri.string(),
       ToVersionString(version), view_name, version.ToString());
-  // TODO(wkyu): may need to change the separator as __
+  // TODO(wkyu): double check the name here. May need to change the separator as __
   return uri.Join(fmt::format(
       "katana_{}_{}.manifest", ToVersionString(version), view_name));
 }

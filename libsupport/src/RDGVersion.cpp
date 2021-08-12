@@ -10,7 +10,11 @@ RDGVersion::RDGVersion(
 
 RDGVersion::RDGVersion(uint64_t num) { numbers_.back() = num; }
 
-RDGVersion::RDGVersion(const std::string& str) {
+RDGVersion::RDGVersion(const std::string& src) {
+
+  KATANA_LOG_DEBUG_ASSERT(src.size() == 20);
+
+  std::string str = src;
   std::vector<char> vec(str.begin(), str.end());
   char* source = vec.data();
   char* token;
@@ -22,6 +26,10 @@ RDGVersion::RDGVersion(const std::string& str) {
     branches_.clear();
     do {
       uint64_t val = strtoul(token, nullptr, 10);
+      if (val >= 5) {
+        KATANA_LOG_DEBUG("in str {} found val {} with {}; ", 
+            str, val, ToString());
+      }
       numbers_.emplace_back(val);
       token = strtok(NULL, "_");
       if (token != NULL) {
@@ -38,6 +46,9 @@ RDGVersion::RDGVersion(const std::string& str) {
 std::string
 RDGVersion::ToString() const {
   std::string vec = "";
+  if (numbers_.size() == 0) {
+    return vec;
+  }
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
     vec += fmt::format("{}_{}_", numbers_[i], branches_[i]);
   }
@@ -47,7 +58,7 @@ RDGVersion::ToString() const {
 
 bool
 RDGVersion::IsNull() {
-  return (numbers_.back() == 0);
+  return (numbers_.size() == 0 || numbers_.back() == 0);
 }
 
 uint64_t
@@ -79,12 +90,43 @@ RDGVersion::GetBranches() {
 
 bool
 RDGVersion::ShareBranch(const RDGVersion& in) {
-  return branches_ == in.branches_;
+  if (branches_.size() != in.branches_.size())
+    return false;
+
+  // TODO(wkyu): to get a correct string comparison 
+#if 0
+  for (uint32_t i = 0; i < branches_.size(); i++) {
+    if (0!=(branches_[i].compare(in.branches_[i]))) {
+      return false;
+    }
+  }
+#else
+  for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
+    if (numbers_[i]!=in.numbers_[i]) {
+      return false;
+    }
+  }
+#endif
+  return true;
 }
 
 bool
 operator==(const RDGVersion& lhs, const RDGVersion& rhs) {
-  return (lhs.numbers_ == rhs.numbers_ && lhs.branches_ == rhs.branches_);
+  // TODO(wkyu): add correct string comparison later
+#if 0
+  if (lhs.branches_.size() != rhs.branches_.size())
+    return false;
+  for (uint32_t i = 0; i < lhs.branches_.size(); i++) {
+    if (0!=(lhs.branches_[i].compare(rhs.branches_[i]))) {
+      return false;
+    }
+  }
+#else
+  if (lhs.numbers_ == rhs.numbers_) 
+    return true;
+  else
+    return false;
+#endif
 }
 
 bool
@@ -94,12 +136,41 @@ operator!=(const RDGVersion& lhs, const RDGVersion& rhs) {
 
 bool
 operator>(const RDGVersion& lhs, const RDGVersion& rhs) {
-  return lhs.numbers_ > rhs.numbers_;
+  uint32_t min = std::min(lhs.numbers_.size(), rhs.numbers_.size());
+
+  for (uint32_t i = 0; i < min; i++) {
+    if (lhs.numbers_[i] < rhs.numbers_[i]) {
+      return false;
+    }
+    if (lhs.numbers_[i] > rhs.numbers_[i]) {
+      return true;
+    }
+  }
+
+  if (lhs.numbers_.size() <= rhs.numbers_.size()) 
+    return false;
+
+  return true;
 }
 
 bool
 operator<(const RDGVersion& lhs, const RDGVersion& rhs) {
-  return lhs.numbers_ < rhs.numbers_;
+  uint32_t min = std::min(lhs.numbers_.size(), rhs.numbers_.size());
+
+  for (uint32_t i = 0; i < min; i++) {
+    if (lhs.numbers_[i] > rhs.numbers_[i]) {
+      return false;
+    }
+    if (lhs.numbers_[i] < rhs.numbers_[i]) {
+      return true;
+    }
+  }
+
+  if (lhs.numbers_.size() >= rhs.numbers_.size()) {
+    return false;
+  } else {
+    return true;
+  }
 }
 
 // Check the example from URI.h on comparitors and formatter.

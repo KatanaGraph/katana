@@ -124,6 +124,7 @@ public:
   void set_viewtype(std::string v) { view_type_ = v; }
   void set_viewargs(std::vector<std::string> v) { view_args_ = v; }
   void set_version(katana::RDGVersion val) { version_ = val; }
+  void set_previous_version(katana::RDGVersion val) { previous_version_ = val; }
   void increment_version() { version_.IncrementNumber(); }
   const std::string& view_type() const { return view_type_; }
   bool transpose() const { return transpose_; }

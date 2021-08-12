@@ -102,6 +102,7 @@ RDGPartHeader::Write(
   }
 
   KATANA_LOG_DEBUG("PartHeader next version: {}; ", next_version.ToString());
+  // TODO(wkyu): to validate the partition file name
   ff->Bind(RDGManifest::PartitionFileName(
                handle.impl_->rdg_manifest().viewtype(),
                handle.impl_->rdg_manifest().dir(), Comm()->ID, next_version)

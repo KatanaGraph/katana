@@ -455,9 +455,15 @@ public:
   ///
   /// \returns io_error if, for instance, a file already exists
   /// first: the beginning version of the manifest
+#if 0
   Result<void> Write(
       const std::string& rdg_name, const std::string& command_line,
       katana::RDGVersion version);
+#endif
+
+  Result<void> CreateBranch(
+      const std::string& rdg_name, const std::string& command_line,
+      const std::string& branch);
 
   /// Create a new storage location for a graph and write everything into it.
   ///

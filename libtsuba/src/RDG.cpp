@@ -293,6 +293,18 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
 }
 
 katana::Result<void>
+tsuba::RDG::ChainVersions(
+    RDGHandle handle, katana::RDGVersion current, katana::RDGVersion previous) {
+  tsuba::RDGManifest manifest = handle.impl_->rdg_manifest();
+  manifest.set_version(current);
+  manifest.set_previous_version(previous);
+  handle.impl_->set_rdg_manifest(std::move(manifest));
+
+  // lineage is updated later before CommitRDG()
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
 tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,

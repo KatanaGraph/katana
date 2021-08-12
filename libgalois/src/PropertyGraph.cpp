@@ -706,6 +706,7 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   return std::string(buf.begin(), buf.end());
 }
 
+#if 0
 katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
@@ -716,12 +717,75 @@ katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line,
     katana::RDGVersion version) {
+  //TODO(wkyu): add the previous version before creating manifest file
   if (auto res = tsuba::Create(rdg_name, version); !res) {
     KATANA_LOG_DEBUG("failed to create the first manifest file\n");
     return res.error();
   }
+
   // TODO(wkyu): update file_, loaded_version_, branch_path_
+  // graph_pg_.SetVersion(version);
+
   return WriteGraph(rdg_name, command_line);
+}
+#else
+katana::Result<void>
+katana::PropertyGraph::Write(
+    const std::string& rdg_name, const std::string& command_line) {
+  if (auto res = tsuba::Create(rdg_name); !res) {
+    KATANA_LOG_DEBUG("failed to create the first manifest file\n");
+    return res.error();
+  }
+
+  return WriteGraph(rdg_name, command_line);
+}
+#endif
+
+katana::Result<void>
+katana::PropertyGraph::CreateBranch(
+    const std::string& rdg_name, const std::string& command_line,
+    const std::string& branch) {
+  katana::RDGVersion version = GetVersion();
+  version.AddBranch(branch);
+
+  if (auto res = tsuba::Create(rdg_name, version); !res) {
+    KATANA_LOG_DEBUG("failed to create the first manifest file\n");
+    return res.error();
+  }
+
+  tsuba::RDG::RDGVersioningPolicy versioning_action =
+      tsuba::RDG::RDGVersioningPolicy::IncrementVersion;
+
+  // return ConductWriteOp(rdg_name, command_line,
+  //    tsuba::RDG::RDGVersioningPolicy::IncrementVersion);
+
+  const std::string& uri = rdg_name;
+
+  KATANA_LOG_DEBUG(
+      "CreateBranch: writing loaded {} from current version {} "
+      " with command_line {} action {}; ",
+      uri, GetVersion().ToString(), command_line, versioning_action);
+
+  // Open the target'ed manifest from version
+  auto open_res = tsuba::Open(uri, version, tsuba::kReadWrite);
+  if (!open_res) {
+    return open_res.error();
+  }
+  auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
+
+  // Time to update the previous_version and old version of RDGFile
+  KATANA_CHECKED(rdg_.ChainVersions(*new_file, version, GetVersion()));
+
+  if (auto res = DoWrite(*new_file, command_line, versioning_action); !res) {
+    return res.error();
+  }
+
+  // TODO(wkyu): update file_, loaded_version_, branch_path_
+  // based on the newly written PropertyGraph.
+  file_ = std::move(new_file);
+  SetVersion(version);
+
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>

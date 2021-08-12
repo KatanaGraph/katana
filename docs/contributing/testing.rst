@@ -141,7 +141,8 @@ The output is available in ``$(pwd)/pythoncov``.
 C++
 ---
 
-Include the following options as part of your build command:
+Include the following options when running the ``cmake`` command
+(i.e., when configuring your build):
 
 .. code-block:: bash
 
@@ -157,13 +158,13 @@ Now you can run any test that you wish.  For example:
    ctest -L quick
 
 There are several tools you can use to process obtained profiling data
-after test run.  One option is gcovr.  You can obtain report by
-executing the following command:
+after test run.  One popular tool is ``gcovr``.  You can obtain (html)
+report by executing the following command:
 
 .. code-block:: bash
 
    cd $SRC_DIR
-   gcovr -r . --html
+   gcovr -r . --html --html-medium-threshold=50
 
 
 Debugging

@@ -9,7 +9,7 @@ from katana.native_interfacing.buffer_access import to_numpy
 
 def from_adjacency_matrix(adjacency: np.ndarray, property_name: str = "weight") -> katana.local.Graph:
     """
-    Convert an adjacency matrix with shape (n_edges, n_edges) into a :py:class:`~katana.local.Graph` with the
+    Convert an adjacency matrix with shape (n_nodes, n_nodes) into a :py:class:`~katana.local.Graph` with the
     non-zero values as an edge weight property.
 
     This preserves node IDs, but not edge IDs.

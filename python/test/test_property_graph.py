@@ -6,6 +6,7 @@ import numpy as np
 import pandas
 import pyarrow
 import pytest
+from pandas import isnull
 
 from katana import TsubaError, do_all, do_all_operator
 from katana.local import Graph
@@ -77,7 +78,7 @@ def test_get_node_property_index_exception(graph):
 
 def test_get_node_property(graph):
     prop1 = graph.get_node_property(3)
-    assert prop1[10].as_py() is None
+    assert isnull(prop1[10])
     # TODO re-enable this
     # prop2 = graph.get_node_property("length")
     # assert prop1 == prop2
@@ -85,10 +86,9 @@ def test_get_node_property(graph):
 
 def test_get_node_property_chunked(graph):
     prop1 = graph.get_node_property(4)
-    assert isinstance(prop1, pyarrow.Array)
+    assert isinstance(prop1, pandas.Series)
     prop2 = graph.get_node_property_chunked(4)
     assert isinstance(prop2, pyarrow.ChunkedArray)
-    assert prop1 == prop2.chunk(0)
 
 
 def test_remove_node_property(graph):
@@ -109,17 +109,17 @@ def test_add_node_property_exception(graph):
 def test_add_node_property(graph):
     t = pyarrow.table(dict(new_prop=range(graph.num_nodes())))
     graph.add_node_property(t)
-    assert graph.get_node_property("new_prop") == pyarrow.array(range(graph.num_nodes()))
+    assert (graph.get_node_property("new_prop") == pandas.Series(range(graph.num_nodes()))).all()
 
 
 def test_add_node_property_kwarg(graph):
     graph.add_node_property(new_prop=range(graph.num_nodes()))
-    assert graph.get_node_property("new_prop") == pyarrow.array(range(graph.num_nodes()))
+    assert (graph.get_node_property("new_prop") == pandas.Series(range(graph.num_nodes()))).all()
 
 
 def test_add_node_property_dataframe(graph):
     graph.add_node_property(pandas.DataFrame(dict(new_prop=range(graph.num_nodes()))))
-    assert graph.get_node_property("new_prop") == pyarrow.array(range(graph.num_nodes()))
+    assert (graph.get_node_property("new_prop") == pandas.Series(range(graph.num_nodes()))).all()
 
 
 def test_upsert_node_property(graph):
@@ -128,12 +128,12 @@ def test_upsert_node_property(graph):
     graph.upsert_node_property(t)
     assert len(graph.loaded_node_schema()) == 31
     assert graph.get_node_property_chunked(prop) == pyarrow.chunked_array([range(graph.num_nodes())])
-    assert graph.get_node_property(prop) == pyarrow.array(range(graph.num_nodes()))
+    assert (graph.get_node_property(prop) == pandas.Series(range(graph.num_nodes()))).all()
 
 
 def test_get_edge_property(graph):
     prop1 = graph.get_edge_property(15)
-    assert not prop1[10].as_py()
+    assert isnull(prop1[10])
     # TODO re-enable this test
     # prop2 = graph.get_edge_property("IS_SUBCLASS_OF")
     # assert prop1 == prop2
@@ -141,10 +141,9 @@ def test_get_edge_property(graph):
 
 def test_get_edge_property_chunked(graph):
     prop1 = graph.get_edge_property(5)
-    assert isinstance(prop1, pyarrow.Array)
+    assert isinstance(prop1, pandas.Series)
     prop2 = graph.get_edge_property_chunked(5)
     assert isinstance(prop2, pyarrow.ChunkedArray)
-    assert prop1 == prop2.chunk(0)
 
 
 def test_remove_edge_property(graph):
@@ -166,7 +165,7 @@ def test_add_edge_property(graph):
     t = pyarrow.table(dict(new_prop=range(graph.num_edges())))
     graph.add_edge_property(t)
     assert len(graph.loaded_edge_schema()) == 19
-    assert graph.get_edge_property("new_prop") == pyarrow.array(range(graph.num_edges()))
+    assert (graph.get_edge_property("new_prop") == pandas.Series(range(graph.num_edges()))).all()
 
 
 def test_upsert_edge_property(graph):
@@ -174,14 +173,14 @@ def test_upsert_edge_property(graph):
     t = pyarrow.table({prop: range(graph.num_edges())})
     graph.upsert_edge_property(t)
     assert len(graph.loaded_edge_schema()) == 18
-    assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
+    assert (graph.get_edge_property(prop) == pandas.Series(range(graph.num_edges()))).all()
 
 
 def test_upsert_edge_property_dict(graph):
     prop = graph.loaded_edge_schema().names[0]
     graph.upsert_edge_property({prop: range(graph.num_edges())})
     assert len(graph.loaded_edge_schema()) == 18
-    assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
+    assert (graph.get_edge_property(prop) == pandas.Series(range(graph.num_edges()))).all()
 
 
 def test_from_csr():
@@ -213,7 +212,7 @@ def test_from_csr_k3():
 def test_load_graphml():
     input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
     pg = Graph.from_graphml(input_file)
-    assert pg.get_node_property(0)[1].as_py() == "Keanu Reeves"
+    assert pg.get_node_property(0)[1] == "Keanu Reeves"
 
 
 @pytest.mark.required_env("KATANA_SOURCE_DIR")
@@ -225,7 +224,7 @@ def test_load_graphml_write():
         del pg
         graph = Graph(tmpdir)
         assert graph.path == f"file://{tmpdir}"
-    assert graph.get_node_property(0)[1].as_py() == "Keanu Reeves"
+    assert graph.get_node_property(0)[1] == "Keanu Reeves"
 
 
 def test_load_invalid_path():
@@ -246,7 +245,7 @@ def test_load_garbage_file():
             Graph(fi.name)
 
 
-def test_simple_algorithm(graph):
+def test_simple_algorithm(graph: Graph):
     @do_all_operator()
     def func_operator(g, prop, out, nid):
         t = 0
@@ -257,15 +256,16 @@ def test_simple_algorithm(graph):
         out[nid] = t
 
     g = graph
-    prop = g.get_node_property("length")
+    # TODO(amp): Must is a pyarrow array here because we support it in numba. Pandas support in numba will be required.
+    prop = g.get_node_property_chunked("length").chunk(0)
     out = np.empty((g.num_nodes(),), dtype=int)
 
     do_all(g, func_operator(g, prop, out), "operator")
 
     g.add_node_property(pyarrow.table(dict(referenced_total_length=out)))
 
-    oprop = g.get_node_property("referenced_total_length")
+    oprop = g.get_node_property("referenced_total_length").to_numpy()
 
-    assert oprop[0].as_py() == 0
-    assert oprop[4].as_py() == 0
-    assert oprop[-1].as_py() == 0
+    assert oprop[0] == 0
+    assert oprop[4] == 0
+    assert oprop[-1] == 0

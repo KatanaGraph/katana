@@ -37,7 +37,7 @@ def max_dist_operator(max_dist: ReduceMax[int], data, nid):
 
 
 def verify_bfs(graph: Graph, _source_i: int, property_id: int):
-    chunk_array = graph.get_node_property(property_id)
+    chunk_array = graph.get_node_property(property_id).to_numpy()
     not_visited = ReduceSum[int](0)
     max_dist = ReduceMax[int]()
 

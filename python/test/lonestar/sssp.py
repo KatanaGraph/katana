@@ -25,18 +25,13 @@ def dtype_info(t):
 
 
 def create_distance_array(g: Graph, source, length_property):
-    a = np.empty(len(g), dtype=dtype_of_pyarrow_array(g.get_edge_property(length_property)))
+    # For some reason g.get_edge_property(length_property).to_numpy().dtype is float64 instead of int.
+    a = np.empty(len(g), dtype=str(g.get_edge_property_chunked(length_property).type))
     # TODO(amp): Remove / 4
     infinity = dtype_info(a.dtype).max / 4
     a[:] = infinity
     a[source] = 0
     return a
-
-
-def dtype_of_pyarrow_array(a):
-    # TODO(amp): This is a hack. But I actually think it will work pretty reliably. Ideally pyarrow would provide a
-    #  conversion.
-    return str(a.type)
 
 
 @for_each_operator()
@@ -70,7 +65,7 @@ def sssp(graph: Graph, source, length_property, shift, property_name):
     t.start()
     for_each(
         init_bag,
-        sssp_operator(graph, dists, graph.get_edge_property(length_property)),
+        sssp_operator(graph, dists, graph.get_edge_property(length_property).to_numpy()),
         worklist=OrderedByIntegerMetric(obim_indexer(shift)),
         disable_conflict_detection=True,
         loop_name="SSSP",
@@ -78,7 +73,7 @@ def sssp(graph: Graph, source, length_property, shift, property_name):
     t.stop()
     print("Elapsed time: ", t.get(), "milliseconds.")
 
-    graph.add_node_property(pyarrow.table({property_name: dists}))
+    graph.add_node_property({property_name: dists})
 
 
 @do_all_operator()
@@ -96,11 +91,11 @@ def max_dist_operator(infinity: int, max_dist: ReduceMax[int], data, nid):
 
 
 def verify_sssp(graph: Graph, _source_i: int, property_id: int):
-    prop_array = graph.get_node_property(property_id)
+    prop_array = graph.get_node_property(property_id).to_numpy()
     not_visited = ReduceSum[int](0)
     max_dist = ReduceMax[int]()
     # TODO(amp): Remove / 4
-    infinity = dtype_info(dtype_of_pyarrow_array(prop_array)).max / 4
+    infinity = dtype_info(prop_array.dtype).max / 4
 
     do_all(
         range(len(prop_array)), not_visited_operator(infinity, not_visited, prop_array), loop_name="not_visited_op",

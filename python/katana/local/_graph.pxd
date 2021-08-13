@@ -21,6 +21,8 @@ cdef class GraphBase:
     @staticmethod
     cdef shared_ptr[CTable] _convert_table(object table, dict kwargs) except *
 
+    cdef object _wrap_array_for_user(self, object array, object prop, Schema schema)
+
     @final
     cdef const GraphTopology* topology(PropertyGraphInterface)
 

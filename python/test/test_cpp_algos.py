@@ -111,7 +111,7 @@ def test_bfs(graph: Graph):
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
 
-    assert graph.get_node_property(property_name)[start_node].as_py() == 0
+    assert graph.get_node_property(property_name)[start_node] == 0
 
     bfs_assert_valid(graph, start_node, property_name)
 
@@ -135,7 +135,7 @@ def test_sssp(graph: Graph):
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
 
-    assert graph.get_node_property(property_name)[start_node].as_py() == 0
+    assert graph.get_node_property(property_name)[start_node] == 0
 
     sssp_assert_valid(graph, start_node, weight_name, property_name)
 
@@ -354,9 +354,9 @@ def test_local_clustering_coefficient():
 
     local_clustering_coefficient(graph, "output")
     graph: Graph
-    out = graph.get_node_property("output")
+    out = graph.get_node_property("output").to_numpy()
 
-    assert out[-1].as_py() == 0
+    assert out[-1] == 0
     assert not np.any(np.isnan(out))
 
 
@@ -392,7 +392,7 @@ def test_busy_wait(graph: Graph):
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
 
-    assert graph.get_node_property(property_name)[start_node].as_py() == 0
+    assert graph.get_node_property(property_name)[start_node] == 0
 
     bfs_assert_valid(graph, start_node, property_name)
 

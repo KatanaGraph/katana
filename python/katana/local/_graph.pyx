@@ -1,4 +1,5 @@
 import numpy
+import pandas
 import pyarrow
 
 from pyarrow.lib cimport pyarrow_unwrap_table, pyarrow_wrap_chunked_array, pyarrow_wrap_schema, to_shared
@@ -122,6 +123,12 @@ cdef class GraphBase:
             raise TypeError("Properties must be identified by int index or str name")
         return pid
 
+    cdef object _wrap_array_for_user(self, object array, object prop, Schema schema):
+        flat_array = unchunked(array)
+        pandas_series = flat_array.to_pandas()
+        pandas_series.name = schema.field(prop).name
+        return pandas_series
+
     def node_property_name_to_id(self, prop):
         """
         Return the index (ID) of a node property specified by name. If an index is provided, it is returned.
@@ -166,36 +173,43 @@ cdef class GraphBase:
             raise IndexError(e)
         return self.topology().edge_dest(e)
 
-    def get_node_property(self, prop):
+    def get_node_property(self, prop) -> pandas.Series:
         """
         Return a `pyarrow` array or chunked array storing the data for node property `prop`.
-        This attempts to unwrap chunked arrays if possible.
-        `prop` may be either a name or an index.
-        """
-        return unchunked(self.get_node_property_chunked(prop))
 
-    def get_node_property_chunked(self, prop):
+        :param prop: The name or index of the property.
+        :return: A pandas series containing the property data.
+        """
+        return self._wrap_array_for_user(self.get_node_property_chunked(prop), prop, self.loaded_node_schema())
+
+    def get_node_property_chunked(self, prop) -> pyarrow.ChunkedArray:
         """
         Return a `pyarrow` chunked array storing the data for node property `prop`.
-        `prop` may be either a name or an index.
+
+        :param prop: The name or index of the property.
+
         `get_node_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
             self.underlying_property_graph().GetNodeProperty(Graph._property_name_to_id(prop, self.loaded_node_schema()))
         )
 
-    def get_edge_property(self, prop):
+    def get_edge_property(self, prop) -> pandas.Series:
         """
         Return a `pyarrow` array or chunked array storing the data for edge property `prop`.
         This attempts to unwrap chunked arrays if possible.
-        `prop` may be either a name or an index.
-        """
-        return unchunked(self.get_edge_property_chunked(prop))
 
-    def get_edge_property_chunked(self, prop):
+        :param prop: The name or index of the property.
+        :return: A pandas series containing the property data.
+        """
+        return self._wrap_array_for_user(self.get_edge_property_chunked(prop), prop, self.loaded_edge_schema())
+
+    def get_edge_property_chunked(self, prop) -> pyarrow.ChunkedArray:
         """
         Return a `pyarrow` chunked array storing the data for edge property `prop`.
-        `prop` may be either a name or an index.
+
+        :param prop: The name or index of the property.
+
         `get_edge_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(

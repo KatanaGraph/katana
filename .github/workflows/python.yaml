@@ -131,7 +131,7 @@ jobs:
       run: |
       cd metagraph-plugin/conda_recipe
       conda-build . -c conda-forge -c metagraph -c katanagraph/label/dev --output-folder $HOME/build/
-
+      
     - name: Clean ccache
       run: |
         ccache --show-stats

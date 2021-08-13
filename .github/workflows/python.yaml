@@ -127,6 +127,11 @@ jobs:
         . .github/workflows/activate_miniconda.sh
         scripts/conda_build.sh --output-folder $HOME/build/
 
+    - name: Build conda Packages for Katana Metagraph Plugin
+      run: |
+      cd metagraph-plugin/conda_recipe
+      conda-build . -c conda-forge -c metagraph -c katanagraph/label/dev --output-folder $HOME/build/
+
     - name: Clean ccache
       run: |
         ccache --show-stats
@@ -407,15 +412,6 @@ jobs:
           . $HOME/build/python_env.sh
           python -c "import katana; katana.for_each;"
           python -c "import katana.local.analytics; katana.local.analytics.sssp;"
-
-      - name: Test Metagraph Plugin
-        if: startsWith(matrix.os, 'ubuntu-')
-        run: |
-          . .github/workflows/activate_miniconda.sh && \
-          cd metagraph-plugin && \
-          conda env create -f katana-metagraph.yml && \
-          conda activate katana-metagraph && \
-          pytest metagraph_katana/tests
 
       - name: Install
         run: |

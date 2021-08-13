@@ -752,7 +752,7 @@ katana::PropertyGraph::CreateBranch(
   // TODO(wkyu): check if we should set this inside Distribution?
   // Create the branch from the RDGFile version
   // use the trunk katana::RDGVersion(0) in other cases.
-  katana::RDGVersion version = GetBranch();  //RDGFileVersion(0);
+  katana::RDGVersion version = GetLoadedVersion();  //RDGFileVersion(0);
   version.AddBranch(branch);
 
   // Create a branch with v0 and the lineage is encoded in the version
@@ -787,6 +787,10 @@ katana::PropertyGraph::CreateBranch(
   katana::RDGVersion new_version = RDGFileVersion();
   SetLoadedVersion(new_version);
   SetBranch(new_version);
+
+  KATANA_LOG_DEBUG(
+      "After creation branch {} new version {}; ", version.ToString(),
+      new_version.ToString());
 
   return katana::ResultSuccess();
 }

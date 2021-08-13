@@ -130,6 +130,9 @@ jobs:
     - name: Build conda Packages for Katana Metagraph Plugin
       run: |
         . .github/workflows/activate_miniconda.sh
+        REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
+        set -euo pipefail
+        export KATANA_VERSION=$("$REPO_ROOT"/scripts/version show --pep440)
         cd metagraph-plugin/conda_recipe
         conda-build . -c conda-forge -c metagraph -c file://$HOME/build/ --output-folder $HOME/build/
 

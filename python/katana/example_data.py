@@ -1,10 +1,14 @@
+"""
+Utilities which download example data for testing and experimentation.
+"""
+
 import os
 import shutil
 import tarfile
 import urllib.request
 from pathlib import Path
 
-__all__ = ["get_input"]
+__all__ = ["get_input", "get_input_as_url"]
 
 
 def get_inputs_directory(*, invalidate=False) -> Path:

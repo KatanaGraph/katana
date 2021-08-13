@@ -21,6 +21,8 @@ from libcpp.vector cimport vector
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
 
+__all__ = ["GraphBase", "Graph"]
+
 
 cdef _convert_string_list(l):
     return [bytes(s, "utf-8") for s in l or []]
@@ -334,27 +336,6 @@ cdef class Graph(GraphBase):
         return f
 
     @staticmethod
-    def from_graphml(path, uint64_t chunk_size=25000):
-        """
-        Load a GraphML file into katana form
-
-        :param path: Path to source GraphML file.
-        :type path: Union[str, Path]
-        :param chunk_size: Chunk size for in memory representations during conversion. Generally this term can be
-            ignored, but it can be decreased to reduce memory usage when converting large inputs.
-        :type chunk_size: int
-        :returns: the new :py:class:`~katana.property_graph.Graph`
-        """
-        path_str = <string>bytes(str(path), "utf-8")
-        with nogil:
-            pg = handle_result_PropertyGraph(
-                CGraph.ConvertToPropertyGraph(
-                move(handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False)))
-                ))
-        return Graph.make(pg)
-
-
-    @staticmethod
     def from_csr(edge_indices, edge_destinations):
         """
         Create a new `Graph` from a raw Compressed Sparse Row representation.
@@ -388,3 +369,23 @@ cdef class Graph(GraphBase):
         Internal.
         """
         return <uint64_t>self.underlying_property_graph()
+
+
+def from_graphml(path, uint64_t chunk_size=25000):
+    """
+    Load a GraphML file into Katana form.
+
+    :param path: Path to source GraphML file.
+    :type path: Union[str, Path]
+    :param chunk_size: Chunk size for in memory representations during conversion. Generally this value can be
+        ignored, but it can be decreased to reduce memory usage when converting large inputs.
+    :type chunk_size: int
+    :returns: the new :py:class:`~katana.local.Graph`
+    """
+    path_str = <string>bytes(str(path), "utf-8")
+    with nogil:
+        pg = handle_result_PropertyGraph(
+            CGraph.ConvertToPropertyGraph(
+            move(handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False)))
+            ))
+    return Graph.make(pg)

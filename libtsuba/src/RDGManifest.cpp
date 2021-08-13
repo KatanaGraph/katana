@@ -272,15 +272,31 @@ RDGManifest::FileNames() {
 }  // namespace tsuba
 
 void
+katana::to_json(json& j, const katana::RDGVersion& version) {
+  j = json{
+    { "rdg_version",
+      {
+        {"numbers", version.numbers_},
+        {"branches", version.branches_},
+      },
+    }
+  };
+}
+
+void
+katana::from_json(const json& j, katana::RDGVersion& version) {
+  j.at("rdg_version").at("numbers").get_to(version.numbers_);
+  j.at("rdg_version").at("branches").get_to(version.branches_);
+}
+
+void
 tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
   katana::RDGVersion ver = manifest.version_;
   katana::RDGVersion prev = manifest.previous_version_;
   j = json{
       {"magic", kRDGMagicNo},
-      {"version_nums", manifest.version_.numbers_},
-      {"version_ids", manifest.version_.branches_},
-      {"previous_version_nums", manifest.previous_version_.numbers_},
-      {"previous_version_ids", manifest.previous_version_.branches_},
+      {"version_vec", manifest.version_},
+      {"previous_version_vec", manifest.previous_version_},
       {"num_hosts", manifest.num_hosts_},
       {"policy_id", manifest.policy_id_},
       {"transpose", manifest.transpose_},
@@ -292,23 +308,18 @@ void
 tsuba::from_json(const json& j, tsuba::RDGManifest& manifest) {
   uint32_t magic;
   j.at("magic").get_to(magic);
-  if (auto it = j.find("version"); it != j.end()) {
-    j.at("version").get_to(manifest.version_.numbers_.back());
-  } else {
-    j.at("version_nums").get_to(manifest.version_.numbers_);
-    j.at("version_ids").get_to(manifest.version_.branches_);
-  }
   j.at("num_hosts").get_to(manifest.num_hosts_);
+  if (auto it = j.find("version"); it != j.end()) {
+    it->get_to(manifest.version_.numbers_.back());
+  } else {
+    j.at("version_vec").get_to(manifest.version_);
+  }
 
   // these values are temporarily optional
   if (auto it = j.find("previous_version"); it != j.end()) {
     it->get_to(manifest.previous_version_.numbers_.back());
-  } else if (auto it = j.find("previous_version_nums"); it != j.end()) {
-    it->get_to(manifest.previous_version_.numbers_);
-  }
-
-  if (auto it = j.find("previous_version_ids"); it != j.end()) {
-    it->get_to(manifest.previous_version_.branches_);
+  } else if (auto it = j.find("previous_version_vec"); it != j.end()) {
+    j.at("previous_version_vec").get_to(manifest.previous_version_);
   }
 
   if (auto it = j.find("policy_id"); it != j.end()) {

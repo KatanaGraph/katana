@@ -11,17 +11,13 @@ RDGVersion::RDGVersion(
 RDGVersion::RDGVersion(uint64_t num) { numbers_.back() = num; }
 
 RDGVersion::RDGVersion(const std::string& src) {
+
   KATANA_LOG_DEBUG_ASSERT(src.size() == 20);
-
-  std::string str = src;
-  std::vector<char> vec(str.begin(), str.end());
-
-  char* source = vec.data();
-  char dest[21];
+  char dest[kRDGVersionIDLength+1];
   char* token;
 
-  strncpy(dest, source, 20);
-  dest[20] = '\0';
+  strncpy(dest, src.c_str(), 20);
+  dest[kRDGVersionIDLength] = '\0';
   token = strtok(dest, "_");
 
   if (token != NULL) {
@@ -31,7 +27,7 @@ RDGVersion::RDGVersion(const std::string& src) {
       uint64_t val = strtoul(token, nullptr, 10);
       if (val >= 5) {
         KATANA_LOG_DEBUG(
-            "in str {} found token {} with val {} in {}; ", str, token, val,
+            "from version ID {} found token {} with val {} in {}; ", src, token, val,
             ToString());
       }
       numbers_.emplace_back(val);
@@ -182,7 +178,5 @@ operator<(const RDGVersion& lhs, const RDGVersion& rhs) {
     return true;
   }
 }
-
-// Check the example from URI.h on comparitors and formatter.
 
 }  // namespace katana

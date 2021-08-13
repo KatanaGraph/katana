@@ -7,12 +7,16 @@
 #include <vector>
 
 #include <fmt/format.h>
+#include <nlohmann/json.hpp>
 
+#include "katana/Random.h"
 #include "katana/config.h"
+
 
 namespace katana {
 
 const uint64_t kRDGVersionMaxID = (1 << 30);
+const uint64_t kRDGVersionIDLength = (20);
 
 struct KATANA_EXPORT RDGVersion {
   // A vectorized version in the form of num:id
@@ -44,5 +48,8 @@ KATANA_EXPORT bool operator!=(const RDGVersion& lhs, const RDGVersion& rhs);
 KATANA_EXPORT bool operator>(const RDGVersion& lhs, const RDGVersion& rhs);
 KATANA_EXPORT bool operator<(const RDGVersion& lhs, const RDGVersion& rhs);
 
+void to_json(nlohmann::json& j, const RDGVersion & version);
+void from_json(const nlohmann::json& j, RDGVersion& version);
 }  // namespace katana
+
 #endif

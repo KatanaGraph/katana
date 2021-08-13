@@ -2,7 +2,7 @@ from cython import final
 
 from libc.stdint cimport uint64_t
 from libcpp.memory cimport shared_ptr
-from pyarrow.lib cimport Schema
+from pyarrow.lib cimport CTable, Schema
 
 from katana.cpp.libgalois.graphs.Graph cimport GraphTopology, RDGLoadOptions, _PropertyGraph
 
@@ -17,6 +17,9 @@ cdef class GraphBase:
 
     @staticmethod
     cdef uint64_t _property_name_to_id(object prop, Schema schema) except -1
+
+    @staticmethod
+    cdef shared_ptr[CTable] _convert_table(object table, dict kwargs) except *
 
     @final
     cdef const GraphTopology* topology(PropertyGraphInterface)

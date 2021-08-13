@@ -16,3 +16,7 @@ cdef class UntypedBufferAccess:
 
     cdef inline object dtype(self):
         return self._numpy_dtype
+
+
+cpdef to_numpy(v)
+cpdef to_pyarrow(v)

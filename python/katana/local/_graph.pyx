@@ -1,4 +1,5 @@
 import numpy
+import pyarrow
 
 from pyarrow.lib cimport pyarrow_unwrap_table, pyarrow_wrap_chunked_array, pyarrow_wrap_schema, to_shared
 
@@ -17,6 +18,8 @@ from libcpp.memory cimport make_shared, shared_ptr, unique_ptr
 from libcpp.string cimport string
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
+
+from ..native_interfacing.buffer_access cimport to_pyarrow
 
 
 cdef _convert_string_list(l):
@@ -199,37 +202,62 @@ cdef class GraphBase:
             self.underlying_property_graph().GetEdgeProperty(Graph._property_name_to_id(prop, self.loaded_edge_schema()))
         )
 
-    def add_node_property(self, table):
+    @staticmethod
+    cdef shared_ptr[CTable] _convert_table(object table, dict kwargs) except *:
+        if isinstance(table, pyarrow.Table):
+            arrow_table = table
+        elif table is not None:
+            arrow_table = pyarrow.table(table)
+        else:
+            arrow_table = None
+
+        for name, data in kwargs.items():
+            if arrow_table:
+                arrow_table = arrow_table.append_column(name, to_pyarrow(data))
+            else:
+                arrow_table = pyarrow.table({name: to_pyarrow(data)})
+
+        return pyarrow_unwrap_table(arrow_table)
+
+    def add_node_property(self, table=None, **kwargs):
         """
         Insert new node properties into this graph.
 
-        :param table: A pyarrow Table containing the properties (the names are taken from the table). The table must have length `len(self)`.
+        :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
+            length ``self.num_nodes()``. (Optional)
+        :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_nodes()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().AddNodeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying_property_graph().AddNodeProperties(GraphBase._convert_table(table, kwargs)))
 
-    def upsert_node_property(self, table):
+    def upsert_node_property(self, table=None, **kwargs):
         """
         Update or insert node properties into this graph.
 
-        :param table: A pyarrow Table containing the properties (the names are taken from the table). The table must have length `len(self)`.
+        :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
+            length ``self.num_nodes()``. (Optional)
+        :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_nodes()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().UpsertNodeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying_property_graph().UpsertNodeProperties(GraphBase._convert_table(table, kwargs)))
 
-    def add_edge_property(self, table):
+    def add_edge_property(self, table=None, **kwargs):
         """
         Insert new edge properties into this graph.
 
-        :param table: A pyarrow Table containing the properties (the names are taken from the table). The table must have length `self.num_edges()`.
+        :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
+            length ``self.num_edges()``. (Optional)
+        :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_edges()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().AddEdgeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying_property_graph().AddEdgeProperties(GraphBase._convert_table(table, kwargs)))
 
-    def upsert_edge_property(self, table):
+    def upsert_edge_property(self, table=None, **kwargs):
         """
         Update or insert edge properties into this graph.
 
-        :param table: A pyarrow Table containing the properties (the names are taken from the table). The table must have length `self.num_edges()`.
+        :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
+            length ``self.num_edges()``. (Optional)
+        :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_edges()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(GraphBase._convert_table(table, kwargs)))
 
     def remove_node_property(self, prop):
         """

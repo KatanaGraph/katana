@@ -195,6 +195,7 @@ def pagerank(PropertyGraph pg, str output_property_name, PagerankPlan plan = Pag
         print("Min Rank:", stats.min_rank)
         print("Max Rank:", stats.max_rank)
         print("Average Rank:", stats.average_rank)
+        
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes

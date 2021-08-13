@@ -129,6 +129,8 @@ katana::ProgressTracer::FinishActiveSpan() {
     }
     if (active_span_ != nullptr &&
         (active_span_->ScopeClosed() || active_span_->IsFinished())) {
+      // if the active span is already finished
+      // then this only sets the active span to its parent
       active_span_->Finish();
     }
   }
@@ -150,6 +152,21 @@ katana::ProgressTracer::SetActiveSpan(
     std::shared_ptr<katana::ProgressSpan> span) {
   active_span_ = span;
   return ProgressScope(std::move(span));
+}
+
+void
+katana::ProgressTracer::Finish() {
+  while (HasActiveSpan()) {
+    FinishActiveSpan();
+  }
+  if (default_active_span_ != nullptr) {
+    default_active_span_->Finish();
+  }
+
+  active_span_ = nullptr;
+  default_active_span_ = nullptr;
+
+  Close();
 }
 
 katana::ProgressScope::~ProgressScope() {

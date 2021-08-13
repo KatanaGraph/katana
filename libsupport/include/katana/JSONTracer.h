@@ -26,8 +26,6 @@ public:
   std::string Inject(const ProgressContext& ctx) override;
   std::unique_ptr<ProgressContext> Extract(const std::string& carrier) override;
 
-  void Close() override {}
-
 private:
   JSONTracer(uint32_t host_id, uint32_t num_hosts, OutputCB out_callback)
       : ProgressTracer(host_id, num_hosts), out_callback_(out_callback) {}
@@ -35,6 +33,8 @@ private:
   std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name,
       std::shared_ptr<ProgressSpan> child_of) override;
+
+  void Close() override {}
 
   OutputCB out_callback_;
 };

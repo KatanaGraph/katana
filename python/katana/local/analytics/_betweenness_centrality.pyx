@@ -25,7 +25,7 @@ from libcpp.vector cimport vector
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._property_graph cimport PropertyGraph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -55,7 +55,7 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
 
     Result[void] BetweennessCentrality(_PropertyGraph* pg, string output_property_name, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
 
-    # std_result[void] BetweennessCentralityAssertValid(Graph* pg, string output_property_name)
+    # std_result[void] BetweennessCentralityAssertValid(PropertyGraph* pg, string output_property_name)
 
     cppclass _BetweennessCentralityStatistics "katana::analytics::BetweennessCentralityStatistics":
         float max_centrality
@@ -128,10 +128,17 @@ cdef class BetweennessCentralityPlan(Plan):
         return BetweennessCentralityPlan.make(_BetweennessCentralityPlan.Level())
 
 
-def betweenness_centrality(Graph pg, str output_property_name, sources = None,
+def betweenness_centrality(PropertyGraph pg, str output_property_name, sources = None,
              BetweennessCentralityPlan plan = BetweennessCentralityPlan()):
     """
-    :type pg: katana.local.Graph
+
+    Description
+    -----------
+    Betweenness centrality measures the extent to which a vertex lies on paths between other vertices. Vertices with high betweenness may have considerable influence within a network by virtue of their control over information passing between others.
+    
+    Parameters
+    ----------
+    :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
@@ -139,6 +146,25 @@ def betweenness_centrality(Graph pg, str output_property_name, sources = None,
     :param sources: Only process some sources, producing an approximate betweenness centrality. If this is a list of node IDs process those source nodes; if this is an int process that number of source nodes.
     :type plan: BetweennessCentralityPlan
     :param plan: The execution plan to use.
+
+    Examples
+    --------
+    .. code-block:: python
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.property_graph import PropertyGraph
+        katana.local.initialize()
+
+        g = PropertyGraph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import betweenness_centrality, BetweennessCentralityPlan, BetweennessCentralityStatistics
+        property_name="betweenness_centrality"
+        betweenness_centrality(g, property_name, 16, BetweennessCentralityPlan.outer())
+        stats = BetweennessCentralityStatistics(g, property_name)
+
+        print("Min Centrality:", stats.min_centrality)
+        print("Max Centrality:", stats.max_centrality)
+        print("Average Centrality:", stats.average_centrality)
+    
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
@@ -169,7 +195,7 @@ cdef class BetweennessCentralityStatistics:
     """
     cdef _BetweennessCentralityStatistics underlying
 
-    def __init__(self, Graph pg, str output_property_name):
+    def __init__(self, PropertyGraph pg, str output_property_name):
         output_property_name_bytes = bytes(output_property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:

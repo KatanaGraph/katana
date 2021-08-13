@@ -13,7 +13,7 @@ from pyarrow.lib cimport CUInt64Array
 from katana.cpp.libgalois.datastructures cimport NUMAArray
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._property_graph cimport PropertyGraph
 from katana.local.datastructures cimport NUMAArray_uint64_t
 
 
@@ -37,7 +37,7 @@ cdef unique_ptr[NUMAArray[uint64_t]] handle_result_unique_numaarray_uint64(Resul
     return move(res.value())
 
 
-# "Algorithms" from Graph
+# "Algorithms" from PropertyGraph
 
 cdef extern from "katana/PropertyGraph.h" namespace "katana" nogil:
     Result[unique_ptr[NUMAArray[uint64_t]]] SortAllEdgesByDest(_PropertyGraph* pg);
@@ -63,7 +63,7 @@ def sort_all_edges_by_dest(Graph pg):
     return NUMAArray_uint64_t.make_move(move(deref(res.get())))
 
 
-def find_edge_sorted_by_dest(Graph pg, uint32_t node, uint32_t node_to_find):
+def find_edge_sorted_by_dest(PropertyGraph pg, uint32_t node, uint32_t node_to_find):
     """
     Find an edge based on its incident nodes. The graph must have sorted edges.
 
@@ -81,7 +81,7 @@ def find_edge_sorted_by_dest(Graph pg, uint32_t node, uint32_t node_to_find):
     return res
 
 
-def sort_nodes_by_degree(Graph pg):
+def sort_nodes_by_degree(PropertyGraph pg):
     """
     Relabel all nodes in the graph by sorting in the descending order by node degree.
     """

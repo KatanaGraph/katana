@@ -28,7 +28,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._property_graph cimport PropertyGraph
 from katana.local.analytics.plan cimport Plan, Statistics, _Plan
 
 
@@ -134,16 +134,16 @@ cdef class SsspPlan(Plan):
         f.underlying_ = u
         return f
 
-    def __init__(self, graph: Graph = None):
+    def __init__(self, graph: PropertyGraph = None):
         """
         Construct a plan optimized for `graph` using heuristics, or using default parameter values.
         """
         if graph is None:
             self.underlying_ = _SsspPlan()
         else:
-            if not isinstance(graph, Graph):
+            if not isinstance(graph, PropertyGraph):
                 raise TypeError(graph)
-            self.underlying_ = _SsspPlan((<Graph>graph).underlying_property_graph())
+            self.underlying_ = _SsspPlan((<PropertyGraph>graph).underlying_property_graph())
 
     Algorithm = _SsspAlgorithm
 
@@ -243,13 +243,17 @@ cdef class SsspPlan(Plan):
         return SsspPlan.make(_SsspPlan.TopologicalTile(edge_tile_size))
 
 
-def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
+def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
          SsspPlan plan = SsspPlan()):
     """
+    Description
+    -----------
     Compute the Single-Source Shortest Path on `pg` using `start_node` as the source. The computed path lengths are
     written to the property `output_property_name`.
-
-    :type pg: katana.local.Graph
+    
+    Parameters
+    ----------
+    :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type start_node: Node ID
     :param start_node: The source node.
@@ -259,6 +263,24 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: SsspPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
+
+    Examples
+    --------
+    .. code-block:: python
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.property_graph import PropertyGraph
+        katana.local.initialize()
+
+        property_graph = PropertyGraph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import sssp, SsspStatistics
+        property_name = "NewProp"
+        weight_name = "workFrom"
+        start_node = 0
+        sssp(property_graph, start_node, weight_name, property_name)
+        stats = SsspStatistics(property_graph, property_name)
+        print("Max Distance:", stats.max_distance)
+
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
@@ -266,7 +288,7 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
         handle_result_void(Sssp(pg.underlying_property_graph(), start_node, edge_weight_property_name_str,
                                 output_property_name_str, plan.underlying_))
 
-def sssp_assert_valid(Graph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
+def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
     """
     Raise an exception if the SSSP results in `pg` with the given parameters appear to be incorrect. This is not an
     exhaustive check, just a sanity check.
@@ -292,7 +314,7 @@ cdef class SsspStatistics(Statistics):
     """
     cdef _SsspStatistics underlying
 
-    def __init__(self, Graph pg, str output_property_name):
+    def __init__(self, PropertyGraph pg, str output_property_name):
         """
         :param pg: The graph on which `sssp` was called.
         :param output_property_name: The output property name passed to `sssp`.

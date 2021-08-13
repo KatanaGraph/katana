@@ -26,7 +26,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._property_graph cimport PropertyGraph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -171,8 +171,10 @@ cdef class LouvainClusteringPlan(Plan):
         return LouvainClusteringPlan.make(_LouvainClusteringPlan.Deterministic(
             enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size))
 
-def louvain_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LouvainClusteringPlan plan = LouvainClusteringPlan()):
+def louvain_clustering(PropertyGraph pg, str edge_weight_property_name, str output_property_name, LouvainClusteringPlan plan = LouvainClusteringPlan()):
     """
+    Description
+    -----------
     Compute the Louvain Clustering for pg.
     The edge weights are taken from the property named
     edge_weight_property_name (which may be a 32- or 64-bit sign or unsigned
@@ -180,6 +182,31 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
     output_property_name (as uint32_t).
     The property named output_property_name is created by this function and may
     not exist before the call.
+        
+    Parameters
+    ----------
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :type edge_weight_property_name: str
+    :param edge_weight_property_name: may be a 32- or 64-bit sign or unsigned int
+    :type output_property_name: str
+    :param output_property_name: The output edge property
+    :type LouvainClusteringPlan: LouvainClusteringPlan
+    :param LouvainClusteringPlan: The Louvain Clustering Plan
+
+    Examples
+    --------
+    .. code-block:: python
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.property_graph import PropertyGraph
+        katana.local.initialize()
+
+        property_graph = PropertyGraph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import louvain_clustering, LouvainClusteringStatistics
+        louvain_clustering(property_graph, "value", "output")
+        LouvainClusteringStatistics(property_graph, "value", "output")
+
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
@@ -187,7 +214,7 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
         handle_result_void(LouvainClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
 
 
-def louvain_clustering_assert_valid(Graph pg, str edge_weight_property_name, str output_property_name ):
+def louvain_clustering_assert_valid(PropertyGraph pg, str edge_weight_property_name, str output_property_name ):
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
@@ -207,7 +234,7 @@ cdef _LouvainClusteringStatistics handle_result_LouvainClusteringStatistics(Resu
 cdef class LouvainClusteringStatistics:
     cdef _LouvainClusteringStatistics underlying
 
-    def __init__(self, Graph pg,
+    def __init__(self, PropertyGraph pg,
             str edge_weight_property_name,
             str output_property_name
             ):

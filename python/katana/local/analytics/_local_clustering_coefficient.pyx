@@ -18,7 +18,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_void
-from katana.local._graph cimport Graph
+from katana.local._property_graph cimport PropertyGraph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -119,15 +119,20 @@ cdef class LocalClusteringCoefficientPlan(Plan):
                 bool edges_sorted = kDefaultEdgesSorted
             ):
         """
+        Description
+        -----------
         An ordered count algorithm that sorts the nodes by degree before
         execution. This has been found to give good performance. We implement the
         ordered count algorithm from the following:
         http://gap.cs.berkeley.edu/benchmark.html
 
         This algorithm uses atomic instructions to update counts.
-
+        
+        Parameters
+        ----------
         :param relabeling: Should the algorithm relabel the nodes.
         :param edges_sorted: Are the edges of the graph already sorted.
+
         """
         return LocalClusteringCoefficientPlan.make(_LocalClusteringCoefficientPlan.OrderedCountAtomics(
              edges_sorted, _relabeling_from_python(relabeling)))
@@ -152,7 +157,7 @@ cdef class LocalClusteringCoefficientPlan(Plan):
              edges_sorted, _relabeling_from_python(relabeling)))
 
 
-def local_clustering_coefficient(Graph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan()):
+def local_clustering_coefficient(PropertyGraph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan()):
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
         handle_result_void(LocalClusteringCoefficient(pg.underlying_property_graph(), output_property_name_str, plan.underlying_))

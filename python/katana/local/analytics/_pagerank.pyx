@@ -28,7 +28,7 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._property_graph cimport PropertyGraph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -167,16 +167,39 @@ cdef class PagerankPlan(Plan):
         return PagerankPlan.make(_PagerankPlan.PushSynchronous(tolerance, max_iterations, alpha))
 
 
-def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPlan()):
+def pagerank(PropertyGraph pg, str output_property_name, PagerankPlan plan = PagerankPlan()):
     """
+    Description
+    -----------
     Compute the Page Rank of each node in the graph.
-
-    :type pg: katana.local.Graph
+    
+    Parameters
+    ----------
+    :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to store the rank. This property must not already exist.
     :type plan: PagerankPlan
     :param plan: The execution plan to use.
+
+    Examples
+    --------
+    .. code-block:: python
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.property_graph import PropertyGraph
+        katana.local.initialize()
+
+        property_graph = PropertyGraph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import pagerank, PagerankStatistics
+        property_name = "NewProp"
+
+        pagerank(property_graph, property_name)
+
+        stats = PagerankStatistics(property_graph, property_name)
+        print("Min Rank:", stats.min_rank)
+        print("Max Rank:", stats.max_rank)
+        print("Average Rank:", stats.average_rank)
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
@@ -184,7 +207,7 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
         handle_result_void(Pagerank(pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
 
 
-def pagerank_assert_valid(Graph pg, str output_property_name):
+def pagerank_assert_valid(PropertyGraph pg, str output_property_name):
     """
     Raise an exception if the pagerank results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
 
@@ -211,7 +234,7 @@ cdef class PagerankStatistics:
     """
     cdef _PagerankStatistics underlying
 
-    def __init__(self, Graph pg, str output_property_name):
+    def __init__(self, PropertyGraph pg, str output_property_name):
         output_property_name_bytes = bytes(output_property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:

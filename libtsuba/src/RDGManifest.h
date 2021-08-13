@@ -81,7 +81,7 @@ public:
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
     katana::RDGVersion next_version(version_.numbers_, version_.branches_);
-    next_version.IncrementNumber();
+    next_version.IncrementLeaf();
     // progress the version numbers
     return RDGManifest(
         next_version, version_, num_hosts, policy_id, transpose, dir_, lineage);
@@ -125,7 +125,7 @@ public:
   void set_viewargs(std::vector<std::string> v) { view_args_ = v; }
   void set_version(katana::RDGVersion val) { version_ = val; }
   void set_previous_version(katana::RDGVersion val) { previous_version_ = val; }
-  void increment_version() { version_.IncrementNumber(); }
+  void increment_version() { version_.IncrementLeaf(); }
   const std::string& view_type() const { return view_type_; }
   bool transpose() const { return transpose_; }
 

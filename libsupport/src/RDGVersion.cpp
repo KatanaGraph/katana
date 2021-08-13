@@ -15,10 +15,14 @@ RDGVersion::RDGVersion(const std::string& src) {
 
   std::string str = src;
   std::vector<char> vec(str.begin(), str.end());
+
   char* source = vec.data();
+  char dest[21];
   char* token;
 
-  token = strtok(source, "_");
+  strncpy(dest, source, 20);
+  dest[20] = '\0';
+  token = strtok(dest, "_");
 
   if (token != NULL) {
     numbers_.clear();
@@ -27,7 +31,8 @@ RDGVersion::RDGVersion(const std::string& src) {
       uint64_t val = strtoul(token, nullptr, 10);
       if (val >= 5) {
         KATANA_LOG_DEBUG(
-            "in str {} found val {} with {}; ", str, val, ToString());
+            "in str {} found token {} with val {} in {}; ", str, token, val,
+            ToString());
       }
       numbers_.emplace_back(val);
       token = strtok(NULL, "_");
@@ -57,7 +62,8 @@ RDGVersion::ToString() const {
 
 bool
 RDGVersion::IsNull() {
-  return (numbers_.size() == 0 || numbers_.back() == 0);
+  // No branch and no positive ID
+  return (branches_.size() == 0 && numbers_.back() == 0);
 }
 
 uint64_t
@@ -66,14 +72,19 @@ RDGVersion::LeafNumber() {
 }
 
 void
-RDGVersion::IncrementNumber() {
-  numbers_.back()++;
+RDGVersion::IncrementLeaf(uint64_t num) {
+  numbers_.back() += num;
+}
+
+void
+RDGVersion::SetLeafNumber(uint64_t num) {
+  numbers_.back() = num;
 }
 
 void
 RDGVersion::AddBranch(const std::string& name) {
   branches_.back() = name;
-  numbers_.emplace_back(1);
+  numbers_.emplace_back(0);
   branches_.emplace_back(".");
 }
 

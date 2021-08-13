@@ -12,6 +12,8 @@
 
 namespace katana {
 
+const uint64_t kRDGVersionMaxID = (1 << 30);
+
 struct KATANA_EXPORT RDGVersion {
   // A vectorized version in the form of num:id
   // The last one has an empty branch "".
@@ -28,7 +30,8 @@ struct KATANA_EXPORT RDGVersion {
   explicit RDGVersion(uint64_t num = 0);
   std::string ToString() const;
   uint64_t LeafNumber();
-  void IncrementNumber();
+  void IncrementLeaf(uint64_t num = 1);
+  void SetLeafNumber(uint64_t num = 0);
   void AddBranch(const std::string& name);
   std::vector<uint64_t>& GetNumbers();
   std::vector<std::string>& GetBranches();

@@ -304,6 +304,11 @@ tsuba::RDG::ChainVersions(
   return katana::ResultSuccess();
 }
 
+katana::RDGVersion
+tsuba::RDG::GetFileVersion(RDGHandle handle) {
+  return handle.impl_->rdg_manifest().version();
+}
+
 katana::Result<void>
 tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,

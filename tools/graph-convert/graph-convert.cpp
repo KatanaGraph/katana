@@ -41,7 +41,6 @@
 #include "tsuba/CSRTopology.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
-#include "tsuba/tsuba.h"
 
 // TODO: move these enums to a common location for all graph convert tools
 enum ConvertMode {
@@ -2919,7 +2918,6 @@ struct Gr2Kg : public Conversion {
 
     tsuba::RDG rdg;
     rdg.set_rdg_dir(tsuba::GetRDGDir(handle));
-
     if (auto res = rdg.SetTopologyFile(top_file_name); !res) {
       return res.error();
     }

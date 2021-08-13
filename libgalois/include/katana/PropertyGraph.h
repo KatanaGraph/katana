@@ -202,7 +202,14 @@ private:
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
-  katana::RDGVersion version_{katana::RDGVersion(0)};
+
+  // branch_: the branch to write run-time PropertyGraph
+  // by default it is the trunk inside graph_dir.
+  katana::RDGVersion branch_{katana::RDGVersion(0)};
+
+  // loaded_version_: version loaded for current PropertyGraph
+  // since file_ is reserved for writing
+  katana::RDGVersion loaded_version_{katana::RDGVersion(0)};
 
   /// A map from the node TypeSetID to
   /// the set of the node type names it contains
@@ -451,16 +458,10 @@ public:
     rdg_.set_local_to_global_id(std::move(a));
   }
 
-  /// Create a new storage location for a graph and write everything into it.
+  /// Create a new branch for a graph and write everything into it.
   ///
   /// \returns io_error if, for instance, a file already exists
-  /// first: the beginning version of the manifest
-#if 0
-  Result<void> Write(
-      const std::string& rdg_name, const std::string& command_line,
-      katana::RDGVersion version);
-#endif
-
+  /// branch: the id of the branch
   Result<void> CreateBranch(
       const std::string& rdg_name, const std::string& command_line,
       const std::string& branch);
@@ -669,8 +670,25 @@ public:
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }
-  void SetVersion(const katana::RDGVersion& val) { version_ = val; }
-  katana::RDGVersion& GetVersion() { return version_; }
+
+  // Get the RDGFile version
+  katana::RDGVersion RDGFileVersion() {
+    if (file_ == nullptr) {
+      return katana::RDGVersion(0);
+    } else {
+      return rdg_.GetFileVersion(*file_);
+    }
+  }
+
+  // Set or Get the targeted branch in graph_dir for writing PropertyGraph
+  void SetBranch(const katana::RDGVersion& val) { branch_ = val; }
+  katana::RDGVersion& GetBranch() { return branch_; }
+
+  // Set or Get the version of loaded PropertyGraph
+  void SetLoadedVersion(const katana::RDGVersion& val) {
+    loaded_version_ = val;
+  }
+  katana::RDGVersion& GetLoadedVersion() { return loaded_version_; }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);

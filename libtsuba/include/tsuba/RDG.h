@@ -96,6 +96,7 @@ public:
   katana::Result<void> ChainVersions(
       RDGHandle handle, katana::RDGVersion current,
       katana::RDGVersion previous);
+  katana::RDGVersion GetFileVersion(RDGHandle handle);
 
   /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
   /// @param handle :: handle indicating where to store RDG

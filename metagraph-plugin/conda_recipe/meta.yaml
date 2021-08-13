@@ -28,10 +28,6 @@ requirements:
     - katana-tools>=0.1.12.dev
 
 test:
-  imports:
-    - metagraph
-    - katana
-    - pytest
   requires:
     - pytest
   source_files:

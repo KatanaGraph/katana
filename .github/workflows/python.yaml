@@ -129,8 +129,9 @@ jobs:
 
     - name: Build conda Packages for Katana Metagraph Plugin
       run: |
+        . .github/workflows/activate_miniconda.sh
         cd metagraph-plugin/conda_recipe
-        conda build . -c conda-forge -c metagraph -c katanagraph/label/dev --output-folder $HOME/build/
+        conda-build . -c conda-forge -c metagraph -c katanagraph/label/dev --output-folder $HOME/build/
 
     - name: Clean ccache
       run: |

@@ -2,6 +2,6 @@
 Importing Graph Data
 ====================
 
-.. automodule:: katana.import_data
+.. automodule:: katana.local.import_data
    :members:
    :undoc-members:

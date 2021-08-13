@@ -1,5 +1,5 @@
 """
-The :py:module:`~katana.local.import_data` module provides a several graph conversion routines which take external data
+The :py:mod:`~katana.local.import_data` module provides a several graph conversion routines which take external data
 and convert it into a Katana :py:class:`~katana.local.Graph` object.
 """
 

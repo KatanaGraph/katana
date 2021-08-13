@@ -32,7 +32,7 @@ def katanagraph_rmat15_cleaned_ud(pg_rmat15_cleaned_symmetric):
 
 @pytest.fixture(autouse=True)
 def networkx_weighted_undirected_8_12():
-    df = pd.read_csv("metagraph_katana/data/edge1.csv")
+    df = pd.read_csv("data/edge1.csv")
     em = mg.wrappers.EdgeMap.PandasEdgeMap(df, "Source", "Destination", "Weight", is_directed=False)
     graph1 = mg.algos.util.graph.build(em)
     return graph1
@@ -40,7 +40,7 @@ def networkx_weighted_undirected_8_12():
 
 @pytest.fixture(autouse=True)
 def networkx_weighted_directed_8_12():
-    df = pd.read_csv("metagraph_katana/data/edge1.csv")
+    df = pd.read_csv("data/edge1.csv")
     em = mg.wrappers.EdgeMap.PandasEdgeMap(df, "Source", "Destination", "Weight", is_directed=True)
     graph1 = mg.algos.util.graph.build(em)
     return graph1

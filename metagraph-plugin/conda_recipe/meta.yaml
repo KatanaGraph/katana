@@ -29,6 +29,8 @@ test:
   imports:
     - metagraph
     - katana
+  commands:
+    pytest ../tests
 
 about:
   home: https://github.com/KatanaGraph/katana

@@ -29,7 +29,7 @@ To check the installation is successful, you can run the test cases by:
 
 ```Shell
 conda activate katana-metagraph
-pytest metagraph_katana/tests/ -s
+pytest tests
 ```
 
 
@@ -41,11 +41,10 @@ Loading Katana Graph
 
 ```
 import metagraph as mg
-from katana.property_graph import PropertyGraph
 import katana.local
-from katana.example_utils import get_input
+from katana.example_data import get_input
 katana.local.initialize()
-pg = PropertyGraph(get_input('propertygraphs/rmat15_cleaned_symmetric'))
+pg = katana.local.Graph(get_input('propertygraphs/rmat15_cleaned_symmetric'))
 katana_graph = mg.wrappers.Graph.KatanaGraph(pg)
 ```
 

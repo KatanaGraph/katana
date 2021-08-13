@@ -133,6 +133,7 @@ jobs:
         REPO_ROOT="$(cd "$(dirname scripts/conda_build.sh)/.."; pwd)"
         set -euo pipefail
         export KATANA_VERSION=$("$REPO_ROOT"/scripts/version show --pep440)
+        echo $KATANA_VERSION
         cd metagraph-plugin/conda_recipe
         conda-build . -c conda-forge -c metagraph -c file://$HOME/build/ --output-folder $HOME/build/
 

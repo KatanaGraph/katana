@@ -1,0 +1,23 @@
+name: Nightly
+on:
+  schedule:
+    - cron: '43 4 * * *'
+
+jobs:
+  clean_anaconda_dev_packages:
+    name: Remove old anaconda dev packages
+    environment: AnacondaUpload
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: Install dependencies
+        run: |
+          $CONDA/bin/conda install -y -q -c conda-forge anaconda-client
+      - name: Remove old dev packages
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          echo "Anaconda token has ${#ANACONDA_TOKEN} characters."
+          $CONDA/bin/conda run scripts/anaconda_ctl.py --token "$ANACONDA_TOKEN" remove-old

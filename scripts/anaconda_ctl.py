@@ -1,11 +1,15 @@
+#!/usr/bin/env python3
+
 import argparse
 
 from binstar_client import Binstar
 from binstar_client.utils import get_server_api
 
+DEFAULT_PACKAGES = ["katana-cpp", "katana-python", "katana-tools", "metagraph-katana"]
+
 
 def remove_old_func(args, api: Binstar):
-    args.package = args.package or ["katana-cpp", "katana-python", "katana-tools"]
+    args.package = args.package or DEFAULT_PACKAGES
     for package_name in set(args.package):
         package = api.package("KatanaGraph", package_name)
 
@@ -22,7 +26,7 @@ def remove_old_func(args, api: Binstar):
             if args.label not in labels:
                 # Skip if it doesn't have the label
                 continue
-            if ndownloads > args.downloads:
+            if args.downloads is not None and ndownloads > args.downloads:
                 # Skip if it has been downloaded enough
                 continue
             info_str = f"{basename} (labels: {labels}, ndownloads: {ndownloads})"
@@ -44,7 +48,7 @@ def main():
     clean_parser.add_argument(
         "--package",
         "-p",
-        help="The package to clean. Can be provided multiple times. Default: katana-cpp, katana-python, katana-tools",
+        help=f"The package to clean. Can be provided multiple times. Default: {DEFAULT_PACKAGES}",
         type=str,
         action="append",
         default=[],
@@ -56,9 +60,9 @@ def main():
     clean_parser.add_argument(
         "--downloads",
         "-n",
-        help="The maximum number of downloads the package can have and still be deleted. Default: 0",
+        help="The maximum number of downloads the package can have and still be deleted. Default: unbounded",
         type=int,
-        default=0,
+        default=None,
     )
     clean_parser.add_argument("--recent", help="The number of recent versions to save. Default: 5", type=int, default=5)
     clean_parser.set_defaults(func=remove_old_func, really=False)

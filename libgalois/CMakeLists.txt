@@ -23,6 +23,7 @@ set(sources
         src/GraphHelpers.cpp
         src/GraphML.cpp
         src/GraphMLSchema.cpp
+        src/GraphTopology.cpp
         src/HWTopo.cpp
         src/Mem.cpp
         src/NumaMem.cpp

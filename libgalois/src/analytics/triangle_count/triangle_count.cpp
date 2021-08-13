@@ -23,8 +23,10 @@
 
 using namespace katana::analytics;
 
-using PropertyGraph = katana::PropertyGraph;
-using Node = katana::PropertyGraph::Node;
+using SortedGraphView =
+    katana::PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID;
+using Node = SortedGraphView::Node;
+using edge_iterator = SortedGraphView::edge_iterator;
 
 constexpr static const unsigned kChunkSize = 64U;
 
@@ -67,8 +69,8 @@ CountEqual(
     typename G::edge_iterator bb, typename G::edge_iterator eb) {
   size_t retval = 0;
   while (aa != ea && bb != eb) {
-    typename G::Node a = *g.GetEdgeDest(aa);
-    typename G::Node b = *g.GetEdgeDest(bb);
+    typename G::Node a = g.edge_dest(*aa);
+    typename G::Node b = g.edge_dest(*bb);
     if (a < b) {
       ++aa;
     } else if (b < a) {
@@ -87,9 +89,7 @@ struct LessThan {
   const G& g;
   typename G::Node n;
   LessThan(const G& g, typename G::Node n) : g(g), n(n) {}
-  bool operator()(typename G::edge_iterator it) {
-    return *g.GetEdgeDest(it) < n;
-  }
+  bool operator()(typename G::edge_iterator it) { return g.edge_dest(*it) < n; }
 };
 
 template <typename G>
@@ -98,25 +98,7 @@ struct GreaterThanOrEqual {
   typename G::Node n;
   GreaterThanOrEqual(const G& g, typename G::Node n) : g(g), n(n) {}
   bool operator()(typename G::edge_iterator it) {
-    return n >= *g.GetEdgeDest(it);
-  }
-};
-
-template <typename G>
-struct GetDegree {
-  typedef typename G::Node N;
-  const G& g;
-  GetDegree(const G& g) : g(g) {}
-
-  ptrdiff_t operator()(const N& n) const { return g.edges(n).size(); }
-};
-
-template <typename Node, typename EdgeTy>
-struct IdLess {
-  bool operator()(
-      const katana::EdgeSortValue<Node, EdgeTy>& e1,
-      const katana::EdgeSortValue<Node, EdgeTy>& e2) const {
-    return e1.dst < e2.dst;
+    return n >= g.edge_dest(*it);
   }
 };
 
@@ -133,30 +115,30 @@ struct IdLess {
  * Thesis. Universitat Karlsruhe. 2007.
  */
 size_t
-NodeIteratingAlgo(katana::PropertyGraph* graph) {
+NodeIteratingAlgo(const SortedGraphView* graph) {
   katana::GAccumulator<size_t> numTriangles;
 
   katana::do_all(
       katana::iterate(*graph),
-      [&](const PropertyGraph::Node& n) {
+      [&](const Node& n) {
         // Partition neighbors
         // [first, ea) [n] [bb, last)
-        PropertyGraph::edge_iterator first = graph->edges(n).begin();
-        PropertyGraph::edge_iterator last = graph->edges(n).end();
-        PropertyGraph::edge_iterator ea =
-            LowerBound(first, last, LessThan<PropertyGraph>(*graph, n));
-        PropertyGraph::edge_iterator bb = LowerBound(
-            first, last, GreaterThanOrEqual<PropertyGraph>(*graph, n));
+        edge_iterator first = graph->edges(n).begin();
+        edge_iterator last = graph->edges(n).end();
+        edge_iterator ea =
+            LowerBound(first, last, LessThan<SortedGraphView>(*graph, n));
+        edge_iterator bb = LowerBound(
+            first, last, GreaterThanOrEqual<SortedGraphView>(*graph, n));
 
         for (; bb != last; ++bb) {
-          Node B = *graph->GetEdgeDest(bb);
+          Node B = graph->edge_dest(*bb);
           for (auto aa = first; aa != ea; ++aa) {
-            Node A = *graph->GetEdgeDest(aa);
-            PropertyGraph::edge_iterator vv = graph->edges(A).begin();
-            PropertyGraph::edge_iterator ev = graph->edges(A).end();
-            PropertyGraph::edge_iterator it =
-                LowerBound(vv, ev, LessThan<PropertyGraph>(*graph, B));
-            if (it != ev && *graph->GetEdgeDest(it) == B) {
+            Node A = graph->edge_dest(*aa);
+            edge_iterator vv = graph->edges(A).begin();
+            edge_iterator ev = graph->edges(A).end();
+            edge_iterator it =
+                LowerBound(vv, ev, LessThan<SortedGraphView>(*graph, B));
+            if (it != ev && graph->edge_dest(*it) == B) {
               numTriangles += 1;
             }
           }
@@ -173,24 +155,25 @@ NodeIteratingAlgo(katana::PropertyGraph* graph) {
  */
 void
 OrderedCountFunc(
-    PropertyGraph* graph, Node n, katana::GAccumulator<size_t>& numTriangles) {
+    const SortedGraphView* graph, Node n,
+    katana::GAccumulator<size_t>& numTriangles) {
   size_t numTriangles_local = 0;
-  for (auto it_v : graph->edges(n)) {
-    auto v = *graph->GetEdgeDest(it_v);
+  for (auto edges_n : graph->edges(n)) {
+    Node v = graph->edge_dest(edges_n);
     if (v > n) {
       break;
     }
-    PropertyGraph::edge_iterator it_n = graph->edges(n).begin();
+    edge_iterator it_n = graph->edges(n).begin();
 
-    for (auto it_vv : graph->edges(v)) {
-      auto vv = *graph->GetEdgeDest(it_vv);
-      if (vv > v) {
+    for (auto edges_v : graph->edges(v)) {
+      auto dst_v = graph->edge_dest(edges_v);
+      if (dst_v > v) {
         break;
       }
-      while (*graph->GetEdgeDest(it_n) < vv) {
+      while (graph->edge_dest(*it_n) < dst_v) {
         it_n++;
       }
-      if (vv == *graph->GetEdgeDest(it_n)) {
+      if (dst_v == graph->edge_dest(*it_n)) {
         numTriangles_local += 1;
       }
     }
@@ -202,7 +185,7 @@ OrderedCountFunc(
  * Simple counting loop, instead of binary searching.
  */
 size_t
-OrderedCountAlgo(PropertyGraph* graph) {
+OrderedCountAlgo(const SortedGraphView* graph) {
   katana::GAccumulator<size_t> numTriangles;
   katana::do_all(
       katana::iterate(*graph),
@@ -227,7 +210,7 @@ OrderedCountAlgo(PropertyGraph* graph) {
  * Thesis. Universitat Karlsruhe. 2007.
  */
 size_t
-EdgeIteratingAlgo(PropertyGraph* graph) {
+EdgeIteratingAlgo(const SortedGraphView* graph) {
   struct WorkItem {
     Node src;
     Node dst;
@@ -241,9 +224,9 @@ EdgeIteratingAlgo(PropertyGraph* graph) {
       katana::iterate(*graph),
       [&](Node n) {
         for (auto edge : graph->edges(n)) {
-          auto dest = graph->GetEdgeDest(edge);
-          if (n < *dest) {
-            items.push(WorkItem(n, *dest));
+          auto dest = graph->edge_dest(edge);
+          if (n < dest) {
+            items.push(WorkItem(n, dest));
           }
         }
       },
@@ -254,19 +237,19 @@ EdgeIteratingAlgo(PropertyGraph* graph) {
       [&](const WorkItem& w) {
         // Compute intersection of range (w.src, w.dst) in neighbors of
         // w.src and w.dst
-        PropertyGraph::edge_iterator abegin = graph->edges(w.src).begin();
-        PropertyGraph::edge_iterator aend = graph->edges(w.src).end();
-        PropertyGraph::edge_iterator bbegin = graph->edges(w.dst).begin();
-        PropertyGraph::edge_iterator bend = graph->edges(w.dst).end();
+        edge_iterator abegin = graph->edges(w.src).begin();
+        edge_iterator aend = graph->edges(w.src).end();
+        edge_iterator bbegin = graph->edges(w.dst).begin();
+        edge_iterator bend = graph->edges(w.dst).end();
 
-        PropertyGraph::edge_iterator aa = LowerBound(
-            abegin, aend, GreaterThanOrEqual<PropertyGraph>(*graph, w.src));
-        PropertyGraph::edge_iterator ea =
-            LowerBound(abegin, aend, LessThan<PropertyGraph>(*graph, w.dst));
-        PropertyGraph::edge_iterator bb = LowerBound(
-            bbegin, bend, GreaterThanOrEqual<PropertyGraph>(*graph, w.src));
-        PropertyGraph::edge_iterator eb =
-            LowerBound(bbegin, bend, LessThan<PropertyGraph>(*graph, w.dst));
+        edge_iterator aa = LowerBound(
+            abegin, aend, GreaterThanOrEqual<SortedGraphView>(*graph, w.src));
+        edge_iterator ea =
+            LowerBound(abegin, aend, LessThan<SortedGraphView>(*graph, w.dst));
+        edge_iterator bb = LowerBound(
+            bbegin, bend, GreaterThanOrEqual<SortedGraphView>(*graph, w.src));
+        edge_iterator eb =
+            LowerBound(bbegin, bend, LessThan<SortedGraphView>(*graph, w.dst));
 
         numTriangles += CountEqual(*graph, aa, ea, bb, eb);
       },
@@ -282,8 +265,15 @@ katana::analytics::TriangleCount(
   katana::StatTimer timer_graph_read("GraphReadingTime", "TriangleCount");
   katana::StatTimer timer_auto_algo("AutoRelabel", "TriangleCount");
 
-  bool relabel;
   timer_graph_read.start();
+
+  SortedGraphView sorted_view = pg->BuildView<SortedGraphView>();
+
+  // TODO(amber): Today we sort unconditionally. Figure out a way to re-enable the
+  // logic below
+#if 0
+  bool relabel = false;;
+
   switch (plan.relabeling()) {
   case TriangleCountPlan::kNoRelabel:
     relabel = false;
@@ -328,6 +318,7 @@ katana::analytics::TriangleCount(
   }
 
   timer_graph_read.stop();
+#endif
 
   katana::EnsurePreallocated(1, 16 * (pg->num_nodes() + pg->num_edges()));
   katana::ReportPageAllocGuard page_alloc;
@@ -337,13 +328,13 @@ katana::analytics::TriangleCount(
   execTime.start();
   switch (plan.algorithm()) {
   case TriangleCountPlan::kNodeIteration:
-    total_count = NodeIteratingAlgo(pg);
+    total_count = NodeIteratingAlgo(&sorted_view);
     break;
   case TriangleCountPlan::kEdgeIteration:
-    total_count = EdgeIteratingAlgo(pg);
+    total_count = EdgeIteratingAlgo(&sorted_view);
     break;
   case TriangleCountPlan::kOrderedCount:
-    total_count = OrderedCountAlgo(pg);
+    total_count = OrderedCountAlgo(&sorted_view);
     break;
   default:
     return katana::ErrorCode::InvalidArgument;

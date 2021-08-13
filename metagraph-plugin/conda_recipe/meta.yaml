@@ -15,11 +15,14 @@ requirements:
   build:
     - git
     - cmake
+    - pytest
   host:
     - pip
     - python
+    - pytest
   run:
     - python
+    - pytest
     - metagraph
     - katana-cpp>=0.1.12.dev
     - katana-python>=0.1.12.dev
@@ -29,6 +32,7 @@ test:
   imports:
     - metagraph
     - katana
+    - pytest
   commands:
     pytest ../tests
 

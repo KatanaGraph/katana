@@ -140,13 +140,13 @@ public:
   /// is created (in this case the program is probably not using tracing)
   virtual ProgressSpan& GetActiveSpan();
   bool HasActiveSpan() { return active_span_ != nullptr; }
-  uint32_t GetHostID() { return host_id_; }
-  uint32_t GetNumHosts() { return num_hosts_; }
+  uint32_t GetHostID() const { return host_id_; }
+  uint32_t GetNumHosts() const { return num_hosts_; }
 
-  /// Close is called when a tracer is finished processing spans
-  /// This should be called to ensure any and all buffered spans are
-  /// flushed
-  virtual void Close() = 0;
+  /// Finish closes the active span and its parent spans if
+  ///   present and resets the active span to the unnamed root span
+  /// Handles end of program logic and calls Close
+  void Finish();
 
 protected:
   ProgressTracer(uint32_t host_id, uint32_t num_hosts)
@@ -156,6 +156,9 @@ private:
   virtual std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, std::shared_ptr<ProgressSpan> child_of) = 0;
   ProgressScope SetActiveSpan(std::shared_ptr<ProgressSpan> span);
+
+  /// Close flushes any buffered spans
+  virtual void Close() = 0;
 
   static std::unique_ptr<ProgressTracer> tracer_;
 
@@ -231,7 +234,7 @@ public:
   /// Primarily for internal class use only
   void MarkScopeClosed();
   virtual bool ScopeClosed();
-  bool IsFinished() { return finished_; }
+  bool IsFinished() const { return finished_; }
   const std::shared_ptr<ProgressSpan>& GetParentSpan() { return parent_; }
 
   /// Every ProgressSpan started must be finished

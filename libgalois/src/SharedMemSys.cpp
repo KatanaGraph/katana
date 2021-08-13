@@ -57,7 +57,7 @@ katana::SharedMemSys::~SharedMemSys() {
   if (auto fini_good = tsuba::Fini(); !fini_good) {
     KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
   }
-  katana::GetTracer().Close();
+  katana::GetTracer().Finish();
   // This will finalize plugins irreversibly, reinitialization may not work.
   FinalizePlugins();
 }

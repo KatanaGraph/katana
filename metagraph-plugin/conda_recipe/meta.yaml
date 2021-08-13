@@ -37,6 +37,8 @@ test:
     - pytest
   source_files:
     - tests
+  script:
+    - run_pytest.sh
 
 
 about:

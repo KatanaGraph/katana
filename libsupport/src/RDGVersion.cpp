@@ -63,7 +63,7 @@ RDGVersion::ToString() const {
 bool
 RDGVersion::IsNull() {
   // No branch and no positive ID
-  return (branches_.size() == 0 && numbers_.back() == 0);
+  return (branches_.size() <= 1 && numbers_.back() == 0);
 }
 
 uint64_t

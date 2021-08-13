@@ -27,31 +27,35 @@ const int RandomWalksPlan::kChunkSize = 1;
 
 namespace {
 
+using SortedPropertyGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
+
 struct Node2VecAlgo {
   using NodeData = std::tuple<>;
   using EdgeData = std::tuple<>;
 
-  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-  typedef typename Graph::Node GNode;
+  using SortedGraphView = katana::TypedPropertyGraphView<
+      SortedPropertyGraphView, NodeData, EdgeData>;
+  using GNode = typename SortedGraphView::Node;
 
   const RandomWalksPlan& plan_;
   Node2VecAlgo(const RandomWalksPlan& plan) : plan_(plan) {}
 
   GNode FindSampleNeighbor(
-      const Graph& graph, const GNode& n,
-      const katana::NUMAArray<uint64_t>& degree, double prob) {
+      const SortedGraphView& graph, const GNode& n,
+      const katana::NUMAArray<uint64_t>& degree, const double prob) {
     if (degree[n] == 0) {
       return graph.num_nodes();
     }
     double total_wt = degree[n];
 
     uint32_t edge_index = std::floor(prob * total_wt);
-    auto edge = graph.edge_begin(n) + edge_index;
-    return *graph.GetEdgeDest(edge);
+    auto ei = graph.edges(n).begin() + edge_index;
+    return graph.edge_dest(*ei);
   }
 
   void GraphRandomWalk(
-      const Graph& graph, katana::InsertBag<std::vector<uint32_t>>* walks,
+      const SortedGraphView& graph,
+      katana::InsertBag<std::vector<uint32_t>>* walks,
       const katana::NUMAArray<uint64_t>& degree) {
     katana::PerThreadStorage<std::mt19937> generator;
     katana::PerThreadStorage<std::uniform_real_distribution<double>*>
@@ -97,7 +101,7 @@ struct Node2VecAlgo {
           double prob = (*dist)(*generator.getLocal());
 
           //Assumption: All edges have weight 1
-          Graph::Node nbr = FindSampleNeighbor(graph, n, degree, prob);
+          auto nbr = FindSampleNeighbor(graph, n, degree, prob);
           KATANA_LOG_ASSERT(nbr < graph.num_nodes());
 
           walk.push_back(std::move(nbr));
@@ -116,7 +120,7 @@ struct Node2VecAlgo {
               //sample x
               double prob = (*dist)(*generator.getLocal());
 
-              Graph::Node nbr = FindSampleNeighbor(graph, curr, degree, prob);
+              auto nbr = FindSampleNeighbor(graph, curr, degree, prob);
               KATANA_LOG_ASSERT(nbr < graph.num_nodes());
 
               //sample y
@@ -135,9 +139,7 @@ struct Node2VecAlgo {
                 if (nbr == prev) {
                   alpha = prob_backward;
                 }  //check if nbr is also a neighbor of the previous node on this walk
-                else if (
-                    katana::FindEdgeSortedByDest(graph, prev, nbr) !=
-                    graph.edge_end(prev)) {
+                else if (graph.has_edge(prev, nbr)) {
                   alpha = 1.0;
                 } else {
                   alpha = prob_forward;
@@ -163,7 +165,8 @@ struct Node2VecAlgo {
   }
 
   void operator()(
-      const Graph& graph, katana::InsertBag<std::vector<uint32_t>>* walks,
+      const SortedGraphView& graph,
+      katana::InsertBag<std::vector<uint32_t>>* walks,
       const katana::NUMAArray<uint64_t>& degree) {
     GraphRandomWalk(graph, walks, degree);
   }
@@ -175,8 +178,9 @@ struct Edge2VecAlgo {
   using NodeData = std::tuple<>;
   using EdgeData = std::tuple<EdgeType>;
 
-  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-  typedef typename Graph::Node GNode;
+  using SortedGraphView = katana::TypedPropertyGraphView<
+      SortedPropertyGraphView, NodeData, EdgeData>;
+  using GNode = typename SortedGraphView::Node;
 
   const RandomWalksPlan& plan_;
   Edge2VecAlgo(const RandomWalksPlan& plan) : plan_(plan) {}
@@ -195,22 +199,22 @@ struct Edge2VecAlgo {
   }
 
   std::pair<GNode, EdgeType::ViewType::value_type> FindSampleNeighbor(
-      const Graph& graph, const GNode& n,
-      const katana::NUMAArray<uint64_t>& degree, double prob) {
+      const SortedGraphView& graph, const GNode& n,
+      const katana::NUMAArray<uint64_t>& degree, const double prob) {
     if (degree[n] == 0) {
       return std::make_pair(graph.num_nodes(), 1);
     }
     double total_wt = degree[n];
-    prob = prob * total_wt;
 
-    uint32_t edge_index = std::floor(prob);
-    auto edge = graph.edge_begin(n) + edge_index;
+    uint32_t edge_index = std::floor(prob * total_wt);
+    auto ei = graph.edges(n).begin() + edge_index;
     return std::make_pair(
-        *graph.GetEdgeDest(edge), graph.GetEdgeData<EdgeType>(edge));
+        graph.edge_dest(*ei), graph.GetEdgeData<EdgeType>(*ei));
   }
 
   void GraphRandomWalk(
-      const Graph& graph, katana::InsertBag<std::vector<uint32_t>>* walks,
+      const SortedGraphView& graph,
+      katana::InsertBag<std::vector<uint32_t>>* walks,
       katana::InsertBag<std::vector<uint32_t>>* types_walks,
       const katana::NUMAArray<uint64_t>& degree) {
     katana::PerThreadStorage<std::mt19937> generator;
@@ -280,7 +284,7 @@ struct Edge2VecAlgo {
                   FindSampleNeighbor(graph, curr, degree, prob);
               KATANA_LOG_ASSERT(nbr_pair.first < graph.num_nodes());
 
-              Graph::Node nbr = nbr_type_pair.first;
+              GNode nbr = nbr_type_pair.first;
               EdgeType::ViewType::value_type p2 = nbr_type_pair.second;
 
               //sample y
@@ -294,9 +298,7 @@ struct Edge2VecAlgo {
               if (nbr == prev) {
                 alpha = prob_backward;
               }  //check if nbr is also a neighbor of the previous node on this walk
-              else if (
-                  katana::FindEdgeSortedByDest(graph, prev, nbr) !=
-                  graph.edge_end(prev)) {
+              else if (graph.has_edge(prev, nbr)) {
                 alpha = 1.0;
               } else {
                 alpha = prob_forward;
@@ -437,7 +439,8 @@ struct Edge2VecAlgo {
   }
 
   void operator()(
-      const Graph& graph, katana::InsertBag<std::vector<uint32_t>>* walks,
+      const SortedGraphView& graph,
+      katana::InsertBag<std::vector<uint32_t>>* walks,
       const katana::NUMAArray<uint64_t>& degree) {
     uint32_t iterations = plan_.max_iterations();
 
@@ -478,40 +481,21 @@ InitializeDegrees(const Graph& graph, katana::NUMAArray<uint64_t>* degree) {
 
 template <typename Algorithm>
 static katana::Result<std::vector<std::vector<uint32_t>>>
-RandomWalksWithWrap(katana::PropertyGraph* pg, RandomWalksPlan plan) {
+RandomWalksWithWrap(
+    const typename Algorithm::SortedGraphView& graph, RandomWalksPlan plan) {
   katana::ReportPageAllocGuard page_alloc;
-
-  if (auto res = katana::SortAllEdgesByDest(pg); !res) {
-    return res.error();
-  }
-
-  // TODO(amp): This is incorrect. For Node2vec this needs to be:
-  //    Algorithm::Graph::Make(pg, {}, {}) // Ignoring all properties.
-  //  For Edge2vec this needs to be:
-  //    Algorithm::Graph::Make(pg, {}, {edge_type_property_name})
-  //  The current version requires the input to have exactly the properties
-  //  expected by the algorithm implementation.
-  auto pg_result = Algorithm::Graph::Make(pg);
-  if (!pg_result) {
-    return pg_result.error();
-  }
-
-  auto graph = pg_result.value();
 
   Algorithm algo(plan);
 
   katana::NUMAArray<uint64_t> degree;
   degree.allocateBlocked(graph.size());
-  InitializeDegrees<typename Algorithm::Graph>(graph, &degree);
+  InitializeDegrees(graph, &degree);
 
   katana::StatTimer execTime("RandomWalks");
   execTime.start();
   katana::InsertBag<std::vector<uint32_t>> walks;
   algo(graph, &walks, degree);
   execTime.stop();
-
-  degree.destroy();
-  degree.deallocate();
 
   std::vector<std::vector<uint32_t>> walks_in_vector;
   walks_in_vector.reserve(plan.number_of_walks());
@@ -522,10 +506,17 @@ RandomWalksWithWrap(katana::PropertyGraph* pg, RandomWalksPlan plan) {
 katana::Result<std::vector<std::vector<uint32_t>>>
 katana::analytics::RandomWalks(PropertyGraph* pg, RandomWalksPlan plan) {
   switch (plan.algorithm()) {
-  case RandomWalksPlan::kNode2Vec:
-    return RandomWalksWithWrap<Node2VecAlgo>(pg, plan);
-  case RandomWalksPlan::kEdge2Vec:
-    return RandomWalksWithWrap<Edge2VecAlgo>(pg, plan);
+  case RandomWalksPlan::kNode2Vec: {
+    auto graph =
+        KATANA_CHECKED(Node2VecAlgo::SortedGraphView::Make(pg, {}, {}));
+    return RandomWalksWithWrap<Node2VecAlgo>(graph, plan);
+  }
+  case RandomWalksPlan::kEdge2Vec: {
+    TemporaryPropertyGuard tmp_edge_prop{pg};
+    auto graph = KATANA_CHECKED(
+        Edge2VecAlgo::SortedGraphView::Make(pg, {}, {tmp_edge_prop.name()}));
+    return RandomWalksWithWrap<Edge2VecAlgo>(graph, plan);
+  }
   default:
     return ErrorCode::InvalidArgument;
   }

@@ -26,109 +26,91 @@ using namespace katana::analytics;
 namespace {
 constexpr static const unsigned kChunkSize = 64U;
 
+struct NodeClusteringCoefficient : public katana::PODProperty<double> {};
+
+using NodeData = typename std::tuple<NodeClusteringCoefficient>;
+using EdgeData = typename std::tuple<>;
+
+using SortedPropertyGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
+using SortedGraphView =
+    katana::TypedPropertyGraphView<SortedPropertyGraphView, NodeData, EdgeData>;
+using Node = SortedGraphView::Node;
+
 struct LocalClusteringCoefficientAtomics {
-  struct NodeTriangleCount : public katana::AtomicPODProperty<uint64_t> {};
-
-  struct NodeClusteringCoefficient : public katana::PODProperty<double> {};
-
-  using NodeData =
-      typename std::tuple<NodeTriangleCount, NodeClusteringCoefficient>;
-  using EdgeData = typename std::tuple<>;
-
-  using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
-
-  using Node = Graph::Node;
-
   /**
- * Counts the number of triangles for each node
- * in the graph using atomics.
- *
- * Uses simple 3-level nested algorithm to find
- * triangles. It assumes that edgelist of each node
- * is sorted.
- */
-  void OrderedCountFunc(Graph* graph, Node n) {
-    for (auto it_v : graph->edges(n)) {
-      auto v = *graph->GetEdgeDest(it_v);
+   * Counts the number of triangles for each node
+   * in the graph using atomics.
+   *
+   * Uses simple 3-level nested algorithm to find
+   * triangles. It assumes that edgelist of each node
+   * is sorted.
+   */
+  template <typename CountVec>
+  void OrderedCountFunc(
+      const SortedGraphView& graph, Node n, CountVec* count_vec) {
+    // TODO(amber): replace with NodeIteratingAlgo for triangle counting
+    for (auto edges_n : graph.edges(n)) {
+      auto v = graph.edge_dest(edges_n);
       if (v > n) {
         break;
       }
-      Graph::edge_iterator it_n = graph->edges(n).begin();
+      auto e_it_n = graph.edges(n).begin();
 
-      for (auto it_vv : graph->edges(v)) {
-        auto vv = *graph->GetEdgeDest(it_vv);
-        if (vv > v) {
+      for (auto edges_v : graph.edges(v)) {
+        auto dst_v = graph.edge_dest(edges_v);
+        if (dst_v > v) {
           break;
         }
-        while (*graph->GetEdgeDest(it_n) < vv) {
-          it_n++;
+        while (graph.edge_dest(*e_it_n) < dst_v) {
+          e_it_n++;
         }
-        if (vv == *graph->GetEdgeDest(it_n)) {
-          katana::atomicAdd<uint64_t>(
-              graph->GetData<NodeTriangleCount>(n), (uint64_t)1);
-          katana::atomicAdd<uint64_t>(
-              graph->GetData<NodeTriangleCount>(v), (uint64_t)1);
-          katana::atomicAdd<uint64_t>(
-              graph->GetData<NodeTriangleCount>(vv), (uint64_t)1);
+        if (dst_v == graph.edge_dest(*e_it_n)) {
+          __sync_fetch_and_add(&(*count_vec)[n], uint32_t{1});
+          __sync_fetch_and_add(&(*count_vec)[v], uint32_t{1});
+          __sync_fetch_and_add(&(*count_vec)[dst_v], uint32_t{1});
         }
       }
     }
   }
 
-  /*
- * Simple counting loop, instead of binary searching.
- * It assumes that edgelist of each node is sorted.
- * This uses an atomic implementation.
- */
-  void OrderedCountAlgo(Graph* graph) {
+  void ComputeLocalClusteringCoefficient(SortedGraphView* graph) {
+    katana::NUMAArray<uint32_t> per_node_triangles;
+    per_node_triangles.allocateInterleaved(graph->num_nodes());
+
+    katana::ParallelSTL::fill(
+        per_node_triangles.begin(), per_node_triangles.end(), uint32_t{0});
+
+    // Count triangles
     katana::do_all(
         katana::iterate(*graph),
-        [&](const Node& n) { OrderedCountFunc(graph, n); },
-        katana::chunk_size<kChunkSize>(), katana::steal(), katana::no_stats(),
+        [&](const Node& n) {
+          OrderedCountFunc(*graph, n, &per_node_triangles);
+        },
+        katana::chunk_size<kChunkSize>(), katana::steal(),
         katana::loopname("TriangleCount_OrderedCountAlgo"));
-  }
 
-  void ComputeLocalClusteringCoefficient(Graph* graph) {
-    katana::do_all(katana::iterate(*graph), [&](Node n) {
-      auto degree =
-          std::distance(graph->edges(n).begin(), graph->edges(n).end());
-      graph->template GetData<NodeClusteringCoefficient>(n) =
-          ((double)(2 * graph->template GetData<NodeTriangleCount>(n))) /
-          (degree * (degree - 1));
-    });
+    katana::do_all(
+        katana::iterate(*graph),
+        [&](Node n) {
+          auto degree = graph->degree(n);
+
+          graph->template GetData<NodeClusteringCoefficient>(n) =
+              static_cast<double>(2 * per_node_triangles[n]) /
+              (degree * (degree - 1));
+        },
+        katana::no_stats());
 
     return;
   }
 
-  katana::Result<void> operator()(
-      katana::PropertyGraph* pg, const std::string& output_property_name) {
-    katana::analytics::TemporaryPropertyGuard temporary_property{pg};
-
-    if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-            pg, {output_property_name, temporary_property.name()});
-        !result) {
-      return result.error();
-    }
-
-    auto graph_result =
-        Graph::Make(pg, {output_property_name, temporary_property.name()}, {});
-    if (!graph_result) {
-      return graph_result.error();
-    }
-
-    Graph graph = graph_result.value();
-
+  katana::Result<void> operator()(SortedGraphView* graph) {
     katana::StatTimer execTime(
         "LocalClusteringCoefficient", "LocalClusteringCoefficient");
     execTime.start();
 
-    // Calculate the number of triangles
-    // on each node
-    OrderedCountAlgo(&graph);
-
     // Compute the clustering coefficient of each
     // node based on the triangles.
-    ComputeLocalClusteringCoefficient(&graph);
+    ComputeLocalClusteringCoefficient(graph);
 
     execTime.stop();
     return katana::ResultSuccess();
@@ -136,16 +118,10 @@ struct LocalClusteringCoefficientAtomics {
 };
 
 struct LocalClusteringCoefficientPerThread {
-  struct NodeClusteringCoefficient : public katana::PODProperty<double> {};
-
-  using NodeData = typename std::tuple<NodeClusteringCoefficient>;
-  using EdgeData = typename std::tuple<>;
-
-  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-
-  typedef typename Graph::Node Node;
-
-  katana::NUMAArray<uint64_t> node_triangle_count_;
+  using TriangleCountVec = katana::NUMAArray<uint32_t>;
+  using IterPair =
+      std::pair<TriangleCountVec::iterator, TriangleCountVec::iterator>;
+  TriangleCountVec node_triangle_count_;
 
   /**
  * Counts the number of triangles for each node
@@ -156,26 +132,27 @@ struct LocalClusteringCoefficientPerThread {
  * is sorted.
  */
   void OrderedCountFunc(
-      Graph* graph, Node n, std::vector<uint64_t>* node_triangle_count) {
-    for (auto it_v : graph->edges(n)) {
-      auto v = *graph->GetEdgeDest(it_v);
+      const SortedGraphView& graph, Node n, IterPair per_thread_count_range) {
+    // TODO(amber): replace with NodeIteratingAlgo for triangle counting
+    for (auto edges_n : graph.edges(n)) {
+      auto v = graph.edge_dest(edges_n);
       if (v > n) {
         break;
       }
-      Graph::edge_iterator it_n = graph->edges(n).begin();
+      auto e_it_n = graph.edges(n).begin();
 
-      for (auto it_vv : graph->edges(v)) {
-        auto vv = *graph->GetEdgeDest(it_vv);
-        if (vv > v) {
+      for (auto edges_v : graph.edges(v)) {
+        auto dst_v = graph.edge_dest(edges_v);
+        if (dst_v > v) {
           break;
         }
-        while (*graph->GetEdgeDest(it_n) < vv) {
-          it_n++;
+        while (graph.edge_dest(*e_it_n) < dst_v) {
+          e_it_n++;
         }
-        if (vv == *graph->GetEdgeDest(it_n)) {
-          (*node_triangle_count)[n] += 1;
-          (*node_triangle_count)[v] += 1;
-          (*node_triangle_count)[vv] += 1;
+        if (dst_v == graph.edge_dest(*e_it_n)) {
+          *(per_thread_count_range.first + n) += 1;
+          *(per_thread_count_range.first + v) += 1;
+          *(per_thread_count_range.first + dst_v) += 1;
         }
       }
     }
@@ -186,46 +163,53 @@ struct LocalClusteringCoefficientPerThread {
  * It assumes that edgelist of each node is sorted.
  * This uses a PerThreadStorage implementation.
  */
-  void OrderedCountAlgo(Graph* graph) {
-    katana::PerThreadStorage<std::vector<uint64_t>>
-        per_thread_node_triangle_count;
-    uint64_t num_nodes = graph->size();
-    uint32_t num_threads = katana::getActiveThreads();
+  void OrderedCountAlgo(const SortedGraphView& graph) {
+    const uint64_t num_nodes = graph.size();
+    const uint32_t num_threads = katana::getActiveThreads();
+
+    // allocate num_nodes * num_threads long array and divide it among threads
+    TriangleCountVec all_thread_count_vec;
+    all_thread_count_vec.allocateBlocked(num_nodes * num_threads);
+    katana::ParallelSTL::fill(
+        all_thread_count_vec.begin(), all_thread_count_vec.end(), uint32_t{0});
+
+    katana::PerThreadStorage<IterPair> per_thread_node_triangle_count;
+
+    katana::on_each([&](const unsigned tid, const unsigned numT) {
+      *per_thread_node_triangle_count.getLocal() = katana::block_range(
+          all_thread_count_vec.begin(), all_thread_count_vec.end(), tid, numT);
+    });
 
     katana::do_all(
-        katana::iterate((uint32_t)0, num_threads), [&](uint32_t tid) {
-          per_thread_node_triangle_count.getRemote(tid)->resize(num_nodes, 0);
-        });
-
-    katana::do_all(
-        katana::iterate(*graph),
+        katana::iterate(graph),
         [&](const Node& n) {
           OrderedCountFunc(
-              graph, n, &(*per_thread_node_triangle_count.getLocal()));
+              graph, n, *per_thread_node_triangle_count.getLocal());
         },
         katana::chunk_size<kChunkSize>(), katana::steal(),
         katana::loopname("TriangleCount_OrderedCountAlgo"));
 
     katana::do_all(
-        katana::iterate(*graph),
+        katana::iterate(graph),
         [&](const Node& n) {
           node_triangle_count_[n] = 0;
           for (uint32_t i = 0; i < num_threads; i++) {
-            node_triangle_count_[n] +=
-                (*(per_thread_node_triangle_count.getRemote(i)))[n];
+            auto my_count_range = *per_thread_node_triangle_count.getRemote(i);
+
+            node_triangle_count_[n] += *(my_count_range.first + n);
           }
         },
-        katana::chunk_size<kChunkSize>(), katana::steal(), katana::no_stats(),
+        katana::chunk_size<kChunkSize>(), katana::steal(),
         katana::loopname("TriangleCount_Reduce"));
   }
 
-  void ComputeLocalClusteringCoefficient(Graph* graph) {
+  void ComputeLocalClusteringCoefficient(SortedGraphView* graph) {
     katana::do_all(katana::iterate(*graph), [&](Node n) {
-      auto degree =
-          std::distance(graph->edges(n).begin(), graph->edges(n).end());
+      auto degree = graph->degree(n);
       if (degree > 1) {
         graph->template GetData<NodeClusteringCoefficient>(n) =
-            ((double)(2 * node_triangle_count_[n])) / (degree * (degree - 1));
+            static_cast<double>(2 * node_triangle_count_[n]) /
+            (degree * (degree - 1));
       } else {
         graph->template GetData<NodeClusteringCoefficient>(n) = 0.0;
       }
@@ -234,37 +218,20 @@ struct LocalClusteringCoefficientPerThread {
     return;
   }
 
-  katana::Result<void> operator()(
-      katana::PropertyGraph* pg, const std::string& output_property_name) {
-    if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-            pg, {output_property_name});
-        !result) {
-      return result.error();
-    }
-
-    auto graph_result = Graph::Make(pg, {output_property_name}, {});
-    if (!graph_result) {
-      return graph_result.error();
-    }
-
-    Graph graph = graph_result.value();
-
+  katana::Result<void> operator()(SortedGraphView* graph) {
     katana::StatTimer execTime(
         "LocalClusteringCoefficient", "LocalClusteringCoefficient");
     execTime.start();
 
-    node_triangle_count_.allocateBlocked(graph.size());
+    node_triangle_count_.allocateBlocked(graph->num_nodes());
 
     // Calculate the number of triangles
     // on each node
-    OrderedCountAlgo(&graph);
+    OrderedCountAlgo(*graph);
 
     // Compute the clustering coefficient of each
     // node based on the triangles.
-    ComputeLocalClusteringCoefficient(&graph);
-
-    node_triangle_count_.destroy();
-    node_triangle_count_.deallocate();
+    ComputeLocalClusteringCoefficient(graph);
 
     execTime.stop();
     return katana::ResultSuccess();
@@ -276,9 +243,16 @@ template <typename Algorithm>
 katana::Result<void>
 LocalClusteringCoefficientWithWrap(
     katana::PropertyGraph* pg, const std::string& output_property_name) {
-  Algorithm algo;
+  if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
+          pg, {output_property_name});
+      !result) {
+    return result.error();
+  }
+  auto sorted_view =
+      KATANA_CHECKED(SortedGraphView::Make(pg, {output_property_name}, {}));
 
-  return algo(pg, output_property_name);
+  Algorithm algo;
+  return algo(&sorted_view);
 }
 
 katana::Result<void>
@@ -290,7 +264,7 @@ katana::analytics::LocalClusteringCoefficient(
   katana::StatTimer timer_auto_algo(
       "AutoRelabel", "LocalClusteringCoefficient");
 
-  bool relabel;
+  [[maybe_unused]] bool relabel;
   timer_graph_read.start();
   switch (plan.relabeling()) {
   case LocalClusteringCoefficientPlan::kNoRelabel:
@@ -308,19 +282,13 @@ katana::analytics::LocalClusteringCoefficient(
     return katana::ErrorCode::AssertionFailed;
   }
 
-  //  std::unique_ptr<katana::PropertyGraph> mutable_pfg;
-  //  if (relabel || !plan.edges_sorted()) {
-  //    // Copy the graph so we don't mutate the users graph.
-  //    auto mutable_pfg_result = pg->Copy({}, {});
-  //    if (!mutable_pfg_result) {
-  //      return mutable_pfg_result.error();
-  //    }
-  //    mutable_pfg = std::move(mutable_pfg_result.value());
-  //    pg = mutable_pfg.get();
-  //  }
-
-  // TODO(amp): Don't mutate the users topology!
-
+  // TODO(amber): For now, we create a sorted view (in
+  // LocalClusteringCoefficientWithWrap) unconditionally. With current triangle
+  // counting algorithm, relabelling is not expected to help, but it will once we
+  // switch to NodeIteratingAlgo, at which point, change the
+  // SortedPropertyGraphView to
+  // PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID
+#if 0
   if (relabel) {
     katana::StatTimer timer_relabel(
         "GraphRelabelTimer", "LocalClusteringCoefficient");
@@ -337,6 +305,7 @@ katana::analytics::LocalClusteringCoefficient(
       return r.error();
     }
   }
+#endif
 
   timer_graph_read.stop();
 
@@ -344,12 +313,12 @@ katana::analytics::LocalClusteringCoefficient(
 
   switch (plan.algorithm()) {
   case LocalClusteringCoefficientPlan::kOrderedCountAtomics: {
-    LocalClusteringCoefficientAtomics algo;
-    return algo(pg, output_property_name);
+    return LocalClusteringCoefficientWithWrap<
+        LocalClusteringCoefficientAtomics>(pg, output_property_name);
   }
   case LocalClusteringCoefficientPlan::kOrderedCountPerThread: {
-    LocalClusteringCoefficientPerThread algo_per_thread;
-    return algo_per_thread(pg, output_property_name);
+    return LocalClusteringCoefficientWithWrap<
+        LocalClusteringCoefficientPerThread>(pg, output_property_name);
   }
   default:
     return katana::ErrorCode::InvalidArgument;

@@ -185,10 +185,8 @@ BSPTrussJacobiAlgo(SortedGraphView* g, uint32_t k) {
     katana::do_all(
         katana::iterate(unsupported),
         [&](Edge e) {
-          KATANA_LOG_DEBUG_ASSERT(
-              g->find_edge(e.first, e.second) != g->edges(e.first).end());
-          KATANA_LOG_DEBUG_ASSERT(
-              g->find_edge(e.second, e.first) != g->edges(e.second).end());
+          KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.first, e.second));
+          KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.second, e.first));
           g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.first, e.second)) =
               removed;
           g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.second, e.first)) =
@@ -212,10 +210,8 @@ struct KeepSupportedEdges {
     if (IsSupportNoLessThanJ(*g, e.first, e.second, j)) {
       s.push_back(e);
     } else {
-      KATANA_LOG_DEBUG_ASSERT(
-          g->find_edge(e.first, e.second) != g->edges(e.first).end());
-      KATANA_LOG_DEBUG_ASSERT(
-          g->find_edge(e.second, e.first) != g->edges(e.second).end());
+      KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.first, e.second));
+      KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.second, e.first));
       g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.first, e.second)) =
           removed;
       g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.second, e.first)) =
@@ -283,8 +279,8 @@ struct KeepValidNodes {
     } else {
       for (auto e : g->edges(n)) {
         auto dest = g->edge_dest(e);
-        KATANA_LOG_DEBUG_ASSERT(g->find_edge(n, dest) != g->edges(n).end());
-        KATANA_LOG_DEBUG_ASSERT(g->find_edge(dest, n) != g->edges(dest).end());
+        KATANA_LOG_DEBUG_ASSERT(g->has_edge(n, dest));
+        KATANA_LOG_DEBUG_ASSERT(g->has_edge(dest, n));
 
         g->template GetEdgeData<EdgeFlag>(*g->find_edge(n, dest)) = removed;
         g->template GetEdgeData<EdgeFlag>(*g->find_edge(dest, n)) = removed;

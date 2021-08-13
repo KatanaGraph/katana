@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 
 void
@@ -131,6 +132,65 @@ katana::EdgeShuffleTopology::MakeOriginalCopy(const katana::PropertyGraph* pg) {
       TransposeKind::kNo, EdgeSortKind::kAny,
       std::move(copy_topo.GetAdjIndices()), std::move(copy_topo.GetDests()),
       std::move(edge_prop_indices)});
+}
+
+katana::GraphTopologyTypes::edge_iterator
+katana::EdgeShuffleTopology::find_edge(
+    const katana::GraphTopologyTypes::Node& src,
+    const katana::GraphTopologyTypes::Node& dst) const noexcept {
+  auto e_range = edges(src);
+
+  constexpr size_t kBinarySearchThreshold = 64;
+
+  if (e_range.size() > kBinarySearchThreshold &&
+      !has_edges_sorted_by(EdgeSortKind::kSortedByDestID)) {
+    KATANA_WARN_ONCE(
+        "find_edge(): expect poor performance. Edges not sorted by Dest ID");
+  }
+
+  if (e_range.size() <= kBinarySearchThreshold) {
+    auto iter = std::find_if(
+        e_range.begin(), e_range.end(),
+        [&](const GraphTopology::Edge& e) { return edge_dest(e) == dst; });
+
+    return iter;
+
+  } else {
+    auto iter = std::lower_bound(
+        e_range.begin(), e_range.end(), dst,
+        internal::EdgeDestComparator<EdgeShuffleTopology>{this});
+
+    return edge_dest(*iter) == dst ? iter : e_range.end();
+  }
+}
+
+katana::GraphTopologyTypes::edges_range
+katana::EdgeShuffleTopology::find_edges(
+    const katana::GraphTopologyTypes::Node& src,
+    const katana::GraphTopologyTypes::Node& dst) const noexcept {
+  auto e_range = edges(src);
+  if (e_range.empty()) {
+    return e_range;
+  }
+
+  KATANA_LOG_VASSERT(
+      !has_edges_sorted_by(EdgeSortKind::kSortedByDestID),
+      "Must have edges sorted by kSortedByDestID");
+
+  internal::EdgeDestComparator<EdgeShuffleTopology> comp{this};
+  auto [first_it, last_it] =
+      std::equal_range(e_range.begin(), e_range.end(), dst, comp);
+
+  if (first_it == e_range.end() || edge_dest(*first_it) != dst) {
+    // return empty range
+    return MakeStandardRange(e_range.end(), e_range.end());
+  }
+
+  auto ret_range = MakeStandardRange(first_it, last_it);
+  for ([[maybe_unused]] auto e : ret_range) {
+    KATANA_LOG_DEBUG_ASSERT(edge_dest(e) == dst);
+  }
+  return ret_range;
 }
 
 void

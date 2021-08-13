@@ -53,8 +53,8 @@ public:
   GraphTopology& operator=(const GraphTopology&) = delete;
 
   GraphTopology(
-      const Edge* adj_indices, size_t numNodes, const Node* dests,
-      size_t numEdges) noexcept;
+      const Edge* adj_indices, size_t num_nodes, const Node* dests,
+      size_t num_edges) noexcept;
 
   GraphTopology(NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests) noexcept
       : adj_indices_(std::move(adj_indices)), dests_(std::move(dests)) {}
@@ -223,6 +223,14 @@ public:
 
     ret->sortEdges(pg, edge_sort_todo);
     return ret;
+  }
+
+  edge_iterator find_edge(const Node& src, const Node& dst) const noexcept;
+
+  edges_range find_edges(const Node& src, const Node& dst) const noexcept;
+
+  bool has_edge(const Node& src, const Node& dst) const noexcept {
+    return find_edge(src, dst) != edges(src).end();
   }
 
 protected:
@@ -809,65 +817,35 @@ private:
 using SimpleBiDirTopology =
     BasicBiDirTopoWrapper<GraphTopology, EdgeShuffleTopology>;
 
-using NodesSortedByDegreeEdgesSortedByDestIDTopology =
-    BasicTopologyWrapper<ShuffleTopology>;
-
-class KATANA_EXPORT EdgesSortedByDestTopology
-    : public BasicTopologyWrapper<EdgeShuffleTopology> {
-  using Base = BasicTopologyWrapper<EdgeShuffleTopology>;
+template <typename Topo>
+class SortedTopologyWrapper : public BasicTopologyWrapper<Topo> {
+  using Base = BasicTopologyWrapper<Topo>;
 
 public:
-  EdgesSortedByDestTopology(const EdgeShuffleTopology* topo) noexcept
-      : Base(topo) {
+  using typename Base::Node;
+
+  explicit SortedTopologyWrapper(const Topo* t) noexcept : Base(t) {
     KATANA_LOG_DEBUG_ASSERT(Base::topo().has_edges_sorted_by(
         EdgeShuffleTopology::EdgeSortKind::kSortedByDestID));
   }
 
-  edge_iterator find_edge(const Node& src, const Node& dst) const noexcept {
-    const auto& topo = Base::topo();
-    auto e_range = topo.edges(src);
-
-    constexpr size_t kBinarySearchThreshold = 64;
-
-    if (e_range.size() <= kBinarySearchThreshold) {
-      auto iter = std::find_if(
-          e_range.begin(), e_range.end(), [&](const GraphTopology::Edge& e) {
-            return topo.edge_dest(e) == dst;
-          });
-
-      return iter;
-
-    } else {
-      auto iter = std::lower_bound(
-          e_range.begin(), e_range.end(), dst,
-          internal::EdgeDestComparator<EdgesSortedByDestTopology>{this});
-
-      return topo.edge_dest(*iter) == dst ? iter : e_range.end();
-    }
+  auto find_edge(const Node& src, const Node& dst) const noexcept {
+    return Base::topo().find_edge(src, dst);
   }
 
-  edges_range find_edges(const Node& src, const Node& dst) const noexcept {
-    auto e_range = Base::topo().edges(src);
-    if (e_range.empty()) {
-      return e_range;
-    }
+  auto has_edge(const Node& src, const Node& dst) const noexcept {
+    return Base::topo().has_edge(src, dst);
+  }
 
-    internal::EdgeDestComparator<EdgesSortedByDestTopology> comp{this};
-    auto [first_it, last_it] =
-        std::equal_range(e_range.begin(), e_range.end(), dst, comp);
-
-    if (first_it == e_range.end() || edge_dest(*first_it) != dst) {
-      // return empty range
-      return MakeStandardRange(e_range.end(), e_range.end());
-    }
-
-    auto ret_range = MakeStandardRange(first_it, last_it);
-    for ([[maybe_unused]] auto e : ret_range) {
-      KATANA_LOG_DEBUG_ASSERT(edge_dest(e) == dst);
-    }
-    return ret_range;
+  auto find_edges(const Node& src, const Node& dst) const noexcept {
+    return Base::topo().find_edges(src, dst);
   }
 };
+
+using EdgesSortedByDestTopology = SortedTopologyWrapper<EdgeShuffleTopology>;
+
+using NodesSortedByDegreeEdgesSortedByDestIDTopology =
+    SortedTopologyWrapper<ShuffleTopology>;
 
 class KATANA_EXPORT EdgeTypeAwareBiDirTopology
     : public BasicBiDirTopoWrapper<
@@ -992,7 +970,7 @@ private:
   const PropertyGraph* prop_graph_;
 };
 
-// TODO (amber): add template flags for checking sort and transpose status
+namespace internal {
 using PGViewEdgesSortedByDestID =
     BasicPropGraphViewWrapper<EdgesSortedByDestTopology>;
 using PGViewNodesSortedByDegreeEdgesSortedByDestID =
@@ -1001,21 +979,13 @@ using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
 using PGViewEdgeTypeAwareBiDir =
     BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
 
-struct PropertyGraphViews {
-  using BiDirectional = PGViewBiDirectional;
-  using EdgesSortedByDestID = PGViewEdgesSortedByDestID;
-  using EdgeTypeAwareBiDir = PGViewEdgeTypeAwareBiDir;
-  using NodesSortedByDegreeEdgesSortedByDestID =
-      PGViewNodesSortedByDegreeEdgesSortedByDestID;
-};
-
 template <typename PGView>
 struct PGViewBuilder {};
 
 template <>
 struct PGViewBuilder<PGViewBiDirectional> {
   template <typename ViewCache>
-  static PGViewBiDirectional BuildView(
+  static internal::PGViewBiDirectional BuildView(
       const PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
         pg, EdgeShuffleTopology::TransposeKind::kYes,
@@ -1071,6 +1041,16 @@ struct PGViewBuilder<PGViewEdgeTypeAwareBiDir> {
   }
 };
 
+}  // end namespace internal
+
+struct PropertyGraphViews {
+  using BiDirectional = internal::PGViewBiDirectional;
+  using EdgesSortedByDestID = internal::PGViewEdgesSortedByDestID;
+  using EdgeTypeAwareBiDir = internal::PGViewEdgeTypeAwareBiDir;
+  using NodesSortedByDegreeEdgesSortedByDestID =
+      internal::PGViewNodesSortedByDegreeEdgesSortedByDestID;
+};
+
 class KATANA_EXPORT PGViewCache {
   std::vector<std::unique_ptr<EdgeShuffleTopology>> edge_shuff_topos_;
   std::vector<std::unique_ptr<ShuffleTopology>> fully_shuff_topos_;
@@ -1079,7 +1059,7 @@ class KATANA_EXPORT PGViewCache {
   // TODO(amber): define a node_type_id_map_;
 
   template <typename>
-  friend struct PGViewBuilder;
+  friend struct internal::PGViewBuilder;
 
 public:
   PGViewCache() = default;
@@ -1091,7 +1071,7 @@ public:
 
   template <typename PGView>
   PGView BuildView(const PropertyGraph* pg) noexcept {
-    return PGViewBuilder<PGView>::BuildView(pg, *this);
+    return internal::PGViewBuilder<PGView>::BuildView(pg, *this);
   }
 
 private:

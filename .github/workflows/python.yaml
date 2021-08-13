@@ -408,15 +408,6 @@ jobs:
           python -c "import katana; katana.for_each;"
           python -c "import katana.local.analytics; katana.local.analytics.sssp;"
 
-      - name: Test Metagraph Plugin
-        if: startsWith(matrix.os, 'ubuntu-')
-        run: |
-          . .github/workflows/activate_miniconda.sh && \
-          cd metagraph-plugin && \
-          conda env create -f katana-metagraph.yml && \
-          conda activate katana-metagraph && \
-          pytest metagraph_katana/tests
-
       - name: Install
         run: |
           . .github/workflows/activate_miniconda.sh

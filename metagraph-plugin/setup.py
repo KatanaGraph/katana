@@ -12,6 +12,6 @@ setup(
     author="Katana Graph, Inc.",
     packages=find_packages(include=["metagraph_katana", "metagraph_katana.*"]),
     include_package_data=True,
-    install_requires=["metagraph", "katana"],
+    install_requires=["metagraph", "katana-python"],
     entry_points={"metagraph.plugins": "plugins=metagraph_katana.plugins:find_plugins"},
 )

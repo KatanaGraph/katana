@@ -1,12 +1,14 @@
 package:
   name: metagraph-katana
-  version: 0.0.1
+  version: "{{ KATANA_VERSION }}"
 
 source:
   path: ../
 
 build:
   number: 0
+  script_env:
+    - KATANA_VERSION
   noarch: python
   script: {{ PYTHON }} -m pip install . --no-deps -vv
 
@@ -15,14 +17,11 @@ requirements:
   build:
     - git
     - cmake
-    - pytest
   host:
     - pip
     - python
-    - pytest
   run:
     - python
-    - pytest
     - metagraph
     - katana-cpp>=0.1.12.dev
     - katana-python>=0.1.12.dev
@@ -37,8 +36,8 @@ test:
     - pytest
   source_files:
     - tests
-  script:
-    - run_pytest.sh
+  commands:
+    - pytest -s -v tests
 
 
 about:

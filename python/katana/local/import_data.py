@@ -8,11 +8,13 @@ from typing import Collection, Dict, Optional, Union
 import numba
 import numpy as np
 
-from katana.local._graph import Graph, from_graphml
+from katana.local._graph import Graph
+from katana.local._import_data import from_csr, from_graphml
 from katana.native_interfacing.buffer_access import to_numpy
 
 __all__ = [
     "from_graphml",
+    "from_csr",
     "from_adjacency_matrix",
     "from_edge_list_matrix",
     "from_edge_list_arrays",
@@ -97,7 +99,7 @@ def from_edge_list_arrays(
     csr_indices = np.empty(n_nodes, dtype=np.uint64)
     _fill_indices(sort_order, sources, csr_indices)
 
-    graph = Graph.from_csr(csr_indices, csr_destinations)
+    graph = from_csr(csr_indices, csr_destinations)
     if properties:
         graph.add_edge_property(properties)
     return graph

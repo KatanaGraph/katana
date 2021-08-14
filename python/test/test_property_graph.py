@@ -9,6 +9,7 @@ import pytest
 
 from katana import TsubaError, do_all, do_all_operator
 from katana.local import Graph
+from katana.local.import_data import from_csr
 
 
 def test_load(graph):
@@ -185,7 +186,7 @@ def test_upsert_edge_property_dict(graph):
 
 
 def test_from_csr():
-    pg = Graph.from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
+    pg = from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
     assert pg.num_nodes() == 2
     assert pg.num_edges() == 1
     assert list(pg.edges(0)) == [0]
@@ -193,7 +194,7 @@ def test_from_csr():
 
 
 def test_from_csr_int16():
-    pg = Graph.from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
+    pg = from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
     assert pg.num_nodes() == 2
     assert pg.num_edges() == 1
     assert list(pg.edges(0)) == [0]
@@ -201,7 +202,7 @@ def test_from_csr_int16():
 
 
 def test_from_csr_k3():
-    pg = Graph.from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
+    pg = from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
     assert pg.num_nodes() == 3
     assert pg.num_edges() == 6
     assert list(pg.edges(2)) == [4, 5]

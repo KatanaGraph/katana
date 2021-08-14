@@ -16,7 +16,7 @@ RDGVersion::RDGVersion(const std::string& src) {
   char dest[kRDGVersionIDLength+1];
   char* token;
 
-  strncpy(dest, src.c_str(), 20);
+  strncpy(dest, src.c_str(), kRDGVersionIDLength);
   dest[kRDGVersionIDLength] = '\0';
   token = strtok(dest, "_");
 
@@ -99,14 +99,19 @@ RDGVersion::ShareBranch(const RDGVersion& in) {
   if (branches_.size() != in.branches_.size())
     return false;
 
-    // TODO(wkyu): to get a correct string comparison
-#if 0
+  // only need to compare branch_
   for (uint32_t i = 0; i < branches_.size(); i++) {
-    if (0!=(branches_[i].compare(in.branches_[i]))) {
+    if(0!=strcmp(branches_[i].c_str(), in.branches_[i].c_str())) {
       return false;
     }
   }
-#else
+
+#if 1
+  if (std::equal(numbers_.begin(), numbers_.end()-1, in.numbers_.begin()))
+    return true;
+  else 
+    return false;
+
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
     if (numbers_[i] != in.numbers_[i]) {
       return false;
@@ -118,21 +123,14 @@ RDGVersion::ShareBranch(const RDGVersion& in) {
 
 bool
 operator==(const RDGVersion& lhs, const RDGVersion& rhs) {
-  // TODO(wkyu): add correct string comparison later
-#if 0
-  if (lhs.branches_.size() != rhs.branches_.size())
+  RDGVersion tmp = lhs;
+  if (!tmp.ShareBranch(rhs))
     return false;
-  for (uint32_t i = 0; i < lhs.branches_.size(); i++) {
-    if (0!=(lhs.branches_[i].compare(rhs.branches_[i]))) {
-      return false;
-    }
-  }
-#else
+
   if (lhs.numbers_ == rhs.numbers_)
     return true;
   else
     return false;
-#endif
 }
 
 bool

@@ -76,7 +76,6 @@ private:
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
-  PGViewCache pg_view_cache_;
 
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;
@@ -93,6 +92,8 @@ private:
       node_indexes_;
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
       edge_indexes_;
+
+  PGViewCache pg_view_cache_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
@@ -260,6 +261,10 @@ public:
     KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == num_edges());
   }
 
+  template <typename PGView>
+  PGView BuildView() noexcept {
+    return pg_view_cache_.BuildView<PGView>(this);
+  }
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -276,7 +281,8 @@ public:
 
   /// Make a property graph from topology and type arrays
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      GraphTopology&& topo_to_assign, EntityTypeIDVec&& node_entity_type_ids,
+      GraphTopology&& topo_to_assign, 
+      EntityTypeIDVec&& node_entity_type_ids,
       EntityTypeIDVec&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager);

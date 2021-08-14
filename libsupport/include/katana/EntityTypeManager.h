@@ -75,7 +75,7 @@ public:
         atomic_entity_type_id_to_entity_type_ids_(
             std::move(atomic_entity_type_id_to_entity_type_ids)) {}
 
-  // TODO(amber): delete this method. It's risky 
+  // TODO(amber): delete this method. It's risky
   void Reset() {
     atomic_entity_type_id_to_type_name_.clear();
     atomic_type_name_to_entity_type_id_.clear();

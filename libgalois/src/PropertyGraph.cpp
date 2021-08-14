@@ -178,7 +178,7 @@ MapEntityTypeIDsArray(const tsuba::FileView& file_view) {
       &type_IDs_array[0], &type_IDs_array[type_ID_array_size],
       entity_type_id_array.begin());
 
-  return std::move(entity_type_id_array);
+  return katana::MakeResult(std::move(entity_type_id_array));
 }
 
 katana::Result<std::unique_ptr<tsuba::FileFrame>>

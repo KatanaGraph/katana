@@ -281,8 +281,7 @@ public:
 
   /// Make a property graph from topology and type arrays
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      GraphTopology&& topo_to_assign, 
-      EntityTypeIDVec&& node_entity_type_ids,
+      GraphTopology&& topo_to_assign, EntityTypeIDVec&& node_entity_type_ids,
       EntityTypeIDVec&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager);

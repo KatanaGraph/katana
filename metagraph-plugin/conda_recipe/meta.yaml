@@ -17,6 +17,7 @@ requirements:
   build:
     - git
     - cmake
+    - katana-python>=0.1.12.dev
   host:
     - pip
     - python

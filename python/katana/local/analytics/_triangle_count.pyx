@@ -182,21 +182,16 @@ cdef uint64_t handle_result_int(Result[uint64_t] res) nogil except *:
 
 def triangle_count(PropertyGraph pg,  TriangleCountPlan plan = TriangleCountPlan()) -> int:
     """
-    Description
-    -----------
     Count the triangles in `pg`.
 
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type plan: TriangleCountPlan
     :param plan: The execution plan to use.
     :return: The number of triangles found.
 
-    Examples
-    --------
     .. code-block:: python
+
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph
@@ -206,6 +201,7 @@ def triangle_count(PropertyGraph pg,  TriangleCountPlan plan = TriangleCountPlan
         from katana.analytics import triangle_count
         n = triangle_count(property_graph)
         print("Triangle Count:", n)
+        
     """
     with nogil:
         v = handle_result_int(TriangleCount(pg.underlying_property_graph(), plan.underlying_))

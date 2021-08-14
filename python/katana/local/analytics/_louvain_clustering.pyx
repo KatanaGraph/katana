@@ -173,8 +173,6 @@ cdef class LouvainClusteringPlan(Plan):
 
 def louvain_clustering(PropertyGraph pg, str edge_weight_property_name, str output_property_name, LouvainClusteringPlan plan = LouvainClusteringPlan()):
     """
-    Description
-    -----------
     Compute the Louvain Clustering for pg.
     The edge weights are taken from the property named
     edge_weight_property_name (which may be a 32- or 64-bit sign or unsigned
@@ -183,8 +181,6 @@ def louvain_clustering(PropertyGraph pg, str edge_weight_property_name, str outp
     The property named output_property_name is created by this function and may
     not exist before the call.
         
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type edge_weight_property_name: str
@@ -194,9 +190,8 @@ def louvain_clustering(PropertyGraph pg, str edge_weight_property_name, str outp
     :type LouvainClusteringPlan: LouvainClusteringPlan
     :param LouvainClusteringPlan: The Louvain Clustering Plan
 
-    Examples
-    --------
     .. code-block:: python
+    
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

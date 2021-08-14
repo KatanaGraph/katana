@@ -123,12 +123,8 @@ cdef class KTrussPlan(Plan):
 
 def k_truss(PropertyGraph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan()) -> int:
     """
-    Description
-    -----------
     Compute the k-truss for pg. `pg` must be symmetric.
     
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :param k_truss_number: k. The number of triangles that each edge must be part of.
@@ -138,9 +134,8 @@ def k_truss(PropertyGraph pg, uint32_t k_truss_number, str output_property_name,
     :type plan: KTrussPlan
     :param plan: The execution plan to use.
 
-    Examples
-    --------
     .. code-block:: python
+    
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

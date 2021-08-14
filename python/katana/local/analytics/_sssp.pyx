@@ -246,13 +246,9 @@ cdef class SsspPlan(Plan):
 def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
          SsspPlan plan = SsspPlan()):
     """
-    Description
-    -----------
     Compute the Single-Source Shortest Path on `pg` using `start_node` as the source. The computed path lengths are
     written to the property `output_property_name`.
     
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type start_node: Node ID
@@ -264,9 +260,8 @@ def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str
     :type plan: SsspPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
 
-    Examples
-    --------
     .. code-block:: python
+    
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

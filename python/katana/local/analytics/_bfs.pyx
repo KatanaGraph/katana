@@ -161,14 +161,9 @@ cdef class BfsPlan(Plan):
 
 def bfs(PropertyGraph pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):
     """
-    
-    Description
-    -----------
     Compute the Breadth-First Search parents on `pg` using `start_node` as the source. The computed parents are
     written to the property `output_property_name`.
 
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type start_node: Node ID
@@ -178,9 +173,8 @@ def bfs(PropertyGraph pg, uint32_t start_node, str output_property_name, BfsPlan
     :type plan: BfsPlan
     :param plan: The execution plan to use.
 
-    Examples
-    --------
     .. code-block:: python
+
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

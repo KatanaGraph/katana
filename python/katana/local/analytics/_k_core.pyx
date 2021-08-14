@@ -108,12 +108,8 @@ cdef class KCorePlan(Plan):
 
 def k_core(PropertyGraph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan()) -> int:
     """
-    Description
-    -----------
     Compute nodes which are in the k-core of pg. The pg must be symmetric.
     
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :param k_core_number: k. The minimum degree of nodes in the resulting core.
@@ -123,9 +119,8 @@ def k_core(PropertyGraph pg, uint32_t k_core_number, str output_property_name, K
     :type plan: KCorePlan
     :param plan: The execution plan to use.
 
-    Examples
-    --------
     .. code-block:: python
+    
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

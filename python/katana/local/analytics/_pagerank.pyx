@@ -169,12 +169,8 @@ cdef class PagerankPlan(Plan):
 
 def pagerank(PropertyGraph pg, str output_property_name, PagerankPlan plan = PagerankPlan()):
     """
-    Description
-    -----------
     Compute the Page Rank of each node in the graph.
     
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type output_property_name: str
@@ -182,9 +178,8 @@ def pagerank(PropertyGraph pg, str output_property_name, PagerankPlan plan = Pag
     :type plan: PagerankPlan
     :param plan: The execution plan to use.
 
-    Examples
-    --------
     .. code-block:: python
+    
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

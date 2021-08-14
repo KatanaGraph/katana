@@ -135,12 +135,8 @@ cdef class JaccardPlan(Plan):
 def jaccard(PropertyGraph pg, size_t compare_node, str output_property_name,
             JaccardPlan plan = JaccardPlan()):
     """
-    Description
-    -----------
     Compute the Jaccard Similarity between `compare_node` and all nodes in the graph.
     
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type compare_node: node ID
@@ -150,9 +146,8 @@ def jaccard(PropertyGraph pg, size_t compare_node, str output_property_name,
     :type plan: JaccardPlan
     :param plan: The execution plan to use.
     
-    Examples
-    --------
     .. code-block:: python
+    
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

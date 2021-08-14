@@ -119,8 +119,6 @@ cdef class LocalClusteringCoefficientPlan(Plan):
                 bool edges_sorted = kDefaultEdgesSorted
             ):
         """
-        Description
-        -----------
         An ordered count algorithm that sorts the nodes by degree before
         execution. This has been found to give good performance. We implement the
         ordered count algorithm from the following:
@@ -128,8 +126,6 @@ cdef class LocalClusteringCoefficientPlan(Plan):
 
         This algorithm uses atomic instructions to update counts.
         
-        Parameters
-        ----------
         :param relabeling: Should the algorithm relabel the nodes.
         :param edges_sorted: Are the edges of the graph already sorted.
 

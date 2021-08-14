@@ -247,12 +247,8 @@ cdef class ConnectedComponentsPlan(Plan):
 def connected_components(PropertyGraph pg, str output_property_name,
                          ConnectedComponentsPlan plan = ConnectedComponentsPlan()) -> int:
     """
-    Description
-    -----------
     Compute the Connected-components for `pg`. `pg` must be symmetric.
 
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type output_property_name: str
@@ -260,9 +256,8 @@ def connected_components(PropertyGraph pg, str output_property_name,
     :type plan: ConnectedComponentsPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
     
-    Examples
-    --------
     .. code-block:: python
+    
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

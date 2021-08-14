@@ -124,14 +124,10 @@ cdef class IndependentSetPlan(Plan):
 def independent_set(PropertyGraph pg, str output_property_name,
              IndependentSetPlan plan = IndependentSetPlan()):
     """
-    Description
-    -----------
     Find a maximal (not the maximum) independent set in the graph and create an indicator property that is true for
     elements of the independent set. The graph must be symmetric. The property named output_property_name is created by
     this function and may not exist before the call. The created property has type uint8_t.
 
-    Parameters
-    ----------
     :type pg: PropertyGraph
     :param pg: The graph to analyze.
     :type output_property_name: str
@@ -139,9 +135,8 @@ def independent_set(PropertyGraph pg, str output_property_name,
     :type plan: IndependentSetPlan
     :param plan: The execution plan to use.
     
-    Examples
-    --------
     .. code-block:: python
+    
         import katana.local
         from katana.example_utils import get_input
         from katana.property_graph import PropertyGraph

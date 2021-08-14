@@ -161,7 +161,6 @@ cdef class BfsPlan(Plan):
 
 def bfs(PropertyGraph pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):
     """
-    
     Compute the Breadth-First Search parents on `pg` using `start_node` as the source. The computed parents are
     written to the property `output_property_name`.
 

@@ -1,12 +1,18 @@
+import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 import numpy as np
 import pandas
 import pytest
 
-from katana.local.convert_graph import (
+from katana.local import Graph
+from katana.local.import_data import (
     from_adjacency_matrix,
     from_edge_list_arrays,
     from_edge_list_dataframe,
     from_edge_list_matrix,
+    from_graphml,
 )
 
 
@@ -107,3 +113,22 @@ def test_dataframe():
     ]
     assert [g.get_edge_dest(i) for i in range(g.num_edges())] == [1, 2, 0]
     assert list(g.get_edge_property("prop").to_numpy()) == [1, 2, 3]
+
+
+@pytest.mark.required_env("KATANA_SOURCE_DIR")
+def test_load_graphml():
+    input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
+    pg = from_graphml(input_file)
+    assert pg.get_node_property(0)[1].as_py() == "Keanu Reeves"
+
+
+@pytest.mark.required_env("KATANA_SOURCE_DIR")
+def test_load_graphml_write():
+    input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
+    pg = from_graphml(input_file)
+    with TemporaryDirectory() as tmpdir:
+        pg.write(tmpdir)
+        del pg
+        graph = Graph(tmpdir)
+        assert graph.path == f"file://{tmpdir}"
+    assert graph.get_node_property(0)[1].as_py() == "Keanu Reeves"

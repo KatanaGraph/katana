@@ -3,7 +3,7 @@ from katana.cpp.libgalois.Galois cimport getActiveThreads as c_getActiveTheads
 from katana.cpp.libgalois.Galois cimport getVersion as c_getVersion
 from katana.cpp.libgalois.Galois cimport setActiveThreads as c_setActiveThreads
 
-__all__ = ["set_active_threads", "get_version"]
+__all__ = ["get_active_threads", "set_active_threads", "set_busy_wait", "get_version"]
 
 
 def get_active_threads():

@@ -12,4 +12,5 @@ Python Library
    katana.local.atomic
    katana.local.datastructures
    katana.local.graph
+   katana.local.import_data
    katana.timer

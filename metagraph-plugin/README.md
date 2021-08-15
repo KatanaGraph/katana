@@ -10,7 +10,7 @@ Users can use graph algorithms/representations from different graph libraries wi
 Highlights include:
 - Katana Graph built-in algorithms/types which can be used by existing Metagraph API.
 - Graph analytics algorithms supported by both existing metagraph plugin graph libraries and Katana Graph.
-- The bi-direction translation between Katana Graph format and the NetworkX Graph format.
+- The bi-direction translation between Katana Graph format and the existing metagraph data formats (e.g., NetworkX Graph format).
 
 
 

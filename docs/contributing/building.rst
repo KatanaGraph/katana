@@ -4,7 +4,7 @@
 Building
 ========
 
-If you are building katana-enterprise make sure to also read the `enterprise build addenda <enterprise-building>`_.
+If you are building katana-enterprise make sure to also read the :doc:`enterprise build addenda <index>`.
 
 Setting up a Build
 ==================

@@ -30,82 +30,72 @@ namespace {
 using namespace katana::analytics;
 using edge_iterator = boost::counting_iterator<uint64_t>;
 
+using SortedGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
+using Node = SortedGraphView::Node;
+using Edge = SortedGraphView::Edge;
+
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 SubGraphNodeSet(
-    katana::PropertyGraph* graph, const std::vector<uint32_t>& node_set) {
-  if (node_set.empty()) {
-    return std::make_unique<katana::PropertyGraph>();
-  }
-
+    const SortedGraphView& graph, const std::vector<Node>& node_set) {
   uint64_t num_nodes = node_set.size();
   // Subgraph topology : out indices
-  katana::NUMAArray<uint64_t> out_indices;
+  katana::NUMAArray<Edge> out_indices;
   out_indices.allocateInterleaved(num_nodes);
 
-  katana::gstl::Vector<katana::gstl::Vector<uint32_t>> subgraph_edges;
+  katana::gstl::Vector<katana::gstl::Vector<Node>> subgraph_edges;
   subgraph_edges.resize(num_nodes);
 
   katana::do_all(
-      katana::iterate(uint32_t(0), uint32_t(num_nodes)),
-      [&](const uint32_t& n) {
-        uint32_t src = node_set[n];
+      katana::iterate(Node(0), Node(num_nodes)),
+      [&](const Node& n) {
+        Node src = node_set[n];
 
-        auto last = graph->edges(src).end();
-        for (uint32_t m = 0; m < num_nodes; ++m) {
+        auto last = graph.edges(src).end();
+        for (Node m = 0; m < num_nodes; ++m) {
           auto dest = node_set[m];
           // Binary search on the edges sorted by destination id
-          auto edge_id = katana::FindEdgeSortedByDest(graph, src, dest);
-          while (edge_id != *last && *graph->GetEdgeDest(edge_id) == dest) {
+          for (auto edge_it = graph.find_edge(src, dest);
+               edge_it != last && graph.edge_dest(*edge_it) == dest;
+               ++edge_it) {
             subgraph_edges[n].push_back(m);
-            edge_id++;
           }
         }
         out_indices[n] = subgraph_edges[n].size();
       },
-      katana::steal(), katana::no_stats(),
-      katana::loopname("SubgraphExtraction"));
+      katana::steal(), katana::loopname("SubgraphExtraction"));
 
   // Prefix sum
-  for (uint64_t i = 1; i < num_nodes; ++i) {
-    out_indices[i] += out_indices[i - 1];
-  }
+  katana::ParallelSTL::partial_sum(
+      out_indices.begin(), out_indices.end(), out_indices.begin());
   uint64_t num_edges = out_indices[num_nodes - 1];
 
   // Subgraph topology : out dests
-  katana::NUMAArray<uint32_t> out_dests;
+  katana::NUMAArray<Node> out_dests;
   out_dests.allocateInterleaved(num_edges);
 
   katana::do_all(
-      katana::iterate(uint32_t(0), uint32_t(num_nodes)),
-      [&](const uint32_t& n) {
+      katana::iterate(Node(0), Node(num_nodes)),
+      [&](const Node& n) {
         uint64_t offset = n == 0 ? 0 : out_indices[n - 1];
-        for (uint32_t dest : subgraph_edges[n]) {
+        for (Node dest : subgraph_edges[n]) {
           out_dests[offset] = dest;
           offset++;
         }
       },
-      katana::no_stats(), katana::loopname("ConstructTopology"));
+      katana::steal(), katana::loopname("ConstructTopology"));
 
   katana::GraphTopology sub_g_topo{
       std::move(out_indices), std::move(out_dests)};
   auto sub_g_res = katana::PropertyGraph::Make(std::move(sub_g_topo));
 
-  if (!sub_g_res) {
-    return sub_g_res.error();
-  }
-
-  return std::unique_ptr<katana::PropertyGraph>(std::move(sub_g_res.value()));
+  return sub_g_res;
 }
 }  // namespace
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::analytics::SubGraphExtraction(
-    katana::PropertyGraph* pg, const std::vector<uint32_t>& node_vec,
+    katana::PropertyGraph* pg, const std::vector<Node>& node_vec,
     SubGraphExtractionPlan plan) {
-  if (auto r = katana::SortAllEdgesByDest(pg); !r) {
-    return r.error();
-  }
-
   // Remove duplicates from the node vector
   std::unordered_set<uint32_t> set;
   std::vector<uint32_t> dedup_node_vec;
@@ -115,11 +105,17 @@ katana::analytics::SubGraphExtraction(
     }
   }
 
+  if (dedup_node_vec.empty()) {
+    return std::make_unique<katana::PropertyGraph>();
+  }
+
+  SortedGraphView sg = pg->BuildView<SortedGraphView>();
+
   katana::StatTimer execTime("SubGraph-Extraction");
   switch (plan.algorithm()) {
   case SubGraphExtractionPlan::kNodeSet: {
     execTime.start();
-    auto subgraph = SubGraphNodeSet(pg, dedup_node_vec);
+    auto subgraph = SubGraphNodeSet(sg, dedup_node_vec);
     execTime.stop();
     KATANA_LOG_DEBUG_ASSERT(subgraph);
     return std::move(subgraph.value());

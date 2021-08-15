@@ -32,6 +32,9 @@ using EdgeData = std::tuple<EdgeFlag>;
 typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
+using SortedGraphView = katana::TypedPropertyGraphView<
+    katana::PropertyGraphViews::EdgesSortedByDestID, NodeData, EdgeData>;
+
 using Edge = std::pair<GNode, GNode>;
 using EdgeVec = katana::InsertBag<Edge>;
 using NodeVec = katana::InsertBag<GNode>;
@@ -40,13 +43,12 @@ static const uint32_t valid = 0x0;
 static const uint32_t removed = 0x1;
 
 /// Initialize edge data to valid.
-template <typename Graph>
 void
-KTrussInitialization(Graph* g) {
+KTrussInitialization(SortedGraphView* g) {
   //! Initializa all edges to valid.
   katana::do_all(
       katana::iterate(*g),
-      [&g](typename Graph::Node N) {
+      [&g](typename SortedGraphView::Node N) {
         for (auto e : g->edges(N)) {
           g->template GetEdgeData<EdgeFlag>(e) = valid;
         }
@@ -67,7 +69,7 @@ KTrussInitialization(Graph* g) {
  *         more than or equal to j
  */
 bool
-IsValidDegreeNoLessThanJ(const Graph& g, GNode n, unsigned int j) {
+IsValidDegreeNoLessThanJ(const SortedGraphView& g, GNode n, unsigned int j) {
   size_t numValid = 0;
   for (auto e : g.edges(n)) {
     if (!(g.GetEdgeData<EdgeFlag>(e) & removed)) {
@@ -91,17 +93,18 @@ IsValidDegreeNoLessThanJ(const Graph& g, GNode n, unsigned int j) {
  * @return true if the src and the dest are included in more than j triangles
  */
 bool
-IsSupportNoLessThanJ(const Graph& g, GNode src, GNode dest, unsigned int j) {
+IsSupportNoLessThanJ(
+    const SortedGraphView& g, GNode src, GNode dest, unsigned int j) {
   size_t numValidEqual = 0;
-  auto srcI = g.edge_begin(src), srcE = g.edge_end(src),
-       dstI = g.edge_begin(dest), dstE = g.edge_end(dest);
+  auto srcI = g.edges(src).begin(), srcE = g.edges(src).end(),
+       dstI = g.edges(dest).begin(), dstE = g.edges(dest).end();
 
   while (true) {
     //! Find the first valid edge.
-    while (srcI != srcE && (g.GetEdgeData<EdgeFlag>(srcI) & removed)) {
+    while (srcI != srcE && (g.GetEdgeData<EdgeFlag>(*srcI) & removed)) {
       ++srcI;
     }
-    while (dstI != dstE && (g.GetEdgeData<EdgeFlag>(dstI) & removed)) {
+    while (dstI != dstE && (g.GetEdgeData<EdgeFlag>(*dstI) & removed)) {
       ++dstI;
     }
 
@@ -110,7 +113,7 @@ IsSupportNoLessThanJ(const Graph& g, GNode src, GNode dest, unsigned int j) {
     }
 
     //! Check for intersection.
-    auto sN = *g.GetEdgeDest(srcI), dN = *g.GetEdgeDest(dstI);
+    auto sN = g.edge_dest(*srcI), dN = g.edge_dest(*dstI);
     if (sN < dN) {
       ++srcI;
     } else if (dN < sN) {
@@ -129,7 +132,7 @@ IsSupportNoLessThanJ(const Graph& g, GNode src, GNode dest, unsigned int j) {
 }
 
 struct PickUnsupportedEdges {
-  Graph* g;
+  SortedGraphView* g;
   unsigned int j;
   EdgeVec& r;  ///< unsupported
   EdgeVec& s;  ///< next
@@ -146,7 +149,7 @@ struct PickUnsupportedEdges {
 /// 3. Remove unsupported edges in a separated loop.
 /// 4. Go back to 1.
 katana::Result<void>
-BSPTrussJacobiAlgo(Graph* g, uint32_t k) {
+BSPTrussJacobiAlgo(SortedGraphView* g, uint32_t k) {
   if (k <= 2) {
     return katana::ErrorCode::InvalidArgument;
   }
@@ -161,9 +164,9 @@ BSPTrussJacobiAlgo(Graph* g, uint32_t k) {
       katana::iterate(*g),
       [&](GNode n) {
         for (auto e : g->edges(n)) {
-          auto dest = g->GetEdgeDest(e);
-          if (*dest > n) {
-            cur->push_back(std::make_pair(n, *dest));
+          auto dest = g->edge_dest(e);
+          if (dest > n) {
+            cur->push_back(std::make_pair(n, dest));
           }
         }
       },
@@ -182,10 +185,12 @@ BSPTrussJacobiAlgo(Graph* g, uint32_t k) {
     katana::do_all(
         katana::iterate(unsupported),
         [&](Edge e) {
-          g->template GetEdgeData<EdgeFlag>(
-              katana::FindEdgeSortedByDest(*g, e.first, e.second)) = removed;
-          g->template GetEdgeData<EdgeFlag>(
-              katana::FindEdgeSortedByDest(*g, e.second, e.first)) = removed;
+          KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.first, e.second));
+          KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.second, e.first));
+          g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.first, e.second)) =
+              removed;
+          g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.second, e.first)) =
+              removed;
         },
         katana::steal());
 
@@ -197,7 +202,7 @@ BSPTrussJacobiAlgo(Graph* g, uint32_t k) {
 }
 
 struct KeepSupportedEdges {
-  Graph* g;
+  SortedGraphView* g;
   unsigned int j;
   EdgeVec& s;
 
@@ -205,10 +210,12 @@ struct KeepSupportedEdges {
     if (IsSupportNoLessThanJ(*g, e.first, e.second, j)) {
       s.push_back(e);
     } else {
-      g->template GetEdgeData<EdgeFlag>(
-          katana::FindEdgeSortedByDest(*g, e.first, e.second)) = removed;
-      g->template GetEdgeData<EdgeFlag>(
-          katana::FindEdgeSortedByDest(*g, e.second, e.first)) = removed;
+      KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.first, e.second));
+      KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.second, e.first));
+      g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.first, e.second)) =
+          removed;
+      g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.second, e.first)) =
+          removed;
     }
   }
 };
@@ -218,7 +225,7 @@ struct KeepSupportedEdges {
 /// 2. If all edges are kept, done.
 /// 3. Go back to 3.
 katana::Result<void>
-BSPTrussAlgo(Graph* g, unsigned int k) {
+BSPTrussAlgo(SortedGraphView* g, unsigned int k) {
   if (k <= 2) {
     return katana::ErrorCode::InvalidArgument;
   }
@@ -233,9 +240,9 @@ BSPTrussAlgo(Graph* g, unsigned int k) {
       katana::iterate(*g),
       [&g, &cur](GNode n) {
         for (auto e : g->edges(n)) {
-          auto dest = g->GetEdgeDest(e);
-          if (*dest > n) {
-            cur->push_back(std::make_pair(n, *dest));
+          auto dest = g->edge_dest(e);
+          if (dest > n) {
+            cur->push_back(std::make_pair(n, dest));
           }
         }
       },
@@ -262,7 +269,7 @@ BSPTrussAlgo(Graph* g, unsigned int k) {
 }
 
 struct KeepValidNodes {
-  Graph* g;
+  SortedGraphView* g;
   unsigned int j;
   NodeVec& s;
 
@@ -271,11 +278,12 @@ struct KeepValidNodes {
       s.push_back(n);
     } else {
       for (auto e : g->edges(n)) {
-        auto dest = g->GetEdgeDest(e);
-        g->template GetEdgeData<EdgeFlag>(
-            katana::FindEdgeSortedByDest(*g, n, *dest)) = removed;
-        g->template GetEdgeData<EdgeFlag>(
-            katana::FindEdgeSortedByDest(*g, *dest, n)) = removed;
+        auto dest = g->edge_dest(e);
+        KATANA_LOG_DEBUG_ASSERT(g->has_edge(n, dest));
+        KATANA_LOG_DEBUG_ASSERT(g->has_edge(dest, n));
+
+        g->template GetEdgeData<EdgeFlag>(*g->find_edge(n, dest)) = removed;
+        g->template GetEdgeData<EdgeFlag>(*g->find_edge(dest, n)) = removed;
       }
     }
   }
@@ -286,7 +294,7 @@ struct KeepValidNodes {
 /// 2. If all nodes are kept, done.
 /// 3. Go back to 1.
 katana::Result<void>
-BSPCoreAlgo(Graph* g, uint32_t k) {
+BSPCoreAlgo(SortedGraphView* g, uint32_t k) {
   auto cur = std::make_unique<NodeVec>();
   auto next = std::make_unique<NodeVec>();
   size_t curSize = g->num_nodes(), nextSize;
@@ -311,7 +319,7 @@ BSPCoreAlgo(Graph* g, uint32_t k) {
 /// 1. Reduce the graph to k-1 core
 /// 2. Compute k-truss from k-1 core
 katana::Result<void>
-BSPCoreThenTrussAlgo(Graph* g, uint32_t k) {
+BSPCoreThenTrussAlgo(SortedGraphView* g, uint32_t k) {
   if (k <= 2) {
     return katana::ErrorCode::InvalidArgument;
   }
@@ -348,17 +356,24 @@ katana::analytics::KTruss(
     return result.error();
   }
 
-  // TODO(amp): Don't mutate the users topology!
-  auto result = katana::SortAllEdgesByDest(pg);
-  if (!result) {
-    return result.error();
+  // // TODO(amp): Don't mutate the users topology!
+  // auto result = katana::SortAllEdgesByDest(pg);
+  // if (!result) {
+  // return result.error();
+  // }
+  //
+  // auto pg_result = Graph::Make(pg, {}, {output_property_name});
+  // if (!pg_result) {
+  // return pg_result.error();
+  // }
+  // auto graph = pg_result.value();
+
+  auto gv_res = SortedGraphView::Make(pg, {}, {output_property_name});
+  if (!gv_res) {
+    return gv_res.error();
   }
 
-  auto pg_result = Graph::Make(pg, {}, {output_property_name});
-  if (!pg_result) {
-    return pg_result.error();
-  }
-  auto graph = pg_result.value();
+  auto graph = gv_res.value();
 
   KTrussInitialization(&graph);
 

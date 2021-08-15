@@ -23,6 +23,7 @@ set(KATANA_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
 set(KATANA_ENABLE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
 set(KATANA_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fail")
 set(KATANA_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
+set(KATANA_ENABLE_COVERAGE OFF CACHE BOOL "Add instrumentation (used for code coverage collection) to binaries.")
 set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
 set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
 set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to use features of;
@@ -301,6 +302,13 @@ include(CheckEndian)
 # Testing-only dependencies
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
   find_package(benchmark REQUIRED)
+endif ()
+
+# Instrument binaries if desired
+if (KATANA_ENABLE_COVERAGE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g --coverage")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g --coverage")
+  add_link_options("SHELL: --coverage -lgcov")
 endif ()
 
 ###### Common Functions ######

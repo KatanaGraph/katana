@@ -1,13 +1,15 @@
 from cython import final
 
 from libc.stdint cimport uint64_t
-from libcpp.memory cimport shared_ptr
+from libcpp.memory cimport shared_ptr, unique_ptr
 from pyarrow.lib cimport CTable, Schema
 
-from katana.cpp.libgalois.graphs.Graph cimport GraphTopology, RDGLoadOptions, _PropertyGraph
+from katana.cpp.libgalois.graphs.Graph cimport GraphTopology, _PropertyGraph
+from katana.cpp.libsupport.result cimport Result
 
 
 cdef _convert_string_list(l)
+cdef shared_ptr[_PropertyGraph] handle_result_PropertyGraph(Result[unique_ptr[_PropertyGraph]] res) nogil except *
 
 #
 # Python Property Graph

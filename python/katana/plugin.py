@@ -1,6 +1,5 @@
 """
 Discover and setup all Katana plugins.
-
 """
 
 import importlib

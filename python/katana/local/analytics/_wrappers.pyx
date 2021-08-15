@@ -47,6 +47,9 @@ cdef extern from "katana/PropertyGraph.h" namespace "katana" nogil:
     Result[void] SortNodesByDegree(_PropertyGraph* pg);
 
 
+# TODO(amber/amp): Update the following functions to use Sorted PropertyGraph
+# Views, because functions like SortNodesByDegree and FindEdgeSortedByDest etc. are
+# deprecated and will be removed in the near future.
 def sort_all_edges_by_dest(Graph pg):
     """
     Sort the edges of each node by the node ID of the target. This enables the use of

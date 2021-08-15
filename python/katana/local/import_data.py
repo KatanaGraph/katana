@@ -1,13 +1,28 @@
+"""
+The :py:mod:`~katana.local.import_data` module provides a several graph conversion routines which take external data
+and convert it into a Katana :py:class:`~katana.local.Graph` object.
+"""
+
 from typing import Collection, Dict, Optional, Union
 
 import numba
 import numpy as np
 
-import katana.local
+from katana.local._graph import Graph
+from katana.local._import_data import from_csr, from_graphml
 from katana.native_interfacing.buffer_access import to_numpy
 
+__all__ = [
+    "from_graphml",
+    "from_csr",
+    "from_adjacency_matrix",
+    "from_edge_list_matrix",
+    "from_edge_list_arrays",
+    "from_edge_list_dataframe",
+]
 
-def from_adjacency_matrix(adjacency: np.ndarray, property_name: str = "weight") -> katana.local.Graph:
+
+def from_adjacency_matrix(adjacency: np.ndarray, property_name: str = "weight") -> Graph:
     """
     Convert an adjacency matrix with shape (n_nodes, n_nodes) into a :py:class:`~katana.local.Graph` with the
     non-zero values as an edge weight property.
@@ -20,7 +35,7 @@ def from_adjacency_matrix(adjacency: np.ndarray, property_name: str = "weight") 
     return from_edge_list_arrays(sources, destinations, {property_name: weights})
 
 
-def from_edge_list_matrix(edges: np.ndarray) -> katana.local.Graph:
+def from_edge_list_matrix(edges: np.ndarray) -> Graph:
     """
     Convert an edge list with shape (n_edges, 2) into a :py:class:`~katana.local.Graph`.
 
@@ -47,7 +62,7 @@ def _fill_indices(sort_order: np.ndarray, sources: np.ndarray, indices: np.ndarr
 
 def from_edge_list_arrays(
     sources: np.ndarray, destinations: np.ndarray, property_dict: Dict[str, np.ndarray] = None, **properties: np.ndarray
-) -> katana.local.Graph:
+) -> Graph:
     """
     Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.
 
@@ -84,7 +99,7 @@ def from_edge_list_arrays(
     csr_indices = np.empty(n_nodes, dtype=np.uint64)
     _fill_indices(sort_order, sources, csr_indices)
 
-    graph = katana.local.Graph.from_csr(csr_indices, csr_destinations)
+    graph = from_csr(csr_indices, csr_destinations)
     if properties:
         graph.add_edge_property(properties)
     return graph

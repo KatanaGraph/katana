@@ -31,7 +31,7 @@ def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
     csr = csr_matrix((data, (row, col)), shape=(len(nlist), len(nlist)))
     # call the katana api to build a PropertyGraph (unweighted) from the CSR format
     # noting that the first 0 in csr.indptr is excluded
-    pg = katana.local.Graph.from_csr(csr.indptr[1:], csr.indices)
+    pg = katana.local.import_data.from_csr(csr.indptr[1:], csr.indices)
     # add the edge weight as a new property
     t = pa.table(dict(value_from_translator=data))
     pg.add_edge_property(t)

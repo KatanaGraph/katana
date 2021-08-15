@@ -1,10 +1,9 @@
 from setuptools import find_packages, setup
-
-import katana
+import os
 
 setup(
     name="metagraph-katana",
-    version=katana.__version__,
+    version=os.environ['KATANA_VERSION'],
     # currently the version is the same as katana.__version__ (which actually comes from the version built into libsupport).
     # Eventually we need to have separate versions built into each library
     description="katana plugins for Metagraph",

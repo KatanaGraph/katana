@@ -42,8 +42,8 @@ private:
   friend class TextTracer;
   friend class TextSpan;
 
-  TextContext(const std::string& trace_id, const std::string& span_id)
-      : trace_id_(trace_id), span_id_(span_id) {}
+  TextContext(std::string trace_id, std::string span_id)
+      : trace_id_(std::move(trace_id)), span_id_(std::move(span_id)) {}
 
   std::string trace_id_;
   std::string span_id_;
@@ -55,7 +55,7 @@ public:
 
   void SetTags(const Tags& tags) override;
 
-  void Log(const std::string& message, const Tags& tags = {}) override;
+  void Log(const std::string& message, const Tags& tags) override;
 
   const ProgressContext& GetContext() const noexcept override {
     return context_;

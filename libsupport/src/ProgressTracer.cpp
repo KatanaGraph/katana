@@ -10,6 +10,8 @@
 
 #if __linux__
 #include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 std::unique_ptr<katana::ProgressTracer> katana::ProgressTracer::tracer_ =
@@ -53,12 +55,16 @@ katana::ProgressTracer::GetHostStats() {
   struct sysinfo info;
   sysinfo(&info);
 
-  char hostname[256];
-  gethostname(hostname, 256);
+  constexpr int kLen = 256;
 
-  stats.ram_gb = info.totalram / 1024 / 1024 / 1024;
+  std::array<char, kLen> hostname;
+  gethostname(hostname.begin(), kLen);
+
+  stats.ram_gb = info.totalram / (1024 * 1024 * 1024);
   stats.nprocs = get_nprocs();
-  stats.hostname = hostname;
+  stats.hostname = hostname.begin();
+
+  stats.pid = getpid();
 
   return stats;
 }

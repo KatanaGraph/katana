@@ -62,7 +62,7 @@ public:
 
   void SetTags(const Tags& tags) override;
 
-  void Log(const std::string& message, const Tags& tags = {}) override;
+  void Log(const std::string& message, const Tags& tags) override;
 
   const ProgressContext& GetContext() const noexcept override {
     return context_;

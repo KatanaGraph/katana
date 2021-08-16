@@ -85,6 +85,7 @@ struct HostStats {
   long nprocs{};
   long ram_gb{};
   std::string hostname;
+  long pid{};
 };
 
 class ProgressScope;

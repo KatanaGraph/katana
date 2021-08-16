@@ -21,9 +21,9 @@ GetHostStatsText() {
   katana::HostStats host_stats = katana::ProgressTracer::GetHostStats();
   auto& tracer = katana::ProgressTracer::Get();
   return fmt::format(
-      "hosts={} hostname={} hardware_threads={} ram_gb={}",
+      "hosts={} hostname={} hardware_threads={} pid={} ram_gb={}",
       tracer.GetNumHosts(), host_stats.hostname, host_stats.nprocs,
-      host_stats.ram_gb);
+      host_stats.pid, host_stats.ram_gb);
 }
 
 std::string
@@ -100,14 +100,13 @@ katana::TextTracer::Inject(const katana::ProgressContext& ctx) {
 
 std::unique_ptr<katana::ProgressContext>
 katana::TextTracer::Extract(const std::string& carrier) {
-  size_t split = carrier.find(",");
+  size_t split = carrier.find(',');
   if (split == std::string::npos) {
     return nullptr;
-  } else {
-    std::string trace_id = carrier.substr(0, split);
-    std::string span_id = carrier.substr(split + 1);
-    return std::unique_ptr<TextContext>(new TextContext(trace_id, span_id));
   }
+  std::string trace_id = carrier.substr(0, split);
+  std::string span_id = carrier.substr(split + 1);
+  return std::unique_ptr<TextContext>(new TextContext(trace_id, span_id));
 }
 
 std::shared_ptr<katana::ProgressSpan>
@@ -143,13 +142,13 @@ katana::TextSpan::Log(const std::string& message, const katana::Tags& tags) {
 
 katana::TextSpan::TextSpan(
     const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent)
-    : ProgressSpan(parent),
+    : ProgressSpan(std::move(parent)),
       context_(TextContext{"0", "0"}),
       span_name_(span_name) {
   std::string message = "starting " + span_name;
   std::string tags_data;
   std::string host_data;
-  if (parent == nullptr) {
+  if (GetParentSpan() == nullptr) {
     host_data = GetHostStatsText();
   }
 
@@ -177,6 +176,7 @@ katana::TextSpan::Make(
     std::shared_ptr<katana::ProgressSpan> parent) {
   return std::shared_ptr<TextSpan>(new TextSpan(span_name, std::move(parent)));
 }
+
 std::shared_ptr<katana::ProgressSpan>
 katana::TextSpan::Make(
     const std::string& span_name, const katana::ProgressContext& parent) {

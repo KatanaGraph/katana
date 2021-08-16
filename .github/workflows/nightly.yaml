@@ -20,4 +20,4 @@ jobs:
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
           echo "Anaconda token has ${#ANACONDA_TOKEN} characters."
-          $CONDA/bin/conda run scripts/anaconda_ctl.py --token "$ANACONDA_TOKEN" remove-old
+          $CONDA/bin/conda run scripts/anaconda_ctl.py --token "$ANACONDA_TOKEN" remove-old --really

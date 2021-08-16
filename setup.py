@@ -22,12 +22,14 @@ if __name__ == "__main__":
 # `make katana_python_wheel` in your build directory. To install it:
 #
 #     Install Katana native library
-# conda install -c katanagraph/label/dev katana-cpp
-#     Make sure we are the correct Python version
-# conda install python==3.8
-#     Install Katana Python Conda dependencies (due to problems in the pip pyarrow package we must use the conda pkg)
-# conda install pyarrow==2
+# conda install -c katanagraph/label/dev -c conda-forge katana-cpp=={{KATANA_VERSION}}
+#     Install Katana Python Conda dependencies (due to problems in the pip pyarrow package)
+# conda install -c conda-forge pyarrow==4.0.1
 #     Install Katana Python pip dependencies (using what we can from pip)
 # pip install numba
 #     Install Katana Python pip package
-# pip install <katana_python package .whl>
+# pip install https://github.com/KatanaGraph/katana-releases/releases/download/{{KATANA_VERSION}}/\
+#   katana_python-{{KATANA_VERSION}}-cp38-cp38-linux_x86_64.whl
+#
+#     Check that it was installed
+# python -c "import katana; print(katana.__version__)"

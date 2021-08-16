@@ -15,18 +15,13 @@ build:
 
 requirements:
   build:
-    - git
-    - cmake
-    - katana-python>=0.1.12.dev
+    - katana-python=={{ KATANA_VERSION }}
   host:
     - pip
     - python
   run:
-    - python
     - metagraph
-    - katana-cpp>=0.1.12.dev
-    - katana-python>=0.1.12.dev
-    - katana-tools>=0.1.12.dev
+    - katana-python=={{ KATANA_VERSION }}
 
 test:
   requires:
@@ -36,9 +31,14 @@ test:
   commands:
     - pytest -s -v tests
 
-
 about:
-  home: https://github.com/KatanaGraph/katana
-  license: BSD-3-Clause
-  license_family: BSD
-  summary: metagraph-katana plugin
+  home: https://katanagraph.com/
+  license: BSD
+  license_file: LICENSE.txt
+  summary: Katana Graph plugin for metagraph
+
+extra:
+  repository: https://github.com/KatanaGraph/katana
+  recipe-maintainers:
+    - katanagraph
+    - amp

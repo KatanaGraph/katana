@@ -512,7 +512,8 @@ struct ClusteringImplementationBase {
 
     const uint64_t num_nodes_next = num_unique_clusters;
 
-    std::vector<katana::InsertBag<GNode>> cluster_bags(num_unique_clusters);
+    //std::vector<katana::InsertBag<GNode>> cluster_bags(num_unique_clusters);
+    std::vector<std::vector<GNode>> cluster_bags(num_unique_clusters);
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       auto n_data_curr_comm_id = graph.template GetData<CurrentCommunityId>(n);

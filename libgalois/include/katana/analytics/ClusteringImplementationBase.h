@@ -512,14 +512,14 @@ struct ClusteringImplementationBase {
 
     const uint64_t num_nodes_next = num_unique_clusters;
 
-    std::vector<gstl::Vector<GNode>> cluster_bags(num_unique_clusters);
+    std::vector<std::vector<GNode>> cluster_bags(num_unique_clusters);
 
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
+    for (GNode n = 0; n < graph.num_nodes(); ++n) {
       auto n_data_curr_comm_id = graph.template GetData<CurrentCommunityId>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         cluster_bags[n_data_curr_comm_id].push_back(n);
       }
-    });
+    }
 
     std::vector<katana::gstl::Vector<uint32_t>> edges_id(num_unique_clusters);
     std::vector<katana::gstl::Vector<EdgeTy>> edges_data(num_unique_clusters);

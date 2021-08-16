@@ -10,7 +10,7 @@ Users can use graph algorithms/representations from different graph libraries wi
 Highlights include:
 - Katana Graph built-in algorithms/types which can be used by existing Metagraph API.
 - Graph analytics algorithms supported by both existing metagraph plugin graph libraries and Katana Graph.
-- The bi-direction translation between Katana Graph format and the NetworkX Graph format.
+- The bi-direction translation between Katana Graph format and the existing metagraph data formats (e.g., NetworkX Graph format).
 
 
 
@@ -29,7 +29,7 @@ To check the installation is successful, you can run the test cases by:
 
 ```Shell
 conda activate katana-metagraph
-pytest metagraph_katana/tests/ -s
+pytest tests
 ```
 
 
@@ -41,11 +41,10 @@ Loading Katana Graph
 
 ```
 import metagraph as mg
-from katana.property_graph import PropertyGraph
 import katana.local
-from katana.example_utils import get_input
+from katana.example_data import get_input
 katana.local.initialize()
-pg = PropertyGraph(get_input('propertygraphs/rmat15_cleaned_symmetric'))
+pg = katana.local.Graph(get_input('propertygraphs/rmat15_cleaned_symmetric'))
 katana_graph = mg.wrappers.Graph.KatanaGraph(pg)
 ```
 

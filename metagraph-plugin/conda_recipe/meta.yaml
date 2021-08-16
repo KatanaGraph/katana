@@ -1,12 +1,14 @@
 package:
   name: metagraph-katana
-  version: 0.0.1
+  version: "{{ KATANA_VERSION }}"
 
 source:
   path: ../
 
 build:
   number: 0
+  script_env:
+    - KATANA_VERSION
   noarch: python
   script: {{ PYTHON }} -m pip install . --no-deps -vv
 
@@ -15,6 +17,7 @@ requirements:
   build:
     - git
     - cmake
+    - katana-python>=0.1.12.dev
   host:
     - pip
     - python
@@ -26,9 +29,13 @@ requirements:
     - katana-tools>=0.1.12.dev
 
 test:
-  imports:
-    - metagraph
-    - katana
+  requires:
+    - pytest
+  source_files:
+    - tests
+  commands:
+    - pytest -s -v tests
+
 
 about:
   home: https://github.com/KatanaGraph/katana

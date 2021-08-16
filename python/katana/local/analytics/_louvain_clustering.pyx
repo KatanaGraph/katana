@@ -180,6 +180,28 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
     output_property_name (as uint32_t).
     The property named output_property_name is created by this function and may
     not exist before the call.
+        
+    :type pg: katana.local.Graph
+    :param pg: The graph to analyze.
+    :type edge_weight_property_name: str
+    :param edge_weight_property_name: may be a 32- or 64-bit sign or unsigned int
+    :type output_property_name: str
+    :param output_property_name: The output edge property
+    :type LouvainClusteringPlan: LouvainClusteringPlan
+    :param LouvainClusteringPlan: The Louvain Clustering Plan
+
+    .. code-block:: python
+    
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.local import Graph
+        katana.local.initialize()
+
+        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import louvain_clustering, LouvainClusteringStatistics
+        louvain_clustering(property_graph, "value", "output")
+        LouvainClusteringStatistics(property_graph, "value", "output")
+
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")

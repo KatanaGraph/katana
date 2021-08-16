@@ -255,6 +255,25 @@ def connected_components(Graph pg, str output_property_name,
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: ConnectedComponentsPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
+    
+    .. code-block:: python
+    
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.local import Graph
+        katana.local.initialize()
+
+        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import connected_components, ConnectedComponentsStatistics
+        connected_components(property_graph, "output")
+
+        stats = ConnectedComponentsStatistics(property_graph, "output")
+
+        print("Total Components:", stats.total_components)
+        print("Total Non-Trivial Components:", stats.total_non_trivial_components)
+        print("Largest Component Size:", stats.largest_component_size)
+        print("Largest Component Ratio:", stats.largest_component_ratio)
+
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:

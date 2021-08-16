@@ -128,13 +128,25 @@ def independent_set(Graph pg, str output_property_name,
     elements of the independent set. The graph must be symmetric. The property named output_property_name is created by
     this function and may not exist before the call. The created property has type uint8_t.
 
-
     :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: IndependentSetPlan
     :param plan: The execution plan to use.
+    
+    .. code-block:: python
+    
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.local import Graph
+        katana.local.initialize()
+
+        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import independent_set, IndependentSetStatistics
+        independent_set(property_graph, "output")
+        IndependentSetStatistics(property_graph, "output")
+
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes

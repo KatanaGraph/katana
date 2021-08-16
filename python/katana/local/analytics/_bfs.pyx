@@ -172,6 +172,22 @@ def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = 
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: BfsPlan
     :param plan: The execution plan to use.
+
+    .. code-block:: python
+
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.local import Graph
+        katana.local.initialize()
+
+        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import bfs, BfsStatistics
+        property_name="bfs"
+        start_node = 0
+        bfs(property_graph, start_node, property_name)
+        stats = BfsStatistics(property_graph, property_name)
+        print("Number of reached nodes:", stats.n_reached_nodes)
+
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes

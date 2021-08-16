@@ -402,6 +402,9 @@ katana::PropertyGraph::Make(
     EntityTypeIDVec edge_type_ids = KATANA_CHECKED(
         MapEntityTypeIDsArray(rdg.edge_entity_type_id_array_file_storage()));
 
+    KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
+    KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
+
     EntityTypeManager node_type_manager =
         KATANA_CHECKED(rdg.node_entity_type_manager());
     EntityTypeManager edge_type_manager =
@@ -428,6 +431,9 @@ katana::PropertyGraph::Make(
     EntityTypeIDVec edge_type_ids =
         KATANA_CHECKED(GetEntityTypeIDsFromProperties(
             topo.num_edges(), rdg.edge_properties(), &edge_type_manager));
+
+    KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
+    KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
 
     return std::make_unique<PropertyGraph>(
         std::move(rdg_file), std::move(rdg), std::move(topo),
@@ -668,11 +674,38 @@ katana::PropertyGraph::WriteView(const std::string& command_line) {
   return WriteView(rdg_.rdg_dir().string(), command_line);
 }
 
+//TODO(unknown):(emcginnis) when comparing PG in Equals we directly compare all tables in properties
+// this is potentially buggy. If for example we have:
+// 1) an "old" graph, modified in "old" software to add type information which is then stored in properties
+// 2) a "new" graph, modified in "new" software to add identical type information which is then stored in entity type arrays
+//    and entity type managers
+// if we then loaded both graphs (1) and (2) in "new" software and compared them, their type information would look identical
+// but their properties information would differ as the old software added the type information to properties while the new
+// software did not. The two graphs would be functionally Equal, but this function would say this are not equal
+// To avoid this, during conversion from old->new, software should remove all type information from properties.
+// To avoid bugs, we should check for type information in properties when comparing Equality and when Storing graphs
 bool
 katana::PropertyGraph::Equals(const PropertyGraph* other) const {
   if (!topology().Equals(other->topology())) {
     return false;
   }
+
+  if (!node_entity_type_manager_.Equals(other->node_entity_type_manager())) {
+    return false;
+  }
+
+  if (!edge_entity_type_manager_.Equals(other->edge_entity_type_manager())) {
+    return false;
+  }
+
+  if (node_entity_type_ids_.data() != other->node_type_data()) {
+    return false;
+  }
+
+  if (edge_entity_type_ids_.data() != other->edge_type_data()) {
+    return false;
+  }
+
   const auto& node_props = rdg_.node_properties();
   const auto& edge_props = rdg_.edge_properties();
   const auto& other_node_props = other->node_properties();
@@ -710,6 +743,37 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   } else {
     fmt::format_to(std::back_inserter(buf), "Topologies match!\n");
   }
+
+  fmt::format_to(std::back_inserter(buf), "NodeEntityTypeManager Diff:\n");
+  fmt::format_to(
+      std::back_inserter(buf),
+      node_entity_type_manager_.ReportDiff(other->node_entity_type_manager()));
+  fmt::format_to(
+      std::back_inserter(buf),
+      node_entity_type_manager_.ReportDiff(other->node_entity_type_manager()));
+  fmt::format_to(std::back_inserter(buf), "EdgeEntityTypeManager Diff:\n");
+  fmt::format_to(
+      std::back_inserter(buf),
+      edge_entity_type_manager_.ReportDiff(other->edge_entity_type_manager()));
+
+  if (node_entity_type_ids_.data() != other->node_type_data()) {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "node_entity_type_ids differ. size {} vs. {}\n",
+        node_entity_type_ids_size(), other->node_entity_type_ids_size());
+  } else {
+    fmt::format_to(std::back_inserter(buf), "node_entity_type_ids Match!\n");
+  }
+
+  if (edge_entity_type_ids_.data() != other->edge_type_data()) {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "edge_entity_type_ids differ. size {} vs. {}\n",
+        edge_entity_type_ids_size(), other->edge_entity_type_ids_size());
+  } else {
+    fmt::format_to(std::back_inserter(buf), "edge_entity_type_ids Match!\n");
+  }
+
   const auto& node_props = rdg_.node_properties();
   const auto& edge_props = rdg_.edge_properties();
   const auto& other_node_props = other->node_properties();

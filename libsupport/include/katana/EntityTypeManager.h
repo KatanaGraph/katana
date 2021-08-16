@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -196,12 +197,93 @@ public:
   }
 
   const EntityTypeIDToSetOfEntityTypeIDsMap&
-  GetEntityTypeIDToAtomicEntityTypeIDs() {
+  GetEntityTypeIDToAtomicEntityTypeIDs() const {
     return entity_type_id_to_atomic_entity_type_ids_;
   }
 
-  const EntityTypeIDToAtomicTypeNameMap& GetEntityTypeIDToAtomicTypeNameMap() {
+  const EntityTypeIDToAtomicTypeNameMap& GetEntityTypeIDToAtomicTypeNameMap()
+      const {
     return atomic_entity_type_id_to_type_name_;
+  }
+
+  bool Equals(const EntityTypeManager& other) const {
+    if (entity_type_id_to_atomic_entity_type_ids_ !=
+        other.entity_type_id_to_atomic_entity_type_ids_) {
+      return false;
+    }
+    if (atomic_entity_type_id_to_type_name_ !=
+        other.atomic_entity_type_id_to_type_name_) {
+      return false;
+    }
+
+    if (atomic_type_name_to_entity_type_id_ !=
+        other.atomic_type_name_to_entity_type_id_) {
+      return false;
+    }
+
+    if (atomic_entity_type_id_to_entity_type_ids_ !=
+        other.atomic_entity_type_id_to_entity_type_ids_) {
+      return false;
+    }
+    return true;
+  }
+
+  std::string ReportDiff(const EntityTypeManager& other) const {
+    fmt::memory_buffer buf;
+    if (entity_type_id_to_atomic_entity_type_ids_ !=
+        other.entity_type_id_to_atomic_entity_type_ids_) {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "entity_type_id_to_atomic_entity_type_ids_ differ. size {}"
+          "vs. {}\n",
+          entity_type_id_to_atomic_entity_type_ids_.size(),
+          other.entity_type_id_to_atomic_entity_type_ids_.size());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "entity_type_id_to_atomic_entity_type_ids_ match!\n");
+    }
+    if (atomic_entity_type_id_to_type_name_ !=
+        other.atomic_entity_type_id_to_type_name_) {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_entity_type_id_to_type_name_ differ. size {}"
+          "vs. {}\n",
+          atomic_entity_type_id_to_type_name_.size(),
+          other.atomic_entity_type_id_to_type_name_.size());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_entity_type_id_to_type_name_ match!\n");
+    }
+    if (atomic_type_name_to_entity_type_id_ !=
+        other.atomic_type_name_to_entity_type_id_) {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_type_name_to_entity_type_id_ differ. size {}"
+          "vs. {}\n",
+          atomic_type_name_to_entity_type_id_.size(),
+          other.atomic_type_name_to_entity_type_id_.size());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_type_name_to_entity_type_id_ match!\n");
+    }
+
+    if (atomic_entity_type_id_to_entity_type_ids_ !=
+        other.atomic_entity_type_id_to_entity_type_ids_) {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_entity_type_id_to_entity_type_ids_ differ. size {}"
+          "vs. {}\n",
+          atomic_entity_type_id_to_entity_type_ids_.size(),
+          other.atomic_entity_type_id_to_entity_type_ids_.size());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_entity_type_id_to_entity_type_ids_ match!\n");
+    }
+    return std::string(buf.begin(), buf.end());
   }
 
 private:

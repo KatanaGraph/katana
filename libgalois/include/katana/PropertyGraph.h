@@ -304,6 +304,14 @@ public:
   /// TODO(roshan) move this to be a part of Make()
   Result<void> ConstructEntityTypeIDs();
 
+  size_t node_entity_type_ids_size() const noexcept {
+    return node_entity_type_ids_.size();
+  }
+
+  size_t edge_entity_type_ids_size() const noexcept {
+    return edge_entity_type_ids_.size();
+  }
+
   /// This is an unfortunate hack. Due to some technical debt, we need a way to
   /// modify these arrays in place from outside this class. This style mirrors a
   /// similar hack in GraphTopology and hopefully makes it clear that these
@@ -663,6 +671,14 @@ public:
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }
+
+  const EntityTypeManager& node_entity_type_manager() const noexcept {
+    return node_entity_type_manager_;
+  }
+
+  const EntityTypeManager& edge_entity_type_manager() const noexcept {
+    return edge_entity_type_manager_;
+  }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);

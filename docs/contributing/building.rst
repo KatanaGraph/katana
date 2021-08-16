@@ -26,6 +26,12 @@ for Conda.
    directories, configuration, etc. from one system to the other, you will get
    build and linker errors, and possibly, dynamic library loading errors.
 
+.. warning::
+
+   The repository may contain git submodules. When checking out a commit, use
+   ``git submodule update --recursive --init`` to make sure all submodules are
+   initialized and reflect their checked-in state.
+
 Conda
 -----
 

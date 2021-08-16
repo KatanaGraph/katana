@@ -439,11 +439,6 @@ katana::PropertyGraph::Make(
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
-  auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
-  if (!handle) {
-    return handle.error();
-  }
-
   tsuba::RDGFile rdg_file{
       KATANA_CHECKED(tsuba::Open(rdg_name, tsuba::kReadWrite))};
   tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));

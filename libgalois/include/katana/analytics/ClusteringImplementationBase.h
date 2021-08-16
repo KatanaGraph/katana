@@ -624,10 +624,9 @@ struct ClusteringImplementationBase {
     // TODO(amber): This is a lame attempt at freeing the memory back to each
     // thread's pool of free pages and blocks. Due to stealing, the execution of
     // do_all above that populates these containers may be different from the
-    // do_all below that frees them. 
+    // do_all below that frees them.
     katana::do_all(
-        katana::iterate(uint64_t{0}, num_unique_clusters),
-        [&](uint64_t c) {
+        katana::iterate(uint64_t{0}, num_unique_clusters), [&](uint64_t c) {
           edges_id[c] = gstl::Vector<uint32_t>();
           edges_data[c] = gstl::Vector<EdgeTy>();
         });

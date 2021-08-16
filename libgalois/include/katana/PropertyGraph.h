@@ -261,6 +261,23 @@ public:
     KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == num_edges());
   }
 
+  PropertyGraph(katana::GraphTopology&& topo_to_assign) noexcept
+      : rdg_(), file_(), topology_(std::move(topo_to_assign)) {}
+
+  PropertyGraph(
+      katana::GraphTopology&& topo_to_assign,
+      NUMAArray<EntityTypeID>&& node_entity_type_id,
+      NUMAArray<EntityTypeID>&& edge_entity_type_id,
+      EntityTypeManager&& node_type_manager,
+      EntityTypeManager&& edge_type_manager) noexcept
+      : rdg_(),
+        file_(),
+        topology_(std::move(topo_to_assign)),
+        node_entity_type_manager_(std::move(node_type_manager)),
+        edge_entity_type_manager_(std::move(edge_type_manager)),
+        node_entity_type_ids_(std::move(node_entity_type_id)),
+        edge_entity_type_ids_(std::move(edge_entity_type_id)) {}
+
   template <typename PGView>
   PGView BuildView() noexcept {
     return pg_view_cache_.BuildView<PGView>(this);

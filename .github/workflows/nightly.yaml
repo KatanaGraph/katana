@@ -1,7 +1,7 @@
 name: Nightly
 on:
   schedule:
-    - cron: '43 4 * * *'
+    - cron: '43 8 * * *'
 
 jobs:
   clean_anaconda_dev_packages:

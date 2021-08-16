@@ -512,14 +512,16 @@ struct ClusteringImplementationBase {
 
     const uint64_t num_nodes_next = num_unique_clusters;
 
-    std::vector<katana::InsertBag<GNode>> cluster_bags(num_unique_clusters);
-
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
+    std::vector<std::vector<GNode>> cluster_bags(num_unique_clusters);
+    // TODO(amber): This loop can be parallelized when using a concurrent container
+    // for cluster_bags, but something like katana::InsertBag exhausts the
+    // per-thread-storage memory
+    for (GNode n = 0; n < graph.num_nodes(); ++n) {
       auto n_data_curr_comm_id = graph.template GetData<CurrentCommunityId>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         cluster_bags[n_data_curr_comm_id].push_back(n);
       }
-    });
+    }
 
     std::vector<katana::gstl::Vector<uint32_t>> edges_id(num_unique_clusters);
     std::vector<katana::gstl::Vector<EdgeTy>> edges_data(num_unique_clusters);
@@ -618,6 +620,17 @@ struct ClusteringImplementationBase {
         });
 
     TimerConstructFrom.stop();
+
+    // TODO(amber): This is a lame attempt at freeing the memory back to each
+    // thread's pool of free pages and blocks. Due to stealing, the execution of
+    // do_all above that populates these containers may be different from the
+    // do_all below that frees them. 
+    katana::do_all(
+        katana::iterate(uint64_t{0}, num_unique_clusters),
+        [&](uint64_t c) {
+          edges_id[c] = gstl::Vector<uint32_t>();
+          edges_data[c] = gstl::Vector<EdgeTy>();
+        });
 
     GraphTopology topo_next{
         std::move(prefix_edges_count), std::move(out_dests_next)};

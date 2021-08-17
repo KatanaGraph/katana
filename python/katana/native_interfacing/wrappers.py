@@ -145,15 +145,15 @@ def overload(self, {arguments}):
 class SimpleNumbaPointerWrapper(NumbaPointerWrapper):
     def __init__(self, orig_typ, override_module_name=None):
         assert (
-            hasattr(orig_typ, "address")
-            and hasattr(orig_typ.address, "__get__")
-            and not hasattr(orig_typ.address, "__call__")
-        ), "{}.address does not exist or is not a property.".format(orig_typ)
+            hasattr(orig_typ, "__katana_address__")
+            and hasattr(orig_typ.__katana_address__, "__get__")
+            and not hasattr(orig_typ.__katana_address__, "__call__")
+        ), "{}.__katana_address__ does not exist or is not a property.".format(orig_typ)
         super().__init__(orig_typ, override_module_name)
 
         @unbox(self.Type)
         def unbox_func(typ, obj, c):
-            ptr_obj = c.pyapi.object_getattr_string(obj, "address")
+            ptr_obj = c.pyapi.object_getattr_string(obj, "__katana_address__")
             ctx = cgutils.create_struct_proxy(typ)(c.context, c.builder)
             ctx.ptr = c.pyapi.long_as_voidptr(ptr_obj)
             c.pyapi.decref(ptr_obj)
@@ -161,7 +161,7 @@ class SimpleNumbaPointerWrapper(NumbaPointerWrapper):
             return NativeValue(ctx._getvalue(), is_error=is_error)
 
     def get_value_address(self, pyval):
-        return pyval.address
+        return pyval.__katana_address__
 
 
 class DtypeParametricType(numba.types.Type):

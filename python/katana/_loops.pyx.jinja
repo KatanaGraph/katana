@@ -113,7 +113,7 @@ cdef class {{UserContext_name}}:
         self.underlying.abort()
 
     @property
-    def address(self):
+    def __katana_address__(self):
         return <unsigned long int>self.underlying
 
     @property

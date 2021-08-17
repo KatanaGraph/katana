@@ -688,6 +688,7 @@ public:
   void SetLoadedVersion(const katana::RDGVersion& val) {
     loaded_version_ = val;
   }
+  const katana::RDGVersion& GetLoadedVersion() const { return loaded_version_; }
   katana::RDGVersion& GetLoadedVersion() { return loaded_version_; }
 
   /// Add Node properties that do not exist in the current graph

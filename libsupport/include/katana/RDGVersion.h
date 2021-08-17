@@ -12,7 +12,6 @@
 #include "katana/Random.h"
 #include "katana/config.h"
 
-
 namespace katana {
 
 const uint64_t kRDGVersionMaxID = (1 << 30);
@@ -32,15 +31,17 @@ struct KATANA_EXPORT RDGVersion {
       const std::vector<std::string>& branches);
   RDGVersion(const std::string& str);
   explicit RDGVersion(uint64_t num = 0);
+
+  // Accessors
   std::string ToString() const;
-  uint64_t LeafNumber();
+  uint64_t LeafNumber() const;
+  bool ShareBranch(const RDGVersion& in) const;
+  bool IsNull() const;
+
+  // Mutators
   void IncrementLeaf(uint64_t num = 1);
   void SetLeafNumber(uint64_t num = 0);
   void AddBranch(const std::string& name);
-  std::vector<uint64_t>& GetNumbers();
-  std::vector<std::string>& GetBranches();
-  bool ShareBranch(const RDGVersion& in);
-  bool IsNull();
 };
 
 KATANA_EXPORT bool operator==(const RDGVersion& lhs, const RDGVersion& rhs);
@@ -48,7 +49,7 @@ KATANA_EXPORT bool operator!=(const RDGVersion& lhs, const RDGVersion& rhs);
 KATANA_EXPORT bool operator>(const RDGVersion& lhs, const RDGVersion& rhs);
 KATANA_EXPORT bool operator<(const RDGVersion& lhs, const RDGVersion& rhs);
 
-void to_json(nlohmann::json& j, const RDGVersion & version);
+void to_json(nlohmann::json& j, const RDGVersion& version);
 void from_json(const nlohmann::json& j, RDGVersion& version);
 }  // namespace katana
 

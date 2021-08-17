@@ -385,7 +385,6 @@ tsuba::ListAvailableViews(const std::string& rdg_dir) {
 
   //TODO (yasser): add an optional parameter to function which if specified is used to set
   //'min_version' value and will set find_max_version to false
-
   for (const std::string& file : list_res.value()) {
     auto view_type_res = tsuba::RDGManifest::ParseViewNameFromName(file);
     auto view_args_res = tsuba::RDGManifest::ParseViewArgsFromName(file);

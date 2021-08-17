@@ -713,26 +713,6 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   return std::string(buf.begin(), buf.end());
 }
 
-#if 0
-katana::Result<void>
-katana::PropertyGraph::Write(
-    const std::string& rdg_name, const std::string& command_line) {
-  return Write(rdg_name, command_line, katana::RDGVersion(0));
-}
-
-katana::Result<void>
-katana::PropertyGraph::Write(
-    const std::string& rdg_name, const std::string& command_line,
-    katana::RDGVersion version) {
-  //TODO(wkyu): add the previous version before creating manifest file
-  if (auto res = tsuba::Create(rdg_name, version); !res) {
-    KATANA_LOG_DEBUG("failed to create the first manifest file\n");
-    return res.error();
-  }
-
-  return WriteGraph(rdg_name, command_line);
-}
-#else
 katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
@@ -741,9 +721,15 @@ katana::PropertyGraph::Write(
     return res.error();
   }
 
+  katana::RDGVersion version = GetLoadedVersion();
+  if (!version.IsNull()) {
+    // the graph is to be written from v0
+    version.SetLeafNumber(0);
+    SetLoadedVersion(version);
+  }
+
   return WriteGraph(rdg_name, command_line);
 }
-#endif
 
 katana::Result<void>
 katana::PropertyGraph::CreateBranch(

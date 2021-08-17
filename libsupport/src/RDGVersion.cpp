@@ -11,9 +11,8 @@ RDGVersion::RDGVersion(
 RDGVersion::RDGVersion(uint64_t num) { numbers_.back() = num; }
 
 RDGVersion::RDGVersion(const std::string& src) {
-
   KATANA_LOG_DEBUG_ASSERT(src.size() == 20);
-  char dest[kRDGVersionIDLength+1];
+  char dest[kRDGVersionIDLength + 1];
   char* token;
 
   strncpy(dest, src.c_str(), kRDGVersionIDLength);
@@ -27,8 +26,8 @@ RDGVersion::RDGVersion(const std::string& src) {
       uint64_t val = strtoul(token, nullptr, 10);
       if (val >= 5) {
         KATANA_LOG_DEBUG(
-            "from version ID {} found token {} with val {} in {}; ", src, token, val,
-            ToString());
+            "from version ID {} found token {} with val {} in {}; ", src, token,
+            val, ToString());
       }
       numbers_.emplace_back(val);
       token = strtok(NULL, "_");
@@ -57,14 +56,41 @@ RDGVersion::ToString() const {
 }
 
 bool
-RDGVersion::IsNull() {
+RDGVersion::IsNull() const {
   // No branch and no positive ID
   return (branches_.size() <= 1 && numbers_.back() == 0);
 }
 
 uint64_t
-RDGVersion::LeafNumber() {
+RDGVersion::LeafNumber() const {
   return numbers_.back();
+}
+
+bool
+RDGVersion::ShareBranch(const RDGVersion& in) const {
+  if (branches_.size() != in.branches_.size())
+    return false;
+
+  // only need to compare branch_
+  for (uint32_t i = 0; i < branches_.size(); i++) {
+    if (0 != strcmp(branches_[i].c_str(), in.branches_[i].c_str())) {
+      return false;
+    }
+  }
+
+#if 1
+  if (std::equal(numbers_.begin(), numbers_.end() - 1, in.numbers_.begin()))
+    return true;
+  else
+    return false;
+
+  for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
+    if (numbers_[i] != in.numbers_[i]) {
+      return false;
+    }
+  }
+#endif
+  return true;
 }
 
 void
@@ -82,43 +108,6 @@ RDGVersion::AddBranch(const std::string& name) {
   branches_.back() = name;
   numbers_.emplace_back(0);
   branches_.emplace_back(".");
-}
-
-std::vector<uint64_t>&
-RDGVersion::GetNumbers() {
-  return numbers_;
-}
-
-std::vector<std::string>&
-RDGVersion::GetBranches() {
-  return branches_;
-}
-
-bool
-RDGVersion::ShareBranch(const RDGVersion& in) {
-  if (branches_.size() != in.branches_.size())
-    return false;
-
-  // only need to compare branch_
-  for (uint32_t i = 0; i < branches_.size(); i++) {
-    if(0!=strcmp(branches_[i].c_str(), in.branches_[i].c_str())) {
-      return false;
-    }
-  }
-
-#if 1
-  if (std::equal(numbers_.begin(), numbers_.end()-1, in.numbers_.begin()))
-    return true;
-  else 
-    return false;
-
-  for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
-    if (numbers_[i] != in.numbers_[i]) {
-      return false;
-    }
-  }
-#endif
-  return true;
 }
 
 bool

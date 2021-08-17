@@ -273,14 +273,13 @@ RDGManifest::FileNames() {
 
 void
 katana::to_json(json& j, const katana::RDGVersion& version) {
-  j = json{
-    { "rdg_version",
+  j = json{{
+      "rdg_version",
       {
-        {"numbers", version.numbers_},
-        {"branches", version.branches_},
+          {"numbers", version.numbers_},
+          {"branches", version.branches_},
       },
-    }
-  };
+  }};
 }
 
 void

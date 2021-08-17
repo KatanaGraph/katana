@@ -3,6 +3,7 @@
 #include <bitset>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -16,7 +17,7 @@ namespace katana {
 /// EntityTypeID is represented using 8 bits
 using EntityTypeID = uint8_t;
 static constexpr EntityTypeID kUnknownEntityType = EntityTypeID{0};
-static std::string kUnknownEntityTypeName = "kUnknownName";
+static constexpr std::string_view kUnknownEntityTypeName = "kUnknownName";
 static constexpr EntityTypeID kInvalidEntityType =
     std::numeric_limits<EntityTypeID>::max();
 /// A set of EntityTypeIDs
@@ -293,8 +294,10 @@ private:
   void Init() {
     // assume kUnknownEntityType is 0
     static_assert(kUnknownEntityType == 0);
+    static_assert(kUnknownEntityTypeName == std::string_view("kUnknownName"));
     // add kUnknownEntityType
-    AddAtomicEntityType(kUnknownEntityTypeName);
+    auto id = AddAtomicEntityType(std::string(kUnknownEntityTypeName));
+    KATANA_LOG_ASSERT(id == kUnknownEntityType);
   }
 
   /// A map from the EntityTypeID to its type name if it is an atomic type
@@ -314,7 +317,10 @@ private:
   /// (to the set of the EntityTypeIDs that intersect it):
   /// derived from entity_type_id_to_atomic_entity_type_ids_
   /// By definition, an atomic EntityTypeID intersects with itself
-  /// So the intersection set will contain itself
+  /// So the intersection set of an atomic EntityTypeID will contain itself
+  /// The intersection set of a non-atomic EntityTypeID will *not* contain itself
+  /// ex: atomic_entity_type_id_to_entity_type_ids_[atomic_id][atomic_id] == 1
+  /// but atomic_entity_type_id_to_entity_type_ids_[non_atomic_id][non_atomic_id] == 0
   EntityTypeIDToSetOfEntityTypeIDsMap atomic_entity_type_id_to_entity_type_ids_;
 };
 

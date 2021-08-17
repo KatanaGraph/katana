@@ -69,6 +69,11 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   KATANA_LOG_ASSERT(uri_res);
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
+  // KATANA_LOG_VASSERT(
+  //     g->GetNumNodeEntityTypes() == 1, "found {} entity types.",
+  //     g->GetNumNodeEntityTypes());
+  // KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() == 1);
+
   auto write_result = g->Write(rdg_dir, command_line);
 
   KATANA_LOG_WARN("creating temp file {}", rdg_dir);
@@ -87,10 +92,10 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
 
   auto g2 = std::move(make_result.value());
 
-  KATANA_LOG_VASSERT(
-      g2->GetNumNodeEntityTypes() == 1, "found {} entity types.",
-      g2->GetNumNodeEntityTypes());
-  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() == 1);
+  // KATANA_LOG_VASSERT(
+  //     g2->GetNumNodeEntityTypes() == 1, "found {} entity types.",
+  //     g2->GetNumNodeEntityTypes());
+  // KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() == 1);
 
   KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
   KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);
@@ -98,6 +103,20 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   KATANA_LOG_ASSERT((g2->edge_entity_type_ids_size()) == test_length);
 
   KATANA_LOG_ASSERT(g->Equals(g2.get()));
+
+  std::string out2 =
+      "Topologies match!\n"
+      "Node Type              (int8)      differs\n"
+      "@@ -99, +99 @@\n"
+      "-99\n"
+      "+0\n"
+      "Edge Type            (int8)      differs\n"
+      "@@ -9907, +9907 @@\n"
+      "-693\n"
+      "+1386\n";
+  KATANA_LOG_VASSERT(
+      g->ReportDiff(g2.get()) == out2, "{}{}", g->ReportDiff(g2.get()), out2);
+
 }
 
 void

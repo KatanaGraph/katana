@@ -206,6 +206,7 @@ public:
     return atomic_entity_type_id_to_type_name_;
   }
 
+  /// bool Equals() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   bool Equals(const EntityTypeManager& other) const {
     if (entity_type_id_to_atomic_entity_type_ids_ !=
         other.entity_type_id_to_atomic_entity_type_ids_) {
@@ -228,6 +229,7 @@ public:
     return true;
   }
 
+  /// std::string ReportDiff() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   std::string ReportDiff(const EntityTypeManager& other) const {
     fmt::memory_buffer buf;
     if (entity_type_id_to_atomic_entity_type_ids_ !=

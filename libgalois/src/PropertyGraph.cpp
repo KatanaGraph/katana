@@ -674,7 +674,8 @@ katana::PropertyGraph::WriteView(const std::string& command_line) {
   return WriteView(rdg_.rdg_dir().string(), command_line);
 }
 
-//TODO(unknown):(emcginnis) when comparing PG in Equals we directly compare all tables in properties
+/// bool katana::PropertyGraph::Equals() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
+// when comparing PG in Equals we directly compare all tables in properties
 // this is potentially buggy. If for example we have:
 // 1) an "old" graph, modified in "old" software to add type information which is then stored in properties
 // 2) a "new" graph, modified in "new" software to add identical type information which is then stored in entity type arrays
@@ -682,8 +683,7 @@ katana::PropertyGraph::WriteView(const std::string& command_line) {
 // if we then loaded both graphs (1) and (2) in "new" software and compared them, their type information would look identical
 // but their properties information would differ as the old software added the type information to properties while the new
 // software did not. The two graphs would be functionally Equal, but this function would say this are not equal
-// To avoid this, during conversion from old->new, software should remove all type information from properties.
-// To avoid bugs, we should check for type information in properties when comparing Equality and when Storing graphs
+// TODO(unknown):(emcginnis) consider breaking the function down into: topology comparison, type comparison, and property comparison. Move pitfall described above alone with the property comparison function
 bool
 katana::PropertyGraph::Equals(const PropertyGraph* other) const {
   if (!topology().Equals(other->topology())) {
@@ -731,6 +731,7 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
   return true;
 }
 
+/// std::string katana::PropertyGraph::ReportDiff() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
 std::string
 katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   fmt::memory_buffer buf;

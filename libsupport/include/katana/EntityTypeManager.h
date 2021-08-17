@@ -16,6 +16,7 @@ namespace katana {
 /// EntityTypeID is represented using 8 bits
 using EntityTypeID = uint8_t;
 static constexpr EntityTypeID kUnknownEntityType = EntityTypeID{0};
+static std::string kUnknownEntityTypeName = "kUnknownName";
 static constexpr EntityTypeID kInvalidEntityType =
     std::numeric_limits<EntityTypeID>::max();
 /// A set of EntityTypeIDs
@@ -290,15 +291,10 @@ public:
 
 private:
   void Init() {
-    // TODO(amber): add a sentinel name for kUnknownEntityType to the maps that hold atomic
-    // ID names
     // assume kUnknownEntityType is 0
     static_assert(kUnknownEntityType == 0);
     // add kUnknownEntityType
-    entity_type_id_to_atomic_entity_type_ids_.emplace_back(
-        SetOfEntityTypeIDs());  // for kUnknownEntityType
-    atomic_entity_type_id_to_entity_type_ids_.emplace_back(
-        SetOfEntityTypeIDs());  // for kUnknownEntityType
+    AddAtomicEntityType(kUnknownEntityTypeName);
   }
 
   /// A map from the EntityTypeID to its type name if it is an atomic type
@@ -317,6 +313,8 @@ private:
   /// A map from the atomic EntityTypeID to its super-types
   /// (to the set of the EntityTypeIDs that intersect it):
   /// derived from entity_type_id_to_atomic_entity_type_ids_
+  /// By definition, an atomic EntityTypeID intersects with itself
+  /// So the intersection set will contain itself
   EntityTypeIDToSetOfEntityTypeIDsMap atomic_entity_type_id_to_entity_type_ids_;
 };
 

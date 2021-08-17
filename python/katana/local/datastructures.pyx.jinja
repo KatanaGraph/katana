@@ -112,7 +112,7 @@ cdef class {{class_name}}:
         return i
 
     @property
-    def address(self):
+    def __katana_address__(self):
         return <uintptr_t>&self.underlying
 
     @property
@@ -283,7 +283,7 @@ cdef class {{class_name}}:
         return i
 
     @property
-    def address(self):
+    def __katana_address__(self):
         return <uintptr_t>&self.underlying
 
     def as_numpy(self):

@@ -329,7 +329,7 @@ cdef class Graph(GraphBase):
         return f
 
     @property
-    def address(self):
+    def __katana_address__(self):
         """
         Internal.
         """

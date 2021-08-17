@@ -97,7 +97,7 @@ cdef class LC_CSR_Graph_{{template_name}}_Edge_Iterable:
         return self.underlying.size()
 
     @property
-    def address(self):
+    def __katana_address__(self):
         return <unsigned long int>&self.underlying
 {%- endmacro %}
 

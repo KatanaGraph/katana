@@ -69,7 +69,7 @@ cdef class DynamicBitset:
         return self.underlying.count()
 
     @property
-    def address(self):
+    def __katana_address__(self):
         return <uintptr_t>&self.underlying
 
 

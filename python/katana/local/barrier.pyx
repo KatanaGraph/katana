@@ -41,7 +41,7 @@ cdef class Barrier:
         return "<" + str(name, "ascii") + " @ " + hex(<size_t>self.underlying()) + ">"
 
     @property
-    def address(self):
+    def __katana_address__(self):
         """
         Internal.
         """

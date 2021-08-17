@@ -538,7 +538,9 @@ katana::Result<void>
 katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
-  katana::RDGVersion target = GetLoadedVersion();  //katana::RDGVersion(0);
+  // Point the write to the intended branch
+  // katana::RDGVersion target = GetLoadedVersion(); //katana::RDGVersion(0);
+  katana::RDGVersion target = GetBranch();
   auto open_res = tsuba::Open(uri, target, tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
@@ -723,9 +725,8 @@ katana::PropertyGraph::Write(
 
   katana::RDGVersion version = GetLoadedVersion();
   if (!version.IsNull()) {
-    // the graph is to be written from v0
-    version.SetLeafNumber(0);
-    SetLoadedVersion(version);
+    // Set the correct branch for writing
+    SetBranch(version);
   }
 
   return WriteGraph(rdg_name, command_line);

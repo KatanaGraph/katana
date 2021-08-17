@@ -681,7 +681,11 @@ public:
   }
 
   // Set or Get the targeted branch in graph_dir for writing PropertyGraph
-  void SetBranch(const katana::RDGVersion& val) { branch_ = val; }
+  // If a positive num is provided, new graph should retain the version number
+  void SetBranch(const katana::RDGVersion& val, uint64_t num = 0) {
+    branch_ = val;
+    branch_.SetLeafNumber(num);
+  }
   katana::RDGVersion& GetBranch() { return branch_; }
 
   // Set or Get the version of loaded PropertyGraph

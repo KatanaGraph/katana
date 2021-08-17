@@ -42,7 +42,7 @@ def from_csr(edge_indices, edge_destinations):
     edge_destinations_numa.as_numpy()[:] = edge_destinations
 
     with nogil:
-        pg = handle_result_PropertyGraph( _PropertyGraph.MakeFromTopo(
+        pg = handle_result_PropertyGraph( PropertyGraph.MakeFromTopo(
              CGraph.GraphTopology(move(edge_indices_numa.underlying), move(edge_destinations_numa.underlying))
              ))
     return Graph.make(pg)

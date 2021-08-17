@@ -320,7 +320,7 @@ cdef class Graph(GraphBase):
             opts.edge_properties = edge_props
         path_str = <string>bytes(str(path), "utf-8")
         with nogil:
-            self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.MakeFromTopo(path_str, opts))
+            self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, opts))
 
     @staticmethod
     cdef Graph make(shared_ptr[_PropertyGraph] u):

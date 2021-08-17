@@ -561,26 +561,23 @@ tsuba::RDG::DoMake(
         !res) {
       return res.error();
     }
-    rdg_dir_ = metadata_dir;
-
-  } else {
-    rdg_dir_ = metadata_dir;
-
-    std::vector<PropStorageInfo*> part_info =
-        KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
-
-    if (part_info.empty()) {
-      return grp.Finish();
-    }
-
-    KATANA_CHECKED_CONTEXT(
-        AddProperties(
-            metadata_dir, part_info, &grp,
-            [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-              return rdg->AddPartitionMetadataArray(props);
-            }),
-        "populating partition metadata");
   }
+  rdg_dir_ = metadata_dir;
+
+  std::vector<PropStorageInfo*> part_info =
+      KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
+
+  if (part_info.empty()) {
+    return grp.Finish();
+  }
+
+  KATANA_CHECKED_CONTEXT(
+      AddProperties(
+          metadata_dir, part_info, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+            return rdg->AddPartitionMetadataArray(props);
+          }),
+      "populating partition metadata");
   KATANA_CHECKED(grp.Finish());
 
   if (local_to_user_id_->length() == 0) {

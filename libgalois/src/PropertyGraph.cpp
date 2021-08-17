@@ -749,9 +749,6 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   fmt::format_to(
       std::back_inserter(buf),
       node_entity_type_manager_.ReportDiff(other->node_entity_type_manager()));
-  fmt::format_to(
-      std::back_inserter(buf),
-      node_entity_type_manager_.ReportDiff(other->node_entity_type_manager()));
   fmt::format_to(std::back_inserter(buf), "EdgeEntityTypeManager Diff:\n");
   fmt::format_to(
       std::back_inserter(buf),

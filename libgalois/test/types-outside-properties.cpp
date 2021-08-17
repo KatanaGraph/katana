@@ -18,9 +18,14 @@ static cll::opt<std::string> ldbc_003InputFile(
 void
 TestLoadGraphWithoutExternalTypes() {
   // Load existing "old" graph.
-  auto g_preconvert =
-      katana::PropertyGraph::Make(ldbc_003InputFile, tsuba::RDGLoadOptions())
-          .value();
+  auto g_preconvert_res =
+      katana::PropertyGraph::Make(ldbc_003InputFile, tsuba::RDGLoadOptions());
+
+  if (!g_preconvert_res) {
+    KATANA_LOG_FATAL("making result: {}", g_preconvert_res.error());
+  }
+  std::unique_ptr<katana::PropertyGraph> g_preconvert =
+      std::move(g_preconvert_res.value());
 
   const auto g_node_type_manager = g_preconvert->GetNodeTypeManager();
 
@@ -75,7 +80,6 @@ TestLoadGraphWithoutExternalTypes() {
       "{}",
       g_edge_type_manager.GetNumAtomicTypes());
 
-
   auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
@@ -87,11 +91,17 @@ TestLoadGraphWithoutExternalTypes() {
       "writing converted graph, creating temp file {}", tmp_rdg_dir);
 
   if (!write_result) {
-    fs::remove_all(tmp_rdg_dir);
     KATANA_LOG_FATAL("writing result: {}", write_result.error());
   }
 
-  auto g_postconvert = katana::PropertyGraph::Make(tmp_rdg_dir, tsuba::RDGLoadOptions()).value();
+  auto g_postconvert_res =
+      katana::PropertyGraph::Make(tmp_rdg_dir, tsuba::RDGLoadOptions());
+  fs::remove_all(tmp_rdg_dir);
+  if (!g_postconvert_res) {
+    KATANA_LOG_FATAL("making result: {}", g_postconvert_res.error());
+  }
+  std::unique_ptr<katana::PropertyGraph> g_postconvert =
+      std::move(g_postconvert_res.value());
 
   KATANA_LOG_WARN("g_postconvert.size() = {}", g_postconvert->size());
   KATANA_LOG_WARN("g_postconvert.num_edges() = {}", g_postconvert->num_edges());
@@ -108,5 +118,3 @@ main(int argc, char** argv) {
 
   return 0;
 }
-
-

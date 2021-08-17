@@ -208,6 +208,18 @@ main() {
   KATANA_LOG_ASSERT(g1->Equals(g1.get()));
   std::string out1 =
       "Topologies match!\n"
+      "NodeEntityTypeManager Diff:\n"
+      "entity_type_id_to_atomic_entity_type_ids_ match!\n"
+      "atomic_entity_type_id_to_type_name_ match!\n"
+      "atomic_type_name_to_entity_type_id_ match!\n"
+      "atomic_entity_type_id_to_entity_type_ids_ match!\n"
+      "EdgeEntityTypeManager Diff:\n"
+      "entity_type_id_to_atomic_entity_type_ids_ match!\n"
+      "atomic_entity_type_id_to_type_name_ match!\n"
+      "atomic_type_name_to_entity_type_id_ match!\n"
+      "atomic_entity_type_id_to_entity_type_ids_ match!\n"
+      "node_entity_type_ids Match!\n"
+      "edge_entity_type_ids Match!\n"
       "Node property n0              (int64)      matches!\n"
       "Edge property rank            (int64)      matches!\n";
   KATANA_LOG_VASSERT(
@@ -217,6 +229,18 @@ main() {
   KATANA_LOG_ASSERT(!g1->Equals(g2.get()));
   std::string out2 =
       "Topologies match!\n"
+      "NodeEntityTypeManager Diff:\n"
+      "entity_type_id_to_atomic_entity_type_ids_ match!\n"
+      "atomic_entity_type_id_to_type_name_ match!\n"
+      "atomic_type_name_to_entity_type_id_ match!\n"
+      "atomic_entity_type_id_to_entity_type_ids_ match!\n"
+      "EdgeEntityTypeManager Diff:\n"
+      "entity_type_id_to_atomic_entity_type_ids_ match!\n"
+      "atomic_entity_type_id_to_type_name_ match!\n"
+      "atomic_type_name_to_entity_type_id_ match!\n"
+      "atomic_entity_type_id_to_entity_type_ids_ match!\n"
+      "node_entity_type_ids differ. size 100 vs. 100\n"
+      "edge_entity_type_ids differ. size 10000 vs. 10000\n"
       "Node property n0              (int64)      differs\n"
       "@@ -99, +99 @@\n"
       "-99\n"
@@ -232,6 +256,18 @@ main() {
   KATANA_LOG_ASSERT(!g1->Equals(g3.get()));
   std::string out3 =
       "Topologies match!\n"
+      "NodeEntityTypeManager Diff:\n"
+      "entity_type_id_to_atomic_entity_type_ids_ match!\n"
+      "atomic_entity_type_id_to_type_name_ match!\n"
+      "atomic_type_name_to_entity_type_id_ match!\n"
+      "atomic_entity_type_id_to_entity_type_ids_ match!\n"
+      "EdgeEntityTypeManager Diff:\n"
+      "entity_type_id_to_atomic_entity_type_ids_ match!\n"
+      "atomic_entity_type_id_to_type_name_ match!\n"
+      "atomic_type_name_to_entity_type_id_ match!\n"
+      "atomic_entity_type_id_to_entity_type_ids_ match!\n"
+      "node_entity_type_ids differ. size 100 vs. 100\n"
+      "edge_entity_type_ids differ. size 10000 vs. 10000\n"
       "Node property n0              (int64)      differs\n"
       "@@ -1, +1 @@\n"
       "-1\n"

@@ -34,7 +34,6 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   4. Load the graph and compare the type info from step 2 above
   */
   constexpr size_t test_length = 10;
-  // using PropertyTypeBool = bool;
   using PropertyType = uint8_t;
   using ThrowAwayType = int64_t;
 
@@ -86,29 +85,19 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
   }
 
-  std::unique_ptr<katana::PropertyGraph> g2 = std::move(make_result.value());
+  auto g2 = std::move(make_result.value());
 
   KATANA_LOG_VASSERT(
       g2->GetNumNodeEntityTypes() == 1, "found {} entity types.",
       g2->GetNumNodeEntityTypes());
   KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() == 1);
 
-  /// Use GetTypeOfNode/Edge() instead
+  KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g2->node_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g2->edge_entity_type_ids_size()) == test_length);
 
-  KATANA_LOG_ASSERT((g->GetSizeOfNodeEntityTypeIDArray()) == test_length);
-  KATANA_LOG_ASSERT((g->GetSizeOfEdgeEntityTypeIDArray()) == test_length);
-  KATANA_LOG_ASSERT((g2->GetSizeOfNodeEntityTypeIDArray()) == test_length);
-  KATANA_LOG_ASSERT((g2->GetSizeOfEdgeEntityTypeIDArray()) == test_length);
-
-  for (size_t i = 0; i < test_length; i++) {
-    KATANA_LOG_ASSERT(g->GetTypeOfNode(i) == g2->GetTypeOfNode(i));
-    KATANA_LOG_ASSERT(g->GetTypeOfEdge(i) == g2->GetTypeOfEdge(i));
-  }
-
-  // katana::EntityTypeManager node_entity_type_manager_from_propertires = g->GetNodeTypeManager();
-  // katana::EntityTypeManager edge_entity_type_manager_from_propertires = g->GetEdgeTypeManager();
-  // katana::EntityTypeManager node_entity_type_manager_from_storage = g2->GetNodeTypeManager();
-  // katana::EntityTypeManager edge_entity_type_manager_from_storage = g2->GetEdgeTypeManager();
+  KATANA_LOG_ASSERT(g->Equals(g2.get()));
 }
 
 void

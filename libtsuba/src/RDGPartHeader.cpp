@@ -244,8 +244,8 @@ tsuba::to_json(json& j, const tsuba::RDGPartHeader& header) {
       {kStorageFormatVersionKey, header.storage_format_version_},
       {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
       {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
-      {kNodeEntityTypeIDDictionaryKey, header.edge_entity_type_id_dictionary_},
-      {kEdgeEntityTypeIDDictionaryKey, header.node_entity_type_id_dictionary_},
+      {kNodeEntityTypeIDDictionaryKey, header.node_entity_type_id_dictionary_},
+      {kEdgeEntityTypeIDDictionaryKey, header.edge_entity_type_id_dictionary_},
       {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
       {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
   };

@@ -4,7 +4,7 @@ on:
     - cron: '43 8 * * *'
 
 jobs:
-  clean_anaconda_dev_packages:
+  remove_old_anaconda_dev_packages:
     name: Remove old anaconda dev packages
     environment: AnacondaUpload
     runs-on: ubuntu-20.04

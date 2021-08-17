@@ -871,9 +871,13 @@ public:
     return Base::out().edges(N, edge_type);
   }
 
+  auto edges(Node N) const noexcept { return Base::out().edges(N); }
+
   auto in_edges(Node N, const EntityType& edge_type) const noexcept {
     return Base::in().edges(N, edge_type);
   }
+
+  auto in_edges(Node N) const noexcept { return Base::in().edges(N); }
 
   auto degree(Node N, const EntityType& edge_type) const noexcept {
     return Base::out().degree(N, edge_type);

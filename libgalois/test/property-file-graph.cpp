@@ -46,8 +46,11 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
   KATANA_LOG_ASSERT(add_throw_away_node_result);
 
-  std::shared_ptr<arrow::Table> edge_throw_away_props =
+  std::shared_ptr<arrow::Table> edge_throw_away =
       MakeProps<ThrowAwayType>("edge-throw-away", test_length);
+
+  auto add_throw_away_edge_result = g->AddNodeProperties(edge_throw_away);
+  KATANA_LOG_ASSERT(add_throw_away_edge_result);
 
   std::shared_ptr<arrow::Table> node_props =
       MakeProps<PropertyType>("node-name", test_length);
@@ -102,21 +105,11 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   KATANA_LOG_ASSERT((g2->node_entity_type_ids_size()) == test_length);
   KATANA_LOG_ASSERT((g2->edge_entity_type_ids_size()) == test_length);
 
-  KATANA_LOG_ASSERT(g->Equals(g2.get()));
-
-  std::string out2 =
-      "Topologies match!\n"
-      "Node Type              (int8)      differs\n"
-      "@@ -99, +99 @@\n"
-      "-99\n"
-      "+0\n"
-      "Edge Type            (int8)      differs\n"
-      "@@ -9907, +9907 @@\n"
-      "-693\n"
-      "+1386\n";
+  std::string out2 = "";
   KATANA_LOG_VASSERT(
       g->ReportDiff(g2.get()) == out2, "{}{}", g->ReportDiff(g2.get()), out2);
 
+  KATANA_LOG_ASSERT(g->Equals(g2.get()));
 }
 
 void

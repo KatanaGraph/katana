@@ -49,10 +49,10 @@ RDGVersion::ToString() const {
     return vec;
   }
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
-    vec += fmt::format("{}_{}_", numbers_[i], branches_[i]);
+    vec += fmt::format("{:03d}_{}_", numbers_[i], branches_[i]);
   }
   // include only the number from the past pair, ignore "."
-  return fmt::format("{}{}", vec, numbers_.back());
+  return fmt::format("{}{:03d}", vec, numbers_.back());
 }
 
 bool

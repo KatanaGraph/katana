@@ -223,6 +223,8 @@ public:
   // Accessors/Mutators
   //
 
+
+
   const std::string& topology_path() const { return topology_path_; }
   void set_topology_path(std::string path) { topology_path_ = std::move(path); }
 
@@ -260,6 +262,17 @@ public:
   void set_edge_prop_info_list(
       std::vector<PropStorageInfo>&& edge_prop_info_list) {
     edge_prop_info_list_ = std::move(edge_prop_info_list);
+  }
+
+  const std::vector<std::string>& property_index_column_names() const {
+	  return property_index_column_names_;
+  }
+  std::vector<std::string>& property_index_column_names() {
+	  return property_index_column_names_;
+  }
+  void set_property_index_column_names(
+      std::vector<std::string>&& property_index_column_names){
+     property_index_column_names_ = std::move(property_index_column_names); 
   }
 
   const std::vector<PropStorageInfo>& part_prop_info_list() const {
@@ -504,6 +517,9 @@ private:
   std::vector<PropStorageInfo> part_prop_info_list_;
   std::vector<PropStorageInfo> node_prop_info_list_;
   std::vector<PropStorageInfo> edge_prop_info_list_;
+
+  /// Column Names to create property index from on startup
+  std::vector<std::string> property_index_column_names_; //nhomann serializes this automagically. to/from json required if column name type is (in the future) changed from string to a custom one
 
   /// Metadata filled in by CuSP, or from storage (meta partition file)
   PartitionMetadata metadata_;

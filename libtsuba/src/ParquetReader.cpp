@@ -344,13 +344,7 @@ public:
       tables.emplace_back(arrow::Table::Make(arrow::schema(fields), columns));
     }
 
-    std::shared_ptr<arrow::Table> concatenated_table =
-        KATANA_CHECKED(arrow::ConcatenateTables(tables));
-    /*    if (slice) {
-      concatenated_table =
-          concatenated_table->Slice(slice->offset, slice->length);
-    }*/
-    return concatenated_table;
+    return KATANA_CHECKED(arrow::ConcatenateTables(tables));
   }
 
 private:

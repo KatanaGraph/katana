@@ -145,7 +145,8 @@ def independent_set(Graph pg, str output_property_name,
         graph = Graph(get_input("propertygraphs/ldbc_003"))
         from katana.analytics import independent_set, IndependentSetStatistics
         independent_set(graph, "output")
-        IndependentSetStatistics(graph, "output")
+        stats = IndependentSetStatistics(graph, "output")
+        print(stats)
 
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")

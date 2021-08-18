@@ -259,6 +259,23 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: SsspPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
+
+    .. code-block:: python
+
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.local import Graph
+        katana.local.initialize()
+
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import sssp, SsspStatistics
+        property_name = "NewProp"
+        weight_name = "workFrom"
+        start_node = 0
+        sssp(graph, start_node, weight_name, property_name)
+        stats = SsspStatistics(graph, property_name)
+        print("Max Distance:", stats.max_distance)
+
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")

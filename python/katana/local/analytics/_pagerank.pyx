@@ -177,6 +177,25 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
     :param output_property_name: The output property to store the rank. This property must not already exist.
     :type plan: PagerankPlan
     :param plan: The execution plan to use.
+
+    .. code-block:: python
+
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.local import Graph
+        katana.local.initialize()
+
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import pagerank, PagerankStatistics
+        property_name = "NewProp"
+
+        pagerank(graph, property_name)
+
+        stats = PagerankStatistics(graph, property_name)
+        print("Min Rank:", stats.min_rank)
+        print("Max Rank:", stats.max_rank)
+        print("Average Rank:", stats.average_rank)
+
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes

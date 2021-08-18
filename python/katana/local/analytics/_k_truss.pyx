@@ -133,6 +133,21 @@ def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussP
         This property must not already exist.
     :type plan: KTrussPlan
     :param plan: The execution plan to use.
+
+    .. code-block:: python
+
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.local import Graph
+        katana.local.initialize()
+
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import k_truss, KTrussStatistics
+        k_truss(graph, 10, "output")
+
+        stats = KTrussStatistics(graph, 10, "output")
+        print("Number of Edges Left:", stats.number_of_edges_left)
+
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:

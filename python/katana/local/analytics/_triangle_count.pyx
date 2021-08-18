@@ -189,6 +189,19 @@ def triangle_count(Graph pg,  TriangleCountPlan plan = TriangleCountPlan()) -> i
     :type plan: TriangleCountPlan
     :param plan: The execution plan to use.
     :return: The number of triangles found.
+
+    .. code-block:: python
+
+        import katana.local
+        from katana.example_utils import get_input
+        from katana.local import Graph
+        katana.local.initialize()
+
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        from katana.analytics import triangle_count
+        n = triangle_count(graph)
+        print("Triangle Count:", n)
+
     """
     with nogil:
         v = handle_result_int(TriangleCount(pg.underlying_property_graph(), plan.underlying_))

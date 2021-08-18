@@ -328,8 +328,14 @@ public:
         std::shared_ptr<arrow::ChunkedArray> column;
         if (auto arr_it = read_arrays.find(idx); arr_it != read_arrays.end()) {
           column = arr_it->second;
+          if (slice) {
+            column = column->Slice(slice->offset, slice->length);
+          }
         } else {
           KATANA_CHECKED(reader->ReadColumn(idx, &column));
+          if (slice) {
+            column = column->Slice(slice->offset, slice->length);
+          }
           read_arrays.emplace(idx, column);
         }
         fields.emplace_back(schema->field(idx));
@@ -340,10 +346,10 @@ public:
 
     std::shared_ptr<arrow::Table> concatenated_table =
         KATANA_CHECKED(arrow::ConcatenateTables(tables));
-    if (slice) {
+    /*    if (slice) {
       concatenated_table =
           concatenated_table->Slice(slice->offset, slice->length);
-    }
+    }*/
     return concatenated_table;
   }
 

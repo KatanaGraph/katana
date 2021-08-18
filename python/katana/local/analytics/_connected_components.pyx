@@ -263,11 +263,11 @@ def connected_components(Graph pg, str output_property_name,
         from katana.local import Graph
         katana.local.initialize()
 
-        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
         from katana.analytics import connected_components, ConnectedComponentsStatistics
-        connected_components(property_graph, "output")
+        connected_components(graph, "output")
 
-        stats = ConnectedComponentsStatistics(property_graph, "output")
+        stats = ConnectedComponentsStatistics(graph, "output")
 
         print("Total Components:", stats.total_components)
         print("Total Non-Trivial Components:", stats.total_non_trivial_components)

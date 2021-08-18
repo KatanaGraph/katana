@@ -180,12 +180,12 @@ def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = 
         from katana.local import Graph
         katana.local.initialize()
 
-        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
         from katana.analytics import bfs, BfsStatistics
         property_name="bfs"
         start_node = 0
-        bfs(property_graph, start_node, property_name)
-        stats = BfsStatistics(property_graph, property_name)
+        bfs(graph, start_node, property_name)
+        stats = BfsStatistics(graph, property_name)
         print("Number of reached nodes:", stats.n_reached_nodes)
 
     """

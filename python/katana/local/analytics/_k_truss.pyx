@@ -141,11 +141,11 @@ def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussP
         from katana.local import Graph
         katana.local.initialize()
 
-        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
         from katana.analytics import k_truss, KTrussStatistics
-        k_truss(property_graph, 10, "output")
+        k_truss(graph, 10, "output")
 
-        stats = KTrussStatistics(property_graph, 10, "output")
+        stats = KTrussStatistics(graph, 10, "output")
         print("Number of Edges Left:", stats.number_of_edges_left)
 
     """

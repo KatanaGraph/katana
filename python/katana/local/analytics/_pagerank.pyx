@@ -185,13 +185,13 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
         from katana.local import Graph
         katana.local.initialize()
 
-        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
         from katana.analytics import pagerank, PagerankStatistics
         property_name = "NewProp"
 
-        pagerank(property_graph, property_name)
+        pagerank(graph, property_name)
 
-        stats = PagerankStatistics(property_graph, property_name)
+        stats = PagerankStatistics(graph, property_name)
         print("Min Rank:", stats.min_rank)
         print("Max Rank:", stats.max_rank)
         print("Average Rank:", stats.average_rank)

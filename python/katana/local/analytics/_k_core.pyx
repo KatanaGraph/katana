@@ -126,11 +126,11 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
         from katana.local import Graph
         katana.local.initialize()
 
-        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
         from katana.analytics import k_core, KCoreStatistics
-        k_core(property_graph, 10, "output")
+        k_core(graph, 10, "output")
 
-        stats = KCoreStatistics(property_graph, 10, "output")
+        stats = KCoreStatistics(graph, 10, "output")
         print("Number of Nodes in K-core:", stats.number_of_nodes_in_kcore)
 
     """

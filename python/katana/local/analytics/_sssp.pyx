@@ -267,13 +267,13 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
         from katana.local import Graph
         katana.local.initialize()
 
-        property_graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_input("propertygraphs/ldbc_003"))
         from katana.analytics import sssp, SsspStatistics
         property_name = "NewProp"
         weight_name = "workFrom"
         start_node = 0
-        sssp(property_graph, start_node, weight_name, property_name)
-        stats = SsspStatistics(property_graph, property_name)
+        sssp(graph, start_node, weight_name, property_name)
+        stats = SsspStatistics(graph, property_name)
         print("Max Distance:", stats.max_distance)
 
     """

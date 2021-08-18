@@ -134,9 +134,9 @@ def independent_set(Graph pg, str output_property_name,
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: IndependentSetPlan
     :param plan: The execution plan to use.
-    
+
     .. code-block:: python
-    
+
         import katana.local
         from katana.example_utils import get_input
         from katana.local import Graph

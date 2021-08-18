@@ -136,7 +136,7 @@ def jaccard(Graph pg, size_t compare_node, str output_property_name,
             JaccardPlan plan = JaccardPlan()):
     """
     Compute the Jaccard Similarity between `compare_node` and all nodes in the graph.
-    
+
     :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type compare_node: node ID
@@ -145,9 +145,9 @@ def jaccard(Graph pg, size_t compare_node, str output_property_name,
     :param output_property_name: The output property for similarities. This property must not already exist.
     :type plan: JaccardPlan
     :param plan: The execution plan to use.
-    
+
     .. code-block:: python
-    
+
         import katana.local
         from katana.example_utils import get_input
         from katana.local import Graph
@@ -163,7 +163,7 @@ def jaccard(Graph pg, size_t compare_node, str output_property_name,
 
         print("Max Similarity:", stats.max_similarity)
         print("Min Similarity:", stats.min_similarity)
-        print("Average Similarity:", stats.average_similarity)    
+        print("Average Similarity:", stats.average_similarity)
 
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")

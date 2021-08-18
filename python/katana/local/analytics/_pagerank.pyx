@@ -170,7 +170,7 @@ cdef class PagerankPlan(Plan):
 def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPlan()):
     """
     Compute the Page Rank of each node in the graph.
-    
+
     :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str
@@ -179,7 +179,7 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
     :param plan: The execution plan to use.
 
     .. code-block:: python
-    
+
         import katana.local
         from katana.example_utils import get_input
         from katana.local import Graph

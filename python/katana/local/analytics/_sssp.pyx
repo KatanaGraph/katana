@@ -248,7 +248,7 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
     """
     Compute the Single-Source Shortest Path on `pg` using `start_node` as the source. The computed path lengths are
     written to the property `output_property_name`.
-    
+
     :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type start_node: Node ID
@@ -261,7 +261,7 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
 
     .. code-block:: python
-    
+
         import katana.local
         from katana.example_utils import get_input
         from katana.local import Graph

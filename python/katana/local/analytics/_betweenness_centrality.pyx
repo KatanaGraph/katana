@@ -131,9 +131,9 @@ cdef class BetweennessCentralityPlan(Plan):
 def betweenness_centrality(Graph pg, str output_property_name, sources = None,
              BetweennessCentralityPlan plan = BetweennessCentralityPlan()):
     """
-    Betweenness centrality measures the extent to which a vertex lies on paths between other vertices. 
+    Betweenness centrality measures the extent to which a vertex lies on paths between other vertices.
     Vertices with high betweenness may have considerable influence within a network by virtue of their control over information passing between others.
-    
+
     :type pg: katana.local.Graph
     :param pg: The graph to analyze.
     :type output_property_name: str

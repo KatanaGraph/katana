@@ -619,12 +619,9 @@ tsuba::RDG::DoMake(
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
-  if (!core_->part_header().IsEntityTypeIDsOutsideProperties()) {
-    // only need to perform these checks on graphs with types in
-    // the properties tables
-    KATANA_CHECKED(core_->EnsureNodeTypesLoaded(rdg_dir_));
-    KATANA_CHECKED(core_->EnsureEdgeTypesLoaded(rdg_dir_));
-  }
+  // these are not Node/Edge types but rather property types we are checking
+  KATANA_CHECKED(core_->EnsureNodeTypesLoaded(rdg_dir_));
+  KATANA_CHECKED(core_->EnsureEdgeTypesLoaded(rdg_dir_));
 
   return katana::ResultSuccess();
 }

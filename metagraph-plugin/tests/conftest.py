@@ -66,6 +66,10 @@ def kg_from_nx_ud_8_12(networkx_weighted_undirected_8_12):
 def nx_from_kg_rmat15_cleaned_di(katanagraph_rmat15_cleaned_di):
     return mg.translate(katanagraph_rmat15_cleaned_di, mg.wrappers.Graph.NetworkXGraph)
 
+@pytest.fixture(autouse=True)
+def nx_from_kg_rmat15_cleaned_ud(katanagraph_rmat15_cleaned_ud):
+    return mg.translate(katanagraph_rmat15_cleaned_ud, mg.wrappers.Graph.NetworkXGraph)
+
 
 @pytest.fixture(autouse=True)
 def kg_from_nx_di_8_12(networkx_weighted_directed_8_12):

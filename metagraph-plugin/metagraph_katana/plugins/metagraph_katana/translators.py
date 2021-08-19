@@ -6,8 +6,6 @@ from metagraph import translator
 from metagraph.plugins.networkx.types import NetworkXGraph
 from scipy.sparse import csr_matrix
 
-import katana.local
-
 from katana.local.import_data import from_csr
 
 from .types import KatanaGraph
@@ -53,6 +51,7 @@ def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
     edge_weights = x.value.get_edge_property(x.edge_weight_prop_name).to_pandas()
     if isinstance(edge_weights[0], np.int64):
         elist = [( nid, x.value.get_edge_dest(j), int(edge_weights[j]) ) for nid in x.value for j in x.value.edges(nid)]
+        # TODO(pengfei): add more type conversion support: like np.float64 -> float??
     if x.is_directed:
         graph = nx.DiGraph()
     else:

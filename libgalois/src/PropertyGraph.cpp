@@ -330,7 +330,8 @@ katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
   auto topo_result = MapTopology(rdg.topology_file_storage());
   if (!topo_result) {
-    return topo_result.error();
+    return (katana::Result<std::unique_ptr<katana::PropertyGraph>>)
+        topo_result.error();
   }
 
   auto property_graph = std::make_unique<PropertyGraph>(

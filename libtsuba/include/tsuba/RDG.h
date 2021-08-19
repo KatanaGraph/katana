@@ -180,16 +180,15 @@ public:
   /// Remove all edge properties
   void DropEdgeProperties();
 
+  //write the list of node and edge column names persisted to json, private as it is called only when the node and edge property index vectors are pushed back
+  void tsuba::RDG::set_node_property_indexes_column_name(
+      std::vector<std::string>&& node_property_indexes_column_name);
+  void tsuba::RDG::set_edge_property_indexes_column_name(
+      std::vector<std::string>&& edge_property_indexes_column_name);
 
-//write the list of node and edge column names persisted to json, private as it is called only when the node and edge property index vectors are pushed back
-  void tsuba::RDG::set_node_property_indexes_column_name(std::vector<std::string>&& node_property_indexes_column_name);
-  void tsuba::RDG::set_edge_property_indexes_column_name(std::vector<std::string>&& edge_property_indexes_column_name);
-  
   // read the same as above and recreate indexes
   std::vector<std::string>& tsuba::RDG::get_node_property_indexes_column_name();
   std::vector<std::string>& tsuba::RDG::get_edge_property_indexes_column_name();
-
-
 
   std::shared_ptr<arrow::Schema> full_node_schema() const;
 

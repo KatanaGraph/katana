@@ -146,23 +146,21 @@ private:
   const std::shared_ptr<arrow::Table>& edge_properties() const {
     return rdg_.edge_properties();
   }
- 
+
   // recreate indexes from json
-  void recreate_node_property_indexes()
-  {
-	  node_property_indexes_column_name =  rdg_.get_node_property_indexes_column_name();
-	  for (const std::string column_name: node_property_indexes_column_name)
-	  {
-		  MakeNodeIndex(&column_name);
-	  }
+  void recreate_node_property_indexes() {
+    node_property_indexes_column_name =
+        rdg_.get_node_property_indexes_column_name();
+    for (const std::string column_name : node_property_indexes_column_name) {
+      MakeNodeIndex(&column_name);
+    }
   }
-  void recreate_edge_property_indexes()
-  {
-	  edge_property_indexes_column_name = rdg_.get_edge_property_indexes_column_name();
-	  for (const std::string column_name: edge_property_indexes_column_name)
-	  {
-		  MakeEdgeIndex(&column_name);
-	  }
+  void recreate_edge_property_indexes() {
+    edge_property_indexes_column_name =
+        rdg_.get_edge_property_indexes_column_name();
+    for (const std::string column_name : edge_property_indexes_column_name) {
+      MakeEdgeIndex(&column_name);
+    }
   }
 
 public:

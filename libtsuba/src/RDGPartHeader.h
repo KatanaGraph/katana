@@ -258,7 +258,8 @@ public:
   }
   void set_node_property_indexes_column_name(
       std::vector<std::string>&& node_property_indexes_column_name) {
-    node_property_indexes_column_name_ = std::move(node_property_indexes_column_name);
+    node_property_indexes_column_name_ =
+        std::move(node_property_indexes_column_name);
   }
 
   const std::vector<std::string>& edge_property_indexes_column_name() const {
@@ -269,7 +270,8 @@ public:
   }
   void set_edge_property_indexes_column_name(
       std::vector<std::string>&& edge_property_indexes_column_name) {
-    edge_property_indexes_column_name_ = std::move(edge_property_indexes_column_name);
+    edge_property_indexes_column_name_ =
+        std::move(edge_property_indexes_column_name);
   }
 
   const PartitionMetadata& metadata() const { return metadata_; }
@@ -338,7 +340,6 @@ private:
       node_property_indexes_column_name_;  //nhomann serializes this automagically. to/from json required if column name type is (in the future) changed from string to a custom one
   std::vector<std::string>
       edge_property_indexes_column_name_;  //nhomann serializes this automagically. to/from json required if column name type is (in the future) changed from string to a custom one
-
 
   /// Metadata filled in by CuSP, or from storage (meta partition file)
   PartitionMetadata metadata_;

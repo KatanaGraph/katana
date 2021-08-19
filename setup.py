@@ -24,7 +24,7 @@ if __name__ == "__main__":
 #     Install Katana native library
 # conda install -c katanagraph/label/dev -c conda-forge katana-cpp=={{KATANA_VERSION}}
 #     Install Katana Python Conda dependencies (due to problems in the pip pyarrow package)
-# conda install -c conda-forge pyarrow==4.0.1
+# conda install -c conda-forge python==3.8 pyarrow==4.0.1
 #     Install Katana Python pip dependencies (using what we can from pip)
 # pip install numba
 #     Install Katana Python pip package

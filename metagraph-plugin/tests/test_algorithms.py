@@ -21,6 +21,7 @@ def test_bfs(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     bfs2_kg = mg.algos.traversal.bfs_iter(katanagraph_rmat15_cleaned_di, src_node)
     bfs_nx = mg.algos.traversal.bfs_iter(nx_from_kg_rmat15_cleaned_di, src_node)
     assert bfs1_kg.tolist() == bfs2_kg.tolist()
+    assert len(bfs1_kg.tolist()) > 0
     # assert bfs1_kg.tolist() == bfs_nx.tolist() # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 
 

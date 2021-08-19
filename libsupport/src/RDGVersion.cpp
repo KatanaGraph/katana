@@ -70,7 +70,7 @@ RDGVersion::NullBranch() const {
 bool
 RDGVersion::IsNull() const {
   // No branch and no positive ID
-  return (branches_.size() <=1 && (numbers_.empty() || numbers_.back() == 0));
+  return (branches_.size() <= 1 && (numbers_.empty() || numbers_.back() == 0));
 }
 
 uint64_t

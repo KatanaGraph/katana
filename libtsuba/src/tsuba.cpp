@@ -324,7 +324,10 @@ tsuba::ListAvailableViewsForVersion(
     // Update curent_max
     if (view_version_res.value() > current_max) {
       current_max = view_version_res.value();
-      views_found.clear();
+      // Clear views_found if max is needed
+      if (!specific) {
+        views_found.clear();
+      }
     }
 
     if (specific && (view_version_res.value() != target)) {
@@ -364,8 +367,8 @@ tsuba::ListAvailableViewsForVersion(
   *max_version = current_max;
 
   KATANA_LOG_DEBUG(
-      "ListAvailableViewsForVersion {} max {} ", target.ToString(),
-      current_max.ToString());
+      "ListAvailableViewsForVersion {} max {} candidates={} ",
+      target.ToString(), current_max.ToString(), views_found.size());
 
   return views_found;
 }

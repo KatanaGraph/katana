@@ -17,10 +17,10 @@ Highlights include:
 Installation
 ===============
 
-First install the dependency together with the plugin
+First install the package
 
 ```Shell
-conda env create -f katana-metagraph.yml
+conda create -n metagraph-test -c conda-forge -c katanagraph/label/dev -c metagraph metagraph-katana
 ```
 
 Test
@@ -28,7 +28,7 @@ Test
 To check the installation is successful, you can run the test cases by:
 
 ```Shell
-conda activate katana-metagraph
+conda activate metagraph-test
 pytest tests
 ```
 

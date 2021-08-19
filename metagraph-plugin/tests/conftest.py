@@ -46,11 +46,43 @@ def networkx_weighted_directed_8_12():
     return graph1
 
 
-@pytest.fixture
-def order():
-    return []
 
 
-@pytest.fixture
-def top(order, innermost):
-    order.append("top")
+# directed graph
+@pytest.fixture(autouse=True)
+def kg_from_nx_di_8_12(networkx_weighted_directed_8_12):
+    pg_test_case = mg.translate(networkx_weighted_directed_8_12, mg.wrappers.Graph.KatanaGraph)
+    return pg_test_case
+
+
+# undirected graph
+@pytest.fixture(autouse=True)
+def kg_from_nx_ud_8_12(networkx_weighted_undirected_8_12):
+    pg_test_case = mg.translate(networkx_weighted_undirected_8_12, mg.wrappers.Graph.KatanaGraph)
+    return pg_test_case
+
+
+@pytest.fixture(autouse=True)
+def nx_from_kg_rmat15_cleaned_di(katanagraph_rmat15_cleaned_di):
+    return mg.translate(katanagraph_rmat15_cleaned_di, mg.wrappers.Graph.NetworkXGraph)
+
+
+@pytest.fixture(autouse=True)
+def kg_from_nx_di_8_12(networkx_weighted_directed_8_12):
+    pg_test_case = mg.translate(networkx_weighted_directed_8_12, mg.wrappers.Graph.KatanaGraph)
+    return pg_test_case
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--runslow", action="store_true", default=False, help="run slow tests"
+    )
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--runslow"):
+        # --runslow given in cli: do not skip slow tests
+        return
+    skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+    for item in items:
+        if "slow" in item.keywords:
+            item.add_marker(skip_slow)

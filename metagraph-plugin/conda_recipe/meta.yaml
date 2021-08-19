@@ -30,6 +30,7 @@ test:
     - tests
   commands:
     - pytest -s -v tests
+    # - pytest -s -v --runslow tests
 
 about:
   home: https://katanagraph.com/

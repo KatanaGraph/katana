@@ -43,11 +43,11 @@ def test_sssp_bellman_ford(networkx_weighted_directed_8_12, kg_from_nx_di_8_12):
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_sssp_bellman_ford_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_sssp_bellman_ford_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     src_node = 11
     sssp1_kg = mg.algos.traversal.bellman_ford(katanagraph_rmat15_cleaned_di, src_node)
     sssp2_kg = mg.algos.traversal.bellman_ford(katanagraph_rmat15_cleaned_di, src_node)
-    sssp_nx = mg.algos.traversal.bellman_ford(networkx_weighted_directed_8_12, src_node)
+    sssp_nx = mg.algos.traversal.bellman_ford(nx_from_kg_rmat15_cleaned_di, src_node)
     assert sssp1_kg[0] == sssp2_kg[0]
     assert sssp1_kg[1] == sssp2_kg[1]
     # assert sssp1_kg[0] == sssp_nx[0] # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
@@ -71,11 +71,11 @@ def test_sssp_dijkstra(networkx_weighted_directed_8_12, kg_from_nx_di_8_12):
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_sssp_dijkstra_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_sssp_dijkstra_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     src_node = 1
     sssp1_kg = mg.algos.traversal.dijkstra(katanagraph_rmat15_cleaned_di, src_node)
     sssp2_kg = mg.algos.traversal.dijkstra(katanagraph_rmat15_cleaned_di, src_node)
-    sssp_nx = mg.algos.traversal.dijkstra(networkx_weighted_directed_8_12, src_node)
+    sssp_nx = mg.algos.traversal.dijkstra(nx_from_kg_rmat15_cleaned_di, src_node)
     assert sssp1_kg[0] == sssp2_kg[0]
     assert sssp1_kg[1] == sssp2_kg[1]
     # assert sssp1_kg[0] == sssp_nx[0] # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
@@ -93,10 +93,10 @@ def test_connected_components(networkx_weighted_undirected_8_12, kg_from_nx_ud_8
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_connected_components_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_connected_components_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     cc_kg1 = mg.algos.clustering.connected_components(katanagraph_rmat15_cleaned_di)
     cc_kg2 = mg.algos.clustering.connected_components(katanagraph_rmat15_cleaned_di)
-    cc_nx = mg.algos.clustering.connected_components(networkx_weighted_directed_8_12)
+    cc_nx = mg.algos.clustering.connected_components(nx_from_kg_rmat15_cleaned_di)
     assert cc_kg1 == cc_kg2
     # assert cc_kg1 == cc_nx # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 
@@ -112,10 +112,10 @@ def test_pagerank(networkx_weighted_directed_8_12, kg_from_nx_di_8_12):
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_pagerank_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_pagerank_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     pr_kg1 = mg.algos.centrality.pagerank(katanagraph_rmat15_cleaned_di)
     pr_kg2 = mg.algos.centrality.pagerank(katanagraph_rmat15_cleaned_di)
-    pr_nx = mg.algos.centrality.pagerank(networkx_weighted_directed_8_12)
+    pr_nx = mg.algos.centrality.pagerank(nx_from_kg_rmat15_cleaned_di)
     assert pr_kg1 == pr_kg2
     # assert pr_kg1 == pr_nx # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 
@@ -131,10 +131,10 @@ def test_betweenness_centrality(networkx_weighted_directed_8_12, kg_from_nx_di_8
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_betweenness_centrality_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_betweenness_centrality_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     bc_kg1 = mg.algos.centrality.betweenness(katanagraph_rmat15_cleaned_di)
     bc_kg2 = mg.algos.centrality.betweenness(katanagraph_rmat15_cleaned_di)
-    bc_nx = mg.algos.centrality.betweenness(networkx_weighted_directed_8_12)
+    bc_nx = mg.algos.centrality.betweenness(nx_from_kg_rmat15_cleaned_di)
     assert bc_kg1 == bc_kg2
     # assert bc_kg1 == bc_nx # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 
@@ -150,10 +150,10 @@ def test_triangle_counting(networkx_weighted_undirected_8_12, kg_from_nx_ud_8_12
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_triangle_counting_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_triangle_counting_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     tc_kg1 = mg.algos.clustering.triangle_count(katanagraph_rmat15_cleaned_di)
     tc_kg2 = mg.algos.clustering.triangle_count(katanagraph_rmat15_cleaned_di)
-    tc_nx = mg.algos.clustering.triangle_count(networkx_weighted_directed_8_12)
+    tc_nx = mg.algos.clustering.triangle_count(nx_from_kg_rmat15_cleaned_di)
     assert tc_kg1 == tc_kg2
     assert tc_kg1 == tc_nx
 
@@ -172,10 +172,10 @@ def test_louvain_community_detection(networkx_weighted_undirected_8_12, kg_from_
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_louvain_community_detection_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_louvain_community_detection_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     lc_kg1 = mg.algos.clustering.louvain_community(katanagraph_rmat15_cleaned_di)
     lc_kg2 = mg.algos.clustering.louvain_community(katanagraph_rmat15_cleaned_di)
-    lc_nx = mg.algos.clustering.louvain_community(networkx_weighted_directed_8_12)
+    lc_nx = mg.algos.clustering.louvain_community(nx_from_kg_rmat15_cleaned_di)
     assert lc_kg1[0] == lc_kg2[0]
     assert lc_kg1[1] == lc_kg2[1]
     # assert lc_kg1[0] == lc_nx[0] # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
@@ -193,11 +193,11 @@ def test_translation_subgraph_extraction(networkx_weighted_directed_8_12, kg_fro
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_translation_subgraph_extraction_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_translation_subgraph_extraction_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     ids = {0, 4, 7}
     se_kg1 = mg.algos.subgraph.extract_subgraph(katanagraph_rmat15_cleaned_di, ids)
     se_kg2 = mg.algos.subgraph.extract_subgraph(katanagraph_rmat15_cleaned_di, ids)
-    se_nx = mg.algos.subgraph.extract_subgraph(networkx_weighted_directed_8_12, ids)
+    se_nx = mg.algos.subgraph.extract_subgraph(nx_from_kg_rmat15_cleaned_di, ids)
     assert list(se_kg1.value.edges(data=True)) == list(se_kg2.value.edges(data=True))
     # assert list(se_kg1.value.edges(data=True)) == list(se_nx.value.edges(data=True)) # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 
@@ -213,10 +213,10 @@ def test_labal_propagation(networkx_weighted_undirected_8_12, kg_from_nx_ud_8_12
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_labal_propagation_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_labal_propagation_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     cd_kg1 = mg.algos.clustering.label_propagation_community(katanagraph_rmat15_cleaned_di)
     cd_kg2 = mg.algos.clustering.label_propagation_community(katanagraph_rmat15_cleaned_di)
-    cd_nx = mg.algos.clustering.label_propagation_community(networkx_weighted_directed_8_12)
+    cd_nx = mg.algos.clustering.label_propagation_community(nx_from_kg_rmat15_cleaned_di)
     assert cd_kg1 == cd_kg2
     # assert cd_kg1 == cd_nx # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 
@@ -234,12 +234,12 @@ def test_jaccard_similarity(networkx_weighted_undirected_8_12, kg_from_nx_ud_8_1
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_jaccard_similarity_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_jaccard_similarity_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     compare_node = 13
     prop_name = "jaccard_prop_with_" + str(compare_node)
     jcd_kg1 = mg.algos.traversal.jaccard(katanagraph_rmat15_cleaned_di, compare_node)
     jcd_kg2 = mg.algos.traversal.jaccard(katanagraph_rmat15_cleaned_di, compare_node)
-    jcd_nx = mg.algos.traversal.jaccard(networkx_weighted_directed_8_12, compare_node)
+    jcd_nx = mg.algos.traversal.jaccard(nx_from_kg_rmat15_cleaned_di, compare_node)
     assert jcd_kg1.tolist() == jcd_kg2.tolist()
     assert jcd_kg1[compare_node] == 1
     assert jcd_kg2[compare_node] == 1
@@ -260,11 +260,11 @@ def test_local_clustering_coefficient(networkx_weighted_undirected_8_12, kg_from
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_local_clustering_coefficient_kg(katanagraph_rmat15_cleaned_di, networkx_weighted_directed_8_12):
+def test_local_clustering_coefficient_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     prop_name = "output_prop"
     lcc_kg1 = mg.algos.clustering.local_clustering_coefficient(katanagraph_rmat15_cleaned_di, prop_name)
     lcc_kg2 = mg.algos.clustering.local_clustering_coefficient(katanagraph_rmat15_cleaned_di, prop_name)
-    lcc_nx = mg.algos.clustering.local_clustering_coefficient(networkx_weighted_directed_8_12, prop_name)
+    lcc_nx = mg.algos.clustering.local_clustering_coefficient(nx_from_kg_rmat15_cleaned_di, prop_name)
     assert lcc_kg1.tolist() == lcc_kg2.tolist()
     assert lcc_kg1[-1] == 1
     assert not np.any(np.isnan(lcc_kg1))

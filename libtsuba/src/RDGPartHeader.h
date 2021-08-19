@@ -257,7 +257,7 @@ public:
     return node_property_indexes_column_name_;
   }
   void set_node_property_indexes_column_name(
-      std::vector<std::string>&& node_property_indexes_column_name) {
+      std::vector<std::string>& node_property_indexes_column_name) {
     node_property_indexes_column_name_ =
         std::move(node_property_indexes_column_name);
   }
@@ -269,7 +269,7 @@ public:
     return edge_property_indexes_column_name_;
   }
   void set_edge_property_indexes_column_name(
-      std::vector<std::string>&& edge_property_indexes_column_name) {
+      std::vector<std::string>& edge_property_indexes_column_name) {
     edge_property_indexes_column_name_ =
         std::move(edge_property_indexes_column_name);
   }

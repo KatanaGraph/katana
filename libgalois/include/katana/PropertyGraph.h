@@ -157,8 +157,8 @@ public:
     std::shared_ptr<arrow::Schema> (PropertyGraph::*full_schema_fn)() const;
     std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_int)(
         int i) const;
-    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_str)(
-        const std::string& str) const;
+    Result<std::shared_ptr<arrow::ChunkedArray>> (
+        PropertyGraph::*property_fn_str)(const std::string& str) const;
     int32_t (PropertyGraph::*property_num_fn)() const;
 
     std::shared_ptr<arrow::Schema> loaded_schema() const {
@@ -173,7 +173,7 @@ public:
       return (const_g->*property_fn_int)(i);
     }
 
-    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+    Result<std::shared_ptr<arrow::ChunkedArray>> GetProperty(
         const std::string& str) const {
       return (const_g->*property_fn_str)(str);
     }
@@ -214,7 +214,7 @@ public:
       return ropv.GetProperty(i);
     }
 
-    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+    Result<std::shared_ptr<arrow::ChunkedArray>> GetProperty(
         const std::string& str) const {
       return ropv.GetProperty(str);
     }
@@ -619,18 +619,28 @@ public:
   ///
   /// \param name The name of the property to get.
   /// \return The property data or NULL if the property is not found.
-  std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(
+  Result<std::shared_ptr<arrow::ChunkedArray>> GetNodeProperty(
       const std::string& name) const {
-    return node_properties()->GetColumnByName(name);
+    auto ret = node_properties()->GetColumnByName(name);
+    if (ret) {
+      return ret;
+    }
+    return KATANA_ERROR(
+        ErrorCode::PropertyNotFound, "node property does not exist: {}", name);
   }
 
   std::string GetNodePropertyName(int32_t i) const {
     return loaded_node_schema()->field(i)->name();
   }
 
-  std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
+  Result<std::shared_ptr<arrow::ChunkedArray>> GetEdgeProperty(
       const std::string& name) const {
-    return edge_properties()->GetColumnByName(name);
+    auto ret = edge_properties()->GetColumnByName(name);
+    if (ret) {
+      return ret;
+    }
+    return KATANA_ERROR(
+        ErrorCode::PropertyNotFound, "edge property does not exist: {}", name);
   }
 
   std::string GetEdgePropertyName(int32_t i) const {
@@ -645,10 +655,8 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetNodePropertyTyped(const std::string& name) {
-    auto chunked_array = GetNodeProperty(name);
-    if (!chunked_array) {
-      return ErrorCode::PropertyNotFound;
-    }
+    auto chunked_array = KATANA_CHECKED(GetNodeProperty(name));
+    KATANA_LOG_ASSERT(chunked_array);
 
     auto array =
         std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
@@ -667,10 +675,8 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetEdgePropertyTyped(const std::string& name) {
-    auto chunked_array = GetEdgeProperty(name);
-    if (!chunked_array) {
-      return ErrorCode::PropertyNotFound;
-    }
+    auto chunked_array = KATANA_CHECKED(GetEdgeProperty(name));
+    KATANA_LOG_ASSERT(chunked_array);
 
     auto array =
         std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(

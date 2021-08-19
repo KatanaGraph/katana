@@ -1022,11 +1022,7 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
 
   // Get a view of the property.
   std::shared_ptr<arrow::ChunkedArray> chunked_property =
-      GetNodeProperty(column_name);
-  if (!chunked_property) {
-    return KATANA_ERROR(
-        katana::ErrorCode::NotFound, "No such property: {}", column_name);
-  }
+      KATANA_CHECKED(GetNodeProperty(column_name));
   KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 
@@ -1055,11 +1051,7 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
 
   // Get a view of the property.
   std::shared_ptr<arrow::ChunkedArray> chunked_property =
-      GetEdgeProperty(column_name);
-  if (!chunked_property) {
-    return KATANA_ERROR(
-        katana::ErrorCode::NotFound, "No such property: {}", column_name);
-  }
+      KATANA_CHECKED(GetEdgeProperty(column_name));
   KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 

@@ -582,7 +582,9 @@ katana::Result<void>
 katana::analytics::LouvainClustering(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, LouvainClusteringPlan plan) {
-  switch (pg->GetEdgeProperty(edge_weight_property_name)->type()->id()) {
+  switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+              ->type()
+              ->id()) {
   case arrow::UInt32Type::type_id:
     return LouvainClusteringWithWrap<uint32_t>(
         pg, edge_weight_property_name, output_property_name, plan);
@@ -726,7 +728,9 @@ katana::analytics::LouvainClusteringStatistics::Compute(
 
   double modularity = 0.0;
 
-  switch (pg->GetEdgeProperty(edge_weight_property_name)->type()->id()) {
+  switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+              ->type()
+              ->id()) {
   case arrow::UInt32Type::type_id: {
     auto modularity_result = CalModularityWrap<uint32_t>(
         pg, edge_weight_property_name, property_name);

@@ -51,7 +51,8 @@ def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
 def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
     elist = []
     edge_weights = x.value.get_edge_property(x.edge_weight_prop_name).to_pandas()
-    elist = [(nid, x.value.get_edge_dest(j), edge_weights[j]) for nid in x.value for j in x.value.edges(nid)]
+    if isinstance(edge_weights[0], np.int64):
+        elist = [(nid, x.value.get_edge_dest(j), edge_weights[j]) for nid in x.value for j in x.value.edges(nid)]
     if x.is_directed:
         graph = nx.DiGraph()
     else:

@@ -44,7 +44,7 @@ def test_sssp_bellman_ford(networkx_weighted_directed_8_12, kg_from_nx_di_8_12):
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
 def test_sssp_bellman_ford_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
-    src_node = 11
+    src_node = 0
     sssp1_kg = mg.algos.traversal.bellman_ford(katanagraph_rmat15_cleaned_di, src_node)
     sssp2_kg = mg.algos.traversal.bellman_ford(katanagraph_rmat15_cleaned_di, src_node)
     sssp_nx = mg.algos.traversal.bellman_ford(nx_from_kg_rmat15_cleaned_di, src_node)
@@ -93,10 +93,10 @@ def test_connected_components(networkx_weighted_undirected_8_12, kg_from_nx_ud_8
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
 @pytest.mark.runslow
-def test_connected_components_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
-    cc_kg1 = mg.algos.clustering.connected_components(katanagraph_rmat15_cleaned_di)
-    cc_kg2 = mg.algos.clustering.connected_components(katanagraph_rmat15_cleaned_di)
-    cc_nx = mg.algos.clustering.connected_components(nx_from_kg_rmat15_cleaned_di)
+def test_connected_components_kg(katanagraph_rmat15_cleaned_ud, nx_from_kg_rmat15_cleaned_ud):
+    cc_kg1 = mg.algos.clustering.connected_components(katanagraph_rmat15_cleaned_ud)
+    cc_kg2 = mg.algos.clustering.connected_components(katanagraph_rmat15_cleaned_ud)
+    cc_nx = mg.algos.clustering.connected_components(nx_from_kg_rmat15_cleaned_ud)
     assert cc_kg1 == cc_kg2
     # assert cc_kg1 == cc_nx # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 

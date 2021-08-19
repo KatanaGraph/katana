@@ -29,8 +29,8 @@ test:
   source_files:
     - tests
   commands:
-    - pytest -s -v tests
-    # - pytest -s -v --runslow tests
+    # - pytest -s -v tests
+    - pytest -s -v --runslow tests
 
 about:
   home: https://katanagraph.com/

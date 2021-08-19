@@ -17,7 +17,6 @@
 #include "katana/PropertyIndex.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"
-#include "tsuba/RDGPartHeader.h"
 
 namespace katana {
 
@@ -91,11 +90,11 @@ private:
   // List of node and edge indexes on this graph. And the columns that created them to persist in json
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
       node_indexes_;
-  std::vector<std::string> node_indexes_column_name;
+  std::vector<std::string> node_property_indexes_column_name;
 
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
       edge_indexes_;
-  std::vector<std::string> edge_indexes_column_name;
+  std::vector<std::string> edge_property_indexes_column_name;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
@@ -147,37 +146,20 @@ private:
   const std::shared_ptr<arrow::Table>& edge_properties() const {
     return rdg_.edge_properties();
   }
-
-  //write the list of node and edge column names persisted to json, private as it is called only when the node and edge property index vectors are pushed back
-  void write_node_property_indexes_column_name()
-  {
-	core_->part_header().set_node_property_indexes_column_name(node_property_indexes_column_name);
-  }
-  void write_edge_property_indexes_column_name()
-  {
-	core_->part_header().set_edge_property_indexes_column_name(edge_property_indexes_column_name);
-  }
-  // read the same as above and recreate indexes
-  void read_node_property_indexes_column_name()
-  {
-	  node_property_indexes_column_name = core_->part_header().node_property_indexes_column_name();
-  }
-  void read_edge_property_indexes_column_name()
-  {
-	  edge_property_indexes_column_name = core_->part_header().edge_property_indexes_column_name();
-  }
+ 
+  // recreate indexes from json
   void recreate_node_property_indexes()
   {
-	  read_node_property_indexes_column_name();
-	  for (const std::string column_name: node_indexes_column_name)
+	  node_property_indexes_column_name =  rdg_.get_node_property_indexes_column_name();
+	  for (const std::string column_name: node_property_indexes_column_name)
 	  {
 		  MakeNodeIndex(&column_name);
 	  }
   }
   void recreate_edge_property_indexes()
   {
-	  read_edge_property_indexes_column_name();
-	  for (const std::string column_name: edge_indexes_column_name)
+	  edge_property_indexes_column_name = rdg_.get_edge_property_indexes_column_name();
+	  for (const std::string column_name: edge_property_indexes_column_name)
 	  {
 		  MakeEdgeIndex(&column_name);
 	  }

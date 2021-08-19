@@ -18,7 +18,8 @@ KATANA_EXPORT katana::Result<std::shared_ptr<arrow::Table>> LoadPropertySlice(
     int64_t offset, int64_t length);
 
 KATANA_EXPORT katana::Result<void> AddProperties(
-    const katana::Uri& uri,
+    const katana::Uri& uri, tsuba::PropertyCacheKey* key,
+    tsuba::PropertyCache* cache,
     const std::vector<tsuba::PropStorageInfo*>& properties, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn);

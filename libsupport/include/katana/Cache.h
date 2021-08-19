@@ -20,7 +20,7 @@
 
 #include "katana/Logging.h"
 
-namespace tsuba {
+namespace katana {
 
 template <typename Key, typename Value>
 class KATANA_EXPORT Cache {
@@ -30,7 +30,7 @@ class KATANA_EXPORT Cache {
     // This allows us to delete the old position in the LRU list without a scan
     typename ListType::iterator lru_it;
   };
-  using MapType = std::unordered_map<Key, MapValue>;
+  using MapType = std::unordered_map<Key, MapValue, typename Key::Hash>;
   enum class ReplacementPolicy { kLRUSize, kLRUBytes };
 
 public:
@@ -161,6 +161,6 @@ private:
   std::function<void(const Key& key)> evict_cb_;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

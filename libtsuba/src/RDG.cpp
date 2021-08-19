@@ -35,6 +35,7 @@
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/ParquetWriter.h"
+#include "tsuba/PropertyCache.h"
 #include "tsuba/ReadGroup.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/file.h"
@@ -481,9 +482,10 @@ tsuba::RDG::DoMake(
     const katana::Uri& metadata_dir) {
   ReadGroup grp;
 
+  tsuba::PropertyCacheKey node_key(tsuba::NodeEdge::kNode);
   KATANA_CHECKED_CONTEXT(
       AddProperties(
-          metadata_dir, node_props_to_be_loaded, &grp,
+          metadata_dir, &node_key, prop_cache_, node_props_to_be_loaded, &grp,
           [rdg = this](const std::shared_ptr<arrow::Table>& props)
               -> katana::Result<void> {
             std::shared_ptr<arrow::Table> prop_table =
@@ -503,9 +505,10 @@ tsuba::RDG::DoMake(
           }),
       "populating node properties");
 
+  tsuba::PropertyCacheKey edge_key(tsuba::NodeEdge::kEdge);
   KATANA_CHECKED_CONTEXT(
       AddProperties(
-          metadata_dir, edge_props_to_be_loaded, &grp,
+          metadata_dir, &edge_key, prop_cache_, edge_props_to_be_loaded, &grp,
           [rdg = this](const std::shared_ptr<arrow::Table>& props)
               -> katana::Result<void> {
             std::shared_ptr<arrow::Table> prop_table =
@@ -559,7 +562,7 @@ tsuba::RDG::DoMake(
 
   KATANA_CHECKED_CONTEXT(
       AddProperties(
-          metadata_dir, part_info, &grp,
+          metadata_dir, nullptr, nullptr, part_info, &grp,
           [rdg = this](const std::shared_ptr<arrow::Table>& props) {
             return rdg->AddPartitionMetadataArray(props);
           }),
@@ -626,6 +629,7 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   }
 
   RDG rdg(std::make_unique<RDGCore>(std::move(part_header_res.value())));
+  rdg.prop_cache_ = opts.prop_cache;
 
   std::vector<PropStorageInfo*> node_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectNodeProperties(opts.node_properties));
@@ -798,6 +802,7 @@ UnloadProperty(
 katana::Result<std::shared_ptr<arrow::Table>>
 LoadProperty(
     const std::shared_ptr<arrow::Table>& props, const std::string name, int i,
+    tsuba::PropertyCacheKey* cache_key, tsuba::PropertyCache* cache,
     std::vector<tsuba::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
   if (i < 0 || i > props->num_columns()) {
@@ -825,7 +830,7 @@ LoadProperty(
   std::shared_ptr<arrow::Table> new_table;
 
   KATANA_CHECKED(tsuba::AddProperties(
-      dir, {&prop_info}, nullptr,
+      dir, cache_key, cache, {&prop_info}, nullptr,
       [&](const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
         if (props->num_columns() > 0) {
           new_table = KATANA_CHECKED(
@@ -863,18 +868,20 @@ tsuba::RDG::UnloadEdgeProperty(int i) {
 
 katana::Result<void>
 tsuba::RDG::LoadNodeProperty(const std::string& name, int i) {
+  tsuba::PropertyCacheKey node_key(tsuba::NodeEdge::kNode);
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
-      node_properties(), name, i, &core_->part_header().node_prop_info_list(),
-      rdg_dir()));
+      node_properties(), name, i, &node_key, prop_cache_,
+      &core_->part_header().node_prop_info_list(), rdg_dir()));
   core_->set_node_properties(std::move(new_props));
   return katana::ResultSuccess();
 }
 
 katana::Result<void>
 tsuba::RDG::LoadEdgeProperty(const std::string& name, int i) {
+  tsuba::PropertyCacheKey edge_key(tsuba::NodeEdge::kEdge);
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
-      edge_properties(), name, i, &core_->part_header().edge_prop_info_list(),
-      rdg_dir()));
+      edge_properties(), name, i, &edge_key, prop_cache_,
+      &core_->part_header().edge_prop_info_list(), rdg_dir()));
   core_->set_edge_properties(std::move(new_props));
   return katana::ResultSuccess();
 }

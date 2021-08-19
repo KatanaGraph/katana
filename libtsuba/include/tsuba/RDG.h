@@ -19,6 +19,7 @@
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"
 #include "tsuba/PartitionMetadata.h"
+#include "tsuba/PropertyCache.h"
 #include "tsuba/RDGLineage.h"
 #include "tsuba/ReadGroup.h"
 #include "tsuba/WriteGroup.h"
@@ -41,6 +42,7 @@ struct KATANA_EXPORT RDGLoadOptions {
   /// List of edge properties that should be loaded
   /// nullptr means all edge properties will be loaded
   std::optional<std::vector<std::string>> edge_properties{std::nullopt};
+  tsuba::PropertyCache* prop_cache{nullptr};
 };
 
 class KATANA_EXPORT RDG {
@@ -341,6 +343,8 @@ private:
   //
 
   std::unique_ptr<RDGCore> core_;
+  // Optional property cache
+  PropertyCache* prop_cache_{nullptr};
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;

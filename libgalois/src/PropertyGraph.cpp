@@ -868,6 +868,12 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
 
   node_indexes_.push_back(std::move(index));
 
+  //save the column name the index was created from for easy assess dudring json load/store
+  node_indexes_column_name.push_back(column_name);
+
+  //persist column names to json, index can now can be recreated using recreate_node_property_indexes()
+  write_node_property_indexes_column_name();
+
   return katana::ResultSuccess();
 }
 
@@ -900,6 +906,12 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
   KATANA_CHECKED(index->BuildFromProperty());
 
   edge_indexes_.push_back(std::move(index));
+
+  //save the column name the index was created from for easy assess dudring json load/store
+  edge_indexes_column_name.push_back(column_name);
+
+  //persist column names to json, index can now can be recreated using recreate_edge_property_indexes()
+  write_edge_property_indexes_column_name();
 
   return katana::ResultSuccess();
 }

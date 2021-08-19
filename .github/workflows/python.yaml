@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
+        run: echo "will build"
 
   do_python_package:
     needs:
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
+        run: echo "will build"
 
   do_python_test:
     needs:
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
+        run: echo "will build"
 
   build_and_test_conda_package:
     needs: do_python_package

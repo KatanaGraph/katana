@@ -17,14 +17,17 @@ def remove_old_func(args, api: Binstar):
         files = package["files"]
         for f in files:
             basename = f["basename"]
-            labels = f["labels"]
+            labels = {l.lower() for l in f["labels"]}
             version = f["version"]
             ndownloads = f["ndownloads"]
             if version in latest_versions:
                 # Skip the most recent versions always.
                 continue
-            if args.label not in labels or args.keep in labels:
-                # Skip if it doesn't have the label we want or has the keep label
+            if args.label.lower() not in labels:
+                # Skip if it doesn't have the label we want
+                continue
+            if args.keep.lower() in labels:
+                # Skip if it has the keep label
                 continue
             if args.downloads is not None and ndownloads > args.downloads:
                 # Skip if it has been downloaded enough

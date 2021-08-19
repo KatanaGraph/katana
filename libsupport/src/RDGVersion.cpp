@@ -56,9 +56,21 @@ RDGVersion::ToString() const {
 }
 
 bool
+RDGVersion::NullNumber() const {
+  // No branch and no positive ID
+  return (numbers_.empty() || numbers_.back() == 0);
+}
+
+bool
+RDGVersion::NullBranch() const {
+  // No branch and no positive ID
+  return (branches_.empty() || branches_.back() == ".");
+}
+
+bool
 RDGVersion::IsNull() const {
   // No branch and no positive ID
-  return (branches_.size() <= 1 && numbers_.back() == 0);
+  return (branches_.size() <=1 && (numbers_.empty() || numbers_.back() == 0));
 }
 
 uint64_t
@@ -78,7 +90,6 @@ RDGVersion::ShareBranch(const RDGVersion& in) const {
     }
   }
 
-#if 1
   if (std::equal(numbers_.begin(), numbers_.end() - 1, in.numbers_.begin()))
     return true;
   else
@@ -89,7 +100,7 @@ RDGVersion::ShareBranch(const RDGVersion& in) const {
       return false;
     }
   }
-#endif
+
   return true;
 }
 

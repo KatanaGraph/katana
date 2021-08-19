@@ -333,8 +333,11 @@ katana::PropertyGraph::Make(
     return topo_result.error();
   }
 
-  return std::make_unique<PropertyGraph>(
+  auto property_graph = std::make_unique<PropertyGraph>(
       std::move(rdg_file), std::move(rdg), std::move(topo_result.value()));
+  property_graph->recreate_node_property_indexes();
+  property_graph->recreate_edge_property_indexes();
+  return property_graph;
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>

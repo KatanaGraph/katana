@@ -114,11 +114,6 @@ CommitRDG(
           : handle.impl_->rdg_manifest().NextVersion(
                 comm->Num, policy_id, transposed, lineage);
 
-  KATANA_LOG_DEBUG(
-      "CommitRDG manifest version old {} new {}; ",
-      handle.impl_->rdg_manifest().version().ToString(),
-      new_manifest.version().ToString());
-
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   if (auto res = desc->Finish(); !res) {
@@ -292,18 +287,6 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   return next_properties;
 }
 
-katana::Result<void>
-tsuba::RDG::ChainVersions(
-    RDGHandle handle, katana::RDGVersion current, katana::RDGVersion previous) {
-  tsuba::RDGManifest manifest = handle.impl_->rdg_manifest();
-  manifest.set_version(current);
-  manifest.set_previous_version(previous);
-  handle.impl_->set_rdg_manifest(std::move(manifest));
-
-  // lineage is updated later before CommitRDG()
-  return katana::ResultSuccess();
-}
-
 katana::RDGVersion
 tsuba::RDG::GetFileVersion(RDGHandle handle) {
   return handle.impl_->rdg_manifest().version();
@@ -314,17 +297,9 @@ tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
-  KATANA_LOG_DEBUG(
-      "store for version {} action {}; ",
-      handle.impl_->rdg_manifest().version().ToString(), versioning_action);
-
   if (core_->part_header().topology_path().empty()) {
     // No topology file; create one
     katana::Uri t_path = MakeTopologyFileName(handle);
-
-    KATANA_LOG_DEBUG(
-        "topology path {} for version {}; ", t_path.path(),
-        handle.impl_->rdg_manifest().version().ToString());
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
 
@@ -333,7 +308,6 @@ tsuba::RDG::DoStore(
         t_path.string(), core_->topology_file_storage().ptr<uint8_t>(),
         core_->topology_file_storage().size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
-
     core_->part_header().set_topology_path(t_path.BaseName());
   }
 
@@ -369,11 +343,6 @@ tsuba::RDG::DoStore(
       WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get()),
       "writing partition metadata"));
 
-  KATANA_LOG_DEBUG(
-      "PartitionMetadata path {} for version {}\n",
-      handle.impl_->rdg_manifest().dir().path(),
-      handle.impl_->rdg_manifest().version().ToString());
-
   //If a view type has been set, use it otherwise pass in the default view type
   if (view_type_.empty()) {
     handle.impl_->set_viewtype(tsuba::kDefaultRDGViewType);
@@ -387,7 +356,7 @@ tsuba::RDG::DoStore(
     return write_result.error().WithContext("failed to write metadata");
   }
 
-  // Update lineage, branch_path_ and commit
+  // Update lineage and commit
   lineage_.AddCommandLine(command_line);
   if (auto res = CommitRDG(
           handle, core_->part_header().metadata().policy_id_,
@@ -513,10 +482,7 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   std::vector<PropStorageInfo*> edge_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectEdgeProperties(opts.edge_properties));
 
-  if (auto res = rdg.DoMake(node_props, edge_props, manifest); !res) {
-    return res.error();
-  }
-
+  KATANA_CHECKED(rdg.DoMake(node_props, edge_props, manifest));
   rdg.set_partition_id(partition_id_to_load);
 
   return RDG(std::move(rdg));
@@ -577,10 +543,6 @@ tsuba::RDG::Store(
   if (ff) {
     katana::Uri t_path =
         handle.impl_->rdg_manifest().dir().RandFile("topology");
-
-    KATANA_LOG_DEBUG(
-        "RDG::Store t_path {} for version {}; ", t_path.string(),
-        handle.impl_->rdg_manifest().version().ToString());
 
     ff->Bind(t_path.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -833,7 +795,6 @@ tsuba::RDG::UnbindTopologyFileStorage() {
 katana::Result<void>
 tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
   katana::Uri dir = new_top.DirName();
-
   if (dir != rdg_dir_) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,

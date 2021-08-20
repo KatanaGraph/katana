@@ -11,8 +11,6 @@ namespace tsuba {
 
 katana::Result<tsuba::RDGPrefix>
 RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
-  katana::RDGVersion version = manifest.version();
-
   auto meta_res = RDGPartHeader::Make(manifest.PartitionFileName(0));
   if (!meta_res) {
     return meta_res.error();

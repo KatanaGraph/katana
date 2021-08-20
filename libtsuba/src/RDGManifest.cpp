@@ -34,7 +34,6 @@ const int MANIFEST_MATCH_VIEW_INDEX = 2;
 namespace {
 const int NODE_ZERO_PADDING_LENGTH = 5;
 const int VERS_ZERO_PADDING_LENGTH = 20;
-
 std::string
 ToVersionString(katana::RDGVersion version) {
   std::string str = version.ToString();
@@ -58,7 +57,6 @@ Result<tsuba::RDGManifest>
 RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   tsuba::FileView fv;
 
-  // Not adding branch_path because uri includes the full path to manifest
   if (auto res = fv.Bind(uri.string(), true); !res) {
     return res.error();
   }
@@ -90,7 +88,6 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   }
 
   if (version_num) {
-    // TODO(wkyu): need to include the version branch
     manifest.set_version(std::move(katana::RDGVersion(version_num.value())));
   }
 
@@ -120,6 +117,7 @@ RDGManifest::PartitionFileName(
     const std::string& view_type, uint32_t node_id,
     katana::RDGVersion version) {
   KATANA_LOG_ASSERT(!view_type.empty());
+  // TODO(wkyu): provide an alternative of variable length
   return fmt::format(
       "part_{}_{}_{}", ToVersionString(version), view_type,
       ToNodeString(node_id));
@@ -161,8 +159,8 @@ RDGManifest::FileName(
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
   KATANA_LOG_DEBUG(
-      "uri {} version {} view {} manifest basename {}; ", uri.string(),
-      version.ToString(), view_name,
+      "uri {} version {} manifest basename {}; ", uri.string(),
+      version.ToString(),
       fmt::format(
           "katana_{}_{}.manifest", ToVersionString(version), view_name));
   return uri.Join(fmt::format(

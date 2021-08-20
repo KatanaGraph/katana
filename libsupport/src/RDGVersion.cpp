@@ -24,11 +24,6 @@ RDGVersion::RDGVersion(const std::string& src) {
     branches_.clear();
     do {
       uint64_t val = strtoul(token, nullptr, 10);
-      if (val >= 5) {
-        KATANA_LOG_DEBUG(
-            "from version ID {} found token {} with val {} in {}; ", src, token,
-            val, ToString());
-      }
       numbers_.emplace_back(val);
       token = strtok(NULL, "_");
       if (token != NULL) {

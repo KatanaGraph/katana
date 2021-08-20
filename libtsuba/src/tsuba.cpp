@@ -217,9 +217,6 @@ tsuba::Create(const std::string& name, katana::RDGVersion version) {
 
   katana::CommBackend* comm = Comm();
 
-  katana::Uri new_uri = tsuba::RDGManifest::FileName(
-      uri, tsuba::kDefaultRDGViewType, manifest.version());
-
   if (comm->ID == 0) {
     std::string s = manifest.ToJsonString();
     KATANA_LOG_DEBUG(
@@ -227,8 +224,10 @@ tsuba::Create(const std::string& name, katana::RDGVersion version) {
         manifest.version().ToString(), name);
 
     if (auto res = tsuba::FileStore(
-            new_uri.string(), reinterpret_cast<const uint8_t*>(s.data()),
-            s.size());
+            tsuba::RDGManifest::FileName(
+                uri, tsuba::kDefaultRDGViewType, manifest.version())
+                .string(),
+            reinterpret_cast<const uint8_t*>(s.data()), s.size());
         !res) {
       comm->NotifyFailure();
       return res.error().WithContext(
@@ -236,10 +235,6 @@ tsuba::Create(const std::string& name, katana::RDGVersion version) {
     }
   }
   Comm()->Barrier();
-
-  if (new_uri.scheme() == katana::Uri::kFileScheme) {
-    sync();
-  }
 
   return katana::ResultSuccess();
 }

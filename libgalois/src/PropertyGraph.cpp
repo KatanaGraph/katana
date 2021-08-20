@@ -523,14 +523,10 @@ katana::PropertyGraph::DoWrite(
     if (!result) {
       return result.error();
     }
-
-    KATANA_LOG_DEBUG("DoWrite: written Topology FF for handle ");
-
     return rdg_.Store(
         handle, command_line, versioning_action, std::move(result.value()));
   }
 
-  KATANA_LOG_DEBUG("DoWrite: not written Topology for handle ");
   return rdg_.Store(handle, command_line, versioning_action);
 }
 
@@ -584,10 +580,9 @@ katana::PropertyGraph::Commit(const std::string& command_line) {
     return WriteGraph(rdg_.rdg_dir().string(), command_line);
   }
 
-  katana::RDGVersion current = GetLoadedVersion();  // RDGFileVersion();
+  katana::RDGVersion current = GetLoadedVersion();
   SetBranch(current);
 
-  KATANA_LOG_DEBUG("Commit Graph command_line {}; ", command_line);
   KATANA_CHECKED(DoWrite(
       *file_, command_line, tsuba::RDG::RDGVersioningPolicy::IncrementVersion));
 
@@ -736,19 +731,12 @@ katana::Result<void>
 katana::PropertyGraph::CreateBranch(
     const std::string& rdg_name, const std::string& command_line,
     const std::string& branch) {
-  // TODO(wkyu): check if we should set this inside Distribution?
-  // Create the branch from the RDGFile version
-  // use the trunk katana::RDGVersion(0) in other cases.
-  katana::RDGVersion version = GetLoadedVersion();  //RDGFileVersion(0);
+  // Create the branch based on loaded version
+  katana::RDGVersion version = GetLoadedVersion();
   version.AddBranch(branch);
 
   // Create a branch with v0 and the lineage is encoded in the version
-  //KATANA_CHECKED(rdg_.ChainVersions(*new_file, version, RDGFileVersion()));
-  if (auto res = tsuba::Create(rdg_name, version); !res) {
-    KATANA_LOG_DEBUG("failed to create the first manifest file\n");
-    return res.error();
-  }
-
+  KATANA_CHECKED(tsuba::Create(rdg_name, version));
   KATANA_LOG_DEBUG(
       "CreateBranch in {} from version {} with command_line {}; ", rdg_name,
       GetBranch().ToString(), command_line);
@@ -774,10 +762,6 @@ katana::PropertyGraph::CreateBranch(
   katana::RDGVersion new_version = RDGFileVersion();
   SetLoadedVersion(new_version);
   SetBranch(new_version);
-
-  KATANA_LOG_DEBUG(
-      "After creation branch {} new version {}; ", version.ToString(),
-      new_version.ToString());
 
   return katana::ResultSuccess();
 }
@@ -951,8 +935,6 @@ katana::PropertyGraph::InformPath(const std::string& input_path) {
     return uri_res.error();
   }
 
-  KATANA_LOG_DEBUG(
-      "from path {} to uri {} ", input_path, uri_res.value().string());
   rdg_.set_rdg_dir(uri_res.value());
   return ResultSuccess();
 }

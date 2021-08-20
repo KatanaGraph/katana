@@ -36,16 +36,16 @@ pytest tests
 Examples
 ===========================
 
-Loading Katana Graph
+Loading An Example Graph
 ------------------
 
 ```
 import metagraph as mg
-import katana.local
-from katana.example_data import get_input
-katana.local.initialize()
-pg = katana.local.Graph(get_input('propertygraphs/rmat15_cleaned_symmetric'))
-katana_graph = mg.wrappers.Graph.KatanaGraph(pg)
+import pandas as pd
+import pytest
+df = pd.read_csv("tests/data/edge1.csv")
+em = mg.wrappers.EdgeMap.PandasEdgeMap(df, "Source", "Destination", "Weight", is_directed=True)
+example_graph = mg.algos.util.graph.build(em)
 ```
 
 
@@ -53,10 +53,8 @@ Graph Format Conversion
 ------------------
 
 ```
-import metagraph as mg
-networkx_graph = mg.translate(katana_graph, mg.wrappers.Graph.NetworkXGraph) # translate from Katana Graph to NetworkX Graph
-katana_graph = mg.translate(networkx_graph, mg.wrappers.Graph.KatanaGraph) # translate from NetworkX Graph to Katana Graph
-# TODO (pengfei): uncomment this after switching to a cleaned graph
+katana_graph = mg.translate(example_graph, mg.wrappers.Graph.KatanaGraph) # translate from NetworkX Graph to Katana Graph
+networkx_graph = mg.translate(katana_graph , mg.wrappers.Graph.NetworkXGraph) # translate from Katana Graph to NetworkX Graph
 ```
 
 
@@ -66,8 +64,7 @@ Running Graph Analytics Algorithms
 ```
 import metagraph as mg
 bfs_kg = mg.algos.traversal.bfs_iter(katana_graph, 0) # run bfs using Katana Graph format
-bfs_nx = mg.algos.traversal.bfs_iter(networkxgraph, 0) # run bfs using NetworkX Graph format
-# TODO (pengfei): uncomment this after switching to a cleaned graph
+bfs_nx = mg.algos.traversal.bfs_iter(networkx_graph, 0) # run bfs using NetworkX Graph format
 ```
 
 

@@ -330,15 +330,15 @@ katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
   auto topo_result = MapTopology(rdg.topology_file_storage());
   if (!topo_result) {
-    return (katana::Result<std::unique_ptr<katana::PropertyGraph>>)
-        topo_result.error();
+    return topo_result.error();
   }
 
   auto property_graph = std::make_unique<PropertyGraph>(
       std::move(rdg_file), std::move(rdg), std::move(topo_result.value()));
   property_graph->recreate_node_property_indexes();
   property_graph->recreate_edge_property_indexes();
-  return property_graph;
+
+  return std::unique_ptr<katana::PropertyGraph>(std::move(property_graph));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>

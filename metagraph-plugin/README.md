@@ -63,6 +63,8 @@ Running Graph Analytics Algorithms
 
 ```
 import metagraph as mg
+import katana.local
+katana.local.initialize()
 bfs_kg = mg.algos.traversal.bfs_iter(katana_graph, 0) # run bfs using Katana Graph format
 bfs_nx = mg.algos.traversal.bfs_iter(networkx_graph, 0) # run bfs using NetworkX Graph format
 ```

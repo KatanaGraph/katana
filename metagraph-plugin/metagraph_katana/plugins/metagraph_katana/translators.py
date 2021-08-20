@@ -10,6 +10,7 @@ from katana.local.import_data import from_csr
 
 from .types import KatanaGraph
 
+from collections import OrderedDict
 
 @translator
 def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
@@ -54,6 +55,7 @@ def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
     elif isinstance(edge_weights[0], pyarrow.lib.Int64Scalar):
         elist = [( nid, x.value.get_edge_dest(j), edge_weights[j].as_py() ) for nid in x.value for j in x.value.edges(nid)]
         # TODO(pengfei): add more type conversion support: like np.float64 -> float??
+    elist = list(OrderedDict.fromkeys(elist))
     if x.is_directed:
         graph = nx.DiGraph()
     else:

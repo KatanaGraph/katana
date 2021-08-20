@@ -240,11 +240,11 @@ def test_jaccard_similarity_kg(katanagraph_rmat15_cleaned_ud, nx_from_kg_rmat15_
     prop_name = "jaccard_prop_with_" + str(compare_node)
     jcd_kg1 = mg.algos.traversal.jaccard(katanagraph_rmat15_cleaned_ud, compare_node)
     jcd_kg2 = mg.algos.traversal.jaccard(katanagraph_rmat15_cleaned_ud, compare_node)
-    jcd_nx = mg.algos.traversal.jaccard(nx_from_kg_rmat15_cleaned_ud, compare_node)
     assert jcd_kg1.tolist() == jcd_kg2.tolist()
     assert jcd_kg1[compare_node] == 1
     assert jcd_kg2[compare_node] == 1
     assert jcd_nx[compare_node] == 1
+    # jcd_nx = mg.algos.traversal.jaccard(nx_from_kg_rmat15_cleaned_ud, compare_node)
     # assert jcd_kg1.tolist() == jcd_nx.tolist() # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 
 
@@ -265,8 +265,8 @@ def test_local_clustering_coefficient_kg(katanagraph_rmat15_cleaned_ud, nx_from_
     prop_name = "output_prop"
     lcc_kg1 = mg.algos.clustering.local_clustering_coefficient(katanagraph_rmat15_cleaned_ud, prop_name)
     lcc_kg2 = mg.algos.clustering.local_clustering_coefficient(katanagraph_rmat15_cleaned_ud, prop_name)
-    lcc_nx = mg.algos.clustering.local_clustering_coefficient(nx_from_kg_rmat15_cleaned_ud, prop_name)
     assert lcc_kg1.tolist() == lcc_kg2.tolist()
     assert lcc_kg1[-1] == 1
     assert not np.any(np.isnan(lcc_kg1))
+    # lcc_nx = mg.algos.clustering.local_clustering_coefficient(nx_from_kg_rmat15_cleaned_ud, prop_name)
     # assert lcc_kg1.tolist() == lcc_nx.tolist() # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this

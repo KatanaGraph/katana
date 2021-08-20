@@ -86,8 +86,6 @@ def networkx_weighted_directed_8_12():
     return graph1
 
 
-
-
 # directed graph
 @pytest.fixture(autouse=True)
 def kg_from_nx_di_8_12(networkx_weighted_directed_8_12):

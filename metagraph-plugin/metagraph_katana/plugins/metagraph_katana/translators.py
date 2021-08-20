@@ -49,6 +49,8 @@ def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
 @translator
 def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
     for nid in x.value:
+        print (nid)
+        print (x.value.edges(nid))
         assert x.value.edges(nid)!=range(0,0), "NetworkX does not support graph with isolated nodes, please use a cleaned Katana Graph"
     edge_dict_count = {
         (src, dest): 0 for src in x for dest in [x.get_edge_dest(e) for e in x.edges(src)]

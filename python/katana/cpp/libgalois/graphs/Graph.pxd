@@ -132,10 +132,15 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
     cppclass _PropertyGraph "katana::PropertyGraph":
         PropertyGraph()
-        PropertyGraph(GraphTopology&&)
+        # PropertyGraph(GraphTopology&&)
 
         @staticmethod
         Result[unique_ptr[_PropertyGraph]] Make(string filename, RDGLoadOptions opts)
+
+        # TODO(amp/amber): Having multiple methods with the same name 'Make'
+        # confuses cython, so applying the trick of renaming for python API
+        @staticmethod
+        Result[unique_ptr[_PropertyGraph]] MakeFromTopo "Make" (GraphTopology&& topo)
 
         bint Equals(const _PropertyGraph*)
 

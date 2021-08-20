@@ -1,9 +1,13 @@
 #ifndef KATANA_LIBTSUBA_TSUBA_TSUBA_H_
 #define KATANA_LIBTSUBA_TSUBA_TSUBA_H_
 
+#include <iterator>
 #include <memory>
+#include <string>
 
 #include "katana/CommBackend.h"
+#include "katana/EntityTypeManager.h"
+#include "katana/Iterators.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/config.h"
@@ -27,7 +31,10 @@ public:
   RDGFile(const RDGFile&) = delete;
   RDGFile& operator=(const RDGFile&) = delete;
 
-  RDGFile(RDGFile&& f) noexcept : handle_(f.handle_) {}
+  RDGFile(RDGFile&& f) noexcept : handle_(f.handle_) {
+    f.handle_ = RDGHandle{nullptr};
+  }
+
   RDGFile& operator=(RDGFile&& f) noexcept {
     std::swap(handle_, f.handle_);
     return *this;
@@ -56,6 +63,16 @@ KATANA_EXPORT katana::Result<RDGHandle> Open(
 /// directory associated with handle. Exported to support
 /// out-of-core conversion
 KATANA_EXPORT katana::Uri MakeTopologyFileName(RDGHandle handle);
+
+/// Generate a new canonically named node_entity_type_id file name in the
+/// directory associated with handle. Exported to support
+/// out-of-core conversion
+KATANA_EXPORT katana::Uri MakeNodeEntityTypeIDArrayFileName(RDGHandle handle);
+
+/// Generate a new canonically named edge_entity_type_id file name in the
+/// directory associated with handle. Exported to support
+/// out-of-core conversion
+KATANA_EXPORT katana::Uri MakeEdgeEntityTypeIDArrayFileName(RDGHandle handle);
 
 /// Get the storage directory associated with this handle
 KATANA_EXPORT katana::Uri GetRDGDir(RDGHandle handle);
@@ -98,6 +115,13 @@ KATANA_EXPORT katana::Result<void> Init(katana::CommBackend* comm);
 KATANA_EXPORT katana::Result<void> Init();
 
 KATANA_EXPORT katana::Result<void> Fini();
+
+/// A set of EntityTypeIDs for use in storage
+using StorageSetOfEntityTypeIDs = std::vector<katana::EntityTypeID>;
+
+/// A map from EntityTypeID to a set of EntityTypeIDs
+using EntityTypeIDToSetOfEntityTypeIDsStorageMap =
+    std::unordered_map<katana::EntityTypeID, StorageSetOfEntityTypeIDs>;
 
 }  // namespace tsuba
 

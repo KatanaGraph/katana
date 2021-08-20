@@ -47,6 +47,8 @@ public:
   const std::shared_ptr<arrow::Table>& node_properties() const;
   const std::shared_ptr<arrow::Table>& edge_properties() const;
   const FileView& topology_file_storage() const;
+  const FileView& node_entity_type_id_array_file_storage() const;
+  const FileView& edge_entity_type_id_array_file_storage() const;
 
 private:
   static katana::Result<RDGSlice> Make(

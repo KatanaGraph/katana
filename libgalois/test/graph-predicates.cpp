@@ -27,6 +27,7 @@ TestIsApproximateDegreeDistributionPowerLaw() {
   {
     auto g =
         katana::PropertyGraph::Make(rmat10InputFile, tsuba::RDGLoadOptions());
+
     KATANA_LOG_ASSERT(
         katana::analytics::IsApproximateDegreeDistributionPowerLaw(
             *g.assume_value().get()));

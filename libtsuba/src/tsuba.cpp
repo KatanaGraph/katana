@@ -286,7 +286,9 @@ tsuba::ListAvailableViewsForVersion(
     const std::string& rdg_dir, katana::RDGVersion version,
     katana::RDGVersion* max_version) {
   std::vector<tsuba::RDGView> views_found;
-  KATANA_LOG_DEBUG("ListAvailableViewsForVersion {} ", version.ToString());
+  KATANA_LOG_DEBUG(
+      "ListAvailableViewsForVersion {} with rdg_dir {} max {}",
+      version.ToString(), rdg_dir, max_version->ToString());
 
   katana::RDGVersion target = version;
   uint64_t specific = version.LeafNumber();
@@ -301,7 +303,7 @@ tsuba::ListAvailableViewsForVersion(
     return list_res.error();
   }
 
-  katana::RDGVersion current_max;
+  katana::RDGVersion current_max = katana::RDGVersion(0);
 
   // Slight modification from Yasser's code to find only targeted version
   for (const std::string& file : list_res.value()) {
@@ -329,12 +331,7 @@ tsuba::ListAvailableViewsForVersion(
       continue;
     }
 
-    KATANA_LOG_DEBUG(
-        "adding file {} to the available list for version", file,
-        target.ToString());
-
     std::string rdg_path = fmt::format("{}/{}", rdg_dir, file);
-
     auto rdg_uri = katana::Uri::Make(rdg_path);
     if (!rdg_uri)
       continue;

@@ -75,8 +75,12 @@ RDGVersion::LeafNumber() const {
 
 bool
 RDGVersion::ShareBranch(const RDGVersion& in) const {
-  if (branches_.size() != in.branches_.size())
+  KATANA_LOG_DEBUG_ASSERT(
+      (branches_.size() == numbers_.size()) &&
+      (in.branches_.size() == in.numbers_.size()));
+  if (branches_.size() != in.branches_.size()) {
     return false;
+  }
 
   // only need to compare branch_
   for (uint32_t i = 0; i < branches_.size(); i++) {
@@ -84,11 +88,6 @@ RDGVersion::ShareBranch(const RDGVersion& in) const {
       return false;
     }
   }
-
-  if (std::equal(numbers_.begin(), numbers_.end() - 1, in.numbers_.begin()))
-    return true;
-  else
-    return false;
 
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
     if (numbers_[i] != in.numbers_[i]) {

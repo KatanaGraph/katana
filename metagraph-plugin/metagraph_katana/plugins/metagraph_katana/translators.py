@@ -48,15 +48,15 @@ def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
 
 @translator
 def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
-    dest_list = [dest for src in x for dest in [x.get_edge_dest(e) for e in x.edges(src)] ]
+    dest_list = [dest for src in x.value for dest in [x.value.get_edge_dest(e) for e in x.value.edges(src)] ]
     for nid in x.value:
         if x.value.edges(nid)!=range(0,0):
             assert nid in dest_list, "NetworkX does not support graph with isolated nodes, please use a cleaned Katana Graph"
     edge_dict_count = {
-        (src, dest): 0 for src in x for dest in [x.get_edge_dest(e) for e in x.edges(src)]
+        (src, dest): 0 for src in x.value for dest in [x.value.get_edge_dest(e) for e in x.value.edges(src)]
     }
-    for src in x:
-        for dest in [x.get_edge_dest(e) for e in x.edges(src)]:
+    for src in x.value:
+        for dest in [x.value.get_edge_dest(e) for e in x.value.edges(src)]:
             edge_dict_count[(src, dest)] += 1
             assert edge_dict_count[(src, dest)] <= 1, "NetworkX does not support graph with duplicated edges, please use a cleaned Katana Graph"
     elist = []

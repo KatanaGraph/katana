@@ -17,7 +17,7 @@ def test_bfs_kg(katanagraph_cleaned_8_12_di, nx_from_kg_di_8_12):
     '''
     test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
     '''
-    src_node = 10
+    src_node = 2
     bfs1_kg = mg.algos.traversal.bfs_iter(katanagraph_cleaned_8_12_di, src_node)
     bfs2_kg = mg.algos.traversal.bfs_iter(katanagraph_cleaned_8_12_di, src_node)
     bfs_nx = mg.algos.traversal.bfs_iter(nx_from_kg_di_8_12, src_node)
@@ -207,7 +207,7 @@ def test_translation_subgraph_extraction_kg(katanagraph_cleaned_8_12_di, nx_from
     '''
     test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
     '''
-    ids = {0, 4, 7}
+    ids = {0, 4, 5}
     se_kg1 = mg.algos.subgraph.extract_subgraph(katanagraph_cleaned_8_12_di, ids)
     se_kg2 = mg.algos.subgraph.extract_subgraph(katanagraph_cleaned_8_12_di, ids)
     se_nx = mg.algos.subgraph.extract_subgraph(nx_from_kg_di_8_12, ids)
@@ -251,7 +251,7 @@ def test_jaccard_similarity_kg(katanagraph_cleaned_8_12_ud, nx_from_kg_ud_8_12):
     '''
     test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
     '''
-    compare_node = 13
+    compare_node = 3
     prop_name = "jaccard_prop_with_" + str(compare_node)
     jcd_kg1 = mg.algos.traversal.jaccard(katanagraph_cleaned_8_12_ud, compare_node)
     jcd_kg2 = mg.algos.traversal.jaccard(katanagraph_cleaned_8_12_ud, compare_node)

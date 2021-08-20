@@ -177,7 +177,6 @@ def test_louvain_community_detection(networkx_weighted_undirected_8_12, kg_from_
     assert lc_nx[1] == lc_kg[1]
 
 
-@pytest.mark.skip(reason=" ")
 @pytest.mark.runslow
 def test_louvain_community_detection_kg(katanagraph_rmat15_cleaned_ud, nx_from_kg_rmat15_cleaned_ud):
     '''
@@ -203,10 +202,11 @@ def test_translation_subgraph_extraction(networkx_weighted_directed_8_12, kg_fro
     assert list(se_nx.value.edges(data=True)) == list(se_kg.value.edges(data=True))
 
 
-# test for katana graph which is directly loaded rather than translated from nettworkx
-# also test two consecutive runs with the same source code
 @pytest.mark.runslow
 def test_translation_subgraph_extraction_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
+    '''
+    test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
+    '''
     ids = {0, 4, 7}
     se_kg1 = mg.algos.subgraph.extract_subgraph(katanagraph_rmat15_cleaned_di, ids)
     se_kg2 = mg.algos.subgraph.extract_subgraph(katanagraph_rmat15_cleaned_di, ids)
@@ -223,10 +223,11 @@ def test_labal_propagation(networkx_weighted_undirected_8_12, kg_from_nx_ud_8_12
     assert cd_nx == cd_kg
 
 
-# test for katana graph which is directly loaded rather than translated from nettworkx
-# also test two consecutive runs with the same source code
 @pytest.mark.runslow
 def test_labal_propagation_kg(katanagraph_rmat15_cleaned_ud, nx_from_kg_rmat15_cleaned_ud):
+    '''
+    test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
+    '''
     cd_kg1 = mg.algos.clustering.label_propagation_community(katanagraph_rmat15_cleaned_ud)
     cd_kg2 = mg.algos.clustering.label_propagation_community(katanagraph_rmat15_cleaned_ud)
     cd_nx = mg.algos.clustering.label_propagation_community(nx_from_kg_rmat15_cleaned_ud)
@@ -244,10 +245,12 @@ def test_jaccard_similarity(networkx_weighted_undirected_8_12, kg_from_nx_ud_8_1
     assert jcd_nx.tolist() == jcd_kg.tolist()
     assert jcd_kg[compare_node] == 1
 
-# test for katana graph which is directly loaded rather than translated from nettworkx
-# also test two consecutive runs with the same source code
+
 @pytest.mark.runslow
 def test_jaccard_similarity_kg(katanagraph_rmat15_cleaned_ud, nx_from_kg_rmat15_cleaned_ud):
+    '''
+    test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
+    '''
     compare_node = 13
     prop_name = "jaccard_prop_with_" + str(compare_node)
     jcd_kg1 = mg.algos.traversal.jaccard(katanagraph_rmat15_cleaned_ud, compare_node)
@@ -270,10 +273,12 @@ def test_local_clustering_coefficient(networkx_weighted_undirected_8_12, kg_from
     assert lcc_kg[-1] == 0
     assert not np.any(np.isnan(lcc_kg))
 
-# test for katana graph which is directly loaded rather than translated from nettworkx
-# also test two consecutive runs with the same source code
+
 @pytest.mark.runslow
 def test_local_clustering_coefficient_kg(katanagraph_rmat15_cleaned_ud, nx_from_kg_rmat15_cleaned_ud):
+    '''
+    test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
+    '''
     prop_name = "output_prop"
     lcc_kg1 = mg.algos.clustering.local_clustering_coefficient(katanagraph_rmat15_cleaned_ud, prop_name)
     lcc_kg2 = mg.algos.clustering.local_clustering_coefficient(katanagraph_rmat15_cleaned_ud, prop_name)

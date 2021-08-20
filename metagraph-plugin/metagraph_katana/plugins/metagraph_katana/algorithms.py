@@ -11,7 +11,12 @@ from katana.local.analytics import bfs, jaccard, local_clustering_coefficient
 from .types import KatanaGraph
 
 
-
+def has_node_prop(kg, node_prop_name):
+    nschema = kg.loaded_node_schema()
+    for i in range(len(nschema)):
+        if nschema[i].name == node_prop_name:
+            return True
+    return False
 
 # breadth-first search,
 @concrete_algorithm("traversal.bfs_iter")
@@ -28,10 +33,12 @@ def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> Nu
     :rtype: NumpyVectorType
     '''
     bfs_prop_name = "bfs_prop_start_from_" + str(source_node)
+    depth_limit_internal = 2**30 - 1 if depth_limit == -1 else depth_limit # return all the reachable nodes for the default value of depth_limit (-1)
     start_node = source_node
-    bfs(graph.value, start_node, bfs_prop_name)
+    if not has_node_prop(graph.value, bfs_prop_name):
+        bfs(graph.value, start_node, bfs_prop_name)
     pg_bfs_list = graph.value.get_node_property(bfs_prop_name).to_pandas().values.tolist()
-    new_list = [[i, pg_bfs_list[i]] for i in range(len(pg_bfs_list)) if pg_bfs_list[i] < depth_limit]
+    new_list = [[i, pg_bfs_list[i]] for i in range(len(pg_bfs_list)) if pg_bfs_list[i] < depth_limit_internal]
     sorted_list = sorted(new_list, key=lambda each: (each[1], each[0]))
     bfs_arr = np.array([each[0] for each in sorted_list])
     return bfs_arr
@@ -58,7 +65,8 @@ def jaccard_similarity(
 @concrete_algorithm("traversal.jaccard")
 def jaccard_similarity_kg(graph: KatanaGraph, compare_node: NodeID) -> NumpyVectorType:
     jaccard_prop_name = "jaccard_prop_with_" + str(compare_node)
-    jaccard(graph.value, compare_node, jaccard_prop_name)
+    if not has_node_prop(graph.value, jaccard_prop_name):
+        jaccard(graph.value, compare_node, jaccard_prop_name)
     jaccard_similarities = graph.value.get_node_property(jaccard_prop_name).to_numpy()
     return jaccard_similarities
 
@@ -73,6 +81,7 @@ def local_clustering(
 
 @concrete_algorithm("clustering.local_clustering_coefficient")
 def local_clustering_kg(graph: KatanaGraph, prop_name: str) -> NumpyVectorType:
-    local_clustering_coefficient(graph.value, prop_name)
+    if not has_node_prop(graph.value, prop_name):
+        local_clustering_coefficient(graph.value, prop_name)
     out = graph.value.get_node_property(prop_name)
     return out.to_pandas().values

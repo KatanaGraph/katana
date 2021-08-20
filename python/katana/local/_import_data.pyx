@@ -41,9 +41,10 @@ def from_csr(edge_indices, edge_destinations):
     edge_indices_numa.as_numpy()[:] = edge_indices
     edge_destinations_numa.as_numpy()[:] = edge_destinations
 
-    cdef shared_ptr[CGraph._PropertyGraph] pg = make_shared[CGraph._PropertyGraph](
-        CGraph.GraphTopology(move(edge_indices_numa.underlying), move(edge_destinations_numa.underlying))
-    )
+    with nogil:
+        pg = handle_result_PropertyGraph( CGraph._PropertyGraph.MakeFromTopo(
+             CGraph.GraphTopology(move(edge_indices_numa.underlying), move(edge_destinations_numa.underlying))
+             ))
     return Graph.make(pg)
 
 

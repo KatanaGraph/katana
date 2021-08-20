@@ -53,6 +53,8 @@ public:
   using Node = GraphTopology::Node;
   using Edge = GraphTopology::Edge;
 
+  using EntityTypeIDArray = katana::NUMAArray<EntityTypeID>;
+
 private:
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
@@ -74,18 +76,16 @@ private:
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
-  PGViewCache pg_view_cache_;
 
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;
-
   /// Manages the relations between the edge entity types
   EntityTypeManager edge_entity_type_manager_;
 
   /// The node EntityTypeID for each node's most specific type
-  katana::NUMAArray<EntityTypeID> node_entity_type_id_;
+  EntityTypeIDArray node_entity_type_ids_;
   /// The edge EntityTypeID for each edge's most specific type
-  katana::NUMAArray<EntityTypeID> edge_entity_type_id_;
+  EntityTypeIDArray edge_entity_type_ids_;
 
   // List of node and edge indexes on this graph.
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
@@ -93,8 +93,11 @@ private:
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
       edge_indexes_;
 
+  PGViewCache pg_view_cache_;
+
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
+
   friend class Distribution;
   const tsuba::PartitionMetadata& partition_metadata() const {
     return rdg_.part_metadata();
@@ -240,35 +243,28 @@ public:
 
   PropertyGraph() = default;
 
+  // XXX: WARNING: do not add new constructors. Add Make Functions
   PropertyGraph(
       std::unique_ptr<tsuba::RDGFile>&& rdg_file, tsuba::RDG&& rdg,
-      GraphTopology&& topo) noexcept
+      GraphTopology&& topo, EntityTypeIDArray&& node_entity_type_ids,
+      EntityTypeIDArray&& edge_entity_type_ids,
+      EntityTypeManager&& node_type_manager,
+      EntityTypeManager&& edge_type_manager) noexcept
       : rdg_(std::move(rdg)),
         file_(std::move(rdg_file)),
-        topology_(std::move(topo)) {}
-
-  PropertyGraph(katana::GraphTopology&& topo_to_assign) noexcept
-      : rdg_(), file_(), topology_(std::move(topo_to_assign)) {}
+        topology_(std::move(topo)),
+        node_entity_type_manager_(std::move(node_type_manager)),
+        edge_entity_type_manager_(std::move(edge_type_manager)),
+        node_entity_type_ids_(std::move(node_entity_type_ids)),
+        edge_entity_type_ids_(std::move(edge_entity_type_ids)) {
+    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == num_edges());
+  }
 
   template <typename PGView>
   PGView BuildView() noexcept {
     return pg_view_cache_.BuildView<PGView>(this);
   }
-
-  PropertyGraph(
-      katana::GraphTopology&& topo_to_assign,
-      NUMAArray<EntityTypeID>&& node_entity_type_id,
-      NUMAArray<EntityTypeID>&& edge_entity_type_id,
-      EntityTypeManager&& node_type_manager,
-      EntityTypeManager&& edge_type_manager) noexcept
-      : rdg_(),
-        file_(),
-        topology_(std::move(topo_to_assign)),
-        node_entity_type_manager_(std::move(node_type_manager)),
-        edge_entity_type_manager_(std::move(edge_type_manager)),
-        node_entity_type_id_(std::move(node_entity_type_id)),
-        edge_entity_type_id_(std::move(edge_entity_type_id)) {}
-
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -285,9 +281,8 @@ public:
 
   /// Make a property graph from topology and type arrays
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      GraphTopology&& topo_to_assign,
-      NUMAArray<EntityTypeID>&& node_entity_type_id,
-      NUMAArray<EntityTypeID>&& edge_entity_type_id,
+      GraphTopology&& topo_to_assign, EntityTypeIDArray&& node_entity_type_ids,
+      EntityTypeIDArray&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager);
 
@@ -309,19 +304,27 @@ public:
   /// TODO(roshan) move this to be a part of Make()
   Result<void> ConstructEntityTypeIDs();
 
+  size_t node_entity_type_ids_size() const noexcept {
+    return node_entity_type_ids_.size();
+  }
+
+  size_t edge_entity_type_ids_size() const noexcept {
+    return edge_entity_type_ids_.size();
+  }
+
   /// This is an unfortunate hack. Due to some technical debt, we need a way to
   /// modify these arrays in place from outside this class. This style mirrors a
   /// similar hack in GraphTopology and hopefully makes it clear that these
   /// functions should not be used lightly.
   const EntityTypeID* node_type_data() const noexcept {
-    return node_entity_type_id_.data();
+    return node_entity_type_ids_.data();
   }
   /// This is an unfortunate hack. Due to some technical debt, we need a way to
   /// modify these arrays in place from outside this class. This style mirrors a
   /// similar hack in GraphTopology and hopefully makes it clear that these
   /// functions should not be used lightly.
   const EntityTypeID* edge_type_data() const noexcept {
-    return edge_entity_type_id_.data();
+    return edge_entity_type_ids_.data();
   }
 
   const EntityTypeManager& GetNodeTypeManager() const {
@@ -392,8 +395,19 @@ public:
   Result<void> InformPath(const std::string& input_path);
 
   /// Determine if two PropertyGraphs are Equal
+  /// THIS IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
+  /// when comparing PG in Equals we directly compare all tables in properties
+  /// this is potentially buggy. If for example we have:
+  /// 1) an "old" graph, modified in "old" software to add type information which is then stored in properties
+  /// 2) a "new" graph, modified in "new" software to add identical type information which is then stored in entity type arrays
+  ///    and entity type managers
+  /// if we then loaded both graphs (1) and (2) in "new" software and compared them, their type information would look identical
+  /// but their properties information would differ as the old software added the type information to properties while the new
+  /// software did not. The two graphs would be functionally Equal, but this function would say this are not equal
+  /// TODO(unknown):(emcginnis) consider breaking the function down into: topology comparison, type comparison, and property comparison. Move pitfall described above alone with the property comparison function
   bool Equals(const PropertyGraph* other) const;
   /// Report the differences between two graphs
+  /// THIS IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   std::string ReportDiff(const PropertyGraph* other) const;
 
   /// get the schema for loaded node properties
@@ -542,12 +556,12 @@ public:
 
   /// \return returns the most specific node entity type for @param node
   EntityTypeID GetTypeOfNode(Node node) const {
-    return node_entity_type_id_[node];
+    return node_entity_type_ids_[node];
   }
 
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdge(Edge edge) const {
-    return edge_entity_type_id_[edge];
+    return edge_entity_type_ids_[edge];
   }
 
   /// \return true iff the node @param node has the given entity type
@@ -668,6 +682,14 @@ public:
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }
+
+  const EntityTypeManager& node_entity_type_manager() const noexcept {
+    return node_entity_type_manager_;
+  }
+
+  const EntityTypeManager& edge_entity_type_manager() const noexcept {
+    return edge_entity_type_manager_;
+  }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);

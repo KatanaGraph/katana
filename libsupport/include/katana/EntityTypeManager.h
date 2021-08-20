@@ -2,6 +2,8 @@
 
 #include <bitset>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -15,6 +17,7 @@ namespace katana {
 /// EntityTypeID is represented using 8 bits
 using EntityTypeID = uint8_t;
 static constexpr EntityTypeID kUnknownEntityType = EntityTypeID{0};
+static constexpr std::string_view kUnknownEntityTypeName = "kUnknownName";
 static constexpr EntityTypeID kInvalidEntityType =
     std::numeric_limits<EntityTypeID>::max();
 /// A set of EntityTypeIDs
@@ -75,6 +78,7 @@ public:
         atomic_entity_type_id_to_entity_type_ids_(
             std::move(atomic_entity_type_id_to_entity_type_ids)) {}
 
+  // TODO(amber): delete this method. It's risky
   void Reset() {
     atomic_entity_type_id_to_type_name_.clear();
     atomic_type_name_to_entity_type_id_.clear();
@@ -194,15 +198,106 @@ public:
     return (sub_atomic_types & super_atomic_types) == sub_atomic_types;
   }
 
+  const EntityTypeIDToSetOfEntityTypeIDsMap&
+  GetEntityTypeIDToAtomicEntityTypeIDs() const {
+    return entity_type_id_to_atomic_entity_type_ids_;
+  }
+
+  const EntityTypeIDToAtomicTypeNameMap& GetEntityTypeIDToAtomicTypeNameMap()
+      const {
+    return atomic_entity_type_id_to_type_name_;
+  }
+
+  /// bool Equals() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
+  bool Equals(const EntityTypeManager& other) const {
+    if (entity_type_id_to_atomic_entity_type_ids_ !=
+        other.entity_type_id_to_atomic_entity_type_ids_) {
+      return false;
+    }
+    if (atomic_entity_type_id_to_type_name_ !=
+        other.atomic_entity_type_id_to_type_name_) {
+      return false;
+    }
+
+    if (atomic_type_name_to_entity_type_id_ !=
+        other.atomic_type_name_to_entity_type_id_) {
+      return false;
+    }
+
+    if (atomic_entity_type_id_to_entity_type_ids_ !=
+        other.atomic_entity_type_id_to_entity_type_ids_) {
+      return false;
+    }
+    return true;
+  }
+
+  /// std::string ReportDiff() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
+  std::string ReportDiff(const EntityTypeManager& other) const {
+    fmt::memory_buffer buf;
+    if (entity_type_id_to_atomic_entity_type_ids_ !=
+        other.entity_type_id_to_atomic_entity_type_ids_) {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "entity_type_id_to_atomic_entity_type_ids_ differ. size {}"
+          "vs. {}\n",
+          entity_type_id_to_atomic_entity_type_ids_.size(),
+          other.entity_type_id_to_atomic_entity_type_ids_.size());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "entity_type_id_to_atomic_entity_type_ids_ match!\n");
+    }
+    if (atomic_entity_type_id_to_type_name_ !=
+        other.atomic_entity_type_id_to_type_name_) {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_entity_type_id_to_type_name_ differ. size {}"
+          "vs. {}\n",
+          atomic_entity_type_id_to_type_name_.size(),
+          other.atomic_entity_type_id_to_type_name_.size());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_entity_type_id_to_type_name_ match!\n");
+    }
+    if (atomic_type_name_to_entity_type_id_ !=
+        other.atomic_type_name_to_entity_type_id_) {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_type_name_to_entity_type_id_ differ. size {}"
+          "vs. {}\n",
+          atomic_type_name_to_entity_type_id_.size(),
+          other.atomic_type_name_to_entity_type_id_.size());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_type_name_to_entity_type_id_ match!\n");
+    }
+
+    if (atomic_entity_type_id_to_entity_type_ids_ !=
+        other.atomic_entity_type_id_to_entity_type_ids_) {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_entity_type_id_to_entity_type_ids_ differ. size {}"
+          "vs. {}\n",
+          atomic_entity_type_id_to_entity_type_ids_.size(),
+          other.atomic_entity_type_id_to_entity_type_ids_.size());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf),
+          "atomic_entity_type_id_to_entity_type_ids_ match!\n");
+    }
+    return std::string(buf.begin(), buf.end());
+  }
+
 private:
   void Init() {
     // assume kUnknownEntityType is 0
     static_assert(kUnknownEntityType == 0);
+    static_assert(kUnknownEntityTypeName == std::string_view("kUnknownName"));
     // add kUnknownEntityType
-    entity_type_id_to_atomic_entity_type_ids_.emplace_back(
-        SetOfEntityTypeIDs());  // for kUnknownEntityType
-    atomic_entity_type_id_to_entity_type_ids_.emplace_back(
-        SetOfEntityTypeIDs());  // for kUnknownEntityType
+    auto id = AddAtomicEntityType(std::string(kUnknownEntityTypeName));
+    KATANA_LOG_ASSERT(id == kUnknownEntityType);
   }
 
   /// A map from the EntityTypeID to its type name if it is an atomic type
@@ -221,6 +316,11 @@ private:
   /// A map from the atomic EntityTypeID to its super-types
   /// (to the set of the EntityTypeIDs that intersect it):
   /// derived from entity_type_id_to_atomic_entity_type_ids_
+  /// By definition, an atomic EntityTypeID intersects with itself
+  /// So the intersection set of an atomic EntityTypeID will contain itself
+  /// The intersection set of a non-atomic EntityTypeID will *not* contain itself
+  /// ex: atomic_entity_type_id_to_entity_type_ids_[atomic_id][atomic_id] == 1
+  /// but atomic_entity_type_id_to_entity_type_ids_[non_atomic_id][non_atomic_id] == 0
   EntityTypeIDToSetOfEntityTypeIDsMap atomic_entity_type_id_to_entity_type_ids_;
 };
 

@@ -48,7 +48,7 @@ def gen_pg_cleaned_8_12_from_csr(is_directed):
     # build the CSR format from the edge list (weight, (src, dst))
     row = np.array([each_edge[0] for each_edge in elist])
     col = np.array([each_edge[1] for each_edge in elist])
-    data = np.array([each_edge[2]["weight"] for each_edge in elist])
+    data = np.array([each_edge[2] for each_edge in elist])
     csr = csr_matrix((data, (row, col)), shape=(len(nlist), len(nlist)))
     # call the katana api to build a PropertyGraph (unweighted) from the CSR format
     # noting that the first 0 in csr.indptr is excluded

@@ -35,13 +35,16 @@ def gen_pg_cleaned_8_12_from_csr(is_directed):
     A helper function for the test, generating Katana's PropertyGraph from an edge list
     '''
     elist_raw = [(0,1,4), (0,3,2), (0,4,7), (1,3,3), (1,4,5), (2,4,5), (2,5,2), (2,6,8), (3,4,1), (4,7,4), (5,6,4), (5,7,6)]
+    src_list = [each[0] for each in elist_raw]
+    dest_list = [each[1] for each in elist_raw]
+    nlist_raw = list(set(src_list) | set(dest_list))
     # sort the eddge list and node list
     if is_directed:
         elist = sorted(elist_raw, key=lambda each: (each[0], each[1]))
     else:
         inv_elist = [(each[1], each[0], each[2]) for each in elist_raw]
         elist = sorted(elist_raw + inv_elist, key=lambda each: (each[0], each[1]))
-    nlist = sorted(list(x.value.nodes(data=True)), key=lambda each: each[0])
+    nlist = sorted(nlist_raw, key=lambda each: each)
     # build the CSR format from the edge list (weight, (src, dst))
     row = np.array([each_edge[0] for each_edge in elist])
     col = np.array([each_edge[1] for each_edge in elist])

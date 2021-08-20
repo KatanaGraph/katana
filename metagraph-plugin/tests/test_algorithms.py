@@ -13,9 +13,10 @@ def test_bfs(networkx_weighted_directed_8_12, kg_from_nx_di_8_12):
     assert bfs2_kg.tolist() == [2, 4, 5, 6, 7]
 
 
-# test for katana graph which is directly loaded rather than translated from nettworkx
-# also test two consecutive runs with the same source code
 def test_bfs_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
+    '''
+    test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
+    '''
     src_node = 10
     bfs1_kg = mg.algos.traversal.bfs_iter(katanagraph_rmat15_cleaned_di, src_node)
     bfs2_kg = mg.algos.traversal.bfs_iter(katanagraph_rmat15_cleaned_di, src_node)
@@ -40,10 +41,11 @@ def test_sssp_bellman_ford(networkx_weighted_directed_8_12, kg_from_nx_di_8_12):
     assert distances_nx == distances_kg
 
 
-# test for katana graph which is directly loaded rather than translated from nettworkx
-# also test two consecutive runs with the same source code
 @pytest.mark.runslow
 def test_sssp_bellman_ford_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
+    '''
+    test for katana graph which is directly loaded rather than translated from nettworkx, also test two consecutive runs with the same source code
+    '''
     src_node = 0
     sssp1_kg = mg.algos.traversal.bellman_ford(katanagraph_rmat15_cleaned_di, src_node)
     sssp2_kg = mg.algos.traversal.bellman_ford(katanagraph_rmat15_cleaned_di, src_node)
@@ -172,7 +174,7 @@ def test_louvain_community_detection(networkx_weighted_undirected_8_12, kg_from_
 
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
-@pytest.mark.skip(reason="failed cause two runs get different results")
+@pytest.mark.skip(reason="failed cause two runs get different results. We cannot set the random seed cause the metagraph wrapper hide that option in network's community_louvain.best_partition function")
 # @pytest.mark.runslow # TODO(pengfei): why 
 def test_louvain_community_detection_kg(katanagraph_rmat15_cleaned_ud, nx_from_kg_rmat15_cleaned_ud):
     lc_kg1 = mg.algos.clustering.louvain_community(katanagraph_rmat15_cleaned_ud)

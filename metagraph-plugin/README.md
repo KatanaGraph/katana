@@ -55,10 +55,10 @@ Graph Format Conversion
 ```
 import metagraph as mg
 networkx_graph = mg.translate(katana_graph, mg.wrappers.Graph.NetworkXGraph) # translate from Katana Graph to NetworkX Graph
+katana_graph = mg.translate(networkx_graph, mg.wrappers.Graph.KatanaGraph) # translate from NetworkX Graph to Katana Graph
+# TODO (pengfei): uncomment this after switching to a cleaned graph
 ```
 
-<!-- katana_graph = mg.translate(networkx_graph, mg.wrappers.Graph.KatanaGraph) # translate from NetworkX Graph to Katana Graph -->
-<!-- TODO (pengfei): uncomment this after switching to a cleaned graph-->
 
 Running Graph Analytics Algorithms
 ------------------
@@ -66,10 +66,11 @@ Running Graph Analytics Algorithms
 ```
 import metagraph as mg
 bfs_kg = mg.algos.traversal.bfs_iter(katana_graph, 0) # run bfs using Katana Graph format
+bfs_nx = mg.algos.traversal.bfs_iter(networkxgraph, 0) # run bfs using NetworkX Graph format
+# TODO (pengfei): uncomment this after switching to a cleaned graph
 ```
 
-<!-- bfs_nx = mg.algos.traversal.bfs_iter(networkxgraph, 0) # run bfs using NetworkX Graph format -->
-<!-- TODO (pengfei): uncomment this after switching to a cleaned graph-->
+
 
 More examples can be found in the metagraph_katana/tests/ folder
 

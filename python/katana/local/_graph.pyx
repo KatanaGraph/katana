@@ -275,10 +275,6 @@ cdef class GraphBase:
         """
         return str(self.underlying_property_graph().rdg_dir(), encoding="UTF-8")
 
-    @path.setter
-    def path(self, path):
-        handle_result_void(self.underlying_property_graph().InformPath(bytes(str(path), encoding="UTF-8")))
-
 
 cdef class Graph(GraphBase):
     """

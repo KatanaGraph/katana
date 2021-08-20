@@ -156,7 +156,6 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         shared_ptr[CTable] edge_properties()
 
         const string& rdg_dir()
-        Result[void]  InformPath(const string & input_path)
 
         shared_ptr[CChunkedArray] GetNodeProperty(int i)
         shared_ptr[CChunkedArray] GetNodeProperty(const string&)

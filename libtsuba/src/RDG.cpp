@@ -923,6 +923,11 @@ tsuba::RDG::DropEdgeProperties() {
   core_->drop_edge_properties();
 }
 
+katana::Result<void>
+tsuba::RDG::DropTopology() {
+  return core_->UnbindTopologyFile();
+}
+
 std::shared_ptr<arrow::Schema>
 tsuba::RDG::full_node_schema() const {
   std::vector<std::shared_ptr<arrow::Field>> fields;

@@ -130,8 +130,8 @@ def test_betweenness_centrality(networkx_weighted_directed_8_12, kg_from_nx_di_8
 
 # test for katana graph which is directly loaded rather than translated from nettworkx
 # also test two consecutive runs with the same source code
-# this test is extremely slow
-@pytest.mark.runslow
+# @pytest.mark.runslow # TODO(pengfei): find a way to accelerate and uncomment this
+@pytest.mark.skip(reason="mg.algos.centrality.betweenness is extremely slow (not because of our translator)")
 def test_betweenness_centrality_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     bc_kg1 = mg.algos.centrality.betweenness(katanagraph_rmat15_cleaned_di)
     bc_kg2 = mg.algos.centrality.betweenness(katanagraph_rmat15_cleaned_di)

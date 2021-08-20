@@ -108,14 +108,9 @@ tsuba::AddProperties(
           std::move(future), path.string(), on_complete);
       continue;
     }
-    auto read_res = future.get();
-    if (!read_res) {
-      return read_res.error();
-    }
-    auto on_complete_res = on_complete(read_res.value());
-    if (!on_complete_res) {
-      return on_complete_res.error();
-    }
+    auto read_res = KATANA_CHECKED(future.get());
+
+    KATANA_CHECKED(on_complete(read_res));
   }
 
   return katana::ResultSuccess();

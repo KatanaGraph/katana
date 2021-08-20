@@ -432,9 +432,9 @@ private:
     for (const auto& name : names) {
       auto it = name_to_slot.find(name);
       if (it == name_to_slot.end()) {
-        return KATANA_ERROR(
-            ErrorCode::PropertyNotFound, "no property named {}",
-            std::quoted(name));
+        KATANA_LOG_DEBUG(
+            "Non-existant property \"{}\" requested. Skipping.", name);
+        continue;
       }
       if (it->second.second) {
         return KATANA_ERROR(

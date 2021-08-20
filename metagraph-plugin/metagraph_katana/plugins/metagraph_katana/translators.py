@@ -48,10 +48,7 @@ def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
 
 @translator
 def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
-    if x.edge_weight_prop_name == "value_from_translator":
-        pg = x.value_from_translator
-    elif x.edge_weight_prop_name == "value":
-        pg = x.value
+    pg = x.value
     dest_list = [dest for src in pg for dest in [pg.get_edge_dest(e) for e in pg.edges(src)] ]
     for nid in pg:
         if pg.edges(nid) == range(0,0):

@@ -134,8 +134,8 @@ def test_betweenness_centrality(networkx_weighted_directed_8_12, kg_from_nx_di_8
 def test_betweenness_centrality_kg(katanagraph_rmat15_cleaned_di, nx_from_kg_rmat15_cleaned_di):
     bc_kg1 = mg.algos.centrality.betweenness(katanagraph_rmat15_cleaned_di)
     bc_kg2 = mg.algos.centrality.betweenness(katanagraph_rmat15_cleaned_di)
-    bc_nx = mg.algos.centrality.betweenness(nx_from_kg_rmat15_cleaned_di)
     assert bc_kg1 == bc_kg2
+    # bc_nx = mg.algos.centrality.betweenness(nx_from_kg_rmat15_cleaned_di)
     # assert bc_kg1 == bc_nx # TODO(pengfei): replace katanagraph_rmat15_cleaned_di with a cleaned version and uncomment this
 
 

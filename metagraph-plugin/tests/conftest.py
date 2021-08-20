@@ -1,12 +1,14 @@
 import numpy as np
 import metagraph as mg
 import pandas as pd
+import pyarrow
 import pytest
 import katana.local
 from katana.example_data import get_input
 from katana.local import Graph
 from scipy.sparse import csr_matrix
 from katana.local.import_data import from_csr
+
 
 # Currently PropertyGraph does not support undirected graphs
 # we are using directed graphs with symmetric edges to denote undirected graphs.
@@ -52,7 +54,10 @@ def gen_pg_cleaned_8_12_from_csr(is_directed):
     csr = csr_matrix((data, (row, col)), shape=(len(nlist), len(nlist)))
     # call the katana api to build a PropertyGraph (unweighted) from the CSR format
     # noting that the first 0 in csr.indptr is excluded
-    return from_csr(csr.indptr[1:], csr.indices)
+    pg = from_csr(csr.indptr[1:], csr.indices)
+    t = pyarrow.table(dict(value_from_translator=data))
+    pg.add_edge_property(t)
+    return pg
 
 
 @pytest.fixture(autouse=True)

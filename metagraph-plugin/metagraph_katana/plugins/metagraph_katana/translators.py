@@ -48,23 +48,27 @@ def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
 
 @translator
 def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
-    dest_list = [dest for src in x.value for dest in [x.value.get_edge_dest(e) for e in x.value.edges(src)] ]
-    for nid in x.value:
-        if x.value.edges(nid) == range(0,0):
+    if x.edge_weight_prop_name == "value_from_translator":
+        pg = x.value_from_translator
+    elif x.edge_weight_prop_name == "value":
+        pg = x.value
+    dest_list = [dest for src in pg for dest in [pg.get_edge_dest(e) for e in pg.edges(src)] ]
+    for nid in pg:
+        if pg.edges(nid) == range(0,0):
             assert nid in dest_list, "NetworkX does not support graph with isolated nodes, please use a cleaned Katana Graph"
     edge_dict_count = {
-        (src, dest): 0 for src in x.value for dest in [x.value.get_edge_dest(e) for e in x.value.edges(src)]
+        (src, dest): 0 for src in pg for dest in [pg.get_edge_dest(e) for e in pg.edges(src)]
     }
-    for src in x.value:
-        for dest in [x.value.get_edge_dest(e) for e in x.value.edges(src)]:
+    for src in pg:
+        for dest in [pg.get_edge_dest(e) for e in pg.edges(src)]:
             edge_dict_count[(src, dest)] += 1
             assert edge_dict_count[(src, dest)] <= 1, "NetworkX does not support graph with duplicated edges, please use a cleaned Katana Graph"
     elist = []
-    edge_weights = x.value.get_edge_property(x.edge_weight_prop_name).to_pandas()
+    edge_weights = pg.get_edge_property(x.edge_weight_prop_name).to_pandas()
     if isinstance(edge_weights[0], np.int64):
-        elist = [( nid, x.value.get_edge_dest(j), int(edge_weights[j]) ) for nid in x.value for j in x.value.edges(nid)]
+        elist = [( nid, pg.get_edge_dest(j), int(edge_weights[j]) ) for nid in pg for j in pg.edges(nid)]
     elif isinstance(edge_weights[0], pyarrow.lib.Int64Scalar):
-        elist = [( nid, x.value.get_edge_dest(j), edge_weights[j].as_py() ) for nid in x.value for j in x.value.edges(nid)]
+        elist = [( nid, pg.get_edge_dest(j), edge_weights[j].as_py() ) for nid in pg for j in pg.edges(nid)]
         # TODO(pengfei): add more type conversion support: like np.float64 -> float??
     elist = list(OrderedDict.fromkeys(elist))
     if x.is_directed:

@@ -55,7 +55,7 @@ def gen_pg_cleaned_8_12_from_csr(is_directed):
     # call the katana api to build a PropertyGraph (unweighted) from the CSR format
     # noting that the first 0 in csr.indptr is excluded
     pg = from_csr(csr.indptr[1:], csr.indices)
-    t = pyarrow.table(dict(value_from_translator=data))
+    t = pyarrow.table(dict(value=data))
     pg.add_edge_property(t)
     return pg
 

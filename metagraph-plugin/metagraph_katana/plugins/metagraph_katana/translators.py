@@ -1,7 +1,7 @@
 import metagraph as mg
 import networkx as nx
 import numpy as np
-import pyarrow as pa
+import pyarrow
 from metagraph import translator
 from metagraph.plugins.networkx.types import NetworkXGraph
 from scipy.sparse import csr_matrix
@@ -33,7 +33,7 @@ def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
     # noting that the first 0 in csr.indptr is excluded
     pg = from_csr(csr.indptr[1:], csr.indices)
     # add the edge weight as a new property
-    t = pa.table(dict(value_from_translator=data))
+    t = pyarrow.table(dict(value_from_translator=data))
     pg.add_edge_property(t)
     # use the metagraph's Graph warpper to wrap the PropertyGraph
     return KatanaGraph(
@@ -51,6 +51,8 @@ def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
     edge_weights = x.value.get_edge_property(x.edge_weight_prop_name).to_pandas()
     if isinstance(edge_weights[0], np.int64):
         elist = [( nid, x.value.get_edge_dest(j), int(edge_weights[j]) ) for nid in x.value for j in x.value.edges(nid)]
+    elif isinstance(edge_weights[0], pyarrow.lib.Int64Scalar):
+        elist = [( nid, x.value.get_edge_dest(j), edge_weights[j].as_py() ) for nid in x.value for j in x.value.edges(nid)]
         # TODO(pengfei): add more type conversion support: like np.float64 -> float??
     if x.is_directed:
         graph = nx.DiGraph()

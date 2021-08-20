@@ -229,6 +229,9 @@ public:
   /// Remove all edge properties
   void DropEdgeProperties();
 
+  /// Remove topology data
+  katana::Result<void> DropTopology();
+
   std::shared_ptr<arrow::Schema> full_node_schema() const;
 
   std::shared_ptr<arrow::Schema> full_edge_schema() const;

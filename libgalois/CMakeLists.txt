@@ -35,6 +35,7 @@ set(sources
         src/Profile.cpp
         src/Properties.cpp
         src/PropertyGraph.cpp
+        src/PropertyGraphRetractor.cpp
         src/PropertyIndex.cpp
         src/PropertyViews.cpp
         src/PtrLock.cpp

@@ -151,7 +151,7 @@ private:
   void recreate_node_property_indexes() {
     node_property_indexes_column_name =
         rdg_.get_node_property_indexes_column_name();
-    for (const std::string column_name : node_property_indexes_column_name) {
+    for (const std::string& column_name : node_property_indexes_column_name) {
       auto result = MakeNodeIndex(column_name);
       if (!result) {
         return (void)result.error();
@@ -161,7 +161,7 @@ private:
   void recreate_edge_property_indexes() {
     edge_property_indexes_column_name =
         rdg_.get_edge_property_indexes_column_name();
-    for (const std::string column_name : edge_property_indexes_column_name) {
+    for (const std::string& column_name : edge_property_indexes_column_name) {
       auto result = MakeEdgeIndex(column_name);
       if (!result) {
         return (void)result.error();

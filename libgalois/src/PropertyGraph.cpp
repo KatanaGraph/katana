@@ -396,11 +396,10 @@ katana::PropertyGraph::Make(
   katana::GraphTopology topo =
       KATANA_CHECKED(MapTopology(rdg.topology_file_storage()));
 
-  std::make_unique<PropertyGraph> property_graph; 
+  std::make_unique<PropertyGraph> property_graph;
 
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
-
 
     EntityTypeIDArray node_type_ids = KATANA_CHECKED(
         MapEntityTypeIDsArray(rdg.node_entity_type_id_array_file_storage()));
@@ -446,10 +445,10 @@ katana::PropertyGraph::Make(
         std::move(node_type_ids), std::move(edge_type_ids),
         std::move(node_type_manager), std::move(edge_type_manager));
   }
-  
+
   property_graph->recreate_node_property_indexes();
   property_graph->recreate_edge_property_indexes();
-  
+
   return std::unique_ptr<katana::PropertyGraph>(std::move(property_graph));
 }
 

@@ -154,7 +154,7 @@ private:
   }
 
   // recreate indexes from json
-  Result<void> recreate_node_property_indexes() {
+  katana::Result<void> recreate_node_property_indexes() {
     node_property_indexes_column_name_ =
         rdg_.node_property_indexes_column_name();
     for (const std::string& column_name : node_property_indexes_column_name_) {
@@ -164,7 +164,7 @@ private:
       }
     }
   }
-  Result<void> recreate_edge_property_indexes() {
+  katana::Result<void> recreate_edge_property_indexes() {
     edge_property_indexes_column_name_ =
         rdg_.edge_property_indexes_column_name();
     for (const std::string& column_name : edge_property_indexes_column_name_) {

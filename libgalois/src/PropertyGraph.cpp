@@ -446,8 +446,15 @@ katana::PropertyGraph::Make(
         std::move(node_type_manager), std::move(edge_type_manager));
   }
 
-  property_graph->recreate_node_property_indexes();
-  property_graph->recreate_edge_property_indexes();
+  auto res = property_graph->recreate_node_property_indexes();
+  if (!res) {
+    return res.error();
+  }
+
+  res = property_graph->recreate_edge_property_indexes();
+  if (!res) {
+    return res.error();
+  }
 
   return std::unique_ptr<katana::PropertyGraph>(std::move(property_graph));
 }

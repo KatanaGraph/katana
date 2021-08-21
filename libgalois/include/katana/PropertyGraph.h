@@ -163,6 +163,7 @@ private:
         return result.error();
       }
     }
+    return;
   }
   katana::Result<void> recreate_edge_property_indexes() {
     edge_property_indexes_column_name_ =
@@ -173,6 +174,7 @@ private:
         return result.error();
       }
     }
+    return;
   }
 
 public:

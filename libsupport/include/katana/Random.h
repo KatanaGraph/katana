@@ -11,6 +11,9 @@ namespace katana {
 
 using RandGenerator = std::mt19937;
 
+const uint64_t kRandomIDLength = (12);
+const uint64_t kRandomBranchLength = (4);
+
 /// Generate a random alphanumeric string of length \param len using
 /// \param gen if provided. If no generator is specified, use the output of
 /// GetGenerator

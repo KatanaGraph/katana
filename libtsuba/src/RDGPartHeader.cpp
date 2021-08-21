@@ -107,11 +107,19 @@ RDGPartHeader::Write(
     return KATANA_ERROR(ArrowToTsuba(res.code()), "arrow error: {}", res);
   }
 
-  auto next_version =
-      (retain_version == tsuba::RDG::RDGVersioningPolicy::RetainVersion)
-          ? handle.impl_->rdg_manifest().version()
-          : (handle.impl_->rdg_manifest().version() + 1);
-  KATANA_LOG_DEBUG("Next verison: {}", next_version);
+  // Assume the same version unless an increment.
+  katana::RDGVersion next_version = handle.impl_->rdg_manifest().version();
+  if (retain_version == tsuba::RDG::RDGVersioningPolicy::IncrementVersion) {
+    next_version.IncrementLeaf();
+  }
+
+  KATANA_LOG_DEBUG(
+      "PartHeader file {} for version: {}; ",
+      RDGManifest::PartitionFileName(
+          handle.impl_->rdg_manifest().viewtype(),
+          handle.impl_->rdg_manifest().dir(), Comm()->ID, next_version),
+      next_version.ToString());
+
   ff->Bind(RDGManifest::PartitionFileName(
                handle.impl_->rdg_manifest().viewtype(),
                handle.impl_->rdg_manifest().dir(), Comm()->ID, next_version)

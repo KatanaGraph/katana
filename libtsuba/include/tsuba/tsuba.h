@@ -8,6 +8,7 @@
 #include "katana/CommBackend.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/Iterators.h"
+#include "katana/RDGVersion.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/config.h"
@@ -57,7 +58,7 @@ KATANA_EXPORT katana::Result<RDGHandle> Open(
     const std::string& rdg_name, uint32_t flags);
 
 KATANA_EXPORT katana::Result<RDGHandle> Open(
-    const std::string& rdg_name, uint64_t version, uint32_t flags);
+    const std::string& rdg_name, katana::RDGVersion version, uint32_t flags);
 
 /// Generate a new canonically named topology file name in the
 /// directory associated with handle. Exported to support
@@ -82,14 +83,15 @@ KATANA_EXPORT katana::Result<void> Close(RDGHandle handle);
 
 /// Create an RDG storage location
 /// \param name is storage location prefix that will be used to store the RDG
-KATANA_EXPORT katana::Result<void> Create(const std::string& name);
+KATANA_EXPORT katana::Result<void> Create(
+    const std::string& name, katana::RDGVersion = katana::RDGVersion(0));
 
 /// @brief Describes properties of RDGView
 /// The RDGView will describe will identify the view-type, the arguments used to
 /// create it, where it is stored, and the properties of the partioning strategy
 /// used to distribute its data across the hosts which will load it.
 struct KATANA_EXPORT RDGView {
-  uint64_t view_version{0};
+  katana::RDGVersion view_version{katana::RDGVersion(0)};
   std::string view_type;
   std::string view_args;
   std::string view_path;
@@ -106,6 +108,10 @@ struct KATANA_EXPORT RDGStat {
 
 /// Get Information about the graph
 KATANA_EXPORT katana::Result<RDGStat> Stat(const std::string& rdg_name);
+
+KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViewsForVersion(
+    const std::string& rdg_dir, katana::RDGVersion version,
+    katana::RDGVersion* max_version);
 
 KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViews(
     const std::string& rdg_dir);

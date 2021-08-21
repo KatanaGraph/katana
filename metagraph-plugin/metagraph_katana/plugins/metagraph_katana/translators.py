@@ -52,14 +52,16 @@ def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
     dest_list = [dest for src in pg for dest in [pg.get_edge_dest(e) for e in pg.edges(src)] ]
     for src in pg:
         if pg.edges(src) == range(0,0):
-            assert src in dest_list, "NetworkX does not support graph with isolated nodes, please use a cleaned Katana Graph"
+            if src not in dest_list:
+                raise ValueError("NetworkX does not support graph with isolated nodes")
     edge_dict_count = {
         (src, dest): 0 for src in pg for dest in [pg.get_edge_dest(e) for e in pg.edges(src)]
     }
     for src in pg:
         for dest in [pg.get_edge_dest(e) for e in pg.edges(src)]:
             edge_dict_count[(src, dest)] += 1
-            assert edge_dict_count[(src, dest)] <= 1, "NetworkX does not support graph with duplicated edges, please use a cleaned Katana Graph"
+            if edge_dict_count[(src, dest)] > 1:
+                raise ValueError("NetworkX does not support graph with duplicated edges")
     elist = []
     edge_weights = pg.get_edge_property(x.edge_weight_prop_name).to_pandas()
     if isinstance(edge_weights[0], np.int64):

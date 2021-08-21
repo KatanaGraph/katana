@@ -396,7 +396,7 @@ katana::PropertyGraph::Make(
   katana::GraphTopology topo =
       KATANA_CHECKED(MapTopology(rdg.topology_file_storage()));
 
-  std::make_unique<PropertyGraph> property_graph;
+  std::unique_ptr<katana::PropertyGraph> property_graph;
 
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");

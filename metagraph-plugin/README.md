@@ -15,7 +15,7 @@ Highlights include:
 
 
 Installation
-===============
+============
 
 First install the package
 
@@ -24,7 +24,7 @@ conda create -n metagraph-test -c conda-forge -c katanagraph/label/dev -c metagr
 ```
 
 Test
-===============
+====
 To check the installation is successful, you can run the test cases by:
 
 ```Shell
@@ -34,34 +34,31 @@ pytest tests
 
 
 Examples
-===========================
+========
 
 Loading An Example Graph
-------------------
+------------------------
 
 ```
 import metagraph as mg
-import pandas as pd
-import pytest
-df = pd.read_csv("tests/data/edge1.csv")
+import pandas
+df = pandas.read_csv("tests/data/edge1.csv")
 em = mg.wrappers.EdgeMap.PandasEdgeMap(df, "Source", "Destination", "Weight", is_directed=True)
 example_graph = mg.algos.util.graph.build(em)
 ```
 
 
 Graph Format Conversion 
-------------------
+-----------------------
 
 ```
 katana_graph = mg.translate(example_graph, mg.wrappers.Graph.KatanaGraph) # translate from NetworkX Graph to Katana Graph
-networkx_graph = mg.translate(katana_graph , mg.wrappers.Graph.NetworkXGraph) # translate from Katana Graph to NetworkX Graph
+networkx_graph = mg.translate(katana_graph, mg.wrappers.Graph.NetworkXGraph) # translate from Katana Graph to NetworkX Graph
 ```
 
-<!-- katana_graph = mg.translate(networkx_graph, mg.wrappers.Graph.KatanaGraph) # translate from NetworkX Graph to Katana Graph -->
-<!-- TODO (pengfei): uncomment this after switching to a cleaned graph-->
 
 Running Graph Analytics Algorithms
-------------------
+----------------------------------
 
 ```
 import metagraph as mg

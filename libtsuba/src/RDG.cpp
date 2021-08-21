@@ -282,11 +282,11 @@ tsuba::RDG::set_edge_property_indexes_column_name(
 }
 // read the same as above and recreate indexes
 std::vector<std::string>&
-tsuba::RDG::get_node_property_indexes_column_name() {
+tsuba::RDG::node_property_indexes_column_name() {
   return core_->part_header().node_property_indexes_column_name();
 }
 std::vector<std::string>&
-tsuba::RDG::get_edge_property_indexes_column_name() {
+tsuba::RDG::edge_property_indexes_column_name() {
   return core_->part_header().edge_property_indexes_column_name();
 }
 

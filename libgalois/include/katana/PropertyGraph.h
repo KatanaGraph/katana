@@ -87,14 +87,17 @@ private:
   /// The edge EntityTypeID for each edge's most specific type
   katana::NUMAArray<EntityTypeID> edge_entity_type_id_;
 
-  // List of node and edge indexes on this graph. And the columns that created them to persist in json
+  // List of node indexes on this graph.
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
       node_indexes_;
-  std::vector<std::string> node_property_indexes_column_name;
+  //And the columns that created them to persist in json
+  std::vector<std::string> node_property_indexes_column_name_;
 
+  // List of edge indexes on this graph.
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
       edge_indexes_;
-  std::vector<std::string> edge_property_indexes_column_name;
+  //And the columns that created them to persist in json
+  std::vector<std::string> edge_property_indexes_column_name_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
@@ -148,23 +151,23 @@ private:
   }
 
   // recreate indexes from json
-  void recreate_node_property_indexes() {
+  Result<void> recreate_node_property_indexes() {
     node_property_indexes_column_name =
-        rdg_.get_node_property_indexes_column_name();
+        rdg_.node_property_indexes_column_name();
     for (const std::string& column_name : node_property_indexes_column_name) {
       auto result = MakeNodeIndex(column_name);
       if (!result) {
-        return (void)result.error();
+        return result.error();
       }
     }
   }
-  void recreate_edge_property_indexes() {
+  Result<void> recreate_edge_property_indexes() {
     edge_property_indexes_column_name =
-        rdg_.get_edge_property_indexes_column_name();
+        rdg_.edge_property_indexes_column_name();
     for (const std::string& column_name : edge_property_indexes_column_name) {
       auto result = MakeEdgeIndex(column_name);
       if (!result) {
-        return (void)result.error();
+        return result.error();
       }
     }
   }

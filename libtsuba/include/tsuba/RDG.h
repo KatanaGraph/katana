@@ -187,8 +187,8 @@ public:
       std::vector<std::string>& edge_property_indexes_column_name);
 
   // read the same as above and recreate indexes
-  std::vector<std::string>& get_node_property_indexes_column_name();
-  std::vector<std::string>& get_edge_property_indexes_column_name();
+  std::vector<std::string>& node_property_indexes_column_name();
+  std::vector<std::string>& edge_property_indexes_column_name();
 
   std::shared_ptr<arrow::Schema> full_node_schema() const;
 

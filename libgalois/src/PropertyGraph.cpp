@@ -1047,10 +1047,11 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
   node_indexes_.push_back(std::move(index));
 
   //save the column name the index was created from for easy assess dudring json load/store
-  node_property_indexes_column_name.push_back(column_name);
+  node_property_indexes_column_name_.push_back(column_name);
 
   //persist column names to json, index can now can be recreated using recreate_node_property_indexes()
-  rdg_.set_node_property_indexes_column_name(node_property_indexes_column_name);
+  rdg_.set_node_property_indexes_column_name(
+      node_property_indexes_column_name_);
 
   return katana::ResultSuccess();
 }
@@ -1086,10 +1087,11 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
   edge_indexes_.push_back(std::move(index));
 
   //save the column name the index was created from for easy assess dudring json load/store
-  edge_property_indexes_column_name.push_back(column_name);
+  edge_property_indexes_column_name_.push_back(column_name);
 
   //persist column names to json, index can now can be recreated using recreate_edge_property_indexes()
-  rdg_.set_edge_property_indexes_column_name(edge_property_indexes_column_name);
+  rdg_.set_edge_property_indexes_column_name(
+      edge_property_indexes_column_name_);
 
   return katana::ResultSuccess();
 }

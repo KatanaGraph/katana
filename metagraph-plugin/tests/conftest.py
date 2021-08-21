@@ -46,11 +46,42 @@ def networkx_weighted_directed_8_12():
     return graph1
 
 
-@pytest.fixture
-def order():
-    return []
 
 
-@pytest.fixture
-def top(order, innermost):
-    order.append("top")
+# directed graph
+@pytest.fixture(autouse=True)
+def kg_from_nx_di_8_12(networkx_weighted_directed_8_12):
+    pg_test_case = mg.translate(networkx_weighted_directed_8_12, mg.wrappers.Graph.KatanaGraph)
+    return pg_test_case
+
+
+# undirected graph
+@pytest.fixture(autouse=True)
+def kg_from_nx_ud_8_12(networkx_weighted_undirected_8_12):
+    pg_test_case = mg.translate(networkx_weighted_undirected_8_12, mg.wrappers.Graph.KatanaGraph)
+    return pg_test_case
+
+
+@pytest.fixture(autouse=True)
+def nx_from_kg_rmat15_cleaned_di(katanagraph_rmat15_cleaned_di):
+    return mg.translate(katanagraph_rmat15_cleaned_di, mg.wrappers.Graph.NetworkXGraph)
+
+@pytest.fixture(autouse=True)
+def nx_from_kg_rmat15_cleaned_ud(katanagraph_rmat15_cleaned_ud):
+    return mg.translate(katanagraph_rmat15_cleaned_ud, mg.wrappers.Graph.NetworkXGraph)
+
+
+@pytest.fixture(autouse=True)
+def kg_from_nx_di_8_12(networkx_weighted_directed_8_12):
+    pg_test_case = mg.translate(networkx_weighted_directed_8_12, mg.wrappers.Graph.KatanaGraph)
+    return pg_test_case
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--runslow", action="store_true", default=False, help="run slow tests"
+    )
+
+def pytest_runtest_setup(item):
+    if 'runslow' in item.keywords and not item.config.getoption("--runslow"):
+        pytest.skip("need --runslow option to run this test")

@@ -623,7 +623,7 @@ public:
       const std::string& name) const {
     auto ret = node_properties()->GetColumnByName(name);
     if (ret) {
-      return ret;
+      return MakeResult(std::move(ret));
     }
     return KATANA_ERROR(
         ErrorCode::PropertyNotFound, "node property does not exist: {}", name);
@@ -637,7 +637,7 @@ public:
       const std::string& name) const {
     auto ret = edge_properties()->GetColumnByName(name);
     if (ret) {
-      return ret;
+      return MakeResult(std::move(ret));
     }
     return KATANA_ERROR(
         ErrorCode::PropertyNotFound, "edge property does not exist: {}", name);
@@ -664,7 +664,7 @@ public:
     if (!array) {
       return ErrorCode::TypeError;
     }
-    return array;
+    return MakeResult(std::move(array));
   }
 
   /// Get an edge property by name and cast it to a type.
@@ -684,7 +684,7 @@ public:
     if (!array) {
       return ErrorCode::TypeError;
     }
-    return array;
+    return MakeResult(std::move(array));
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }

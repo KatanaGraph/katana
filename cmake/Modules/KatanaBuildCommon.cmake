@@ -23,6 +23,7 @@ set(KATANA_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
 set(KATANA_ENABLE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
 set(KATANA_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fail")
 set(KATANA_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
+set(KATANA_ENABLE_COVERAGE OFF CACHE BOOL "Add instrumentation (used for code coverage collection) to binaries.")
 set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
 set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
 set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to use features of;
@@ -58,13 +59,16 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "" CACHE STRING "Semi-colon separated list of D
 set(KATANA_PER_ROUND_STATS OFF CACHE BOOL "Report statistics of each round of execution")
 set(KATANA_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a single machine) for running the tests.")
 set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
-set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: number of physical core)")
+set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: min(number of physical core, 4))")
 set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 
 cmake_host_system_information(RESULT KATANA_NUM_PHYSICAL_CORES QUERY NUMBER_OF_PHYSICAL_CORES)
 
 if (NOT KATANA_NUM_TEST_THREADS)
   set(KATANA_NUM_TEST_THREADS ${KATANA_NUM_PHYSICAL_CORES})
+  if (KATANA_NUM_TEST_THREADS GREATER_EQUAL 4)
+    set(KATANA_NUM_TEST_THREADS 4)
+  endif ()
 endif ()
 if (KATANA_NUM_TEST_THREADS LESS_EQUAL 0)
   set(KATANA_NUM_TEST_THREADS 1)
@@ -303,6 +307,13 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
   find_package(benchmark REQUIRED)
 endif ()
 
+# Instrument binaries if desired
+if (KATANA_ENABLE_COVERAGE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g --coverage")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g --coverage")
+  add_link_options("SHELL: --coverage -lgcov")
+endif ()
+
 ###### Common Functions ######
 
 function(set_common_katana_library_options)
@@ -436,7 +447,8 @@ function(add_katana_sphinx_target target_name)
   add_custom_target(
       ${target_name}_sphinx_docs
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
-      COMMAND env KATANA_DOXYGEN_PATH="${PROJECT_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
+      COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
+        -W
         -b html
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}

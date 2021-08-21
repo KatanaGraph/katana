@@ -5,11 +5,13 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 #include <arrow/api.h>
 #include <arrow/chunked_array.h>
 #include <nlohmann/json.hpp>
 
+#include "katana/EntityTypeManager.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/config.h"
@@ -52,6 +54,10 @@ public:
   RDG(RDG&& other) noexcept;
   RDG& operator=(RDG&& other) noexcept;
 
+  /// Determine if the EntityTypeIDs are stored in properties, or outside
+  /// in their own dedicated structures
+  bool IsEntityTypeIDsOutsideProperties() const;
+
   /// Perform some checks on assumed invariants
   katana::Result<void> Validate() const;
 
@@ -63,21 +69,41 @@ public:
   /// @param handle :: handle indicating where to store RDG
   /// @param command_line :: added to metadata to track lineage of RDG
   /// @param versioning_action :: can be set to 'RDG::RDGVersioningPolicy::IncrementVersion' or
-  /// @param ff :: if ff is not nullptr, it is persisted as the topology for this RDG.
-  /// 'RDG::RDGVersioningPolicy::RetainVersion' to indicate whether RDG version is
+  /// 'RDG::RDGVersioningPolicy::RetainVersion' to indicate whether RDG version is changing with this store.
+  /// @param topology_ff :: if not nullptr, it is persisted as the topology for this RDG.
+  /// @param node_entity_type_id_array_ff :: if not nullptr, it is persisted as the node_entity_type_id_array for this RDG.
+  /// @param edge_entity_type_id_array_ff :: if not nullptr, it is persisted as the edge_entity_type_id_array for this RDG.
+  /// @param node_entity_type_manager :: persisted as the node EntityTypeID -> Atomic node EntityType id mapping and Atomic node EntityType ID -> Atomic EntityType Name
+  /// @param edge_entity_type_manager :: persisted as the edge EntityTypeID -> Atomic node EntityType id mapping and Atomic edge EntityType ID -> Atomic EntityType Name
   katana::Result<void> Store(
       RDGHandle handle, const std::string& command_line,
-      RDGVersioningPolicy versioning_action, std::unique_ptr<FileFrame> ff);
+      RDGVersioningPolicy versioning_action,
+      std::unique_ptr<FileFrame> topology_ff,
+      std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
+      std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
+      const katana::EntityTypeManager& node_entity_type_manager,
+      const katana::EntityTypeManager& edge_entity_type_manager);
 
   /// @brief Store new version of the RDG with lineage based on command line.
   /// @param handle :: handle indicating where to store RDG
   /// @param command_line :: added to metadata to track lineage of RDG
-  /// @param ff :: FileFrame for topology information, can be nullptr. If set, topology
-  /// information will be persisted to ff.
+  /// @param topology_ff :: if not nullptr, it is persisted as the topology for this RDG.
+  /// @param node_entity_type_id_array_ff :: if not nullptr, it is persisted as the node_entity_type_id_array for this RDG.
+  /// @param edge_entity_type_id_array_ff :: if not nullptr, it is persisted as the edge_entity_type_id_array for this RDG.
+  /// @param node_entity_type_manager :: persisted as the node EntityTypeID -> Atomic node EntityType id mapping and Atomic node EntityType ID -> Atomic EntityType Name
+  /// @param edge_entity_type_manager :: persisted as the edge EntityTypeID -> Atomic node EntityType id mapping and Atomic edge EntityType ID -> Atomic EntityType Name
   katana::Result<void> Store(
       RDGHandle handle, const std::string& command_line,
-      std::unique_ptr<FileFrame> ff) {
-    return Store(handle, command_line, IncrementVersion, std::move(ff));
+      std::unique_ptr<FileFrame> topology_ff,
+      std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
+      std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
+      const katana::EntityTypeManager& node_entity_type_manager,
+      const katana::EntityTypeManager& edge_entity_type_manager) {
+    return Store(
+        handle, command_line, IncrementVersion, std::move(topology_ff),
+        std::move(node_entity_type_id_array_ff),
+        std::move(edge_entity_type_id_array_ff), node_entity_type_manager,
+        edge_entity_type_manager);
   }
 
   /// @brief Store new version of RDG with lineage based on command line.
@@ -85,19 +111,26 @@ public:
   /// @param command_line :: added to metadata to track lineage of RDG
   katana::Result<void> Store(
       RDGHandle handle, const std::string& command_line) {
-    return Store(handle, command_line, IncrementVersion, nullptr);
+    katana::EntityTypeManager node_entity_type_manager;
+    katana::EntityTypeManager edge_entity_type_manager;
+    return Store(
+        handle, command_line, IncrementVersion, nullptr, nullptr, nullptr,
+        node_entity_type_manager, edge_entity_type_manager);
   }
 
   /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
   /// @param handle :: handle indicating where to store RDG
   /// @param command_line :: added to metadata to track lineage of RDG
   /// @param versioning_action :: can be set to 'RDG::RDGVersioningPolicy::IncrementVersion' or
-  /// 'RDG::RDGVersioningPolicy::RetainVersion' to indicate whether RDG version is
-  /// changing with this store.
+  /// 'RDG::RDGVersioningPolicy::RetainVersion' to indicate whether RDG version is changing with this store.
   katana::Result<void> Store(
       RDGHandle handle, const std::string& command_line,
       RDGVersioningPolicy versioning_action) {
-    return Store(handle, command_line, versioning_action, nullptr);
+    katana::EntityTypeManager node_entity_type_manager;
+    katana::EntityTypeManager edge_entity_type_manager;
+    return Store(
+        handle, command_line, versioning_action, nullptr, nullptr, nullptr,
+        node_entity_type_manager, edge_entity_type_manager);
   }
 
   katana::Result<void> AddNodeProperties(
@@ -145,10 +178,26 @@ public:
 
   katana::Result<void> UnbindTopologyFileStorage();
 
-  /// Inform this RDG that it's topology is in storage at this location
+  /// Inform this RDG that its topology is in storage at this location
   /// without loading it into memory. \param new_top must exist and be in
   /// the correct directory for this RDG
   katana::Result<void> SetTopologyFile(const katana::Uri& new_top);
+
+  katana::Result<void> UnbindNodeEntityTypeIDArrayFileStorage();
+
+  /// Inform this RDG that its Node Entity Type ID Array is in storage at this location
+  /// without loading it into memory. \param new_type_id_array must exist and be in
+  /// the correct directory for this RDG
+  katana::Result<void> SetNodeEntityTypeIDArrayFile(
+      const katana::Uri& new_type_id_array);
+
+  katana::Result<void> UnbindEdgeEntityTypeIDArrayFileStorage();
+
+  /// Inform this RDG that its Edge Entity Type ID Array is in storage at this location
+  /// without loading it into memory. \param new_type_id_array must exist and be in
+  /// the correct directory for this RDG
+  katana::Result<void> SetEdgeEntityTypeIDArrayFile(
+      const katana::Uri& new_type_id_array);
 
   void AddMirrorNodes(std::shared_ptr<arrow::ChunkedArray>&& a) {
     mirror_nodes_.emplace_back(std::move(a));
@@ -179,6 +228,10 @@ public:
 
   /// Remove all edge properties
   void DropEdgeProperties();
+
+  std::shared_ptr<arrow::Schema> full_node_schema() const;
+
+  std::shared_ptr<arrow::Schema> full_edge_schema() const;
 
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
       const {
@@ -233,6 +286,14 @@ public:
 
   const FileView& topology_file_storage() const;
 
+  const FileView& node_entity_type_id_array_file_storage() const;
+
+  const FileView& edge_entity_type_id_array_file_storage() const;
+
+  katana::Result<katana::EntityTypeManager> node_entity_type_manager() const;
+
+  katana::Result<katana::EntityTypeManager> edge_entity_type_manager() const;
+
   void set_view_name(const std::string& v) { view_type_ = v; }
 
 private:
@@ -257,7 +318,20 @@ private:
 
   katana::Result<void> DoStore(
       RDGHandle handle, const std::string& command_line,
-      RDGVersioningPolicy versioning_action, std::unique_ptr<WriteGroup> desc);
+      RDGVersioningPolicy versioning_action,
+      std::unique_ptr<WriteGroup> write_group);
+
+  katana::Result<void> DoStoreTopology(
+      RDGHandle handle, std::unique_ptr<FileFrame> topology_ff,
+      std::unique_ptr<WriteGroup>& write_group);
+
+  katana::Result<void> DoStoreNodeEntityTypeIDArray(
+      RDGHandle handle, std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
+      std::unique_ptr<WriteGroup>& write_group);
+
+  katana::Result<void> DoStoreEdgeEntityTypeIDArray(
+      RDGHandle handle, std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
+      std::unique_ptr<WriteGroup>& write_group);
 
   //
   // Data

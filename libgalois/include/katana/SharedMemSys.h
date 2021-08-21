@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "katana/TextTracer.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -21,7 +22,7 @@ class KATANA_EXPORT SharedMemSys {
   std::unique_ptr<Impl> impl_;
 
 public:
-  SharedMemSys();
+  SharedMemSys(std::unique_ptr<ProgressTracer> tracer = TextTracer::Make());
   ~SharedMemSys();
 
   SharedMemSys(const SharedMemSys&) = delete;

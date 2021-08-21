@@ -1,10 +1,16 @@
 #include "katana/PropertyGraph.h"
 
+#include <stdio.h>
 #include <sys/mman.h>
 
+#include <memory>
+#include <utility>
+
 #include "katana/ArrowInterchange.h"
+#include "katana/Iterators.h"
 #include "katana/Logging.h"
 #include "katana/Loops.h"
+#include "katana/NUMAArray.h"
 #include "katana/PerThreadStorage.h"
 #include "katana/Platform.h"
 #include "katana/Properties.h"
@@ -146,14 +152,81 @@ struct PropertyColumn {
       : field_index(i), array(a) {}
 };
 
+/// MapEntityTypeIDsFromFile takes a file buffer of a node or edge Type set ID file
+/// and extracts the property graph type set ids from it. It is an alternative way
+/// of extracting EntityTypeIDs and extraction from properties will be depreciated in
+/// favor of this method.
+katana::Result<katana::PropertyGraph::EntityTypeIDArray>
+MapEntityTypeIDsArray(const tsuba::FileView& file_view) {
+  const auto* data = file_view.ptr<uint64_t>();
+  const int64_t type_ID_array_size = data[0];
+
+  if (file_view.size() == 0) {
+    return katana::ErrorCode::InvalidArgument;
+  }
+
+  const katana::EntityTypeID* type_IDs_array =
+      reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
+
+  KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+
+  // allocate type IDs array
+  katana::PropertyGraph::EntityTypeIDArray entity_type_id_array;
+  entity_type_id_array.allocateInterleaved(type_ID_array_size);
+
+  katana::ParallelSTL::copy(
+      &type_IDs_array[0], &type_IDs_array[type_ID_array_size],
+      entity_type_id_array.begin());
+
+  return katana::MakeResult(std::move(entity_type_id_array));
+}
+
+katana::Result<std::unique_ptr<tsuba::FileFrame>>
+WriteEntityTypeIDsArray(
+    const katana::NUMAArray<katana::EntityTypeID>& entity_type_id_array) {
+  auto ff = std::make_unique<tsuba::FileFrame>();
+
+  if (auto res = ff->Init(); !res) {
+    return res.error();
+  }
+
+  uint64_t data[1] = {entity_type_id_array.size()};
+  arrow::Status aro_sts = ff->Write(&data, sizeof(uint64_t));
+
+  if (!aro_sts.ok()) {
+    return tsuba::ArrowToTsuba(aro_sts.code());
+  }
+
+  if (entity_type_id_array.size()) {
+    const katana::EntityTypeID* raw = entity_type_id_array.data();
+    auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
+    aro_sts = ff->Write(buf);
+    if (!aro_sts.ok()) {
+      return tsuba::ArrowToTsuba(aro_sts.code());
+    }
+  }
+  return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
+}
+
+katana::PropertyGraph::EntityTypeIDArray
+MakeDefaultEntityTypeIDArray(size_t vec_sz) {
+  katana::PropertyGraph::EntityTypeIDArray type_ids;
+  type_ids.allocateInterleaved(vec_sz);
+  katana::ParallelSTL::fill(
+      type_ids.begin(), type_ids.end(), katana::kUnknownEntityType);
+  return type_ids;
+}
+
 /// Assumes all boolean or uint8 properties are types
-katana::Result<katana::NUMAArray<katana::PropertyGraph::TypeSetID>>
-GetTypeSetIDsFromProperties(
+katana::Result<katana::NUMAArray<katana::EntityTypeID>>
+GetEntityTypeIDsFromProperties(
+    const size_t topo_size,  // == either num_nodes() or  num_edges()
     const std::shared_ptr<arrow::Table>& properties,
-    katana::PropertyGraph::TypeNameToSetOfTypeSetIDsMap*
-        type_name_to_type_set_ids,
-    katana::PropertyGraph::TypeSetIDToSetOfTypeNamesMap*
-        type_set_id_to_type_names) {
+    katana::EntityTypeManager* entity_type_manager) {
+  if (properties->num_rows() == 0) {
+    return MakeDefaultEntityTypeIDArray(topo_size);
+  }
+
   // throw an error if each column/property has more than 1 chunk
   for (int i = 0, n = properties->num_columns(); i < n; i++) {
     std::shared_ptr<arrow::ChunkedArray> property = properties->column(i);
@@ -196,38 +269,29 @@ GetTypeSetIDsFromProperties(
   // assign a new ID to each type
   // NB: cannot use unordered_map without defining a hash function for vectors;
   // performance is not affected here because the map is very small (<=256)
-  std::map<katana::gstl::Vector<int>, katana::PropertyGraph::TypeSetID>
+  std::map<katana::gstl::Vector<int>, katana::EntityTypeID>
       type_field_indices_to_id;
   for (int i : type_field_indices) {
-    katana::PropertyGraph::TypeSetID new_type_set_id =
-        type_set_id_to_type_names->size();
-    katana::gstl::Vector<int> field_indices = {i};
-    type_field_indices_to_id.emplace(
-        std::make_pair(field_indices, new_type_set_id));
-
     const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
     const std::string& field_name = current_field->name();
-    KATANA_LOG_DEBUG_ASSERT(
-        type_name_to_type_set_ids->find(field_name) ==
-        type_name_to_type_set_ids->end());
+    katana::EntityTypeID new_entity_type_id =
+        entity_type_manager->AddAtomicEntityType(field_name);
 
-    katana::PropertyGraph::SetOfTypeSetIDs type_set_ids;
-    type_set_ids.set(new_type_set_id);
-    type_name_to_type_set_ids->emplace(
-        std::make_pair(field_name, type_set_ids));
-    type_set_id_to_type_names->push_back({field_name});
+    katana::gstl::Vector<int> field_indices = {i};
+    type_field_indices_to_id.emplace(
+        std::make_pair(field_indices, new_entity_type_id));
   }
 
   // collect the list of unique combination of types
-  using EntityType = katana::gstl::Vector<int>;
+  using FieldEntityType = katana::gstl::Vector<int>;
   // NB: cannot use unordered_set without defining a hash function for vectors;
   // performance is not affected here because the set is very small (<=256)
-  using EntityTypeSet = katana::gstl::Set<EntityType>;
-  EntityTypeSet type_combinations;
-  katana::PerThreadStorage<EntityTypeSet> type_combinations_pts;
+  using FieldEntityTypeSet = katana::gstl::Set<FieldEntityType>;
+  FieldEntityTypeSet type_combinations;
+  katana::PerThreadStorage<FieldEntityTypeSet> type_combinations_pts;
   katana::do_all(
       katana::iterate(int64_t{0}, properties->num_rows()), [&](int64_t row) {
-        EntityType field_indices;
+        FieldEntityType field_indices;
         for (auto bool_property : bool_properties) {
           if (bool_property.array->IsValid(row) &&
               bool_property.array->Value(row)) {
@@ -241,13 +305,13 @@ GetTypeSetIDsFromProperties(
           }
         }
         if (field_indices.size() > 1) {
-          EntityTypeSet& local_type_combinations =
+          FieldEntityTypeSet& local_type_combinations =
               *type_combinations_pts.getLocal();
           local_type_combinations.emplace(field_indices);
         }
       });
   for (unsigned t = 0, n = katana::activeThreads; t < n; t++) {
-    EntityTypeSet& remote_type_combinations =
+    FieldEntityTypeSet& remote_type_combinations =
         *type_combinations_pts.getRemote(t);
     for (auto& type_combination : remote_type_combinations) {
       type_combinations.emplace(type_combination);
@@ -255,52 +319,48 @@ GetTypeSetIDsFromProperties(
   }
   // deallocate PerThreadStorage in parallel
   katana::on_each([&](unsigned, unsigned) {
-    EntityTypeSet& local_type_combinations = *type_combinations_pts.getLocal();
-    local_type_combinations = EntityTypeSet();
+    FieldEntityTypeSet& local_type_combinations =
+        *type_combinations_pts.getLocal();
+    local_type_combinations = FieldEntityTypeSet();
   });
 
   // assign a new ID to each unique combination of types
-  for (const EntityType& field_indices : type_combinations) {
-    katana::PropertyGraph::TypeSetID new_type_set_id =
-        type_set_id_to_type_names->size();
-    type_field_indices_to_id.emplace(
-        std::make_pair(field_indices, new_type_set_id));
-
-    type_set_id_to_type_names->push_back({});
+  for (const FieldEntityType& field_indices : type_combinations) {
+    std::vector<std::string> field_names;
     for (int i : field_indices) {
       const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
       const std::string& field_name = current_field->name();
-      KATANA_LOG_DEBUG_ASSERT(
-          type_name_to_type_set_ids->find(field_name) !=
-          type_name_to_type_set_ids->end());
-
-      type_name_to_type_set_ids->at(field_name).set(new_type_set_id);
-      type_set_id_to_type_names->at(new_type_set_id).emplace(field_name);
+      field_names.emplace_back(field_name);
     }
+    katana::EntityTypeID new_entity_type_id =
+        entity_type_manager->AddNonAtomicEntityType(field_names);
+    type_field_indices_to_id.emplace(
+        std::make_pair(field_indices, new_entity_type_id));
   }
 
-  // assert that all type IDs and 2 special type IDs (unknown and invalid)
+  // assert that all type IDs (including kUnknownEntityType) and
+  // 1 special type ID (kInvalidEntityType)
   // can be stored in 8 bits
-  if (type_set_id_to_type_names->size() >
-      (std::numeric_limits<katana::PropertyGraph::TypeSetID>::max() -
-       size_t{2})) {
+  if (entity_type_manager->GetNumEntityTypes() >
+      (std::numeric_limits<katana::EntityTypeID>::max() - size_t{1})) {
     return KATANA_ERROR(
         katana::ErrorCode::NotImplemented,
         "number of unique combination of types is {} "
         "but only up to {} is supported currently",
-        type_set_id_to_type_names->size(),
-        // exclude kUnknownType and kInvalidType
-        std::numeric_limits<katana::PropertyGraph::TypeSetID>::max() - 2);
+        // exclude kUnknownEntityType
+        entity_type_manager->GetNumEntityTypes() - 1,
+        // exclude kUnknownEntityType and kInvalidEntityType
+        std::numeric_limits<katana::EntityTypeID>::max() - 2);
   }
 
   // allocate type IDs array
-  katana::NUMAArray<katana::PropertyGraph::TypeSetID> type_set_ids;
+  katana::NUMAArray<katana::EntityTypeID> entity_type_ids;
   int64_t num_rows = properties->num_rows();
-  type_set_ids.allocateInterleaved(num_rows);
+  entity_type_ids.allocateInterleaved(num_rows);
 
   // assign the type ID for each row
   katana::do_all(katana::iterate(int64_t{0}, num_rows), [&](int64_t row) {
-    EntityType field_indices;
+    FieldEntityType field_indices;
     for (auto bool_property : bool_properties) {
       if (bool_property.array->IsValid(row) &&
           bool_property.array->Value(row)) {
@@ -314,93 +374,116 @@ GetTypeSetIDsFromProperties(
       }
     }
     if (field_indices.empty()) {
-      type_set_ids[row] = katana::PropertyGraph::kUnknownType;
+      entity_type_ids[row] = katana::kUnknownEntityType;
     } else {
-      katana::PropertyGraph::TypeSetID type_set_id =
+      katana::EntityTypeID entity_type_id =
           type_field_indices_to_id.at(field_indices);
-      type_set_ids[row] = type_set_id;
+      entity_type_ids[row] = entity_type_id;
     }
   });
 
-  return katana::Result<katana::NUMAArray<katana::PropertyGraph::TypeSetID>>(
-      std::move(type_set_ids));
-}
+  KATANA_LOG_ASSERT(topo_size == entity_type_ids.size());
 
-katana::NUMAArray<katana::PropertyGraph::TypeSetID>
-GetUnknownTypeSetIDs(uint64_t num_rows) {
-  katana::NUMAArray<katana::PropertyGraph::TypeSetID> type_set_ids;
-  type_set_ids.allocateInterleaved(num_rows);
-  katana::do_all(katana::iterate(uint64_t{0}, num_rows), [&](uint64_t row) {
-    type_set_ids[row] = katana::PropertyGraph::kUnknownType;
-  });
-  return type_set_ids;
+  return katana::Result<katana::NUMAArray<katana::EntityTypeID>>(
+      std::move(entity_type_ids));
 }
 
 }  // namespace
 
-katana::GraphTopology::GraphTopology(
-    const Edge* adj_indices, size_t num_nodes, const Node* dests,
-    size_t num_edges) noexcept {
-  adj_indices_.allocateInterleaved(num_nodes);
-  dests_.allocateInterleaved(num_edges);
-
-  katana::ParallelSTL::copy(
-      &adj_indices[0], &adj_indices[num_nodes], adj_indices_.begin());
-  katana::ParallelSTL::copy(&dests[0], &dests[num_edges], dests_.begin());
-}
-
-katana::GraphTopology
-katana::GraphTopology::Copy(const GraphTopology& that) noexcept {
-  return katana::GraphTopology(
-      that.adj_indices_.data(), that.adj_indices_.size(), that.dests_.data(),
-      that.dests_.size());
-}
-
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
-  auto topo_result = MapTopology(rdg.topology_file_storage());
-  if (!topo_result) {
-    return topo_result.error();
+  katana::GraphTopology topo =
+      KATANA_CHECKED(MapTopology(rdg.topology_file_storage()));
+
+  if (rdg.IsEntityTypeIDsOutsideProperties()) {
+    KATANA_LOG_DEBUG("loading EntityType data from outside properties");
+
+    EntityTypeIDArray node_type_ids = KATANA_CHECKED(
+        MapEntityTypeIDsArray(rdg.node_entity_type_id_array_file_storage()));
+
+    EntityTypeIDArray edge_type_ids = KATANA_CHECKED(
+        MapEntityTypeIDsArray(rdg.edge_entity_type_id_array_file_storage()));
+
+    KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
+    KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
+
+    EntityTypeManager node_type_manager =
+        KATANA_CHECKED(rdg.node_entity_type_manager());
+    EntityTypeManager edge_type_manager =
+        KATANA_CHECKED(rdg.edge_entity_type_manager());
+
+    return std::make_unique<PropertyGraph>(
+        std::move(rdg_file), std::move(rdg), std::move(topo),
+        std::move(node_type_ids), std::move(edge_type_ids),
+        std::move(node_type_manager), std::move(edge_type_manager));
+
+  } else {
+    // we must construct id_arrays and managers from properties
+
+    KATANA_LOG_DEBUG("loading EntityType data from properties");
+
+    EntityTypeManager node_type_manager{};
+
+    EntityTypeIDArray node_type_ids =
+        KATANA_CHECKED(GetEntityTypeIDsFromProperties(
+            topo.num_nodes(), rdg.node_properties(), &node_type_manager));
+
+    EntityTypeManager edge_type_manager{};
+
+    EntityTypeIDArray edge_type_ids =
+        KATANA_CHECKED(GetEntityTypeIDsFromProperties(
+            topo.num_edges(), rdg.edge_properties(), &edge_type_manager));
+
+    KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
+    KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
+
+    return std::make_unique<PropertyGraph>(
+        std::move(rdg_file), std::move(rdg), std::move(topo),
+        std::move(node_type_ids), std::move(edge_type_ids),
+        std::move(node_type_manager), std::move(edge_type_manager));
   }
-
-  return std::make_unique<PropertyGraph>(
-      std::move(rdg_file), std::move(rdg), std::move(topo_result.value()));
-}
-
-katana::Result<std::unique_ptr<katana::PropertyGraph>>
-MakePropertyGraph(
-    std::unique_ptr<tsuba::RDGFile> rdg_file,
-    const tsuba::RDGLoadOptions& opts) {
-  auto rdg_result = tsuba::RDG::Make(*rdg_file, opts);
-  if (!rdg_result) {
-    return rdg_result.error();
-  }
-
-  return katana::PropertyGraph::Make(
-      std::move(rdg_file), std::move(rdg_result.value()));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
-  auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
-  if (!handle) {
-    return handle.error();
-  }
+  tsuba::RDGFile rdg_file{
+      KATANA_CHECKED(tsuba::Open(rdg_name, tsuba::kReadWrite))};
+  tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
 
-  return MakePropertyGraph(
-      std::make_unique<tsuba::RDGFile>(handle.value()), opts);
+  return katana::PropertyGraph::Make(
+      std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
-  return std::make_unique<katana::PropertyGraph>(std::move(topo_to_assign));
+  return std::make_unique<katana::PropertyGraph>(
+      std::unique_ptr<tsuba::RDGFile>(), tsuba::RDG{},
+      std::move(topo_to_assign),
+      MakeDefaultEntityTypeIDArray(topo_to_assign.num_nodes()),
+      MakeDefaultEntityTypeIDArray(topo_to_assign.num_edges()),
+      EntityTypeManager{}, EntityTypeManager{});
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
+    katana::GraphTopology&& topo_to_assign,
+    NUMAArray<EntityTypeID>&& node_entity_type_ids,
+    NUMAArray<EntityTypeID>&& edge_entity_type_ids,
+    EntityTypeManager&& node_type_manager,
+    EntityTypeManager&& edge_type_manager) {
+  return std::make_unique<katana::PropertyGraph>(
+      std::unique_ptr<tsuba::RDGFile>(), tsuba::RDG{},
+      std::move(topo_to_assign), std::move(node_entity_type_ids),
+      std::move(edge_entity_type_ids), std::move(node_type_manager),
+      std::move(edge_type_manager));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Copy() const {
-  return Copy(node_schema()->field_names(), edge_schema()->field_names());
+  return Copy(
+      loaded_node_schema()->field_names(), loaded_edge_schema()->field_names());
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -445,6 +528,22 @@ katana::PropertyGraph::Validate() {
         node_properties()->num_rows(), num_nodes());
   }
 
+  if (num_nodes() != node_entity_type_ids_.size()) {
+    return KATANA_ERROR(
+        ErrorCode::AssertionFailed,
+        "Number of nodes {} differs"
+        "from the number of node IDs {} in the node type set ID array",
+        num_nodes(), node_entity_type_ids_.size());
+  }
+
+  if (num_edges() != edge_entity_type_ids_.size()) {
+    return KATANA_ERROR(
+        ErrorCode::AssertionFailed,
+        "Number of edges {} differs"
+        "from the number of edge IDs {} in the edge type set ID array",
+        num_edges(), edge_entity_type_ids_.size());
+  }
+
   uint64_t num_edge_rows = static_cast<uint64_t>(edge_properties()->num_rows());
   if (num_edge_rows == 0) {
     if ((edge_properties()->num_columns() != 0) && (num_edges() != 0)) {
@@ -465,44 +564,20 @@ katana::PropertyGraph::Validate() {
   return katana::ResultSuccess();
 }
 
+/// Converts all uint8/bool properties into EntityTypeIDs
+/// Only call this if every uint8/bool property should be considered a type
 katana::Result<void>
-katana::PropertyGraph::ConstructTypeSetIDs() {
-  node_type_name_to_type_set_ids_.clear();
-  node_type_set_id_to_type_names_.clear();
-  edge_type_name_to_type_set_ids_.clear();
-  edge_type_set_id_to_type_names_.clear();
+katana::PropertyGraph::ConstructEntityTypeIDs() {
+  // only relevant to actually construct when EntityTypeIDs are expected in properties
+  // when EntityTypeIDs are not expected in properties then we have nothing to do here
+  KATANA_LOG_WARN("Loading types from properties.");
+  node_entity_type_manager_ = EntityTypeManager{};
+  node_entity_type_ids_ = KATANA_CHECKED(GetEntityTypeIDsFromProperties(
+      num_nodes(), node_properties(), &node_entity_type_manager_));
 
-  static_assert(kUnknownType == 0);
-  node_type_set_id_to_type_names_.push_back(
-      {});  // for kUnknownType: assumes it is 0
-  uint64_t num_node_rows = static_cast<uint64_t>(node_properties()->num_rows());
-  if (num_node_rows == 0) {
-    node_type_set_id_ = GetUnknownTypeSetIDs(num_nodes());
-  } else {
-    auto node_types_res = GetTypeSetIDsFromProperties(
-        node_properties(), &node_type_name_to_type_set_ids_,
-        &node_type_set_id_to_type_names_);
-    if (!node_types_res) {
-      return node_types_res.error().WithContext("node properties");
-    }
-    node_type_set_id_ = std::move(node_types_res.value());
-  }
-
-  static_assert(kUnknownType == 0);
-  edge_type_set_id_to_type_names_.push_back(
-      {});  // for kUnknownType: assumes it is 0
-  uint64_t num_edge_rows = static_cast<uint64_t>(edge_properties()->num_rows());
-  if (num_edge_rows == 0) {
-    edge_type_set_id_ = GetUnknownTypeSetIDs(num_edges());
-  } else {
-    auto edge_types_res = GetTypeSetIDsFromProperties(
-        edge_properties(), &edge_type_name_to_type_set_ids_,
-        &edge_type_set_id_to_type_names_);
-    if (!edge_types_res) {
-      return edge_types_res.error().WithContext("edge properties");
-    }
-    edge_type_set_id_ = std::move(edge_types_res.value());
-  }
+  edge_entity_type_manager_ = EntityTypeManager{};
+  edge_entity_type_ids_ = KATANA_CHECKED(GetEntityTypeIDsFromProperties(
+      num_edges(), edge_properties(), &edge_entity_type_manager_));
 
   return katana::ResultSuccess();
 }
@@ -511,16 +586,39 @@ katana::Result<void>
 katana::PropertyGraph::DoWrite(
     tsuba::RDGHandle handle, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
+  std::unique_ptr<tsuba::FileFrame> topology_res = nullptr;
+  std::unique_ptr<tsuba::FileFrame> node_entity_type_id_array_res = nullptr;
+  std::unique_ptr<tsuba::FileFrame> edge_entity_type_id_array_res = nullptr;
+
   if (!rdg_.topology_file_storage().Valid()) {
-    auto result = WriteTopology(topology());
-    if (!result) {
-      return result.error();
+    auto res = WriteTopology(topology());
+    if (!res) {
+      return res.error();
     }
-    return rdg_.Store(
-        handle, command_line, versioning_action, std::move(result.value()));
+    topology_res = std::move(res.value());
   }
 
-  return rdg_.Store(handle, command_line, versioning_action);
+  if (!rdg_.node_entity_type_id_array_file_storage().Valid()) {
+    auto res = WriteEntityTypeIDsArray(node_entity_type_ids_);
+    if (!res) {
+      return res.error();
+    }
+    node_entity_type_id_array_res = std::move(res.value());
+  }
+
+  if (!rdg_.edge_entity_type_id_array_file_storage().Valid()) {
+    auto res = WriteEntityTypeIDsArray(edge_entity_type_ids_);
+    if (!res) {
+      return res.error();
+    }
+    edge_entity_type_id_array_res = std::move(res.value());
+  }
+
+  return rdg_.Store(
+      handle, command_line, versioning_action, std::move(topology_res),
+      std::move(node_entity_type_id_array_res),
+      std::move(edge_entity_type_id_array_res), node_entity_type_manager(),
+      edge_entity_type_manager());
 }
 
 katana::Result<void>
@@ -581,6 +679,23 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
   if (!topology().Equals(other->topology())) {
     return false;
   }
+
+  if (!node_entity_type_manager_.Equals(other->node_entity_type_manager())) {
+    return false;
+  }
+
+  if (!edge_entity_type_manager_.Equals(other->edge_entity_type_manager())) {
+    return false;
+  }
+
+  if (!(node_entity_type_ids_ == other->node_entity_type_ids_)) {
+    return false;
+  }
+
+  if (!(edge_entity_type_ids_ == other->edge_entity_type_ids_)) {
+    return false;
+  }
+
   const auto& node_props = rdg_.node_properties();
   const auto& edge_props = rdg_.edge_properties();
   const auto& other_node_props = other->node_properties();
@@ -618,6 +733,34 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   } else {
     fmt::format_to(std::back_inserter(buf), "Topologies match!\n");
   }
+
+  fmt::format_to(std::back_inserter(buf), "NodeEntityTypeManager Diff:\n");
+  fmt::format_to(
+      std::back_inserter(buf),
+      node_entity_type_manager_.ReportDiff(other->node_entity_type_manager()));
+  fmt::format_to(std::back_inserter(buf), "EdgeEntityTypeManager Diff:\n");
+  fmt::format_to(
+      std::back_inserter(buf),
+      edge_entity_type_manager_.ReportDiff(other->edge_entity_type_manager()));
+
+  if (node_entity_type_ids_ == other->node_entity_type_ids_) {
+    fmt::format_to(std::back_inserter(buf), "node_entity_type_ids Match!\n");
+  } else {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "node_entity_type_ids differ. size {} vs. {}\n",
+        node_entity_type_ids_size(), other->node_entity_type_ids_size());
+  }
+
+  if (edge_entity_type_ids_ == other->edge_entity_type_ids_) {
+    fmt::format_to(std::back_inserter(buf), "edge_entity_type_ids Match!\n");
+  } else {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "edge_entity_type_ids differ. size {} vs. {}\n",
+        edge_entity_type_ids_size(), other->edge_entity_type_ids_size());
+  }
+
   const auto& node_props = rdg_.node_properties();
   const auto& edge_props = rdg_.edge_properties();
   const auto& other_node_props = other->node_properties();
@@ -866,6 +1009,72 @@ katana::PropertyGraph::InformPath(const std::string& input_path) {
   return ResultSuccess();
 }
 
+// Build an index over nodes.
+katana::Result<void>
+katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
+  for (const auto& existing_index : node_indexes_) {
+    if (existing_index->column_name() == column_name) {
+      return KATANA_ERROR(
+          katana::ErrorCode::AlreadyExists,
+          "Index already exists for column {}", column_name);
+    }
+  }
+
+  // Get a view of the property.
+  std::shared_ptr<arrow::ChunkedArray> chunked_property =
+      GetNodeProperty(column_name);
+  if (!chunked_property) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "No such property: {}", column_name);
+  }
+  KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
+  std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
+
+  // Create an index based on the type of the field.
+  std::unique_ptr<katana::PropertyIndex<GraphTopology::Node>> index =
+      KATANA_CHECKED(katana::MakeTypedIndex<katana::GraphTopology::Node>(
+          column_name, num_nodes(), property));
+
+  KATANA_CHECKED(index->BuildFromProperty());
+
+  node_indexes_.push_back(std::move(index));
+
+  return katana::ResultSuccess();
+}
+
+// Build an index over edges.
+katana::Result<void>
+katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
+  for (const auto& existing_index : edge_indexes_) {
+    if (existing_index->column_name() == column_name) {
+      return KATANA_ERROR(
+          katana::ErrorCode::AlreadyExists,
+          "Index already exists for column {}", column_name);
+    }
+  }
+
+  // Get a view of the property.
+  std::shared_ptr<arrow::ChunkedArray> chunked_property =
+      GetEdgeProperty(column_name);
+  if (!chunked_property) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "No such property: {}", column_name);
+  }
+  KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
+  std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
+
+  // Create an index based on the type of the field.
+  std::unique_ptr<katana::PropertyIndex<katana::GraphTopology::Edge>> index =
+      KATANA_CHECKED(katana::MakeTypedIndex<katana::GraphTopology::Edge>(
+          column_name, num_edges(), property));
+
+  KATANA_CHECKED(index->BuildFromProperty());
+
+  edge_indexes_.push_back(std::move(index));
+
+  return katana::ResultSuccess();
+}
+
 katana::Result<std::unique_ptr<katana::NUMAArray<uint64_t>>>
 katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   // TODO(amber): This function will soon change so that it produces a new sorted
@@ -880,19 +1089,25 @@ katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   auto* out_dests_data = const_cast<GraphTopology::Node*>(topo.dest_data());
 
   katana::do_all(
-      katana::iterate(uint64_t{0}, pg->topology().num_nodes()),
-      [&](uint64_t n) {
-        const auto e_beg = *pg->topology().edge_begin(n);
-        const auto e_end = *pg->topology().edge_end(n);
-        // IMPORTANT: Must sort permutation vector before dest array
+      katana::iterate(pg->topology().all_nodes()),
+      [&](GraphTopology::Node n) {
+        const auto e_beg = *pg->topology().edges(n).begin();
+        const auto e_end = *pg->topology().edges(n).end();
+
+        auto sort_iter_beg = katana::make_zip_iterator(
+            out_dests_data + e_beg, permutation_vec->begin() + e_beg);
+        auto sort_iter_end = katana::make_zip_iterator(
+            out_dests_data + e_end, permutation_vec->begin() + e_end);
+
         std::sort(
-            permutation_vec->begin() + e_beg, permutation_vec->begin() + e_end,
-            [&](uint64_t a, uint64_t b) {
-              return out_dests_data[a] < out_dests_data[b];
+            sort_iter_beg, sort_iter_end,
+            [&](const auto& tup1, const auto& tup2) {
+              auto d1 = std::get<0>(tup1);
+              auto d2 = std::get<0>(tup2);
+              static_assert(std::is_same_v<decltype(d1), GraphTopology::Node>);
+              static_assert(std::is_same_v<decltype(d1), GraphTopology::Node>);
+              return d1 < d2;
             });
-        std::sort(
-            out_dests_data + e_beg, out_dests_data + e_end,
-            std::less<GraphTopology::Node>{});
       },
       katana::steal());
 
@@ -906,30 +1121,24 @@ katana::GraphTopology::Edge
 katana::FindEdgeSortedByDest(
     const PropertyGraph* graph, const GraphTopology::Node src,
     const GraphTopology::Node dst) {
-  using edge_iterator = GraphTopology::edge_iterator;
-
   const auto& topo = graph->topology();
-  const edge_iterator e_beg = topo.edge_begin(src);
-  const edge_iterator e_end = topo.edge_end(src);
+  auto e_range = topo.edges(src);
 
-  constexpr int BINARY_SEARCH_THRESHOLD = 100;
+  constexpr size_t kBinarySearchThreshold = 64;
 
-  if (std::distance(e_beg, e_end) < BINARY_SEARCH_THRESHOLD) {
-    auto iter = std::find_if(e_beg, e_end, [&](const GraphTopology::Edge& e) {
-      return topo.edge_dest(e) == dst;
-    });
+  if (e_range.size() <= kBinarySearchThreshold) {
+    auto iter = std::find_if(
+        e_range.begin(), e_range.end(),
+        [&](const GraphTopology::Edge& e) { return topo.edge_dest(e) == dst; });
 
     return *iter;
 
   } else {
-    auto comparator = [&](const GraphTopology::Edge& e,
-                          const GraphTopology::Node& d) {
-      return topo.edge_dest(e) < d;
-    };
+    auto iter = std::lower_bound(
+        e_range.begin(), e_range.end(), dst,
+        internal::EdgeDestComparator<GraphTopology>{&topo});
 
-    auto iter = std::lower_bound(e_beg, e_end, dst, comparator);
-
-    return topo.edge_dest(iter) == dst ? *iter : *e_end;
+    return topo.edge_dest(*iter) == dst ? *iter : *e_range.end();
   }
 }
 
@@ -945,7 +1154,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   katana::NUMAArray<DegreeNodePair> dn_pairs;
   dn_pairs.allocateInterleaved(num_nodes);
 
-  katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](size_t node) {
+  katana::do_all(katana::iterate(topo.all_nodes()), [&](auto node) {
     size_t node_degree = pg->edges(node).size();
     dn_pairs[node] = DegreeNodePair(node_degree, node);
   });
@@ -978,8 +1187,8 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   auto* out_indices_data = const_cast<GraphTopology::Edge*>(topo.adj_data());
 
   katana::do_all(
-      katana::iterate(uint64_t{0}, num_nodes),
-      [&](uint32_t old_node_id) {
+      katana::iterate(topo.all_nodes()),
+      [&](auto old_node_id) {
         uint32_t new_node_id = old_to_new_mapping[old_node_id];
 
         // get the start location of this reindex'd nodes edges
@@ -1004,15 +1213,13 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
 
   //Update the underlying PropertyGraph topology
   // TODO(amber): eliminate these copies since we will be returning a new topology
-  katana::do_all(
-      katana::iterate(uint64_t{0}, num_nodes), [&](uint32_t node_id) {
-        out_indices_data[node_id] = new_prefix_sum[node_id];
-      });
+  katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](auto node_id) {
+    out_indices_data[node_id] = new_prefix_sum[node_id];
+  });
 
-  katana::do_all(
-      katana::iterate(uint64_t{0}, num_edges), [&](uint32_t edge_id) {
-        out_dests_data[edge_id] = new_out_dest[edge_id];
-      });
+  katana::do_all(katana::iterate(uint64_t{0}, num_edges), [&](auto edge_id) {
+    out_dests_data[edge_id] = new_out_dest[edge_id];
+  });
 
   return katana::ResultSuccess();
 }
@@ -1030,19 +1237,17 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
 
   out_indices.allocateInterleaved(topology.num_nodes());
   // Store the out-degree of nodes from original graph
-  katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_nodes()), [&](uint64_t n) {
-        auto edges = topology.edges(n);
-        out_indices[n] = (*edges.end() - *edges.begin());
-      });
+  katana::do_all(katana::iterate(topology.all_nodes()), [&](auto n) {
+    auto edges = topology.edges(n);
+    out_indices[n] = (*edges.end() - *edges.begin());
+  });
 
   katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_nodes()),
-      [&](uint64_t n) {
-        auto edges = topology.edges(n);
+      katana::iterate(topology.all_nodes()),
+      [&](auto n) {
         // update the out_indices for the symmetric topology
-        for (auto e = edges.begin(); e != edges.end(); ++e) {
-          auto dest = topology.edge_dest(*e);
+        for (auto e : topology.edges(n)) {
+          auto dest = topology.edge_dest(e);
           // Do not add reverse edge for self-loops
           if (n != dest) {
             __sync_fetch_and_add(&(out_indices[dest]), 1);
@@ -1070,8 +1275,8 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
   out_dests.allocateInterleaved(num_edges_symmetric);
   // Update graph topology with the original edges + reverse edges
   katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_nodes()),
-      [&](uint64_t src) {
+      katana::iterate(topology.all_nodes()),
+      [&](auto src) {
         // get all outgoing edges (excluding self edges) of a particular
         // node and add reverse edges.
         for (GraphTopology::Edge e : topology.edges(src)) {
@@ -1095,9 +1300,7 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
       katana::no_stats());
 
   GraphTopology sym_topo(std::move(out_indices), std::move(out_dests));
-  auto symmetric = std::make_unique<katana::PropertyGraph>(std::move(sym_topo));
-
-  return std::unique_ptr<PropertyGraph>(std::move(symmetric));
+  return katana::PropertyGraph::Make(std::move(sym_topo));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -1120,8 +1323,8 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
   // Keep a copy of old destinaton ids and compute number of
   // in-coming edges for the new prefix sum of out_indices.
   katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_edges()),
-      [&](uint64_t e) {
+      katana::iterate(topology.all_edges()),
+      [&](auto e) {
         // Counting outgoing edges in the tranpose graph by
         // counting incoming edges in the original graph
         auto dest = topology.edge_dest(e);
@@ -1135,18 +1338,20 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
 
   katana::NUMAArray<uint64_t> out_dests_offset;
   out_dests_offset.allocateInterleaved(topology.num_nodes());
-  // Reuse out_indices_tmp for computing new destination positions
+
+  // temporary buffer for storing the starting point of each node's transpose
+  // adjacency
   out_dests_offset[0] = 0;
   katana::do_all(
       katana::iterate(uint64_t{1}, topology.num_nodes()),
       [&](uint64_t n) { out_dests_offset[n] = out_indices[n - 1]; },
       katana::no_stats());
 
-  // Update large_array_out_dests_ with the new destination ids
+  // Update out_dests with the new destination ids
   // of the transposed graphs
   katana::do_all(
-      katana::iterate(uint64_t{0}, topology.num_nodes()),
-      [&](uint64_t src) {
+      katana::iterate(topology.all_nodes()),
+      [&](auto src) {
         // get all outgoing edges of a particular
         // node and reverse the edges.
         for (GraphTopology::Edge e : topology.edges(src)) {
@@ -1157,14 +1362,10 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
           auto e_new = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
           // Save src as destination
           out_dests[e_new] = src;
-          // TODO (gill) copy edge data to the transposed graph
         }
       },
       katana::no_stats());
 
   GraphTopology transpose_topo{std::move(out_indices), std::move(out_dests)};
-  auto transpose_pg =
-      std::make_unique<katana::PropertyGraph>(std::move(transpose_topo));
-
-  return std::unique_ptr<PropertyGraph>(std::move(transpose_pg));
+  return katana::PropertyGraph::Make(std::move(transpose_topo));
 }

@@ -1,0 +1,328 @@
+"""
+This module contains data structures designed for use with Galois' parallel loops.
+They are instantiated for several element types, but cannot support custom element types.
+
+The instantiations are:
+
+{% for inst in primitive_type_instantiations -%}
+* `{{inst.element_py_type}}` (with C element type {{inst.element_c_type}})
+{% endfor %}
+
+The instantiation is selected by indexing the type, for example `InsertBag[int]` or `NUMAArray[np.uint64]`.
+"""
+
+# {{generated_banner()}}
+
+from enum import Enum
+
+import numpy as np
+cimport numpy as np
+
+from katana.native_interfacing.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
+from katana.native_interfacing.numpy_structs import StructInstance
+from katana.native_interfacing.template_type import make_template_type1, make_template_type1_with_opaque
+from katana.cpp.libgalois cimport datastructures
+from libc.stdint cimport uintptr_t
+from libcpp.utility cimport move
+from cython.operator cimport preincrement, dereference as deref
+import cython
+
+__all__ = ["InsertBag", "NUMAArray", "AllocationPolicy"]
+
+{% import "native_interfacing/numba_wrapper_support.jinja" as numba %}
+
+{{numba.header()}}
+
+
+{% macro wrap_insert_bag(inst) %}
+{% set underlying_type %}datastructures.InsertBag[{{inst.element_c_type}}]{% endset -%}
+{% set class_name %}InsertBag_{{inst.element_c_type}}{% endset -%}
+
+
+@cython.freelist(2)
+cdef class {{class_name}}_Iterator:
+    def __next__(self):
+        if self.it == self.end:
+            raise StopIteration()
+        v = {% if inst.by_pointer %}&{% else %}<{{inst.element_c_type}}>{% endif %}deref(self.it)
+        preincrement(self.it)
+        {% if inst.by_pointer %}
+        tv = <{{inst.element_c_type}}[:1]>v
+        return as_struct_instance(np.asarray(tv), self.obj.dtype)
+        {% else %}
+        return v
+        {% endif %}
+
+
+cdef class {{class_name}}:
+    """
+    Unordered collection of elements. This data structure supports scalable
+    concurrent pushes but reading the bag can only be done serially.
+    """
+    def __init__(self, dtype):
+        self.dtype = {{inst.dtype("dtype")}}
+
+    def push(self, v):
+        """
+        push(self, v)
+
+        Add an element to the collection. This may be called from numba compiled code.
+        """
+{%- if inst.by_pointer %}
+        arr = argument_to_ndarray_dtype(v, self.dtype)
+        self.underlying.push((<{{inst.element_c_type}}*>np.PyArray_DATA(arr))[0])
+{% else %}
+        self.underlying.push(<{{inst.element_c_type}}>v)
+{% endif %}
+
+    def clear(self):
+        """
+        clear(self)
+
+        Discard the contents of this collection. Must be called from single threaded code.
+        """
+        self.underlying.clear()
+
+    def empty(self):
+        """
+        empty(self)
+
+        Return true of the collection is empty.
+        """
+        return self.underlying.empty()
+
+    def swap(self, {{class_name}} other):
+        """
+        swap(self, InsertBag other)
+
+        Swap the contents of this collection with another efficiently. Must be called from single threaded code.
+        """
+        self.underlying.swap(other.underlying)
+
+    def __iter__(self):
+        """
+        iter(self)
+
+        Iterate over the elements of the collection. Must be called from single threaded code.
+        """
+        i =  <{{class_name}}_Iterator>{{class_name}}_Iterator.__new__({{class_name}}_Iterator)
+        i.obj = self
+        i.it = self.underlying.begin()
+        i.end = self.underlying.end()
+        return i
+
+    @property
+    def __katana_address__(self):
+        return <uintptr_t>&self.underlying
+
+    @property
+    def storage_size(self):
+        return sizeof({{inst.element_c_type}})
+
+{% call numba.class_(class_name, underlying_type, True) %}
+{{numba.method("push", "void", [inst.element_c_type + (" dtype" if inst.by_pointer else "")])}}
+{{numba.method("clear", "void", [])}}
+{{numba.method("empty", "bint", [])}}
+{% endcall %}
+{% endmacro %}
+
+{{numba.wrap_all_instances("InsertBag", wrap_insert_bag, True)}}
+
+
+class AllocationPolicy(Enum):
+    """
+    NUMA allocation policies.
+    """
+    BLOCKED = 0
+    INTERLEAVED = 1
+
+
+{% macro wrap_large_array(inst) %}
+# inst.element_c_type, inst.element_py_type, inst.element_format_code
+{% set underlying_type %}datastructures.NUMAArray[{{inst.element_c_type}}]{% endset -%}
+{% set class_name %}NUMAArray_{{inst.element_c_type}}{% endset -%}
+
+
+@cython.freelist(2)
+cdef class {{class_name}}_Iterator:
+    def __next__(self):
+        if self.it == self.end:
+            raise StopIteration()
+        v = {% if inst.by_pointer %}&{% else %}<{{inst.element_c_type}}>{% endif %}deref(self.it)
+        preincrement(self.it)
+        {% if inst.by_pointer %}
+        tv = <{{inst.element_c_type}}[:1]>v
+        return as_struct_instance(np.asarray(tv), self.obj.dtype)
+        {% else %}
+        return v
+        {% endif %}
+
+
+cdef class {{class_name}}:
+    """
+    An array of elements of the same type that are allocated using NUMA aware policies.
+    """
+
+    @staticmethod
+    cdef {{class_name}} make_move({{underlying_type}}&& u, dtype=None):
+        self = <{{class_name}}>{{class_name}}.__new__({{class_name}})
+        self.dtype = {{inst.dtype("dtype")}}
+        self.shape = -1
+        self.stride = sizeof({{inst.element_c_type}})
+        self.underlying = move(u)
+        return self
+
+    def __init__(self, size=None, policy=None, dtype=None):
+        """
+        __init__(self, size=None, policy=None)
+
+        Construct a new array.
+
+        If `size` and `policy` are provided, the array is allocated with the specified size and policy.
+        Otherwise,  the underlying array must be allocated with `allocateBlocked` or `allocateInterleaved` after
+        construction.
+        """
+        self.dtype = {{inst.dtype("dtype")}}
+        self.shape = -1
+        self.stride = sizeof({{inst.element_c_type}})
+        if size is not None:
+            if policy is None:
+                raise ValueError("Policy must be provided to allocate.")
+            if policy == AllocationPolicy.BLOCKED:
+                self.allocateBlocked(size)
+            elif policy == AllocationPolicy.INTERLEAVED:
+                self.allocateInterleaved(size)
+            else:
+                raise TypeError("Policy must be an AllocationPolicy")
+
+    def __setitem__(self, uint64_t i,  v):
+        """
+        `self[i] = v`
+
+        Set an element of the array. This may be called from numba code and is not bounds check in that context.
+        """
+        if i >= self.underlying.size():
+            raise IndexError(i)
+{%- if inst.by_pointer %}
+        arr = argument_to_ndarray_dtype(v, self.dtype)
+        self.underlying.set(i, (<{{inst.element_c_type}}*>np.PyArray_DATA(arr))[0])
+{% else %}
+        self.underlying.set(i, <{{inst.element_c_type}}>v)
+{% endif %}
+
+    def __getitem__(self, uint64_t i):
+        """
+        self[i]
+
+        Get an element of the array. This may be called from numba code and is not bounds check in that context.
+        """
+        if i >= self.underlying.size():
+            raise IndexError(i)
+        v = {% if inst.by_pointer %}&{% else %}<{{inst.element_c_type}}>{% endif %}self.underlying[i]
+        {% if inst.by_pointer %}
+        tv = <{{inst.element_c_type}}[:1]>v
+        return as_struct_instance(np.asarray(tv), self.dtype)
+        {% else %}
+        return v
+        {% endif %}
+
+    def __len__(self):
+        """
+        len(self)
+
+        Get the size of the array. This may be called from numba code.
+        """
+        return self.underlying.size()
+
+    cdef bint _check_not_allocated(self) except False:
+        if self.shape >= 0:
+            raise ValueError("NUMAArray is already allocated.")
+        return True
+
+    cdef bint _check_allocated(self) except False:
+        if self.shape < 0:
+            raise ValueError("NUMAArray is not yet allocated.")
+        return True
+
+    cdef bint _mark_allocated(self) except False:
+        self.shape = <Py_ssize_t>self.underlying.size()
+        return True
+
+    def allocateInterleaved(self, uint64_t size):
+        """
+        allocateInterleaved(self, size)
+
+        Allocate the array with a specific `size` using a NUMA interleaved memory policy.
+        """
+        self._check_not_allocated()
+        self.underlying.allocateInterleaved(size)
+        self._mark_allocated()
+
+    def allocateBlocked(self, uint64_t size):
+        """
+        allocateBlocked(self, size)
+
+        Allocate the array with a specific `size` using blocked memory policy.
+        """
+        self._check_not_allocated()
+        self.underlying.allocateBlocked(size)
+        self._mark_allocated()
+
+    def __iter__(self):
+        """
+        iter(self)
+
+        >>> for v in self: ...
+
+        Iterate over the elements of the collection. This may be called from numba code.
+        """
+        i =  <{{class_name}}_Iterator>{{class_name}}_Iterator.__new__({{class_name}}_Iterator)
+        i.obj = self
+        i.it = self.underlying.begin()
+        i.end = self.underlying.end()
+        return i
+
+    @property
+    def __katana_address__(self):
+        return <uintptr_t>&self.underlying
+
+    def as_numpy(self):
+        """
+        as_numpy(self)
+
+        Return a numpy array that is a view on self.
+        """
+        return np.lib.stride_tricks.as_strided(np.frombuffer(self, dtype=self.dtype),
+                                               shape=(len(self),),
+                                               strides=(sizeof({{inst.element_c_type}}),))
+
+    def __getbuffer__(self, Py_buffer *buffer, int flags):
+        self._check_allocated()
+        buffer.buf = <char *>self.underlying.data()
+        buffer.format = NULL
+        buffer.internal = NULL
+        buffer.itemsize = self.stride
+        buffer.len = self.shape * self.stride
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 0
+        buffer.shape = &self.shape
+        buffer.strides = &self.stride
+        buffer.suboffsets = NULL
+
+    def __releasebuffer__(self, Py_buffer *buffer):
+        pass
+
+{% call numba.class_(class_name, underlying_type, True) %}
+{% call numba.method_with_body("get", inst.element_c_type + (" dtype" if inst.by_pointer else ""), ["uint64_t"]) %}
+    return {{"&" if inst.by_pointer}}self[0][arg1]
+{% endcall %}
+{{numba.method("set", "void", ["uint64_t", inst.element_c_type + (" dtype" if inst.by_pointer else "")])}}
+{% endcall %}
+{% endmacro %}
+
+{{numba.wrap_all_instances("NUMAArray", wrap_large_array, True)}}
+
+{{numba.register_all_wrappers()}}
+{{numba.build_numba_type_dict("InsertBag", True)}}
+{{numba.build_numba_type_dict("NUMAArray", True)}}

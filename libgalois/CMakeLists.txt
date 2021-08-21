@@ -23,6 +23,7 @@ set(sources
         src/GraphHelpers.cpp
         src/GraphML.cpp
         src/GraphMLSchema.cpp
+        src/GraphTopology.cpp
         src/HWTopo.cpp
         src/Mem.cpp
         src/NumaMem.cpp
@@ -34,6 +35,7 @@ set(sources
         src/Profile.cpp
         src/Properties.cpp
         src/PropertyGraph.cpp
+        src/PropertyIndex.cpp
         src/PropertyViews.cpp
         src/PtrLock.cpp
         src/SharedMem.cpp

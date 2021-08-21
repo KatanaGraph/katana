@@ -2,14 +2,20 @@
 #define KATANA_LIBTSUBA_RDGPARTHEADER_H_
 
 #include <cassert>
+#include <cstddef>
 #include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <arrow/api.h>
 
+#include "katana/EntityTypeManager.h"
 #include "katana/JSON.h"
+#include "katana/Logging.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
+#include "tsuba/Errors.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/RDG.h"
 #include "tsuba/WriteGroup.h"
@@ -50,22 +56,27 @@ class PropStorageInfo {
   };
 
 public:
-  PropStorageInfo(std::string name)
-      : name_(std::move(name)), path_(), state_(State::kDirty) {}
+  PropStorageInfo(std::string name, std::shared_ptr<arrow::DataType> type)
+      : name_(std::move(name)),
+        path_(),
+        type_(std::move(type)),
+        state_(State::kDirty) {}
 
   PropStorageInfo(std::string name, std::string path)
       : name_(std::move(name)),
         path_(std::move(path)),
         state_(State::kAbsent) {}
 
-  void WasLoaded() {
+  void WasLoaded(const std::shared_ptr<arrow::DataType>& type) {
     KATANA_LOG_ASSERT(state_ == State::kAbsent);
     state_ = State::kClean;
+    type_ = type;
   }
 
-  void WasModified() {
+  void WasModified(const std::shared_ptr<arrow::DataType>& type) {
     path_.clear();
     state_ = State::kDirty;
+    type_ = type;
   }
 
   void WasWritten(std::string_view new_path) {
@@ -87,6 +98,16 @@ public:
 
   const std::string& name() const { return name_; }
   const std::string& path() const { return path_; }
+  const std::shared_ptr<arrow::DataType>& type() const { return type_; }
+
+  // since we don't have type info in the header don't know the
+  // type when this would have been constructed. Allow others to
+  // fix up the type in this case, required until we can get the type
+  // from PartHeader files
+  void set_type(std::shared_ptr<arrow::DataType> type) {
+    KATANA_LOG_ASSERT(state_ == State::kAbsent);
+    type_ = std::move(type);
+  }
 
   friend void to_json(nlohmann::json& j, const PropStorageInfo& propmd);
   friend void from_json(const nlohmann::json& j, PropStorageInfo& propmd);
@@ -97,6 +118,7 @@ public:
 private:
   std::string name_;
   std::string path_;
+  std::shared_ptr<arrow::DataType> type_;
   State state_;
 };
 
@@ -115,6 +137,8 @@ public:
   katana::Result<void> ChangeStorageLocation(
       const katana::Uri& old_location, const katana::Uri& new_location);
 
+  katana::Result<void> ValidateEntityTypeIDStructures() const;
+  bool IsEntityTypeIDsOutsideProperties() const;
   //
   // Property manipulation
   //
@@ -165,10 +189,36 @@ public:
     p.erase(p.begin() + i);
   }
 
+  katana::Result<void> RemoveNodeProperty(const std::string& name) {
+    auto& p = node_prop_info_list_;
+    auto it = std::find_if(p.begin(), p.end(), [&](const PropStorageInfo& psi) {
+      return psi.name() == name;
+    });
+    if (it == p.end()) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::PropertyNotFound, "no such node property");
+    }
+    p.erase(it);
+    return katana::ResultSuccess();
+  }
+
   void RemoveEdgeProperty(uint32_t i) {
     auto& p = edge_prop_info_list_;
     KATANA_LOG_DEBUG_ASSERT(i < p.size());
     p.erase(p.begin() + i);
+  }
+
+  katana::Result<void> RemoveEdgeProperty(const std::string& name) {
+    auto& p = edge_prop_info_list_;
+    auto it = std::find_if(p.begin(), p.end(), [&](const PropStorageInfo& psi) {
+      return psi.name() == name;
+    });
+    if (it == p.end()) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::PropertyNotFound, "no such edge property");
+    }
+    p.erase(it);
+    return katana::ResultSuccess();
   }
 
   //
@@ -177,6 +227,20 @@ public:
 
   const std::string& topology_path() const { return topology_path_; }
   void set_topology_path(std::string path) { topology_path_ = std::move(path); }
+
+  const std::string& node_entity_type_id_array_path() const {
+    return node_entity_type_id_array_path_;
+  }
+  void set_node_entity_type_id_array_path(std::string path) {
+    node_entity_type_id_array_path_ = std::move(path);
+  }
+
+  const std::string& edge_entity_type_id_array_path() const {
+    return edge_entity_type_id_array_path_;
+  }
+  void set_edge_entity_type_id_array_path(std::string path) {
+    edge_entity_type_id_array_path_ = std::move(path);
+  }
 
   const std::vector<PropStorageInfo>& node_prop_info_list() const {
     return node_prop_info_list_;
@@ -209,6 +273,147 @@ public:
 
   const PartitionMetadata& metadata() const { return metadata_; }
   void set_metadata(const PartitionMetadata& metadata) { metadata_ = metadata; }
+
+  uint32_t storage_format_version() const { return storage_format_version_; }
+  void update_storage_format_version() {
+    storage_format_version_ = latest_storage_format_version_;
+  }
+
+  const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
+  node_entity_type_id_dictionary() const {
+    return node_entity_type_id_dictionary_;
+  }
+
+  const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
+  edge_entity_type_id_dictionary() const {
+    return edge_entity_type_id_dictionary_;
+  }
+
+  void ValidateDictBitset(
+      const katana::EntityTypeIDToSetOfEntityTypeIDsMap& manager_map,
+      const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict) const {
+    for (const auto& pair : id_dict) {
+      katana::EntityTypeID cur_id = pair.first;
+      tsuba::StorageSetOfEntityTypeIDs cur_id_set = pair.second;
+      for (auto& id : cur_id_set) {
+        KATANA_LOG_ASSERT(manager_map[cur_id][id] == true);
+      }
+    }
+  }
+
+  /// Extract the EntityType information from an EntityTypeManager and convert it for storage
+  void ConvertEntityTypeManager(
+      const katana::EntityTypeManager& manager,
+      tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict,
+      katana::EntityTypeIDToAtomicTypeNameMap& id_name) const {
+    katana::EntityTypeIDToSetOfEntityTypeIDsMap manager_type_id_sets =
+        manager.GetEntityTypeIDToAtomicEntityTypeIDs();
+
+    size_t num_entity_types = manager_type_id_sets.size();
+    for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
+      for (size_t j = 0, nj = num_entity_types; j < nj; ++j) {
+        if (manager_type_id_sets[i].test(j)) {
+          auto cur_id = katana::EntityTypeID(i);
+          if (id_dict.count(cur_id)) {
+            // if we have seen this EntityTypeID already, add to its set
+            id_dict.at(cur_id).emplace_back(katana::EntityTypeID(j));
+          } else {
+            // if we have not, create a set with the id
+            tsuba::StorageSetOfEntityTypeIDs new_set = {
+                katana::EntityTypeID(j)};
+            id_dict.emplace(std::make_pair(cur_id, new_set));
+          }
+        }
+      }
+    }
+    // Convert EntityTypeID name map
+    id_name = manager.GetEntityTypeIDToAtomicTypeNameMap();
+    ValidateDictBitset(manager_type_id_sets, id_dict);
+  }
+
+  void StoreNodeEntityTypeManager(const katana::EntityTypeManager& manager) {
+    tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap id_dict;
+    katana::EntityTypeIDToAtomicTypeNameMap id_name;
+
+    ConvertEntityTypeManager(manager, id_dict, id_name);
+
+    if (!id_dict.empty()) {
+      set_node_entity_type_id_dictionary(id_dict);
+    } else {
+      KATANA_LOG_WARN("converted node id_dict is empty, not setting!");
+    }
+    if (!id_name.empty()) {
+      set_node_entity_type_id_name(id_name);
+    } else {
+      KATANA_LOG_WARN("converted node id_name is empty, not setting!");
+    }
+  }
+
+  void StoreEdgeEntityTypeManager(const katana::EntityTypeManager& manager) {
+    tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap id_dict;
+    katana::EntityTypeIDToAtomicTypeNameMap id_name;
+
+    ConvertEntityTypeManager(manager, id_dict, id_name);
+
+    if (!id_dict.empty()) {
+      set_edge_entity_type_id_dictionary(id_dict);
+    } else {
+      KATANA_LOG_WARN("converted edge id_dict is empty, not setting!");
+    }
+    if (!id_name.empty()) {
+      set_edge_entity_type_id_name(id_name);
+    } else {
+      KATANA_LOG_WARN("converted edge id_name is empty, not setting!");
+    }
+  }
+
+  katana::Result<katana::EntityTypeManager> GetEntityTypeManager(
+      const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict,
+      const katana::EntityTypeIDToAtomicTypeNameMap& id_name) const {
+    katana::EntityTypeIDToAtomicTypeNameMap manager_name_map;
+    katana::EntityTypeIDToSetOfEntityTypeIDsMap manager_type_id_map;
+    katana::EntityTypeID cur_entity_type_id = 0;
+
+    // convert id_name -> EntityTypeID Name map
+    manager_name_map = id_name;
+
+    // convert id_dict -> EntityTypeID map
+    manager_type_id_map.resize(id_dict.size());
+    for (const auto& pair : id_dict) {
+      cur_entity_type_id = pair.first;
+      katana::SetOfEntityTypeIDs cur_set;
+      for (const auto& id : pair.second) {
+        cur_set.set(id);
+      }
+      manager_type_id_map.at(cur_entity_type_id) = cur_set;
+    }
+
+    KATANA_LOG_ASSERT(manager_type_id_map.size() == id_dict.size());
+    KATANA_LOG_ASSERT(manager_name_map.size() == id_name.size());
+
+    ValidateDictBitset(manager_type_id_map, id_dict);
+
+    auto manager = katana::EntityTypeManager(
+        std::move(manager_name_map), std::move(manager_type_id_map));
+
+    KATANA_LOG_ASSERT(manager.GetNumEntityTypes() == id_dict.size());
+    KATANA_LOG_ASSERT(
+        manager.GetEntityTypeIDToAtomicTypeNameMap().size() == id_name.size());
+
+    ValidateDictBitset(manager.GetEntityTypeIDToAtomicEntityTypeIDs(), id_dict);
+
+    return katana::Result<katana::EntityTypeManager>(std::move(manager));
+  }
+
+  katana::Result<katana::EntityTypeManager> GetNodeEntityTypeManager() {
+    return GetEntityTypeManager(
+        node_entity_type_id_dictionary_, node_entity_type_id_name_);
+  }
+
+  katana::Result<katana::EntityTypeManager> GetEdgeEntityTypeManager() {
+    return GetEntityTypeManager(
+        edge_entity_type_id_dictionary_, edge_entity_type_id_name_);
+  }
 
   friend void to_json(nlohmann::json& j, const RDGPartHeader& header);
   friend void from_json(const nlohmann::json& j, RDGPartHeader& header);
@@ -264,6 +469,28 @@ private:
   static katana::Result<RDGPartHeader> MakeJson(
       const katana::Uri& partition_path);
 
+  void set_node_entity_type_id_dictionary(
+      const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
+          node_entity_type_id_dictionary) {
+    node_entity_type_id_dictionary_ = node_entity_type_id_dictionary;
+  }
+
+  void set_edge_entity_type_id_dictionary(
+      const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
+          edge_entity_type_id_dictionary) {
+    edge_entity_type_id_dictionary_ = edge_entity_type_id_dictionary;
+  }
+
+  void set_node_entity_type_id_name(
+      const katana::EntityTypeIDToAtomicTypeNameMap& node_entity_type_id_name) {
+    node_entity_type_id_name_ = node_entity_type_id_name;
+  }
+
+  void set_edge_entity_type_id_name(
+      const katana::EntityTypeIDToAtomicTypeNameMap& edge_entity_type_id_name) {
+    edge_entity_type_id_name_ = edge_entity_type_id_name;
+  }
+
   std::vector<PropStorageInfo> part_prop_info_list_;
   std::vector<PropStorageInfo> node_prop_info_list_;
   std::vector<PropStorageInfo> edge_prop_info_list_;
@@ -271,7 +498,34 @@ private:
   /// Metadata filled in by CuSP, or from storage (meta partition file)
   PartitionMetadata metadata_;
 
+  /// tracks changes to json on disk structure of the PartitionHeader
+  /// current one is defined by latest_storage_format_version_
+  /// When a graph is loaded from file, this is overwritten with the loaded value
+  /// When a graph is created in memory, this is updated on store
+  uint32_t storage_format_version_ = 0;
+
+  static const uint32_t kPartitionStorageFormatVersion1 = 1;
+  static const uint32_t kPartitionStorageFormatVersion2 = 2;
+  /// current_storage_format_version_ to be bumped any time
+  /// the on disk format of RDGPartHeader changes
+  uint32_t latest_storage_format_version_ = kPartitionStorageFormatVersion2;
+
   std::string topology_path_;
+
+  std::string node_entity_type_id_array_path_;
+  std::string edge_entity_type_id_array_path_;
+
+  // entity_type_id_dictionary maps from Entity Type ID to set of  Atomic Entity Type IDs
+  // if EntityTypeID is an Atomic Type ID, then the set is size 1 containing only itself
+  // if EntityTypeID is a Combination Type ID, then the set contains all of the Atomic Entity Type IDs that make it
+  tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap
+      node_entity_type_id_dictionary_;
+  tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap
+      edge_entity_type_id_dictionary_;
+
+  // entity_type_id_name maps from Atomic Entity Type ID to string name for the Entity Type ID
+  katana::EntityTypeIDToAtomicTypeNameMap node_entity_type_id_name_;
+  katana::EntityTypeIDToAtomicTypeNameMap edge_entity_type_id_name_;
 };
 
 void to_json(nlohmann::json& j, const RDGPartHeader& header);

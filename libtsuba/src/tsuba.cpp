@@ -238,6 +238,16 @@ tsuba::MakeTopologyFileName(tsuba::RDGHandle handle) {
 }
 
 katana::Uri
+tsuba::MakeNodeEntityTypeIDArrayFileName(tsuba::RDGHandle handle) {
+  return GetRDGDir(handle).RandFile("node_entity_type_id_array");
+}
+
+katana::Uri
+tsuba::MakeEdgeEntityTypeIDArrayFileName(tsuba::RDGHandle handle) {
+  return GetRDGDir(handle).RandFile("edge_entity_type_id_array");
+}
+
+katana::Uri
 tsuba::GetRDGDir(tsuba::RDGHandle handle) {
   return handle.impl_->rdg_manifest().dir();
 }

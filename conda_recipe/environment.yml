@@ -3,6 +3,7 @@
 # (This file must be named <something>.yml)
 channels:
  - conda-forge
+ - metagraph
 dependencies:
  - arrow-cpp>=4.0,<5.0.0a0
  - backward-cpp>=1.4
@@ -40,9 +41,12 @@ dependencies:
  - pygithub
  - pytest
  - pylint=2.8.3
+ - coverage
+ - pandas
 
 # The dependencies for pytest-notebook are incomplete, add them manually
  - pytest-notebook
+ - jupyter_client<7
  - attrs<21,>=19
  - nbconvert<6
  - pexpect
@@ -53,3 +57,4 @@ dependencies:
  - sphinx>=3.5.1,<4
  - sphinx-tabs>=2.1.0
  - zlib>=1.2.11
+ - metagraph=0.2.6

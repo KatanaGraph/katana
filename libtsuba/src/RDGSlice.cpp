@@ -3,6 +3,7 @@
 #include "AddProperties.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
+#include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
 #include "tsuba/Errors.h"
 
@@ -12,14 +13,30 @@ tsuba::RDGSlice::DoMake(
     const std::optional<std::vector<std::string>>& edge_props,
     const katana::Uri& metadata_dir, const SliceArg& slice) {
   ReadGroup grp;
-  katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
+  katana::Uri topology_path =
+      metadata_dir.Join(core_->part_header().topology_path());
+  katana::Uri node_types_path =
+      metadata_dir.Join(core_->part_header().node_entity_type_id_array_path());
+  katana::Uri edge_types_path =
+      metadata_dir.Join(core_->part_header().edge_entity_type_id_array_path());
 
-  if (auto res = core_->topology_file_storage().Bind(
-          t_path.string(), slice.topo_off, slice.topo_off + slice.topo_size,
-          true);
-      !res) {
-    return res.error();
-  }
+  KATANA_CHECKED_CONTEXT(
+      core_->topology_file_storage().Bind(
+          topology_path.string(), slice.topo_off,
+          slice.topo_off + slice.topo_size, true),
+      "loading topology array");
+  KATANA_CHECKED_CONTEXT(
+      core_->node_entity_type_id_array_file_storage().Bind(
+          node_types_path.string(),
+          slice.node_range.first * sizeof(katana::EntityTypeID),
+          slice.node_range.second * sizeof(katana::EntityTypeID), true),
+      "loading node type id array");
+  KATANA_CHECKED_CONTEXT(
+      core_->edge_entity_type_id_array_file_storage().Bind(
+          edge_types_path.string(),
+          slice.edge_range.first * sizeof(katana::EntityTypeID),
+          slice.edge_range.second * sizeof(katana::EntityTypeID), true),
+      "loading edge type id array");
 
   // all of the properties
   std::vector<PropStorageInfo*> node_properties =
@@ -27,8 +44,21 @@ tsuba::RDGSlice::DoMake(
 
   KATANA_CHECKED(AddPropertySlice(
       metadata_dir, node_properties, slice.node_range, &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddNodeProperties(props);
+      [rdg = this](
+          const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
+        std::shared_ptr<arrow::Table> prop_table =
+            rdg->core_->node_properties();
+
+        if (prop_table && prop_table->num_columns() > 0) {
+          for (int i = 0; i < props->num_columns(); ++i) {
+            prop_table = KATANA_CHECKED(prop_table->AddColumn(
+                prop_table->num_columns(), props->field(i), props->column(i)));
+          }
+        } else {
+          prop_table = props;
+        }
+        rdg->core_->set_node_properties(std::move(prop_table));
+        return katana::ResultSuccess();
       }));
 
   // all of the properties
@@ -37,8 +67,21 @@ tsuba::RDGSlice::DoMake(
 
   auto edge_result = AddPropertySlice(
       metadata_dir, edge_properties, slice.edge_range, &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddEdgeProperties(props);
+      [rdg = this](
+          const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
+        std::shared_ptr<arrow::Table> prop_table =
+            rdg->core_->edge_properties();
+
+        if (prop_table && prop_table->num_columns() > 0) {
+          for (int i = 0; i < props->num_columns(); ++i) {
+            prop_table = KATANA_CHECKED(prop_table->AddColumn(
+                prop_table->num_columns(), props->field(i), props->column(i)));
+          }
+        } else {
+          prop_table = props;
+        }
+        rdg->core_->set_edge_properties(std::move(prop_table));
+        return katana::ResultSuccess();
       });
   if (!edge_result) {
     return edge_result.error();
@@ -86,6 +129,16 @@ tsuba::RDGSlice::edge_properties() const {
 const tsuba::FileView&
 tsuba::RDGSlice::topology_file_storage() const {
   return core_->topology_file_storage();
+}
+
+const tsuba::FileView&
+tsuba::RDGSlice::node_entity_type_id_array_file_storage() const {
+  return core_->node_entity_type_id_array_file_storage();
+}
+
+const tsuba::FileView&
+tsuba::RDGSlice::edge_entity_type_id_array_file_storage() const {
+  return core_->edge_entity_type_id_array_file_storage();
 }
 
 tsuba::RDGSlice::RDGSlice(std::unique_ptr<RDGCore>&& core)

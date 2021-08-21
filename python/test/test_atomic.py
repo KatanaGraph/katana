@@ -1,19 +1,21 @@
+# pylint: disable=unused-argument
+
 import numpy as np
 import pytest
 
 from katana import do_all, do_all_operator
-from katana.atomic import (
-    GAccumulator,
-    GReduceLogicalAnd,
-    GReduceLogicalOr,
-    GReduceMax,
-    GReduceMin,
+from katana.local import (
+    NUMAArray,
+    ReduceLogicalAnd,
+    ReduceLogicalOr,
+    ReduceMax,
+    ReduceMin,
+    ReduceSum,
     atomic_add,
     atomic_max,
     atomic_min,
     atomic_sub,
 )
-from katana.datastructures import NUMAArray
 
 dtypes_int = [
     pytest.param(np.int64, id="int64"),
@@ -30,9 +32,9 @@ types = [
 ]
 
 acc_types = [
-    pytest.param(GAccumulator, 15, id="GAccumulator"),
-    pytest.param(GReduceMax, 10, id="GReduceMax"),
-    pytest.param(GReduceMin, 2, id="GReduceMin"),
+    pytest.param(ReduceSum, 15, id="ReduceSum"),
+    pytest.param(ReduceMax, 10, id="ReduceMax"),
+    pytest.param(ReduceMin, 2, id="ReduceMin"),
 ]
 
 
@@ -49,10 +51,8 @@ def test_accumulator_simple(acc_type, res, typ):
     assert acc.reduce() == 10
 
 
-def test_GAccumulator_parallel(threads_many):
-    _ = threads_many
-
-    T = GAccumulator[int]
+def test_ReduceSum_parallel(threads_many):
+    T = ReduceSum[int]
     acc = T()
 
     @do_all_operator()
@@ -63,10 +63,8 @@ def test_GAccumulator_parallel(threads_many):
     assert acc.reduce() == 499500
 
 
-def test_GReduceMax_parallel(threads_many):
-    _ = threads_many
-
-    T = GReduceMax[int]
+def test_ReduceMax_parallel(threads_many):
+    T = ReduceMax[int]
     acc = T()
 
     @do_all_operator()
@@ -77,10 +75,8 @@ def test_GReduceMax_parallel(threads_many):
     assert acc.reduce() == 500
 
 
-def test_GReduceMin_parallel(threads_many):
-    _ = threads_many
-
-    T = GReduceMin[float]
+def test_ReduceMin_parallel(threads_many):
+    T = ReduceMin[float]
     acc = T()
 
     @do_all_operator()
@@ -91,10 +87,8 @@ def test_GReduceMin_parallel(threads_many):
     assert acc.reduce() == -50.0
 
 
-def test_GReduceLogicalOr_parallel(threads_many):
-    _ = threads_many
-
-    T = GReduceLogicalOr
+def test_ReduceLogicalOr_parallel(threads_many):
+    T = ReduceLogicalOr
     acc = T()
 
     @do_all_operator()
@@ -105,10 +99,8 @@ def test_GReduceLogicalOr_parallel(threads_many):
     assert acc.reduce() is True
 
 
-def test_GReduceLogicalAnd_parallel(threads_many):
-    _ = threads_many
-
-    T = GReduceLogicalAnd
+def test_ReduceLogicalAnd_parallel(threads_many):
+    T = ReduceLogicalAnd
     acc = T()
 
     @do_all_operator()
@@ -119,8 +111,8 @@ def test_GReduceLogicalAnd_parallel(threads_many):
     assert acc.reduce() is False
 
 
-def test_GReduceLogicalOr_simple():
-    T = GReduceLogicalOr
+def test_ReduceLogicalOr_simple():
+    T = ReduceLogicalOr
     acc = T()
     acc.update(True)
     acc.update(False)
@@ -132,8 +124,8 @@ def test_GReduceLogicalOr_simple():
     assert acc.reduce() is False
 
 
-def test_GReduceLogicalAnd_simple():
-    T = GReduceLogicalAnd
+def test_ReduceLogicalAnd_simple():
+    T = ReduceLogicalAnd
     acc = T()
     acc.update(True)
     acc.update(False)
@@ -147,8 +139,6 @@ def test_GReduceLogicalAnd_simple():
 
 @pytest.mark.parametrize("dtype", dtypes)
 def test_atomic_add_parallel(dtype, threads_many):
-    _ = threads_many
-
     @do_all_operator()
     def f(out, i):
         atomic_add(out, 0, i)
@@ -159,8 +149,6 @@ def test_atomic_add_parallel(dtype, threads_many):
 
 
 def test_atomic_add_parallel_numaarray(threads_many):
-    _ = threads_many
-
     @do_all_operator()
     def f(out, i):
         atomic_add(out, 0, i)
@@ -173,8 +161,6 @@ def test_atomic_add_parallel_numaarray(threads_many):
 
 @pytest.mark.parametrize("dtype", dtypes)
 def test_atomic_sub_parallel(dtype, threads_many):
-    _ = threads_many
-
     @do_all_operator()
     def f(out, i):
         atomic_sub(out, 0, i)
@@ -186,8 +172,6 @@ def test_atomic_sub_parallel(dtype, threads_many):
 
 @pytest.mark.parametrize("dtype", dtypes_int)
 def test_atomic_max_parallel(dtype, threads_many):
-    _ = threads_many
-
     @do_all_operator()
     def f(out, i):
         atomic_max(out, 0, i)
@@ -199,8 +183,6 @@ def test_atomic_max_parallel(dtype, threads_many):
 
 @pytest.mark.parametrize("dtype", dtypes_int)
 def test_atomic_min_parallel(dtype, threads_many):
-    _ = threads_many
-
     @do_all_operator()
     def f(out, i):
         atomic_min(out, 0, i)

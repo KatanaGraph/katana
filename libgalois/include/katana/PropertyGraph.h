@@ -1,10 +1,7 @@
 #ifndef KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
 #define KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
 
-#include <bitset>
-#include <string>
 #include <utility>
-#include <vector>
 
 #include <arrow/api.h>
 #include <arrow/chunked_array.h>
@@ -12,8 +9,12 @@
 
 #include "katana/ArrowInterchange.h"
 #include "katana/Details.h"
+#include "katana/EntityTypeManager.h"
 #include "katana/ErrorCode.h"
+#include "katana/GraphTopology.h"
+#include "katana/Iterators.h"
 #include "katana/NUMAArray.h"
+#include "katana/PropertyIndex.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"
 
@@ -30,117 +31,6 @@ ProjectAsArrowArray(const T* buf, const size_t len) noexcept {
   return std::make_shared<ArrowArrayType>(len, arrow::Buffer::Wrap(buf, len));
 }
 
-/// A graph topology represents the adjacency information for a graph in CSR
-/// format.
-class KATANA_EXPORT GraphTopology {
-public:
-  using Node = uint32_t;
-  using Edge = uint64_t;
-  using node_iterator = boost::counting_iterator<Node>;
-  using edge_iterator = boost::counting_iterator<Edge>;
-  using nodes_range = StandardRange<node_iterator>;
-  using edges_range = StandardRange<edge_iterator>;
-  using iterator = node_iterator;
-
-  GraphTopology() = default;
-  GraphTopology(GraphTopology&&) = default;
-  GraphTopology& operator=(GraphTopology&&) = default;
-
-  GraphTopology(const GraphTopology&) = delete;
-  GraphTopology& operator=(const GraphTopology&) = delete;
-
-  GraphTopology(
-      const Edge* adj_indices, size_t numNodes, const Node* dests,
-      size_t numEdges) noexcept;
-
-  GraphTopology(NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests) noexcept
-      : adj_indices_(std::move(adj_indices)), dests_(std::move(dests)) {}
-
-  static GraphTopology Copy(const GraphTopology& that) noexcept;
-
-  uint64_t num_nodes() const noexcept { return adj_indices_.size(); }
-
-  uint64_t num_edges() const noexcept { return dests_.size(); }
-
-  const Edge* adj_data() const noexcept { return adj_indices_.data(); }
-
-  const Node* dest_data() const noexcept { return dests_.data(); }
-
-  /**
-   * Checks equality against another instance of GraphTopology.
-   * WARNING: Expensive operation due to element-wise checks on large arrays
-   * @param that: GraphTopology instance to compare against
-   * @returns true if topology arrays are equal
-   */
-  bool Equals(const GraphTopology& that) const noexcept {
-    if (this == &that) {
-      return true;
-    }
-    if (num_nodes() != that.num_nodes()) {
-      return false;
-    }
-    if (num_edges() != that.num_edges()) {
-      return false;
-    }
-
-    return adj_indices_ == that.adj_indices_ && dests_ == that.dests_;
-  }
-
-  // Edge accessors
-
-  edge_iterator edge_begin(Node node) const noexcept {
-    return edge_iterator{node > 0 ? adj_indices_[node - 1] : 0};
-  }
-
-  edge_iterator edge_end(Node node) const noexcept {
-    return edge_iterator{adj_indices_[node]};
-  }
-
-  /// Gets the edge range of some node.
-  ///
-  /// \param node an iterator pointing to the node to get the edge range of
-  /// \returns iterable edge range for node.
-  edges_range edges(const node_iterator& node) const noexcept {
-    return edges(*node);
-  }
-  // TODO(amp): [[deprecated("use edges(Node node)")]]
-
-  /// Gets the edge range of some node.
-  ///
-  /// \param node node to get the edge range of
-  /// \returns iterable edge range for node.
-  edges_range edges(Node node) const noexcept {
-    return MakeStandardRange<edge_iterator>(edge_begin(node), edge_end(node));
-  }
-
-  Node edge_dest(Edge edge_id) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
-    return dests_[edge_id];
-  }
-
-  Node edge_dest(const edge_iterator ei) const noexcept {
-    return edge_dest(*ei);
-  }
-
-  nodes_range nodes(Node begin, Node end) const noexcept {
-    return MakeStandardRange<node_iterator>(begin, end);
-  }
-
-  // Standard container concepts
-
-  node_iterator begin() const noexcept { return node_iterator(0); }
-
-  node_iterator end() const noexcept { return node_iterator(num_nodes()); }
-
-  size_t size() const noexcept { return num_nodes(); }
-
-  bool empty() const noexcept { return num_nodes() == 0; }
-
-private:
-  NUMAArray<Edge> adj_indices_;
-  NUMAArray<Node> dests_;
-};
-
 /// A property graph is a graph that has properties associated with its nodes
 /// and edges. A property has a name and value. Its value may be a primitive
 /// type, a list of values or a composition of properties.
@@ -155,24 +45,6 @@ private:
 /// comprise the physical representation of the logical property graph.
 class KATANA_EXPORT PropertyGraph {
 public:
-  /// TypeSetID uniquely identifies/contains a combination/set of types
-  /// TypeSetID is represented using 8 bits
-  /// TypeSetID for nodes is distinct from TypeSetID for edges
-  using TypeSetID = uint8_t;
-  static constexpr TypeSetID kUnknownType = TypeSetID{0};
-  static constexpr TypeSetID kInvalidType =
-      std::numeric_limits<TypeSetID>::max();
-  /// A set of TypeSetIDs
-  using SetOfTypeSetIDs =
-      std::bitset<std::numeric_limits<TypeSetID>::max() + 1>;
-  /// A set of type names
-  using SetOfTypeNames = std::unordered_set<std::string>;
-  /// A map from TypeSetID to the set of the type names it contains
-  using TypeSetIDToSetOfTypeNamesMap = std::vector<SetOfTypeNames>;
-  /// A map from the type name to the set of the TypeSetIDs that contain it
-  using TypeNameToSetOfTypeSetIDsMap =
-      std::unordered_map<std::string, SetOfTypeSetIDs>;
-
   // Pass through topology API
   using node_iterator = GraphTopology::node_iterator;
   using edge_iterator = GraphTopology::edge_iterator;
@@ -180,6 +52,8 @@ public:
   using iterator = GraphTopology::iterator;
   using Node = GraphTopology::Node;
   using Edge = GraphTopology::Edge;
+
+  using EntityTypeIDArray = katana::NUMAArray<EntityTypeID>;
 
 private:
   /// Validate performs a sanity check on the the graph after loading
@@ -203,27 +77,27 @@ private:
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
 
-  /// A map from the node TypeSetID to
-  /// the set of the node type names it contains
-  TypeSetIDToSetOfTypeNamesMap node_type_set_id_to_type_names_;
-  /// A map from the edge TypeSetID to
-  /// the set of the edge type names it contains
-  TypeSetIDToSetOfTypeNamesMap edge_type_set_id_to_type_names_;
+  /// Manages the relations between the node entity types
+  EntityTypeManager node_entity_type_manager_;
+  /// Manages the relations between the edge entity types
+  EntityTypeManager edge_entity_type_manager_;
 
-  /// A map from the node type name
-  /// to the set of the node TypeSetIDs that contain it
-  TypeNameToSetOfTypeSetIDsMap node_type_name_to_type_set_ids_;
-  /// A map from the edge type name
-  /// to the set of the edge TypeSetIDs that contain it
-  TypeNameToSetOfTypeSetIDsMap edge_type_name_to_type_set_ids_;
+  /// The node EntityTypeID for each node's most specific type
+  EntityTypeIDArray node_entity_type_ids_;
+  /// The edge EntityTypeID for each edge's most specific type
+  EntityTypeIDArray edge_entity_type_ids_;
 
-  /// The node TypeSetID for each node in the graph
-  katana::NUMAArray<TypeSetID> node_type_set_id_;
-  /// The edge TypeSetID for each edge in the graph
-  katana::NUMAArray<TypeSetID> edge_type_set_id_;
+  // List of node and edge indexes on this graph.
+  std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
+      node_indexes_;
+  std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
+      edge_indexes_;
+
+  PGViewCache pg_view_cache_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
+
   friend class Distribution;
   const tsuba::PartitionMetadata& partition_metadata() const {
     return rdg_.part_metadata();
@@ -279,15 +153,20 @@ public:
   struct ReadOnlyPropertyView {
     const PropertyGraph* const_g;
 
-    std::shared_ptr<arrow::Schema> (PropertyGraph::*schema_fn)() const;
+    std::shared_ptr<arrow::Schema> (PropertyGraph::*loaded_schema_fn)() const;
+    std::shared_ptr<arrow::Schema> (PropertyGraph::*full_schema_fn)() const;
     std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_int)(
         int i) const;
     std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_str)(
         const std::string& str) const;
     int32_t (PropertyGraph::*property_num_fn)() const;
 
-    std::shared_ptr<arrow::Schema> schema() const {
-      return (const_g->*schema_fn)();
+    std::shared_ptr<arrow::Schema> loaded_schema() const {
+      return (const_g->*loaded_schema_fn)();
+    }
+
+    std::shared_ptr<arrow::Schema> full_schema() const {
+      return (const_g->*full_schema_fn)();
     }
 
     std::shared_ptr<arrow::ChunkedArray> GetProperty(int i) const {
@@ -324,7 +203,12 @@ public:
     Result<void> (PropertyGraph::*remove_property_int)(int i);
     Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
 
-    std::shared_ptr<arrow::Schema> schema() const { return ropv.schema(); }
+    std::shared_ptr<arrow::Schema> loaded_schema() const {
+      return ropv.loaded_schema();
+    }
+    std::shared_ptr<arrow::Schema> full_schema() const {
+      return ropv.full_schema();
+    }
 
     std::shared_ptr<arrow::ChunkedArray> GetProperty(int i) const {
       return ropv.GetProperty(i);
@@ -359,16 +243,28 @@ public:
 
   PropertyGraph() = default;
 
+  // XXX: WARNING: do not add new constructors. Add Make Functions
   PropertyGraph(
       std::unique_ptr<tsuba::RDGFile>&& rdg_file, tsuba::RDG&& rdg,
-      GraphTopology&& topo) noexcept
+      GraphTopology&& topo, EntityTypeIDArray&& node_entity_type_ids,
+      EntityTypeIDArray&& edge_entity_type_ids,
+      EntityTypeManager&& node_type_manager,
+      EntityTypeManager&& edge_type_manager) noexcept
       : rdg_(std::move(rdg)),
         file_(std::move(rdg_file)),
-        topology_(std::move(topo)) {}
+        topology_(std::move(topo)),
+        node_entity_type_manager_(std::move(node_type_manager)),
+        edge_entity_type_manager_(std::move(edge_type_manager)),
+        node_entity_type_ids_(std::move(node_entity_type_ids)),
+        edge_entity_type_ids_(std::move(edge_entity_type_ids)) {
+    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == num_edges());
+  }
 
-  PropertyGraph(katana::GraphTopology&& topo_to_assign) noexcept
-      : rdg_(), file_(), topology_(std::move(topo_to_assign)) {}
-
+  template <typename PGView>
+  PGView BuildView() noexcept {
+    return pg_view_cache_.BuildView<PGView>(this);
+  }
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -383,6 +279,13 @@ public:
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign);
 
+  /// Make a property graph from topology and type arrays
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      GraphTopology&& topo_to_assign, EntityTypeIDArray&& node_entity_type_ids,
+      EntityTypeIDArray&& edge_entity_type_ids,
+      EntityTypeManager&& node_type_manager,
+      EntityTypeManager&& edge_type_manager);
+
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.
   Result<std::unique_ptr<PropertyGraph>> Copy() const;
@@ -395,11 +298,42 @@ public:
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties) const;
 
-  /// Construct node & edge TypeSetIDs from node & edge properties
-  /// Also constructs metadata to convert between types and TypeSetIDs
-  /// Assumes all boolean or uint8 properties are types
+  /// Construct node & edge EntityTypeIDs from node & edge properties
+  /// Also constructs metadata to convert between atomic types and EntityTypeIDs
+  /// Assumes all boolean or uint8 properties are atomic types
   /// TODO(roshan) move this to be a part of Make()
-  Result<void> ConstructTypeSetIDs();
+  Result<void> ConstructEntityTypeIDs();
+
+  size_t node_entity_type_ids_size() const noexcept {
+    return node_entity_type_ids_.size();
+  }
+
+  size_t edge_entity_type_ids_size() const noexcept {
+    return edge_entity_type_ids_.size();
+  }
+
+  /// This is an unfortunate hack. Due to some technical debt, we need a way to
+  /// modify these arrays in place from outside this class. This style mirrors a
+  /// similar hack in GraphTopology and hopefully makes it clear that these
+  /// functions should not be used lightly.
+  const EntityTypeID* node_type_data() const noexcept {
+    return node_entity_type_ids_.data();
+  }
+  /// This is an unfortunate hack. Due to some technical debt, we need a way to
+  /// modify these arrays in place from outside this class. This style mirrors a
+  /// similar hack in GraphTopology and hopefully makes it clear that these
+  /// functions should not be used lightly.
+  const EntityTypeID* edge_type_data() const noexcept {
+    return edge_entity_type_ids_.data();
+  }
+
+  const EntityTypeManager& GetNodeTypeManager() const {
+    return node_entity_type_manager_;
+  }
+
+  const EntityTypeManager& GetEdgeTypeManager() const {
+    return edge_entity_type_manager_;
+  }
 
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 
@@ -461,100 +395,199 @@ public:
   Result<void> InformPath(const std::string& input_path);
 
   /// Determine if two PropertyGraphs are Equal
+  /// THIS IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
+  /// when comparing PG in Equals we directly compare all tables in properties
+  /// this is potentially buggy. If for example we have:
+  /// 1) an "old" graph, modified in "old" software to add type information which is then stored in properties
+  /// 2) a "new" graph, modified in "new" software to add identical type information which is then stored in entity type arrays
+  ///    and entity type managers
+  /// if we then loaded both graphs (1) and (2) in "new" software and compared them, their type information would look identical
+  /// but their properties information would differ as the old software added the type information to properties while the new
+  /// software did not. The two graphs would be functionally Equal, but this function would say this are not equal
+  /// TODO(unknown):(emcginnis) consider breaking the function down into: topology comparison, type comparison, and property comparison. Move pitfall described above alone with the property comparison function
   bool Equals(const PropertyGraph* other) const;
   /// Report the differences between two graphs
+  /// THIS IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   std::string ReportDiff(const PropertyGraph* other) const;
 
-  std::shared_ptr<arrow::Schema> node_schema() const {
+  /// get the schema for loaded node properties
+  std::shared_ptr<arrow::Schema> loaded_node_schema() const {
     return node_properties()->schema();
   }
 
-  std::shared_ptr<arrow::Schema> edge_schema() const {
+  /// get the schema for all node properties (includes unloaded properties)
+  std::shared_ptr<arrow::Schema> full_node_schema() const {
+    return rdg_.full_node_schema();
+  }
+
+  /// get the schema for loaded edge properties
+  std::shared_ptr<arrow::Schema> loaded_edge_schema() const {
     return edge_properties()->schema();
   }
 
-  /// \returns the number of node types
-  size_t GetNodeTypesNum() const {
-    return node_type_name_to_type_set_ids_.size();
+  /// get the schema for all edge properties (includes unloaded properties)
+  std::shared_ptr<arrow::Schema> full_edge_schema() const {
+    return rdg_.full_edge_schema();
   }
 
-  /// \returns the number of edge types
-  size_t GetEdgeTypesNum() const {
-    return edge_type_name_to_type_set_ids_.size();
+  /// \returns the number of node atomic types
+  size_t GetNumNodeAtomicTypes() const {
+    return node_entity_type_manager_.GetNumAtomicTypes();
   }
 
-  /// \returns true if a node type with @param name exists
-  /// NB: no node may have this type
+  /// \returns the number of edge atomic types
+  size_t GetNumEdgeAtomicTypes() const {
+    return edge_entity_type_manager_.GetNumAtomicTypes();
+  }
+
+  /// \returns the number of node entity types (including kUnknownEntityType)
+  size_t GetNumNodeEntityTypes() const {
+    return node_entity_type_manager_.GetNumEntityTypes();
+  }
+
+  /// \returns the number of edge entity types (including kUnknownEntityType)
+  size_t GetNumEdgeEntityTypes() const {
+    return edge_entity_type_manager_.GetNumEntityTypes();
+  }
+
+  /// \returns true iff a node atomic type @param name exists
+  /// NB: no node may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of nodes with the type
-  bool HasNodeType(const std::string& name) const {
-    return node_type_name_to_type_set_ids_.count(name) == 1;
+  bool HasAtomicNodeType(const std::string& name) const {
+    return node_entity_type_manager_.HasAtomicType(name);
   }
 
-  /// \returns true if an edge type with @param name exists
-  /// NB: no edge may have this type
+  /// \returns true iff an edge atomic type with @param name exists
+  /// NB: no edge may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of edges with the type
-  bool HasEdgeType(const std::string& name) const {
-    return edge_type_name_to_type_set_ids_.count(name) == 1;
+  bool HasAtomicEdgeType(const std::string& name) const {
+    return edge_entity_type_manager_.HasAtomicType(name);
   }
 
-  /// \returns the set of node TypeSetIDs that contain
-  /// the node type with @param name
+  /// \returns true iff a node entity type @param node_entity_type_id exists
+  /// NB: even if it exists, it may not be the most specific type for any node
+  /// (returns true for kUnknownEntityType)
+  bool HasNodeEntityType(EntityTypeID node_entity_type_id) const {
+    return node_entity_type_manager_.HasEntityType(node_entity_type_id);
+  }
+
+  /// \returns true iff an edge entity type @param node_entity_type_id exists
+  /// NB: even if it exists, it may not be the most specific type for any edge
+  /// (returns true for kUnknownEntityType)
+  bool HasEdgeEntityType(EntityTypeID edge_entity_type_id) const {
+    return edge_entity_type_manager_.HasEntityType(edge_entity_type_id);
+  }
+
+  /// \returns the node EntityTypeID for an atomic node type with name
+  /// @param name
   /// (assumes that the node type exists)
-  const SetOfTypeSetIDs& NodeTypeNameToTypeSetIDs(
-      const std::string& name) const {
-    return node_type_name_to_type_set_ids_.at(name);
+  EntityTypeID GetNodeEntityTypeID(const std::string& name) const {
+    return node_entity_type_manager_.GetEntityTypeID(name);
   }
 
-  /// \returns the set of edge TypeSetIDs that contain
-  /// the edge type with @param name
+  /// \returns the edge EntityTypeID for an atomic edge type with name
+  /// @param name
   /// (assumes that the edge type exists)
-  const SetOfTypeSetIDs& EdgeTypeNameToTypeSetIDs(
-      const std::string& name) const {
-    return edge_type_name_to_type_set_ids_.at(name);
+  EntityTypeID GetEdgeEntityTypeID(const std::string& name) const {
+    return edge_entity_type_manager_.GetEntityTypeID(name);
   }
 
-  /// \returns the number of node TypeSetIDs (including kUnknownType)
-  size_t GetNodeTypeSetIDsNum() const {
-    return node_type_set_id_to_type_names_.size();
+  /// \returns the name of the atomic type if the node EntityTypeID
+  /// @param node_entity_type_id is an atomic type,
+  /// nullopt otherwise
+  std::optional<std::string> GetNodeAtomicTypeName(
+      EntityTypeID node_entity_type_id) const {
+    return node_entity_type_manager_.GetAtomicTypeName(node_entity_type_id);
   }
 
-  /// \returns the number of edge TypeSetIDs (including kUnknownType)
-  size_t GetEdgeTypeSetIDsNum() const {
-    return edge_type_set_id_to_type_names_.size();
+  /// \returns the name of the atomic type if the edge EntityTypeID
+  /// @param edge_entity_type_id is an atomic type,
+  /// nullopt otherwise
+  std::optional<std::string> GetEdgeAtomicTypeName(
+      EntityTypeID edge_entity_type_id) const {
+    return edge_entity_type_manager_.GetAtomicTypeName(edge_entity_type_id);
   }
 
-  /// \returns the set of node type names that contain
-  /// the node TypeSetID @param node_type_set_id
-  /// (assumes that the node TypeSetID exists)
-  const SetOfTypeNames& NodeTypeSetIDToTypeNames(
-      TypeSetID node_type_set_id) const {
-    return node_type_set_id_to_type_names_.at(node_type_set_id);
+  /// \returns the set of node entity types that intersect
+  /// the node atomic type @param node_entity_type_id
+  /// (assumes that the node atomic type exists)
+  const SetOfEntityTypeIDs& GetNodeSupertypes(
+      EntityTypeID node_entity_type_id) const {
+    return node_entity_type_manager_.GetSupertypes(node_entity_type_id);
   }
 
-  /// \returns the set of edge type names that contain
-  /// the edge TypeSetID @param edge_type_set_id
-  /// (assumes that the edge TypeSetID exists)
-  const SetOfTypeNames& EdgeTypeSetIDToTypeNames(
-      TypeSetID edge_type_set_id) const {
-    return edge_type_set_id_to_type_names_.at(edge_type_set_id);
+  /// \returns the set of edge entity types that intersect
+  /// the edge atomic type @param edge_entity_type_id
+  /// (assumes that the edge atomic type exists)
+  const SetOfEntityTypeIDs& GetEdgeSupertypes(
+      EntityTypeID edge_entity_type_id) const {
+    return edge_entity_type_manager_.GetSupertypes(edge_entity_type_id);
   }
 
-  /// \return returns the node TypeSetID for @param node
-  TypeSetID GetNodeTypeSetID(Node node) const {
-    return node_type_set_id_[node];
+  /// \returns the set of atomic node types that are intersected
+  /// by the node entity type @param node_entity_type_id
+  /// (assumes that the node entity type exists)
+  const SetOfEntityTypeIDs& GetNodeAtomicSubtypes(
+      EntityTypeID node_entity_type_id) const {
+    return node_entity_type_manager_.GetAtomicSubtypes(node_entity_type_id);
   }
 
-  /// \return returns the edge TypeSetID for @param edge
-  TypeSetID GetEdgeTypeSetID(Edge edge) const {
-    return edge_type_set_id_[edge];
+  /// \returns the set of atomic edge types that are intersected
+  /// by the edge entity type @param edge_entity_type_id
+  /// (assumes that the edge entity type exists)
+  const SetOfEntityTypeIDs& GetEdgeAtomicSubtypes(
+      EntityTypeID edge_entity_type_id) const {
+    return edge_entity_type_manager_.GetAtomicSubtypes(edge_entity_type_id);
+  }
+
+  /// \returns true iff the node type @param sub_type is a
+  /// sub-type of the node type @param super_type
+  /// (assumes that the sub_type and super_type EntityTypeIDs exists)
+  bool IsNodeSubtypeOf(EntityTypeID sub_type, EntityTypeID super_type) const {
+    return node_entity_type_manager_.IsSubtypeOf(sub_type, super_type);
+  }
+
+  /// \returns true iff the edge type @param sub_type is a
+  /// sub-type of the edge type @param super_type
+  /// (assumes that the sub_type and super_type EntityTypeIDs exists)
+  bool IsEdgeSubtypeOf(EntityTypeID sub_type, EntityTypeID super_type) const {
+    return edge_entity_type_manager_.IsSubtypeOf(sub_type, super_type);
+  }
+
+  /// \return returns the most specific node entity type for @param node
+  EntityTypeID GetTypeOfNode(Node node) const {
+    return node_entity_type_ids_[node];
+  }
+
+  /// \return returns the most specific edge entity type for @param edge
+  EntityTypeID GetTypeOfEdge(Edge edge) const {
+    return edge_entity_type_ids_[edge];
+  }
+
+  /// \return true iff the node @param node has the given entity type
+  /// @param node_entity_type_id (need not be the most specific type)
+  /// (assumes that the node entity type exists)
+  bool DoesNodeHaveType(Node node, EntityTypeID node_entity_type_id) const {
+    return IsNodeSubtypeOf(node_entity_type_id, GetTypeOfNode(node));
+  }
+
+  /// \return true iff the edge @param edge has the given entity type
+  /// @param edge_entity_type_id (need not be the most specific type)
+  /// (assumes that the edge entity type exists)
+  bool DoesEdgeHaveType(Edge edge, EntityTypeID edge_entity_type_id) const {
+    return IsEdgeSubtypeOf(edge_entity_type_id, GetTypeOfEdge(edge));
   }
 
   // Return type dictated by arrow
   /// Returns the number of node properties
-  int32_t GetNumNodeProperties() const { return node_schema()->num_fields(); }
+  int32_t GetNumNodeProperties() const {
+    return loaded_node_schema()->num_fields();
+  }
 
   /// Returns the number of edge properties
-  int32_t GetNumEdgeProperties() const { return edge_schema()->num_fields(); }
+  int32_t GetNumEdgeProperties() const {
+    return loaded_edge_schema()->num_fields();
+  }
 
   // num_rows() == num_nodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
@@ -574,12 +607,12 @@ public:
 
   /// \returns true if a node property/type with @param name exists
   bool HasNodeProperty(const std::string& name) const {
-    return node_schema()->GetFieldIndex(name) != -1;
+    return loaded_node_schema()->GetFieldIndex(name) != -1;
   }
 
   /// \returns true if an edge property/type with @param name exists
   bool HasEdgeProperty(const std::string& name) const {
-    return edge_schema()->GetFieldIndex(name) != -1;
+    return loaded_edge_schema()->GetFieldIndex(name) != -1;
   }
 
   /// Get a node property by name.
@@ -592,7 +625,7 @@ public:
   }
 
   std::string GetNodePropertyName(int32_t i) const {
-    return node_schema()->field(i)->name();
+    return loaded_node_schema()->field(i)->name();
   }
 
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
@@ -601,7 +634,7 @@ public:
   }
 
   std::string GetEdgePropertyName(int32_t i) const {
-    return edge_schema()->field(i)->name();
+    return loaded_edge_schema()->field(i)->name();
   }
 
   /// Get a node property by name and cast it to a type.
@@ -649,6 +682,14 @@ public:
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }
+
+  const EntityTypeManager& node_entity_type_manager() const noexcept {
+    return node_entity_type_manager_;
+  }
+
+  const EntityTypeManager& edge_entity_type_manager() const noexcept {
+    return edge_entity_type_manager_;
+  }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);
@@ -704,7 +745,8 @@ public:
         .ropv =
             {
                 .const_g = this,
-                .schema_fn = &PropertyGraph::node_schema,
+                .loaded_schema_fn = &PropertyGraph::loaded_node_schema,
+                .full_schema_fn = &PropertyGraph::full_node_schema,
                 .property_fn_int = &PropertyGraph::GetNodeProperty,
                 .property_fn_str = &PropertyGraph::GetNodeProperty,
                 .property_num_fn = &PropertyGraph::GetNumNodeProperties,
@@ -719,7 +761,8 @@ public:
   ReadOnlyPropertyView NodeReadOnlyPropertyView() const {
     return ReadOnlyPropertyView{
         .const_g = this,
-        .schema_fn = &PropertyGraph::node_schema,
+        .loaded_schema_fn = &PropertyGraph::loaded_node_schema,
+        .full_schema_fn = &PropertyGraph::full_node_schema,
         .property_fn_int = &PropertyGraph::GetNodeProperty,
         .property_fn_str = &PropertyGraph::GetNodeProperty,
         .property_num_fn = &PropertyGraph::GetNumNodeProperties,
@@ -731,7 +774,8 @@ public:
         .ropv =
             {
                 .const_g = this,
-                .schema_fn = &PropertyGraph::edge_schema,
+                .loaded_schema_fn = &PropertyGraph::loaded_edge_schema,
+                .full_schema_fn = &PropertyGraph::full_edge_schema,
                 .property_fn_int = &PropertyGraph::GetEdgeProperty,
                 .property_fn_str = &PropertyGraph::GetEdgeProperty,
                 .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
@@ -746,7 +790,8 @@ public:
   ReadOnlyPropertyView EdgeReadOnlyPropertyView() const {
     return ReadOnlyPropertyView{
         .const_g = this,
-        .schema_fn = &PropertyGraph::edge_schema,
+        .loaded_schema_fn = &PropertyGraph::loaded_edge_schema,
+        .full_schema_fn = &PropertyGraph::full_edge_schema,
         .property_fn_int = &PropertyGraph::GetEdgeProperty,
         .property_fn_str = &PropertyGraph::GetEdgeProperty,
         .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
@@ -776,15 +821,31 @@ public:
   /// \returns iterable edge range for node.
   edges_range edges(Node node) const { return topology().edges(node); }
 
-  /**
-   * Gets the destination for an edge.
-   *
-   * @param edge edge iterator to get the destination of
-   * @returns node iterator to the edge destination
-   */
+  /// Gets the destination for an edge.
+  ///
+  /// @param edge edge iterator to get the destination of
+  /// @returns node iterator to the edge destination
   node_iterator GetEdgeDest(const edge_iterator& edge) const {
     auto node_id = topology().edge_dest(*edge);
     return node_iterator(node_id);
+  }
+
+  // Creates an index over a node property.
+  Result<void> MakeNodeIndex(const std::string& column_name);
+
+  // Creates an index over an edge property.
+  Result<void> MakeEdgeIndex(const std::string& column_name);
+
+  // Returns the list of node indexes.
+  const std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>&
+  node_indexes() const {
+    return node_indexes_;
+  }
+
+  // Returns the list of edge indexes.
+  const std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>&
+  edge_indexes() const {
+    return edge_indexes_;
   }
 };
 
@@ -807,7 +868,7 @@ KATANA_EXPORT GraphTopology::Edge FindEdgeSortedByDest(
     const PropertyGraph* graph, GraphTopology::Node node,
     GraphTopology::Node node_to_find);
 
-/// Relabel all nodes in the graph by sorting in the descending
+/// Renumber all nodes in the graph by sorting in the descending
 /// order by node degree.
 // TODO(amber): this method should return a new sorted topology
 KATANA_EXPORT Result<void> SortNodesByDegree(PropertyGraph* pg);

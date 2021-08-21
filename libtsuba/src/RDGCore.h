@@ -37,6 +37,11 @@ public:
 
   katana::Result<void> RemoveEdgeProperty(int i);
 
+  // type info will be missing for properties that weren't loaded
+  // make sure it's not missing
+  katana::Result<void> EnsureNodeTypesLoaded(const katana::Uri& rdg_dir);
+  katana::Result<void> EnsureEdgeTypesLoaded(const katana::Uri& rdg_dir);
+
   //
   // Accessors and Mutators
   //
@@ -58,10 +63,12 @@ public:
   void drop_node_properties() {
     std::vector<std::shared_ptr<arrow::Array>> empty;
     node_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
+    part_header_.set_node_prop_info_list({});
   }
   void drop_edge_properties() {
     std::vector<std::shared_ptr<arrow::Array>> empty;
     edge_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
+    part_header_.set_edge_prop_info_list({});
   }
 
   const FileView& topology_file_storage() const {
@@ -70,6 +77,30 @@ public:
   FileView& topology_file_storage() { return topology_file_storage_; }
   void set_topology_file_storage(FileView&& topology_file_storage) {
     topology_file_storage_ = std::move(topology_file_storage);
+  }
+
+  const FileView& node_entity_type_id_array_file_storage() const {
+    return node_entity_type_id_array_file_storage_;
+  }
+  FileView& node_entity_type_id_array_file_storage() {
+    return node_entity_type_id_array_file_storage_;
+  }
+  void set_node_entity_type_id_array_file_storage(
+      FileView&& node_entity_type_id_array_file_storage) {
+    node_entity_type_id_array_file_storage_ =
+        std::move(node_entity_type_id_array_file_storage);
+  }
+
+  const FileView& edge_entity_type_id_array_file_storage() const {
+    return edge_entity_type_id_array_file_storage_;
+  }
+  FileView& edge_entity_type_id_array_file_storage() {
+    return edge_entity_type_id_array_file_storage_;
+  }
+  void set_edge_entity_type_id_array_file_storage(
+      FileView&& edge_entity_type_id_array_file_storage) {
+    edge_entity_type_id_array_file_storage_ =
+        std::move(edge_entity_type_id_array_file_storage);
   }
 
   const RDGPartHeader& part_header() const { return part_header_; }
@@ -83,6 +114,18 @@ public:
     return topology_file_storage_.Unbind();
   }
 
+  katana::Result<void> RegisterNodeEntityTypeIDArrayFile(
+      const std::string& new_type_id_array) {
+    part_header_.set_node_entity_type_id_array_path(new_type_id_array);
+    return node_entity_type_id_array_file_storage_.Unbind();
+  }
+
+  katana::Result<void> RegisterEdgeEntityTypeIDArrayFile(
+      const std::string& new_type_id_array) {
+    part_header_.set_edge_entity_type_id_array_path(new_type_id_array);
+    return edge_entity_type_id_array_file_storage_.Unbind();
+  }
+
 private:
   void InitEmptyProperties();
 
@@ -94,6 +137,9 @@ private:
   std::shared_ptr<arrow::Table> edge_properties_;
 
   FileView topology_file_storage_;
+
+  FileView node_entity_type_id_array_file_storage_;
+  FileView edge_entity_type_id_array_file_storage_;
 
   RDGPartHeader part_header_;
 };

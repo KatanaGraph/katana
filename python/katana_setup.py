@@ -31,10 +31,9 @@ class RequirementError(RuntimeError):
     def __str__(self):
         return (
             super().__str__()
-            + " (Normal Katana builds should use cmake to start the build and NOT directly call setup.py "
-            "(cmake calls setup.py as needed). See Python.md or "
-            "https://github.com/KatanaGraph/katana/blob/master/Python.md#building-katana-python for Python build "
-            "instructions.)"
+            + " (Normal Katana builds should use cmake to start the build and NOT directly call setup.py. "
+            "cmake calls setup.py as needed. See docs/contributing/building.rst "
+            "for Python build instructions.)"
         )
 
 
@@ -300,7 +299,7 @@ def process_jinja_file(filename, build_source_root):
 
     # TODO(amp): Ideally this would only process the jinja file when the inputs change. But it's fast and I'm lazy.
     #  https://jinja.palletsprojects.com/en/2.11.x/api/#jinja2.meta.find_referenced_templates
-    regenerated = generate_from_jinja.run("python" / filename.parent, filename.name, output_file)
+    regenerated = generate_from_jinja.run("python", filename, output_file)
     if regenerated:
         print(f"Processed {filename} with Jinja2.")
     return output_file
@@ -439,12 +438,22 @@ setActiveThreads(1)
     )
 
 
+def setup_coverage():
+    if os.environ.get("COVERAGE_RCFILE"):
+        # usercustomize.py will initialize coverage for each Python process (but only if COVERAGE_PROCESS_START is set).
+        with open(Path(os.getcwd()) / "python" / "usercustomize.py", "w") as f:
+            f.write("import coverage\n")
+            f.write("coverage.process_startup()")
+
+
 def setup(*, source_dir, package_name, additional_requires=None, package_data=None, **kwargs):
     package_data = package_data or {}
     # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
     requires = ["pyarrow (<3.0)", "numpy", "numba (>=0.50,<1.0a0)"]
     if additional_requires:
         requires.extend(additional_requires)
+
+    setup_coverage()
 
     source_dir = Path(source_dir)
 

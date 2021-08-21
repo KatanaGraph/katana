@@ -193,10 +193,11 @@ main(int argc, char** argv) {
             "connected",
             pg->num_nodes() - stats.n_reached_nodes);
       }
-      if (BfsAssertValid(pg.get(), start_node, node_distance_prop)) {
+      if (auto res = BfsAssertValid(pg.get(), start_node, node_distance_prop);
+          res) {
         std::cout << "Verification successful.\n";
       } else {
-        KATANA_LOG_FATAL("verification failed");
+        KATANA_LOG_FATAL("verification failed: {}", res.error());
       }
     }
 

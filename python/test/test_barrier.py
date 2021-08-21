@@ -1,7 +1,7 @@
+import numpy as np
 import pytest
 
-from katana import do_all, do_all_operator
-from katana.galois import get_active_threads, set_active_threads
+from katana import do_all, do_all_operator, get_active_threads, set_active_threads
 from katana.local import SimpleBarrier, get_fast_barrier
 
 
@@ -23,7 +23,7 @@ def test_fast_barrier_invalidate():
 
 
 def test_fast_barrier(threads_many):
-    _ = threads_many
+    # pylint: disable=unused-argument
     barrier = get_fast_barrier()
     out = []
 
@@ -38,29 +38,28 @@ def test_fast_barrier(threads_many):
     assert set(out[threads:]) == set(range(threads))
 
 
-# TODO(amp): Implement numba access for Barrier.
-@pytest.mark.skip("Barriers not supported in numba code.")
 def test_fast_barrier_in_numba(threads_many):
-    _ = threads_many
+    # pylint: disable=unused-argument
     barrier = get_fast_barrier()
-    out = []
+    threads = get_active_threads()
+    a = np.zeros(threads, dtype=int)
+    b = np.zeros(threads, dtype=int)
 
     @do_all_operator()
-    def op(v):
-        out.append(v)
+    def op(a, b, i):
+        a[i] = 1
         barrier.wait()
-        out.append(v)
+        b[i] = a.sum()
 
-    threads = get_active_threads()
-    do_all(range(threads), op)
-    assert set(out[:threads]) == set(range(threads))
-    assert set(out[threads:]) == set(range(threads))
+    do_all(range(threads), op(a, b))
+    assert np.all(a == np.ones(threads))
+    assert np.all(b == np.ones(threads) * threads)
 
 
 # TODO(amp): Reenable when SimpleBarrier is fixed. It is broken and deadlocks.
 @pytest.mark.skip("Simple barrier is broken in C++.")
 def test_simple_barrier(threads_many):
-    _ = threads_many
+    # pylint: disable=unused-argument
     threads = get_active_threads()
     barrier = SimpleBarrier(threads)
     out = []

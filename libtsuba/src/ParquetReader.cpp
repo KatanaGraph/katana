@@ -8,6 +8,7 @@
 #include <arrow/chunked_array.h>
 #include <arrow/type.h>
 #include <arrow/type_fwd.h>
+#include <parquet/arrow/schema.h>
 
 #include "katana/JSON.h"
 #include "tsuba/Errors.h"
@@ -70,6 +71,18 @@ HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
   }
   default:
     return old_array;
+  }
+}
+
+katana::Result<std::shared_ptr<arrow::Field>>
+HandleBadParquetTypes(std::shared_ptr<arrow::Field> old_field) {
+  switch (old_field->type()->id()) {
+  case arrow::Type::type::STRING: {
+    return std::make_shared<arrow::Field>(
+        old_field->name(), arrow::large_utf8());
+  }
+  default:
+    return old_field;
   }
 }
 
@@ -207,6 +220,14 @@ public:
   Result<int32_t> NumColumns() {
     KATANA_CHECKED(EnsureReader(0));
     return readers_[0]->parquet_reader()->metadata()->num_columns();
+  }
+
+  Result<std::shared_ptr<arrow::Schema>> ReadSchema() {
+    KATANA_CHECKED(EnsureReader(0));
+    std::shared_ptr<arrow::Schema> schema;
+    KATANA_CHECKED(parquet::arrow::FromParquetSchema(
+        readers_[0]->parquet_reader()->metadata()->schema(), &schema));
+    return schema;
   }
 
   Result<std::shared_ptr<arrow::Table>> ReadTable(
@@ -377,6 +398,12 @@ tsuba::ParquetReader::ReadTable(const katana::Uri& uri) {
   return FixTable(KATANA_CHECKED(bpr->ReadTable(slice_)));
 }
 
+katana::Result<std::shared_ptr<arrow::Schema>>
+tsuba::ParquetReader::GetSchema(const katana::Uri& uri) {
+  auto bpr = KATANA_CHECKED(BlockedParquetReader::Make(uri, false));
+  return FixSchema(KATANA_CHECKED(bpr->ReadSchema()));
+}
+
 Result<std::shared_ptr<arrow::Table>>
 tsuba::ParquetReader::ReadColumn(const katana::Uri& uri, int32_t column_idx) {
   auto bpr = KATANA_CHECKED(BlockedParquetReader::Make(uri, false));
@@ -398,6 +425,19 @@ tsuba::ParquetReader::NumColumns(const katana::Uri& uri) {
 Result<int64_t>
 tsuba::ParquetReader::NumRows(const katana::Uri& uri) {
   return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->NumRows();
+}
+
+Result<std::shared_ptr<arrow::Schema>>
+tsuba::ParquetReader::FixSchema(const std::shared_ptr<arrow::Schema>& schema) {
+  if (!make_cannonical_) {
+    return schema;
+  }
+
+  std::vector<std::shared_ptr<arrow::Field>> fields = schema->fields();
+  for (auto& field : fields) {
+    field = KATANA_CHECKED(HandleBadParquetTypes(field));
+  }
+  return arrow::schema(fields);
 }
 
 Result<std::shared_ptr<arrow::Table>>

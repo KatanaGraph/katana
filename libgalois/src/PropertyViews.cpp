@@ -7,7 +7,9 @@ katana::internal::ExtractArrays(
   for (auto& property : properties) {
     auto column = table->GetColumnByName(property);
     if (!column) {
-      return ErrorCode::PropertyNotFound;
+      return KATANA_ERROR(
+          ErrorCode::PropertyNotFound, "property named {}",
+          std::quoted(property));
     }
     if (column->num_chunks() != 1) {
       // Katana form graphs only contain single chunk property columns.
@@ -28,7 +30,9 @@ katana::internal::ExtractArrays(
   for (auto& property : properties) {
     auto column = pview.GetProperty(property);
     if (!column) {
-      return ErrorCode::PropertyNotFound;
+      return KATANA_ERROR(
+          ErrorCode::PropertyNotFound, "property named {}",
+          std::quoted(property));
     }
     if (column->num_chunks() != 1) {
       // Katana form graphs only contain single chunk property columns.

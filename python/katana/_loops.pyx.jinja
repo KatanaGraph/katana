@@ -15,30 +15,28 @@ import numpy as np
 
 import katana
 import katana.loop_operators
-import katana.numba_support.closure
+import katana.native_interfacing.closure
 from numba import from_dtype
 
-from .cpp.libgalois cimport Galois, datastructures
-from .cpp.libgalois.graphs cimport Graph
-from .cpp.libgalois cimport Worklist
+from katana.cpp.libgalois cimport Galois, datastructures
+from katana.cpp.libgalois.graphs cimport Graph
+from katana.cpp.libgalois cimport Worklist
 
-from katana.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
-from katana.numpy_structs import StructInstance
+from katana.native_interfacing.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
+from katana.native_interfacing.numpy_structs import StructInstance
 
-from katana.datastructures cimport InsertBag_uint64_t, NUMAArray_uint64_t
+from katana.local.datastructures cimport InsertBag_uint64_t, NUMAArray_uint64_t
 {% for inst in type_instantiations -%}
-from katana.datastructures cimport InsertBag_{{inst.type_scab}}{% if inst.by_pointer %}, {{inst.element_c_type}}{% endif %}
+from katana.local.datastructures cimport InsertBag_{{inst.type_scab}}{% if inst.by_pointer %}, {{inst.element_c_type}}{% endif %}
 {% endfor -%}
-from katana.datastructures import InsertBag_uint64_t, NUMAArray_uint64_t, InsertBag_Opaque16, StructInstance
-from katana._property_graph cimport PropertyGraph
-from katana._property_graph import PropertyGraph
+from katana.local.datastructures import InsertBag_uint64_t, NUMAArray_uint64_t, InsertBag_Opaque16, StructInstance
 
-from katana.util.template_type import make_template_type1_with_opaque
+from katana.native_interfacing.template_type import make_template_type1_with_opaque
 
 
 _logger = logging.getLogger(__name__)
 
-{% import "numba_wrapper_support.jinja" as numba %}
+{% import "native_interfacing/numba_wrapper_support.jinja" as numba %}
 
 {{numba.header()}}
 
@@ -115,7 +113,7 @@ cdef class {{UserContext_name}}:
         self.underlying.abort()
 
     @property
-    def address(self):
+    def __katana_address__(self):
         return <unsigned long int>self.underlying
 
     @property
@@ -236,7 +234,7 @@ elif isinstance(worklist, PerSocketChunkFIFO):
     {{inner(1, iterable, args + ["make_per_socket_chunk_fifo()"], loop_variable_type)}}
 elif isinstance(worklist, OrderedByIntegerMetric):
     obim_func = worklist.indexer
-    if isinstance(obim_func, katana.numba_support.closure.UninstantiatedClosure):
+    if isinstance(obim_func, katana.native_interfacing.closure.UninstantiatedClosure):
         obim_func = obim_func.instantiate(from_dtype(dtype))
 
     if isinstance(obim_func, numba.core.ccallback.CFunc):
@@ -244,7 +242,7 @@ elif isinstance(worklist, OrderedByIntegerMetric):
             raise TypeError("Function has incorrect signature")
         obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}><unsigned long int>(obim_func.address)
         obim_userdata = NULL
-    elif isinstance(obim_func, katana.numba_support.closure.Closure):
+    elif isinstance(obim_func, katana.native_interfacing.closure.Closure):
         if not katana.loop_operators.is_obim_metric_closure(obim_func):
             raise TypeError("Function has incorrect signature")
         obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}><unsigned long int>(obim_func.__function_address__)
@@ -273,8 +271,9 @@ with nogil:
 
 {% macro handle_iterable(inner, iterable, args, loop_variable_type) -%}
 {{"FATAL: loop_variable_type already set to: " + loop_variable_type if loop_variable_type}}
-if isinstance(iterable, PropertyGraph):
-    iterable = range((<PropertyGraph>iterable).num_nodes())
+from katana.local._graph import Graph
+if isinstance(iterable, Graph):
+    iterable = range(iterable.num_nodes())
 
 if isinstance(iterable, range) and iterable.step == 1:
     frm = <uint64_t>iterable.start
@@ -309,7 +308,7 @@ c_name = <const char*>loop_name_bytes
 
 {% macro extract_callback(loop_type, inner, iterable, args, loop_variable_type) -%}
 {{"FATAL: loop_variable_type must be set." if not loop_variable_type}}
-if isinstance(func, katana.numba_support.closure.UninstantiatedClosure):
+if isinstance(func, katana.native_interfacing.closure.UninstantiatedClosure):
     {% if loop_type == "do_all" %}
     func = func.instantiate(from_dtype(dtype))
     {% else %}
@@ -321,7 +320,7 @@ if isinstance(func, numba.core.ccallback.CFunc):
         raise TypeError("Function has incorrect signature")
     cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.address)
     userdata = NULL
-elif isinstance(func, katana.numba_support.closure.Closure):
+elif isinstance(func, katana.native_interfacing.closure.Closure):
     if not katana.loop_operators.is_{{loop_type}}_operator_closure(func):
         raise TypeError("Function has incorrect signature")
     cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.__function_address__)

@@ -11,12 +11,12 @@ ApplyTransform(
     katana::PropertyGraph::MutablePropertyView view,
     katana::ColumnTransformer* transform) {
   int cur_field = 0;
-  int num_fields = view.schema()->num_fields();
+  int num_fields = view.loaded_schema()->num_fields();
   std::vector<std::shared_ptr<arrow::Field>> new_fields;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
 
   while (cur_field < num_fields) {
-    auto field = view.schema()->field(cur_field);
+    auto field = view.loaded_schema()->field(cur_field);
     if (!transform->Matches(field.get())) {
       ++cur_field;
       continue;
@@ -33,7 +33,7 @@ ApplyTransform(
 
     // Reread num_fields from view.schema rather than caching schema() value
     // because RemoveProperty may have updated view itself.
-    num_fields = view.schema()->num_fields();
+    num_fields = view.loaded_schema()->num_fields();
 
     auto [new_field, new_column] = (*transform)(field.get(), property.get());
 

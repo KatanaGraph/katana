@@ -1,0 +1,45 @@
+package:
+  name: metagraph-katana
+  version: "{{ KATANA_VERSION }}"
+
+source:
+  path: ../
+
+build:
+  number: 0
+  script_env:
+    - KATANA_VERSION
+  noarch: python
+  script: {{ PYTHON }} -m pip install . --no-deps -vv
+
+
+requirements:
+  build:
+    - katana-python=={{ KATANA_VERSION }}
+  host:
+    - pip
+    - python
+  run:
+    - metagraph
+    - katana-python=={{ KATANA_VERSION }}
+
+test:
+  requires:
+    - pytest
+  source_files:
+    - tests
+  commands:
+    # - pytest -s -v tests
+    - pytest -s -vv --runslow tests
+
+about:
+  home: https://katanagraph.com/
+  license: BSD
+  license_file: LICENSE.txt
+  summary: Katana Graph plugin for metagraph
+
+extra:
+  repository: https://github.com/KatanaGraph/katana
+  recipe-maintainers:
+    - katanagraph
+    - amp

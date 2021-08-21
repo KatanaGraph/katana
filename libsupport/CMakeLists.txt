@@ -3,6 +3,11 @@ add_library(Katana::support ALIAS katana_support)
 set_target_properties(katana_support PROPERTIES EXPORT_NAME support)
 add_dependencies(lib katana_support)
 
+if(KATANA_USE_SANITIZER)
+  # Ensure that katana_disable_dlclose is available everywhere in the build, but don't link it to anything
+  add_dependencies(katana_support katana_disable_dlclose)
+endif()
+
 configure_file(include/katana/config.h.in include/katana/config.h)
 
 set(sources
@@ -15,12 +20,15 @@ set(sources
         src/HostAllocator.cpp
         src/HTTP.cpp
         src/JSON.cpp
+        src/JSONTracer.cpp
         src/Logging.cpp
         src/Random.cpp
         src/Result.cpp
         src/Plugin.cpp
+        src/ProgressTracer.cpp
         src/Signals.cpp
         src/Strings.cpp
+        src/TextTracer.cpp
         src/URI.cpp
 )
 

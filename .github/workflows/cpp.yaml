@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
+        run: echo "will build"
 
   do_cpp_test:
     needs:
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
+        run: echo "will build"
 
   ###################################################################
   # lint
@@ -105,7 +105,7 @@ jobs:
       matrix:
         os:
         - ubuntu-18.04
-        - macOS-latest
+        # - macOS-latest
         build_type:
         - Debug
         - Release

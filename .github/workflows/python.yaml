@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
+        run: echo "will build"
 
   do_python_package:
     needs:
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
+        run: echo "will build"
 
   do_python_test:
     needs:
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Info
-        run: echo "${{ github.event.pull_request.body }}"
+        run: echo "will build"
 
   build_and_test_conda_package:
     needs: do_python_package
@@ -126,6 +126,16 @@ jobs:
       run: |
         . .github/workflows/activate_miniconda.sh
         scripts/conda_build.sh --output-folder $HOME/build/
+
+    - name: Build conda Packages for Katana Metagraph Plugin
+      run: |
+        . .github/workflows/activate_miniconda.sh
+        REPO_ROOT="$(cd "$(dirname scripts/conda_build.sh)/.."; pwd)"
+        set -euo pipefail
+        export KATANA_VERSION=$("$REPO_ROOT"/scripts/version show --pep440)
+        echo $KATANA_VERSION
+        cd metagraph-plugin/conda_recipe
+        conda mambabuild . -c conda-forge -c metagraph -c file://$HOME/build/ --output-folder $HOME/build/
 
     - name: Clean ccache
       run: |
@@ -403,10 +413,10 @@ jobs:
         run: |
           . .github/workflows/activate_miniconda.sh
           $HOME/build/python_env.sh python -c "import katana; katana.for_each;"
-          $HOME/build/python_env.sh python -c "import katana.analytics; katana.analytics.sssp;"
+          $HOME/build/python_env.sh python -c "import katana.local.analytics; katana.local.analytics.sssp;"
           . $HOME/build/python_env.sh
           python -c "import katana; katana.for_each;"
-          python -c "import katana.analytics; katana.analytics.sssp;"
+          python -c "import katana.local.analytics; katana.local.analytics.sssp;"
 
       - name: Install
         run: |

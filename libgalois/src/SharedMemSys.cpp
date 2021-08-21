@@ -24,6 +24,7 @@
 #include "katana/Plugin.h"
 #include "katana/SharedMem.h"
 #include "katana/Statistics.h"
+#include "katana/TextTracer.h"
 #include "tsuba/FileStorage.h"
 #include "tsuba/tsuba.h"
 
@@ -38,11 +39,13 @@ struct katana::SharedMemSys::Impl {
   katana::StatManager stat_manager;
 };
 
-katana::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
+katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
+    : impl_(std::make_unique<Impl>()) {
   LoadPlugins();
   if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
     KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
+  katana::ProgressTracer::Set(std::move(tracer));
 
   katana::internal::setSysStatManager(&impl_->stat_manager);
 }
@@ -54,6 +57,7 @@ katana::SharedMemSys::~SharedMemSys() {
   if (auto fini_good = tsuba::Fini(); !fini_good) {
     KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
   }
+  katana::GetTracer().Finish();
   // This will finalize plugins irreversibly, reinitialization may not work.
   FinalizePlugins();
 }

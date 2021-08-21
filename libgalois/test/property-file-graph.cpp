@@ -25,6 +25,186 @@ MakeProps(const std::string& name, size_t size) {
 }
 
 void
+TestTypesFromPropertiesCompareTypesFromStorage() {
+  /*
+  Scenario 1:
+  1. create a graph in memory with a couple of bool and uint8 properties
+  2. Construct types from properties
+  3. Commit to storage
+  4. Load the graph and compare the type info from step 2 above
+  */
+  constexpr size_t test_length = 10;
+  using PropertyType = uint8_t;
+  using ThrowAwayType = int64_t;
+
+  RandomPolicy policy{1};
+  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy);
+
+  std::shared_ptr<arrow::Table> node_throw_away =
+      MakeProps<ThrowAwayType>("node-throw-away", test_length);
+
+  auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
+  KATANA_LOG_ASSERT(add_throw_away_node_result);
+
+  std::shared_ptr<arrow::Table> edge_throw_away =
+      MakeProps<ThrowAwayType>("edge-throw-away", test_length);
+
+  auto add_throw_away_edge_result = g->AddNodeProperties(edge_throw_away);
+  KATANA_LOG_ASSERT(add_throw_away_edge_result);
+
+  std::shared_ptr<arrow::Table> node_props =
+      MakeProps<PropertyType>("node-name", test_length);
+
+  auto add_node_result = g->AddNodeProperties(node_props);
+  KATANA_LOG_ASSERT(add_node_result);
+
+  std::shared_ptr<arrow::Table> edge_props =
+      MakeProps<PropertyType>("edge-name", test_length);
+
+  auto add_edge_result = g->AddEdgeProperties(edge_props);
+  KATANA_LOG_ASSERT(add_edge_result);
+
+  /// Construct types from IDs.
+  auto type_construction_result = g->ConstructEntityTypeIDs();
+  KATANA_LOG_ASSERT(type_construction_result);
+
+  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  KATANA_LOG_ASSERT(uri_res);
+  std::string rdg_dir(uri_res.value().path());  // path() because local
+
+  KATANA_LOG_VASSERT(
+      g->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g->GetNumNodeEntityTypes());
+  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() != 0);
+
+  auto write_result = g->Write(rdg_dir, command_line);
+
+  KATANA_LOG_WARN("creating temp file {}", rdg_dir);
+
+  if (!write_result) {
+    fs::remove_all(rdg_dir);
+    KATANA_LOG_FATAL("writing result: {}", write_result.error());
+  }
+
+  katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
+      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+  fs::remove_all(rdg_dir);
+  if (!make_result) {
+    KATANA_LOG_FATAL("making result: {}", make_result.error());
+  }
+
+  auto g2 = std::move(make_result.value());
+
+  KATANA_LOG_VASSERT(
+      g2->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g2->GetNumNodeEntityTypes());
+  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() != 0);
+
+  KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g2->node_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g2->edge_entity_type_ids_size()) == test_length);
+
+  KATANA_LOG_ASSERT(g->Equals(g2.get()));
+}
+
+void
+TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
+  /*
+  Scenario 2:
+  1. create a graph in memory with a couple of bool and uint8 properties
+  2. Construct composite types from properties
+  3. Commit to storage
+  4. Load the graph and compare the type info from step 2 above
+  */
+  constexpr size_t test_length = 10;
+  using PropertyType = uint8_t;
+  using ThrowAwayType = int64_t;
+
+  RandomPolicy policy{1};
+  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy);
+
+  std::shared_ptr<arrow::Table> node_throw_away =
+      MakeProps<ThrowAwayType>("node-throw-away", test_length);
+
+  auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
+  KATANA_LOG_ASSERT(add_throw_away_node_result);
+
+  std::shared_ptr<arrow::Table> edge_throw_away =
+      MakeProps<ThrowAwayType>("edge-throw-away", test_length);
+
+  auto add_throw_away_edge_result = g->AddNodeProperties(edge_throw_away);
+  KATANA_LOG_ASSERT(add_throw_away_edge_result);
+
+  std::shared_ptr<arrow::Table> node_props_one =
+      MakeProps<PropertyType>("node-name-1", test_length);
+
+  auto add_node_one_result = g->AddNodeProperties(node_props_one);
+  KATANA_LOG_ASSERT(add_node_one_result);
+
+  std::shared_ptr<arrow::Table> edge_props_one =
+      MakeProps<PropertyType>("edge-name-1", test_length);
+
+  auto add_edge_one_result = g->AddEdgeProperties(edge_props_one);
+  KATANA_LOG_ASSERT(add_edge_one_result);
+
+  std::shared_ptr<arrow::Table> node_props_two =
+      MakeProps<PropertyType>("node-name-2", test_length);
+
+  auto add_node_two_result = g->AddNodeProperties(node_props_two);
+  KATANA_LOG_ASSERT(add_node_two_result);
+
+  std::shared_ptr<arrow::Table> edge_props_two =
+      MakeProps<PropertyType>("edge-name-2", test_length);
+
+  auto add_edge_two_result = g->AddEdgeProperties(edge_props_two);
+  KATANA_LOG_ASSERT(add_edge_two_result);
+
+  /// Construct types from IDs.
+  auto type_construction_result = g->ConstructEntityTypeIDs();
+  KATANA_LOG_ASSERT(type_construction_result);
+
+  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  KATANA_LOG_ASSERT(uri_res);
+  std::string rdg_dir(uri_res.value().path());  // path() because local
+
+  KATANA_LOG_VASSERT(
+      g->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g->GetNumNodeEntityTypes());
+  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() != 0);
+
+  auto write_result = g->Write(rdg_dir, command_line);
+
+  KATANA_LOG_WARN("creating temp file {}", rdg_dir);
+
+  if (!write_result) {
+    fs::remove_all(rdg_dir);
+    KATANA_LOG_FATAL("writing result: {}", write_result.error());
+  }
+
+  katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
+      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+  fs::remove_all(rdg_dir);
+  if (!make_result) {
+    KATANA_LOG_FATAL("making result: {}", make_result.error());
+  }
+
+  auto g2 = std::move(make_result.value());
+
+  KATANA_LOG_VASSERT(
+      g2->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g2->GetNumNodeEntityTypes());
+  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() != 0);
+
+  KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g2->node_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g2->edge_entity_type_ids_size()) == test_length);
+
+  KATANA_LOG_ASSERT(g->Equals(g2.get()));
+}
+
+void
 TestRoundTrip() {
   constexpr size_t test_length = 10;
   using ValueType = int32_t;
@@ -86,17 +266,19 @@ TestRoundTrip() {
 
   std::unique_ptr<katana::PropertyGraph> g2 = std::move(make_result.value());
 
-  KATANA_LOG_ASSERT(g2->GetNumNodeProperties() == 1);
+  KATANA_LOG_VASSERT(
+      g2->GetNumNodeProperties() == 1, "found {} properties",
+      g2->GetNumNodeProperties());
   KATANA_LOG_ASSERT(g2->GetNumEdgeProperties() == 1);
 
-  KATANA_LOG_ASSERT(g2->edge_schema()->field(0)->name() == "edge-name");
-  KATANA_LOG_ASSERT(g2->node_schema()->field(0)->name() == "node-name");
+  KATANA_LOG_ASSERT(g2->loaded_edge_schema()->field(0)->name() == "edge-name");
+  KATANA_LOG_ASSERT(g2->loaded_node_schema()->field(0)->name() == "node-name");
 
   // the throwaway type was int64; make sure we didn't alias
   KATANA_LOG_ASSERT(
-      g2->edge_schema()->field(0)->type()->Equals(arrow::int32()));
+      g2->loaded_edge_schema()->field(0)->type()->Equals(arrow::int32()));
   KATANA_LOG_ASSERT(
-      g2->node_schema()->field(0)->type()->Equals(arrow::int32()));
+      g2->loaded_node_schema()->field(0)->type()->Equals(arrow::int32()));
 
   std::shared_ptr<arrow::ChunkedArray> node_property = g2->GetNodeProperty(0);
   std::shared_ptr<arrow::ChunkedArray> edge_property = g2->GetEdgeProperty(0);
@@ -243,6 +425,8 @@ main(int argc, char** argv) {
   TestGarbageMetadata();
   TestSimplePGs();
   TestTopologyAccess();
+  TestTypesFromPropertiesCompareTypesFromStorage();
+  TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage();
 
   return 0;
 }

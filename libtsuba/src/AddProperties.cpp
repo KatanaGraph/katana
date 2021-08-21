@@ -85,30 +85,22 @@ tsuba::AddProperties(
           ErrorCode::Exists, "property {} must be absent to be added",
           std::quoted(prop->name()));
     }
-    const std::string& name = prop->name();
     const katana::Uri& path = uri.Join(prop->path());
-
-    prop->WasLoaded();
 
     std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
         std::async(
             std::launch::async,
-            [name,
+            [prop,
              path]() -> katana::CopyableResult<std::shared_ptr<arrow::Table>> {
-              auto load_result = LoadProperties(name, path);
-              if (!load_result) {
-                return load_result.error().WithContext(
-                    "error loading {}", path);
-              }
-              return load_result.value();
+              return KATANA_CHECKED_CONTEXT(
+                  LoadProperties(prop->name(), path), "error loading {}", path);
             });
     auto on_complete = [add_fn,
-                        name](const std::shared_ptr<arrow::Table>& props)
+                        prop](const std::shared_ptr<arrow::Table>& props)
         -> katana::CopyableResult<void> {
-      auto add_result = add_fn(props);
-      if (!add_result) {
-        return add_result.error().WithContext("adding {}", std::quoted(name));
-      }
+      KATANA_CHECKED_CONTEXT(
+          add_fn(props), "adding {}", std::quoted(prop->name()));
+      prop->WasLoaded(props->field(0)->type());
       return katana::CopyableResultSuccess();
     };
     if (grp) {
@@ -144,21 +136,15 @@ tsuba::AddPropertySlice(
           ErrorCode::Exists, "property {} must be absent to be added",
           std::quoted(prop->name()));
     }
-    const std::string& name = prop->name();
     const katana::Uri& path = dir.Join(prop->path());
-
-    prop->WasLoaded();
-
-    // since this property is going to be sliced it has no on disk form, so
-    // immediately mark it dirty
-    prop->WasModified();
 
     std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
         std::async(
             std::launch::async,
-            [name, path, begin,
+            [path, prop, begin,
              size]() -> katana::CopyableResult<std::shared_ptr<arrow::Table>> {
-              auto load_result = LoadPropertySlice(name, path, begin, size);
+              auto load_result =
+                  LoadPropertySlice(prop->name(), path, begin, size);
               if (!load_result) {
                 return load_result.error().WithContext(
                     "error loading {}", path);
@@ -166,12 +152,19 @@ tsuba::AddPropertySlice(
               return load_result.value();
             });
     auto on_complete = [add_fn,
-                        name](const std::shared_ptr<arrow::Table>& props)
+                        prop](const std::shared_ptr<arrow::Table>& props)
         -> katana::CopyableResult<void> {
       auto add_result = add_fn(props);
       if (!add_result) {
-        return add_result.error().WithContext("adding {}", std::quoted(name));
+        return add_result.error().WithContext(
+            "adding {}", std::quoted(prop->name()));
       }
+      prop->WasLoaded(props->field(0)->type());
+
+      // since this property is going to be sliced it has no on disk form, so
+      // immediately mark it dirty
+      prop->WasModified(props->field(0)->type());
+
       return katana::CopyableResultSuccess();
     };
     if (grp) {

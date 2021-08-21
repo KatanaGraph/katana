@@ -88,9 +88,6 @@ public:
     return Store(handle, command_line, IncrementVersion, nullptr);
   }
 
-  /// @brief Get the current version from the RDGFile
-  katana::RDGVersion GetFileVersion(RDGHandle handle);
-
   /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
   /// @param handle :: handle indicating where to store RDG
   /// @param command_line :: added to metadata to track lineage of RDG
@@ -247,7 +244,7 @@ private:
   katana::Result<void> DoMake(
       const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
       const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
-      const RDGManifest& manifest);
+      const katana::Uri& metadata_dir);
 
   static katana::Result<RDG> Make(
       const RDGManifest& manifest, const RDGLoadOptions& opts);

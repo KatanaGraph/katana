@@ -7,8 +7,6 @@
 
 #include "katana/JSON.h"
 #include "katana/Logging.h"
-#include "katana/RDGVersion.h"
-#include "katana/Random.h"
 #include "katana/URI.h"
 #include "katana/config.h"
 #include "tsuba/RDGLineage.h"
@@ -27,10 +25,8 @@ class KATANA_EXPORT RDGManifest {
   //
   // Persisted
   //
-
-  katana::RDGVersion version_{katana::RDGVersion(0)};
-  katana::RDGVersion previous_version_{katana::RDGVersion(0)};
-
+  uint64_t version_{0};
+  uint64_t previous_version_{0};
   uint32_t num_hosts_{0};  // 0 is a reserved value for the empty RDG when
   // tsuba views policy_id as zero (not partitioned) or not zero (partitioned
   // according to a CuSP-specific policy)
@@ -51,9 +47,8 @@ class KATANA_EXPORT RDGManifest {
   }
 
   RDGManifest(
-      katana::RDGVersion version, katana::RDGVersion previous_version,
-      uint32_t num_hosts, uint32_t policy_id, bool transpose, katana::Uri dir,
-      RDGLineage lineage)
+      uint64_t version, uint64_t previous_version, uint32_t num_hosts,
+      uint32_t policy_id, bool transpose, katana::Uri dir, RDGLineage lineage)
       : dir_(std::move(dir)),
         version_(version),
         previous_version_(previous_version),
@@ -65,8 +60,7 @@ class KATANA_EXPORT RDGManifest {
   static katana::Result<RDGManifest> MakeFromStorage(const katana::Uri& uri);
 
   static std::string PartitionFileName(
-      const std::string& view_type, uint32_t node_id,
-      katana::RDGVersion version);
+      const std::string& view_type, uint32_t node_id, uint64_t version);
 
   std::string view_specifier() const {
     if (view_args_.size())
@@ -80,20 +74,15 @@ public:
   RDGManifest NextVersion(
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
-    katana::RDGVersion next_version(version_.numbers_, version_.branches_);
-    next_version.IncrementLeaf();
-    // progress the version numbers
     return RDGManifest(
-        next_version, version_, num_hosts, policy_id, transpose, dir_, lineage);
+        version_ + 1, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }
 
   RDGManifest SameVersion(
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
-    // retain both current and previous versions
     return RDGManifest(
-        version_, previous_version_, num_hosts, policy_id, transpose, dir_,
-        lineage);
+        version_, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }
 
   bool IsEmptyRDG() const { return num_hosts() == 0; }
@@ -112,20 +101,16 @@ public:
   /// \param version is the version of the RDG to load
   /// \returns the constructed RDGManifest and the directory of its contents
   static katana::Result<RDGManifest> Make(
-      const katana::Uri& uri, const std::string& view_type,
-      katana::RDGVersion version);
+      const katana::Uri& uri, const std::string& view_type, uint64_t version);
 
   const katana::Uri& dir() const { return dir_; }
-  katana::RDGVersion version() const { return version_; }
+  uint64_t version() const { return version_; }
   uint32_t num_hosts() const { return num_hosts_; }
   uint32_t policy_id() const { return policy_id_; }
-  katana::RDGVersion previous_version() const { return previous_version_; }
+  uint64_t previous_version() const { return previous_version_; }
   const std::string& viewtype() const { return view_type_; }
   void set_viewtype(std::string v) { view_type_ = v; }
   void set_viewargs(std::vector<std::string> v) { view_args_ = v; }
-  void set_version(katana::RDGVersion val) { version_ = val; }
-  void set_previous_version(katana::RDGVersion val) { previous_version_ = val; }
-  void increment_version() { version_.IncrementLeaf(); }
   const std::string& view_type() const { return view_type_; }
   bool transpose() const { return transpose_; }
 
@@ -137,18 +122,16 @@ public:
 
   // Canonical naming
   static katana::Uri FileName(
-      const katana::Uri& uri, const std::string& view_type,
-      katana::RDGVersion version);
+      const katana::Uri& uri, const std::string& view_type, uint64_t version);
 
   static katana::Uri PartitionFileName(
-      const katana::Uri& uri, uint32_t node_id, katana::RDGVersion version);
+      const katana::Uri& uri, uint32_t node_id, uint64_t version);
 
   static katana::Uri PartitionFileName(
       const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
-      katana::RDGVersion version);
+      uint64_t version);
 
-  static katana::Result<katana::RDGVersion> ParseVersionFromName(
-      const std::string& file);
+  static katana::Result<uint64_t> ParseVersionFromName(const std::string& file);
   static katana::Result<std::string> ParseViewNameFromName(
       const std::string& file);
   static katana::Result<std::vector<std::string>> ParseViewArgsFromName(

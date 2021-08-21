@@ -1,10 +1,8 @@
 import os
-import re
 import shutil
 import tarfile
 import urllib.request
 from pathlib import Path
-from typing import List, Optional
 
 __all__ = ["get_input"]
 
@@ -64,40 +62,3 @@ def get_input_as_url(rel_path) -> str:
     """
     path = get_input(rel_path).resolve()
     return f"file://{path}"
-
-def parse_version(source) -> dict:
-    s = re.split(r'_', source[4:])
-    version = {}
-    version["Numbers"]=[]
-    version["Branches"]=[]
-    if len(s) == 0 :
-        version["Numbers"]=[0]
-        version["Branches"]=["."]
-        return version
-    i = 0
-    while i<len(s) :
-        version["Numbers"].append(int(s[i]))
-        i += 1
-        if i<len(s):
-            version["Branches"].append(s[i])
-            i += 1
-        else:
-            version["Branches"].append(".")
-    return version
-
-def get_rdgs(graph_dir, version: Optional[dict] = None):
-    s = re.compile(r"katana_(?P<version>(?:vers.*))_(?P<view_type>(?:rdg.*)).manifest$")
-    precursors = [s.match(f).groupdict() for f in os.listdir(graph_dir) if s.match(f)]
-    rdgs = []
-    for precursor in precursors:
-        rdg = {}
-        rdg["version"] = parse_version(precursor["version"])
-        rdg["view_type"] = precursor["view_type"]
-        rdgs.append(rdg)
-    if version is None:
-        return rdgs
-    else:
-        for rdg in rdgs:
-            if rdg["version"] == version:
-                rdgs.remove(rdg)
-    return rdgs

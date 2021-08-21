@@ -18,12 +18,14 @@ using json = nlohmann::json;
 
 namespace {
 
-Result<katana::RDGVersion>
-ParseVersion(const std::string& str) {
-  // The length of "vers" is 4.
-  std::string prefix = "vers";
-  std::string version = str.substr(prefix.size());
-  return katana::RDGVersion(version);
+Result<uint64_t>
+Parse(const std::string& str) {
+  uint64_t val = strtoul(str.c_str(), nullptr, 10);
+  if (errno == ERANGE) {
+    return KATANA_ERROR(
+        katana::ResultErrno(), "manifest file found with out of range version");
+  }
+  return val;
 }
 
 const int MANIFEST_MATCH_VERS_INDEX = 1;
@@ -35,13 +37,8 @@ namespace {
 const int NODE_ZERO_PADDING_LENGTH = 5;
 const int VERS_ZERO_PADDING_LENGTH = 20;
 std::string
-ToVersionString(katana::RDGVersion version) {
-  std::string str = version.ToString();
-  std::string leading_zeros =
-      fmt::format("{0:0{1}d}", 0, (VERS_ZERO_PADDING_LENGTH - str.size()));
-  KATANA_LOG_DEBUG_ASSERT(
-      leading_zeros.size() + str.size() == VERS_ZERO_PADDING_LENGTH);
-  return fmt::format("vers{}{}", leading_zeros, str);
+ToVersionString(uint64_t version) {
+  return fmt::format("vers{0:0{1}d}", version, VERS_ZERO_PADDING_LENGTH);
 }
 std::string
 ToNodeString(uint32_t node_id) {
@@ -51,7 +48,7 @@ ToNodeString(uint32_t node_id) {
 namespace tsuba {
 
 const std::regex RDGManifest::kManifestVersion(
-    "katana_(?:(vers[0-9A-Za-z_]+))_(?:(rdg[0-9A-Za-z-]*))\\.manifest$");
+    "katana_vers(?:([0-9]+))_(?:([0-9A-Za-z-]+))\\.manifest$");
 
 Result<tsuba::RDGManifest>
 RDGManifest::MakeFromStorage(const katana::Uri& uri) {
@@ -68,14 +65,9 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
     return manifest_res.error().WithContext("cannot parse {}", uri.string());
   }
 
-  KATANA_LOG_DEBUG(
-      "parsed URI {} dir {} base {}", uri.string(), uri.DirName(),
-      uri.BaseName());
-
   auto manifest_name = uri.BaseName();
   auto view_name = ParseViewNameFromName(manifest_name);
   auto view_args = ParseViewArgsFromName(manifest_name);
-  auto version_num = ParseVersionFromName(manifest_name);
 
   if (view_name) {
     manifest.set_viewtype(view_name.value());
@@ -86,18 +78,12 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   } else {
     manifest.set_viewargs(std::vector<std::string>());
   }
-
-  if (version_num) {
-    manifest.set_version(std::move(katana::RDGVersion(version_num.value())));
-  }
-
   return manifest;
 }
 
 Result<RDGManifest>
 RDGManifest::Make(
-    const katana::Uri& uri, const std::string& view_type,
-    katana::RDGVersion version) {
+    const katana::Uri& uri, const std::string& view_type, uint64_t version) {
   return MakeFromStorage(FileName(uri, view_type, version));
 }
 
@@ -114,10 +100,8 @@ RDGManifest::Make(const katana::Uri& uri) {
 
 std::string
 RDGManifest::PartitionFileName(
-    const std::string& view_type, uint32_t node_id,
-    katana::RDGVersion version) {
+    const std::string& view_type, uint32_t node_id, uint64_t version) {
   KATANA_LOG_ASSERT(!view_type.empty());
-  // TODO(wkyu): provide an alternative of variable length
   return fmt::format(
       "part_{}_{}_{}", ToVersionString(version), view_type,
       ToNodeString(node_id));
@@ -125,7 +109,7 @@ RDGManifest::PartitionFileName(
 
 katana::Uri
 RDGManifest::PartitionFileName(
-    const katana::Uri& uri, uint32_t node_id, katana::RDGVersion version) {
+    const katana::Uri& uri, uint32_t node_id, uint64_t version) {
   return uri.Join(
       PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
 }
@@ -133,7 +117,7 @@ RDGManifest::PartitionFileName(
 katana::Uri
 RDGManifest::PartitionFileName(
     const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
-    katana::RDGVersion version) {
+    uint64_t version) {
   KATANA_LOG_DEBUG_ASSERT(!IsManifestUri(uri));
   return uri.Join(PartitionFileName(view_type, node_id, version));
 }
@@ -154,15 +138,9 @@ RDGManifest::ToJsonString() const {
 // e.g., rdg_dir == s3://witchel-tests-east2/fault/simple/
 katana::Uri
 RDGManifest::FileName(
-    const katana::Uri& uri, const std::string& view_name,
-    katana::RDGVersion version) {
+    const katana::Uri& uri, const std::string& view_name, uint64_t version) {
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
-  KATANA_LOG_DEBUG(
-      "uri {} version {} manifest basename {}; ", uri.string(),
-      version.ToString(),
-      fmt::format(
-          "katana_{}_{}.manifest", ToVersionString(version), view_name));
   return uri.Join(fmt::format(
       "katana_{}_{}.manifest", ToVersionString(version), view_name));
 }
@@ -174,14 +152,14 @@ RDGManifest::IsManifestUri(const katana::Uri& uri) {
   return res;
 }
 
-Result<katana::RDGVersion>
+Result<uint64_t>
 RDGManifest::ParseVersionFromName(const std::string& file) {
   std::smatch sub_match;
   if (!std::regex_match(file, sub_match, kManifestVersion)) {
     return tsuba::ErrorCode::InvalidArgument;
   }
   //Manifest file
-  return ParseVersion(sub_match[MANIFEST_MATCH_VERS_INDEX]);
+  return Parse(sub_match[MANIFEST_MATCH_VERS_INDEX]);
 }
 
 Result<std::string>
@@ -248,7 +226,7 @@ RDGManifest::FileNames() {
     if (!header_res) {
       KATANA_LOG_DEBUG(
           "problem uri: {} host: {} ver: {} view_name: {}  : {}", header_uri, i,
-          version().LeafNumber(), view_specifier(), header_res.error());
+          version(), view_specifier(), header_res.error());
     } else {
       auto header = std::move(header_res.value());
       for (const auto& node_prop : header.node_prop_info_list()) {
@@ -270,27 +248,11 @@ RDGManifest::FileNames() {
 }  // namespace tsuba
 
 void
-katana::to_json(json& j, const katana::RDGVersion& version) {
-  j = json{
-      {"numbers", version.numbers_},
-      {"branches", version.branches_},
-  };
-}
-
-void
-katana::from_json(const json& j, katana::RDGVersion& version) {
-  j.at("numbers").get_to(version.numbers_);
-  j.at("branches").get_to(version.branches_);
-}
-
-void
 tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
-  katana::RDGVersion ver = manifest.version_;
-  katana::RDGVersion prev = manifest.previous_version_;
   j = json{
       {"magic", kRDGMagicNo},
-      {"version_vec", manifest.version_},
-      {"previous_version_vec", manifest.previous_version_},
+      {"version", manifest.version_},
+      {"previous_version", manifest.previous_version_},
       {"num_hosts", manifest.num_hosts_},
       {"policy_id", manifest.policy_id_},
       {"transpose", manifest.transpose_},
@@ -302,20 +264,13 @@ void
 tsuba::from_json(const json& j, tsuba::RDGManifest& manifest) {
   uint32_t magic;
   j.at("magic").get_to(magic);
+  j.at("version").get_to(manifest.version_);
   j.at("num_hosts").get_to(manifest.num_hosts_);
-  if (auto it = j.find("version"); it != j.end()) {
-    it->get_to(manifest.version_.numbers_.back());
-  } else {
-    j.at("version_vec").get_to(manifest.version_);
-  }
 
   // these values are temporarily optional
   if (auto it = j.find("previous_version"); it != j.end()) {
-    it->get_to(manifest.previous_version_.numbers_.back());
-  } else if (auto it = j.find("previous_version_vec"); it != j.end()) {
-    j.at("previous_version_vec").get_to(manifest.previous_version_);
+    it->get_to(manifest.previous_version_);
   }
-
   if (auto it = j.find("policy_id"); it != j.end()) {
     it->get_to(manifest.policy_id_);
   }

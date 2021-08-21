@@ -14,7 +14,6 @@
 
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
-#include "katana/RDGVersion.h"
 #include "katana/config.h"
 
 namespace katana {

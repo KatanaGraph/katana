@@ -75,7 +75,7 @@ std::string
 AddRandComponent(const std::string& str) {
   std::string name(str);
   name += "-";
-  name += katana::RandomAlphanumericString(katana::kRandomIDLength);
+  name += katana::RandomAlphanumericString(12);
   return name;
 }
 

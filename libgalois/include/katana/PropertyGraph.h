@@ -203,14 +203,6 @@ private:
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
 
-  // branch_: the branch to write run-time PropertyGraph
-  // by default it is the trunk inside graph_dir.
-  katana::RDGVersion branch_{katana::RDGVersion(0)};
-
-  // loaded_version_: version loaded for current PropertyGraph
-  // since file_ is reserved for writing
-  katana::RDGVersion loaded_version_{katana::RDGVersion(0)};
-
   /// A map from the node TypeSetID to
   /// the set of the node type names it contains
   TypeSetIDToSetOfTypeNamesMap node_type_set_id_to_type_names_;
@@ -382,11 +374,6 @@ public:
   static Result<std::unique_ptr<PropertyGraph>> Make(
       std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
-  /// Make a property graph from an RDG name with Version.
-  static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name, katana::RDGVersion version,
-      const tsuba::RDGLoadOptions& opts);
-
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
       const std::string& rdg_name,
@@ -457,14 +444,6 @@ public:
   void set_local_to_global_id(std::shared_ptr<arrow::ChunkedArray>&& a) {
     rdg_.set_local_to_global_id(std::move(a));
   }
-
-  /// Create a new branch for a graph and write everything into it.
-  ///
-  /// \returns io_error if, for instance, a file already exists
-  /// branch: the id of the branch
-  Result<void> CreateBranch(
-      const std::string& rdg_name, const std::string& command_line,
-      const std::string& branch);
 
   /// Create a new storage location for a graph and write everything into it.
   ///
@@ -670,30 +649,6 @@ public:
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }
-
-  // Get the RDGFile version
-  katana::RDGVersion RDGFileVersion() {
-    if (file_ == nullptr) {
-      return katana::RDGVersion(0);
-    } else {
-      return rdg_.GetFileVersion(*file_);
-    }
-  }
-
-  // Set or Get the targeted branch in graph_dir for writing PropertyGraph
-  // If a positive num is provided, new graph should retain the version number
-  void SetBranch(const katana::RDGVersion& val, uint64_t num = 0) {
-    branch_ = val;
-    branch_.SetLeafNumber(num);
-  }
-  katana::RDGVersion& GetBranch() { return branch_; }
-
-  // Set or Get the version of loaded PropertyGraph
-  void SetLoadedVersion(const katana::RDGVersion& val) {
-    loaded_version_ = val;
-  }
-  const katana::RDGVersion& GetLoadedVersion() const { return loaded_version_; }
-  katana::RDGVersion& GetLoadedVersion() { return loaded_version_; }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);

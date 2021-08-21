@@ -36,6 +36,7 @@ def gen_pg_cleaned_8_12_from_csr(is_directed):
     '''
     A helper function for the test, generating Katana's PropertyGraph from an edge list
     '''
+    katana.local.initialize()
     elist_raw = [(0,1,4), (0,3,2), (0,4,7), (1,3,3), (1,4,5), (2,4,5), (2,5,2), (2,6,8), (3,4,1), (4,7,4), (5,6,4), (5,7,6)]
     src_list = [each[0] for each in elist_raw]
     dest_list = [each[1] for each in elist_raw]

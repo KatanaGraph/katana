@@ -118,6 +118,9 @@ public:
         node_entity_type_manager, edge_entity_type_manager);
   }
 
+  /// @brief Get the current version from the RDGFile
+  katana::RDGVersion GetFileVersion(RDGHandle handle);
+
   /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
   /// @param handle :: handle indicating where to store RDG
   /// @param command_line :: added to metadata to track lineage of RDG

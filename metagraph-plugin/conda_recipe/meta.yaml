@@ -29,7 +29,6 @@ test:
   source_files:
     - tests
   commands:
-    # - pytest -s -v tests
     - pytest -s -vv --runslow tests
 
 about:

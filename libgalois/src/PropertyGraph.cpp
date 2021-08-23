@@ -827,6 +827,26 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   return std::string(buf.begin(), buf.end());
 }
 
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::PropertyGraph::GetNodeProperty(const std::string& name) const {
+  auto ret = node_properties()->GetColumnByName(name);
+  if (ret) {
+    return MakeResult(std::move(ret));
+  }
+  return KATANA_ERROR(
+      ErrorCode::PropertyNotFound, "node property does not exist: {}", name);
+}
+
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::PropertyGraph::GetEdgeProperty(const std::string& name) const {
+  auto ret = edge_properties()->GetColumnByName(name);
+  if (ret) {
+    return MakeResult(std::move(ret));
+  }
+  return KATANA_ERROR(
+      ErrorCode::PropertyNotFound, "edge property does not exist: {}", name);
+}
+
 katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {

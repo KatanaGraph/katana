@@ -64,7 +64,7 @@ private:
       tsuba::RDGHandle handle, const std::string& command_line,
       tsuba::RDG::RDGVersioningPolicy versioning_action);
 
-  katana::Result<void> ConductWriteOp(
+  Result<void> ConductWriteOp(
       const std::string& uri, const std::string& command_line,
       tsuba::RDG::RDGVersioningPolicy versioning_action);
 
@@ -621,28 +621,14 @@ public:
   /// \param name The name of the property to get.
   /// \return The property data or NULL if the property is not found.
   Result<std::shared_ptr<arrow::ChunkedArray>> GetNodeProperty(
-      const std::string& name) const {
-    auto ret = node_properties()->GetColumnByName(name);
-    if (ret) {
-      return MakeResult(std::move(ret));
-    }
-    return KATANA_ERROR(
-        ErrorCode::PropertyNotFound, "node property does not exist: {}", name);
-  }
+      const std::string& name) const;
 
   std::string GetNodePropertyName(int32_t i) const {
     return loaded_node_schema()->field(i)->name();
   }
 
   Result<std::shared_ptr<arrow::ChunkedArray>> GetEdgeProperty(
-      const std::string& name) const {
-    auto ret = edge_properties()->GetColumnByName(name);
-    if (ret) {
-      return MakeResult(std::move(ret));
-    }
-    return KATANA_ERROR(
-        ErrorCode::PropertyNotFound, "edge property does not exist: {}", name);
-  }
+      const std::string& name) const;
 
   std::string GetEdgePropertyName(int32_t i) const {
     return loaded_edge_schema()->field(i)->name();
@@ -656,7 +642,12 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetNodePropertyTyped(const std::string& name) {
-    auto chunked_array = KATANA_CHECKED(GetNodeProperty(name));
+    // TODO(amp): Use KATANA_CHECKED once that doesn't cause CUDA builds to fail.
+    auto chunked_array_result = GetNodeProperty(name);
+    if (!chunked_array_result) {
+      return chunked_array_result.assume_error();
+    }
+    auto chunked_array = chunked_array_result.assume_value();
     KATANA_LOG_ASSERT(chunked_array);
 
     auto array =
@@ -676,7 +667,12 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetEdgePropertyTyped(const std::string& name) {
-    auto chunked_array = KATANA_CHECKED(GetEdgeProperty(name));
+    // TODO(amp): Use KATANA_CHECKED once that doesn't cause CUDA builds to fail.
+    auto chunked_array_result = GetEdgeProperty(name);
+    if (!chunked_array_result) {
+      return chunked_array_result.assume_error();
+    }
+    auto chunked_array = chunked_array_result.assume_value();
     KATANA_LOG_ASSERT(chunked_array);
 
     auto array =

@@ -15,29 +15,33 @@ tsuba::RDGSlice::DoMake(
   ReadGroup grp;
   katana::Uri topology_path =
       metadata_dir.Join(core_->part_header().topology_path());
-  katana::Uri node_types_path =
-      metadata_dir.Join(core_->part_header().node_entity_type_id_array_path());
-  katana::Uri edge_types_path =
-      metadata_dir.Join(core_->part_header().edge_entity_type_id_array_path());
-
   KATANA_CHECKED_CONTEXT(
       core_->topology_file_storage().Bind(
           topology_path.string(), slice.topo_off,
           slice.topo_off + slice.topo_size, true),
       "loading topology array");
-  KATANA_CHECKED_CONTEXT(
-      core_->node_entity_type_id_array_file_storage().Bind(
-          node_types_path.string(),
-          slice.node_range.first * sizeof(katana::EntityTypeID),
-          slice.node_range.second * sizeof(katana::EntityTypeID), true),
-      "loading node type id array");
-  KATANA_CHECKED_CONTEXT(
-      core_->edge_entity_type_id_array_file_storage().Bind(
-          edge_types_path.string(),
-          slice.edge_range.first * sizeof(katana::EntityTypeID),
-          slice.edge_range.second * sizeof(katana::EntityTypeID), true),
-      "loading edge type id array");
 
+  if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
+    katana::Uri node_types_path = metadata_dir.Join(
+        core_->part_header().node_entity_type_id_array_path());
+    katana::Uri edge_types_path = metadata_dir.Join(
+        core_->part_header().edge_entity_type_id_array_path());
+
+    KATANA_CHECKED_CONTEXT(
+        core_->node_entity_type_id_array_file_storage().Bind(
+            node_types_path.string(),
+            slice.node_range.first * sizeof(katana::EntityTypeID),
+            slice.node_range.second * sizeof(katana::EntityTypeID), true),
+        "loading node type id array; begin: {}, end: {}",
+        slice.node_range.first * sizeof(katana::EntityTypeID),
+        slice.node_range.second * sizeof(katana::EntityTypeID));
+    KATANA_CHECKED_CONTEXT(
+        core_->edge_entity_type_id_array_file_storage().Bind(
+            edge_types_path.string(),
+            slice.edge_range.first * sizeof(katana::EntityTypeID),
+            slice.edge_range.second * sizeof(katana::EntityTypeID), true),
+        "loading edge type id array");
+  }
   // all of the properties
   std::vector<PropStorageInfo*> node_properties =
       KATANA_CHECKED(core_->part_header().SelectNodeProperties(node_props));

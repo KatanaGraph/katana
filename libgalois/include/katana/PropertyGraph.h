@@ -11,11 +11,11 @@
 #include "katana/Details.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/ErrorCode.h"
-#include "katana/Result.h"
 #include "katana/GraphTopology.h"
 #include "katana/Iterators.h"
 #include "katana/NUMAArray.h"
 #include "katana/PropertyIndex.h"
+#include "katana/Result.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"
 

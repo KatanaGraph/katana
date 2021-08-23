@@ -2,12 +2,17 @@
 
 #include <bitset>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
+#include <arrow/array/array_primitive.h>
+#include <arrow/table.h>
+
 #include "katana/Logging.h"
+#include "katana/Result.h"
 
 namespace katana {
 
@@ -77,6 +82,181 @@ public:
             std::move(entity_type_id_to_atomic_entity_type_ids)),
         atomic_entity_type_id_to_entity_type_ids_(
             std::move(atomic_entity_type_id_to_entity_type_ids)) {}
+
+  template <typename ArrowType>
+  struct PropertyColumn {
+    int field_index;
+    std::shared_ptr<ArrowType> array;
+
+    PropertyColumn(int i, std::shared_ptr<ArrowType>& a)
+        : field_index(i), array(a) {}
+  };
+
+  /// This function can be used to convert "old style" graphs (storage format 1,
+  /// where types are represented by bool or uint8 properties) and "new style"
+  /// graphs (version > 2, where types are represented in our native type
+  /// represenation). This function is serial but it likely iterates over
+  /// O(nodes) and O(edges) vectors, so it is very slow. It should only be used
+  /// for updating old graphs.
+  ///
+  /// The number of entries in entity_type_ids should be equal to topo_size and
+  /// properties->num_rows().
+  template <template <typename> class Vector>
+  static Result<void> AssignEntityTypeIDsFromProperties(
+      const size_t topo_size,  // == either num_nodes() or  num_edges()
+      const std::shared_ptr<arrow::Table>& properties,
+      katana::EntityTypeManager* entity_type_manager,
+      Vector<EntityTypeID>* entity_type_ids) {
+    KATANA_LOG_ASSERT(entity_type_ids->size() == topo_size);
+    int64_t num_rows = properties->num_rows();
+    if (num_rows == 0) {
+      std::fill(
+          entity_type_ids->begin(), entity_type_ids->end(), kUnknownEntityType);
+      return ResultSuccess();
+    }
+    auto num_rows_for_comparison = static_cast<size_t>(num_rows);
+    KATANA_LOG_VASSERT(
+        entity_type_ids->size() == num_rows_for_comparison,
+        "size: {}, expected: {}, signed expected: {}", entity_type_ids->size(),
+        num_rows_for_comparison, num_rows);
+
+    // throw an error if each column/property has more than 1 chunk
+    for (int i = 0, n = properties->num_columns(); i < n; i++) {
+      std::shared_ptr<arrow::ChunkedArray> property = properties->column(i);
+      if (property->num_chunks() != 1) {
+        return KATANA_ERROR(
+            katana::ErrorCode::NotImplemented,
+            "property {} has {} chunks (1 chunk expected)",
+            properties->schema()->field(i)->name(), property->num_chunks());
+      }
+    }
+
+    // collect the list of types
+    std::vector<int> type_field_indices;
+    using BoolPropertyColumn = PropertyColumn<arrow::BooleanArray>;
+    std::vector<BoolPropertyColumn> bool_properties;
+    using UInt8PropertyColumn = PropertyColumn<arrow::UInt8Array>;
+    std::vector<UInt8PropertyColumn> uint8_properties;
+    const std::shared_ptr<arrow::Schema>& schema = properties->schema();
+    KATANA_LOG_DEBUG_ASSERT(schema->num_fields() == properties->num_columns());
+    for (int i = 0, n = schema->num_fields(); i < n; i++) {
+      const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
+
+      // a bool or uint8 property is (always) considered a type
+      // TODO(roshan) make this customizable by the user
+      if (current_field->type()->Equals(arrow::boolean())) {
+        type_field_indices.push_back(i);
+        std::shared_ptr<arrow::Array> property =
+            properties->column(i)->chunk(0);
+        auto bool_property =
+            std::static_pointer_cast<arrow::BooleanArray>(property);
+        bool_properties.emplace_back(i, bool_property);
+      } else if (current_field->type()->Equals(arrow::uint8())) {
+        type_field_indices.push_back(i);
+        std::shared_ptr<arrow::Array> property =
+            properties->column(i)->chunk(0);
+        auto uint8_property =
+            std::static_pointer_cast<arrow::UInt8Array>(property);
+        uint8_properties.emplace_back(i, uint8_property);
+      }
+    }
+
+    // assign a new ID to each type
+    // NB: cannot use unordered_map without defining a hash function for vectors;
+    // performance is not affected here because the map is very small (<=256)
+    std::map<std::vector<int>, katana::EntityTypeID> type_field_indices_to_id;
+    for (int i : type_field_indices) {
+      const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
+      const std::string& field_name = current_field->name();
+      katana::EntityTypeID new_entity_type_id =
+          entity_type_manager->AddAtomicEntityType(field_name);
+
+      std::vector<int> field_indices = {i};
+      type_field_indices_to_id.emplace(
+          std::make_pair(field_indices, new_entity_type_id));
+    }
+
+    // collect the list of unique combination of types
+    using FieldEntityType = std::vector<int>;
+    // NB: cannot use unordered_set without defining a hash function for vectors;
+    // performance is not affected here because the set is very small (<=256)
+    using FieldEntityTypeSet = std::set<FieldEntityType>;
+    FieldEntityTypeSet type_combinations;
+    for (int64_t row = 0, num_rows = properties->num_rows(); row < num_rows;
+         ++row) {
+      FieldEntityType field_indices;
+      for (auto bool_property : bool_properties) {
+        if (bool_property.array->IsValid(row) &&
+            bool_property.array->Value(row)) {
+          field_indices.emplace_back(bool_property.field_index);
+        }
+      }
+      for (auto uint8_property : uint8_properties) {
+        if (uint8_property.array->IsValid(row) &&
+            uint8_property.array->Value(row)) {
+          field_indices.emplace_back(uint8_property.field_index);
+        }
+      }
+      if (field_indices.size() > 1) {
+        type_combinations.emplace(field_indices);
+      }
+    }
+
+    // assign a new ID to each unique combination of types
+    for (const FieldEntityType& field_indices : type_combinations) {
+      std::vector<std::string> field_names;
+      for (int i : field_indices) {
+        const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
+        const std::string& field_name = current_field->name();
+        field_names.emplace_back(field_name);
+      }
+      katana::EntityTypeID new_entity_type_id =
+          entity_type_manager->AddNonAtomicEntityType(field_names);
+      type_field_indices_to_id.emplace(
+          std::make_pair(field_indices, new_entity_type_id));
+    }
+
+    // assert that all type IDs (including kUnknownEntityType) and
+    // 1 special type ID (kInvalidEntityType)
+    // can be stored in 8 bits
+    if (entity_type_manager->GetNumEntityTypes() >
+        (std::numeric_limits<katana::EntityTypeID>::max() - size_t{1})) {
+      return KATANA_ERROR(
+          katana::ErrorCode::NotImplemented,
+          "number of unique combination of types is {} "
+          "but only up to {} is supported currently",
+          // exclude kUnknownEntityType
+          entity_type_manager->GetNumEntityTypes() - 1,
+          // exclude kUnknownEntityType and kInvalidEntityType
+          std::numeric_limits<katana::EntityTypeID>::max() - 2);
+    }
+
+    // assign the type ID for each row
+    for (int64_t row = 0; row < num_rows; ++row) {
+      FieldEntityType field_indices;
+      for (auto bool_property : bool_properties) {
+        if (bool_property.array->IsValid(row) &&
+            bool_property.array->Value(row)) {
+          field_indices.emplace_back(bool_property.field_index);
+        }
+      }
+      for (auto uint8_property : uint8_properties) {
+        if (uint8_property.array->IsValid(row) &&
+            uint8_property.array->Value(row)) {
+          field_indices.emplace_back(uint8_property.field_index);
+        }
+      }
+      if (field_indices.empty()) {
+        entity_type_ids->at(row) = katana::kUnknownEntityType;
+      } else {
+        katana::EntityTypeID entity_type_id =
+            type_field_indices_to_id.at(field_indices);
+        entity_type_ids->at(row) = entity_type_id;
+      }
+    }
+
+    return ResultSuccess();
+  }
 
   // TODO(amber): delete this method. It's risky
   void Reset() {

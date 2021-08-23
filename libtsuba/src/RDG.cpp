@@ -647,9 +647,7 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   std::vector<PropStorageInfo*> edge_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectEdgeProperties(opts.edge_properties));
 
-  if (auto res = rdg.DoMake(node_props, edge_props, manifest.dir()); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(rdg.DoMake(node_props, edge_props, manifest.dir()));
 
   rdg.set_partition_id(partition_id_to_load);
 

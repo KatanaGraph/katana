@@ -432,7 +432,7 @@ private:
     for (const auto& name : names) {
       auto it = name_to_slot.find(name);
       if (it == name_to_slot.end()) {
-        KATANA_LOG_DEBUG(
+        KATANA_LOG_WARN(
             "Non-existant property \"{}\" requested. Skipping.", name);
         continue;
       }

@@ -12,7 +12,7 @@ class KatanaConan(ConanFile):
     #  - llvm
     requires = (
         "backward-cpp/1.5",
-        "benchmark/1.5.0",
+        "benchmark/1.5.3",
         "boost/1.74.0",
         "eigen/3.3.7",
         "fmt/6.2.1",

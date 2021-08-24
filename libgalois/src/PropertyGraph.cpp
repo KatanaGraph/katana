@@ -396,14 +396,14 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
   // when EntityTypeIDs are not expected in properties then we have nothing to do here
   KATANA_LOG_WARN("Loading types from properties.");
   node_entity_type_manager_ = EntityTypeManager{};
-  EntityTypeIDArray node_entity_type_ids_;
+  node_entity_type_ids_ = EntityTypeIDArray{};
   node_entity_type_ids_.allocateInterleaved(num_nodes());
   KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
       num_nodes(), node_properties(), &node_entity_type_manager_,
       &node_entity_type_ids_));
 
   edge_entity_type_manager_ = EntityTypeManager{};
-  EntityTypeIDArray edge_entity_type_ids_;
+  edge_entity_type_ids_ = EntityTypeIDArray{};
   edge_entity_type_ids_.allocateInterleaved(num_edges());
   KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
       num_edges(), edge_properties(), &edge_entity_type_manager_,

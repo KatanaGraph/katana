@@ -827,6 +827,26 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   return std::string(buf.begin(), buf.end());
 }
 
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::PropertyGraph::GetNodeProperty(const std::string& name) const {
+  auto ret = node_properties()->GetColumnByName(name);
+  if (ret) {
+    return MakeResult(std::move(ret));
+  }
+  return KATANA_ERROR(
+      ErrorCode::PropertyNotFound, "node property does not exist: {}", name);
+}
+
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::PropertyGraph::GetEdgeProperty(const std::string& name) const {
+  auto ret = edge_properties()->GetColumnByName(name);
+  if (ret) {
+    return MakeResult(std::move(ret));
+  }
+  return KATANA_ERROR(
+      ErrorCode::PropertyNotFound, "edge property does not exist: {}", name);
+}
+
 katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
@@ -1022,11 +1042,7 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
 
   // Get a view of the property.
   std::shared_ptr<arrow::ChunkedArray> chunked_property =
-      GetNodeProperty(column_name);
-  if (!chunked_property) {
-    return KATANA_ERROR(
-        katana::ErrorCode::NotFound, "No such property: {}", column_name);
-  }
+      KATANA_CHECKED(GetNodeProperty(column_name));
   KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 
@@ -1055,11 +1071,7 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
 
   // Get a view of the property.
   std::shared_ptr<arrow::ChunkedArray> chunked_property =
-      GetEdgeProperty(column_name);
-  if (!chunked_property) {
-    return KATANA_ERROR(
-        katana::ErrorCode::NotFound, "No such property: {}", column_name);
-  }
+      KATANA_CHECKED(GetEdgeProperty(column_name));
   KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 

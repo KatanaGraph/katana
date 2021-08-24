@@ -15,6 +15,7 @@
 #include "katana/Iterators.h"
 #include "katana/NUMAArray.h"
 #include "katana/PropertyIndex.h"
+#include "katana/Result.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"
 
@@ -63,7 +64,7 @@ private:
       tsuba::RDGHandle handle, const std::string& command_line,
       tsuba::RDG::RDGVersioningPolicy versioning_action);
 
-  katana::Result<void> ConductWriteOp(
+  Result<void> ConductWriteOp(
       const std::string& uri, const std::string& command_line,
       tsuba::RDG::RDGVersioningPolicy versioning_action);
 
@@ -157,8 +158,8 @@ public:
     std::shared_ptr<arrow::Schema> (PropertyGraph::*full_schema_fn)() const;
     std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_int)(
         int i) const;
-    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_str)(
-        const std::string& str) const;
+    Result<std::shared_ptr<arrow::ChunkedArray>> (
+        PropertyGraph::*property_fn_str)(const std::string& str) const;
     int32_t (PropertyGraph::*property_num_fn)() const;
 
     std::shared_ptr<arrow::Schema> loaded_schema() const {
@@ -173,7 +174,7 @@ public:
       return (const_g->*property_fn_int)(i);
     }
 
-    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+    Result<std::shared_ptr<arrow::ChunkedArray>> GetProperty(
         const std::string& str) const {
       return (const_g->*property_fn_str)(str);
     }
@@ -214,7 +215,7 @@ public:
       return ropv.GetProperty(i);
     }
 
-    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+    Result<std::shared_ptr<arrow::ChunkedArray>> GetProperty(
         const std::string& str) const {
       return ropv.GetProperty(str);
     }
@@ -619,19 +620,15 @@ public:
   ///
   /// \param name The name of the property to get.
   /// \return The property data or NULL if the property is not found.
-  std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(
-      const std::string& name) const {
-    return node_properties()->GetColumnByName(name);
-  }
+  Result<std::shared_ptr<arrow::ChunkedArray>> GetNodeProperty(
+      const std::string& name) const;
 
   std::string GetNodePropertyName(int32_t i) const {
     return loaded_node_schema()->field(i)->name();
   }
 
-  std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
-      const std::string& name) const {
-    return edge_properties()->GetColumnByName(name);
-  }
+  Result<std::shared_ptr<arrow::ChunkedArray>> GetEdgeProperty(
+      const std::string& name) const;
 
   std::string GetEdgePropertyName(int32_t i) const {
     return loaded_edge_schema()->field(i)->name();
@@ -645,10 +642,13 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetNodePropertyTyped(const std::string& name) {
-    auto chunked_array = GetNodeProperty(name);
-    if (!chunked_array) {
-      return ErrorCode::PropertyNotFound;
+    // TODO(amp): Use KATANA_CHECKED once that doesn't cause CUDA builds to fail.
+    auto chunked_array_result = GetNodeProperty(name);
+    if (!chunked_array_result) {
+      return chunked_array_result.assume_error();
     }
+    auto chunked_array = chunked_array_result.assume_value();
+    KATANA_LOG_ASSERT(chunked_array);
 
     auto array =
         std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
@@ -656,7 +656,7 @@ public:
     if (!array) {
       return ErrorCode::TypeError;
     }
-    return array;
+    return MakeResult(std::move(array));
   }
 
   /// Get an edge property by name and cast it to a type.
@@ -667,10 +667,13 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetEdgePropertyTyped(const std::string& name) {
-    auto chunked_array = GetEdgeProperty(name);
-    if (!chunked_array) {
-      return ErrorCode::PropertyNotFound;
+    // TODO(amp): Use KATANA_CHECKED once that doesn't cause CUDA builds to fail.
+    auto chunked_array_result = GetEdgeProperty(name);
+    if (!chunked_array_result) {
+      return chunked_array_result.assume_error();
     }
+    auto chunked_array = chunked_array_result.assume_value();
+    KATANA_LOG_ASSERT(chunked_array);
 
     auto array =
         std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
@@ -678,7 +681,7 @@ public:
     if (!array) {
       return ErrorCode::TypeError;
     }
-    return array;
+    return MakeResult(std::move(array));
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }

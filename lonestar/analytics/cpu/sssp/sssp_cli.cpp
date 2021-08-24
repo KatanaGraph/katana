@@ -275,7 +275,7 @@ main(int argc, char** argv) {
 
     if (output) {
       std::string output_filename = "output-" + std::to_string(startNode);
-      switch (pg->GetNodeProperty(node_distance_prop)->type()->id()) {
+      switch (pg->GetNodeProperty(node_distance_prop).value()->type()->id()) {
       case arrow::UInt32Type::type_id:
         OutputResults<uint32_t>(pg.get(), node_distance_prop, output_filename);
         break;
@@ -296,7 +296,8 @@ main(int argc, char** argv) {
         break;
       default:
         KATANA_LOG_FATAL(
-            "Unsupported type: {}", pg->GetNodeProperty("distance")->type());
+            "Unsupported type: {}",
+            pg->GetNodeProperty(node_distance_prop).value()->type());
         break;
       }
     }

@@ -28,12 +28,7 @@ katana::internal::ExtractArrays(
     const std::vector<std::string>& properties) {
   std::vector<arrow::Array*> ret;
   for (auto& property : properties) {
-    auto column = pview.GetProperty(property);
-    if (!column) {
-      return KATANA_ERROR(
-          ErrorCode::PropertyNotFound, "property named {}",
-          std::quoted(property));
-    }
+    auto column = KATANA_CHECKED(pview.GetProperty(property));
     if (column->num_chunks() != 1) {
       // Katana form graphs only contain single chunk property columns.
       return KATANA_ERROR(

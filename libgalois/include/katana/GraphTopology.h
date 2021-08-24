@@ -99,6 +99,24 @@ public:
     return MakeStandardRange(e_beg, e_end);
   }
 
+  Node edge_source(const Edge& eid) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(eid < num_edges());
+
+    if (eid < adj_indices_[0]) {
+      return Node{0};
+    }
+
+    auto it = std::upper_bound(adj_indices_.begin(), adj_indices_.end(), eid);
+    KATANA_LOG_DEBUG_ASSERT(it != adj_indices_.end());
+    KATANA_LOG_DEBUG_ASSERT(*it > eid);
+
+    auto d = std::distance(adj_indices_.begin(), it);
+    KATANA_LOG_DEBUG_ASSERT(static_cast<size_t>(d) < num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(d > 0);
+
+    return static_cast<Node>(d);
+  }
+
   Node edge_dest(Edge edge_id) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
     return dests_[edge_id];
@@ -137,6 +155,16 @@ public:
     return nid;
   }
 
+  // TODO(amber): These two methods are a short term fix. The nature of
+  // PropertyIndex is expected to change post grouping of properties.
+  Node original_node_id(const Node& nid) const noexcept {
+    return static_cast<Node>(node_property_index(nid));
+  }
+
+  Edge original_edge_id(const Edge& eid) const noexcept {
+    return edge_property_index(eid);
+  }
+
   void Print() noexcept;
 
 private:
@@ -148,7 +176,6 @@ private:
   NUMAArray<Edge>& GetAdjIndices() noexcept { return adj_indices_; }
   NUMAArray<Node>& GetDests() noexcept { return dests_; }
 
-private:
   NUMAArray<Edge> adj_indices_;
   NUMAArray<Node> dests_;
 };
@@ -201,6 +228,12 @@ public:
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < num_edges());
     return edge_prop_indices_[eid];
+  }
+
+  // Need to redefine the method here so it overrides and hides base-class
+  // version of this method
+  Edge original_edge_id(const Edge& eid) const noexcept {
+    return edge_property_index(eid);
   }
 
   static std::unique_ptr<EdgeShuffleTopology> MakeTransposeCopy(
@@ -518,15 +551,21 @@ public:
   ///
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
-  auto edges(Node N) const noexcept { return topo().edges(N); }
+  auto edges(const Node& N) const noexcept { return topo().edges(N); }
 
-  auto edge_dest(Edge eid) const noexcept { return topo().edge_dest(eid); }
+  auto edge_dest(const Edge& eid) const noexcept {
+    return topo().edge_dest(eid);
+  }
+
+  auto edge_source(const Edge& eid) const noexcept {
+    return topo().edge_source(eid);
+  }
 
   /// @param node node to get degree for
   /// @returns Degree of node N
-  auto degree(Node node) const noexcept { return topo().degree(node); }
+  auto degree(const Node& node) const noexcept { return topo().degree(node); }
 
-  auto nodes(Node begin, Node end) const noexcept {
+  auto nodes(const Node& begin, const Node& end) const noexcept {
     return topo().nodes(begin, end);
   }
 
@@ -550,6 +589,13 @@ public:
 
   auto node_property_index(const Node& nid) const noexcept {
     return topo().node_property_index(nid);
+  }
+  auto original_node_id(const Node& nid) const noexcept {
+    return topo().original_node_id(nid);
+  }
+
+  auto original_edge_id(const Edge& eid) const noexcept {
+    return topo().original_edge_id(eid);
   }
 
 protected:
@@ -806,6 +852,10 @@ public:
     return in().edge_property_index(eid);
   }
 
+  auto original_in_edge_id(const GraphTopologyTypes::Edge& eid) const noexcept {
+    return in().original_edge_id(eid);
+  }
+
 protected:
   const OutTopo& out() const noexcept { return Base::topo(); }
   const InTopo& in() const noexcept { return *in_topo_; }
@@ -907,7 +957,7 @@ public:
   /// searching for the key via the node's outgoing or incoming edges.
   /// If not found, returns nothing.
   edges_range FindAllEdgesSingleType(Node src, Node dst) const {
-    // TODO: Similar to IsConnectedWithEdgeType, we should be able to switch
+    // TODO(amber): Similar to IsConnectedWithEdgeType, we should be able to switch
     // between searching out going topology or incoming topology. However, incoming
     // topology will return a different range of incoming edges instead of outgoing
     // edges. Can we convert easily between outing and incoming edge range
@@ -1099,6 +1149,14 @@ private:
       const PropertyGraph* pg,
       const EdgeShuffleTopology::TransposeKind& tpose_kind) noexcept;
 };
+
+/// Creates a uniform-random CSR GrpahTopology instance, where each node as
+///'edges_per_node' neighbors, chosen randomly
+/// \p num_nodes number of nodes
+/// \p edges_per_node number of out-going edges of each node
+/// \r GraphTopology instance
+KATANA_EXPORT GraphTopology CreateUniformRandomTopology(
+    const size_t num_nodes, const size_t edges_per_node) noexcept;
 
 }  // end namespace katana
 

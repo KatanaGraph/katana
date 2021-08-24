@@ -2,6 +2,7 @@
 #define KATANA_LIBTSUBA_TSUBA_RDGSLICE_H_
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -11,6 +12,7 @@
 #include "katana/config.h"
 #include "tsuba/FileView.h"
 #include "tsuba/RDGLineage.h"
+#include "tsuba/RDGTopology.h"
 #include "tsuba/tsuba.h"
 
 namespace tsuba {

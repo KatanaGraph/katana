@@ -1,13 +1,17 @@
 #include "RDGPartHeader.h"
 
+#include <vector>
+
 #include "Constants.h"
 #include "GlobalState.h"
+#include "PartitionTopologyMetadata.h"
 #include "RDGHandleImpl.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/FileView.h"
+#include "tsuba/RDGTopology.h"
 
 using json = nlohmann::json;
 
@@ -33,6 +37,13 @@ const char* kEdgeEntityTypeIDDictionaryKey =
 const char* kNodeEntityTypeIDNameKey = "kg.v1.node_entity_type_id_name";
 // Name maps from Atomic Edge Entity Type ID to set of string names for the Edge Entity Type ID
 const char* kEdgeEntityTypeIDNameKey = "kg.v1.edge_entity_type_id_name";
+// Metadata object for partition topology entries
+const char* kPartitionTopologyMetadataKey = "kg.v1.partition_topology_metadata";
+// Set of topology entries
+const char* kPartitionTopologyMetadataEntriesKey =
+    "kg.v1.partition_topology_metadata_entries";
+const char* kPartitionTopologyMetadataEntriesSizeKey =
+    "kg.v1.partition_topology_metadata_entries_size";
 
 //
 //constexpr std::string_view  mirror_nodes_prop_name = "mirror_nodes";
@@ -158,6 +169,11 @@ RDGPartHeader::IsEntityTypeIDsOutsideProperties() const {
   return (storage_format_version_ >= kPartitionStorageFormatVersion2);
 }
 
+bool
+RDGPartHeader::IsMetadataOutsideTopologyFile() const {
+  return (storage_format_version_ >= kPartitionStorageFormatVersion3);
+}
+
 katana::Result<void>
 RDGPartHeader::ValidateEntityTypeIDStructures() const {
   if (node_entity_type_id_array_path_.empty()) {
@@ -209,17 +225,11 @@ RDGPartHeader::Validate() const {
           "edge_property path doesn't contain a slash (/): {}", md.path());
     }
   }
-  if (topology_path_.empty()) {
-    return KATANA_ERROR(ErrorCode::InvalidArgument, "topology_path is empty");
-  }
-  if (topology_path_.find('/') != std::string::npos) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument,
-        "topology_path doesn't contain a slash (/): {}", topology_path_);
-  }
+
+  KATANA_CHECKED(topology_metadata_.Validate());
 
   if (IsEntityTypeIDsOutsideProperties()) {
-    return ValidateEntityTypeIDStructures();
+    KATANA_CHECKED(ValidateEntityTypeIDStructures());
   }
 
   return katana::ResultSuccess();
@@ -249,11 +259,10 @@ RDGPartHeader::ChangeStorageLocation(
       prop.WasModified(prop.type());
     }
   }
-
   // clear out specific file paths so that we know to store them later
-  topology_path_ = "";
   node_entity_type_id_array_path_ = "";
   edge_entity_type_id_array_path_ = "";
+  topology_metadata_.ChangeStorageLocation();
 
   return katana::ResultSuccess();
 }
@@ -272,7 +281,6 @@ tsuba::to_json(json& j, const std::vector<tsuba::PropStorageInfo>& vec_pmd) {
 void
 tsuba::to_json(json& j, const tsuba::RDGPartHeader& header) {
   j = json{
-      {kTopologyPathKey, header.topology_path_},
       {kNodePropertyKey, header.node_prop_info_list_},
       {kEdgePropertyKey, header.edge_prop_info_list_},
       {kPartPropertyFilesKey, header.part_prop_info_list_},
@@ -284,12 +292,11 @@ tsuba::to_json(json& j, const tsuba::RDGPartHeader& header) {
       {kEdgeEntityTypeIDDictionaryKey, header.edge_entity_type_id_dictionary_},
       {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
       {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
-  };
+      {kPartitionTopologyMetadataKey, header.topology_metadata_}};
 }
 
 void
 tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
-  j.at(kTopologyPathKey).get_to(header.topology_path_);
   j.at(kNodePropertyKey).get_to(header.node_prop_info_list_);
   j.at(kEdgePropertyKey).get_to(header.edge_prop_info_list_);
   j.at(kPartPropertyFilesKey).get_to(header.part_prop_info_list_);
@@ -302,6 +309,7 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
         RDGPartHeader::kPartitionStorageFormatVersion1;
   }
 
+  // Version 2 added entity type id files
   if (header.storage_format_version_ >=
       RDGPartHeader::kPartitionStorageFormatVersion2) {
     j.at(kNodeEntityTypeIDArrayPathKey)
@@ -314,6 +322,25 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
         .get_to(header.edge_entity_type_id_dictionary_);
     j.at(kNodeEntityTypeIDNameKey).get_to(header.node_entity_type_id_name_);
     j.at(kEdgeEntityTypeIDNameKey).get_to(header.edge_entity_type_id_name_);
+  }
+
+  // Version 3 added topology metadata
+  if (header.storage_format_version_ >=
+      RDGPartHeader::kPartitionStorageFormatVersion3) {
+    j.at(kPartitionTopologyMetadataKey).get_to(header.topology_metadata_);
+  } else {
+    //make a new minimal entry from just the path so we can load the metadata later
+    PartitionTopologyMetadataEntry entry = PartitionTopologyMetadataEntry();
+    entry.topology_state_ = RDGTopology::TopologyKind::kCSR;
+    entry.node_sort_state_ = RDGTopology::NodeSortKind::kAny;
+    entry.edge_sort_state_ = RDGTopology::EdgeSortKind::kAny;
+    if (header.metadata_.transposed_) {
+      entry.transpose_state_ = RDGTopology::TransposeKind::kYes;
+    } else {
+      entry.transpose_state_ = RDGTopology::TransposeKind::kNo;
+    }
+    j.at(kTopologyPathKey).get_to(entry.path_);
+    header.topology_metadata_.Append(entry);
   }
 }
 
@@ -340,6 +367,7 @@ tsuba::from_json(const json& j, tsuba::PartitionMetadata& pmd) {
   j.at("magic").get_to(magic);
 
   j.at("policy_id").get_to(pmd.policy_id_);
+
   j.at("transposed").get_to(pmd.transposed_);
   j.at("is_outgoing_edge_cut").get_to(pmd.is_outgoing_edge_cut_);
   j.at("is_incoming_edge_cut").get_to(pmd.is_incoming_edge_cut_);
@@ -371,4 +399,125 @@ tsuba::from_json(const nlohmann::json& j, tsuba::PropStorageInfo& propmd) {
 void
 tsuba::to_json(json& j, const tsuba::PropStorageInfo& propmd) {
   j = json{propmd.name(), propmd.path()};
+}
+
+void
+tsuba::from_json(
+    const nlohmann::json& j, tsuba::PartitionTopologyMetadataEntry& topo) {
+  j.at("path").get_to(topo.path_);
+  KATANA_LOG_VASSERT(!topo.path_.empty(), "loaded topology with empty path");
+  j.at("num_nodes").get_to(topo.num_nodes_);
+  j.at("num_edges").get_to(topo.num_edges_);
+  j.at("edge_index_to_property_index_map_present")
+      .get_to(topo.edge_index_to_property_index_map_present_);
+  j.at("node_index_to_property_index_map_present")
+      .get_to(topo.node_index_to_property_index_map_present_);
+  j.at("edge_condensed_type_id_map_present")
+      .get_to(topo.edge_condensed_type_id_map_present_);
+  j.at("edge_condensed_type_id_map_size")
+      .get_to(topo.edge_condensed_type_id_map_size_);
+  j.at("node_condensed_type_id_map_present")
+      .get_to(topo.node_condensed_type_id_map_present_);
+  j.at("node_condensed_type_id_map_size")
+      .get_to(topo.node_condensed_type_id_map_size_);
+  j.at("topology_state").get_to(topo.topology_state_);
+  j.at("transpose_state").get_to(topo.transpose_state_);
+  j.at("edge_sort_state").get_to(topo.edge_sort_state_);
+  j.at("node_sort_state").get_to(topo.node_sort_state_);
+  KATANA_LOG_DEBUG(
+      "read topology with: topology_state={}, transpose_state={}, "
+      "edge_sort_state={}, node_sort_state={}",
+      topo.topology_state_, topo.transpose_state_, topo.edge_sort_state_,
+      topo.node_sort_state_);
+}
+
+void
+tsuba::to_json(json& j, const tsuba::PartitionTopologyMetadataEntry& topo) {
+  KATANA_LOG_VASSERT(
+      !topo.path_.empty(), "tried to store topology with empty path");
+
+  KATANA_LOG_ASSERT(
+      topo.topology_state_ != tsuba::RDGTopology::TopologyKind::kInvalid);
+  KATANA_LOG_ASSERT(
+      topo.transpose_state_ != tsuba::RDGTopology::TransposeKind::kInvalid);
+  KATANA_LOG_VASSERT(
+      topo.transpose_state_ != tsuba::RDGTopology::TransposeKind::kAny,
+      "Cannot store a TransposeKind::kAny topology");
+  KATANA_LOG_ASSERT(
+      topo.edge_sort_state_ != tsuba::RDGTopology::EdgeSortKind::kInvalid);
+  KATANA_LOG_ASSERT(
+      topo.node_sort_state_ != tsuba::RDGTopology::NodeSortKind::kInvalid);
+
+  j = json{
+      {"path", topo.path_},
+      {"num_edges", topo.num_edges_},
+      {"num_nodes", topo.num_nodes_},
+      {"edge_index_to_property_index_map_present",
+       topo.edge_index_to_property_index_map_present_},
+      {"node_index_to_property_index_map_present",
+       topo.node_index_to_property_index_map_present_},
+      {"edge_condensed_type_id_map_present",
+       topo.edge_condensed_type_id_map_present_},
+      {"edge_condensed_type_id_map_size",
+       topo.edge_condensed_type_id_map_size_},
+      {"edge_condensed_type_id_map_size",
+       topo.edge_condensed_type_id_map_size_},
+      {"node_condensed_type_id_map_size",
+       topo.node_condensed_type_id_map_size_},
+      {"node_condensed_type_id_map_present",
+       topo.node_condensed_type_id_map_present_},
+      {"topology_state", topo.topology_state_},
+      {"transpose_state", topo.transpose_state_},
+      {"edge_sort_state", topo.edge_sort_state_},
+      {"node_sort_state", topo.node_sort_state_}};
+
+  KATANA_LOG_DEBUG(
+      "stored topology with: topology_state={}, transpose_state={}, "
+      "edge_sort_state={}, node_sort_state={}",
+      topo.topology_state_, topo.transpose_state_, topo.edge_sort_state_,
+      topo.node_sort_state_);
+}
+
+void
+tsuba::from_json(
+    const nlohmann::json& j, tsuba::PartitionTopologyMetadata& topomd) {
+  uint32_t tmp_num;
+
+  // initally parse json into vector so we can verify the number of elements
+  std::vector<PartitionTopologyMetadataEntry> entries_vec;
+  j.at(kPartitionTopologyMetadataEntriesSizeKey).get_to(tmp_num);
+  topomd.set_num_entries(tmp_num);
+  j.at(kPartitionTopologyMetadataEntriesKey).get_to(entries_vec);
+  KATANA_LOG_ASSERT(size(entries_vec) == topomd.num_entries());
+
+  // move the vector contents into our entries array
+  std::copy_n(
+      std::make_move_iterator(entries_vec.begin()), topomd.num_entries_,
+      topomd.entries_.begin());
+}
+
+void
+tsuba::to_json(json& j, const tsuba::PartitionTopologyMetadata& topomd) {
+  KATANA_LOG_ASSERT(topomd.num_entries_ >= 1);
+  KATANA_LOG_VERBOSE(
+      "storing {} PartitionTopologyMetadata entries", topomd.num_entries_);
+
+  // if we store the array, we will always store kMaxNumTopologies since the json parser has no way
+  // of telling if an entry is present, valid, or actually just empty. Wrap in a vector to avoid this and only store
+  // the topologies we actually have present and valid
+  std::vector<PartitionTopologyMetadataEntry> entries_vec;
+  size_t num_valid_entries = 0;
+  for (auto it = topomd.Entries().begin();
+       it != topomd.Entries().begin() + topomd.num_entries_; ++it) {
+    if (it->invalid_) {
+      continue;
+    }
+    entries_vec.emplace_back(*it);
+    num_valid_entries++;
+  }
+
+  j = json{
+      {kPartitionTopologyMetadataEntriesSizeKey, num_valid_entries},
+      {kPartitionTopologyMetadataEntriesKey, entries_vec},
+  };
 }

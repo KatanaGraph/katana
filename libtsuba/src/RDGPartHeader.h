@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <regex>
 #include <string>
@@ -11,6 +12,7 @@
 
 #include <arrow/api.h>
 
+#include "PartitionTopologyMetadata.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
@@ -19,6 +21,7 @@
 #include "tsuba/Errors.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/RDG.h"
+#include "tsuba/RDGTopology.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/tsuba.h"
 
@@ -125,6 +128,8 @@ private:
 
 class KATANA_EXPORT RDGPartHeader {
 public:
+  RDGPartHeader() = default;
+
   static katana::Result<RDGPartHeader> Make(const katana::Uri& partition_path);
 
   katana::Result<void> Validate() const;
@@ -146,6 +151,7 @@ public:
       const std::string& file);
 
   bool IsEntityTypeIDsOutsideProperties() const;
+  bool IsMetadataOutsideTopologyFile() const;
   //
   // Property manipulation
   //
@@ -232,8 +238,33 @@ public:
   // Accessors/Mutators
   //
 
-  const std::string& topology_path() const { return topology_path_; }
-  void set_topology_path(std::string path) { topology_path_ = std::move(path); }
+  //TODO: emcginnis eliminate usages of this
+  /// Only to be used by applications that depend strongly on the assumption
+  /// that only 1 topology is present. New functions should *not* use this
+  /// as it will be deprecated
+  std::string csr_topology_path() const {
+    KATANA_LOG_VASSERT(
+        topology_metadata()->num_entries() >= 1,
+        "Must have at least one topology present");
+
+    // Assume that the csr topology is the one that is:
+    // - untransposed
+    // - not sorted
+    for (size_t i = 0; i < topology_metadata()->num_entries(); i++) {
+      PartitionTopologyMetadataEntry entry =
+          topology_metadata()->Entries().at(i);
+      if (entry.topology_state_ == tsuba::RDGTopology::TopologyKind::kCSR &&
+          entry.transpose_state_ == tsuba::RDGTopology::TransposeKind::kNo &&
+          entry.edge_sort_state_ == tsuba::RDGTopology::EdgeSortKind::kAny &&
+          entry.node_sort_state_ == tsuba::RDGTopology::NodeSortKind::kAny) {
+        return topology_metadata()->Entries().at(i).path_;
+      }
+    }
+    KATANA_LOG_ERROR(
+        "Unable to find a csr topology to return the path of, returning empty "
+        "string");
+    return std::string("");
+  }
 
   const std::string& node_entity_type_id_array_path() const {
     return node_entity_type_id_array_path_;
@@ -392,6 +423,23 @@ public:
         edge_entity_type_id_dictionary_, edge_entity_type_id_name_);
   }
 
+  PartitionTopologyMetadata* topology_metadata() { return &topology_metadata_; }
+  const PartitionTopologyMetadata* topology_metadata() const {
+    return &topology_metadata_;
+  }
+
+  PartitionTopologyMetadataEntry* MakePartitionTopologyMetadataEntry() {
+    PartitionTopologyMetadataEntry new_entry = PartitionTopologyMetadataEntry();
+    return topology_metadata_.Append(std::move(new_entry));
+  }
+
+  PartitionTopologyMetadataEntry* MakePartitionTopologyMetadataEntry(
+      const std::string& topo_path) {
+    PartitionTopologyMetadataEntry new_entry = PartitionTopologyMetadataEntry();
+    new_entry.path_ = topo_path;
+    return topology_metadata_.Append(std::move(new_entry));
+  }
+
   friend void to_json(nlohmann::json& j, const RDGPartHeader& header);
   friend void from_json(const nlohmann::json& j, RDGPartHeader& header);
 
@@ -512,11 +560,12 @@ private:
 
   static const uint32_t kPartitionStorageFormatVersion1 = 1;
   static const uint32_t kPartitionStorageFormatVersion2 = 2;
+  static const uint32_t kPartitionStorageFormatVersion3 = 3;
   /// current_storage_format_version_ to be bumped any time
   /// the on disk format of RDGPartHeader changes
-  uint32_t latest_storage_format_version_ = kPartitionStorageFormatVersion2;
+  uint32_t latest_storage_format_version_ = kPartitionStorageFormatVersion3;
 
-  std::string topology_path_;
+  PartitionTopologyMetadata topology_metadata_;
 
   std::string node_entity_type_id_array_path_;
   std::string edge_entity_type_id_array_path_;
@@ -543,8 +592,48 @@ void from_json(const nlohmann::json& j, PropStorageInfo& propmd);
 void to_json(nlohmann::json& j, const PartitionMetadata& propmd);
 void from_json(const nlohmann::json& j, PartitionMetadata& propmd);
 
+void to_json(nlohmann::json& j, const PartitionTopologyMetadataEntry& topo);
+void from_json(const nlohmann::json& j, PartitionTopologyMetadataEntry& topo);
+
+void to_json(nlohmann::json& j, const PartitionTopologyMetadata& topomd);
+void from_json(const nlohmann::json& j, PartitionTopologyMetadata& topomd);
+
 void to_json(
     nlohmann::json& j, const std::vector<tsuba::PropStorageInfo>& vec_pmd);
+
+// nlohmann map enum values to JSON as strings
+// *** do not alter these mappings, only append to them ***
+// altering these mappings breaks backwards compatibility for loading older graphs
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    RDGTopology::TransposeKind,
+    {{RDGTopology::TransposeKind::kInvalid, "kInvalid"},
+     {RDGTopology::TransposeKind::kNo, "kNo"},
+     {RDGTopology::TransposeKind::kYes, "kYes"},
+     {RDGTopology::TransposeKind::kAny, "kAny"}})
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    RDGTopology::EdgeSortKind,
+    {{RDGTopology::EdgeSortKind::kInvalid, "kInvalid"},
+     {RDGTopology::EdgeSortKind::kAny, "kAny"},
+     {RDGTopology::EdgeSortKind::kSortedByDestID, "kSortedByDestID"},
+     {RDGTopology::EdgeSortKind::kSortedByEdgeType, "kSortedByEdgeType"},
+     {RDGTopology::EdgeSortKind::kSortedByNodeType, "kSortedByNodeType"}})
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    RDGTopology::NodeSortKind,
+    {{RDGTopology::NodeSortKind::kInvalid, "kInvalid"},
+     {RDGTopology::NodeSortKind::kAny, "kAny"},
+     {RDGTopology::NodeSortKind::kSortedByDegree, "kSortedByDegree"},
+     {RDGTopology::NodeSortKind::kSortedByNodeType, "kSortedByNodeType"}})
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    RDGTopology::TopologyKind,
+    {{RDGTopology::TopologyKind::kInvalid, "kInvalid"},
+     {RDGTopology::TopologyKind::kCSR, "kCSR"},
+     {RDGTopology::TopologyKind::kEdgeShuffleTopology, "kEdgeShuffleTopology"},
+     {RDGTopology::TopologyKind::kShuffleTopology, "kShuffleTopology"},
+     {RDGTopology::TopologyKind::kEdgeTypeAwareTopology,
+      "kEdgeTypeAwareTopology"}})
 
 }  // namespace tsuba
 

@@ -139,6 +139,10 @@ using StorageSetOfEntityTypeIDs = std::vector<katana::EntityTypeID>;
 using EntityTypeIDToSetOfEntityTypeIDsStorageMap =
     std::unordered_map<katana::EntityTypeID, StorageSetOfEntityTypeIDs>;
 
+/// Dictactes the max number of RDGTopologies PartitionTopologyMetadataEntries
+/// can be increased if required
+constexpr size_t kMaxNumTopologies = 64;
+
 }  // namespace tsuba
 
 #endif

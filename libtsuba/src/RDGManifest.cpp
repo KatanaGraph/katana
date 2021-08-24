@@ -258,12 +258,15 @@ RDGManifest::FileNames() {
             fnames, katana::Uri::JoinPath(dir().string(), part_prop.path())));
       }
       // Duplicates eliminated by set
-      fnames.emplace(header.topology_path());
       if (const auto& n = header.node_entity_type_id_array_path(); !n.empty()) {
         fnames.emplace(n);
       }
       if (const auto& n = header.edge_entity_type_id_array_path(); !n.empty()) {
         fnames.emplace(n);
+      }
+
+      for (size_t i = 0; i < header.topology_metadata()->num_entries(); i++) {
+        fnames.emplace(header.topology_metadata()->Entries().at(i).path_);
       }
     }
   }

@@ -17,3 +17,10 @@ add_test(NAME parquet COMMAND parquet-test "${CMAKE_CURRENT_BINARY_DIR}/parquet-
 set_tests_properties(parquet PROPERTIES FIXTURES_REQUIRED parquet-ready LABELS quick)
 add_test(NAME clean-parquet COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_CURRENT_BINARY_DIR}/parquet-test-wd")
 set_tests_properties(clean-parquet PROPERTIES FIXTURES_SETUP parquet-ready LABELS quick)
+
+add_executable(topology-test topology.cpp)
+target_link_libraries(topology-test tsuba)
+target_include_directories(topology-test PRIVATE ../src)
+add_test(NAME topology COMMAND topology-test ${BASEINPUT}/propertygraphs/ldbc_003_storage_format_version_2)
+set_property(TEST topology APPEND PROPERTY LABELS quick)
+set_tests_properties(topology PROPERTIES LABELS quick)

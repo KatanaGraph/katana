@@ -1,6 +1,7 @@
 #ifndef KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
 #define KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
 
+#include <memory>
 #include <utility>
 
 #include <arrow/api.h>
@@ -13,11 +14,13 @@
 #include "katana/ErrorCode.h"
 #include "katana/GraphTopology.h"
 #include "katana/Iterators.h"
+#include "katana/Logging.h"
 #include "katana/NUMAArray.h"
 #include "katana/PropertyIndex.h"
 #include "katana/Result.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"
+#include "tsuba/RDGTopology.h"
 
 namespace katana {
 
@@ -60,6 +63,8 @@ private:
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
 
+  Result<void> DoWriteTopologies();
+
   Result<void> DoWrite(
       tsuba::RDGHandle handle, const std::string& command_line,
       tsuba::RDG::RDGVersioningPolicy versioning_action);
@@ -76,6 +81,7 @@ private:
 
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
+
   GraphTopology topology_;
 
   /// Manages the relations between the node entity types
@@ -95,6 +101,21 @@ private:
       edge_indexes_;
 
   PGViewCache pg_view_cache_;
+
+  katana::Result<tsuba::RDGTopology*> LoadTopology(
+      const tsuba::RDGTopology& shadow) {
+    tsuba::RDGTopology* topo = KATANA_CHECKED(rdg_.GetTopology(shadow));
+    if (num_edges() != topo->num_edges() || num_nodes() != topo->num_nodes()) {
+      KATANA_LOG_WARN(
+          "RDG found topology matching description, but num_edge/num_node does "
+          "not match csr topology");
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument, "no matching topology found");
+    }
+    return topo;
+  }
+
+  friend class PGViewCache;
 
   friend class PropertyGraphRetractor;
 

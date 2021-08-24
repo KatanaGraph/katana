@@ -5,10 +5,12 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <arrow/array.h>
 
 #include "katana/ArrowInterchange.h"
+#include "katana/GraphTopology.h"
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
 #include "katana/Loops.h"
@@ -22,18 +24,10 @@
 #include "tsuba/RDG.h"
 #include "tsuba/RDGManifest.h"
 #include "tsuba/RDGPrefix.h"
+#include "tsuba/RDGTopology.h"
 #include "tsuba/tsuba.h"
 
 namespace {
-
-constexpr uint64_t
-GetGraphSize(uint64_t num_nodes, uint64_t num_edges) {
-  /// version, sizeof_edge_data, num_nodes, num_edges
-  constexpr int mandatory_fields = 4;
-
-  return (mandatory_fields + num_nodes) * sizeof(uint64_t) +
-         (num_edges * sizeof(uint32_t));
-}
 
 [[maybe_unused]] bool
 CheckTopology(
@@ -61,90 +55,6 @@ CheckTopology(
       katana::no_stats());
 
   return !has_bad_adj && !has_bad_dest;
-}
-
-/// MapTopology takes a file buffer of a topology file and extracts the
-/// topology files.
-///
-/// Format of a topology file (borrowed from the original FileGraph.cpp:
-///
-///   uint64_t version: 1
-///   uint64_t sizeof_edge_data: size of edge data element
-///   uint64_t num_nodes: number of nodes
-///   uint64_t num_edges: number of edges
-///   uint64_t[num_nodes] out_indices: start and end of the edges for a node
-///   uint32_t[num_edges] out_dests: destinations (node indexes) of each edge
-///   uint32_t padding if num_edges is odd
-///   void*[num_edges] edge_data: edge data
-///
-/// Since property graphs store their edge data separately, we will
-/// ignore the size_of_edge_data (data[1]).
-katana::Result<katana::GraphTopology>
-MapTopology(const tsuba::FileView& file_view) {
-  const auto* data = file_view.ptr<uint64_t>();
-  if (file_view.size() < 4) {
-    return katana::ErrorCode::InvalidArgument;
-  }
-
-  if (data[0] != 1) {
-    return katana::ErrorCode::InvalidArgument;
-  }
-
-  const uint64_t num_nodes = data[2];
-  const uint64_t num_edges = data[3];
-
-  uint64_t expected_size = GetGraphSize(num_nodes, num_edges);
-
-  if (file_view.size() < expected_size) {
-    return KATANA_ERROR(
-        katana::ErrorCode::InvalidArgument, "file_view size: {} expected {}",
-        file_view.size(), expected_size);
-  }
-
-  const uint64_t* out_indices = &data[4];
-  const uint32_t* out_dests =
-      reinterpret_cast<const uint32_t*>(out_indices + num_nodes);
-
-  KATANA_LOG_DEBUG_ASSERT(
-      CheckTopology(out_indices, num_nodes, out_dests, num_edges));
-  return katana::GraphTopology(out_indices, num_nodes, out_dests, num_edges);
-}
-
-katana::Result<std::unique_ptr<tsuba::FileFrame>>
-WriteTopology(const katana::GraphTopology& topology) {
-  auto ff = std::make_unique<tsuba::FileFrame>();
-  if (auto res = ff->Init(); !res) {
-    return res.error();
-  }
-  const uint64_t num_nodes = topology.num_nodes();
-  const uint64_t num_edges = topology.num_edges();
-
-  uint64_t data[4] = {1, 0, num_nodes, num_edges};
-  arrow::Status aro_sts = ff->Write(&data, 4 * sizeof(uint64_t));
-  if (!aro_sts.ok()) {
-    return tsuba::ArrowToTsuba(aro_sts.code());
-  }
-
-  if (num_nodes) {
-    const auto* raw = topology.adj_data();
-    static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint64_t>);
-    auto buf = arrow::Buffer::Wrap(raw, num_nodes);
-    aro_sts = ff->Write(buf);
-    if (!aro_sts.ok()) {
-      return tsuba::ArrowToTsuba(aro_sts.code());
-    }
-  }
-
-  if (num_edges) {
-    const auto* raw = topology.dest_data();
-    static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint32_t>);
-    auto buf = arrow::Buffer::Wrap(raw, num_edges);
-    aro_sts = ff->Write(buf);
-    if (!aro_sts.ok()) {
-      return tsuba::ArrowToTsuba(aro_sts.code());
-    }
-  }
-  return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
 }
 
 /// MapEntityTypeIDsFromFile takes a file buffer of a node or edge Type set ID file
@@ -219,8 +129,17 @@ MakeDefaultEntityTypeIDArray(size_t vec_sz) {
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
-  katana::GraphTopology topo =
-      KATANA_CHECKED(MapTopology(rdg.topology_file_storage()));
+  // find & map the default csr topology
+  tsuba::RDGTopology shadow_csr = tsuba::RDGTopology::MakeShadowCSR();
+  tsuba::RDGTopology* csr = KATANA_CHECKED_CONTEXT(
+      rdg.GetTopology(shadow_csr),
+      "unable to find csr topology, must have csr topology to Make a "
+      "PropertyGraph");
+
+  KATANA_LOG_DEBUG_ASSERT(CheckTopology(
+      csr->adj_indices(), csr->num_nodes(), csr->dests(), csr->num_edges()));
+  katana::GraphTopology topo = katana::GraphTopology(
+      csr->adj_indices(), csr->num_nodes(), csr->dests(), csr->num_edges());
 
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
@@ -243,7 +162,6 @@ katana::PropertyGraph::Make(
         std::move(rdg_file), std::move(rdg), std::move(topo),
         std::move(node_type_ids), std::move(edge_type_ids),
         std::move(node_type_manager), std::move(edge_type_manager));
-
   } else {
     // we must construct id_arrays and managers from properties
 
@@ -435,23 +353,35 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
 }
 
 katana::Result<void>
+katana::PropertyGraph::DoWriteTopologies() {
+  // Since PGViewCache doesn't manage the main csr topology, see if we need to store it now
+  tsuba::RDGTopology shadow = KATANA_CHECKED(tsuba::RDGTopology::Make(
+      topology().adj_data(), topology().num_nodes(), topology().dest_data(),
+      topology().num_edges(), tsuba::RDGTopology::TopologyKind::kCSR,
+      tsuba::RDGTopology::TransposeKind::kNo,
+      tsuba::RDGTopology::EdgeSortKind::kAny,
+      tsuba::RDGTopology::NodeSortKind::kAny));
+
+  rdg_.UpsertTopology(std::move(shadow));
+
+  std::vector<tsuba::RDGTopology> topologies =
+      KATANA_CHECKED(pg_view_cache_.ToRDGTopology());
+  for (size_t i = 0; i < topologies.size(); i++) {
+    rdg_.UpsertTopology(std::move(topologies.at(i)));
+  }
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
 katana::PropertyGraph::DoWrite(
     tsuba::RDGHandle handle, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
   KATANA_LOG_DEBUG(
-      "topology valid: {}, node array valid: {}, edge array valid: {}",
-      rdg_.topology_file_storage().Valid(),
+      " node array valid: {}, edge array valid: {}",
       rdg_.node_entity_type_id_array_file_storage().Valid(),
       rdg_.edge_entity_type_id_array_file_storage().Valid());
 
-  if (!rdg_.topology_file_storage().Valid()) {
-    KATANA_LOG_DEBUG("topology file store invalid, writing");
-  }
-
-  std::unique_ptr<tsuba::FileFrame> topology_res =
-      !rdg_.topology_file_storage().Valid()
-          ? KATANA_CHECKED(WriteTopology(topology()))
-          : nullptr;
+  KATANA_CHECKED(DoWriteTopologies());
 
   if (!rdg_.node_entity_type_id_array_file_storage().Valid()) {
     KATANA_LOG_DEBUG("node_entity_type_id_array file store invalid, writing");
@@ -472,7 +402,7 @@ katana::PropertyGraph::DoWrite(
           : nullptr;
 
   return rdg_.Store(
-      handle, command_line, versioning_action, std::move(topology_res),
+      handle, command_line, versioning_action,
       std::move(node_entity_type_id_array_res),
       std::move(edge_entity_type_id_array_res), node_entity_type_manager(),
       edge_entity_type_manager());

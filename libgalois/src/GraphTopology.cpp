@@ -5,6 +5,7 @@
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/Random.h"
+#include "tsuba/RDGTopology.h"
 
 void
 katana::GraphTopology::Print() const noexcept {
@@ -54,7 +55,7 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
   const auto& topology = pg->topology();
   if (topology.empty()) {
     EdgeShuffleTopology et;
-    et.tpose_state_ = TransposeKind::kYes;
+    et.tpose_state_ = tsuba::RDGTopology::TransposeKind::kYes;
     return std::make_unique<EdgeShuffleTopology>(std::move(et));
   }
 
@@ -116,7 +117,8 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
       katana::steal(), katana::no_stats());
 
   return std::make_unique<EdgeShuffleTopology>(EdgeShuffleTopology{
-      TransposeKind::kYes, EdgeSortKind::kAny, std::move(out_indices),
+      tsuba::RDGTopology::TransposeKind::kYes,
+      tsuba::RDGTopology::EdgeSortKind::kAny, std::move(out_indices),
       std::move(out_dests), std::move(edge_prop_indices)});
 }
 
@@ -130,9 +132,52 @@ katana::EdgeShuffleTopology::MakeOriginalCopy(const katana::PropertyGraph* pg) {
       edge_prop_indices.begin(), edge_prop_indices.end(), Edge{0});
 
   return std::make_unique<EdgeShuffleTopology>(EdgeShuffleTopology{
-      TransposeKind::kNo, EdgeSortKind::kAny,
+      tsuba::RDGTopology::TransposeKind::kNo,
+      tsuba::RDGTopology::EdgeSortKind::kAny,
       std::move(copy_topo.GetAdjIndices()), std::move(copy_topo.GetDests()),
       std::move(edge_prop_indices)});
+}
+
+std::unique_ptr<katana::EdgeShuffleTopology>
+katana::EdgeShuffleTopology::Make(tsuba::RDGTopology* rdg_topo) {
+  KATANA_LOG_DEBUG_ASSERT(rdg_topo);
+
+  EdgeDestVec dests_copy;
+  dests_copy.allocateInterleaved(rdg_topo->num_edges());
+  AdjIndexVec adj_indices_copy;
+  adj_indices_copy.allocateInterleaved(rdg_topo->num_nodes());
+  PropIndexVec edge_prop_indices;
+  edge_prop_indices.allocateInterleaved(rdg_topo->num_edges());
+
+  katana::ParallelSTL::copy(
+      &(rdg_topo->adj_indices()[0]),
+      &(rdg_topo->adj_indices()[rdg_topo->num_nodes()]),
+      adj_indices_copy.begin());
+  katana::ParallelSTL::copy(
+      &(rdg_topo->dests()[0]), &(rdg_topo->dests()[rdg_topo->num_edges()]),
+      dests_copy.begin());
+
+  katana::ParallelSTL::copy(
+      &(rdg_topo->edge_index_to_property_index_map()[0]),
+      &(rdg_topo->edge_index_to_property_index_map()[rdg_topo->num_edges()]),
+      edge_prop_indices.begin());
+
+  std::unique_ptr<EdgeShuffleTopology> shuffle =
+      std::make_unique<EdgeShuffleTopology>(EdgeShuffleTopology{
+          rdg_topo->transpose_state(), rdg_topo->edge_sort_state(),
+          std::move(adj_indices_copy), std::move(dests_copy),
+          std::move(edge_prop_indices)});
+
+  return shuffle;
+}
+
+katana::Result<tsuba::RDGTopology>
+katana::EdgeShuffleTopology::ToRDGTopology() const {
+  tsuba::RDGTopology topo = KATANA_CHECKED(tsuba::RDGTopology::Make(
+      adj_data(), num_nodes(), dest_data(), num_edges(),
+      tsuba::RDGTopology::TopologyKind::kEdgeShuffleTopology, tpose_state_,
+      edge_sort_state_, edge_prop_indices_.data()));
+  return tsuba::RDGTopology(std::move(topo));
 }
 
 katana::GraphTopologyTypes::edge_iterator
@@ -144,7 +189,7 @@ katana::EdgeShuffleTopology::find_edge(
   constexpr size_t kBinarySearchThreshold = 64;
 
   if (e_range.size() > kBinarySearchThreshold &&
-      !has_edges_sorted_by(EdgeSortKind::kSortedByDestID)) {
+      !has_edges_sorted_by(tsuba::RDGTopology::EdgeSortKind::kSortedByDestID)) {
     KATANA_WARN_ONCE(
         "find_edge(): expect poor performance. Edges not sorted by Dest ID");
   }
@@ -175,7 +220,7 @@ katana::EdgeShuffleTopology::find_edges(
   }
 
   KATANA_LOG_VASSERT(
-      !has_edges_sorted_by(EdgeSortKind::kSortedByDestID),
+      !has_edges_sorted_by(tsuba::RDGTopology::EdgeSortKind::kSortedByDestID),
       "Must have edges sorted by kSortedByDestID");
 
   internal::EdgeDestComparator<EdgeShuffleTopology> comp{this};
@@ -233,7 +278,7 @@ katana::EdgeShuffleTopology::SortEdgesByDestID() noexcept {
       },
       katana::steal(), katana::no_stats());
   // remember to update sort state
-  edge_sort_state_ = EdgeSortKind::kSortedByDestID;
+  edge_sort_state_ = tsuba::RDGTopology::EdgeSortKind::kSortedByDestID;
 }
 
 void
@@ -287,7 +332,7 @@ katana::EdgeShuffleTopology::SortEdgesByTypeThenDest(
       katana::steal(), katana::no_stats());
 
   // remember to update sort state
-  edge_sort_state_ = EdgeSortKind::kSortedByEdgeType;
+  edge_sort_state_ = tsuba::RDGTopology::EdgeSortKind::kSortedByEdgeType;
 }
 
 void
@@ -311,7 +356,8 @@ katana::ShuffleTopology::MakeSortedByDegree(
     return d1 > d2;
   };
 
-  return MakeNodeSortedTopo(seed_topo, cmp, NodeSortKind::kSortedByDegree);
+  return MakeNodeSortedTopo(
+      seed_topo, cmp, tsuba::RDGTopology::NodeSortKind::kSortedByDegree);
 }
 
 std::unique_ptr<katana::ShuffleTopology>
@@ -327,7 +373,58 @@ katana::ShuffleTopology::MakeSortedByNodeType(
     return k1 < k2;
   };
 
-  return MakeNodeSortedTopo(seed_topo, cmp, NodeSortKind::kSortedByNodeType);
+  return MakeNodeSortedTopo(
+      seed_topo, cmp, tsuba::RDGTopology::NodeSortKind::kSortedByNodeType);
+}
+
+std::unique_ptr<katana::ShuffleTopology>
+katana::ShuffleTopology::Make(tsuba::RDGTopology* rdg_topo) {
+  KATANA_LOG_DEBUG_ASSERT(rdg_topo);
+  EdgeDestVec dests_copy;
+  dests_copy.allocateInterleaved(rdg_topo->num_edges());
+  AdjIndexVec adj_indices_copy;
+  adj_indices_copy.allocateInterleaved(rdg_topo->num_nodes());
+  PropIndexVec edge_prop_indices_copy;
+  edge_prop_indices_copy.allocateInterleaved(rdg_topo->num_edges());
+  PropIndexVec node_prop_indices_copy;
+  node_prop_indices_copy.allocateInterleaved(rdg_topo->num_nodes());
+
+  katana::ParallelSTL::copy(
+      &(rdg_topo->adj_indices()[0]),
+      &(rdg_topo->adj_indices()[rdg_topo->num_nodes()]),
+      adj_indices_copy.begin());
+  katana::ParallelSTL::copy(
+      &(rdg_topo->dests()[0]), &(rdg_topo->dests()[rdg_topo->num_edges()]),
+      dests_copy.begin());
+
+  katana::ParallelSTL::copy(
+      &(rdg_topo->edge_index_to_property_index_map()[0]),
+      &(rdg_topo->edge_index_to_property_index_map()[rdg_topo->num_edges()]),
+      edge_prop_indices_copy.begin());
+
+  katana::ParallelSTL::copy(
+      &(rdg_topo->node_index_to_property_index_map()[0]),
+      &(rdg_topo->node_index_to_property_index_map()[rdg_topo->num_nodes()]),
+      node_prop_indices_copy.begin());
+
+  std::unique_ptr<ShuffleTopology> shuffle =
+      std::make_unique<ShuffleTopology>(ShuffleTopology{
+          rdg_topo->transpose_state(), rdg_topo->node_sort_state(),
+          rdg_topo->edge_sort_state(), std::move(adj_indices_copy),
+          std::move(node_prop_indices_copy), std::move(dests_copy),
+          std::move(edge_prop_indices_copy)});
+
+  return shuffle;
+}
+
+katana::Result<tsuba::RDGTopology>
+katana::ShuffleTopology::ToRDGTopology() const {
+  tsuba::RDGTopology topo = KATANA_CHECKED(tsuba::RDGTopology::Make(
+      adj_data(), num_nodes(), dest_data(), num_edges(),
+      tsuba::RDGTopology::TopologyKind::kShuffleTopology, transpose_state(),
+      edge_sort_state(), node_sort_state(), edge_property_index_data(),
+      node_prop_indices_.data()));
+  return tsuba::RDGTopology(std::move(topo));
 }
 
 std::unique_ptr<katana::CondensedTypeIDMap>
@@ -429,7 +526,7 @@ katana::EdgeTypeAwareTopology::MakeFrom(
     const katana::CondensedTypeIDMap* edge_type_index,
     const katana::EdgeShuffleTopology* e_topo) noexcept {
   KATANA_LOG_DEBUG_ASSERT(e_topo->has_edges_sorted_by(
-      EdgeShuffleTopology::EdgeSortKind::kSortedByEdgeType));
+      tsuba::RDGTopology::EdgeSortKind::kSortedByEdgeType));
 
   KATANA_LOG_DEBUG_ASSERT(e_topo->num_edges() == pg->topology().num_edges());
 
@@ -437,7 +534,54 @@ katana::EdgeTypeAwareTopology::MakeFrom(
       CreatePerEdgeTypeAdjacencyIndex(pg, edge_type_index, e_topo);
 
   return std::make_unique<EdgeTypeAwareTopology>(EdgeTypeAwareTopology{
-      pg, edge_type_index, e_topo, std::move(per_type_adj_indices)});
+      edge_type_index, e_topo, std::move(per_type_adj_indices)});
+}
+
+katana::Result<tsuba::RDGTopology>
+katana::EdgeTypeAwareTopology::ToRDGTopology() const {
+  tsuba::RDGTopology topo = KATANA_CHECKED(tsuba::RDGTopology::Make(
+      per_type_adj_indices_.data(), num_nodes(), edge_shuff_topo_->dest_data(),
+      num_edges(), tsuba::RDGTopology::TopologyKind::kEdgeTypeAwareTopology,
+      transpose_state(), edge_sort_state(),
+      edge_shuff_topo_->edge_property_index_data(),
+      edge_type_index_->num_unique_types(),
+      edge_type_index_->index_to_type_map_data()));
+
+  return tsuba::RDGTopology(std::move(topo));
+}
+
+std::unique_ptr<katana::EdgeTypeAwareTopology>
+katana::EdgeTypeAwareTopology::Make(
+    tsuba::RDGTopology* rdg_topo, const CondensedTypeIDMap* edge_type_index,
+    const katana::EdgeShuffleTopology* e_topo) {
+  KATANA_LOG_DEBUG_ASSERT(rdg_topo);
+  KATANA_LOG_ASSERT(
+      rdg_topo->edge_sort_state() ==
+      tsuba::RDGTopology::EdgeSortKind::kSortedByEdgeType);
+  KATANA_LOG_DEBUG_ASSERT(e_topo->has_edges_sorted_by(
+      tsuba::RDGTopology::EdgeSortKind::kSortedByEdgeType));
+
+  KATANA_LOG_VASSERT(
+      edge_type_index->index_to_type_map_matches(
+          rdg_topo->edge_condensed_type_id_map_size(),
+          rdg_topo->edge_condensed_type_id_map()) &&
+          e_topo->num_edges() == rdg_topo->num_edges() &&
+          e_topo->num_nodes() == rdg_topo->num_nodes(),
+      "tried to load out of date EdgeTypeAwareTopology; on disk topologies "
+      "must be invalidated when updates occur");
+
+  AdjIndexVec per_type_adj_indices;
+  per_type_adj_indices.allocateInterleaved(
+      rdg_topo->num_nodes() * edge_type_index->num_unique_types());
+
+  katana::ParallelSTL::copy(
+      &(rdg_topo->adj_indices()[0]),
+      &(rdg_topo->adj_indices()
+            [rdg_topo->num_nodes() * edge_type_index->num_unique_types()]),
+      per_type_adj_indices.begin());
+
+  return std::make_unique<EdgeTypeAwareTopology>(EdgeTypeAwareTopology{
+      edge_type_index, e_topo, std::move(per_type_adj_indices)});
 }
 
 std::unique_ptr<katana::ProjectedTopology>
@@ -719,9 +863,10 @@ CheckTopology(const katana::PropertyGraph* pg, const Topo* t) noexcept {
 
 katana::EdgeShuffleTopology*
 katana::PGViewCache::BuildOrGetEdgeShuffTopo(
-    const katana::PropertyGraph* pg,
-    const katana::EdgeShuffleTopology::TransposeKind& tpose_kind,
-    const katana::EdgeShuffleTopology::EdgeSortKind& sort_kind) noexcept {
+    katana::PropertyGraph* pg,
+    const tsuba::RDGTopology::TransposeKind& tpose_kind,
+    const tsuba::RDGTopology::EdgeSortKind& sort_kind) noexcept {
+  // try to find a matching topology in the cache
   auto pred = [&](const auto& topo_ptr) {
     return topo_ptr->is_valid() && topo_ptr->has_transpose_state(tpose_kind) &&
            topo_ptr->has_edges_sorted_by(sort_kind);
@@ -733,8 +878,22 @@ katana::PGViewCache::BuildOrGetEdgeShuffTopo(
     KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
     return it->get();
   } else {
-    edge_shuff_topos_.emplace_back(
-        EdgeShuffleTopology::Make(pg, tpose_kind, sort_kind));
+    // no matching topology in cache, see if we have it in storage
+    tsuba::RDGTopology shadow = tsuba::RDGTopology::MakeShadow(
+        tsuba::RDGTopology::TopologyKind::kEdgeShuffleTopology, tpose_kind,
+        sort_kind, tsuba::RDGTopology::NodeSortKind::kAny);
+
+    auto res = pg->LoadTopology(std::move(shadow));
+    if (!res) {
+      // no matching topology in cache or storage, generate it
+      edge_shuff_topos_.emplace_back(
+          EdgeShuffleTopology::Make(pg, tpose_kind, sort_kind));
+    } else {
+      // found matching topology in storage
+      tsuba::RDGTopology* topo = res.value();
+      edge_shuff_topos_.emplace_back(katana::EdgeShuffleTopology::Make(topo));
+    }
+
     KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, edge_shuff_topos_.back().get()));
     return edge_shuff_topos_.back().get();
   }
@@ -742,10 +901,11 @@ katana::PGViewCache::BuildOrGetEdgeShuffTopo(
 
 katana::ShuffleTopology*
 katana::PGViewCache::BuildOrGetShuffTopo(
-    const katana::PropertyGraph* pg,
-    const katana::EdgeShuffleTopology::TransposeKind& tpose_kind,
-    const katana::ShuffleTopology::NodeSortKind& node_sort_todo,
-    const katana::EdgeShuffleTopology::EdgeSortKind& edge_sort_todo) noexcept {
+    katana::PropertyGraph* pg,
+    const tsuba::RDGTopology::TransposeKind& tpose_kind,
+    const tsuba::RDGTopology::NodeSortKind& node_sort_todo,
+    const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo) noexcept {
+  // try to find a matching topology in the cache
   auto pred = [&](const auto& topo_ptr) {
     return topo_ptr->is_valid() && topo_ptr->has_transpose_state(tpose_kind) &&
            topo_ptr->has_edges_sorted_by(edge_sort_todo) &&
@@ -759,16 +919,32 @@ katana::PGViewCache::BuildOrGetShuffTopo(
     KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
     return it->get();
   } else {
-    // EdgeShuffleTopology e_topo below is going to serve as a seed for
-    // ShuffleTopology, so we only care about transpose state, and not the sort
-    // state. Because, when creating ShuffleTopology, once we shuffle the nodes, we
-    // will need to re-sort the edges even if they were already sorted
-    auto e_topo = BuildOrGetEdgeShuffTopo(
-        pg, tpose_kind, EdgeShuffleTopology::EdgeSortKind::kAny);
-    KATANA_LOG_DEBUG_ASSERT(e_topo->has_transpose_state(tpose_kind));
+    // no matching topology in cache, see if we have it in storage
 
-    fully_shuff_topos_.emplace_back(ShuffleTopology::MakeFromTopo(
-        pg, *e_topo, node_sort_todo, edge_sort_todo));
+    tsuba::RDGTopology shadow = tsuba::RDGTopology::MakeShadow(
+        tsuba::RDGTopology::TopologyKind::kShuffleTopology, tpose_kind,
+        edge_sort_todo, node_sort_todo);
+    auto res = pg->LoadTopology(std::move(shadow));
+
+    if (!res) {
+      // no matching topology in cache or storage, generate it
+
+      // EdgeShuffleTopology e_topo below is going to serve as a seed for
+      // ShuffleTopology, so we only care about transpose state, and not the sort
+      // state. Because, when creating ShuffleTopology, once we shuffle the nodes, we
+      // will need to re-sort the edges even if they were already sorted
+      auto e_topo = BuildOrGetEdgeShuffTopo(
+          pg, tpose_kind, tsuba::RDGTopology::EdgeSortKind::kAny);
+      KATANA_LOG_DEBUG_ASSERT(e_topo->has_transpose_state(tpose_kind));
+
+      fully_shuff_topos_.emplace_back(ShuffleTopology::MakeFromTopo(
+          pg, *e_topo, node_sort_todo, edge_sort_todo));
+
+    } else {
+      // found matching topology in storage
+      tsuba::RDGTopology* topo = res.value();
+      fully_shuff_topos_.emplace_back(katana::ShuffleTopology::Make(topo));
+    }
 
     KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, fully_shuff_topos_.back().get()));
     return fully_shuff_topos_.back().get();
@@ -777,8 +953,9 @@ katana::PGViewCache::BuildOrGetShuffTopo(
 
 katana::EdgeTypeAwareTopology*
 katana::PGViewCache::BuildOrGetEdgeTypeAwareTopo(
-    const katana::PropertyGraph* pg,
-    const katana::EdgeShuffleTopology::TransposeKind& tpose_kind) noexcept {
+    katana::PropertyGraph* pg,
+    const tsuba::RDGTopology::TransposeKind& tpose_kind) noexcept {
+  // try to find a matching topology in the cache
   auto pred = [&](const auto& topo_ptr) {
     return topo_ptr->is_valid() && topo_ptr->has_transpose_state(tpose_kind);
   };
@@ -789,11 +966,38 @@ katana::PGViewCache::BuildOrGetEdgeTypeAwareTopo(
     KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
     return it->get();
   } else {
+    // no matching topology in cache, see if we have it in storage
+
+    tsuba::RDGTopology shadow = tsuba::RDGTopology::MakeShadow(
+        tsuba::RDGTopology::TopologyKind::kEdgeTypeAwareTopology, tpose_kind,
+        tsuba::RDGTopology::EdgeSortKind::kSortedByEdgeType,
+        tsuba::RDGTopology::NodeSortKind::kAny);
+    auto res = pg->LoadTopology(std::move(shadow));
+
+    // In either generation, or loading, the EdgeTypeAwareTopology depends on an EdgeShuffleTopology
     auto sorted_topo = BuildOrGetEdgeShuffTopo(
-        pg, tpose_kind, EdgeShuffleTopology::EdgeSortKind::kSortedByEdgeType);
+        pg, tpose_kind, tsuba::RDGTopology::EdgeSortKind::kSortedByEdgeType);
+
+    // There are two use cases for the EdgeTypeIndex, either we:
+    // Are generating an EdgeTypeAwareTopology, and need the EdgeTypeIndex
+    // Are loading an EdgeTypeAwareTopology from storage, and need to confirm
+    // the EdgeTypeIndex in storage matches the one we have.
+    // If it doesn't match, then the EdgeTypeAwareTopology on storage is out of date and cannot be used
     auto edge_type_index = BuildOrGetEdgeTypeIndex(pg);
-    edge_type_aware_topos_.emplace_back(
-        EdgeTypeAwareTopology::MakeFrom(pg, edge_type_index, sorted_topo));
+
+    if (res) {
+      // found matching topology in storage
+      tsuba::RDGTopology* rdg_topo = res.value();
+
+      edge_type_aware_topos_.emplace_back(katana::EdgeTypeAwareTopology::Make(
+          rdg_topo, edge_type_index, sorted_topo));
+    }
+
+    else {
+      // no matching topology in cache or storage, generate it
+      edge_type_aware_topos_.emplace_back(
+          EdgeTypeAwareTopology::MakeFrom(pg, edge_type_index, sorted_topo));
+    }
 
     KATANA_LOG_DEBUG_ASSERT(
         CheckTopology(pg, edge_type_aware_topos_.back().get()));
@@ -813,6 +1017,31 @@ katana::PGViewCache::BuildOrGetProjectedGraphTopo(
       ProjectedTopology::MakeTypeProjectedTopology(pg, node_types, edge_types);
   KATANA_LOG_DEBUG_ASSERT(projected_topos_);
   return projected_topos_.get();
+}
+
+katana::Result<std::vector<tsuba::RDGTopology>>
+katana::PGViewCache::ToRDGTopology() {
+  std::vector<tsuba::RDGTopology> rdg_topos;
+
+  for (size_t i = 0; i < edge_shuff_topos_.size(); i++) {
+    tsuba::RDGTopology topo =
+        KATANA_CHECKED(edge_shuff_topos_[i]->ToRDGTopology());
+    rdg_topos.emplace_back(std::move(topo));
+  }
+
+  for (size_t i = 0; i < fully_shuff_topos_.size(); i++) {
+    tsuba::RDGTopology topo =
+        KATANA_CHECKED(fully_shuff_topos_[i]->ToRDGTopology());
+    rdg_topos.emplace_back(std::move(topo));
+  }
+
+  for (size_t i = 0; i < edge_type_aware_topos_.size(); i++) {
+    tsuba::RDGTopology topo =
+        KATANA_CHECKED(edge_type_aware_topos_[i]->ToRDGTopology());
+    rdg_topos.emplace_back(std::move(topo));
+  }
+
+  return std::vector<tsuba::RDGTopology>(std::move(rdg_topos));
 }
 
 katana::GraphTopology

@@ -23,6 +23,9 @@ set(sources
   src/RDGPartHeader.cpp
   src/RDGPrefix.cpp
   src/RDGSlice.cpp
+  src/RDGTopology.cpp
+  src/RDGTopologyManager.cpp
+  src/PartitionTopologyMetadata.cpp
   src/ReadGroup.cpp
   src/tsuba.cpp
   src/WriteGroup.cpp

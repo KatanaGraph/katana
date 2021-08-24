@@ -17,11 +17,11 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
   }
 
   tsuba::RDGPartHeader part_header = std::move(meta_res.value());
-  if (part_header.topology_path().empty()) {
+  if (part_header.csr_topology_path().empty()) {
     return RDGPrefix{};
   }
 
-  katana::Uri t_path = manifest.dir().Join(part_header.topology_path());
+  katana::Uri t_path = manifest.dir().Join(part_header.csr_topology_path());
 
   CSRTopologyHeader gr_header;
   if (auto res = FileGet(t_path.string(), &gr_header); !res) {

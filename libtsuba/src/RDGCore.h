@@ -5,9 +5,14 @@
 
 #include <arrow/api.h>
 
+#include "PartitionTopologyMetadata.h"
 #include "RDGPartHeader.h"
+#include "RDGTopologyManager.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
 #include "katana/config.h"
 #include "tsuba/FileView.h"
+#include "tsuba/RDGTopology.h"
 
 namespace tsuba {
 
@@ -162,14 +167,6 @@ public:
   const RDGLineage& lineage() const { return lineage_; }
   void set_lineage(RDGLineage&& lineage) { lineage_ = lineage; }
 
-  const FileView& topology_file_storage() const {
-    return topology_file_storage_;
-  }
-  FileView& topology_file_storage() { return topology_file_storage_; }
-  void set_topology_file_storage(FileView&& topology_file_storage) {
-    topology_file_storage_ = std::move(topology_file_storage);
-  }
-
   const FileView& node_entity_type_id_array_file_storage() const {
     return node_entity_type_id_array_file_storage_;
   }
@@ -200,14 +197,62 @@ public:
     part_header_ = std::move(part_header);
   }
 
-  katana::Result<void> RegisterTopologyFile(const std::string& new_top) {
-    part_header_.set_topology_path(new_top);
-    return topology_file_storage_.Bind(
-        rdg_dir_.Join(new_top).string(), /*resolve =*/false);
+  const RDGTopologyManager& topology_manager() const {
+    return topology_manager_;
+  }
+  RDGTopologyManager& topology_manager() { return topology_manager_; }
+
+  katana::Result<void> MakeTopologyManager(const katana::Uri& metadata_dir) {
+    RDGTopologyManager topo_manager = KATANA_CHECKED(
+        tsuba::RDGTopologyManager::Make(part_header_.topology_metadata()));
+    topology_manager_ = std::move(topo_manager);
+    if (!part_header_.IsMetadataOutsideTopologyFile()) {
+      // need to bind & map topology file now to extract the metadata
+      KATANA_CHECKED_CONTEXT(
+          topology_manager_.ExtractMetadata(metadata_dir),
+          "Extracting metadata from previous format topology file");
+    }
+
+    return katana::ResultSuccess();
   }
 
-  katana::Result<void> UnbindTopologyFile() {
-    return topology_file_storage_.Unbind();
+  void UpsertTopology(RDGTopology topo) {
+    // get the topology a metadata entry
+    topo.set_metadata_entry(part_header_.MakePartitionTopologyMetadataEntry());
+
+    topology_manager().Upsert(std::move(topo));
+  }
+
+  void AddTopology(RDGTopology topo) {
+    // get the topology a metadata entry
+    topo.set_metadata_entry(part_header_.MakePartitionTopologyMetadataEntry());
+
+    topology_manager().Append(std::move(topo));
+  }
+
+  /// Create a PartitionMetadataEntry for the provided topology file
+  /// Loads just enough of the file into memory to populate the metadata
+  /// Marks the topologies storage as valid, since we are just telling the
+  /// RDG about where the topology is located and not actually loading it for use.
+  katana::Result<void> RegisterCSRTopologyFile(
+      const std::string& new_topo_path, const katana::Uri& rdg_dir) {
+    // get the topology a metadata entry and add it to our entries set
+    part_header_.MakePartitionTopologyMetadataEntry(new_topo_path);
+
+    // generate a RDGTopologyManager from the now present entry
+    RDGTopologyManager topo_manager = KATANA_CHECKED(
+        tsuba::RDGTopologyManager::Make(part_header_.topology_metadata()));
+    topology_manager_ = std::move(topo_manager);
+
+    // get the metadata we need from the topology file
+    KATANA_CHECKED_CONTEXT(
+        topology_manager_.ExtractMetadata(rdg_dir, /*storage_valid=*/true),
+        "Extracting metadata from previous format topology file");
+    return katana::ResultSuccess();
+  }
+
+  katana::Result<void> UnbindAllTopologyFile() {
+    return topology_manager().UnbindAllTopologyFile();
   }
 
   katana::Result<void> RegisterNodeEntityTypeIDArrayFile(
@@ -236,7 +281,7 @@ private:
   std::shared_ptr<arrow::Table> node_properties_;
   std::shared_ptr<arrow::Table> edge_properties_;
 
-  FileView topology_file_storage_;
+  RDGTopologyManager topology_manager_;
 
   FileView node_entity_type_id_array_file_storage_;
   FileView edge_entity_type_id_array_file_storage_;

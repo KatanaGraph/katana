@@ -317,6 +317,7 @@ tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
   return katana::ResultSuccess();
 }
 
+/// Create a file name for the default CSR topology
 katana::Uri
 tsuba::MakeTopologyFileName(tsuba::RDGHandle handle) {
   return GetRDGDir(handle).RandFile("topology");

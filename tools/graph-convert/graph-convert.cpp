@@ -2918,7 +2918,7 @@ struct Gr2Kg : public Conversion {
 
     tsuba::RDG rdg;
     rdg.set_rdg_dir(tsuba::GetRDGDir(handle));
-    if (auto res = rdg.SetTopologyFile(top_file_name); !res) {
+    if (auto res = rdg.AddCSRTopologyByFile(top_file_name); !res) {
       return res.error();
     }
     auto node_types = std::make_unique<tsuba::FileFrame>();
@@ -2944,8 +2944,8 @@ struct Gr2Kg : public Conversion {
         KATANA_CHECKED(edge_type_manager.AddAtomicEntityType("edge")));
 
     return rdg.Store(
-        handle, kCommandLine, nullptr, std::move(node_types),
-        std::move(edge_types), node_type_manager, edge_type_manager);
+        handle, kCommandLine, std::move(node_types), std::move(edge_types),
+        node_type_manager, edge_type_manager);
   }
 
   template <typename EdgeTy>

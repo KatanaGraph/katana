@@ -102,8 +102,7 @@ def get_rdgs(graph_dir, version: Optional[dict] = None):
         rdgs.append(rdg)
     if version is None:
         return rdgs
-    else:
-        for rdg in rdgs:
-            if rdg["version"] == version:
-                rdgs.remove(rdg)
+    for rdg in rdgs:
+        if rdg["version"] == version:
+            rdgs.remove(rdg)
     return rdgs

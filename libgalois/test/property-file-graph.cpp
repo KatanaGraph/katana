@@ -96,9 +96,9 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   auto g2 = std::move(make_result.value());
 
   KATANA_LOG_VASSERT(
-      g2->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g2->GetNumNodeEntityTypes() == 1, "found {} entity types.",
       g2->GetNumNodeEntityTypes());
-  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() != 0);
+  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() == 1);
 
   KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
   KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);

@@ -283,6 +283,7 @@ tsuba::RDG::DoStoreTopology(
   }
 
   if (topology_ff) {
+    KATANA_LOG_DEBUG("Persisting new topology");
     // we have an update, store the passed in memory state
     katana::Uri path_uri = MakeTopologyFileName(handle);
     topology_ff->Bind(path_uri.string());
@@ -290,7 +291,8 @@ tsuba::RDG::DoStoreTopology(
     write_group->StartStore(std::move(topology_ff));
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_topology_path(path_uri.BaseName());
-  } else if (core_->part_header().topology_path().empty()) {
+  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
+    KATANA_LOG_DEBUG("persisting topology in new location");
     // we don't have an update, but we are persisting in a new location
     // store our in memory state
     katana::Uri path_uri = MakeTopologyFileName(handle);
@@ -302,6 +304,9 @@ tsuba::RDG::DoStoreTopology(
         core_->topology_file_storage().size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_topology_path(path_uri.BaseName());
+  } else {
+    // no update, rdg_dir is unchanged, assert if we don't have a valid path
+    KATANA_LOG_ASSERT(core_->part_header().topology_path().empty() == false);
   }
   // else: no update, not persisting in a new location, so nothing for us to do
 
@@ -329,11 +334,11 @@ tsuba::RDG::DoStoreNodeEntityTypeIDArray(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_node_entity_type_id_array_path(
         path_uri.BaseName());
-  } else if (core_->part_header().node_entity_type_id_array_path().empty()) {
+  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
+    KATANA_LOG_DEBUG("persisting node_entity_type_id_array in new location");
     // we don't have an update, but we are persisting in a new location
     // store our in memory state
     katana::Uri path_uri = MakeNodeEntityTypeIDArrayFileName(handle);
-    node_entity_type_id_array_ff->Bind(path_uri.string());
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     // depends on `node_entity_type_id_array_` outliving writes
@@ -344,6 +349,10 @@ tsuba::RDG::DoStoreNodeEntityTypeIDArray(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_node_entity_type_id_array_path(
         path_uri.BaseName());
+  } else {
+    // no update, rdg_dir is unchanged, assert if we don't have a valid path
+    KATANA_LOG_ASSERT(
+        core_->part_header().node_entity_type_id_array_path().empty() == false);
   }
   // else: no update, not persisting in a new location, so nothing for us to do
 
@@ -371,11 +380,11 @@ tsuba::RDG::DoStoreEdgeEntityTypeIDArray(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_edge_entity_type_id_array_path(
         path_uri.BaseName());
-  } else if (core_->part_header().edge_entity_type_id_array_path().empty()) {
+  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
+    KATANA_LOG_DEBUG("persisting edge_entity_type_id_array in new location");
     // we don't have an update, but we are persisting in a new location
     // store our in memory state
     katana::Uri path_uri = MakeEdgeEntityTypeIDArrayFileName(handle);
-    edge_entity_type_id_array_ff->Bind(path_uri.string());
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     // depends on `edge_entity_type_id_array_` outliving writes
@@ -386,6 +395,10 @@ tsuba::RDG::DoStoreEdgeEntityTypeIDArray(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_edge_entity_type_id_array_path(
         path_uri.BaseName());
+  } else {
+    // no update, rdg_dir is unchanged, assert if we don't have a valid path
+    KATANA_LOG_ASSERT(
+        core_->part_header().edge_entity_type_id_array_path().empty() == false);
   }
   // else: no update, not persisting in a new location, so nothing for us to do
 
@@ -397,38 +410,7 @@ tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
-  if (core_->part_header().node_entity_type_id_array_path().empty()) {
-    // No node_entity_type_id_array file; create one
-    katana::Uri node_entity_type_id_array_path =
-        MakeNodeEntityTypeIDArrayFileName(handle);
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-
-    // depends on `node_entity_type_id_array_` outliving writes
-    write_group->StartStore(
-        node_entity_type_id_array_path.string(),
-        core_->node_entity_type_id_array_file_storage().ptr<uint8_t>(),
-        core_->node_entity_type_id_array_file_storage().size());
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-    core_->part_header().set_node_entity_type_id_array_path(
-        node_entity_type_id_array_path.BaseName());
-  }
-
-  if (core_->part_header().edge_entity_type_id_array_path().empty()) {
-    // No edge_entity_type_id_array file; create one
-    katana::Uri edge_entity_type_id_array_path =
-        MakeEdgeEntityTypeIDArrayFileName(handle);
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-
-    // depends on `edge_entity_type_id_array_` outliving writes
-    write_group->StartStore(
-        edge_entity_type_id_array_path.string(),
-        core_->edge_entity_type_id_array_file_storage().ptr<uint8_t>(),
-        core_->edge_entity_type_id_array_file_storage().size());
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-    core_->part_header().set_edge_entity_type_id_array_path(
-        edge_entity_type_id_array_path.BaseName());
-  }
-
+  // bump the storage format version to the latest
   core_->part_header().update_storage_format_version();
 
   std::vector<std::string> node_prop_names;

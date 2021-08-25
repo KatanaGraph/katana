@@ -238,6 +238,13 @@ public:
   }
   void LogError(const std::string& message, const ErrorInfo& error);
 
+  /// Optionally output detailed memory profiling information.
+  ///
+  /// This is a noop unless KATANA_USE_JEMALLOC is enabled and the environment
+  /// variable MALLOC_CONF contains prof:true. See
+  /// docs/contributing/performance.rst for more details.
+  void LogProfile();
+
   /// Get span's context for propagating across process boundaries
   virtual const ProgressContext& GetContext() const noexcept = 0;
 

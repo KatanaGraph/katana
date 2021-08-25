@@ -6,6 +6,7 @@ include(GitHeadSHA)
 include(PythonSetupSubdirectory)
 
 include(Version)
+include(FindCLibrary)
 
 set(KATANA_COPYRIGHT_YEAR "2018") # Also in COPYRIGHT
 set(KATANA_GIT_SHA "${GIT_HEAD_SHA}")
@@ -34,6 +35,8 @@ set(KATANA_USE_TUNE "intel;generic;auto" CACHE STRING "Semi-colon separated list
   Default: 'intel;generic;auto' which tries to optimize for the most recent Intel processors, then falls back to
   optimizing for the most common processors and then to optimizing for the processor selected by KATANA_USE_ARCH")
 set(KATANA_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
+set(KATANA_USE_JEMALLOC OFF CACHE BOOL "Use jemalloc")
+
 # This option is automatically handled by CMake.
 # It makes add_library build a shared lib unless STATIC is explicitly specified.
 set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
@@ -62,6 +65,8 @@ set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: min(number of physical core, 4))")
 set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 
+###### Configure (users don't need to go beyond here) ######
+
 cmake_host_system_information(RESULT KATANA_NUM_PHYSICAL_CORES QUERY NUMBER_OF_PHYSICAL_CORES)
 
 if (NOT KATANA_NUM_TEST_THREADS)
@@ -81,8 +86,6 @@ if (NOT KATANA_NUM_TEST_GPUS)
     set(KATANA_NUM_TEST_GPUS 0)
   endif ()
 endif ()
-
-###### Configure (users don't need to go beyond here) ######
 
 # Enable KATANA_IS_MAIN_PROJECT if this file is included in the root project.
 # KATANA_IS_MAIN_PROJECT is enabled for Katana library builds and disabled if
@@ -123,7 +126,6 @@ if (KATANA_AUTO_CONAN)
       BUILD missing)
   include("${CMAKE_CURRENT_BINARY_DIR}/conan_paths.cmake")
 endif ()
-
 
 ###### Configure compiler ######
 
@@ -236,7 +238,6 @@ if (python IN_LIST KATANA_LANG_BINDINGS)
   set(KATANA_LANG_BINDINGS_PYTHON TRUE)
 endif ()
 
-
 ###### Configure features ######
 
 if (KATANA_USE_VTUNE)
@@ -251,6 +252,11 @@ if (KATANA_USE_PAPI)
   add_definitions(-DKATANA_USE_PAPI)
 endif ()
 
+if (KATANA_USE_JEMALLOC)
+  find_c_library(NAME jemalloc TARGET jemalloc::jemalloc REQUIRED MAIN_HEADER jemalloc/jemalloc.h)
+  link_libraries(jemalloc::jemalloc)
+endif ()
+
 find_package(NUMA)
 
 find_package(Threads REQUIRED)
@@ -258,8 +264,13 @@ find_package(Threads REQUIRED)
 include(CheckMmap)
 
 include(CheckHugePages)
-if (NOT HAVE_HUGEPAGES AND KATANA_STRICT_CONFIG)
-  message(FATAL_ERROR "Need huge pages")
+if (KATANA_STRICT_CONFIG)
+  if (NOT HAVE_HUGEPAGES)
+    message(FATAL_ERROR "Strict config requires huge pages but huge pages not found")
+  endif ()
+  if (KATANA_USE_JEMALLOC)
+    message(FATAL_ERROR "Strict config requires huge pages but jemalloc disables huge pages")
+  endif ()
 endif ()
 
 find_package(Boost 1.58.0 REQUIRED COMPONENTS filesystem serialization iostreams)

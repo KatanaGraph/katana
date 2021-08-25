@@ -16,12 +16,14 @@ class KatanaConan(ConanFile):
         "boost/1.74.0",
         "eigen/3.3.7",
         "fmt/6.2.1",
+        "jemalloc/5.2.1",
         "libcurl/7.74.0",
         "nlohmann_json/3.7.3",
         "openssl/1.1.1h",
     )
 
     default_options = {
+        "jemalloc:enable_prof": True,
         "libcurl:shared": False,
     }
 

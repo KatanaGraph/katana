@@ -7,11 +7,16 @@
 #include <regex>
 
 #include "katana/Logging.h"
+#include "katana/config.h"
 
 #if __linux__
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
+#endif
+
+#ifdef KATANA_USE_JEMALLOC
+#include <jemalloc/jemalloc.h>
 #endif
 
 std::unique_ptr<katana::ProgressTracer> katana::ProgressTracer::tracer_ =
@@ -202,6 +207,22 @@ katana::ProgressSpan::LogError(
   Log(message, {{"event", "error"},
                 {"error.kind", error.error_code().message()},
                 {"error.context", fmt::format("{}", error)}});
+}
+
+void
+katana::ProgressSpan::LogProfile() {
+#ifdef KATANA_USE_JEMALLOC
+  // Write a profile according to the environment variable
+  // MALLOC_CONF
+  int ret = mallctl("prof.dump", NULL, NULL, NULL, 0);
+  if (ret) {
+    KATANA_LOG_ERROR("jemalloc dump: {}", std::strerror(ret));
+    return;
+  }
+  static int stage;
+  Log("heap dumped", {{"profile_stage", stage}});
+  stage++;
+#endif
 }
 
 void

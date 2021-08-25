@@ -19,7 +19,7 @@
 
 #include "katana/Profile.h"
 
-#ifdef KATANA_ENABLE_PAPI
+#ifdef KATANA_USE_PAPI
 extern "C" {
 #include <papi.h>
 #include <papiStdEventDefs.h>

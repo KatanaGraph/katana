@@ -3,9 +3,9 @@ include_guard(DIRECTORY)
 include(GNUInstallDirs)
 include(FetchContent)
 include(GitHeadSHA)
-include(KatanaPythonSetupSubdirectory)
+include(PythonSetupSubdirectory)
 
-include(KatanaVersion)
+include(Version)
 
 set(KATANA_COPYRIGHT_YEAR "2018") # Also in COPYRIGHT
 set(KATANA_GIT_SHA "${GIT_HEAD_SHA}")
@@ -19,11 +19,11 @@ endif ()
 
 ###### Options (alternatively pass as options to cmake -DName=Value) ######
 ###### General features ######
-set(KATANA_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
-set(KATANA_ENABLE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
+set(KATANA_USE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
+set(KATANA_USE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
 set(KATANA_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fail")
 set(KATANA_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
-set(KATANA_ENABLE_COVERAGE OFF CACHE BOOL "Add instrumentation (used for code coverage collection) to binaries.")
+set(KATANA_USE_COVERAGE OFF CACHE BOOL "Add instrumentation (used for code coverage collection) to binaries.")
 set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
 set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
 set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to use features of;
@@ -75,7 +75,7 @@ if (KATANA_NUM_TEST_THREADS LESS_EQUAL 0)
 endif ()
 
 if (NOT KATANA_NUM_TEST_GPUS)
-  if (KATANA_ENABLE_GPU)
+  if (KATANA_USE_GPU)
     set(KATANA_NUM_TEST_GPUS 1)
   else ()
     set(KATANA_NUM_TEST_GPUS 0)
@@ -239,16 +239,16 @@ endif ()
 
 ###### Configure features ######
 
-if (KATANA_ENABLE_VTUNE)
+if (KATANA_USE_VTUNE)
   find_package(VTune REQUIRED PATHS /opt/intel/vtune_amplifier)
   include_directories(${VTune_INCLUDE_DIRS})
-  add_definitions(-DKATANA_ENABLE_VTUNE)
+  add_definitions(-DKATANA_USE_VTUNE)
 endif ()
 
-if (KATANA_ENABLE_PAPI)
+if (KATANA_USE_PAPI)
   find_package(PAPI REQUIRED)
   include_directories(${PAPI_INCLUDE_DIRS})
-  add_definitions(-DKATANA_ENABLE_PAPI)
+  add_definitions(-DKATANA_USE_PAPI)
 endif ()
 
 find_package(NUMA)
@@ -308,7 +308,7 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
 endif ()
 
 # Instrument binaries if desired
-if (KATANA_ENABLE_COVERAGE)
+if (KATANA_USE_COVERAGE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g --coverage")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g --coverage")
   add_link_options("SHELL: --coverage -lgcov")
@@ -353,12 +353,12 @@ endfunction ()
 if (KATANA_GRAPH_LOCATION)
   set(BASEINPUT "${KATANA_GRAPH_LOCATION}")
   set(BASE_VERIFICATION "${KATANA_GRAPH_LOCATION}")
-  set(KATANA_ENABLE_INPUTS OFF)
+  set(KATANA_USE_INPUTS OFF)
   message(STATUS "Using graph input and verification logs location ${KATANA_GRAPH_LOCATION}")
 else ()
   set(BASEINPUT "${PROJECT_BINARY_DIR}/inputs/current")
   set(BASE_VERIFICATION "${PROJECT_BINARY_DIR}/inputs/current")
-  set(KATANA_ENABLE_INPUTS ON)
+  set(KATANA_USE_INPUTS ON)
 endif ()
 # Set a common graph location for any nested projects.
 set(KATANA_GRAPH_LOCATION ${BASEINPUT})

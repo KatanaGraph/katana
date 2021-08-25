@@ -200,7 +200,7 @@ def load_lang_config(lang):
     """
     Load the compilation configuration provided by CMake.
 
-    KatanaPythonSetupSubdirectory.cmake generates a text file that contains build and link flags that we read.
+    PythonSetupSubdirectory.cmake generates a text file that contains build and link flags that we read.
     They typically look like (more text elided with `[...]`, newlines inserted for clarity):
     ::
 

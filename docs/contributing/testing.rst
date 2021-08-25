@@ -146,7 +146,7 @@ Include the following options when running the ``cmake`` command
 
 .. code-block:: bash
 
-   -DKATANA_ENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+   -DKATANA_USE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
 
 After the build is done, binaries will be instrumented to collect
 profiling data.

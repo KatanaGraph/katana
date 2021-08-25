@@ -272,6 +272,11 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   return next_properties;
 }
 
+katana::RDGVersion
+tsuba::RDG::GetFileVersion(RDGHandle handle) {
+  return handle.impl_->rdg_manifest().version();
+}
+
 katana::Result<void>
 tsuba::RDG::DoStoreTopology(
     RDGHandle handle, std::unique_ptr<FileFrame> topology_ff,
@@ -492,8 +497,11 @@ katana::Result<void>
 tsuba::RDG::DoMake(
     const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
     const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
-    const katana::Uri& metadata_dir) {
+    const RDGManifest& manifest) {
   ReadGroup grp;
+
+  katana::Uri metadata_dir = manifest.dir();
+  katana::RDGVersion version = manifest.version();
 
   KATANA_CHECKED_CONTEXT(
       AddProperties(
@@ -647,7 +655,7 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   std::vector<PropStorageInfo*> edge_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectEdgeProperties(opts.edge_properties));
 
-  KATANA_CHECKED(rdg.DoMake(node_props, edge_props, manifest.dir()));
+  KATANA_CHECKED(rdg.DoMake(node_props, edge_props, manifest));
 
   rdg.set_partition_id(partition_id_to_load);
 
@@ -697,11 +705,13 @@ tsuba::RDG::Store(
   // We trust the partitioner to give us a valid graph, but we
   // report our assumptions
   KATANA_LOG_DEBUG(
-      "RDG::Store manifest.num_hosts: {} manifest.policy_id: {} num_hosts: {} "
-      "policy_id: {} versioning_action{}",
+      "RDG::Store manifest.num_hosts: {} version {} manifest.policy_id: {} "
+      "num_hosts: {} policy_id: {} versioning_action {}; ",
       handle.impl_->rdg_manifest().num_hosts(),
+      handle.impl_->rdg_manifest().version().ToString(),
       handle.impl_->rdg_manifest().policy_id(), tsuba::Comm()->Num,
       core_->part_header().metadata().policy_id_, versioning_action);
+
   if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
     KATANA_CHECKED(core_->part_header().ChangeStorageLocation(
         rdg_dir_, handle.impl_->rdg_manifest().dir()));

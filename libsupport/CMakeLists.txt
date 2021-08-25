@@ -30,6 +30,7 @@ set(sources
         src/Strings.cpp
         src/TextTracer.cpp
         src/URI.cpp
+        src/RDGVersion.cpp
 )
 
 target_sources(katana_support PRIVATE ${sources})

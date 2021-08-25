@@ -145,6 +145,16 @@ tsuba::RDGSlice::edge_entity_type_id_array_file_storage() const {
   return core_->edge_entity_type_id_array_file_storage();
 }
 
+katana::Result<katana::EntityTypeManager>
+tsuba::RDGSlice::node_entity_type_manager() const {
+  return core_->part_header().GetNodeEntityTypeManager();
+}
+
+katana::Result<katana::EntityTypeManager>
+tsuba::RDGSlice::edge_entity_type_manager() const {
+  return core_->part_header().GetEdgeEntityTypeManager();
+}
+
 tsuba::RDGSlice::RDGSlice(std::unique_ptr<RDGCore>&& core)
     : core_(std::move(core)) {}
 

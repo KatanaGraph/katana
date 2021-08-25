@@ -151,15 +151,6 @@ public:
     return ResultSuccess();
   }
 
-  // TODO(amber): delete this method. It's risky
-  void Reset() {
-    atomic_entity_type_id_to_type_name_.clear();
-    atomic_type_name_to_entity_type_id_.clear();
-    entity_type_id_to_atomic_entity_type_ids_.clear();
-    atomic_entity_type_id_to_entity_type_ids_.clear();
-    Init();
-  }
-
   /// adds a new entity type for the atomic type with name \p name
   /// \returns the EntityTypeID for the new type
   EntityTypeID AddAtomicEntityType(const std::string& name) {

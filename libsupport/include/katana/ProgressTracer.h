@@ -10,55 +10,64 @@
 #include "katana/Result.h"
 #include "katana/config.h"
 
-/// This tracer does not currently support thread-local tracers or concurrency controls
-/// Starting/Finishing span functions should only be used in a single-threaded context
-/// However, logging and tagging existing spans are thread-safe in the JSONTracer
+/// Tracers do not currently support thread-local tracers or concurrency controls.
+/// Starting/Finishing span functions should only be used in a single-threaded context.
+/// However, logging and tagging existing spans are thread-safe.
 ///
-/// OpenTracing Overview
+/// The tracing classes are based on the OpenTracing
+/// specifications, which can be found here: https://opentracing.io/docs/overview/what-is-tracing/
 ///
-/// The following classes are based on/from the OpenTracing
-/// specifications which can be found here: https://opentracing.io/docs/overview/what-is-tracing/
+/// Spans are units of work with a defined start and stop point. Spans may have
+/// associated log messages as well as tags.
 ///
-/// In short spans are units of work with a defined start and stop point which
-/// we can add timestamped logs to as well as tags for the overall span (or unit of work)
+/// A scope owns a span for its lifetime, and it closes the span when it goes
+/// out of scope or the developer calls Close on it. Whenever possible scopes
+/// should be used instead of raw spans
 ///
-/// Each Scope is "in charge of" a span for its lifetime, and closes the span when it
-/// goes out of scope or the developer calls Close on it
-/// Whenever possible scopes should be used instead of raw spans
-///
-/// Tracers are used to control span logic, they create spans and maintain
-/// the active span for ease of use for the developer
+/// Tracers are used to control span logic. They create spans and maintain
+/// the active span for ease of use for the developer.
 ///
 /// Contexts are typically used to pass spans across process/thread boundaries
 ///
-///
-///
 /// Best Practices:
-///   If possible always avoid creating raw ProgressSpans from ProgressTracer
-///   If possible always use ProgressScopes to handle ProgressSpans
-///   Only use 1 ProgressTracer in an execution, so they should be created at entry points
-///   Use ProgressScope's RAII to handle early returns (i.e. due to errors)
-///   Raw ProgressSpans should be used for special scenarios like tracing asynchronous calls
+///
+/// - If possible always avoid creating raw ProgressSpans from ProgressTracer
+///
+/// - If possible always use ProgressScopes to handle ProgressSpans
+///
+/// - Only use 1 ProgressTracer in an execution. They should be created at entry points.
+///
+/// - Use ProgressScope's RAII to handle early returns (e.g., due to errors)
+///
+/// - Raw ProgressSpans should be used for special scenarios like tracing asynchronous calls
 ///
 /// Notes:
-///   SharedMemSys and DistMemSys will initialize the global ProgressTracer to a JsonTracer
-///     later it will be set to a No-op Tracer, on Fini or the destructor they will call
-///     Close on the global ProgressTracer
-///   This prevents GetProgressTracer() from returning nullptr and ensures Tracers are closed
 ///
-///   ProgressScope's will only close their ProgressSpan when their ProgressSpan is the active span
-///   This means that if a user exclusively uses ProgressScopes,
-///   Then parent ProgressSpans will not be closed until their child ProgressSpan's close
-///   i.e.
-///   {
-///      auto scope1 = tracer.StartActiveSpan("1");
-///      auto scope2 = tracer.StartActiveSpan("2");
-///      if (err) { return; }
-///      scope2.Close();
-///      auto scope3 = tracer.StartActiveSpan("3");
-///   }
-///   This always results in scope2's ProgressSpan finishing before scope1's ProgressSpan
-///   If there is no error, scope3's ProgressSpan will always finish before scope1's ProgressSpan
+/// SharedMemSys and DistMemSys will initialize the global ProgressTracer to a
+/// JsonTracer. Later, it will be set to a no-op tracer. On Fini or the
+/// destructor, SharedMemSys or DistMemSys will call Close on the global
+/// ProgressTracer. This prevents GetProgressTracer() from returning nullptr
+/// and ensures tracers are closed
+///
+/// ProgressScopes will only close their ProgressSpan when their ProgressSpan
+/// is the active span. This means that if a user exclusively uses
+/// ProgressScopes, then parent ProgressSpans will not be closed until their
+/// child ProgressSpan's close.
+///
+/// For example, in the following,
+///
+///     {
+///        auto scope1 = tracer.StartActiveSpan("1");
+///        auto scope2 = tracer.StartActiveSpan("2");
+///        if (err) { return; }
+///        scope2.Close();
+///        auto scope3 = tracer.StartActiveSpan("3");
+///     }
+///
+/// Scope2's ProgressSpan will finish before scope1's ProgressSpan. If there is
+/// no error, scope3's ProgressSpan will finish before scope1's ProgressSpan.
+///
+/// \file
 
 namespace katana {
 

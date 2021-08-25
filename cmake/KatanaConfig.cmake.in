@@ -43,11 +43,11 @@ find_dependency(Arrow REQUIRED)
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
 find_dependency(Parquet HINTS ${ARROW_CONFIG_DIR})
 
-if (@KATANA_ENABLE_VTUNE@)
+if (@KATANA_USE_VTUNE@)
   find_dependency(VTune REQUIRED)
 endif()
 
-if (@KATANA_ENABLE_PAPI@)
+if (@KATANA_USE_PAPI@)
   find_dependency(PAPI REQUIRED)
 endif()
 

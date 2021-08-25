@@ -22,11 +22,11 @@
 
 #include <cstdlib>
 
-#ifdef KATANA_ENABLE_VTUNE
+#ifdef KATANA_USE_VTUNE
 #include "ittnotify.h"
 #endif
 
-#ifdef KATANA_ENABLE_PAPI
+#ifdef KATANA_USE_PAPI
 extern "C" {
 #include <papi.h>
 #include <papiStdEventDefs.h>
@@ -40,7 +40,7 @@ extern "C" {
 
 namespace katana {
 
-#ifdef KATANA_ENABLE_VTUNE
+#ifdef KATANA_USE_VTUNE
 
 template <typename F>
 void
@@ -77,7 +77,7 @@ profileVtune(const F& func, const char* region) {
 
 #endif
 
-#ifdef KATANA_ENABLE_PAPI
+#ifdef KATANA_USE_PAPI
 
 namespace internal {
 

@@ -4,7 +4,7 @@ project(Katana)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
-include(KatanaBuildCommon)
+include(BuildCommon)
 
 ###### Documentation ######
 
@@ -34,7 +34,7 @@ if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(lonestar)
   # If we are testing and there is no custom input location, add rules to
   # download inputs
-  if(KATANA_ENABLE_INPUTS)
+  if(KATANA_USE_INPUTS)
     add_subdirectory(inputs)
   endif()
 else()

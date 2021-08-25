@@ -73,9 +73,9 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
   KATANA_LOG_VASSERT(
-      g->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g->GetNumNodeEntityTypes() == 1, "found {} entity types.",
       g->GetNumNodeEntityTypes());
-  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() != 0);
+  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() == 1);
 
   auto write_result = g->Write(rdg_dir, command_line);
 

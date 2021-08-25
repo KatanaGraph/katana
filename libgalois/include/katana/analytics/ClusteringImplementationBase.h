@@ -39,8 +39,8 @@ struct CommunityType {
   EdgeWeightType internal_edge_wt;
 };
 
-struct PreviousCommunityId : public katana::PODProperty<uint64_t> {};
-struct CurrentCommunityId : public katana::PODProperty<uint64_t> {};
+struct PreviousCommunityID : public katana::PODProperty<uint64_t> {};
+struct CurrentCommunityID : public katana::PODProperty<uint64_t> {};
 
 template <typename EdgeWeightType>
 using DegreeWeight = katana::PODProperty<EdgeWeightType>;
@@ -77,7 +77,7 @@ struct ClusteringImplementationBase {
 
     // Add the node's current cluster to be considered
     // for movement as well
-    cluster_local_map[graph.template GetData<CurrentCommunityId>(n)] =
+    cluster_local_map[graph.template GetData<CurrentCommunityID>(n)] =
         0;                 // Add n's current cluster
     counter.push_back(0);  // Initialize the counter to zero (no edges incident
                            // yet)
@@ -92,12 +92,12 @@ struct ClusteringImplementationBase {
         self_loop_wt += edge_wt;  // Self loop weights is recorded
       }
       auto stored_already =
-          cluster_local_map.find(graph.template GetData<CurrentCommunityId>(
+          cluster_local_map.find(graph.template GetData<CurrentCommunityID>(
               dst));  // Check if it already exists
       if (stored_already != cluster_local_map.end()) {
         counter[stored_already->second] += edge_wt;
       } else {
-        cluster_local_map[graph.template GetData<CurrentCommunityId>(dst)] =
+        cluster_local_map[graph.template GetData<CurrentCommunityID>(dst)] =
             num_unique_clusters;
         counter.push_back(edge_wt);
         num_unique_clusters++;
@@ -115,14 +115,14 @@ struct ClusteringImplementationBase {
     using GNode = typename Graph::Node;
     // Initialize each node to its own cluster
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
-      graph->template GetData<CurrentCommunityId>(n) = n;
+      graph->template GetData<CurrentCommunityID>(n) = n;
     });
 
     // Remove isolated and degree-one nodes
     katana::GAccumulator<uint64_t> isolated_nodes;
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
       auto& n_data_curr_comm_id =
-          graph->template GetData<CurrentCommunityId>(n);
+          graph->template GetData<CurrentCommunityID>(n);
       uint64_t degree = std::distance(graph->edge_begin(n), graph->edge_end(n));
       if (degree == 0) {
         isolated_nodes += 1;
@@ -136,7 +136,7 @@ struct ClusteringImplementationBase {
           if ((dst_degree > 1 || (n > *dst))) {
             isolated_nodes += 1;
             n_data_curr_comm_id =
-                graph->template GetData<CurrentCommunityId>(dst);
+                graph->template GetData<CurrentCommunityID>(dst);
           }
         }
       }
@@ -279,9 +279,9 @@ struct ClusteringImplementationBase {
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       auto n_data_current_comm_id =
-          graph.template GetData<CurrentCommunityId>(n);
+          graph.template GetData<CurrentCommunityID>(n);
       for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-        if (graph.template GetData<CurrentCommunityId>(graph.GetEdgeDest(ii)) ==
+        if (graph.template GetData<CurrentCommunityID>(graph.GetEdgeDest(ii)) ==
             n_data_current_comm_id) {
           cluster_wt_internal[n] +=
               graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
@@ -406,7 +406,7 @@ struct ClusteringImplementationBase {
 
     for (GNode n = 0; n < graph->num_nodes(); ++n) {
       auto& n_data_curr_comm_id =
-          graph->template GetData<CurrentCommunityId>(n);
+          graph->template GetData<CurrentCommunityID>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         KATANA_LOG_DEBUG_ASSERT(n_data_curr_comm_id < graph->num_nodes());
         auto stored_already = cluster_local_map.find(n_data_curr_comm_id);
@@ -426,14 +426,14 @@ struct ClusteringImplementationBase {
   void CheckModularity(
       Graph& graph, katana::NUMAArray<uint64_t>& clusters_orig) {
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      graph.template GetData<CurrentCommunityId>(n).curr_comm_ass =
+      graph.template GetData<CurrentCommunityID>(n).curr_comm_ass =
           clusters_orig[n];
     });
 
     [[maybe_unused]] uint64_t num_unique_clusters =
         RenumberClustersContiguously(graph);
     auto mod =
-        CalModularityFinal<Graph, EdgeWeightType, CurrentCommunityId>(graph);
+        CalModularityFinal<Graph, EdgeWeightType, CurrentCommunityID>(graph);
   }
 
   /**
@@ -517,7 +517,7 @@ struct ClusteringImplementationBase {
     // for cluster_bags, but something like katana::InsertBag exhausts the
     // per-thread-storage memory
     for (GNode n = 0; n < graph.num_nodes(); ++n) {
-      auto n_data_curr_comm_id = graph.template GetData<CurrentCommunityId>(n);
+      auto n_data_curr_comm_id = graph.template GetData<CurrentCommunityID>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         cluster_bags[n_data_curr_comm_id].push_back(n);
       }
@@ -534,14 +534,14 @@ struct ClusteringImplementationBase {
           uint64_t num_unique_clusters = 0;
           for (auto node : cluster_bags[c]) {
             KATANA_LOG_DEBUG_ASSERT(
-                graph.template GetData<CurrentCommunityId>(node) ==
+                graph.template GetData<CurrentCommunityID>(node) ==
                 c);  // All nodes in this bag must have same cluster id
 
             for (auto ii = graph.edge_begin(node); ii != graph.edge_end(node);
                  ++ii) {
               auto dst = graph.GetEdgeDest(ii);
               auto dst_data_curr_comm_id =
-                  graph.template GetData<CurrentCommunityId>(dst);
+                  graph.template GetData<CurrentCommunityID>(dst);
               KATANA_LOG_DEBUG_ASSERT(dst_data_curr_comm_id != UNASSIGNED);
               auto stored_already = cluster_local_map.find(
                   dst_data_curr_comm_id);  // Check if it already exists

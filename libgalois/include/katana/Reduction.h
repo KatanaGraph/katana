@@ -42,14 +42,14 @@ namespace katana {
  *
  *   T& operator()(T& lhs, T&& rhs)
  *
- * IdFunc returns the identity element, which is used to initialize and reset
+ * IDFunc returns the identity element, which is used to initialize and reset
  * the per thread values.
  *
- * Both MergeFunc and IdFunc should be copy constructable.
+ * Both MergeFunc and IDFunc should be copy constructable.
  *
- * The MergeFunc and IdFunc should be related as follows:
+ * The MergeFunc and IDFunc should be related as follows:
  *
- *   MergeFunc(x, IdFunc()) == x    for all x in X
+ *   MergeFunc(x, IDFunc()) == x    for all x in X
  *
  * An example of using a move merge function:
  *
@@ -61,8 +61,8 @@ namespace katana {
  *   r.update(std::move(u));
  *   T& result = r.reduce();
  */
-template <typename T, typename MergeFunc, typename IdFunc>
-class Reducible : public MergeFunc, public IdFunc {
+template <typename T, typename MergeFunc, typename IDFunc>
+class Reducible : public MergeFunc, public IDFunc {
   katana::PerThreadStorage<T> data_;
 
   void merge(T& lhs, T&& rhs) {
@@ -75,10 +75,10 @@ class Reducible : public MergeFunc, public IdFunc {
 public:
   using value_type = T;
 
-  Reducible(MergeFunc merge_func, IdFunc id_func)
-      : MergeFunc(merge_func), IdFunc(id_func) {
+  Reducible(MergeFunc merge_func, IDFunc id_func)
+      : MergeFunc(merge_func), IDFunc(id_func) {
     for (unsigned i = 0; i < data_.size(); ++i) {
-      *(data_.getRemote(i)) = IdFunc::operator()();
+      *(data_.getRemote(i)) = IDFunc::operator()();
     }
   }
 
@@ -103,7 +103,7 @@ public:
     for (unsigned int i = 1; i < data_.size(); ++i) {
       T& rhs = *data_.getRemote(i);
       merge(lhs, std::move(rhs));
-      rhs = IdFunc::operator()();
+      rhs = IDFunc::operator()();
     }
 
     return lhs;
@@ -111,7 +111,7 @@ public:
 
   void reset() {
     for (unsigned int i = 0; i < data_.size(); ++i) {
-      *data_.getRemote(i) = IdFunc::operator()();
+      *data_.getRemote(i) = IDFunc::operator()();
     }
   }
 };
@@ -120,10 +120,10 @@ public:
  * make_reducible creates a Reducible from a merge function and identity
  * function.
  */
-template <typename MergeFn, typename IdFn>
+template <typename MergeFn, typename IDFn>
 auto
-make_reducible(const MergeFn& mergeFn, const IdFn& idFn) {
-  return Reducible<std::invoke_result_t<IdFn>, MergeFn, IdFn>(mergeFn, idFn);
+make_reducible(const MergeFn& mergeFn, const IDFn& idFn) {
+  return Reducible<std::invoke_result_t<IDFn>, MergeFn, IDFn>(mergeFn, idFn);
 }
 
 //! gmax is the functional form of std::max

@@ -166,8 +166,8 @@ def main():
 
     if not args.noverify:
         numNodeProperties = len(graph.loaded_node_schema())
-        newPropertyId = numNodeProperties - 1
-        verify_cc(graph, newPropertyId)
+        newPropertyID = numNodeProperties - 1
+        verify_cc(graph, newPropertyID)
 
 
 if __name__ == "__main__":

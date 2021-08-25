@@ -52,7 +52,7 @@ PrimitivePropertyIndex<node_or_edge, c_type>::BuildFromProperty() {
     // The keys inserted are the node ids - the set translates these into
     // property values.
     if (property_->IsValid(i)) {
-      set_.insert(IndexId{i});
+      set_.insert(IndexID{i});
     }
   }
 
@@ -72,7 +72,7 @@ StringPropertyIndex<node_or_edge>::BuildFromProperty() {
     // The keys inserted are the node ids - the set translates these into
     // property values.
     if (property_->IsValid(i)) {
-      set_.insert(IndexId{i});
+      set_.insert(IndexID{i});
     }
   }
 

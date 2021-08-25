@@ -235,20 +235,20 @@ private:
   void advance(ptrdiff_t n) { at += n; }
 };
 
-template <typename IdTy>
-class IntrusiveId {
-  IdTy id;
+template <typename IDTy>
+class IntrusiveID {
+  IDTy id;
 
 public:
-  IdTy& getId() { return id; }
-  void setId(size_t n) { id = n; }
+  IDTy& getID() { return id; }
+  void setID(size_t n) { id = n; }
 };
 
 template <>
-class IntrusiveId<void> {
+class IntrusiveID<void> {
 public:
-  char getId() { return 0; }
-  void setId(size_t) {}
+  char getID() { return 0; }
+  void setID(size_t) {}
 };
 
 //! Empty class for HasLockable optimization

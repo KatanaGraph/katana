@@ -161,8 +161,8 @@ public:
     if (ni.type == 0) {
       return this->getEdgeDst(boost::fusion::at_c<0>(ni.its));
     } else {
-      return nodeFromId(
-          inGraph.getId(inGraph.getEdgeDst(boost::fusion::at_c<1>(ni.its))));
+      return nodeFromID(
+          inGraph.getID(inGraph.getEdgeDst(boost::fusion::at_c<1>(ni.its))));
     }
   }
 
@@ -184,7 +184,7 @@ public:
                  ei = inGraph.raw_end(inGraphNode(N));
              ii != ei; ++ii) {
           this->acquireNode(
-              nodeFromId(inGraph.getId(inGraph.getEdgeDst(ii))), mflag);
+              nodeFromID(inGraph.getID(inGraph.getEdgeDst(ii))), mflag);
         }
       }
       return in_edge_iterator(inGraph.raw_begin(inGraphNode(N)), 0);
@@ -285,9 +285,9 @@ public:
         katana::steal());
   }
 
-  size_t idFromNode(GraphNode N) { return this->getId(N); }
+  size_t idFromNode(GraphNode N) { return this->getID(N); }
 
-  GraphNode nodeFromId(size_t N) { return this->getNode(N); }
+  GraphNode nodeFromID(size_t N) { return this->getNode(N); }
 };
 
 }  // namespace katana

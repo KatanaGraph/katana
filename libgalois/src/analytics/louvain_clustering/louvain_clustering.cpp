@@ -33,12 +33,12 @@ struct LouvainClusteringImplementation
     : public katana::analytics::ClusteringImplementationBase<
           katana::TypedPropertyGraph<
               std::tuple<
-                  PreviousCommunityId, CurrentCommunityId,
+                  PreviousCommunityID, CurrentCommunityID,
                   DegreeWeight<EdgeWeightType>>,
               std::tuple<EdgeWeight<EdgeWeightType>>>,
           EdgeWeightType, CommunityType<EdgeWeightType>> {
   using NodeData = std::tuple<
-      PreviousCommunityId, CurrentCommunityId, DegreeWeight<EdgeWeightType>>;
+      PreviousCommunityID, CurrentCommunityID, DegreeWeight<EdgeWeightType>>;
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
   using CommTy = CommunityType<EdgeWeightType>;
   using CommunityArray = katana::NUMAArray<CommTy>;
@@ -76,8 +76,8 @@ struct LouvainClusteringImplementation
 
     /* Initialization each node to its own cluster */
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      graph.template GetData<CurrentCommunityId>(n) = n;
-      graph.template GetData<PreviousCommunityId>(n) = n;
+      graph.template GetData<CurrentCommunityID>(n) = n;
+      graph.template GetData<PreviousCommunityID>(n) = n;
     });
 
     /* Calculate the weighted degree sum for each vertex */
@@ -101,7 +101,7 @@ struct LouvainClusteringImplementation
           katana::iterate(graph),
           [&](GNode n) {
             auto& n_data_curr_comm_id =
-                graph.template GetData<CurrentCommunityId>(n);
+                graph.template GetData<CurrentCommunityID>(n);
             auto& n_data_degree_wt =
                 graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
 
@@ -205,8 +205,8 @@ struct LouvainClusteringImplementation
 
     /* Initialization each node to its own cluster */
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      graph.template GetData<CurrentCommunityId>(n) = n;
-      graph.template GetData<PreviousCommunityId>(n) = n;
+      graph.template GetData<CurrentCommunityID>(n) = n;
+      graph.template GetData<PreviousCommunityID>(n) = n;
     });
 
     /* Calculate the weighted degree sum for each vertex */
@@ -253,7 +253,7 @@ struct LouvainClusteringImplementation
             katana::iterate(bag[idx]),
             [&](GNode n) {
               auto& n_data_curr_comm_id =
-                  graph.template GetData<CurrentCommunityId>(n);
+                  graph.template GetData<CurrentCommunityID>(n);
               auto& n_data_degree_wt =
                   graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
 
@@ -307,7 +307,7 @@ struct LouvainClusteringImplementation
             katana::loopname("louvain algo: Phase 1"));
 
         katana::do_all(katana::iterate(bag[idx]), [&](GNode n) {
-          graph.template GetData<CurrentCommunityId>(n) = local_target[n];
+          graph.template GetData<CurrentCommunityID>(n) = local_target[n];
         });
 
         for (auto n : to_process) {
@@ -384,7 +384,7 @@ public:
      * Initialize node cluster id.
      */
       katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-        clusters_orig[n] = graph_curr.template GetData<CurrentCommunityId>(n);
+        clusters_orig[n] = graph_curr.template GetData<CurrentCommunityID>(n);
       });
 
       auto pfg_empty = std::make_unique<katana::PropertyGraph>();
@@ -458,7 +458,7 @@ public:
           KATANA_LOG_DEBUG_ASSERT(num_nodes_orig == graph_curr.num_nodes());
           katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
             clusters_orig[n] =
-                graph_curr.template GetData<CurrentCommunityId>(n);
+                graph_curr.template GetData<CurrentCommunityID>(n);
           });
         } else {
           katana::do_all(
@@ -467,7 +467,7 @@ public:
                   KATANA_LOG_DEBUG_ASSERT(
                       clusters_orig[n] < graph_curr.num_nodes());
                   clusters_orig[n] =
-                      graph_curr.template GetData<CurrentCommunityId>(
+                      graph_curr.template GetData<CurrentCommunityID>(
                           clusters_orig[n]);
                 }
               });
@@ -528,19 +528,19 @@ LouvainClusteringWithWrap(
       pfg, edge_weight_property_name, temp_node_property_names, clusters_orig,
       plan));
 
-  KATANA_CHECKED(ConstructNodeProperties<std::tuple<CurrentCommunityId>>(
+  KATANA_CHECKED(ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
       pfg, {output_property_name}));
 
   auto graph = KATANA_CHECKED((
-      katana::TypedPropertyGraph<std::tuple<CurrentCommunityId>, std::tuple<>>::
+      katana::TypedPropertyGraph<std::tuple<CurrentCommunityID>, std::tuple<>>::
           Make(pfg, {output_property_name}, {})));
 
   katana::do_all(
       katana::iterate(graph),
       [&](uint32_t i) {
-        graph.GetData<CurrentCommunityId>(i) = clusters_orig[i];
+        graph.GetData<CurrentCommunityID>(i) = clusters_orig[i];
       },
-      katana::loopname("Add clusterIds"), katana::no_stats());
+      katana::loopname("Add clusterIDs"), katana::no_stats());
 
   return katana::ResultSuccess();
 }
@@ -610,7 +610,7 @@ CalModularityWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& property_name) {
   using CommTy = CommunityType<EdgeWeightType>;
-  using NodeData = std::tuple<PreviousCommunityId>;
+  using NodeData = std::tuple<PreviousCommunityID>;
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
   using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
   using ClusterBase = katana::analytics::ClusteringImplementationBase<
@@ -622,7 +622,7 @@ CalModularityWrap(
   }
   auto graph = graph_result.value();
   return ClusterBase::template CalModularityFinal<
-      Graph, EdgeWeightType, PreviousCommunityId>(graph);
+      Graph, EdgeWeightType, PreviousCommunityID>(graph);
 }
 
 katana::Result<katana::analytics::LouvainClusteringStatistics>
@@ -630,7 +630,7 @@ katana::analytics::LouvainClusteringStatistics::Compute(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& property_name) {
   auto graph_result = katana::
-      TypedPropertyGraph<std::tuple<PreviousCommunityId>, std::tuple<>>::Make(
+      TypedPropertyGraph<std::tuple<PreviousCommunityID>, std::tuple<>>::Make(
           pg, {property_name}, {});
   if (!graph_result) {
     return graph_result.error();
@@ -661,7 +661,7 @@ katana::analytics::LouvainClusteringStatistics::Compute(
   katana::do_all(
       katana::iterate(graph),
       [&](const uint32_t& x) {
-        auto& n = graph.template GetData<PreviousCommunityId>(x);
+        auto& n = graph.template GetData<PreviousCommunityID>(x);
         accumMap.update(Map{std::make_pair(n, uint64_t{1})});
       },
       katana::loopname("CountLargest"));

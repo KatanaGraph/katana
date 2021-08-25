@@ -709,7 +709,7 @@ AddLabelInternal(
 
 // Used to build the out_dests component of the CSR representation
 uint64_t
-SetEdgeId(
+SetEdgeID(
     TopologyState* topology_builder, std::vector<uint64_t>* offsets,
     size_t index) {
   uint32_t src = topology_builder->sources[index];
@@ -1202,14 +1202,14 @@ katana::PropertyGraphBuilder::StartNode() {
 bool
 katana::PropertyGraphBuilder::StartNode(const std::string& id) {
   if (this->StartNode()) {
-    this->AddNodeId(id);
+    this->AddNodeID(id);
     return true;
   }
   return false;
 }
 
 void
-katana::PropertyGraphBuilder::AddNodeId(const std::string& id) {
+katana::PropertyGraphBuilder::AddNodeID(const std::string& id) {
   topology_builder_.node_indexes.insert(
       std::pair<std::string, size_t>(id, nodes_));
 }
@@ -1303,7 +1303,7 @@ katana::PropertyGraphBuilder::StartEdge(
 }
 
 void
-katana::PropertyGraphBuilder::AddEdgeId(const std::string& id) {
+katana::PropertyGraphBuilder::AddEdgeID(const std::string& id) {
   topology_builder_.edge_ids.insert(id);
 }
 
@@ -1676,9 +1676,8 @@ katana::PropertyGraphBuilder::BuildFinalEdges(bool verbose) {
 
   // get edge indices
   for (size_t i = 0; i < topology_builder_.sources.size(); i++) {
-    uint64_t edgeId = SetEdgeId(&topology_builder_, &offsets, i);
-    // edge_mapping[i] = edgeId;
-    edge_mapping[edgeId] = i;
+    uint64_t edgeID = SetEdgeID(&topology_builder_, &offsets, i);
+    edge_mapping[edgeID] = i;
   }
 
   auto initial_edges = BuildChunks(&edge_properties_.chunks);

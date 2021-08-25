@@ -248,7 +248,7 @@ ResolveValue(const bson_value_t* val, ImportDataType type, bool is_list) {
 /*****************************************/
 
 std::string
-ExtractOid(const bson_value_t* elt) {
+ExtractOID(const bson_value_t* elt) {
   const bson_oid_t* oid = &elt->value.v_oid;
   char str[25];
   bson_oid_to_string(oid, str);
@@ -256,7 +256,7 @@ ExtractOid(const bson_value_t* elt) {
 }
 
 std::string
-ExtractOid(const bson_iter_t& elt) {
+ExtractOID(const bson_iter_t& elt) {
   const bson_oid_t* oid = bson_iter_oid(&elt);
   char str[25];
   bson_oid_to_string(oid, str);
@@ -264,7 +264,7 @@ ExtractOid(const bson_iter_t& elt) {
 }
 
 bson_type_t
-ExtractBsonArrayType(const bson_value_t* val) {
+ExtractBSONArrayType(const bson_value_t* val) {
   bson_type_t type = BSON_TYPE_NULL;
   bson_t array;
   if (bson_init_static(
@@ -312,7 +312,7 @@ ProcessElement(const bson_value_t* elt, const std::string& name) {
   auto elt_type = elt->value_type;
   bool is_list = elt_type == BSON_TYPE_ARRAY;
   if (is_list) {
-    elt_type = ExtractBsonArrayType(elt);
+    elt_type = ExtractBSONArrayType(elt);
     if (elt_type == BSON_TYPE_DOCUMENT) {
       return PropertyKey{
           name,
@@ -424,19 +424,19 @@ HandleNonPropertyNodeElement(
 
   // initialize new node
   if (name == std::string("_id")) {
-    builder->AddNodeId(ExtractOid(elt));
+    builder->AddNodeID(ExtractOID(elt));
     return true;
   }
   // if elt is an ObjectID (foreign key), add a property-less edge
   if (elt_type == BSON_TYPE_OID) {
     std::string edge_type = collection_name + "_" + name;
-    auto oid = ExtractOid(elt);
+    auto oid = ExtractOID(elt);
     builder->AddOutgoingEdge(oid, edge_type);
     return true;
   }
   // if elt is an array of embedded documents defer adding them to later
   if (elt_type == BSON_TYPE_ARRAY) {
-    auto array_type = ExtractBsonArrayType(elt);
+    auto array_type = ExtractBSONArrayType(elt);
     if (array_type == BSON_TYPE_DOCUMENT) {
       bson_value_t copy;
       bson_value_copy(elt, &copy);
@@ -452,7 +452,7 @@ HandleNonPropertyNodeElement(
         if (bson_iter_init(&arr_iter, &array)) {
           while (bson_iter_next(&arr_iter)) {
             auto val = bson_iter_value(&arr_iter);
-            auto oid = ExtractOid(val);
+            auto oid = ExtractOID(val);
             builder->AddOutgoingEdge(oid, name);
           }
         }
@@ -605,7 +605,7 @@ CheckIfDocumentIsEdge(const bson_t* doc) {
       break;
     }
     case BSON_TYPE_ARRAY: {
-      auto array_type = ExtractBsonArrayType(elt);
+      auto array_type = ExtractBSONArrayType(elt);
       if (array_type == BSON_TYPE_DOCUMENT || array_type == BSON_TYPE_OID) {
         return false;
       }
@@ -693,7 +693,7 @@ ExtractDocumentFields(
             std::pair<std::string, PropertyKey>(elt_name, elt_key));
       } else {
         if (elt->value_type == BSON_TYPE_ARRAY) {
-          auto array_type = ExtractBsonArrayType(elt);
+          auto array_type = ExtractBSONArrayType(elt);
           if (array_type == BSON_TYPE_OID) {
             fields->embedded_relations.insert(name);
           } else if (array_type == BSON_TYPE_DOCUMENT) {
@@ -1022,16 +1022,16 @@ katana::HandleEdgeDocumentMongoDB(
 
       // initialize new node
       if (name == std::string("_id")) {
-        builder->AddEdgeId(ExtractOid(iter));
+        builder->AddEdgeID(ExtractOID(iter));
         continue;
       }
       // handle src and destination node IDs
       if (elt->value_type == BSON_TYPE_OID) {
         if (!found_source) {
-          builder->AddEdgeSource(ExtractOid(iter));
+          builder->AddEdgeSource(ExtractOID(iter));
           found_source = true;
         } else {
-          builder->AddEdgeTarget(ExtractOid(iter));
+          builder->AddEdgeTarget(ExtractOID(iter));
         }
         continue;
       }

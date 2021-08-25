@@ -3,10 +3,10 @@ Utilities which download example data for testing and experimentation.
 """
 
 import os
+import re
 import shutil
 import tarfile
 import urllib.request
-import re
 from pathlib import Path
 from typing import List, Optional
 
@@ -69,20 +69,21 @@ def get_input_as_url(rel_path) -> str:
     path = get_input(rel_path).resolve()
     return f"file://{path}"
 
+
 def parse_version(source) -> dict:
-    s = re.split(r'_', source[4:])
+    s = re.split(r"_", source[4:])
     version = {}
-    version["Numbers"]=[]
-    version["Branches"]=[]
-    if len(s) == 0 :
-        version["Numbers"]=[0]
-        version["Branches"]=["."]
+    version["Numbers"] = []
+    version["Branches"] = []
+    if len(s) == 0:
+        version["Numbers"] = [0]
+        version["Branches"] = ["."]
         return version
     i = 0
-    while i<len(s) :
+    while i < len(s):
         version["Numbers"].append(int(s[i]))
         i += 1
-        if i<len(s):
+        if i < len(s):
             version["Branches"].append(s[i])
             i += 1
         else:

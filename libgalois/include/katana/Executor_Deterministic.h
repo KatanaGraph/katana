@@ -469,7 +469,7 @@ struct OptionsCommon {
   constexpr static bool needsBreak = has_trait<parallel_break_tag, ArgsTy>();
 
   constexpr static bool hasBreak = has_trait<det_parallel_break_tag, ArgsTy>();
-  constexpr static bool hasId = has_trait<det_id_tag, ArgsTy>();
+  constexpr static bool hasID = has_trait<det_id_tag, ArgsTy>();
 
   constexpr static bool useLocalState = has_trait<local_state_tag, ArgsTy>();
   constexpr static bool hasFixedNeighborhood =
@@ -482,7 +482,7 @@ struct OptionsCommon {
   static const size_t MinDelta = ChunkSize * 40;
 
   static_assert(
-      !hasFixedNeighborhood || (hasFixedNeighborhood && hasId),
+      !hasFixedNeighborhood || (hasFixedNeighborhood && hasID),
       "Please provide id function when operator has fixed neighborhood");
 
   function2_type fn2;
@@ -938,31 +938,31 @@ using WindowManager =
     WindowManagerBase<OptionsTy, OptionsTy::hasFixedNeighborhood>;
 
 template <typename OptionsTy, bool Enable>
-struct IdManagerBase {
+struct IDManagerBase {
   typedef typename OptionsTy::value_type value_type;
-  IdManagerBase(const OptionsTy&) {}
+  IDManagerBase(const OptionsTy&) {}
   uintptr_t id(const value_type&) { return 0; }
 };
 
 template <typename OptionsTy>
-class IdManagerBase<OptionsTy, true> {
+class IDManagerBase<OptionsTy, true> {
   typedef typename OptionsTy::value_type value_type;
   typedef
       typename trait_type<det_id_tag, typename OptionsTy::args_type>::type::type
-          IdFn;
-  IdFn idFn;
+          IDFn;
+  IDFn idFn;
 
 public:
-  IdManagerBase(const OptionsTy& o)
+  IDManagerBase(const OptionsTy& o)
       : idFn(get_trait_value<det_id_tag>(o.args).value) {}
   uintptr_t id(const value_type& x) { return idFn(x); }
 };
 
 template <typename OptionsTy>
-using IdManager = IdManagerBase<OptionsTy, OptionsTy::hasId>;
+using IDManager = IDManagerBase<OptionsTy, OptionsTy::hasID>;
 
 template <typename OptionsTy>
-class NewWorkManager : public IdManager<OptionsTy> {
+class NewWorkManager : public IDManager<OptionsTy> {
   typedef typename OptionsTy::value_type value_type;
   typedef DItem<OptionsTy> Item;
   typedef DNewItem<value_type> NewItem;
@@ -993,8 +993,8 @@ class NewWorkManager : public IdManager<OptionsTy> {
     PerIterAllocTy alloc;
     NewItemsTy newItems;
     ReserveTy reserve;
-    size_t minId;
-    size_t maxId;
+    size_t minID;
+    size_t maxID;
     size_t size;
 
     ThreadLocalData() : alloc(&heap), newItems(alloc) {}
@@ -1168,7 +1168,7 @@ class NewWorkManager : public IdManager<OptionsTy> {
     if (tid == 0) {
       receiveLimits(local);
       broadcastLimits(local);
-      if (!OptionsTy::hasId) {
+      if (!OptionsTy::hasID) {
         mergeBuf.reserve(local.size);
         merge(0, numActive);
       }
@@ -1176,9 +1176,9 @@ class NewWorkManager : public IdManager<OptionsTy> {
 
     barrier.Wait();
 
-    if (OptionsTy::hasId) {
+    if (OptionsTy::hasID) {
       size_t window = wm.nextWindow(
-          local.maxId - local.minId, OptionsTy::MinDelta, local.minId);
+          local.maxID - local.minID, OptionsTy::MinDelta, local.minID);
       copyAllWithIds(ii, ei, wl, window);
     } else {
       GetNewItem fn(this);
@@ -1201,8 +1201,8 @@ class NewWorkManager : public IdManager<OptionsTy> {
   void broadcastLimits(ThreadLocalData& local) {
     for (unsigned i = 1; i < numActive; ++i) {
       ThreadLocalData& other = *data.getRemote(i);
-      other.minId = local.minId;
-      other.maxId = local.maxId;
+      other.minID = local.minID;
+      other.maxID = local.maxID;
       other.size = local.size;
     }
   }
@@ -1210,8 +1210,8 @@ class NewWorkManager : public IdManager<OptionsTy> {
   void receiveLimits(ThreadLocalData& local) {
     for (unsigned i = 1; i < numActive; ++i) {
       ThreadLocalData& other = *data.getRemote(i);
-      local.minId = std::min(other.minId, local.minId);
-      local.maxId = std::max(other.maxId, local.maxId);
+      local.minID = std::min(other.minID, local.minID);
+      local.maxID = std::max(other.maxID, local.maxID);
       local.size += other.size;
     }
   }
@@ -1221,16 +1221,16 @@ class NewWorkManager : public IdManager<OptionsTy> {
   void initialLimits(BiIteratorTy ii, BiIteratorTy ei) {
     ThreadLocalData& local = *data.getLocal();
 
-    local.minId = std::numeric_limits<size_t>::max();
-    local.maxId = std::numeric_limits<size_t>::min();
+    local.minID = std::numeric_limits<size_t>::max();
+    local.maxID = std::numeric_limits<size_t>::min();
     local.size = std::distance(ii, ei);
 
     if (ii != ei) {
       if (ii + 1 == ei) {
-        local.minId = local.maxId = ii->parent;
+        local.minID = local.maxID = ii->parent;
       } else {
-        local.minId = ii->parent;
-        local.maxId = (ei - 1)->parent;
+        local.minID = ii->parent;
+        local.maxID = (ei - 1)->parent;
       }
     }
   }
@@ -1239,10 +1239,10 @@ class NewWorkManager : public IdManager<OptionsTy> {
   void sortInitialWorkDispatch(InputIteratorTy, InputIteratorTy, ...) {}
 
   template <
-      typename InputIteratorTy, bool HasId = OptionsTy::hasId,
+      typename InputIteratorTy, bool HasID = OptionsTy::hasID,
       bool HasFixed = OptionsTy::hasFixedNeighborhood>
   auto sortInitialWorkDispatch(InputIteratorTy ii, InputIteratorTy ei, int) ->
-      typename std::enable_if<HasId && !HasFixed, void>::type {
+      typename std::enable_if<HasID && !HasFixed, void>::type {
     ThreadLocalData& local = *data.getLocal();
     size_t dist = std::distance(ii, ei);
 
@@ -1258,7 +1258,7 @@ class NewWorkManager : public IdManager<OptionsTy> {
 
 public:
   NewWorkManager(const OptionsTy& o)
-      : IdManager<OptionsTy>(o),
+      : IDManager<OptionsTy>(o),
         alloc(&heap),
         mergeBuf(alloc),
         distributeBuf(alloc),
@@ -1292,9 +1292,9 @@ public:
       WindowManager<OptionsTy>& wm, InputIteratorTy b, InputIteratorTy e,
       WL* wl) {
     size_t dist = std::distance(b, e);
-    if (OptionsTy::hasId) {
+    if (OptionsTy::hasID) {
       ThreadLocalData& local = *data.getLocal();
-      size_t window = wm.initialWindow(dist, OptionsTy::MinDelta, local.minId);
+      size_t window = wm.initialWindow(dist, OptionsTy::MinDelta, local.minID);
       if (OptionsTy::hasFixedNeighborhood) {
         copyMine(b, e, dist, wl, window, ThreadPool::getTID());
       } else {
@@ -1311,15 +1311,15 @@ public:
     }
   }
 
-  template <bool HasId = OptionsTy::hasId>
+  template <bool HasID = OptionsTy::hasID>
   auto pushNew(const value_type& val, unsigned long, unsigned) ->
-      typename std::enable_if<HasId, void>::type {
+      typename std::enable_if<HasID, void>::type {
     new_.push(NewItem(val, this->id(val), 1));
   }
 
-  template <bool HasId = OptionsTy::hasId>
+  template <bool HasID = OptionsTy::hasID>
   auto pushNew(const value_type& val, unsigned long parent, unsigned count) ->
-      typename std::enable_if<!HasId, void>::type {
+      typename std::enable_if<!HasID, void>::type {
     new_.push(NewItem(val, parent, count));
   }
 

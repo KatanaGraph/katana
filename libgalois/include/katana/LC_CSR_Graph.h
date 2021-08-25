@@ -197,7 +197,7 @@ protected:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<_A1 && !_A2>::type* = 0) {
-    this->outOfLineAcquire(getId(N), mflag);
+    this->outOfLineAcquire(getID(N), mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
@@ -224,7 +224,7 @@ protected:
     edgeData.set(*nn, {});
   }
 
-  size_t getId(GraphNode N) { return N; }
+  size_t getID(GraphNode N) { return N; }
 
   GraphNode getNode(size_t n) { return n; }
 

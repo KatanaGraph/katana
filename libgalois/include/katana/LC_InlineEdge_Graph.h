@@ -197,7 +197,7 @@ protected:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<_A1 && !_A2>::type* = 0) {
-    this->outOfLineAcquire(getId(N), mflag);
+    this->outOfLineAcquire(getID(N), mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
@@ -205,10 +205,10 @@ protected:
       GraphNode, MethodFlag, typename std::enable_if<_A2>::type* = 0) {}
 
   edge_iterator raw_begin(GraphNode N) {
-    return nodeData[getId(N)].edgeBegin();
+    return nodeData[getID(N)].edgeBegin();
   }
 
-  edge_iterator raw_end(GraphNode N) { return nodeData[getId(N)].edgeEnd(); }
+  edge_iterator raw_end(GraphNode N) { return nodeData[getID(N)].edgeEnd(); }
 
   template <
       bool _A1 = EdgeInfo::has_value,
@@ -230,7 +230,7 @@ protected:
     edge->construct();
   }
 
-  size_t getId(GraphNode N) { return std::distance(this->nodeData.data(), N); }
+  size_t getID(GraphNode N) { return std::distance(this->nodeData.data(), N); }
 
   GraphNode getNode(size_t n) { return &nodeData[n]; }
 

@@ -41,9 +41,9 @@ enum DetAlgo { nondet = 0, detBase, detDisjoint };
 
 static cll::opt<std::string> inputFile(
     cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<uint32_t> sourceId(
+static cll::opt<uint32_t> sourceID(
     "sourceNode", cll::desc("Source node"), cll::Required);
-static cll::opt<uint32_t> sinkId(
+static cll::opt<uint32_t> sinkID(
     "sinkNode", cll::desc("Sink node"), cll::Required);
 static cll::opt<bool> useHLOrder(
     "useHLOrder", cll::desc("Use HL ordering heuristic"), cll::init(false));
@@ -617,7 +617,7 @@ struct PreflowPush {
 
     using Wnode = Writer::GraphNode;
 
-    struct IdLess {
+    struct IDLess {
       bool operator()(
           const katana::EdgeSortValue<Wnode, edge_value_type>& e1,
           const katana::EdgeSortValue<Wnode, edge_value_type>& e2) const {
@@ -626,14 +626,14 @@ struct PreflowPush {
     };
 
     for (Writer::iterator i = p.begin(), end_i = p.end(); i != end_i; ++i) {
-      p.sortEdges<edge_value_type>(*i, IdLess());
+      p.sortEdges<edge_value_type>(*i, IDLess());
     }
 
     p.toFile(outputFile);
   }
 
   void initializeGraph(
-      std::string inputFile, uint32_t sourceId, uint32_t sinkId) {
+      std::string inputFile, uint32_t sourceID, uint32_t sinkID) {
     if (useSymmetricDirectly) {
       katana::readGraph(graph, inputFile);
       for (auto ss : graph)
@@ -653,8 +653,8 @@ struct PreflowPush {
       katana::readGraph(graph, inputFile);
     }
 
-    if (sourceId == sinkId || sourceId >= graph.size() ||
-        sinkId >= graph.size()) {
+    if (sourceID == sinkID || sourceID >= graph.size() ||
+        sinkID >= graph.size()) {
       std::cerr << "invalid source or sink id\n";
       abort();
     }
@@ -662,10 +662,10 @@ struct PreflowPush {
     uint32_t id = 0;
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei;
          ++ii, ++id) {
-      if (id == sourceId) {
+      if (id == sourceID) {
         source = *ii;
         graph.getData(source).height = graph.size();
-      } else if (id == sinkId) {
+      } else if (id == sinkID) {
         sink = *ii;
       }
       graph.getData(*ii).id = id;
@@ -772,7 +772,7 @@ struct PreflowPush {
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode src = *ii;
       const Node& node = graph.getData(src);
-      uint32_t srcId = node.id;
+      uint32_t srcID = node.id;
 
       if (src == source || src == sink)
         continue;
@@ -785,9 +785,9 @@ struct PreflowPush {
       int64_t sum = 0;
       for (auto jj : graph.edges(src)) {
         GNode dst = graph.getEdgeDst(jj);
-        uint32_t dstId = graph.getData(dst).id;
+        uint32_t dstID = graph.getData(dst).id;
         int64_t ocap =
-            orig.graph.getEdgeData(orig.findEdge(map[srcId], map[dstId]));
+            orig.graph.getEdgeData(orig.findEdge(map[srcID], map[dstID]));
         int64_t delta = 0;
         if (ocap > 0)
           delta -= (ocap - graph.getEdgeData(jj));
@@ -821,7 +821,7 @@ main(int argc, char** argv) {
   totalTime.start();
 
   PreflowPush app;
-  app.initializeGraph(inputFile, sourceId, sinkId);
+  app.initializeGraph(inputFile, sourceID, sinkID);
 
   app.checkSorting();
 
@@ -849,7 +849,7 @@ main(int argc, char** argv) {
 
   if (!skipVerify) {
     PreflowPush orig;
-    orig.initializeGraph(inputFile, sourceId, sinkId);
+    orig.initializeGraph(inputFile, sourceID, sinkID);
     app.verify(orig);
     std::cout << "(Partially) Verified\n";
   }

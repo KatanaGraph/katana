@@ -284,10 +284,10 @@ main(int argc, char** argv) {
       }
     }
     order_by_degree<GNode, std::map<GNode, uint64_t>> fn(graph, globalMap);
-    std::map<GNode, int> nodeIdMap;
+    std::map<GNode, int> nodeIDMap;
     int id = 0;
     for (auto nb = graph.begin(), ne = graph.end(); nb != ne; nb++) {
-      nodeIdMap[*nb] = id;
+      nodeIDMap[*nb] = id;
       id++;
     }
     // compute inverse
@@ -297,8 +297,8 @@ main(int argc, char** argv) {
     // compute permutation
     id = 0;
     for (auto pb = perm.begin(), pe = perm.end(); pb != pe; pb++) {
-      int prevId = nodeIdMap[*pb];
-      perm2[prevId] = id;
+      int prevID = nodeIDMap[*pb];
+      perm2[prevID] = id;
       id++;
     }
     katana::FileGraph out;

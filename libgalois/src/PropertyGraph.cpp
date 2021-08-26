@@ -421,6 +421,7 @@ katana::PropertyGraph::DoWrite(
   std::unique_ptr<tsuba::FileFrame> edge_entity_type_id_array_res = nullptr;
 
   if (!rdg_.topology_file_storage().Valid()) {
+    KATANA_LOG_DEBUG("topology file store invalid, writing");
     auto res = WriteTopology(topology());
     if (!res) {
       return res.error();
@@ -429,6 +430,7 @@ katana::PropertyGraph::DoWrite(
   }
 
   if (!rdg_.node_entity_type_id_array_file_storage().Valid()) {
+    KATANA_LOG_DEBUG("node_entity_type_id_array file store invalid, writing");
     auto res = WriteEntityTypeIDsArray(node_entity_type_ids_);
     if (!res) {
       return res.error();
@@ -437,6 +439,7 @@ katana::PropertyGraph::DoWrite(
   }
 
   if (!rdg_.edge_entity_type_id_array_file_storage().Valid()) {
+    KATANA_LOG_DEBUG("edge_entity_type_id_array file store invalid, writing");
     auto res = WriteEntityTypeIDsArray(edge_entity_type_ids_);
     if (!res) {
       return res.error();

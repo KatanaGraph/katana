@@ -218,7 +218,12 @@ RDGPartHeader::ChangeStorageLocation(
       prop.WasModified(prop.type());
     }
   }
+
+  // clear out specific file paths so that we know to store them later
   topology_path_ = "";
+  node_entity_type_id_array_path_ = "";
+  edge_entity_type_id_array_path_ = "";
+
   return katana::ResultSuccess();
 }
 

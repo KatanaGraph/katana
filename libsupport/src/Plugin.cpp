@@ -54,7 +54,6 @@ public:
     auto path = katana::GetPluginPath();
     std::vector<boost::filesystem::path> plugin_paths;
     for (const auto& p : path) {
-      KATANA_LOG_VERBOSE("loading plugins from: {}", p);
       for (const boost::filesystem::directory_entry& entry :
            boost::filesystem::directory_iterator(
                p, boost::filesystem::directory_options::none)) {

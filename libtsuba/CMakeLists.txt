@@ -38,6 +38,10 @@ set_common_katana_library_options(tsuba ALWAYS_SHARED)
 
 target_link_libraries(tsuba PUBLIC katana_support)
 
+if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
+  add_subdirectory(test)
+endif()
+
 install(
   DIRECTORY include/
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"

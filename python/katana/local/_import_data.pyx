@@ -29,7 +29,7 @@ def from_csr(edge_indices, edge_destinations):
     :param edge_destinations: The destinations of edges in the new graph.
     :type edge_destinations: `numpy.ndarray` or another type supporting the buffer protocol. Element type must be an
         integer.
-    :returns: the new :py:class:`~katana.property_graph.Graph`
+    :returns: the new :py:class:`~katana.local.Graph`
     """
     cdef datastructures.NUMAArray_uint64_t edge_indices_numa = datastructures.NUMAArray_uint64_t(
         len(edge_indices), datastructures.AllocationPolicy.INTERLEAVED

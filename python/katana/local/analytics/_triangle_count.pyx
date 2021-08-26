@@ -193,7 +193,7 @@ def triangle_count(Graph pg,  TriangleCountPlan plan = TriangleCountPlan()) -> i
     .. code-block:: python
 
         import katana.local
-        from katana.example_utils import get_input
+        from katana.example_data import get_input
         from katana.local import Graph
         katana.local.initialize()
 

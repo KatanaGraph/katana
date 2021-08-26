@@ -44,7 +44,7 @@ cdef class GraphBase:
         with gil:
             raise NotImplementedError()
 
-    def write(self, path = None, str command_line = "katana.property_graph.Graph"):
+    def write(self, path = None, str command_line = "katana.local.Graph"):
         """
         Write the property graph to the specified path or URL (or the original path it was loaded from if path is
         not provided). Provide lineage information in the form of a command line.

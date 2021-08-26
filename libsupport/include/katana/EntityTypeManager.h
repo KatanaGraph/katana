@@ -122,8 +122,13 @@ public:
           num_rows, entity_type_ids->size());
     }
 
-    TypeProperties type_properties = KATANA_CHECKED(
-        DoAssignEntityTypeIDsFromProperties(properties, entity_type_manager));
+    // We cannot use KATANA_CHECKED here because nvcc cannot handle it.
+    auto res =
+        DoAssignEntityTypeIDsFromProperties(properties, entity_type_manager);
+    if (!res) {
+      return ResultError(std::move(res.error()));
+    }
+    TypeProperties type_properties = std::move(res.value());
 
     // assign the type ID for each row
     for (int64_t row = 0; row < num_rows; ++row) {

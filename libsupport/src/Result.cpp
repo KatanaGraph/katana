@@ -164,6 +164,11 @@ katana::ResultSuccess() {
   return BOOST_OUTCOME_V2_NAMESPACE::success();
 }
 
+katana::Result<void>
+katana::ResultError(ErrorInfo&& info) {
+  return Result<void>(std::move(info));
+}
+
 katana::CopyableResult<void>
 katana::CopyableResultSuccess() {
   return BOOST_OUTCOME_V2_NAMESPACE::success();

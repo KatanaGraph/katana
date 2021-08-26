@@ -144,7 +144,9 @@ ConstructPropertyView(arrow::Array* array) {
   auto* t = dynamic_cast<ArrowArrayType*>(array);
 
   if (!t) {
-    return katana::ErrorCode::TypeError;
+    return KATANA_ERROR(
+        katana::ErrorCode::TypeError, "Incorrect arrow::Array type: {}",
+        array->type()->ToString());
   }
 
   return ViewType::Make(*t);
@@ -173,13 +175,14 @@ ConstructPropertyViews(
 
   Result<View> v = ConstructPropertyView<Prop>(arrays[head]);
   if (!v) {
-    return v.error();
+    return v.error().template WithContext(
+        "failed to convert property with {} remaining", arrays.size());
   }
 
   auto rest =
       ConstructPropertyViews<PropTuple>(arrays, std::index_sequence<tail...>());
   if (!rest) {
-    return rest.error();
+    return rest.error().template WithContext("");
   }
 
   return std::tuple_cat(

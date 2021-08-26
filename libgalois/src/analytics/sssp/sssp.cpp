@@ -569,7 +569,11 @@ katana::analytics::Sssp(
     return SSSPWithWrap<double>(
         pg, start_node, edge_weight_property_name, output_property_name, plan);
   default:
-    return katana::ErrorCode::TypeError;
+    return KATANA_ERROR(
+        katana::ErrorCode::TypeError, "Unsupported type: {}",
+        KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+            ->type()
+            ->ToString());
   }
 }
 
@@ -635,7 +639,11 @@ katana::analytics::SsspAssertValid(
     return SsspValidateImpl<double>(
         pg, start_node, edge_weight_property_name, output_property_name);
   default:
-    return katana::ErrorCode::TypeError;
+    return KATANA_ERROR(
+        katana::ErrorCode::TypeError, "Unsupported type: {}",
+        KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+            ->type()
+            ->ToString());
   }
 }
 
@@ -698,7 +706,11 @@ SsspStatistics::Compute(
   case arrow::DoubleType::type_id:
     return ComputeStatistics<double>(pg, output_property_name);
   default:
-    return katana::ErrorCode::TypeError;
+    return KATANA_ERROR(
+        katana::ErrorCode::TypeError, "Unsupported type: {}",
+        KATANA_CHECKED(pg->GetEdgeProperty(output_property_name))
+            ->type()
+            ->ToString());
   }
 }
 

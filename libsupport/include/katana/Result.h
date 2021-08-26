@@ -447,9 +447,14 @@ operator!=(const CopyableErrorInfo& a, const CopyableErrorInfo& b) {
   return !(a == b);
 }
 
-//TODO (serge): make these functions back inline after the issue in nvcc is fixed. Currently nvcc fails in CI if this is inline and leaks to .cu files.
+// TODO (serge): make these functions back inline after the issue in nvcc is
+// fixed. Currently nvcc fails in CI if this is inline and leaks to .cu files.
 KATANA_EXPORT Result<void> ResultSuccess();
 KATANA_EXPORT CopyableResult<void> CopyableResultSuccess();
+// TODO(ddn): nvcc has trouble applying implicit conversions while other
+// compilers can apply the implicit conversion from ErrorInfo to Result.R emove
+// this function when nvcc improves.
+KATANA_EXPORT Result<void> ResultError(ErrorInfo&& info);
 
 inline std::error_code
 ResultErrno() {

@@ -48,11 +48,11 @@ katana::EntityTypeManager::DoAssignEntityTypeIDsFromProperties(
     const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
     const std::string& field_name = current_field->name();
     katana::EntityTypeID new_entity_type_id =
-        entity_type_manager->AddAtomicEntityType(field_name);
+        KATANA_CHECKED(entity_type_manager->AddAtomicEntityType(field_name));
 
     std::vector<int> field_indices = {i};
     type_properties.type_field_indices_to_id.emplace(
-        std::make_pair(field_indices, new_entity_type_id));
+        field_indices, new_entity_type_id);
   }
 
   // NB: cannot use unordered_set without defining a hash function for vectors;
@@ -87,10 +87,11 @@ katana::EntityTypeManager::DoAssignEntityTypeIDsFromProperties(
       const std::string& field_name = current_field->name();
       field_names.emplace_back(field_name);
     }
-    katana::EntityTypeID new_entity_type_id =
-        entity_type_manager->AddNonAtomicEntityType(field_names);
+    katana::EntityTypeID new_entity_type_id = KATANA_CHECKED(
+        entity_type_manager->AddNonAtomicEntityType(KATANA_CHECKED(
+            entity_type_manager->template GetOrAddEntityTypeIDs(field_names))));
     type_properties.type_field_indices_to_id.emplace(
-        std::make_pair(field_indices, new_entity_type_id));
+        field_indices, new_entity_type_id);
   }
 
   // assert that all type IDs (including kUnknownEntityType) and
@@ -109,4 +110,176 @@ katana::EntityTypeManager::DoAssignEntityTypeIDsFromProperties(
   }
 
   return type_properties;
+}
+
+katana::Result<katana::EntityTypeID>
+katana::EntityTypeManager::AddNonAtomicEntityType(
+    const katana::SetOfEntityTypeIDs& type_id_set) {
+  // Add the element since it doesn't exist.
+  EntityTypeID new_entity_type_id = GetNumEntityTypes();
+  if (new_entity_type_id >= kInvalidEntityType) {
+    return KATANA_ERROR(
+        ErrorCode::NotImplemented, "Katana only supports {} entity types",
+        kInvalidEntityType);
+  }
+
+  entity_type_id_to_atomic_entity_type_ids_.emplace_back(type_id_set);
+  atomic_entity_type_id_to_entity_type_ids_.emplace_back(SetOfEntityTypeIDs());
+  for (size_t atomic_entity_type_id = 0;
+       atomic_entity_type_id < type_id_set.size(); ++atomic_entity_type_id) {
+    if (type_id_set[atomic_entity_type_id]) {
+      atomic_entity_type_id_to_entity_type_ids_.at(atomic_entity_type_id)
+          .set(new_entity_type_id);
+    }
+  }
+
+  // Ideally this would return an error instead of failing. But checking is
+  // probably too slow. Remember kids, fast is more important than correct.
+  KATANA_LOG_DEBUG_VASSERT(
+      std::count(
+          entity_type_id_to_atomic_entity_type_ids_.begin(),
+          entity_type_id_to_atomic_entity_type_ids_.end(), type_id_set) == 1,
+      "AddNonAtomicEntityType called with type_id_set that is already "
+      "present.");
+
+  return Result<EntityTypeID>(new_entity_type_id);
+}
+
+katana::Result<katana::EntityTypeID>
+katana::EntityTypeManager::GetOrAddNonAtomicEntityType(
+    const katana::SetOfEntityTypeIDs& type_id_set) {
+  // Find a previous type ID for this set of types. This is a linear search
+  // and O(n types). However, n types is expected to stay small so this isn't
+  // a big issue. If this does turn out to be a performance problem we could
+  // keep around an extra map from type ID sets to type IDs.
+  auto existing_id = std::find(
+      entity_type_id_to_atomic_entity_type_ids_.cbegin(),
+      entity_type_id_to_atomic_entity_type_ids_.cend(), type_id_set);
+  if (existing_id != entity_type_id_to_atomic_entity_type_ids_.cend()) {
+    // We rely on the fact that entity_type_id_to_atomic_entity_type_ids_ is a
+    // vector here so that distances are the same as type IDs.
+    return Result<EntityTypeID>(std::distance(
+        entity_type_id_to_atomic_entity_type_ids_.cbegin(), existing_id));
+  }
+
+  return AddNonAtomicEntityType(type_id_set);
+}
+
+katana::Result<katana::EntityTypeID>
+katana::EntityTypeManager::AddAtomicEntityType(const std::string& name) {
+  // This is a hash lookup, so this should be fast enough for production code.
+  if (HasAtomicType(name)) {
+    return KATANA_ERROR(
+        ErrorCode::AlreadyExists, "Type {} already exists", name);
+  }
+
+  EntityTypeID new_entity_type_id = GetNumEntityTypes();
+  if (new_entity_type_id >= kInvalidEntityType) {
+    return KATANA_ERROR(
+        ErrorCode::NotImplemented, "Katana only supports {} entity types",
+        kInvalidEntityType);
+  }
+
+  atomic_entity_type_id_to_type_name_.emplace(new_entity_type_id, name);
+  atomic_type_name_to_entity_type_id_.emplace(name, new_entity_type_id);
+
+  SetOfEntityTypeIDs entity_type_ids;
+  entity_type_ids.set(new_entity_type_id);
+  entity_type_id_to_atomic_entity_type_ids_.emplace_back(entity_type_ids);
+  atomic_entity_type_id_to_entity_type_ids_.emplace_back(entity_type_ids);
+
+  return Result<EntityTypeID>(new_entity_type_id);
+}
+
+std::string
+katana::EntityTypeManager::ReportDiff(
+    const katana::EntityTypeManager& other) const {
+  fmt::memory_buffer buf;
+  if (entity_type_id_to_atomic_entity_type_ids_ !=
+      other.entity_type_id_to_atomic_entity_type_ids_) {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "entity_type_id_to_atomic_entity_type_ids_ differ. size {}"
+        "vs. {}\n",
+        entity_type_id_to_atomic_entity_type_ids_.size(),
+        other.entity_type_id_to_atomic_entity_type_ids_.size());
+  } else {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "entity_type_id_to_atomic_entity_type_ids_ match!\n");
+  }
+  if (atomic_entity_type_id_to_type_name_ !=
+      other.atomic_entity_type_id_to_type_name_) {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "atomic_entity_type_id_to_type_name_ differ. size {}"
+        "vs. {}\n",
+        atomic_entity_type_id_to_type_name_.size(),
+        other.atomic_entity_type_id_to_type_name_.size());
+  } else {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "atomic_entity_type_id_to_type_name_ match!\n");
+  }
+  if (atomic_type_name_to_entity_type_id_ !=
+      other.atomic_type_name_to_entity_type_id_) {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "atomic_type_name_to_entity_type_id_ differ. size {}"
+        "vs. {}\n",
+        atomic_type_name_to_entity_type_id_.size(),
+        other.atomic_type_name_to_entity_type_id_.size());
+  } else {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "atomic_type_name_to_entity_type_id_ match!\n");
+  }
+
+  if (atomic_entity_type_id_to_entity_type_ids_ !=
+      other.atomic_entity_type_id_to_entity_type_ids_) {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "atomic_entity_type_id_to_entity_type_ids_ differ. size {}"
+        "vs. {}\n",
+        atomic_entity_type_id_to_entity_type_ids_.size(),
+        other.atomic_entity_type_id_to_entity_type_ids_.size());
+  } else {
+    fmt::format_to(
+        std::back_inserter(buf),
+        "atomic_entity_type_id_to_entity_type_ids_ match!\n");
+  }
+  return std::string(buf.begin(), buf.end());
+}
+
+bool
+katana::EntityTypeManager::Equals(
+    const katana::EntityTypeManager& other) const {
+  if (entity_type_id_to_atomic_entity_type_ids_ !=
+      other.entity_type_id_to_atomic_entity_type_ids_) {
+    return false;
+  }
+  if (atomic_entity_type_id_to_type_name_ !=
+      other.atomic_entity_type_id_to_type_name_) {
+    return false;
+  }
+
+  if (atomic_type_name_to_entity_type_id_ !=
+      other.atomic_type_name_to_entity_type_id_) {
+    return false;
+  }
+
+  if (atomic_entity_type_id_to_entity_type_ids_ !=
+      other.atomic_entity_type_id_to_entity_type_ids_) {
+    return false;
+  }
+  return true;
+}
+
+katana::Result<katana::EntityTypeID>
+katana::EntityTypeManager::GetOrAddEntityTypeID(const std::string& name) {
+  if (HasAtomicType(name)) {
+    return GetEntityTypeID(name);
+  } else {
+    return AddAtomicEntityType(name);
+  }
 }

@@ -53,7 +53,7 @@ public:
             std::move(entity_type_id_to_atomic_entity_type_ids)) {
     for (auto& type_id_name_pair : atomic_entity_type_id_to_type_name_) {
       atomic_type_name_to_entity_type_id_.emplace(
-          std::make_pair(type_id_name_pair.second, type_id_name_pair.first));
+          type_id_name_pair.second, type_id_name_pair.first);
     }
 
     size_t num_entity_types = entity_type_id_to_atomic_entity_type_ids_.size();
@@ -159,51 +159,45 @@ public:
 
   /// adds a new entity type for the atomic type with name \p name
   /// \returns the EntityTypeID for the new type
-  EntityTypeID AddAtomicEntityType(const std::string& name) {
-    KATANA_LOG_DEBUG_ASSERT(!HasAtomicType(name));
+  Result<EntityTypeID> AddAtomicEntityType(const std::string& name);
 
-    // TODO(roshan) limit the new entity type id to the max for 8 bits
-    // and return an error
-    EntityTypeID new_entity_type_id = GetNumEntityTypes();
-    atomic_entity_type_id_to_type_name_.emplace(
-        std::make_pair(new_entity_type_id, name));
-    atomic_type_name_to_entity_type_id_.emplace(
-        std::make_pair(name, new_entity_type_id));
-
-    SetOfEntityTypeIDs entity_type_ids;
-    entity_type_ids.set(new_entity_type_id);
-    entity_type_id_to_atomic_entity_type_ids_.emplace_back(entity_type_ids);
-    atomic_entity_type_id_to_entity_type_ids_.emplace_back(entity_type_ids);
-
-    return new_entity_type_id;
+  /// Get the intersection of the types named in \p names; or add the type if
+  /// it does not already exist. If any types named in \p names do not exist,
+  /// create them.
+  ///
+  /// \returns the EntityTypeID of the intersection type.
+  ///
+  /// \see GetOrAddNonAtomicEntityType(const SetOfEntityTypeIDs&)
+  template <typename Container>
+  Result<EntityTypeID> GetOrAddNonAtomicEntityTypeFromStrings(
+      const Container& names) {
+    // We cannot use KATANA_CHECKED here because nvcc cannot handle it.
+    auto res = GetOrAddEntityTypeIDs(names);
+    if (!res) {
+      return res.error();
+    }
+    return GetOrAddNonAtomicEntityType(res.assume_value());
   }
 
-  /// adds a new entity type for the set of atomic types with names \p names
-  /// \returns the EntityTypeID for the new type
-  EntityTypeID AddNonAtomicEntityType(const std::vector<std::string>& names) {
-    for (auto& name : names) {
-      if (!HasAtomicType(name)) {
-        AddAtomicEntityType(name);
-      }
-    }
+  /// Get the intersection of the types passed in; or add the type if it does
+  /// not already exist.
+  ///
+  /// \warning This operation is currently `O(number of types)` due to a linear
+  ///     search. This can be fixed with a space--time trade-off if needed.
+  ///
+  /// \returns the EntityTypeID of the intersection type.
+  Result<EntityTypeID> GetOrAddNonAtomicEntityType(
+      const SetOfEntityTypeIDs& type_id_set);
 
-    // TODO(roshan) limit the new entity type id to the max for 8 bits
-    // and return an error
-    EntityTypeID new_entity_type_id = GetNumEntityTypes();
-    entity_type_id_to_atomic_entity_type_ids_.emplace_back(
-        SetOfEntityTypeIDs());
-    atomic_entity_type_id_to_entity_type_ids_.emplace_back(
-        SetOfEntityTypeIDs());
-    for (auto& name : names) {
-      EntityTypeID atomic_entity_type_id = GetEntityTypeID(name);
-      entity_type_id_to_atomic_entity_type_ids_.at(new_entity_type_id)
-          .set(atomic_entity_type_id);
-      atomic_entity_type_id_to_entity_type_ids_.at(atomic_entity_type_id)
-          .set(new_entity_type_id);
-    }
-
-    return new_entity_type_id;
-  }
+  /// Get the intersection of the types passed in.
+  ///
+  /// \warning This function does not do proper error checking. Only use if you
+  ///     can prove the intersection type does not already exist. Otherwise, use
+  ///     GetOrAddNonAtomicEntityType(const SetOfEntityTypeIDs& type_id_set).
+  ///
+  /// \returns the EntityTypeID of the intersection type.
+  Result<EntityTypeID> AddNonAtomicEntityType(
+      const SetOfEntityTypeIDs& type_id_set);
 
   /// \returns the number of atomic types
   size_t GetNumAtomicTypes() const {
@@ -230,6 +224,52 @@ public:
   /// (assumes that the type exists)
   EntityTypeID GetEntityTypeID(const std::string& name) const {
     return atomic_type_name_to_entity_type_id_.at(name);
+  }
+
+  /// \returns the EntityTypeID for an atomic type with name \p name, adding it
+  /// if it doesn't exist.
+  Result<EntityTypeID> GetOrAddEntityTypeID(const std::string& name);
+
+  /// \returns the EntityTypeIDs for atomic types with \p names, or an error if
+  /// any does not exist.
+  template <typename Container>
+  Result<SetOfEntityTypeIDs> GetEntityTypeIDs(const Container& names) const {
+    SetOfEntityTypeIDs res;
+    for (const auto& name : names) {
+      if (HasAtomicType(name)) {
+        EntityTypeID id = GetEntityTypeID(name);
+        if (res[id]) {
+          return KATANA_ERROR(
+              ErrorCode::InvalidArgument, "Duplicate name: {}", name);
+        }
+        res[id] = true;
+      } else {
+        return KATANA_ERROR(
+            ErrorCode::NotFound, "Type {} does not exist", name);
+      }
+    }
+    return res;
+  }
+
+  /// \returns the EntityTypeIDs for atomic types with \p names, adding them if
+  /// needed.
+  template <typename Container>
+  Result<SetOfEntityTypeIDs> GetOrAddEntityTypeIDs(const Container& names) {
+    SetOfEntityTypeIDs res;
+    for (const auto& name : names) {
+      auto id_res = GetOrAddEntityTypeID(name);
+      // We cannot use KATANA_CHECKED here because nvcc cannot handle it.
+      if (!id_res) {
+        return id_res.error();
+      }
+      auto id = id_res.value();
+      if (res[id]) {
+        return KATANA_ERROR(
+            ErrorCode::InvalidArgument, "Duplicate name: {}", name);
+      }
+      res[id] = true;
+    }
+    return res;
   }
 
   /// \returns the name of the atomic type if the EntityTypeID
@@ -279,86 +319,10 @@ public:
   }
 
   /// bool Equals() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
-  bool Equals(const EntityTypeManager& other) const {
-    if (entity_type_id_to_atomic_entity_type_ids_ !=
-        other.entity_type_id_to_atomic_entity_type_ids_) {
-      return false;
-    }
-    if (atomic_entity_type_id_to_type_name_ !=
-        other.atomic_entity_type_id_to_type_name_) {
-      return false;
-    }
-
-    if (atomic_type_name_to_entity_type_id_ !=
-        other.atomic_type_name_to_entity_type_id_) {
-      return false;
-    }
-
-    if (atomic_entity_type_id_to_entity_type_ids_ !=
-        other.atomic_entity_type_id_to_entity_type_ids_) {
-      return false;
-    }
-    return true;
-  }
+  bool Equals(const EntityTypeManager& other) const;
 
   /// std::string ReportDiff() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
-  std::string ReportDiff(const EntityTypeManager& other) const {
-    fmt::memory_buffer buf;
-    if (entity_type_id_to_atomic_entity_type_ids_ !=
-        other.entity_type_id_to_atomic_entity_type_ids_) {
-      fmt::format_to(
-          std::back_inserter(buf),
-          "entity_type_id_to_atomic_entity_type_ids_ differ. size {}"
-          "vs. {}\n",
-          entity_type_id_to_atomic_entity_type_ids_.size(),
-          other.entity_type_id_to_atomic_entity_type_ids_.size());
-    } else {
-      fmt::format_to(
-          std::back_inserter(buf),
-          "entity_type_id_to_atomic_entity_type_ids_ match!\n");
-    }
-    if (atomic_entity_type_id_to_type_name_ !=
-        other.atomic_entity_type_id_to_type_name_) {
-      fmt::format_to(
-          std::back_inserter(buf),
-          "atomic_entity_type_id_to_type_name_ differ. size {}"
-          "vs. {}\n",
-          atomic_entity_type_id_to_type_name_.size(),
-          other.atomic_entity_type_id_to_type_name_.size());
-    } else {
-      fmt::format_to(
-          std::back_inserter(buf),
-          "atomic_entity_type_id_to_type_name_ match!\n");
-    }
-    if (atomic_type_name_to_entity_type_id_ !=
-        other.atomic_type_name_to_entity_type_id_) {
-      fmt::format_to(
-          std::back_inserter(buf),
-          "atomic_type_name_to_entity_type_id_ differ. size {}"
-          "vs. {}\n",
-          atomic_type_name_to_entity_type_id_.size(),
-          other.atomic_type_name_to_entity_type_id_.size());
-    } else {
-      fmt::format_to(
-          std::back_inserter(buf),
-          "atomic_type_name_to_entity_type_id_ match!\n");
-    }
-
-    if (atomic_entity_type_id_to_entity_type_ids_ !=
-        other.atomic_entity_type_id_to_entity_type_ids_) {
-      fmt::format_to(
-          std::back_inserter(buf),
-          "atomic_entity_type_id_to_entity_type_ids_ differ. size {}"
-          "vs. {}\n",
-          atomic_entity_type_id_to_entity_type_ids_.size(),
-          other.atomic_entity_type_id_to_entity_type_ids_.size());
-    } else {
-      fmt::format_to(
-          std::back_inserter(buf),
-          "atomic_entity_type_id_to_entity_type_ids_ match!\n");
-    }
-    return std::string(buf.begin(), buf.end());
-  }
+  std::string ReportDiff(const EntityTypeManager& other) const;
 
 private:
   // Used by AssignEntityTypeIDsFromProperties()
@@ -389,7 +353,7 @@ private:
     static_assert(kUnknownEntityTypeName == std::string_view("kUnknownName"));
     // add kUnknownEntityType
     auto id = AddAtomicEntityType(std::string(kUnknownEntityTypeName));
-    KATANA_LOG_ASSERT(id == kUnknownEntityType);
+    KATANA_LOG_ASSERT(id.value() == kUnknownEntityType);
   }
 
   /// A map from the EntityTypeID to its type name if it is an atomic type

@@ -418,9 +418,9 @@ katana::Result<void>
 katana::PropertyGraph::DoWrite(
     tsuba::RDGHandle handle, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
-  if (!rdg_.topology_file_storage().Valid() ||
-      !rdg_.node_entity_type_id_array_file_storage().Valid() ||
-      !rdg_.edge_entity_type_id_array_file_storage().Valid()) {
+  if (rdg_.topology_file_storage().Valid() ||
+      rdg_.node_entity_type_id_array_file_storage().Valid() ||
+      rdg_.edge_entity_type_id_array_file_storage().Valid()) {
     if (!rdg_.topology_file_storage().Valid()) {
       KATANA_LOG_DEBUG("topology file store invalid, writing");
     }

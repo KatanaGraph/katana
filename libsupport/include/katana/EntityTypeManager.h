@@ -228,13 +228,7 @@ public:
 
   /// \returns the EntityTypeID for an atomic type with name \p name, adding it
   /// if it doesn't exist.
-  Result<EntityTypeID> GetOrAddEntityTypeID(const std::string& name) {
-    if (HasAtomicType(name)) {
-      return Result<EntityTypeID>(GetEntityTypeID(name));
-    } else {
-      return AddAtomicEntityType(name);
-    }
-  }
+  Result<EntityTypeID> GetOrAddEntityTypeID(const std::string& name);
 
   /// \returns the EntityTypeIDs for atomic types with \p names, or an error if
   /// any does not exist.

@@ -274,3 +274,12 @@ katana::EntityTypeManager::Equals(
   }
   return true;
 }
+
+katana::Result<katana::EntityTypeID>
+katana::EntityTypeManager::GetOrAddEntityTypeID(const std::string& name) {
+  if (HasAtomicType(name)) {
+    return GetEntityTypeID(name);
+  } else {
+    return AddAtomicEntityType(name);
+  }
+}

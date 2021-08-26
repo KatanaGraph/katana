@@ -1,58 +1,109 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import argparse
+import multiprocessing
 import os
 import subprocess
-
-from katana_traversal.traversal import FileVisitor, Launcher, Pivot
-
-# Hard-coded constants
-prune_names = {"build*", ".#*"}
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 
-class CppCudaVisitor(FileVisitor):
-    file_suffixes = {".cpp", ".h", ".cu", ".cuh"}
+def check_file(file_path: Path, fix: bool, clang_format: str, verbose: bool):
+    """
+    Run `clang_format` on `file_path`.
+    :param file_path: The path to the file.
+    :param fix: Should we fix the file if it's wrong.
+    :param clang_format: The name of the ``clang-format`` command.
+    :return: True if there were no errors, or all errors were fixed.
+    """
+    if fix:
+        print("fixing ", file_path)
+        cmd = [clang_format, "-style=file", "-i", file_path]
+    else:
+        cmd = [clang_format, "-style=file", "-output-replacements-xml", file_path]
 
-    def __init__(self, fix: bool, clang_format: str):
-        super().__init__()
-        self.fix = fix
-        self.clang_format = clang_format
-
-    def visit(self, file_path: str) -> bool:
-        if self.fix:
-            print("fixing ", file_path)
-            cmd = [self.clang_format, "-style=file", "-i", file_path]
-        else:
-            cmd = [self.clang_format, "-style=file", "-output-replacements-xml", file_path]
-
-        completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-        if not self.fix and (completed.returncode != 0 or ("<replacement " in str(completed.stdout))):
-            print(file_path, " NOT OK")
-            return False  # Check failed
-        return True
-
-    def needs_visiting(self, file_name: str) -> bool:
-        for suffix in CppCudaVisitor.file_suffixes:
-            if file_name.endswith(suffix):
-                return True
+    if verbose:
+        print(f"Running: {cmd}")
+    completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if not fix and (completed.returncode != 0 or ("<replacement " in str(completed.stdout))):
+        print(file_path, " NOT OK")
         return False
+    return True
 
 
 if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Check or fix C++/CUDA code style.")
     parser.add_argument(
+        "--fix",
         "-fix",
-        dest="fix",
+        "-f",
         default=False,
         action="store_true",
-        help="fix the sources instead of just checking their formatting",
+        help="Fix the sources instead of just checking their formatting.",
     )
-    parser.add_argument("roots", type=str, nargs="+", help="the root paths to search from")
+    parser.add_argument(
+        "--verbose", "-v", default=False, action="store_true", help="Verbosely print what I am doing.",
+    )
+    parser.add_argument(
+        "--exclude",
+        default=[],
+        action="append",
+        help="Add a pattern to exclude from processing. The pattern can be a path or a glob.",
+    )
+    parser.add_argument("roots", type=str, nargs="+", help="The root paths to search from, or files to check.")
     args = parser.parse_args()
 
-    # Init and launch traversal
-    visitor = CppCudaVisitor(args.fix, os.environ.get("CLANG_FORMAT", "clang-format"))
-    pivot = Pivot(visitor, args.roots[:], prune_names)
-    launcher = Launcher(pivot)
-    launcher.run_to_exit()
+    clang_format = os.environ.get("CLANG_FORMAT")
+
+    if not clang_format:
+        # If the user doesn't specify, try clang-format-10 and then clang-format.
+        # Trying the specific version first makes sure we get the correct version even if clang-format points to a
+        # newer version.
+        clang_format_names = ["clang-format-10", "clang-format"]
+        for candidate in clang_format_names:
+            try:
+                subprocess.check_call([candidate, "--version"])
+                clang_format = candidate
+                break
+            except subprocess.CalledProcessError:
+                continue
+
+    exclude_paths = set(args.exclude)
+    # For backwards compat check an old environment variable.
+    exclude_paths.update(os.environ.get("PRUNE_PATHS", "").split(":"))
+    exclude_paths.update({"build*", ".#*", "*-build-*"})
+
+    # Empty strings can come from user input. Drop them.
+    exclude_paths.discard("")
+
+    def is_excluded(f):
+        # Check the patterns against the path, the absolute, path and every prefix of the absolute path.
+        paths = [f, f.resolve()] + list(f.resolve().parents)
+        for path_to_check in paths:
+            for pp in exclude_paths:
+                if path_to_check.match(pp):
+                    if args.verbose:
+                        print(f"Excluding path {f} ({path_to_check}) with pattern {pp}")
+                    return True
+        return False
+
+    file_suffixes = {"cpp", "h", "cu", "cuh"}
+
+    # We are definitely IO bound so use double the number of CPUs.
+    with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() * 2) as executor:
+        for root_str in args.roots:
+            root = Path(root_str)
+            # If the root is excluded, don't even look in it.
+            if not is_excluded(root):
+                for suffix in file_suffixes:
+                    suffix_glob = f"*.{suffix}"
+                    # Check if the root IS a file that matches this suffix
+                    if root.is_file() and root.match(suffix_glob):
+                        executor.submit(check_file, root, args.fix, clang_format, args.verbose)
+                    else:
+                        # Otherwise, iterate over all files matching the suffix in the subtree.
+                        for file in root.rglob(suffix_glob):
+                            if file.is_file() and not is_excluded(file):
+                                executor.submit(check_file, file, args.fix, clang_format, args.verbose)
+        executor.shutdown(wait=True)

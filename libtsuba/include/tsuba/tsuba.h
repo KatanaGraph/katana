@@ -106,6 +106,12 @@ KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
 ListAvailableViews(
     const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
 
+KATANA_EXPORT katana::Result<std::vector<RDGView>>
+ListAvailableViewsFromVersion(const std::string& rdg_dir, uint64_t version);
+
+KATANA_EXPORT katana::Result<void> CopyRDG(
+    const std::string& src_dir, const std::string& dest_dir, uint64_t version);
+
 // Setup and tear down
 KATANA_EXPORT katana::Result<void> Init(katana::CommBackend* comm);
 KATANA_EXPORT katana::Result<void> Init();

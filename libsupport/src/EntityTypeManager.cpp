@@ -51,7 +51,8 @@ katana::EntityTypeManager::DoAssignEntityTypeIDsFromProperties(
         KATANA_CHECKED(entity_type_manager->AddAtomicEntityType(field_name));
 
     std::vector<int> field_indices = {i};
-    type_properties.type_field_indices_to_id.emplace(field_indices, new_entity_type_id);
+    type_properties.type_field_indices_to_id.emplace(
+        field_indices, new_entity_type_id);
   }
 
   // NB: cannot use unordered_set without defining a hash function for vectors;
@@ -89,7 +90,8 @@ katana::EntityTypeManager::DoAssignEntityTypeIDsFromProperties(
     katana::EntityTypeID new_entity_type_id = KATANA_CHECKED(
         entity_type_manager->AddNonAtomicEntityType(KATANA_CHECKED(
             entity_type_manager->template GetOrAddEntityTypeIDs(field_names))));
-    type_properties.type_field_indices_to_id.emplace(field_indices, new_entity_type_id);
+    type_properties.type_field_indices_to_id.emplace(
+        field_indices, new_entity_type_id);
   }
 
   // assert that all type IDs (including kUnknownEntityType) and

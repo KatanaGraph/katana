@@ -52,7 +52,8 @@ public:
         entity_type_id_to_atomic_entity_type_ids_(
             std::move(entity_type_id_to_atomic_entity_type_ids)) {
     for (auto& type_id_name_pair : atomic_entity_type_id_to_type_name_) {
-      atomic_type_name_to_entity_type_id_.emplace(type_id_name_pair.second, type_id_name_pair.first);
+      atomic_type_name_to_entity_type_id_.emplace(
+          type_id_name_pair.second, type_id_name_pair.first);
     }
 
     size_t num_entity_types = entity_type_id_to_atomic_entity_type_ids_.size();
@@ -172,7 +173,7 @@ public:
       const Container& names) {
     // We cannot use KATANA_CHECKED here because nvcc cannot handle it.
     auto res = GetOrAddEntityTypeIDs(names);
-    if(!res) {
+    if (!res) {
       return res.error();
     }
     return GetOrAddNonAtomicEntityType(res.assume_value());
@@ -191,8 +192,8 @@ public:
   /// Get the intersection of the types passed in.
   ///
   /// \warning This function does not do proper error checking. Only use if you
-  /// can prove the intersection type does not already exist. Otherwise, use
-  /// GetOrAddNonAtomicEntityType(const SetOfEntityTypeIDs& type_id_set).
+  ///     can prove the intersection type does not already exist. Otherwise, use
+  ///     GetOrAddNonAtomicEntityType(const SetOfEntityTypeIDs& type_id_set).
   ///
   /// \returns the EntityTypeID of the intersection type.
   Result<EntityTypeID> AddNonAtomicEntityType(

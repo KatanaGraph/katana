@@ -1,0 +1,5 @@
+add_executable(manifest-test manifest.cpp)
+target_link_libraries(manifest-test tsuba)
+target_include_directories(manifest-test PRIVATE ../src)
+add_test(NAME manifest COMMAND manifest-test ${BASEINPUT}/propertygraphs/rmat15/katana_vers00000000000000000001_rdg.manifest)
+set_property(TEST manifest APPEND PROPERTY LABELS quick)

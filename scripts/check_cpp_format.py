@@ -4,7 +4,8 @@ import argparse
 import multiprocessing
 import os
 import subprocess
-from concurrent.futures import ThreadPoolExecutor
+import sys
+from concurrent import futures
 from pathlib import Path
 
 
@@ -90,8 +91,10 @@ if __name__ == "__main__":
 
     file_suffixes = {"cpp", "h", "cu", "cuh"}
 
+    tasks = []
+
     # We are definitely IO bound so use double the number of CPUs.
-    with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() * 2) as executor:
+    with futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() * 2) as executor:
         for root_str in args.roots:
             root = Path(root_str)
             # If the root is excluded, don't even look in it.
@@ -100,10 +103,12 @@ if __name__ == "__main__":
                     suffix_glob = f"*.{suffix}"
                     # Check if the root IS a file that matches this suffix
                     if root.is_file() and root.match(suffix_glob):
-                        executor.submit(check_file, root, args.fix, clang_format, args.verbose)
+                        tasks.append(executor.submit(check_file, root, args.fix, clang_format, args.verbose))
                     else:
                         # Otherwise, iterate over all files matching the suffix in the subtree.
                         for file in root.rglob(suffix_glob):
                             if file.is_file() and not is_excluded(file):
-                                executor.submit(check_file, file, args.fix, clang_format, args.verbose)
-        executor.shutdown(wait=True)
+                                tasks.append(executor.submit(check_file, file, args.fix, clang_format, args.verbose))
+        results = futures.as_completed(tasks)
+        all_files_ok = all(f.result() for f in results)
+    sys.exit(0 if all_files_ok else 1)

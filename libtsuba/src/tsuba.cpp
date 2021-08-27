@@ -261,8 +261,9 @@ tsuba::CreateSrcDestFromViewsForCopy(
   std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs;
 
   // List out all the files in a given view
-  auto rdg_views_res = tsuba::ListAvailableViewsFromVersion(src_dir, version);
-  for (const auto& rdg_view : rdg_views_res.value()) {
+  auto rdg_views =
+      KATANA_CHECKED(tsuba::ListAvailableViewsFromVersion(src_dir, version));
+  for (const auto& rdg_view : rdg_views) {
     KATANA_LOG_WARN("view_path: {}", rdg_view.view_path);
     auto uri = KATANA_CHECKED(katana::Uri::Make(src_dir));
 
@@ -302,7 +303,7 @@ tsuba::CreateSrcDestFromViewsForCopy(
         KATANA_LOG_WARN("src_file_uri: {}", src_file_uri);
         KATANA_LOG_WARN("dst_file_uri: {}", dst_file_uri);
       }
-      
+
       src_dst_pairs.push_back(std::make_pair(src_file_uri, dst_file_uri));
     }
 

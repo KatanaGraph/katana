@@ -298,7 +298,7 @@ katana::PropertyGraph::Make(
     EntityTypeManager&& node_type_manager,
     EntityTypeManager&& edge_type_manager) {
   return std::make_unique<katana::PropertyGraph>(
-      std::unique_ptr<tsuba::RDGFile>(), tsuba::RDG{},
+      std::make_unique<tsuba::RDGFile>(tsuba::RDGHandle()), tsuba::RDG{},
       std::move(topo_to_assign), std::move(node_entity_type_ids),
       std::move(edge_entity_type_ids), std::move(node_type_manager),
       std::move(edge_type_manager));

@@ -15,7 +15,8 @@
 namespace katana {
 
 const uint64_t kRDGVersionMaxID = (1 << 30);
-const uint64_t kRDGVersionIDLength = (20);
+const uint64_t kRDGVersionIDLength = (256);
+const int      kRDGVersionPaddingLength = (10);
 
 struct KATANA_EXPORT RDGVersion {
   // A vectorized version in the form of num:id

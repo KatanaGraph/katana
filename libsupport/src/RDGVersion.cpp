@@ -11,7 +11,6 @@ RDGVersion::RDGVersion(
 RDGVersion::RDGVersion(uint64_t num) { numbers_.back() = num; }
 
 RDGVersion::RDGVersion(const std::string& src) {
-  KATANA_LOG_DEBUG_ASSERT(src.size() == 20);
   char dest[kRDGVersionIDLength + 1];
   char* token;
 
@@ -39,15 +38,20 @@ RDGVersion::RDGVersion(const std::string& src) {
 
 std::string
 RDGVersion::ToPathName() const {
-  std::string vec = "";
+  std::string vec = fmt::format("{0:0{1}d}",
+      0, kRDGVersionPaddingLength);
   if (numbers_.size() == 0) {
     return vec;
   }
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
-    vec += fmt::format("{:03d}_{}_", numbers_[i], branches_[i]);
+    vec += fmt::format("{0:0{1}d}",
+        numbers_[i], kRDGVersionPaddingLength);
+    vec += fmt::format("_{}_", branches_[i]);
   }
   // include only the number from the last pair, ignore "."
-  return fmt::format("{}{:03d}", vec, numbers_.back());
+  vec += fmt::format("{0:0{1}d}",
+      numbers_.back(), kRDGVersionPaddingLength);
+  return vec;
 }
 
 std::string

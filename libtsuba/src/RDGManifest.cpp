@@ -33,15 +33,10 @@ const int MANIFEST_MATCH_VIEW_INDEX = 2;
 
 namespace {
 const int NODE_ZERO_PADDING_LENGTH = 5;
-const int VERS_ZERO_PADDING_LENGTH = 20;
 std::string
 ToVersionString(katana::RDGVersion version) {
   std::string str = version.ToPathName();
-  std::string leading_zeros =
-      fmt::format("{0:0{1}d}", 0, (VERS_ZERO_PADDING_LENGTH - str.size()));
-  KATANA_LOG_DEBUG_ASSERT(
-      leading_zeros.size() + str.size() == VERS_ZERO_PADDING_LENGTH);
-  return fmt::format("vers{}{}", leading_zeros, str);
+  return fmt::format("vers{}", str);
 }
 std::string
 ToNodeString(uint32_t node_id) {
@@ -113,7 +108,6 @@ RDGManifest::PartitionFileName(
     const std::string& view_type, uint32_t node_id,
     katana::RDGVersion version) {
   KATANA_LOG_ASSERT(!view_type.empty());
-  // TODO(wkyu): provide an alternative of variable length
   return fmt::format(
       "part_{}_{}_{}", ToVersionString(version), view_type,
       ToNodeString(node_id));

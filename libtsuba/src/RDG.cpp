@@ -313,6 +313,8 @@ tsuba::RDG::DoStoreTopology(
   return katana::ResultSuccess();
 }
 
+//TODO : Giorgi combine the Edge and Node DoStoreNode/EntityTypeIDArray
+// into a single generalized function.
 katana::Result<void>
 tsuba::RDG::DoStoreNodeEntityTypeIDArray(
     RDGHandle handle, std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
@@ -359,6 +361,8 @@ tsuba::RDG::DoStoreNodeEntityTypeIDArray(
   return katana::ResultSuccess();
 }
 
+//TODO : Giorgi combine the Edge and Node DoStoreNode/EntityTypeIDArray
+// into a single generalized function.
 katana::Result<void>
 tsuba::RDG::DoStoreEdgeEntityTypeIDArray(
     RDGHandle handle, std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,

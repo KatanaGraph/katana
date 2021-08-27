@@ -109,10 +109,12 @@ ListAvailableViews(
 KATANA_EXPORT katana::Result<std::vector<RDGView>>
 ListAvailableViewsFromVersion(const std::string& rdg_dir, uint64_t version);
 
-KATANA_EXPORT katana::Result<std::vector<katana::Uri>>
-ListAllFilesFromViews(const std::string& src_dir, uint64_t version);
+KATANA_EXPORT katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>
+CreateSrcDestFromViewsForCopy(
+    const std::string& src_dir, const std::string& dst_dir, uint64_t version);
 
-KATANA_EXPORT katana::Result<void> CopyRDG(std::vector<katana::Uri> file_uris, const std::string& dst_dir);
+KATANA_EXPORT katana::Result<void> CopyRDG(
+    std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs);
 
 // Setup and tear down
 KATANA_EXPORT katana::Result<void> Init(katana::CommBackend* comm);

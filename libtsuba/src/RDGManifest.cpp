@@ -30,6 +30,7 @@ Parse(const std::string& str) {
 
 const int MANIFEST_MATCH_VERS_INDEX = 1;
 const int MANIFEST_MATCH_VIEW_INDEX = 2;
+const int PARTITION_MATCH_HOST_INDEX = 3;
 
 }  // namespace
 
@@ -49,6 +50,9 @@ namespace tsuba {
 
 const std::regex RDGManifest::kManifestVersion(
     "katana_vers(?:([0-9]+))_(?:([0-9A-Za-z-]+))\\.manifest$");
+
+const std::regex RDGManifest::kPartitionFile(
+    "part_(?:(vers[0-9A-Za-z_]+))_(?:(rdg[0-9A-Za-z-]*))_(?:(node[0-9]*))$");
 
 Result<tsuba::RDGManifest>
 RDGManifest::MakeFromStorage(const katana::Uri& uri) {
@@ -152,6 +156,12 @@ RDGManifest::IsManifestUri(const katana::Uri& uri) {
   return res;
 }
 
+bool
+RDGManifest::IsPartitionFileUri(const katana::Uri& uri) {
+  bool res = std::regex_match(uri.BaseName(), kPartitionFile);
+  return res;
+}
+
 Result<uint64_t>
 RDGManifest::ParseVersionFromName(const std::string& file) {
   std::smatch sub_match;
@@ -206,6 +216,17 @@ RDGManifest::ParseViewArgsFromName(const std::string& file) {
     view_args.erase(view_args.begin());
   }
   return view_args;
+}
+
+Result<uint64_t>
+RDGManifest::ParseHostFromPartitionFile(const std::string& file) {
+  std::smatch sub_match;
+  if (!std::regex_match(file, sub_match, kPartitionFile)) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+  //Partition file
+  KATANA_LOG_WARN("sub_match: {}", sub_match[PARTITION_MATCH_HOST_INDEX]);
+  return Parse(sub_match[PARTITION_MATCH_HOST_INDEX]);
 }
 
 // Return the set of file names that hold this RDG's data by reading partition files

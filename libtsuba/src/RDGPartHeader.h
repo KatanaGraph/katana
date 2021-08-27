@@ -126,6 +126,7 @@ class KATANA_EXPORT RDGPartHeader {
 public:
   static katana::Result<RDGPartHeader> Make(const katana::Uri& partition_path);
 
+  // Helper function to parse
   katana::Result<void> Validate() const;
 
   katana::Result<void> Write(

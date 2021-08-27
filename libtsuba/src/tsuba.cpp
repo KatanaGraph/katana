@@ -7,8 +7,8 @@
 #include "katana/Plugin.h"
 #include "katana/Signals.h"
 #include "tsuba/Errors.h"
-#include "tsuba/file.h"
 #include "tsuba/FileView.h"
+#include "tsuba/file.h"
 
 namespace {
 
@@ -255,56 +255,105 @@ tsuba::ListAvailableViewsFromVersion(
   return views_found;
 }
 
+katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>
+tsuba::CreateSrcDestFromViewsForCopy(
+    const std::string& src_dir, const std::string& dst_dir, uint64_t version) {
+  std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs;
 
-katana::Result<std::vector<katana::Uri>>
-tsuba::ListAllFilesFromViews(const std::string& src_dir, uint64_t version) {
-  std::vector<katana::Uri> filenames;
   // List out all the files in a given view
-  auto rdg_views_res = tsuba::ListAvailableViewsFromVersion(
-      src_dir, version);
+  auto rdg_views_res = tsuba::ListAvailableViewsFromVersion(src_dir, version);
   for (const auto& rdg_view : rdg_views_res.value()) {
     KATANA_LOG_WARN("view_path: {}", rdg_view.view_path);
     auto uri = KATANA_CHECKED(katana::Uri::Make(src_dir));
 
-    auto rdg_manifest_res = tsuba::RDGManifest::Make(
-        uri, rdg_view.view_type, version);
+    auto rdg_manifest_res =
+        tsuba::RDGManifest::Make(uri, rdg_view.view_type, version);
     if (!rdg_manifest_res) {
       continue;
     }
+
     auto fnames = KATANA_CHECKED(rdg_manifest_res.value().FileNames());
     for (auto fname : fnames) {
-      auto file_path = katana::Uri::JoinPath(src_dir, fname);
-      auto file_uri = KATANA_CHECKED(katana::Uri::Make(file_path));
-      filenames.push_back(file_uri);
-    }
-  }
-  return filenames;
-}
+      auto src_file_path = katana::Uri::JoinPath(src_dir, fname);
+      auto src_file_uri = KATANA_CHECKED(katana::Uri::Make(src_file_path));
 
-
-katana::Result<void>
-tsuba::CopyRDG(std::vector<katana::Uri> file_uris, const std::string& dst_dir) {
-  // TODO: make sure that manifests are written at the end!
-  // TODO: add do_all loop
-  std::vector<katana::Uri> manifest_uris;
-  for (const auto src_file_uri : file_uris) {
-      auto src_filename = src_file_uri.BaseName();
-      auto dst_file_path = katana::Uri::JoinPath(dst_dir, src_filename);
-      KATANA_LOG_WARN("dst_file_path: {}", dst_file_path);
-      auto dst = KATANA_CHECKED(katana::Uri::Make(dst_file_path));
-
-      // We save the names of all the manifest files and we write them out at the end.
+      // If we are a manifest, we need to change our version to 1.
       if (tsuba::RDGManifest::IsManifestUri(src_file_uri)) {
-        manifest_uris.push_back(src_file_uri);
         continue;
       }
-      tsuba::FileView fv;
-      KATANA_CHECKED(fv.Bind(src_file_uri.path(), false));
-      KATANA_CHECKED(tsuba::FileStore(dst.path(), fv.ptr<char>(), fv.size()));
+
+      // Check to see if we have a partition file
+      // If we have a partition file, the dst path should be based on PartitionFileName using rdg manifest info
+      // We're batching this now because we want to rely on having the RDG manifest file in case things
+      // change in the future.
+      katana::Uri dst_file_uri;
+      if (tsuba::RDGManifest::IsPartitionFileUri(src_file_uri)) {
+        KATANA_LOG_WARN("src_file_uri partition: {}", src_file_uri);
+        auto host_id =
+            KATANA_CHECKED(tsuba::RDGManifest::ParseHostFromPartitionFile(
+                src_file_uri.BaseName()));
+        auto dst_dir_uri = KATANA_CHECKED(katana::Uri::Make(dst_dir));
+        dst_file_uri = tsuba::RDGManifest::PartitionFileName(
+            rdg_manifest_res.value().view_type(), dst_dir_uri, host_id, 1);
+        KATANA_LOG_WARN("dst_file_uri partition: {}", dst_file_uri);
+      } else {
+        auto dst_file_path = katana::Uri::JoinPath(dst_dir, fname);
+        dst_file_uri = KATANA_CHECKED(katana::Uri::Make(dst_file_path));
+        KATANA_LOG_WARN("src_file_uri: {}", src_file_uri);
+        KATANA_LOG_WARN("dst_file_uri: {}", dst_file_uri);
+      }
+      
+      src_dst_pairs.push_back(std::make_pair(src_file_uri, dst_file_uri));
+    }
+
+    // We add the manifest file to the vector
+    // Set the version to be 1
+    auto rdg_manifest_uri = rdg_manifest_res.value().FileName();
+    rdg_manifest_res.value().ResetVersion();
+    auto dst_rdg_manifest_path = katana::Uri::JoinPath(
+        dst_dir, rdg_manifest_res.value().FileName().BaseName());
+    auto dst_rdg_manifest_uri =
+        KATANA_CHECKED(katana::Uri::Make(dst_rdg_manifest_path));
+    KATANA_LOG_WARN("rdg_manifest_uri: {}", rdg_manifest_uri);
+    KATANA_LOG_WARN("dst_rdg_manifest_uri: {}", dst_rdg_manifest_uri);
+    src_dst_pairs.push_back(
+        std::make_pair(rdg_manifest_uri, dst_rdg_manifest_uri));
+  }
+  return src_dst_pairs;
+}
+
+katana::Result<void>
+tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs) {
+  // TODO: make sure that manifests are written at the end!
+  // TODO: add do_all loop
+  std::vector<uint64_t> manifest_uri_idxs;
+  for (uint64_t i = 0; i < src_dst_pairs.size(); i++) {
+    auto [src_file_uri, dst_file_uri] = src_dst_pairs[i];
+    // We save the names of all the manifest files and we write them out at the end.
+    if (tsuba::RDGManifest::IsManifestUri(src_file_uri)) {
+      manifest_uri_idxs.push_back(i);
+      continue;
+    }
+    tsuba::FileView fv;
+    KATANA_CHECKED(fv.Bind(src_file_uri.path(), false));
+    KATANA_CHECKED(
+        tsuba::FileStore(dst_file_uri.path(), fv.ptr<char>(), fv.size()));
   }
 
-  // Process all the manifest files
-
+  // Process all the manifest files, write them out.
+  // We want to write this last so that we know whether a write fully finished or not.
+  for (auto idx : manifest_uri_idxs) {
+    auto [src_file_uri, dst_file_uri] = src_dst_pairs[idx];
+    auto rdg_manifest = KATANA_CHECKED(tsuba::RDGManifest::Make(src_file_uri));
+    // These are hard-coded for now. Will what we copy always be version 1?
+    // Should we clear the lineage as well?
+    rdg_manifest.ResetVersion();
+    auto rdg_manifest_json = rdg_manifest.ToJsonString();
+    KATANA_CHECKED(tsuba::FileStore(
+        dst_file_uri.path(),
+        reinterpret_cast<const uint8_t*>(rdg_manifest_json.data()),
+        rdg_manifest_json.size()));
+  }
   return katana::ResultSuccess();
 }
 

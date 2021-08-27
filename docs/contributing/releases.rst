@@ -106,11 +106,11 @@ The steps on the release branch release/v0.1.11 to release 0.1.11:
 3. Computed version: ``0.1.11rc1.dev+2.2.#.#``; Repository status:  ``version.txt = 0.1.11rc1``
 4. Run ``scripts/version release 0.1.11rc2`` and merge the created PR on the
    release branch release/v0.1.11. Once this commit is tagged v0.1.11rc1 it is
-   also version 0.1.11rc1 and can be released. 
+   also version 0.1.11rc1 and can be released.
 5. Once 0.1.11rc1 passes QC, run ``scripts/version tag 0.1.11`` to tag the same
    commit as the final release 0.1.11. Once this commit is tagged v0.1.11 it is
    also version 0.1.11 and can be released. At this point the commit will have
-   3 versions: 0.1.11rc1.dev+2.2.#.#, 0.1.11rc1, and 0.1.11. 
+   3 versions: 0.1.11rc1.dev+2.2.#.#, 0.1.11rc1, and 0.1.11.
 
 The state of master after branching for 0.1.11:
 
@@ -125,7 +125,7 @@ merge to master. You can install the latest development release with
 
 .. code-block:: bash
 
-   conda install -c katanagraph/label/dev katana katana-python
+   conda install -c katanagraph/label/dev -c conda-forge katana-python
 
 Each PR also creates Conda packages. You can find them as an artifact
 associated with each build (``conda-pkgs-*``). You can install these packages

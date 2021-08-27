@@ -130,106 +130,79 @@ tsuba::Create(const std::string& name) {
   return katana::ResultSuccess();
 }
 
-katana::Result<tsuba::RDGStat>
-tsuba::Stat(const std::string& rdg_name) {
-  auto uri_res = katana::Uri::Make(rdg_name);
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  katana::Uri uri = std::move(uri_res.value());
+namespace {
 
-  if (!RDGManifest::IsManifestUri(uri)) {
-    if (auto res = FindLatestManifestFile(uri); !res) {
-      return res.error().WithContext("failed to find an RDG manifest");
-    } else {
-      auto rdg_res = RDGManifest::Make(res.value());
-      RDGManifest manifest = rdg_res.value();
-      return RDGStat{
-          .num_partitions = manifest.num_hosts(),
-          .policy_id = manifest.policy_id(),
-          .transpose = manifest.transpose(),
-      };
-    }
-  }
-
-  auto rdg_res = RDGManifest::Make(uri);
-  if (!rdg_res) {
-    if (rdg_res.error() == katana::ErrorCode::JSONParseFailed) {
-      return RDGStat{
-          .num_partitions = 1,
-          .policy_id = 0,
-          .transpose = false,
-      };
-    }
-    return rdg_res.error();
-  }
-
-  RDGManifest manifest = rdg_res.value();
-  return RDGStat{
-      .num_partitions = manifest.num_hosts(),
-      .policy_id = manifest.policy_id(),
-      .transpose = manifest.transpose(),
-  };
+katana::Result<void>
+ParseManifestName(
+    const std::string& filename, std::string* type,
+    std::vector<std::string>* args, uint64_t* version) {
+  *type = KATANA_CHECKED(tsuba::RDGManifest::ParseViewNameFromName(filename));
+  *args = KATANA_CHECKED(tsuba::RDGManifest::ParseViewArgsFromName(filename));
+  *version = KATANA_CHECKED(tsuba::RDGManifest::ParseVersionFromName(filename));
+  return katana::ResultSuccess();
 }
 
-katana::Result<std::vector<tsuba::RDGView>>
-tsuba::ListAvailableViews(const std::string& rdg_dir) {
+}  // namespace
+
+katana::Result<std::pair<uint64_t, std::vector<tsuba::RDGView>>>
+tsuba::ListAvailableViews(
+    const std::string& rdg_dir, std::optional<uint64_t> version) {
+  auto rdg_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
+  std::vector<std::string> files = KATANA_CHECKED(FileList(rdg_uri.string()));
+
   std::vector<tsuba::RDGView> views_found;
-  KATANA_LOG_DEBUG("ListAvailableViews");
-  auto list_res = FileList(rdg_dir);
-  if (!list_res) {
-    KATANA_LOG_DEBUG("failed to list files in {}", rdg_dir);
-    return list_res.error();
-  }
+  uint64_t latest_version = 0;
+  bool found_graph = false;
+  for (const std::string& file : files) {
+    std::string view_type;
+    std::vector<std::string> view_args;
+    uint64_t view_version{};
 
-  bool find_max_version = true;
-  uint64_t min_version = 1;
-
-  //TODO (yasser): add an optional parameter to function which if specified is used to set
-  //'min_version' value and will set find_max_version to false
-
-  for (const std::string& file : list_res.value()) {
-    auto view_type_res = tsuba::RDGManifest::ParseViewNameFromName(file);
-    auto view_args_res = tsuba::RDGManifest::ParseViewArgsFromName(file);
-    auto view_version_res = tsuba::RDGManifest::ParseVersionFromName(file);
-
-    if (!view_type_res || !view_args_res || !view_version_res ||
-        view_version_res.value() < min_version) {
+    if (!ParseManifestName(file, &view_type, &view_args, &view_version)) {
       continue;
     }
 
-    // If RDGManifest version is greater than our current minimum then bump up minimum and
-    // discard previously found views
-    if (find_max_version && (view_version_res.value() > min_version)) {
-      min_version = view_version_res.value();
+    if (version && view_version != version.value()) {
+      continue;
+    }
+
+    katana::Uri manifest_path = rdg_uri.Join(file);
+
+    auto manifest_res = RDGManifest::Make(manifest_path);
+    if (!manifest_res) {
+      continue;
+    }
+    const RDGManifest& manifest = manifest_res.value();
+
+    if (view_version > latest_version) {
+      // we only keep views from the latest
+      latest_version = view_version;
       views_found.clear();
     }
 
-    std::string rdg_path = fmt::format("{}/{}", rdg_dir, file);
+    found_graph = true;
 
-    auto rdg_uri = katana::Uri::Make(rdg_path);
-    if (!rdg_uri)
+    if (manifest.num_hosts() == 0) {
+      // emtpy sentinal; not a valid view
       continue;
+    }
 
-    auto rdg_res = RDGManifest::Make(rdg_uri.value());
-    if (!rdg_res)
-      continue;
-
-    RDGManifest manifest = rdg_res.value();
-
-    std::vector<std::string> args_vector = std::move(view_args_res.value());
-    views_found.push_back(tsuba::RDGView{
-        .view_version = view_version_res.value(),
-        .view_type = view_type_res.value(),
-        .view_args = fmt::format("{}", fmt::join(args_vector, "-")),
-        .view_path = fmt::format("{}/{}", rdg_dir, file),
+    views_found.emplace_back(tsuba::RDGView{
+        .view_type = view_type,
+        .view_args = fmt::format("{}", fmt::join(view_args, "-")),
+        .view_path = manifest_path.string(),
         .num_partitions = manifest.num_hosts(),
         .policy_id = manifest.policy_id(),
         .transpose = manifest.transpose(),
     });
   }
 
-  return views_found;
+  if (!found_graph) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::NotFound, "no views found for that version");
+  }
+
+  return std::make_pair(latest_version, views_found);
 }
 
 katana::Uri

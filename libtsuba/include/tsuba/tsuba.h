@@ -89,7 +89,6 @@ KATANA_EXPORT katana::Result<void> Create(const std::string& name);
 /// create it, where it is stored, and the properties of the partioning strategy
 /// used to distribute its data across the hosts which will load it.
 struct KATANA_EXPORT RDGView {
-  uint64_t view_version{0};
   std::string view_type;
   std::string view_args;
   std::string view_path;
@@ -98,17 +97,14 @@ struct KATANA_EXPORT RDGView {
   bool transpose{false};
 };
 
-struct KATANA_EXPORT RDGStat {
-  uint64_t num_partitions{0};
-  uint32_t policy_id{0};
-  bool transpose{false};
-};
-
-/// Get Information about the graph
-KATANA_EXPORT katana::Result<RDGStat> Stat(const std::string& rdg_name);
-
-KATANA_EXPORT katana::Result<std::vector<RDGView>> ListAvailableViews(
-    const std::string& rdg_dir);
+/// list the views in storage for a particular RDG
+/// \param rdg_dir is the RDG's URI prefix
+/// \param version is an optional version argument, if omitted this will return
+///    the views for the latest version
+/// \returns a pair (RDG version, vector of RDGViews)
+KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
+ListAvailableViews(
+    const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
 
 // Setup and tear down
 KATANA_EXPORT katana::Result<void> Init(katana::CommBackend* comm);

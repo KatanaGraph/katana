@@ -68,10 +68,6 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
     return manifest_res.error().WithContext("cannot parse {}", uri.string());
   }
 
-  KATANA_LOG_DEBUG(
-      "parsed URI {} dir {} base {}", uri.string(), uri.DirName(),
-      uri.BaseName());
-
   auto manifest_name = uri.BaseName();
   auto view_name = ParseViewNameFromName(manifest_name);
   auto view_args = ParseViewArgsFromName(manifest_name);

@@ -69,9 +69,6 @@ FindManifestFileForVersion(
     }
   }
 
-  KATANA_LOG_DEBUG(
-      "found manifest [{}] for target {}; ", found_manifest, target.ToString());
-
   if (found_manifest.empty()) {
     return KATANA_ERROR(
         tsuba::ErrorCode::NotFound,
@@ -103,9 +100,6 @@ FindLatestManifestFile(const katana::Uri& name) {
       }
     }
   }
-
-  KATANA_LOG_DEBUG("found latest manifest [{}] ", found_manifest);
-
   if (found_manifest.empty()) {
     return KATANA_ERROR(
         tsuba::ErrorCode::NotFound,
@@ -143,9 +137,6 @@ tsuba::Open(
     return uri_res.error();
   }
   katana::Uri uri = std::move(uri_res.value());
-
-  KATANA_LOG_DEBUG(
-      "tsuba::Open: made uri {} from rdg path {}; ", uri.string(), rdg_name);
 
   if (RDGManifest::IsManifestUri(uri)) {
     auto manifest_res = tsuba::RDGManifest::Make(uri);
@@ -279,8 +270,7 @@ tsuba::ListAvailableViewsForVersion(
 
   auto list_res = FileList(rdg_dir);
   if (!list_res) {
-    KATANA_LOG_DEBUG("failed to list files in {}", rdg_dir);
-    return list_res.error();
+    return list_res.error().WithContext("failed to list files in {}", rdg_dir);
   }
 
   katana::RDGVersion current_max = katana::RDGVersion(0);

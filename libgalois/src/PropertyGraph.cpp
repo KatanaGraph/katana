@@ -707,8 +707,7 @@ katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
   if (auto res = tsuba::Create(rdg_name); !res) {
-    KATANA_LOG_DEBUG("failed to create the first manifest file\n");
-    return res.error();
+    return res.error().WithContext("failed to create the first manifest file");
   }
 
   katana::RDGVersion version = GetLoadedVersion();
@@ -730,9 +729,6 @@ katana::PropertyGraph::CreateBranch(
 
   // Create a branch with v0 and the lineage is encoded in the version
   KATANA_CHECKED(tsuba::Create(rdg_name, version));
-  KATANA_LOG_DEBUG(
-      "CreateBranch in {} from version {} with command_line {}; ", rdg_name,
-      GetBranch().ToString(), command_line);
 
   // Set the branch for search the latest manifest in that branch
   SetBranch(version);
@@ -921,7 +917,7 @@ katana::PropertyGraph::UnloadEdgeProperty(const std::string& prop_name) {
 katana::Result<void>
 katana::PropertyGraph::InformPath(const std::string& input_path) {
   if (!rdg_.rdg_dir().empty()) {
-    KATANA_LOG_DEBUG("rdg dir from {} to {} ", rdg_.rdg_dir(), input_path);
+    KATANA_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir(), input_path);
   }
   auto uri_res = katana::Uri::Make(input_path);
   if (!uri_res) {

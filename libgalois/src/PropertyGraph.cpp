@@ -418,36 +418,38 @@ katana::Result<void>
 katana::PropertyGraph::DoWrite(
     tsuba::RDGHandle handle, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
-  std::unique_ptr<tsuba::FileFrame> topology_res = nullptr;
-  std::unique_ptr<tsuba::FileFrame> node_entity_type_id_array_res = nullptr;
-  std::unique_ptr<tsuba::FileFrame> edge_entity_type_id_array_res = nullptr;
+  KATANA_LOG_DEBUG(
+      "topology valid: {}, node array valid: {}, edge array valid: {}",
+      rdg_.topology_file_storage().Valid(),
+      rdg_.node_entity_type_id_array_file_storage().Valid(),
+      rdg_.edge_entity_type_id_array_file_storage().Valid());
 
   if (!rdg_.topology_file_storage().Valid()) {
     KATANA_LOG_DEBUG("topology file store invalid, writing");
-    auto res = WriteTopology(topology());
-    if (!res) {
-      return res.error();
-    }
-    topology_res = std::move(res.value());
   }
+
+  std::unique_ptr<tsuba::FileFrame> topology_res =
+      !rdg_.topology_file_storage().Valid()
+          ? KATANA_CHECKED(WriteTopology(topology()))
+          : nullptr;
 
   if (!rdg_.node_entity_type_id_array_file_storage().Valid()) {
     KATANA_LOG_DEBUG("node_entity_type_id_array file store invalid, writing");
-    auto res = WriteEntityTypeIDsArray(node_entity_type_ids_);
-    if (!res) {
-      return res.error();
-    }
-    node_entity_type_id_array_res = std::move(res.value());
   }
+
+  std::unique_ptr<tsuba::FileFrame> node_entity_type_id_array_res =
+      !rdg_.node_entity_type_id_array_file_storage().Valid()
+          ? KATANA_CHECKED(WriteEntityTypeIDsArray(node_entity_type_ids_))
+          : nullptr;
 
   if (!rdg_.edge_entity_type_id_array_file_storage().Valid()) {
     KATANA_LOG_DEBUG("edge_entity_type_id_array file store invalid, writing");
-    auto res = WriteEntityTypeIDsArray(edge_entity_type_ids_);
-    if (!res) {
-      return res.error();
-    }
-    edge_entity_type_id_array_res = std::move(res.value());
   }
+
+  std::unique_ptr<tsuba::FileFrame> edge_entity_type_id_array_res =
+      !rdg_.edge_entity_type_id_array_file_storage().Valid()
+          ? KATANA_CHECKED(WriteEntityTypeIDsArray(edge_entity_type_ids_))
+          : nullptr;
 
   return rdg_.Store(
       handle, command_line, versioning_action, std::move(topology_res),

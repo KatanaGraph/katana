@@ -562,7 +562,9 @@ public:
         std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
             chunked_array->chunk(0));
     if (!array) {
-      return ErrorCode::TypeError;
+      return KATANA_ERROR(
+          katana::ErrorCode::TypeError, "Incorrect arrow::Array type: {}",
+          chunked_array->type()->ToString());
     }
     return MakeResult(std::move(array));
   }
@@ -587,7 +589,9 @@ public:
         std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
             chunked_array->chunk(0));
     if (!array) {
-      return ErrorCode::TypeError;
+      return KATANA_ERROR(
+          katana::ErrorCode::TypeError, "Incorrect arrow::Array type: {}",
+          chunked_array->type()->ToString());
     }
     return MakeResult(std::move(array));
   }

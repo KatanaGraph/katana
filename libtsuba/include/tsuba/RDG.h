@@ -41,6 +41,9 @@ struct KATANA_EXPORT RDGLoadOptions {
   /// List of edge properties that should be loaded
   /// nullptr means all edge properties will be loaded
   std::optional<std::vector<std::string>> edge_properties{std::nullopt};
+
+  /// the version to be loaded, default is 0 (null version)
+  katana::RDGVersion version;
 };
 
 class KATANA_EXPORT RDG {

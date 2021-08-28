@@ -271,20 +271,12 @@ katana::PropertyGraph::Make(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const std::string& rdg_name, katana::RDGVersion version,
-    const tsuba::RDGLoadOptions& opts) {
+    const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
   tsuba::RDGFile rdg_file{
-      KATANA_CHECKED(tsuba::Open(rdg_name, version, tsuba::kReadWrite))};
+      KATANA_CHECKED(tsuba::Open(rdg_name, opts.version, tsuba::kReadWrite))};
   tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
-
   return katana::PropertyGraph::Make(
       std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg));
-}
-
-katana::Result<std::unique_ptr<katana::PropertyGraph>>
-katana::PropertyGraph::Make(
-    const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
-  return Make(rdg_name, katana::RDGVersion(0), opts);
 };
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>

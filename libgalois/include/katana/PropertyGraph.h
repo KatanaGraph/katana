@@ -78,12 +78,12 @@ private:
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
 
-  // branch_: the branch to write run-time PropertyGraph
-  // by default it is the trunk inside graph_dir.
+  /// the branch to write run-time PropertyGraph
+  /// by default it is the trunk inside graph_dir.
   katana::RDGVersion branch_{katana::RDGVersion(0)};
 
-  // loaded_version_: version loaded for current PropertyGraph
-  // since file_ is reserved for writing
+  /// version loaded for current PropertyGraph
+  /// since file_ is reserved for writing
   katana::RDGVersion loaded_version_{katana::RDGVersion(0)};
 
   /// Manages the relations between the node entity types
@@ -278,11 +278,6 @@ public:
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
       std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
-
-  /// Make a property graph from an RDG name with Version.
-  static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name, katana::RDGVersion version,
-      const tsuba::RDGLoadOptions& opts);
 
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -715,7 +710,7 @@ public:
     return edge_entity_type_manager_;
   }
 
-  // Get the RDGFile version
+  /// Get the version from the RDGFile
   katana::RDGVersion RDGFileVersion() {
     if (file_ == nullptr) {
       return katana::RDGVersion(0);
@@ -724,19 +719,22 @@ public:
     }
   }
 
-  // Set or Get the targeted branch in graph_dir for writing PropertyGraph
-  // If a positive num is provided, new graph should retain the version number
+  /// Set the targeted branch in graph_dir for writing PropertyGraph
+  /// If a positive num is provided, new graph should retain the version number
   void SetBranch(const katana::RDGVersion& val, uint64_t num = 0) {
     branch_ = val;
     branch_.SetLeafNumber(num);
   }
+  /// Get the targeted branch in graph_dir for writing PropertyGraph
   katana::RDGVersion& GetBranch() { return branch_; }
 
-  // Set or Get the version of loaded PropertyGraph
+  /// Record the version of loaded PropertyGraph
   void SetLoadedVersion(const katana::RDGVersion& val) {
     loaded_version_ = val;
   }
+  /// Get the version of loaded PropertyGraph (const)
   const katana::RDGVersion& GetLoadedVersion() const { return loaded_version_; }
+  /// Get the version of loaded PropertyGraph for using its member functions
   katana::RDGVersion& GetLoadedVersion() { return loaded_version_; }
 
   /// Add Node properties that do not exist in the current graph

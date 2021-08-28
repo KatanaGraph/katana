@@ -17,6 +17,10 @@ MakeTypedIndex(
     index = std::make_unique<PrimitivePropertyIndex<node_or_edge, bool>>(
         column_name, num_entities, property);
     break;
+  case arrow::Type::UINT8:
+    index = std::make_unique<PrimitivePropertyIndex<node_or_edge, uint8_t>>(
+        column_name, num_entities, property);
+    break;
   case arrow::Type::INT64:
     index = std::make_unique<PrimitivePropertyIndex<node_or_edge, int64_t>>(
         column_name, num_entities, property);

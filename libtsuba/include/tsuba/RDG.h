@@ -43,7 +43,7 @@ struct KATANA_EXPORT RDGLoadOptions {
   std::optional<std::vector<std::string>> edge_properties{std::nullopt};
 
   /// the version to be loaded, default is 0 (null version)
-  katana::RDGVersion version;
+  katana::RDGVersion version{katana::RDGVersion(0)};
 };
 
 class KATANA_EXPORT RDG {

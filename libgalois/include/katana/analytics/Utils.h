@@ -134,6 +134,69 @@ public:
   ~TemporaryPropertyGuard() { Deinit(); }
 };
 
+class KATANA_EXPORT TemporaryEdgePropertyGuard {
+  static thread_local int temporary_edge_property_counter;
+
+  katana::PropertyGraph* pg_{nullptr};
+  std::string name_;
+
+  std::string GetPropertyName() {
+    // Use a thread local counter and the thread ID to get a unique name.
+    // `this` is not unique because we support moves.
+    return fmt::format(
+        "__katana_temporary_property_{}_{}", std::this_thread::get_id(),
+        temporary_edge_property_counter++);
+  }
+
+  void Deinit() {
+    if (!pg_) {
+      return;
+    }
+
+    if (auto r = pg_->RemoveEdgeProperty(name_); !r) {
+      if (r.error() != ErrorCode::PropertyNotFound) {
+        // Log an error if something goes wrong other than the property not
+        // existing.
+        KATANA_LOG_WARN("Failed to remove temporary property: {}", r.error());
+      }
+    }
+    Clear();
+  }
+
+  void Clear() { pg_ = nullptr; }
+
+public:
+  TemporaryEdgePropertyGuard() = default;
+
+  TemporaryEdgePropertyGuard(PropertyGraph* pg, std::string name)
+      : pg_(pg), name_(std::move(name)) {}
+
+  explicit TemporaryEdgePropertyGuard(PropertyGraph* pg)
+      : TemporaryEdgePropertyGuard(pg, GetPropertyName()) {}
+
+  const TemporaryEdgePropertyGuard& operator=(
+      const TemporaryEdgePropertyGuard&) = delete;
+  TemporaryEdgePropertyGuard(const TemporaryEdgePropertyGuard&) = delete;
+
+  TemporaryEdgePropertyGuard(TemporaryEdgePropertyGuard&& rhs) noexcept
+      : pg_(rhs.pg_), name_(std::move(rhs.name_)) {
+    rhs.Clear();
+  }
+
+  TemporaryEdgePropertyGuard& operator=(
+      TemporaryEdgePropertyGuard&& rhs) noexcept {
+    Deinit();
+    pg_ = rhs.pg_;
+    name_ = std::move(rhs.name_);
+    rhs.Clear();
+    return *this;
+  }
+
+  std::string name() const { return name_; }
+
+  ~TemporaryEdgePropertyGuard() { Deinit(); }
+};
+
 }  // namespace katana::analytics
 
 #endif

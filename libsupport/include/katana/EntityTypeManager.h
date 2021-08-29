@@ -38,6 +38,7 @@ using AtomicTypeNameToEntityTypeIDMap =
 /// (that does not intersect any other atomic type)
 using EntityTypeIDToAtomicTypeNameMap =
     std::unordered_map<EntityTypeID, std::string>;
+using TypeNameSet = std::set<std::string>;
 
 class KATANA_EXPORT EntityTypeManager {
 public:
@@ -230,6 +231,26 @@ public:
   /// if it doesn't exist.
   Result<EntityTypeID> GetOrAddEntityTypeID(const std::string& name);
 
+  Result<katana::TypeNameSet> EntityTypeToTypeNameSet(
+      katana::EntityTypeID type_id) const {
+    katana::TypeNameSet type_name_set;
+    if (type_id == katana::kInvalidEntityType ||
+        type_id >= GetNumEntityTypes()) {
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument,
+          "no string representation for invalid type");
+    }
+    auto type_set = GetAtomicSubtypes(type_id);
+    for (size_t idx = 0; idx < type_set.size(); ++idx) {
+      if (type_set[idx]) {
+        auto name = GetAtomicTypeName(idx);
+        KATANA_LOG_ASSERT(name.has_value());
+        type_name_set.insert(name.value());
+      }
+    }
+    return type_name_set;
+  }
+
   /// \returns the EntityTypeIDs for atomic types with \p names, or an error if
   /// any does not exist.
   template <typename Container>
@@ -240,12 +261,12 @@ public:
         EntityTypeID id = GetEntityTypeID(name);
         if (res[id]) {
           return KATANA_ERROR(
-              ErrorCode::InvalidArgument, "Duplicate name: {}", name);
+              ErrorCode::InvalidArgument, "duplicate name: {}", name);
         }
         res[id] = true;
       } else {
         return KATANA_ERROR(
-            ErrorCode::NotFound, "Type {} does not exist", name);
+            ErrorCode::NotFound, "type {} does not exist", name);
       }
     }
     return res;
@@ -265,7 +286,7 @@ public:
       auto id = id_res.value();
       if (res[id]) {
         return KATANA_ERROR(
-            ErrorCode::InvalidArgument, "Duplicate name: {}", name);
+            ErrorCode::InvalidArgument, "duplicate name: {}", name);
       }
       res[id] = true;
     }

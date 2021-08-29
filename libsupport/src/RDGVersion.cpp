@@ -60,18 +60,6 @@ RDGVersion::ToString() const {
 }
 
 bool
-RDGVersion::NullNumber() const {
-  // No branch and no positive ID
-  return (numbers_.empty() || numbers_.back() == 0);
-}
-
-bool
-RDGVersion::NullBranch() const {
-  // No branch and no positive ID
-  return (branches_.empty() || branches_.back() == ".");
-}
-
-bool
 RDGVersion::IsNull() const {
   // No branch and no positive ID
   return (branches_.size() <= 1 && (numbers_.empty() || numbers_.back() == 0));

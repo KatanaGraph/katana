@@ -454,9 +454,7 @@ katana::Result<void>
 katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
-  // Point the write to the intended branch
-  // katana::RDGVersion target = GetLoadedVersion(); //katana::RDGVersion(0);
-  katana::RDGVersion target = GetBranch();
+  katana::RDGVersion target = GetLoadedVersion();
   auto open_res = tsuba::Open(uri, target, tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
@@ -471,8 +469,6 @@ katana::PropertyGraph::ConductWriteOp(
   // Get the version from the RDGFile
   katana::RDGVersion new_version = RDGFileVersion();
   SetLoadedVersion(new_version);
-  SetBranch(new_version);
-
   return katana::ResultSuccess();
 }
 
@@ -500,9 +496,6 @@ katana::PropertyGraph::Commit(const std::string& command_line) {
     return WriteGraph(rdg_.rdg_dir().string(), command_line);
   }
 
-  katana::RDGVersion current = GetLoadedVersion();
-  SetBranch(current);
-
   KATANA_CHECKED(DoWrite(
       *file_, command_line, tsuba::RDG::RDGVersioningPolicy::IncrementVersion));
 
@@ -510,8 +503,6 @@ katana::PropertyGraph::Commit(const std::string& command_line) {
   // Get the version from the RDGFile
   katana::RDGVersion new_version = RDGFileVersion();
   SetLoadedVersion(new_version);
-  SetBranch(new_version);
-
   return katana::ResultSuccess();
 }
 
@@ -702,12 +693,7 @@ katana::PropertyGraph::Write(
     return res.error().WithContext("failed to create the first manifest file");
   }
 
-  katana::RDGVersion version = GetLoadedVersion();
-  if (!version.IsNull()) {
-    // Set the correct branch for writing
-    SetBranch(version);
-  }
-
+  SetLoadedVersion(katana::RDGVersion(0));
   return WriteGraph(rdg_name, command_line);
 }
 
@@ -721,9 +707,6 @@ katana::PropertyGraph::CreateBranch(
 
   // Create a branch with v0 and the lineage is encoded in the version
   KATANA_CHECKED(tsuba::Create(rdg_name, version));
-
-  // Set the branch for search the latest manifest in that branch
-  SetBranch(version);
 
   // Open the target'ed manifest from version, supposedly v0
   auto open_res = tsuba::Open(rdg_name, version, tsuba::kReadWrite);
@@ -742,8 +725,6 @@ katana::PropertyGraph::CreateBranch(
   // Get the version from the new RDGFile
   katana::RDGVersion new_version = RDGFileVersion();
   SetLoadedVersion(new_version);
-  SetBranch(new_version);
-
   return katana::ResultSuccess();
 }
 

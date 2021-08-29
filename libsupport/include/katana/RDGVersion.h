@@ -25,7 +25,11 @@ struct KATANA_EXPORT RDGVersion {
   std::vector<std::string> branches_{"."};
 
   RDGVersion(const RDGVersion& in) = default;
-  RDGVersion& operator=(const RDGVersion& in) = default;
+  RDGVersion& operator=(const RDGVersion& in) {
+    numbers_ = in.numbers_;
+    branches_ = in.branches_;
+    return *this;
+  }
 
   RDGVersion(
       const std::vector<uint64_t>& nums,
@@ -38,8 +42,6 @@ struct KATANA_EXPORT RDGVersion {
   std::string ToString() const;
   uint64_t LeafNumber() const;
   bool ShareBranch(const RDGVersion& in) const;
-  bool NullNumber() const;
-  bool NullBranch() const;
   bool IsNull() const;
 
   // Mutators

@@ -78,9 +78,8 @@ private:
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
 
-  /// the branch to write run-time PropertyGraph
-  /// by default it is the trunk inside graph_dir.
-  katana::RDGVersion branch_{katana::RDGVersion(0)};
+  /// true when the loaded version is not the latest
+  bool intermediate_{false};
 
   /// version loaded for current PropertyGraph
   /// since file_ is reserved for writing
@@ -719,16 +718,13 @@ public:
     }
   }
 
-  /// Set the targeted branch in graph_dir for writing PropertyGraph
-  /// If a positive num is provided, new graph should retain the version number
-  void SetBranch(const katana::RDGVersion& val, uint64_t num = 0) {
-    branch_ = val;
-    branch_.SetLeafNumber(num);
-  }
-  /// Get the targeted branch in graph_dir for writing PropertyGraph
-  katana::RDGVersion& GetBranch() { return branch_; }
+  /// Check if the loaded PropertyGraph is intermediate
+  bool IsIntermediate() { return intermediate_; }
 
-  /// Record the version of loaded PropertyGraph
+  /// Set if the loaded PropertyGraph is intermediate
+  void SetIntermediate(bool val) { intermediate_ = val; }
+
+  /// Set the version of loaded PropertyGraph
   void SetLoadedVersion(const katana::RDGVersion& val) {
     loaded_version_ = val;
   }

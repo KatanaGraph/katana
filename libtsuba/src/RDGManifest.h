@@ -80,7 +80,7 @@ public:
   RDGManifest NextVersion(
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
-    katana::RDGVersion next_version(version_.numbers_, version_.branches_);
+    katana::RDGVersion next_version = version_;
     next_version.IncrementLeaf();
     // progress the version numbers
     return RDGManifest(

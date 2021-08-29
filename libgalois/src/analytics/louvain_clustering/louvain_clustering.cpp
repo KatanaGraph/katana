@@ -50,12 +50,12 @@ struct LouvainClusteringImplementation
       Graph, EdgeWeightType, CommTy>;
 
   katana::Result<double> LouvainWithoutLockingDoAll(
-      katana::PropertyGraph* pfg, double lower,
+      katana::PropertyGraph* pg, double lower,
       double modularity_threshold_per_round, uint32_t& iter) {
     katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
     TimerClusteringTotal.start();
 
-    auto graph_result = Graph::Make(pfg);
+    auto graph_result = Graph::Make(pg);
     if (!graph_result) {
       return graph_result.error();
     }
@@ -177,12 +177,12 @@ struct LouvainClusteringImplementation
   // the non-deterministic one. Need to figure how to
   // do remove duplication
   katana::Result<double> LouvainDeterministic(
-      katana::PropertyGraph* pfg, double lower,
+      katana::PropertyGraph* pg, double lower,
       double modularity_threshold_per_round, uint32_t& iter) {
     katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
     katana::TimerGuard TimerClusteringGuard(TimerClusteringTotal);
 
-    auto graph_result = Graph::Make(pfg);
+    auto graph_result = Graph::Make(pg);
     if (!graph_result) {
       return graph_result.error();
     }
@@ -355,10 +355,10 @@ struct LouvainClusteringImplementation
 
 public:
   katana::Result<void> LouvainClustering(
-      katana::PropertyGraph* pfg, const std::string& edge_weight_property_name,
+      katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
       const std::vector<std::string>& temp_node_property_names,
       katana::NUMAArray<uint64_t>& clusters_orig, LouvainClusteringPlan plan) {
-    TemporaryPropertyGuard temp_edge_property{pfg};
+    TemporaryEdgePropertyGuard temp_edge_property{pg};
     std::vector<std::string> temp_edge_property_names = {
         temp_edge_property.name()};
 
@@ -366,10 +366,10 @@ public:
      * Construct temp property graph. This graph gets coarsened as the
      * computation proceeds.
      */
-    std::unique_ptr<katana::PropertyGraph> pfg_mutable;
+    std::unique_ptr<katana::PropertyGraph> pg_mutable;
 
-    Graph graph_curr = KATANA_CHECKED(Graph::Make(
-        pfg, temp_node_property_names, {edge_weight_property_name}));
+    Graph graph_curr = KATANA_CHECKED(
+        Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
     /*
     * Vertex following optimization
@@ -387,18 +387,18 @@ public:
         clusters_orig[n] = graph_curr.template GetData<CurrentCommunityID>(n);
       });
 
-      auto pfg_empty = std::make_unique<katana::PropertyGraph>();
+      auto pg_empty = std::make_unique<katana::PropertyGraph>();
 
       // Build new graph to remove the isolated nodes
       auto coarsened_graph_result =
           Base::template GraphCoarsening<NodeData, EdgeData, EdgeWeightType>(
-              graph_curr, pfg_empty.get(), num_unique_clusters,
+              graph_curr, pg_empty.get(), num_unique_clusters,
               temp_node_property_names, temp_edge_property_names);
       if (!coarsened_graph_result) {
         return coarsened_graph_result.error();
       }
 
-      pfg_mutable = std::move(coarsened_graph_result.value());
+      pg_mutable = std::move(coarsened_graph_result.value());
 
     } else {
       /*
@@ -407,37 +407,37 @@ public:
       katana::do_all(
           katana::iterate(graph_curr), [&](GNode n) { clusters_orig[n] = -1; });
 
-      auto pfg_dup = KATANA_CHECKED(Base::template DuplicateGraph<NodeData>(
-          pfg, edge_weight_property_name, temp_edge_property_names[0]));
+      auto pg_dup = KATANA_CHECKED(Base::template DuplicateGraph<NodeData>(
+          pg, edge_weight_property_name, temp_edge_property_names[0]));
 
-      pfg_mutable = std::move(pfg_dup);
+      pg_mutable = std::move(pg_dup);
     }
 
-    KATANA_LOG_ASSERT(pfg_mutable);
+    KATANA_LOG_ASSERT(pg_mutable);
 
     double prev_mod = -1;  // Previous modularity
     double curr_mod = -1;  // Current modularity
     uint32_t phase = 0;
 
-    std::unique_ptr<katana::PropertyGraph> pfg_curr = std::move(pfg_mutable);
+    std::unique_ptr<katana::PropertyGraph> pg_curr = std::move(pg_mutable);
     uint32_t iter = 0;
     uint64_t num_nodes_orig = clusters_orig.size();
     while (true) {
       iter++;
       phase++;
 
-      Graph graph_curr = KATANA_CHECKED(Graph::Make(pfg_curr.get()));
+      Graph graph_curr = KATANA_CHECKED(Graph::Make(pg_curr.get()));
       if (graph_curr.num_nodes() > plan.min_graph_size()) {
         switch (plan.algorithm()) {
         case LouvainClusteringPlan::kDoAll: {
           curr_mod = KATANA_CHECKED(LouvainWithoutLockingDoAll(
-              pfg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
+              pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
               iter));
           break;
         }
         case LouvainClusteringPlan::kDeterministic: {
           curr_mod = KATANA_CHECKED(LouvainDeterministic(
-              pfg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
+              pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
               iter));
           break;
         }
@@ -475,13 +475,13 @@ public:
 
         auto coarsened_graph_result =
             Base::template GraphCoarsening<NodeData, EdgeData, EdgeWeightType>(
-                graph_curr, pfg_curr.get(), num_unique_clusters,
+                graph_curr, pg_curr.get(), num_unique_clusters,
                 temp_node_property_names, temp_edge_property_names);
         if (!coarsened_graph_result) {
           return coarsened_graph_result.error();
         }
 
-        pfg_curr = std::move(coarsened_graph_result.value());
+        pg_curr = std::move(coarsened_graph_result.value());
 
         prev_mod = curr_mod;
       } else {
@@ -494,8 +494,34 @@ public:
 
 template <typename EdgeWeightType>
 static katana::Result<void>
+AddDefaultEdgeWeight(
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name) {
+  using EdgeData = std::tuple<EdgeWeightType>;
+
+  if (auto res = katana::analytics::ConstructEdgeProperties<EdgeData>(
+          pg, {edge_weight_property_name});
+      !res) {
+    return res.error();
+  }
+
+  auto typed_graph =
+      KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
+          pg, {}, {edge_weight_property_name})));
+  katana::do_all(
+      katana::iterate(typed_graph),
+      [&](auto n) {
+        for (auto ii : typed_graph.edges(n)) {
+          typed_graph.template GetEdgeData<EdgeWeightType>(ii) = 1;
+        }
+      },
+      katana::steal(), katana::loopname("InitEdgeWeight"));
+  return katana::ResultSuccess();
+}
+
+template <typename EdgeWeightType>
+static katana::Result<void>
 LouvainClusteringWithWrap(
-    katana::PropertyGraph* pfg, const std::string& edge_weight_property_name,
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, LouvainClusteringPlan plan) {
   static_assert(
       std::is_integral_v<EdgeWeightType> ||
@@ -504,7 +530,7 @@ LouvainClusteringWithWrap(
   std::vector<TemporaryPropertyGuard> temp_node_properties(3);
   std::generate_n(
       temp_node_properties.begin(), temp_node_properties.size(),
-      [&]() { return TemporaryPropertyGuard{pfg}; });
+      [&]() { return TemporaryPropertyGuard{pg}; });
   std::vector<std::string> temp_node_property_names(
       temp_node_properties.size());
   std::transform(
@@ -514,26 +540,26 @@ LouvainClusteringWithWrap(
 
   using Impl = LouvainClusteringImplementation<EdgeWeightType>;
   KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
-      pfg, temp_node_property_names));
+      pg, temp_node_property_names));
 
   /*
    * To keep track of communities for nodes in the original graph.
    * Community will be set to -1 for isolated nodes
    */
   katana::NUMAArray<uint64_t> clusters_orig;
-  clusters_orig.allocateBlocked(pfg->num_nodes());
+  clusters_orig.allocateBlocked(pg->num_nodes());
 
   LouvainClusteringImplementation<EdgeWeightType> impl{};
   KATANA_CHECKED(impl.LouvainClustering(
-      pfg, edge_weight_property_name, temp_node_property_names, clusters_orig,
+      pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
       plan));
 
   KATANA_CHECKED(ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
-      pfg, {output_property_name}));
+      pg, {output_property_name}));
 
   auto graph = KATANA_CHECKED((
       katana::TypedPropertyGraph<std::tuple<CurrentCommunityID>, std::tuple<>>::
-          Make(pfg, {output_property_name}, {})));
+          Make(pg, {output_property_name}, {})));
 
   katana::do_all(
       katana::iterate(graph),
@@ -551,6 +577,23 @@ katana::Result<void>
 katana::analytics::LouvainClustering(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, LouvainClusteringPlan plan) {
+  if (!edge_weight_property_name.empty() &&
+      !pg->HasEdgeProperty(edge_weight_property_name)) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "Edge Property: {} Not found",
+        edge_weight_property_name);
+  }
+  // If edge property name empty, add int64_t property
+  // add initialize it to 1.
+  if (edge_weight_property_name.empty()) {
+    TemporaryEdgePropertyGuard temporary_edge_property{pg};
+    struct EdgeWt : public katana::PODProperty<int64_t> {};
+    KATANA_CHECKED(
+        AddDefaultEdgeWeight<EdgeWt>(pg, temporary_edge_property.name()));
+    return LouvainClusteringWithWrap<int64_t>(
+        pg, temporary_edge_property.name(), output_property_name, plan);
+  }
+
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()
               ->id()) {
@@ -701,69 +744,67 @@ katana::analytics::LouvainClusteringStatistics::Compute(
 
   double modularity = 0.0;
 
-  switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
-              ->type()
-              ->id()) {
-  case arrow::UInt32Type::type_id: {
-    auto modularity_result = CalModularityWrap<uint32_t>(
-        pg, edge_weight_property_name, property_name);
-    if (!modularity_result) {
-      return modularity_result.error();
-    }
-    modularity = modularity_result.value();
-    break;
-  }
-  case arrow::Int32Type::type_id: {
-    auto modularity_result = CalModularityWrap<int32_t>(
-        pg, edge_weight_property_name, property_name);
-    if (!modularity_result) {
-      return modularity_result.error();
-    }
-    modularity = modularity_result.value();
-    break;
-  }
-  case arrow::UInt64Type::type_id: {
-    auto modularity_result = CalModularityWrap<uint64_t>(
-        pg, edge_weight_property_name, property_name);
-    if (!modularity_result) {
-      return modularity_result.error();
-    }
-    modularity = modularity_result.value();
-    break;
-  }
-  case arrow::Int64Type::type_id: {
-    auto modularity_result = CalModularityWrap<int64_t>(
-        pg, edge_weight_property_name, property_name);
-    if (!modularity_result) {
-      return modularity_result.error();
-    }
-    modularity = modularity_result.value();
-    break;
-  }
-  case arrow::FloatType::type_id: {
-    auto modularity_result =
-        CalModularityWrap<float>(pg, edge_weight_property_name, property_name);
-    if (!modularity_result) {
-      return modularity_result.error();
-    }
-    modularity = modularity_result.value();
-    break;
-  }
-  case arrow::DoubleType::type_id: {
-    auto modularity_result =
-        CalModularityWrap<double>(pg, edge_weight_property_name, property_name);
-    if (!modularity_result) {
-      return modularity_result.error();
-    }
-    modularity = modularity_result.value();
-    break;
-  }
-  default:
+  if (!edge_weight_property_name.empty() &&
+      !pg->HasEdgeProperty(edge_weight_property_name)) {
     return KATANA_ERROR(
-        katana::ErrorCode::TypeError, "Unsupported type: {}",
-        KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
-            ->type()
-            ->ToString());
+        katana::ErrorCode::NotFound, "Edge Property: {} Not found",
+        edge_weight_property_name);
+  }
+  // If edge property name is empty, add int64_t edge property and
+  // initialize it to 1.
+  if (edge_weight_property_name.empty()) {
+    TemporaryEdgePropertyGuard temporary_edge_property{pg};
+    struct EdgeWt : public katana::PODProperty<int64_t> {};
+    KATANA_CHECKED(
+        AddDefaultEdgeWeight<EdgeWt>(pg, temporary_edge_property.name()));
+
+    auto modularity_result = CalModularityWrap<int64_t>(
+        pg, temporary_edge_property.name(), property_name);
+    if (!modularity_result) {
+      return modularity_result.error();
+    }
+    modularity = modularity_result.value();
+  } else {
+    switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+                ->type()
+                ->id()) {
+    case arrow::UInt32Type::type_id: {
+      modularity = KATANA_CHECKED(CalModularityWrap<uint32_t>(
+          pg, edge_weight_property_name, property_name));
+      break;
+    }
+    case arrow::Int32Type::type_id: {
+      modularity = KATANA_CHECKED(CalModularityWrap<int32_t>(
+          pg, edge_weight_property_name, property_name));
+      break;
+    }
+    case arrow::UInt64Type::type_id: {
+      modularity = KATANA_CHECKED(CalModularityWrap<uint64_t>(
+          pg, edge_weight_property_name, property_name));
+      break;
+    }
+    case arrow::Int64Type::type_id: {
+      modularity = KATANA_CHECKED(CalModularityWrap<int64_t>(
+          pg, edge_weight_property_name, property_name));
+      break;
+    }
+    case arrow::FloatType::type_id: {
+      modularity = KATANA_CHECKED(CalModularityWrap<float>(
+          pg, edge_weight_property_name, property_name));
+      break;
+    }
+    case arrow::DoubleType::type_id: {
+      modularity = KATANA_CHECKED(CalModularityWrap<double>(
+          pg, edge_weight_property_name, property_name));
+      break;
+    }
+    default:
+      return KATANA_ERROR(
+          katana::ErrorCode::TypeError, "Unsupported type: {}",
+          KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+              ->type()
+              ->ToString());
+    }
   }
   return LouvainClusteringStatistics{
       reps, non_trivial_clusters.reduce(), largest_cluster_size,

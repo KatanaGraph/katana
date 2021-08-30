@@ -19,7 +19,6 @@ static const char* kDefaultRDGViewType = "rdg";
 // Struct version of main graph metadatafile
 class KATANA_EXPORT RDGManifest {
   static const std::regex kManifestVersion;
-  static const std::regex kPartitionFile;
 
   katana::Uri dir_;  // not persisted; inferred from name
 
@@ -79,7 +78,7 @@ public:
         version_ + 1, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }
 
-  // This should have previous_version_ for the second argument, no?
+  // TODO(vkarthik): This should have previous_version_ for the second argument, no?
   RDGManifest SameVersion(
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
@@ -144,10 +143,7 @@ public:
   static katana::Result<std::vector<std::string>> ParseViewArgsFromName(
       const std::string& file);
 
-  static katana::Result<uint64_t> ParseHostFromPartitionFile(
-      const std::string& file);
   static bool IsManifestUri(const katana::Uri& uri);
-  static bool IsPartitionFileUri(const katana::Uri& uri);
   std::string ToJsonString() const;
 
   /// Return the set of file names that hold this RDG's data by reading partition files

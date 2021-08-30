@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <optional>
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -126,7 +127,6 @@ class KATANA_EXPORT RDGPartHeader {
 public:
   static katana::Result<RDGPartHeader> Make(const katana::Uri& partition_path);
 
-  // Helper function to parse
   katana::Result<void> Validate() const;
 
   katana::Result<void> Write(
@@ -139,6 +139,12 @@ public:
       const katana::Uri& old_location, const katana::Uri& new_location);
 
   katana::Result<void> ValidateEntityTypeIDStructures() const;
+  static bool IsPartitionFileUri(const katana::Uri& uri);
+  // TODO(vkarthik): Move this somewhere else because this depends on the Parse function here. Might
+  // need to reorganize all the parsing properly.
+  static katana::Result<uint64_t> ParseHostFromPartitionFile(
+      const std::string& file);
+
   bool IsEntityTypeIDsOutsideProperties() const;
   //
   // Property manipulation
@@ -491,6 +497,9 @@ private:
       const katana::EntityTypeIDToAtomicTypeNameMap& edge_entity_type_id_name) {
     edge_entity_type_id_name_ = edge_entity_type_id_name;
   }
+
+  // Regex for partition files
+  static const std::regex kPartitionFile;
 
   std::vector<PropStorageInfo> part_prop_info_list_;
   std::vector<PropStorageInfo> node_prop_info_list_;

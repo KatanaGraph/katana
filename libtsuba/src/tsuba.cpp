@@ -2,6 +2,7 @@
 
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
+#include "RDGPartHeader.h"
 #include "katana/CommBackend.h"
 #include "katana/Env.h"
 #include "katana/Plugin.h"
@@ -288,10 +289,10 @@ tsuba::CreateSrcDestFromViewsForCopy(
       // We're batching this now because we want to rely on having the RDG manifest file in case things
       // change in the future.
       katana::Uri dst_file_uri;
-      if (tsuba::RDGManifest::IsPartitionFileUri(src_file_uri)) {
+      if (tsuba::RDGPartHeader::IsPartitionFileUri(src_file_uri)) {
         KATANA_LOG_WARN("src_file_uri partition: {}", src_file_uri);
         auto host_id =
-            KATANA_CHECKED(tsuba::RDGManifest::ParseHostFromPartitionFile(
+            KATANA_CHECKED(tsuba::RDGPartHeader::ParseHostFromPartitionFile(
                 src_file_uri.BaseName()));
         auto dst_dir_uri = KATANA_CHECKED(katana::Uri::Make(dst_dir));
         dst_file_uri = tsuba::RDGManifest::PartitionFileName(
@@ -325,8 +326,8 @@ tsuba::CreateSrcDestFromViewsForCopy(
 
 katana::Result<void>
 tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs) {
-  // TODO: make sure that manifests are written at the end!
-  // TODO: add do_all loop
+  // TODO(vkarthik): make sure that manifests are written at the end!
+  // TODO(vkarthik): add do_all loop
   std::vector<uint64_t> manifest_uri_idxs;
   for (uint64_t i = 0; i < src_dst_pairs.size(); i++) {
     auto [src_file_uri, dst_file_uri] = src_dst_pairs[i];

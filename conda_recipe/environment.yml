@@ -32,7 +32,7 @@ dependencies:
  - ninja
  - ncurses>=6.1
  - nlohmann_json>=3.7.3
- - numba
+ - numba=0.53.1
  - numpy
  - openblas>=0.3.12
  - packaging

@@ -189,7 +189,7 @@ tsuba::Create(const std::string& name, katana::RDGVersion version) {
   KATANA_LOG_DEBUG_ASSERT(!RDGManifest::IsManifestUri(uri));
 
   tsuba::RDGManifest manifest{};
-  if (!version.IsNull()) {
+  if (!version.IsZero()) {
     // start a new branch with v0
     version.SetLeafNumber(0);
     manifest.set_version(version);

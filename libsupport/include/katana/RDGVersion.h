@@ -42,7 +42,7 @@ struct KATANA_EXPORT RDGVersion {
   std::string ToString() const;
   uint64_t LeafNumber() const;
   bool ShareBranch(const RDGVersion& in) const;
-  bool IsNull() const;
+  bool IsZero() const;
 
   // Mutators
   void IncrementLeaf(uint64_t num = 1);

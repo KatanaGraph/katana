@@ -81,9 +81,10 @@ private:
   /// true when the loaded version is not the latest
   bool intermediate_{false};
 
-  /// version loaded for current PropertyGraph
-  /// since file_ is reserved for writing
-  katana::RDGVersion loaded_version_{katana::RDGVersion(0)};
+  /// version loaded for the current PropertyGraph
+  /// It changes when the graph is updated or forked to a branch.
+  /// In contrast, the version with the RDG file_ is immutable.
+  katana::RDGVersion current_version_{katana::RDGVersion(0)};
 
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;
@@ -724,14 +725,14 @@ public:
   /// Set if the loaded PropertyGraph is intermediate
   void SetIntermediate(bool val) { intermediate_ = val; }
 
-  /// Set the version of loaded PropertyGraph
-  void SetLoadedVersion(const katana::RDGVersion& val) {
-    loaded_version_ = val;
+  /// Set the current version of loaded PropertyGraph
+  void SetVersion(const katana::RDGVersion& val) {
+    current_version_ = val;
   }
   /// Get the version of loaded PropertyGraph (const)
-  const katana::RDGVersion& GetLoadedVersion() const { return loaded_version_; }
+  const katana::RDGVersion& GetVersion() const { return current_version_; }
   /// Get the version of loaded PropertyGraph for using its member functions
-  katana::RDGVersion& GetLoadedVersion() { return loaded_version_; }
+  katana::RDGVersion& GetVersion() { return current_version_; }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);

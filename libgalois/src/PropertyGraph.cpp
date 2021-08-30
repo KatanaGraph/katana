@@ -454,7 +454,7 @@ katana::Result<void>
 katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
-  katana::RDGVersion target = GetLoadedVersion();
+  katana::RDGVersion target = GetVersion();
   auto open_res = tsuba::Open(uri, target, tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
@@ -468,7 +468,7 @@ katana::PropertyGraph::ConductWriteOp(
 
   // Get the version from the RDGFile
   katana::RDGVersion new_version = RDGFileVersion();
-  SetLoadedVersion(new_version);
+  SetVersion(new_version);
   return katana::ResultSuccess();
 }
 
@@ -502,7 +502,7 @@ katana::PropertyGraph::Commit(const std::string& command_line) {
   // file_ is already updated as an In/Out parameter.
   // Get the version from the RDGFile
   katana::RDGVersion new_version = RDGFileVersion();
-  SetLoadedVersion(new_version);
+  SetVersion(new_version);
   return katana::ResultSuccess();
 }
 
@@ -693,7 +693,7 @@ katana::PropertyGraph::Write(
     return res.error().WithContext("failed to create the first manifest file");
   }
 
-  SetLoadedVersion(katana::RDGVersion(0));
+  SetVersion(katana::RDGVersion(0));
   return WriteGraph(rdg_name, command_line);
 }
 
@@ -702,7 +702,7 @@ katana::PropertyGraph::CreateBranch(
     const std::string& rdg_name, const std::string& command_line,
     const std::string& branch) {
   // Create the branch based on loaded version
-  katana::RDGVersion version = GetLoadedVersion();
+  katana::RDGVersion version = GetVersion();
   version.AddBranch(branch);
 
   // Create a branch with v0 and the lineage is encoded in the version
@@ -724,7 +724,7 @@ katana::PropertyGraph::CreateBranch(
 
   // Get the version from the new RDGFile
   katana::RDGVersion new_version = RDGFileVersion();
-  SetLoadedVersion(new_version);
+  SetVersion(new_version);
   return katana::ResultSuccess();
 }
 

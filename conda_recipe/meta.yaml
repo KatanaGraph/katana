@@ -35,7 +35,7 @@ requirements:
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
     - arrow-cpp {{ arrow_cpp }}
-    - backward-cpp>=1.4
+    - backward-cpp=1.4
     - boost-cpp>=1.74
     - elfutils
     - fmt>=6.2.1
@@ -66,7 +66,7 @@ outputs:
       host:
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - backward-cpp>=1.4
+        - backward-cpp=1.4
         - boost-cpp>=1.74
         - elfutils
         - fmt>=6.2.1
@@ -83,7 +83,7 @@ outputs:
         - fmt
         - nlohmann_json
         - libcurl
-        - backward-cpp
+        - backward-cpp=1.4
         - elfutils
         - libxml2
     run_exports:

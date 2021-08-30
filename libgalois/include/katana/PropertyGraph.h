@@ -762,6 +762,27 @@ public:
   edge_indexes() const {
     return edge_indexes_;
   }
+
+  // Returns true of an index exists for the named property
+  bool HasNodePropertyIndex(const std::string& property_name) const {
+    for (const auto& index : node_indexes()) {
+      if (index->column_name() == property_name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Returns the property index associated with the named property
+  katana::Result<katana::PropertyIndex<GraphTopology::Node>*>
+  GetNodePropertyIndex(const std::string& property_name) const {
+    for (const auto& index : node_indexes()) {
+      if (index->column_name() == property_name) {
+        return index.get();
+      }
+    }
+    return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+  }
 };
 
 /// SortAllEdgesByDest sorts edges for each node by destination

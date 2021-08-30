@@ -30,13 +30,14 @@ public:
   // The set key type is either a node/edge id (all the keys in the actual set)
   // or a value representing the search key.
   using set_key_type = typename std::variant<
-      IndexID, bool, int64_t, double_t, std::string_view*>;
+      IndexID, bool, uint8_t, int64_t, double_t, std::string_view*>;
 
   // PropertyIndex::iterator returns a sequence of node or edge ids.
   using base_iterator = typename std::multiset<set_key_type>::iterator;
   class iterator : public base_iterator {
   public:
     explicit iterator(const base_iterator& base) : base_iterator(base) {}
+    iterator() : base_iterator(0) {}
     const node_or_edge& operator*() const {
       return std::get<IndexID>(base_iterator::operator*()).id;
     }
@@ -145,6 +146,8 @@ private:
 template <typename node_or_edge>
 class KATANA_EXPORT StringPropertyIndex : public PropertyIndex<node_or_edge> {
 public:
+  using ArrowArrayType =
+      typename arrow::TypeTraits<arrow::LargeStringType>::ArrayType;
   using IndexID = typename PropertyIndex<node_or_edge>::IndexID;
   using iterator = typename PropertyIndex<node_or_edge>::iterator;
   using set_key_type = typename PropertyIndex<node_or_edge>::set_key_type;

@@ -69,11 +69,18 @@ public:
     return pg_->rdg_.edge_properties();
   }
 
+  void ReplaceNodeTypeManager(EntityTypeManager&& manager) {
+    pg_->node_entity_type_manager_ = std::move(manager);
+  }
+
+  void ReplaceEdgeTypeManager(EntityTypeManager&& manager) {
+    pg_->edge_entity_type_manager_ = std::move(manager);
+  }
+
   /// Tell the RDG where it's data is coming from
   Result<void> InformPath(const std::string& input_path);
 
-  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one chunk, change to arrow::Array.
+  /// Vector from storage mapping host to global node ID ranges
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_node_ids()
       const {
     return pg_->rdg_.host_to_owned_global_node_ids();
@@ -83,8 +90,7 @@ public:
     pg_->rdg_.set_host_to_owned_global_node_ids(std::move(a));
   }
 
-  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one chunk, change to arrow::Array.
+  /// Vector from storage mapping host to global edge ID ranges
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_edge_ids()
       const {
     return pg_->rdg_.host_to_owned_global_edge_ids();
@@ -94,8 +100,7 @@ public:
     pg_->rdg_.set_host_to_owned_global_edge_ids(std::move(a));
   }
 
-  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one chunk, change to arrow::Array.
+  /// Vector from storage mapping local node ID to UserID
   const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const {
     return pg_->rdg_.local_to_user_id();
   }
@@ -103,8 +108,7 @@ public:
     pg_->rdg_.set_local_to_user_id(std::move(a));
   }
 
-  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one chunk, change to arrow::Array.
+  /// Vector from storage mapping local node ID to global node ID
   const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const {
     return pg_->rdg_.local_to_global_id();
   }
@@ -112,7 +116,7 @@ public:
     pg_->rdg_.set_local_to_global_id(std::move(a));
   }
 
-  /// deallocate and forget about all topology information associated with the
+  /// Deallocate and forget about all topology information associated with the
   /// managed PropertyGraph
   Result<void> DropTopologies();
 

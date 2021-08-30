@@ -525,12 +525,32 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
     return false;
   }
 
-  if (!(node_entity_type_ids_ == other->node_entity_type_ids_)) {
+  // The TypeIDs can change, but their string interpretation cannot
+  if (node_entity_type_ids_.size() != other->node_entity_type_ids_.size()) {
     return false;
   }
+  for (size_t i = 0; i < node_entity_type_ids_.size(); ++i) {
+    auto tns = node_entity_type_manager_.EntityTypeToTypeNameSet(
+        node_entity_type_ids_[i]);
+    auto otns = other->node_entity_type_manager_.EntityTypeToTypeNameSet(
+        other->node_entity_type_ids_[i]);
+    if (tns != otns) {
+      return false;
+    }
+  }
 
-  if (!(edge_entity_type_ids_ == other->edge_entity_type_ids_)) {
+  // The TypeIDs can change, but their string interpretation cannot
+  if (edge_entity_type_ids_.size() != other->edge_entity_type_ids_.size()) {
     return false;
+  }
+  for (size_t i = 0; i < edge_entity_type_ids_.size(); ++i) {
+    auto tns = edge_entity_type_manager_.EntityTypeToTypeNameSet(
+        edge_entity_type_ids_[i]);
+    auto otns = other->edge_entity_type_manager_.EntityTypeToTypeNameSet(
+        other->edge_entity_type_ids_[i]);
+    if (tns != otns) {
+      return false;
+    }
   }
 
   const auto& node_props = rdg_.node_properties();
@@ -580,22 +600,80 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
       std::back_inserter(buf),
       edge_entity_type_manager_.ReportDiff(other->edge_entity_type_manager()));
 
-  if (node_entity_type_ids_ == other->node_entity_type_ids_) {
-    fmt::format_to(std::back_inserter(buf), "node_entity_type_ids Match!\n");
-  } else {
+  // The TypeIDs can change, but their string interpretation cannot
+  bool match = true;
+  if (node_entity_type_ids_.size() != other->node_entity_type_ids_.size()) {
     fmt::format_to(
         std::back_inserter(buf),
         "node_entity_type_ids differ. size {} vs. {}\n",
         node_entity_type_ids_size(), other->node_entity_type_ids_size());
+    match = false;
+  } else {
+    for (size_t i = 0; i < node_entity_type_ids_.size(); ++i) {
+      auto tns_res = node_entity_type_manager_.EntityTypeToTypeNameSet(
+          node_entity_type_ids_[i]);
+      auto otns_res = other->node_entity_type_manager_.EntityTypeToTypeNameSet(
+          other->node_entity_type_ids_[i]);
+      if (!tns_res || !otns_res) {
+        fmt::format_to(
+            std::back_inserter(buf),
+            "node error types index {} entity lhs {} entity rhs_{}\n", i,
+            node_entity_type_ids_[i], other->node_entity_type_ids_[i]);
+        match = false;
+        break;
+      }
+      auto tns = tns_res.value();
+      auto otns = otns_res.value();
+      if (tns != otns) {
+        fmt::format_to(
+            std::back_inserter(buf),
+            "node_entity_type_ids differ. {:4} {} {} {} {}\n", i,
+            node_entity_type_ids_[i], fmt::join(tns, ", "),
+            other->node_entity_type_ids_[i], fmt::join(otns, ", "));
+        match = false;
+      }
+    }
+  }
+  if (match) {
+    fmt::format_to(std::back_inserter(buf), "node_entity_type_ids Match!\n");
   }
 
-  if (edge_entity_type_ids_ == other->edge_entity_type_ids_) {
-    fmt::format_to(std::back_inserter(buf), "edge_entity_type_ids Match!\n");
-  } else {
+  // The TypeIDs can change, but their string interpretation cannot
+  match = true;
+  if (edge_entity_type_ids_.size() != other->edge_entity_type_ids_.size()) {
     fmt::format_to(
         std::back_inserter(buf),
         "edge_entity_type_ids differ. size {} vs. {}\n",
         edge_entity_type_ids_size(), other->edge_entity_type_ids_size());
+    match = false;
+  } else {
+    for (size_t i = 0; i < edge_entity_type_ids_.size(); ++i) {
+      auto tns_res = edge_entity_type_manager_.EntityTypeToTypeNameSet(
+          edge_entity_type_ids_[i]);
+      auto otns_res = other->edge_entity_type_manager_.EntityTypeToTypeNameSet(
+          other->edge_entity_type_ids_[i]);
+      if (!tns_res || !otns_res) {
+        fmt::format_to(
+            std::back_inserter(buf),
+            "edge error types index {} entity lhs {} entity rhs_{}\n", i,
+            edge_entity_type_ids_[i], other->edge_entity_type_ids_[i]);
+        match = false;
+        break;
+      }
+      auto tns = tns_res.value();
+      auto otns = otns_res.value();
+      if (tns != otns) {
+        fmt::format_to(
+            std::back_inserter(buf),
+            "edge_entity_type_ids differ. {:4} {} {} {} {}\n", i,
+            edge_entity_type_ids_[i], fmt::join(tns, ", "),
+            other->edge_entity_type_ids_[i], fmt::join(otns, ", "));
+        match = false;
+      }
+    }
+  }
+  if (match) {
+    fmt::format_to(std::back_inserter(buf), "edge_entity_type_ids Match!\n");
   }
 
   const auto& node_props = rdg_.node_properties();

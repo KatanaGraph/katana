@@ -3,10 +3,13 @@ Utilities which download example data for testing and experimentation.
 """
 
 import os
+import re
 import shutil
 import tarfile
 import urllib.request
 from pathlib import Path
+from typing import List, Optional
+
 
 __all__ = ["get_input", "get_input_as_url"]
 
@@ -66,3 +69,57 @@ def get_input_as_url(rel_path) -> str:
     """
     path = get_input(rel_path).resolve()
     return f"file://{path}"
+
+
+class version(dict):
+
+    def __init__(self):
+        super().__init__()
+        self["numbers"] = [0]
+        self["branches"] = ["."]
+
+    def is_zero(self):
+        return self["numbers"][-1] == 0 or not self["numbers"]
+
+    def __str__(self):
+        vec = str("0").zfill(10)
+        for i in range(0, len(self["numbers"]) - 1):
+            vec += str(self["numbers"][i]).zfill(10) + "_"
+            vec += self["branches"][i] + "_"
+        return vec + str(self["numbers"][-1]).zfill(10)
+
+
+def parse_version(source):
+    s = re.split(r"_", source[4:])
+    a = version()
+    if len(s) == 0:
+        return a
+    a["numbers"].clear()
+    a["branches"].clear()
+    i = 0
+    while i < len(s):
+        a["numbers"].append(int(s[i]))
+        i += 1
+        if i < len(s):
+            a["branches"].append(s[i])
+            i += 1
+        else:
+            a["branches"].append(".")
+    return a
+
+
+def get_rdgs(graph_dir, ver: Optional[version] = None):
+    s = re.compile(r"katana_(?P<version>(?:vers.*))_(?P<view_type>(?:rdg.*)).manifest$")
+    precursors = [s.match(f).groupdict() for f in os.listdir(graph_dir) if s.match(f)]
+    rdgs = []
+    for precursor in precursors:
+        rdg = {}
+        rdg["version"] = parse_version(precursor["version"])
+        rdg["view_type"] = precursor["view_type"]
+        rdgs.append(rdg)
+    if ver is None:
+        return rdgs
+    for rdg in rdgs:
+        if rdg["version"] == ver:
+            rdgs.remove(rdg)
+    return rdgs

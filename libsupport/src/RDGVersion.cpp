@@ -38,19 +38,16 @@ RDGVersion::RDGVersion(const std::string& src) {
 
 std::string
 RDGVersion::ToPathName() const {
-  std::string vec = fmt::format("{0:0{1}d}",
-      0, kRDGVersionPaddingLength);
+  std::string vec = fmt::format("{0:0{1}d}", 0, kRDGVersionPaddingLength);
   if (numbers_.size() == 0) {
     return vec;
   }
   for (uint32_t i = 0; (i + 1) < numbers_.size(); i++) {
-    vec += fmt::format("{0:0{1}d}",
-        numbers_[i], kRDGVersionPaddingLength);
+    vec += fmt::format("{0:0{1}d}", numbers_[i], kRDGVersionPaddingLength);
     vec += fmt::format("_{}_", branches_[i]);
   }
   // include only the number from the last pair, ignore "."
-  vec += fmt::format("{0:0{1}d}",
-      numbers_.back(), kRDGVersionPaddingLength);
+  vec += fmt::format("{0:0{1}d}", numbers_.back(), kRDGVersionPaddingLength);
   return vec;
 }
 

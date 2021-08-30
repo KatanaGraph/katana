@@ -726,9 +726,7 @@ public:
   void SetIntermediate(bool val) { intermediate_ = val; }
 
   /// Set the current version of loaded PropertyGraph
-  void SetVersion(const katana::RDGVersion& val) {
-    current_version_ = val;
-  }
+  void SetVersion(const katana::RDGVersion& val) { current_version_ = val; }
   /// Get the version of loaded PropertyGraph (const)
   const katana::RDGVersion& GetVersion() const { return current_version_; }
   /// Get the version of loaded PropertyGraph for using its member functions

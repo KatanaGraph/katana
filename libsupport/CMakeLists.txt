@@ -76,7 +76,7 @@ target_link_libraries(katana_support PUBLIC ${curl_lib})
 find_package(Backward REQUIRED
              # This is a hack to handle a package bug in conda package upstream
              # TODO(amp): Remove the hack once https://github.com/conda-forge/backward-cpp-feedstock/issues/18 is fixed.
-             PATHS $ENV{CONDA_PREFIX}/lib64)
+             PATHS $ENV{CONDA_PREFIX}/lib64 $ENV{PREFIX}/lib64)
 target_link_libraries(katana_support PUBLIC Backward::Backward)
 
 find_package(fmt REQUIRED)

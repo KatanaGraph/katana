@@ -214,6 +214,16 @@ public:
     return atomic_type_name_to_entity_type_id_.count(name) == 1;
   }
 
+  std::vector<std::string> ListAtomicTypes() const {
+    std::vector<std::string> types;
+    // TODO(aneesh) define an iterator-type alias and return an iterator over
+    // the names instead of constructing a vector.
+    for (const auto& kv : atomic_type_name_to_entity_type_id_) {
+      types.push_back(kv.first);
+    }
+    return types;
+  }
+
   /// \returns true iff an entity type \p entity_type_id exists
   /// (returns true for kUnknownEntityType)
   bool HasEntityType(EntityTypeID entity_type_id) const {

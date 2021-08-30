@@ -366,11 +366,21 @@ public:
     return node_entity_type_manager_.HasAtomicType(name);
   }
 
+  /// \returns all node types
+  std::vector<std::string> ListAtomicNodeTypes() const {
+    return node_entity_type_manager_.ListAtomicTypes();
+  }
+
   /// \returns true iff an edge atomic type with @param name exists
   /// NB: no edge may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of edges with the type
   bool HasAtomicEdgeType(const std::string& name) const {
     return edge_entity_type_manager_.HasAtomicType(name);
+  }
+
+  /// \returns all edge types
+  std::vector<std::string> ListAtomicEdgeTypes() const {
+    return node_entity_type_manager_.ListAtomicTypes();
   }
 
   /// \returns true iff a node entity type @param node_entity_type_id exists

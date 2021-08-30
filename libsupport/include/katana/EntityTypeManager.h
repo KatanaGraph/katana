@@ -248,7 +248,7 @@ public:
             ErrorCode::NotFound, "Type {} does not exist", name);
       }
     }
-    return res;
+    return Result<SetOfEntityTypeIDs>(res);
   }
 
   /// \returns the EntityTypeIDs for atomic types with \p names, adding them if
@@ -269,7 +269,7 @@ public:
       }
       res[id] = true;
     }
-    return res;
+    return Result<SetOfEntityTypeIDs>(res);
   }
 
   /// \returns the name of the atomic type if the EntityTypeID

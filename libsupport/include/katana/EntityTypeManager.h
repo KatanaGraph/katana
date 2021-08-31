@@ -41,6 +41,9 @@ using EntityTypeIDToAtomicTypeNameMap =
 using TypeNameSet = std::set<std::string>;
 
 class KATANA_EXPORT EntityTypeManager {
+  // TODO (scober): add iterator over all types
+  // TODO (scober): add iterator over all atomic types
+  // TODO (scober): add convenient iteration over SetOfEntityTypeIDs
 public:
   EntityTypeManager() { Init(); }
 

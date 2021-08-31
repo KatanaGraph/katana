@@ -110,8 +110,10 @@ KATANA_EXPORT katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>
 CreateSrcDestFromViewsForCopy(
     const std::string& src_dir, const std::string& dst_dir, uint64_t version);
 
-/// Copies RDG files from each respective file's src to its destination.
+/// CopyRDG copies RDG files from a source to a destination.
 /// E.g. SRC_DIR/part_vers0003_rdg_node00000 -> DST_DIR/part_vers0001_rdg_node_00000
+/// The argument is a list of source and destination pairs as an RDG consists of many files.
+/// See CreateSrcDestFromViewsForCopy for how to generate this list from an RDG prefix and version
 /// \param src_dst_files is a vector of src-dest pairs for individual RDG files
 /// \returns a Result to indicate whether the method succeeded or failed
 KATANA_EXPORT katana::Result<void> CopyRDG(

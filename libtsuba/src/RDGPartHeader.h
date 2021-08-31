@@ -498,9 +498,6 @@ private:
     edge_entity_type_id_name_ = edge_entity_type_id_name;
   }
 
-  // Regex for partition files
-  static const std::regex kPartitionFile;
-
   std::vector<PropStorageInfo> part_prop_info_list_;
   std::vector<PropStorageInfo> node_prop_info_list_;
   std::vector<PropStorageInfo> edge_prop_info_list_;

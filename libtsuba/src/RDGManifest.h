@@ -88,12 +88,6 @@ public:
 
   bool IsEmptyRDG() const { return num_hosts() == 0; }
 
-  // TODO(vkarthik): Should we expose this here? Or should we have setter methods instead?
-  void ResetVersion() {
-    version_ = 1;
-    previous_version_ = 0;
-  }
-
   static katana::Result<RDGManifest> Make(RDGHandle handle);
 
   /// Create an RDGManifest
@@ -122,6 +116,10 @@ public:
   bool transpose() const { return transpose_; }
 
   void set_dir(katana::Uri dir) { dir_ = std::move(dir); }
+  void set_version(uint64_t version) { version_ = version; }
+  void set_prev_version(uint64_t prev_version) {
+    previous_version_ = prev_version;
+  }
 
   katana::Uri PartitionFileName(uint32_t host_id) const;
 

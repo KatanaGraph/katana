@@ -223,12 +223,14 @@ tsuba::CreateSrcDestFromViewsForCopy(
       continue;
     }
 
-    auto fnames = KATANA_CHECKED(rdg_manifest_res.value().FileNames());
+    auto rdg_manifest = std::move(rdg_manifest_res.value());
+
+    auto fnames = KATANA_CHECKED(rdg_manifest.FileNames());
     for (auto fname : fnames) {
       auto src_file_path = katana::Uri::JoinPath(src_dir, fname);
       auto src_file_uri = KATANA_CHECKED(katana::Uri::Make(src_file_path));
 
-      // If we are a manifest, we need to change our version to 1.
+      // Skip manifests for now, will be handled at the end
       if (tsuba::RDGManifest::IsManifestUri(src_file_uri)) {
         continue;
       }
@@ -244,7 +246,7 @@ tsuba::CreateSrcDestFromViewsForCopy(
                 src_file_uri.BaseName()));
         auto dst_dir_uri = KATANA_CHECKED(katana::Uri::Make(dst_dir));
         dst_file_uri = tsuba::RDGManifest::PartitionFileName(
-            rdg_manifest_res.value().view_type(), dst_dir_uri, host_id, 1);
+            rdg_manifest.view_type(), dst_dir_uri, host_id, 1);
       } else {
         auto dst_file_path = katana::Uri::JoinPath(dst_dir, fname);
         dst_file_uri = KATANA_CHECKED(katana::Uri::Make(dst_file_path));
@@ -254,11 +256,14 @@ tsuba::CreateSrcDestFromViewsForCopy(
     }
 
     // We add the manifest file to the vector
-    // Set the version to be 1
-    auto rdg_manifest_uri = rdg_manifest_res.value().FileName();
-    rdg_manifest_res.value().ResetVersion();
-    auto dst_rdg_manifest_path = katana::Uri::JoinPath(
-        dst_dir, rdg_manifest_res.value().FileName().BaseName());
+    auto rdg_manifest_uri = rdg_manifest.FileName();
+
+    // Reset the version
+    rdg_manifest.set_version(1);
+    rdg_manifest.set_prev_version(1);
+
+    auto dst_rdg_manifest_path =
+        katana::Uri::JoinPath(dst_dir, rdg_manifest.FileName().BaseName());
     auto dst_rdg_manifest_uri =
         KATANA_CHECKED(katana::Uri::Make(dst_rdg_manifest_path));
     src_dst_files.push_back(
@@ -269,7 +274,7 @@ tsuba::CreateSrcDestFromViewsForCopy(
 
 katana::Result<void>
 tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
-  // TODO(vkarthik): make sure that manifests are written at the end!
+  // TODO(vkarthik): write tests
   // TODO(vkarthik): add do_all loop
   std::vector<uint64_t> manifest_uri_idxs;
   for (uint64_t i = 0; i < src_dst_files.size(); i++) {
@@ -292,7 +297,10 @@ tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
     auto rdg_manifest = KATANA_CHECKED(tsuba::RDGManifest::Make(src_file_uri));
     // These are hard-coded for now. Will what we copy always be version 1?
     // Should we clear the lineage as well?
-    rdg_manifest.ResetVersion();
+    // Reset the version
+    rdg_manifest.set_version(1);
+    rdg_manifest.set_prev_version(1);
+
     auto rdg_manifest_json = rdg_manifest.ToJsonString();
     KATANA_CHECKED(tsuba::FileStore(
         dst_file_uri.path(),

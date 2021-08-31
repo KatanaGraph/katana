@@ -402,6 +402,9 @@ operator<<(std::ostream& out, const CopyableErrorInfo& ei) {
 
 }  // namespace katana
 
+// We inject the trait as per https://www.boost.org/doc/libs/1_70_0/libs/outcome/doc/html/reference/traits/is_error_type.html
+// "Overridable: By template specialisation into the trait namespace."
+// It is safer to define the trait before the definition of the Result structure.
 BOOST_OUTCOME_V2_NAMESPACE_BEGIN
 
 namespace trait {

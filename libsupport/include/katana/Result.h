@@ -230,11 +230,6 @@ public:
 
   ErrorInfo() : ErrorInfo(std::error_code()) {}
 
-  ErrorInfo(ErrorInfo &&) = default;
-  ErrorInfo& operator=(ErrorInfo&&) = default;
-  ErrorInfo(const ErrorInfo&) = default;
-  ErrorInfo& operator=(const ErrorInfo&) = default;
-
   template <
       typename ErrorEnum, typename U = std::enable_if_t<
                               std::is_error_code_enum_v<ErrorEnum> ||

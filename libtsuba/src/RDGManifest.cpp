@@ -30,7 +30,6 @@ Parse(const std::string& str) {
 
 const int MANIFEST_MATCH_VERS_INDEX = 1;
 const int MANIFEST_MATCH_VIEW_INDEX = 2;
-const int PARTITION_MATCH_HOST_INDEX = 3;
 
 }  // namespace
 

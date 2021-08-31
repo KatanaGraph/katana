@@ -207,64 +207,14 @@ tsuba::ListAvailableViews(
   return std::make_pair(latest_version, views_found);
 }
 
-// vkarthik: We could combine this with the function above. I just didn't want to clutter it.
-katana::Result<std::vector<tsuba::RDGView>>
-tsuba::ListAvailableViewsFromVersion(
-    const std::string& rdg_dir, uint64_t version) {
-  std::vector<tsuba::RDGView> views_found;
-  KATANA_LOG_DEBUG("ListAvailableViewsFromVersion");
-  auto list_res = FileList(rdg_dir);
-  if (!list_res) {
-    KATANA_LOG_DEBUG("failed to list files in {}", rdg_dir);
-    return list_res.error();
-  }
-
-  for (const std::string& file : list_res.value()) {
-    auto view_type_res = tsuba::RDGManifest::ParseViewNameFromName(file);
-    auto view_args_res = tsuba::RDGManifest::ParseViewArgsFromName(file);
-    auto view_version_res = tsuba::RDGManifest::ParseVersionFromName(file);
-
-    if (!view_type_res || !view_args_res || !view_version_res ||
-        view_version_res.value() != version) {
-      continue;
-    }
-
-    std::string rdg_path = fmt::format("{}/{}", rdg_dir, file);
-
-    auto rdg_uri = katana::Uri::Make(rdg_path);
-    if (!rdg_uri)
-      continue;
-
-    auto rdg_res = RDGManifest::Make(rdg_uri.value());
-    if (!rdg_res)
-      continue;
-
-    RDGManifest manifest = rdg_res.value();
-
-    std::vector<std::string> args_vector = std::move(view_args_res.value());
-    views_found.push_back(tsuba::RDGView{
-        .view_version = view_version_res.value(),
-        .view_type = view_type_res.value(),
-        .view_args = fmt::format("{}", fmt::join(args_vector, "-")),
-        .view_path = fmt::format("{}/{}", rdg_dir, file),
-        .num_partitions = manifest.num_hosts(),
-        .policy_id = manifest.policy_id(),
-        .transpose = manifest.transpose(),
-    });
-  }
-
-  return views_found;
-}
-
 katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>
 tsuba::CreateSrcDestFromViewsForCopy(
     const std::string& src_dir, const std::string& dst_dir, uint64_t version) {
   std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs;
 
   // List out all the files in a given view
-  auto rdg_views =
-      KATANA_CHECKED(tsuba::ListAvailableViewsFromVersion(src_dir, version));
-  for (const auto& rdg_view : rdg_views) {
+  auto rdg_views = KATANA_CHECKED(tsuba::ListAvailableViews(src_dir, version));
+  for (const auto& rdg_view : rdg_views.second) {
     KATANA_LOG_WARN("view_path: {}", rdg_view.view_path);
     auto uri = KATANA_CHECKED(katana::Uri::Make(src_dir));
 

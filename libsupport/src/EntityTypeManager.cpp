@@ -283,3 +283,23 @@ katana::EntityTypeManager::GetOrAddEntityTypeID(const std::string& name) {
     return AddAtomicEntityType(name);
   }
 }
+
+katana::Result<katana::TypeNameSet>
+katana::EntityTypeManager::EntityTypeToTypeNameSet(
+    katana::EntityTypeID type_id) const {
+  katana::TypeNameSet type_name_set;
+  if (type_id == katana::kInvalidEntityType || type_id >= GetNumEntityTypes()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "no string representation for invalid type");
+  }
+  auto type_set = GetAtomicSubtypes(type_id);
+  for (size_t idx = 0; idx < type_set.size(); ++idx) {
+    if (type_set[idx]) {
+      auto name = GetAtomicTypeName(idx);
+      KATANA_LOG_ASSERT(name.has_value());
+      type_name_set.insert(name.value());
+    }
+  }
+  return type_name_set;
+}

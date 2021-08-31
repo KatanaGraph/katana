@@ -1282,3 +1282,14 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
   GraphTopology transpose_topo{std::move(out_indices), std::move(out_dests)};
   return katana::PropertyGraph::Make(std::move(transpose_topo));
 }
+
+katana::Result<katana::PropertyIndex<katana::GraphTopology::Node>*>
+katana::PropertyGraph::GetNodePropertyIndex(
+    const std::string& property_name) const {
+  for (const auto& index : node_indexes()) {
+    if (index->column_name() == property_name) {
+      return index.get();
+    }
+  }
+  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+}

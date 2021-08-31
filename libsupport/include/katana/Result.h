@@ -9,6 +9,7 @@
 
 #include <arrow/result.h>
 #include <boost/outcome/outcome.hpp>
+#include <boost/outcome/trait.hpp>
 #include <boost/outcome/utils.hpp>
 #include <fmt/format.h>
 
@@ -229,6 +230,11 @@ public:
 
   ErrorInfo() : ErrorInfo(std::error_code()) {}
 
+  ErrorInfo(ErrorInfo &&) = default;
+  ErrorInfo& operator=(ErrorInfo&&) = default;
+  ErrorInfo(const ErrorInfo&) = default;
+  ErrorInfo& operator=(const ErrorInfo&) = default;
+
   template <
       typename ErrorEnum, typename U = std::enable_if_t<
                               std::is_error_code_enum_v<ErrorEnum> ||
@@ -393,6 +399,28 @@ inline std::ostream&
 operator<<(std::ostream& out, const CopyableErrorInfo& ei) {
   return ei.Write(out);
 }
+
+}  // namespace katana
+
+BOOST_OUTCOME_V2_NAMESPACE_BEGIN
+
+namespace trait {
+
+template <>
+struct is_error_type<katana::ErrorInfo> {
+  static constexpr bool value = true;
+};
+
+template <>
+struct is_error_type<katana::CopyableErrorInfo> {
+  static constexpr bool value = true;
+};
+
+}  // namespace trait
+
+BOOST_OUTCOME_V2_NAMESPACE_END
+
+namespace katana {
 
 /// make_error_code converts ErrorInfo into a standard error code. It is an STL
 /// and boost::outcome extension point and will be found with ADL if necessary.

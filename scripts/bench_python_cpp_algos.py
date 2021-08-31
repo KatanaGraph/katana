@@ -343,7 +343,7 @@ def run_all_gap(args):
             for _ in range(args.trials):
                 run_tc(graph, input)
 
-    elif args.application in ["cc", "kcore", "louvain"]:
+    elif args.application in ["cc", "kcore"]:
         graph_path = f"{args.input_dir}/{input['symmetric_input']}"
         if not os.path.exists(graph_path):
             print(f"Symmetric Graph doesn't exist: {graph_path}")
@@ -357,6 +357,13 @@ def run_all_gap(args):
         if args.application == "kcore":
             for _ in range(args.trials):
                 run_kcore(graph, input)
+
+    elif args.application in ["louvain"]:
+        graph_path = f"{args.input_dir}/{input['symmetric_input']}"
+        if not os.path.exists(graph_path):
+            print(f"Symmetric Graph doesn't exist: {graph_path}")
+
+        graph = load_graph(graph_path)
 
         if args.application == "louvain":
             for _ in range(args.trials):
@@ -379,9 +386,7 @@ def run_all_gap(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark performance of routines")
 
-    parser.add_argument(
-        "--input-dir", default="./", help="Path to the input directory (default: %(default)s)",
-    )
+    parser.add_argument("--input-dir", default="./", help="Path to the input directory (default: %(default)s)")
 
     parser.add_argument(
         "--threads",
@@ -389,9 +394,7 @@ if __name__ == "__main__":
         default=None,
         help="Number of threads to use (default: query sinfo). Should match max threads.",
     )
-    parser.add_argument(
-        "--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.",
-    )
+    parser.add_argument("--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.")
     parser.add_argument(
         "--graph",
         default="GAP-road",
@@ -404,12 +407,8 @@ if __name__ == "__main__":
         choices=["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain"],
         help="Application to run (default: %(default)s)",
     )
-    parser.add_argument(
-        "--source-nodes", default="", help="Source nodes file(default: %(default)s)",
-    )
-    parser.add_argument(
-        "--trials", type=int, default=1, help="Number of trials (default: %(default)s)",
-    )
+    parser.add_argument("--source-nodes", default="", help="Source nodes file(default: %(default)s)")
+    parser.add_argument("--trials", type=int, default=1, help="Number of trials (default: %(default)s)")
 
     parsed_args = parser.parse_args()
 

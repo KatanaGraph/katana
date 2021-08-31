@@ -180,6 +180,20 @@ public:
     return GetOrAddNonAtomicEntityType(res.assume_value());
   }
 
+  /// Get the intersection of the types named in \p names
+  ///
+  /// \returns the EntityTypeID of the intersection type.
+  template <typename Container>
+  Result<EntityTypeID> GetNonAtomicEntityTypeFromStrings(
+      const Container& names) const {
+    // We cannot use KATANA_CHECKED here because nvcc cannot handle it.
+    auto res = GetEntityTypeIDs(names);
+    if (!res) {
+      return res.error();
+    }
+    return GetNonAtomicEntityType(res.assume_value());
+  }
+
   /// Get the intersection of the types passed in; or add the type if it does
   /// not already exist.
   ///
@@ -189,6 +203,15 @@ public:
   /// \returns the EntityTypeID of the intersection type.
   Result<EntityTypeID> GetOrAddNonAtomicEntityType(
       const SetOfEntityTypeIDs& type_id_set);
+
+  /// Get the intersection of the types passed in.
+  ///
+  /// \warning This operation is currently `O(number of types)` due to a linear
+  ///     search. This can be fixed with a space--time trade-off if needed.
+  ///
+  /// \returns the EntityTypeID of the intersection type.
+  Result<EntityTypeID> GetNonAtomicEntityType(
+      const SetOfEntityTypeIDs& type_id_set) const;
 
   /// Get the intersection of the types passed in.
   ///

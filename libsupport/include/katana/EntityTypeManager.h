@@ -162,12 +162,19 @@ public:
   }
 
   /// adds a new entity type for the atomic type with name \p name
+  ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
+  ///
   /// \returns the EntityTypeID for the new type
   Result<EntityTypeID> AddAtomicEntityType(const std::string& name);
 
   /// Get the intersection of the types named in \p names; or add the type if
   /// it does not already exist. If any types named in \p names do not exist,
   /// create them.
+  ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
   ///
   /// \returns the EntityTypeID of the intersection type.
   ///
@@ -200,6 +207,9 @@ public:
   /// Get the intersection of the types passed in; or add the type if it does
   /// not already exist.
   ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
+  ///
   /// \warning This operation is currently `O(number of types)` due to a linear
   ///     search. This can be fixed with a space--time trade-off if needed.
   ///
@@ -217,6 +227,9 @@ public:
       const SetOfEntityTypeIDs& type_id_set) const;
 
   /// Get the intersection of the types passed in.
+  ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
   ///
   /// \warning This function does not do proper error checking. Only use if you
   ///     can prove the intersection type does not already exist. Otherwise, use
@@ -263,6 +276,9 @@ public:
     return atomic_type_name_to_entity_type_id_.at(name);
   }
 
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
+  ///
   /// \returns the EntityTypeID for an atomic type with name \p name, adding it
   /// if it doesn't exist.
   Result<EntityTypeID> GetOrAddEntityTypeID(const std::string& name);
@@ -308,6 +324,9 @@ public:
     return MakeResult(std::move(res));
   }
 
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
+  ///
   /// \returns the EntityTypeIDs for atomic types with \p names, adding them if
   /// needed.
   template <typename Container>

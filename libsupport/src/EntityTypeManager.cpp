@@ -221,7 +221,7 @@ katana::EntityTypeManager::ReportDiff(
       other.entity_type_id_to_atomic_entity_type_ids_) {
     fmt::format_to(
         std::back_inserter(buf),
-        "entity_type_id_to_atomic_entity_type_ids_ differ. size {}"
+        "entity_type_id_to_atomic_entity_type_ids_ differ. size {} "
         "vs. {}\n",
         entity_type_id_to_atomic_entity_type_ids_.size(),
         other.entity_type_id_to_atomic_entity_type_ids_.size());
@@ -234,7 +234,7 @@ katana::EntityTypeManager::ReportDiff(
       other.atomic_entity_type_id_to_type_name_) {
     fmt::format_to(
         std::back_inserter(buf),
-        "atomic_entity_type_id_to_type_name_ differ. size {}"
+        "atomic_entity_type_id_to_type_name_ differ. size {} "
         "vs. {}\n",
         atomic_entity_type_id_to_type_name_.size(),
         other.atomic_entity_type_id_to_type_name_.size());
@@ -247,7 +247,7 @@ katana::EntityTypeManager::ReportDiff(
       other.atomic_type_name_to_entity_type_id_) {
     fmt::format_to(
         std::back_inserter(buf),
-        "atomic_type_name_to_entity_type_id_ differ. size {}"
+        "atomic_type_name_to_entity_type_id_ differ. size {} "
         "vs. {}\n",
         atomic_type_name_to_entity_type_id_.size(),
         other.atomic_type_name_to_entity_type_id_.size());
@@ -261,7 +261,7 @@ katana::EntityTypeManager::ReportDiff(
       other.atomic_entity_type_id_to_entity_type_ids_) {
     fmt::format_to(
         std::back_inserter(buf),
-        "atomic_entity_type_id_to_entity_type_ids_ differ. size {}"
+        "atomic_entity_type_id_to_entity_type_ids_ differ. size {} "
         "vs. {}\n",
         atomic_entity_type_id_to_entity_type_ids_.size(),
         other.atomic_entity_type_id_to_entity_type_ids_.size());

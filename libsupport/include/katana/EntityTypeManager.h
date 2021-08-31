@@ -279,7 +279,7 @@ public:
             ErrorCode::NotFound, "type {} does not exist", name);
       }
     }
-    return res;
+    return MakeResult(std::move(res));
   }
 
   /// \returns the EntityTypeIDs for atomic types with \p names, adding them if
@@ -300,7 +300,7 @@ public:
       }
       res[id] = true;
     }
-    return res;
+    return MakeResult(std::move(res));
   }
 
   /// \returns the name of the atomic type if the EntityTypeID

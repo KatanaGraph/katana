@@ -215,7 +215,6 @@ tsuba::CreateSrcDestFromViewsForCopy(
   // List out all the files in a given view
   auto rdg_views = KATANA_CHECKED(tsuba::ListAvailableViews(src_dir, version));
   for (const auto& rdg_view : rdg_views.second) {
-    KATANA_LOG_WARN("view_path: {}", rdg_view.view_path);
     auto uri = KATANA_CHECKED(katana::Uri::Make(src_dir));
 
     auto rdg_manifest_res =
@@ -240,19 +239,15 @@ tsuba::CreateSrcDestFromViewsForCopy(
       // change in the future.
       katana::Uri dst_file_uri;
       if (tsuba::RDGPartHeader::IsPartitionFileUri(src_file_uri)) {
-        KATANA_LOG_WARN("src_file_uri partition: {}", src_file_uri);
         auto host_id =
             KATANA_CHECKED(tsuba::RDGPartHeader::ParseHostFromPartitionFile(
                 src_file_uri.BaseName()));
         auto dst_dir_uri = KATANA_CHECKED(katana::Uri::Make(dst_dir));
         dst_file_uri = tsuba::RDGManifest::PartitionFileName(
             rdg_manifest_res.value().view_type(), dst_dir_uri, host_id, 1);
-        KATANA_LOG_WARN("dst_file_uri partition: {}", dst_file_uri);
       } else {
         auto dst_file_path = katana::Uri::JoinPath(dst_dir, fname);
         dst_file_uri = KATANA_CHECKED(katana::Uri::Make(dst_file_path));
-        KATANA_LOG_WARN("src_file_uri: {}", src_file_uri);
-        KATANA_LOG_WARN("dst_file_uri: {}", dst_file_uri);
       }
 
       src_dst_files.push_back(std::make_pair(src_file_uri, dst_file_uri));
@@ -266,8 +261,6 @@ tsuba::CreateSrcDestFromViewsForCopy(
         dst_dir, rdg_manifest_res.value().FileName().BaseName());
     auto dst_rdg_manifest_uri =
         KATANA_CHECKED(katana::Uri::Make(dst_rdg_manifest_path));
-    KATANA_LOG_WARN("rdg_manifest_uri: {}", rdg_manifest_uri);
-    KATANA_LOG_WARN("dst_rdg_manifest_uri: {}", dst_rdg_manifest_uri);
     src_dst_files.push_back(
         std::make_pair(rdg_manifest_uri, dst_rdg_manifest_uri));
   }

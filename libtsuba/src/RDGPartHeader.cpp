@@ -149,8 +149,6 @@ RDGPartHeader::ParseHostFromPartitionFile(const std::string& file) {
   if (!std::regex_match(file, sub_match, kPartitionFile)) {
     return tsuba::ErrorCode::InvalidArgument;
   }
-  //Partition file
-  KATANA_LOG_WARN("sub_match: {}", sub_match[PARTITION_MATCH_HOST_INDEX]);
   return Parse(sub_match[PARTITION_MATCH_HOST_INDEX]);
 }
 

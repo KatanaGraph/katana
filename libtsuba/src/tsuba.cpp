@@ -210,7 +210,7 @@ tsuba::ListAvailableViews(
 katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>
 tsuba::CreateSrcDestFromViewsForCopy(
     const std::string& src_dir, const std::string& dst_dir, uint64_t version) {
-  std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs;
+  std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files;
 
   // List out all the files in a given view
   auto rdg_views = KATANA_CHECKED(tsuba::ListAvailableViews(src_dir, version));
@@ -255,7 +255,7 @@ tsuba::CreateSrcDestFromViewsForCopy(
         KATANA_LOG_WARN("dst_file_uri: {}", dst_file_uri);
       }
 
-      src_dst_pairs.push_back(std::make_pair(src_file_uri, dst_file_uri));
+      src_dst_files.push_back(std::make_pair(src_file_uri, dst_file_uri));
     }
 
     // We add the manifest file to the vector
@@ -268,19 +268,19 @@ tsuba::CreateSrcDestFromViewsForCopy(
         KATANA_CHECKED(katana::Uri::Make(dst_rdg_manifest_path));
     KATANA_LOG_WARN("rdg_manifest_uri: {}", rdg_manifest_uri);
     KATANA_LOG_WARN("dst_rdg_manifest_uri: {}", dst_rdg_manifest_uri);
-    src_dst_pairs.push_back(
+    src_dst_files.push_back(
         std::make_pair(rdg_manifest_uri, dst_rdg_manifest_uri));
   }
-  return src_dst_pairs;
+  return src_dst_files;
 }
 
 katana::Result<void>
-tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs) {
+tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
   // TODO(vkarthik): make sure that manifests are written at the end!
   // TODO(vkarthik): add do_all loop
   std::vector<uint64_t> manifest_uri_idxs;
-  for (uint64_t i = 0; i < src_dst_pairs.size(); i++) {
-    auto [src_file_uri, dst_file_uri] = src_dst_pairs[i];
+  for (uint64_t i = 0; i < src_dst_files.size(); i++) {
+    auto [src_file_uri, dst_file_uri] = src_dst_files[i];
     // We save the names of all the manifest files and we write them out at the end.
     if (tsuba::RDGManifest::IsManifestUri(src_file_uri)) {
       manifest_uri_idxs.push_back(i);
@@ -295,7 +295,7 @@ tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_pairs) {
   // Process all the manifest files, write them out.
   // We want to write this last so that we know whether a write fully finished or not.
   for (auto idx : manifest_uri_idxs) {
-    auto [src_file_uri, dst_file_uri] = src_dst_pairs[idx];
+    auto [src_file_uri, dst_file_uri] = src_dst_files[idx];
     auto rdg_manifest = KATANA_CHECKED(tsuba::RDGManifest::Make(src_file_uri));
     // These are hard-coded for now. Will what we copy always be version 1?
     // Should we clear the lineage as well?

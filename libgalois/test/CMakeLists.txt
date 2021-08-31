@@ -64,6 +64,7 @@ add_test_unit(property-file-graph-rdg-conversion "${BASEINPUT}/propertygraphs/ld
 add_test_unit(property-graph)
 add_test_unit(property-graph-diff)
 add_test_unit(property-graph-bench NOT_QUICK)
+add_test_unit(property-graph-topology)
 add_test_unit(property-index)
 add_test_unit(reduction)
 add_test_unit(sort)

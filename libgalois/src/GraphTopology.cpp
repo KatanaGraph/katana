@@ -4,6 +4,7 @@
 
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
+#include "katana/Random.h"
 
 void
 katana::GraphTopology::Print() noexcept {
@@ -536,4 +537,37 @@ katana::PGViewCache::BuildOrGetEdgeTypeAwareTopo(
         CheckTopology(pg, edge_type_aware_topos_.back().get()));
     return edge_type_aware_topos_.back().get();
   }
+}
+
+katana::GraphTopology
+katana::CreateUniformRandomTopology(
+    const size_t num_nodes, const size_t edges_per_node) noexcept {
+  KATANA_LOG_ASSERT(edges_per_node > 0);
+  if (num_nodes == 0) {
+    return GraphTopology{};
+  }
+  KATANA_LOG_ASSERT(edges_per_node <= num_nodes);
+
+  GraphTopology::AdjIndexVec adj_indices;
+  adj_indices.allocateInterleaved(num_nodes);
+  // give each node edges_per_node neighbors
+  katana::ParallelSTL::fill(
+      adj_indices.begin(), adj_indices.end(),
+      GraphTopology::Edge{edges_per_node});
+  katana::ParallelSTL::partial_sum(
+      adj_indices.begin(), adj_indices.end(), adj_indices.begin());
+
+  const size_t num_edges = num_nodes * edges_per_node;
+  KATANA_LOG_ASSERT(
+      adj_indices.size() > 0 &&
+      adj_indices[adj_indices.size() - 1] == num_edges);
+
+  GraphTopology::EdgeDestVec dests;
+  dests.allocateInterleaved(num_edges);
+  // TODO(amber): Write a parallel version of GenerateUniformRandomSequence
+  katana::GenerateUniformRandomSequence(
+      dests.begin(), dests.end(), GraphTopology::Node{0},
+      static_cast<GraphTopology::Node>(num_nodes - 1));
+
+  return GraphTopology{std::move(adj_indices), std::move(dests)};
 }

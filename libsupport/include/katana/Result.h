@@ -226,9 +226,9 @@ public:
 
   static constexpr int kContextSize = 512;
 
-  ErrorInfo(const std::error_code& ec) : error_code_(ec) {}
-
   ErrorInfo() : ErrorInfo(std::error_code()) {}
+
+  ErrorInfo(const std::error_code& ec) : error_code_(ec) {}
 
   template <
       typename ErrorEnum, typename U = std::enable_if_t<
@@ -344,6 +344,13 @@ public:
 
   CopyableErrorInfo(const ErrorInfo& ei);
 
+  template <
+      typename ErrorEnum, typename U = std::enable_if_t<
+                              std::is_error_code_enum_v<ErrorEnum> ||
+                              std::is_error_condition_enum_v<ErrorEnum>>>
+  CopyableErrorInfo(ErrorEnum&& err)
+      : CopyableErrorInfo(make_error_code(std::forward<ErrorEnum>(err))) {}
+
   template <typename F, typename... Args>
   CopyableErrorInfo WithContext(F&& fmt_string, Args&&... args) {
     PrependFmt(std::forward<F>(fmt_string), std::forward<Args>(args)...);
@@ -397,6 +404,8 @@ operator<<(std::ostream& out, const CopyableErrorInfo& ei) {
 
 }  // namespace katana
 
+// Tell boost::outcome which types will be used as an error type E in
+// std_result<T, E, ...> below.
 // We inject the trait as per https://www.boost.org/doc/libs/1_70_0/libs/outcome/doc/html/reference/traits/is_error_type.html
 // "Overridable: By template specialisation into the trait namespace."
 // It is safer to define the trait before the definition of the Result structure.
@@ -478,7 +487,7 @@ operator!=(const CopyableErrorInfo& a, const CopyableErrorInfo& b) {
 KATANA_EXPORT Result<void> ResultSuccess();
 KATANA_EXPORT CopyableResult<void> CopyableResultSuccess();
 // TODO(ddn): nvcc has trouble applying implicit conversions while other
-// compilers can apply the implicit conversion from ErrorInfo to Result.R emove
+// compilers can apply the implicit conversion from ErrorInfo to Result. Remove
 // this function when nvcc improves.
 KATANA_EXPORT Result<void> ResultError(ErrorInfo&& info);
 

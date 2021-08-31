@@ -45,6 +45,3 @@ make                 # Feel free to use -j or similar.
 
 (You should be able to copy and paste the whole script above into your terminal.)
 EOF
-
-# --Azure cli  https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-apt
-# curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash

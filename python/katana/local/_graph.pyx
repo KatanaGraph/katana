@@ -44,7 +44,7 @@ cdef class GraphBase:
         with gil:
             raise NotImplementedError()
 
-    def write(self, path = None, str command_line = "katana.property_graph.Graph"):
+    def write(self, path = None, str command_line = "katana.local.Graph"):
         """
         Write the property graph to the specified path or URL (or the original path it was loaded from if path is
         not provided). Provide lineage information in the form of a command line.
@@ -274,10 +274,6 @@ cdef class GraphBase:
         :rtype: str
         """
         return str(self.underlying_property_graph().rdg_dir(), encoding="UTF-8")
-
-    @path.setter
-    def path(self, path):
-        handle_result_void(self.underlying_property_graph().InformPath(bytes(str(path), encoding="UTF-8")))
 
 
 cdef class Graph(GraphBase):

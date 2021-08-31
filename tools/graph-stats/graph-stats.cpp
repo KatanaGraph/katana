@@ -81,16 +81,16 @@ doDegrees(Graph& graph) {
 
 void
 findMaxDegreeNode(Graph& graph) {
-  uint64_t nodeId = 0;
+  uint64_t nodeID = 0;
   size_t MaxDegree = 0;
   uint64_t MaxDegreeNode = 0;
   for (auto n : graph) {
     size_t degree = graph.edges(n).size();
     if (MaxDegree < degree) {
       MaxDegree = degree;
-      MaxDegreeNode = nodeId;
+      MaxDegreeNode = nodeID;
     }
-    ++nodeId;
+    ++nodeID;
   }
   std::cout << "MaxDegreeNode : " << MaxDegreeNode
             << " , MaxDegree : " << MaxDegree << "\n";

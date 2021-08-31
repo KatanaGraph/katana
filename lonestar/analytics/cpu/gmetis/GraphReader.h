@@ -74,8 +74,8 @@ struct parallelMakeEdges {
   }
 
   void operator()(InputGNode inNode, katana::UserContext<InputGNode>& ctx) {
-    int nodeId = inputGraph->getData(inNode);
-    GNode node = gnodes[nodeId];
+    int nodeID = inputGraph->getData(inNode);
+    GNode node = gnodes[nodeID];
     MetisNode& nodeData = graph->getData(node);
     for (InputGraph::edge_iterator jj = inputGraph->edge_begin(inNode),
                                    eejj = inputGraph->edge_end(inNode);
@@ -83,22 +83,14 @@ struct parallelMakeEdges {
       InputGNode inNeighbor = inputGraph->getEdgeDst(jj);
       if (inNode == inNeighbor)
         continue;
-      int neighId = inputGraph->getData(inNeighbor);
+      int neighID = inputGraph->getData(inNeighbor);
       int weight = 1;
       if (weighted) {
         weight = inputGraph->getEdgeData(jj);
       }
-      graph->addEdge(node, gnodes[neighId], katana::MethodFlag::WRITE, weight);
+      graph->addEdge(node, gnodes[neighID], katana::MethodFlag::WRITE, weight);
       nodeData.setNumEdges(nodeData.getNumEdges() + 1);
       nodeData.setEdgeWeight(nodeData.getEdgeWeight() + weight);
-      /*if(!directed){
-        graph->getEdgeData(graph->addEdge(node, gnodes[neighId])) = weight;//
-        nodeData.incNumEdges();
-        nodeData.addEdgeWeight(weight);
-        }else{
-        graph->getEdgeData(graph->addEdge(node, gnodes[neighId])) = weight;
-        graph->getEdgeData(graph->addEdge(gnodes[neighId], node)) = weight;
-        }*/
       pnumEdges += 1;
     }
   }

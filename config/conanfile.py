@@ -12,16 +12,18 @@ class KatanaConan(ConanFile):
     #  - llvm
     requires = (
         "backward-cpp/1.5",
-        "benchmark/1.5.0",
+        "benchmark/1.5.3",
         "boost/1.74.0",
         "eigen/3.3.7",
         "fmt/6.2.1",
+        "jemalloc/5.2.1",
         "libcurl/7.74.0",
         "nlohmann_json/3.7.3",
         "openssl/1.1.1h",
     )
 
     default_options = {
+        "jemalloc:enable_prof": True,
         "libcurl:shared": False,
     }
 

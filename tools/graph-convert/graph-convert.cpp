@@ -2005,7 +2005,7 @@ struct Transpose : public Conversion {
 };
 
 template <typename GraphNode, typename EdgeTy>
-struct IdLess {
+struct IDLess {
   bool operator()(
       const katana::EdgeSortValue<GraphNode, EdgeTy>& e1,
       const katana::EdgeSortValue<GraphNode, EdgeTy>& e2) const {
@@ -2043,7 +2043,7 @@ struct Cleanup : public Conversion {
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode src = *ii;
 
-      graph.sortEdges<EdgeTy>(src, IdLess<GNode, EdgeTy>());
+      graph.sortEdges<EdgeTy>(src, IDLess<GNode, EdgeTy>());
 
       Graph::edge_iterator prev = graph.edge_end(src);
       for (Graph::edge_iterator jj = graph.edge_begin(src),
@@ -3351,7 +3351,7 @@ main(int argc, char** argv) {
     convert<SortByDegree>();
     break;
   case gr2sorteddstgr:
-    convert<SortEdges<IdLess, false>>();
+    convert<SortEdges<IDLess, false>>();
     break;
   case gr2sortedparentdegreegr:
     convert<SortByHighDegreeParent>();
@@ -3375,7 +3375,7 @@ main(int argc, char** argv) {
     convert<MakeUnsymmetric>();
     break;
   case gr2totem:
-    convert<Gr2Totem<IdLess>>();
+    convert<Gr2Totem<IDLess>>();
     break;
   case gr2neo4j:
     convert<Gr2Neo4j>();

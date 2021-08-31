@@ -49,6 +49,8 @@ public:
   const FileView& topology_file_storage() const;
   const FileView& node_entity_type_id_array_file_storage() const;
   const FileView& edge_entity_type_id_array_file_storage() const;
+  katana::Result<katana::EntityTypeManager> node_entity_type_manager() const;
+  katana::Result<katana::EntityTypeManager> edge_entity_type_manager() const;
 
 private:
   static katana::Result<RDGSlice> Make(

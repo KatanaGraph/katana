@@ -3,9 +3,10 @@ include_guard(DIRECTORY)
 include(GNUInstallDirs)
 include(FetchContent)
 include(GitHeadSHA)
-include(KatanaPythonSetupSubdirectory)
+include(PythonSetupSubdirectory)
 
-include(KatanaVersion)
+include(Version)
+include(FindCLibrary)
 
 set(KATANA_COPYRIGHT_YEAR "2018") # Also in COPYRIGHT
 set(KATANA_GIT_SHA "${GIT_HEAD_SHA}")
@@ -19,11 +20,11 @@ endif ()
 
 ###### Options (alternatively pass as options to cmake -DName=Value) ######
 ###### General features ######
-set(KATANA_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
-set(KATANA_ENABLE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
+set(KATANA_USE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
+set(KATANA_USE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
 set(KATANA_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fail")
 set(KATANA_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
-set(KATANA_ENABLE_COVERAGE OFF CACHE BOOL "Add instrumentation (used for code coverage collection) to binaries.")
+set(KATANA_USE_COVERAGE OFF CACHE BOOL "Add instrumentation (used for code coverage collection) to binaries.")
 set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
 set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
 set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to use features of;
@@ -34,6 +35,8 @@ set(KATANA_USE_TUNE "intel;generic;auto" CACHE STRING "Semi-colon separated list
   Default: 'intel;generic;auto' which tries to optimize for the most recent Intel processors, then falls back to
   optimizing for the most common processors and then to optimizing for the processor selected by KATANA_USE_ARCH")
 set(KATANA_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
+set(KATANA_USE_JEMALLOC OFF CACHE BOOL "Use jemalloc")
+
 # This option is automatically handled by CMake.
 # It makes add_library build a shared lib unless STATIC is explicitly specified.
 set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
@@ -62,6 +65,8 @@ set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: min(number of physical core, 4))")
 set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 
+###### Configure (users don't need to go beyond here) ######
+
 cmake_host_system_information(RESULT KATANA_NUM_PHYSICAL_CORES QUERY NUMBER_OF_PHYSICAL_CORES)
 
 if (NOT KATANA_NUM_TEST_THREADS)
@@ -75,14 +80,12 @@ if (KATANA_NUM_TEST_THREADS LESS_EQUAL 0)
 endif ()
 
 if (NOT KATANA_NUM_TEST_GPUS)
-  if (KATANA_ENABLE_GPU)
+  if (KATANA_USE_GPU)
     set(KATANA_NUM_TEST_GPUS 1)
   else ()
     set(KATANA_NUM_TEST_GPUS 0)
   endif ()
 endif ()
-
-###### Configure (users don't need to go beyond here) ######
 
 # Enable KATANA_IS_MAIN_PROJECT if this file is included in the root project.
 # KATANA_IS_MAIN_PROJECT is enabled for Katana library builds and disabled if
@@ -123,7 +126,6 @@ if (KATANA_AUTO_CONAN)
       BUILD missing)
   include("${CMAKE_CURRENT_BINARY_DIR}/conan_paths.cmake")
 endif ()
-
 
 ###### Configure compiler ######
 
@@ -236,19 +238,23 @@ if (python IN_LIST KATANA_LANG_BINDINGS)
   set(KATANA_LANG_BINDINGS_PYTHON TRUE)
 endif ()
 
-
 ###### Configure features ######
 
-if (KATANA_ENABLE_VTUNE)
+if (KATANA_USE_VTUNE)
   find_package(VTune REQUIRED PATHS /opt/intel/vtune_amplifier)
   include_directories(${VTune_INCLUDE_DIRS})
-  add_definitions(-DKATANA_ENABLE_VTUNE)
+  add_definitions(-DKATANA_USE_VTUNE)
 endif ()
 
-if (KATANA_ENABLE_PAPI)
+if (KATANA_USE_PAPI)
   find_package(PAPI REQUIRED)
   include_directories(${PAPI_INCLUDE_DIRS})
-  add_definitions(-DKATANA_ENABLE_PAPI)
+  add_definitions(-DKATANA_USE_PAPI)
+endif ()
+
+if (KATANA_USE_JEMALLOC)
+  find_c_library(NAME jemalloc TARGET jemalloc::jemalloc REQUIRED MAIN_HEADER jemalloc/jemalloc.h)
+  link_libraries(jemalloc::jemalloc)
 endif ()
 
 find_package(NUMA)
@@ -258,8 +264,13 @@ find_package(Threads REQUIRED)
 include(CheckMmap)
 
 include(CheckHugePages)
-if (NOT HAVE_HUGEPAGES AND KATANA_STRICT_CONFIG)
-  message(FATAL_ERROR "Need huge pages")
+if (KATANA_STRICT_CONFIG)
+  if (NOT HAVE_HUGEPAGES)
+    message(FATAL_ERROR "Strict config requires huge pages but huge pages not found")
+  endif ()
+  if (KATANA_USE_JEMALLOC)
+    message(FATAL_ERROR "Strict config requires huge pages but jemalloc disables huge pages")
+  endif ()
 endif ()
 
 find_package(Boost 1.58.0 REQUIRED COMPONENTS filesystem serialization iostreams)
@@ -308,7 +319,7 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
 endif ()
 
 # Instrument binaries if desired
-if (KATANA_ENABLE_COVERAGE)
+if (KATANA_USE_COVERAGE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g --coverage")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g --coverage")
   add_link_options("SHELL: --coverage -lgcov")
@@ -353,12 +364,12 @@ endfunction ()
 if (KATANA_GRAPH_LOCATION)
   set(BASEINPUT "${KATANA_GRAPH_LOCATION}")
   set(BASE_VERIFICATION "${KATANA_GRAPH_LOCATION}")
-  set(KATANA_ENABLE_INPUTS OFF)
+  set(KATANA_USE_INPUTS OFF)
   message(STATUS "Using graph input and verification logs location ${KATANA_GRAPH_LOCATION}")
 else ()
   set(BASEINPUT "${PROJECT_BINARY_DIR}/inputs/current")
   set(BASE_VERIFICATION "${PROJECT_BINARY_DIR}/inputs/current")
-  set(KATANA_ENABLE_INPUTS ON)
+  set(KATANA_USE_INPUTS ON)
 endif ()
 # Set a common graph location for any nested projects.
 set(KATANA_GRAPH_LOCATION ${BASEINPUT})

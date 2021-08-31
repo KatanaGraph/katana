@@ -193,7 +193,7 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
     .. code-block:: python
 
         import katana.local
-        from katana.example_utils import get_input
+        from katana.example_data import get_input
         from katana.local import Graph
         katana.local.initialize()
 

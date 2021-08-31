@@ -30,12 +30,12 @@ requirements:
     - jinja2
     - cython>=0.29.12
     - pyarrow {{ arrow_cpp }}
-    - numba>=0.50,<1.0a0
+    - numba=0.53.1
     - python {{ python }}
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
     - arrow-cpp {{ arrow_cpp }}
-    - backward-cpp>=1.4
+    - backward-cpp=1.4
     - boost-cpp>=1.74
     - elfutils
     - fmt>=6.2.1
@@ -66,7 +66,7 @@ outputs:
       host:
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - backward-cpp>=1.4
+        - backward-cpp=1.4
         - boost-cpp>=1.74
         - elfutils
         - fmt>=6.2.1
@@ -83,7 +83,7 @@ outputs:
         - fmt
         - nlohmann_json
         - libcurl
-        - backward-cpp
+        - backward-cpp=1.4
         - elfutils
         - libxml2
     run_exports:
@@ -116,7 +116,7 @@ outputs:
         - jinja2
         - cython>=0.29.12
         - pyarrow {{ arrow_cpp }}
-        - numba>=0.50,<1.0a0
+        - numba=0.53.1
         - python {{ python }}
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}

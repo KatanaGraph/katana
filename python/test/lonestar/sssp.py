@@ -149,8 +149,8 @@ def main():
 
     if not args.noverify:
         numNodeProperties = len(graph.loaded_node_schema())
-        newPropertyId = numNodeProperties - 1
-        verify_sssp(graph, args.startNode, newPropertyId)
+        newPropertyID = numNodeProperties - 1
+        verify_sssp(graph, args.startNode, newPropertyID)
 
 
 if __name__ == "__main__":

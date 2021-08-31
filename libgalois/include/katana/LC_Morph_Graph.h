@@ -45,7 +45,7 @@ namespace katana {
 template <
     typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
     bool UseNumaAlloc = false, bool HasOutOfLineLockable = false,
-    bool HasId = false, typename FileEdgeTy = EdgeTy>
+    bool HasID = false, typename FileEdgeTy = EdgeTy>
 class LC_Morph_Graph : private boost::noncopyable,
                        private internal::OutOfLineLockableFeature<
                            HasOutOfLineLockable && !HasNoLockable> {
@@ -55,9 +55,9 @@ class LC_Morph_Graph : private boost::noncopyable,
 
 public:
   /**
-   * Struct that allows activation of the HasId template parameter
+   * Struct that allows activation of the HasID template parameter
    * Example: using Graph = LC_Morph_Graph::with_id<true> defines
-   * LC_Morph_Graph with HasId = true
+   * LC_Morph_Graph with HasID = true
    */
   template <bool _has_id>
   struct with_id {
@@ -74,7 +74,7 @@ public:
   struct with_node_data {
     using type = LC_Morph_Graph<
         _node_data, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
-        HasId, FileEdgeTy>;
+        HasID, FileEdgeTy>;
   };
 
   /**
@@ -85,7 +85,7 @@ public:
   struct with_edge_data {
     using type = LC_Morph_Graph<
         NodeTy, _edge_data, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
-        HasId, FileEdgeTy>;
+        HasID, FileEdgeTy>;
   };
 
   /**
@@ -96,7 +96,7 @@ public:
   struct with_file_edge_data {
     using type = LC_Morph_Graph<
         NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
-        HasId, _file_edge_data>;
+        HasID, _file_edge_data>;
   };
 
   /**
@@ -107,7 +107,7 @@ public:
   struct with_no_lockable {
     using type = LC_Morph_Graph<
         NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc, HasOutOfLineLockable,
-        HasId, FileEdgeTy>;
+        HasID, FileEdgeTy>;
   };
 
   /**
@@ -118,7 +118,7 @@ public:
   struct with_numa_alloc {
     using type = LC_Morph_Graph<
         NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc, HasOutOfLineLockable,
-        HasId, FileEdgeTy>;
+        HasID, FileEdgeTy>;
   };
 
   /**
@@ -129,7 +129,7 @@ public:
   struct with_out_of_line_lockable {
     using type = LC_Morph_Graph<
         NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, _has_out_of_line_lockable,
-        _has_out_of_line_lockable || HasId, FileEdgeTy>;
+        _has_out_of_line_lockable || HasID, FileEdgeTy>;
   };
 
   //! type that tells graph reader how to read a file for this graph
@@ -262,7 +262,7 @@ protected:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<_A1 && !_A2>::type* = 0) {
-    this->outOfLineAcquire(getId(N), mflag);
+    this->outOfLineAcquire(getID(N), mflag);
   }
 
   /**
@@ -311,9 +311,9 @@ protected:
   /**
    * Get the ID of a graph node if they're enabled in the class.
    */
-  template <bool _Enable = HasId>
-  size_t getId(GraphNode N, typename std::enable_if<_Enable>::type* = 0) {
-    return N->getId();
+  template <bool _Enable = HasID>
+  size_t getID(GraphNode N, typename std::enable_if<_Enable>::type* = 0) {
+    return N->getID();
   }
 
 public:

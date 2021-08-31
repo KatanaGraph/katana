@@ -241,7 +241,7 @@ SetCompleteHEdgePartition(HyperGraph* graph, const uint32_t num_hedges) {
  * @param graph Graph
  */
 void
-SetChildId(
+SetChildID(
     const std::set<uint32_t>& current_level_indices,
     const std::vector<katana::InsertBag<GNode>>& mem_nodes_of_parts,
     const std::vector<katana::InsertBag<GNode>>& mem_hedges_of_parts,
@@ -517,7 +517,7 @@ CreateKPartitions(MetisGraph* metis_graph) {
       }
     }
 
-    SetChildId(
+    SetChildID(
         current_level_indices, mem_nodes_of_parts, mem_hedges_of_parts,
         &hnodes_bag, &hedges_bag, graph);
 

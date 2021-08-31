@@ -23,22 +23,23 @@ class KATANA_EXPORT PropertyIndex {
 public:
   // Type-safe container for node and edge ids to avoid overlap with the
   // primitive types we are indexing.
-  struct IndexId {
+  struct IndexID {
     node_or_edge id;
   };
 
   // The set key type is either a node/edge id (all the keys in the actual set)
   // or a value representing the search key.
   using set_key_type = typename std::variant<
-      IndexId, bool, int64_t, double_t, std::string_view*>;
+      IndexID, bool, uint8_t, int64_t, double_t, std::string_view*>;
 
   // PropertyIndex::iterator returns a sequence of node or edge ids.
   using base_iterator = typename std::multiset<set_key_type>::iterator;
   class iterator : public base_iterator {
   public:
     explicit iterator(const base_iterator& base) : base_iterator(base) {}
+    iterator() : base_iterator(0) {}
     const node_or_edge& operator*() const {
-      return std::get<IndexId>(base_iterator::operator*()).id;
+      return std::get<IndexID>(base_iterator::operator*()).id;
     }
   };
 
@@ -71,7 +72,7 @@ class KATANA_EXPORT PrimitivePropertyIndex
     : public PropertyIndex<node_or_edge> {
 public:
   using ArrowArrayType = typename arrow::CTypeTraits<c_type>::ArrayType;
-  using IndexId = typename PropertyIndex<node_or_edge>::IndexId;
+  using IndexID = typename PropertyIndex<node_or_edge>::IndexID;
   using iterator = typename PropertyIndex<node_or_edge>::iterator;
   using set_key_type = typename PropertyIndex<node_or_edge>::set_key_type;
 
@@ -92,7 +93,7 @@ public:
   iterator Find(c_type key) {
     auto it = set_.lower_bound(key);
     if (it == set_.end() ||
-        property_->Value(std::get<IndexId>(*it).id) != key) {
+        property_->Value(std::get<IndexID>(*it).id) != key) {
       return end();
     }
     return iterator(it);
@@ -122,8 +123,8 @@ private:
 
   private:
     c_type GetValue(const set_key_type& a) const {
-      if (std::holds_alternative<IndexId>(a)) {
-        node_or_edge id = std::get<IndexId>(a).id;
+      if (std::holds_alternative<IndexID>(a)) {
+        node_or_edge id = std::get<IndexID>(a).id;
         c_type val = property_->Value(id);
         return val;
       }
@@ -145,7 +146,9 @@ private:
 template <typename node_or_edge>
 class KATANA_EXPORT StringPropertyIndex : public PropertyIndex<node_or_edge> {
 public:
-  using IndexId = typename PropertyIndex<node_or_edge>::IndexId;
+  using ArrowArrayType =
+      typename arrow::TypeTraits<arrow::LargeStringType>::ArrayType;
+  using IndexID = typename PropertyIndex<node_or_edge>::IndexID;
   using iterator = typename PropertyIndex<node_or_edge>::iterator;
   using set_key_type = typename PropertyIndex<node_or_edge>::set_key_type;
 
@@ -167,7 +170,7 @@ public:
     auto it = set_.lower_bound(&key);
     if (it != set_.end()) {
       arrow::util::string_view arrow_view =
-          property_->GetView(std::get<IndexId>(*it).id);
+          property_->GetView(std::get<IndexID>(*it).id);
       if (std::string_view(arrow_view.data(), arrow_view.length()) != key) {
         return end();
       }
@@ -203,9 +206,9 @@ private:
 
   private:
     std::string_view GetValue(const set_key_type& a) const {
-      if (std::holds_alternative<IndexId>(a)) {
+      if (std::holds_alternative<IndexID>(a)) {
         arrow::util::string_view arrow_view =
-            property_->GetView(std::get<IndexId>(a).id);
+            property_->GetView(std::get<IndexID>(a).id);
         return std::string_view(arrow_view.data(), arrow_view.length());
       }
       return *std::get<std::string_view*>(a);

@@ -132,7 +132,7 @@ public:
 
   size_t idFromNode(GraphNode N) { return graph.idFromNode(N); }
 
-  GraphNode nodeFromId(size_t N) { return graph.nodeFromId(N); }
+  GraphNode nodeFromID(size_t N) { return graph.nodeFromID(N); }
 };
 
 //! Like {@link FileGraph} but allows partial loading of the graph.
@@ -560,7 +560,7 @@ public:
 
   size_t idFromNode(GraphNode N) { return N; }
 
-  GraphNode nodeFromId(size_t N) { return N; }
+  GraphNode nodeFromID(size_t N) { return N; }
 
   //! Assumes that the graph is symmetric
   void createFrom(const std::string& fname) {

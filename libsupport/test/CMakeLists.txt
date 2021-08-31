@@ -18,6 +18,7 @@ endfunction()
 
 add_unit_test(tracing)
 add_unit_test(bitmath)
+add_unit_test(cache)
 add_unit_test(env)
 add_unit_test(logging)
 add_unit_test(opaque-id)

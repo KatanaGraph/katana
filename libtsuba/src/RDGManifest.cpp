@@ -240,6 +240,12 @@ RDGManifest::FileNames() {
       }
       // Duplicates eliminated by set
       fnames.emplace(header.topology_path());
+      if (const auto& n = header.node_entity_type_id_array_path(); !n.empty()) {
+        fnames.emplace(n);
+      }
+      if (const auto& n = header.edge_entity_type_id_array_path(); !n.empty()) {
+        fnames.emplace(n);
+      }
     }
   }
   return fnames;

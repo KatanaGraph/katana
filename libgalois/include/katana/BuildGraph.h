@@ -193,7 +193,7 @@ public:
 
   bool StartNode();
   bool StartNode(const std::string& id);
-  void AddNodeId(const std::string& id);
+  void AddNodeID(const std::string& id);
   void AddOutgoingEdge(const std::string& target, const std::string& label);
   void AddOutgoingEdge(uint32_t target, const std::string& label);
   bool FinishNode();
@@ -202,7 +202,7 @@ public:
 
   bool StartEdge();
   bool StartEdge(const std::string& source, const std::string& target);
-  void AddEdgeId(const std::string& id);
+  void AddEdgeID(const std::string& id);
   void AddEdgeSource(const std::string& source);
   void AddEdgeTarget(const std::string& target);
   bool FinishEdge();

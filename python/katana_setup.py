@@ -200,7 +200,7 @@ def load_lang_config(lang):
     """
     Load the compilation configuration provided by CMake.
 
-    KatanaPythonSetupSubdirectory.cmake generates a text file that contains build and link flags that we read.
+    PythonSetupSubdirectory.cmake generates a text file that contains build and link flags that we read.
     They typically look like (more text elided with `[...]`, newlines inserted for clarity):
     ::
 
@@ -449,7 +449,7 @@ def setup_coverage():
 def setup(*, source_dir, package_name, additional_requires=None, package_data=None, **kwargs):
     package_data = package_data or {}
     # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
-    requires = ["pyarrow (<3.0)", "numpy", "numba (>=0.50,<1.0a0)"]
+    requires = ["pyarrow (<5.0)", "numpy", "numba (==0.53)"]
     if additional_requires:
         requires.extend(additional_requires)
 

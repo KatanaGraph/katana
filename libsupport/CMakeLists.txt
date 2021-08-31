@@ -15,6 +15,7 @@ set(sources
         src/ArrowVisitor.cpp
         src/Backtrace.cpp
         src/CommBackend.cpp
+        src/EntityTypeManager.cpp
         src/Env.cpp
         src/ErrorCode.cpp
         src/HostAllocator.cpp
@@ -72,6 +73,7 @@ endif()
 target_link_libraries(katana_support PUBLIC ${curl_lib})
 
 # Backtrace support
+
 find_package(Backward REQUIRED)
 target_link_libraries(katana_support PUBLIC Backward::Backward)
 

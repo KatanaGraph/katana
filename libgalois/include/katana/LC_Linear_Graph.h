@@ -42,7 +42,7 @@ namespace katana {
 template <
     typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
     bool UseNumaAlloc = false, bool HasOutOfLineLockable = false,
-    bool HasId = false, typename FileEdgeTy = EdgeTy>
+    bool HasID = false, typename FileEdgeTy = EdgeTy>
 class LC_Linear_Graph : private boost::noncopyable,
                         private internal::LocalIteratorFeature<UseNumaAlloc>,
                         private internal::OutOfLineLockableFeature<
@@ -63,7 +63,7 @@ public:
   struct with_node_data {
     typedef LC_Linear_Graph<
         _node_data, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
-        HasId, FileEdgeTy>
+        HasID, FileEdgeTy>
         type;
   };
 
@@ -71,7 +71,7 @@ public:
   struct with_edge_data {
     typedef LC_Linear_Graph<
         NodeTy, _edge_data, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
-        HasId, FileEdgeTy>
+        HasID, FileEdgeTy>
         type;
   };
 
@@ -79,7 +79,7 @@ public:
   struct with_file_edge_data {
     typedef LC_Linear_Graph<
         NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
-        HasId, _file_edge_data>
+        HasID, _file_edge_data>
         type;
   };
 
@@ -87,7 +87,7 @@ public:
   struct with_no_lockable {
     typedef LC_Linear_Graph<
         NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc, HasOutOfLineLockable,
-        HasId, FileEdgeTy>
+        HasID, FileEdgeTy>
         type;
   };
 
@@ -95,7 +95,7 @@ public:
   struct with_numa_alloc {
     typedef LC_Linear_Graph<
         NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc, HasOutOfLineLockable,
-        HasId, FileEdgeTy>
+        HasID, FileEdgeTy>
         type;
   };
 
@@ -103,7 +103,7 @@ public:
   struct with_out_of_line_lockable {
     typedef LC_Linear_Graph<
         NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, _has_out_of_line_lockable,
-        _has_out_of_line_lockable || HasId, FileEdgeTy>
+        _has_out_of_line_lockable || HasID, FileEdgeTy>
         type;
   };
 
@@ -119,8 +119,8 @@ protected:
 
   class NodeInfo : public internal::NodeInfoBase<
                        NodeTy, !HasNoLockable && !HasOutOfLineLockable>,
-                   public internal::IntrusiveId<
-                       typename boost::mpl::if_c<HasId, uint32_t, void>::type> {
+                   public internal::IntrusiveID<
+                       typename boost::mpl::if_c<HasID, uint32_t, void>::type> {
     friend class LC_Linear_Graph;
     int numEdges;
 
@@ -177,7 +177,7 @@ protected:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<_A1 && !_A2>::type* = 0) {
-    this->outOfLineAcquire(getId(N), mflag);
+    this->outOfLineAcquire(getID(N), mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
@@ -208,12 +208,12 @@ protected:
     edge->construct();
   }
 
-  template <bool _Enable = HasId>
-  size_t getId(GraphNode N, typename std::enable_if<_Enable>::type* = 0) {
-    return N->getId();
+  template <bool _Enable = HasID>
+  size_t getID(GraphNode N, typename std::enable_if<_Enable>::type* = 0) {
+    return N->getID();
   }
 
-  template <bool _Enable = HasId>
+  template <bool _Enable = HasID>
   GraphNode getNode(size_t n, typename std::enable_if<_Enable>::type* = 0) {
     return nodes[n];
   }
@@ -354,7 +354,7 @@ public:
       nodes.constructAt(*ii);
       new (curNode) NodeInfo();
       // curNode->construct();
-      curNode->setId(id);
+      curNode->setID(id);
       curNode->numEdges =
           std::distance(graph.edge_begin(*ii), graph.edge_end(*ii));
       nodes[*ii] = curNode;

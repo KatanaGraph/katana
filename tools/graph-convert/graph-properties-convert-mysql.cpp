@@ -273,7 +273,7 @@ AddNodeTable(
     auto primary_index = table_data.primary_key_index;
     if (primary_index >= 0) {
       std::string primary_key{row[primary_index], lengths[primary_index]};
-      builder->AddNodeId(table_data.name + primary_key);
+      builder->AddNodeID(table_data.name + primary_key);
     }
 
     // add data fields

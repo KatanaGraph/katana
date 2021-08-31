@@ -17,6 +17,10 @@ MakeTypedIndex(
     index = std::make_unique<PrimitivePropertyIndex<node_or_edge, bool>>(
         column_name, num_entities, property);
     break;
+  case arrow::Type::UINT8:
+    index = std::make_unique<PrimitivePropertyIndex<node_or_edge, uint8_t>>(
+        column_name, num_entities, property);
+    break;
   case arrow::Type::INT64:
     index = std::make_unique<PrimitivePropertyIndex<node_or_edge, int64_t>>(
         column_name, num_entities, property);
@@ -52,7 +56,7 @@ PrimitivePropertyIndex<node_or_edge, c_type>::BuildFromProperty() {
     // The keys inserted are the node ids - the set translates these into
     // property values.
     if (property_->IsValid(i)) {
-      set_.insert(IndexId{i});
+      set_.insert(IndexID{i});
     }
   }
 
@@ -72,7 +76,7 @@ StringPropertyIndex<node_or_edge>::BuildFromProperty() {
     // The keys inserted are the node ids - the set translates these into
     // property values.
     if (property_->IsValid(i)) {
-      set_.insert(IndexId{i});
+      set_.insert(IndexID{i});
     }
   }
 

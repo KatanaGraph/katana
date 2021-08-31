@@ -15,6 +15,7 @@
 #include "katana/Iterators.h"
 #include "katana/NUMAArray.h"
 #include "katana/PropertyIndex.h"
+#include "katana/Result.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"
 
@@ -63,7 +64,7 @@ private:
       tsuba::RDGHandle handle, const std::string& command_line,
       tsuba::RDG::RDGVersioningPolicy versioning_action);
 
-  katana::Result<void> ConductWriteOp(
+  Result<void> ConductWriteOp(
       const std::string& uri, const std::string& command_line,
       tsuba::RDG::RDGVersioningPolicy versioning_action);
 
@@ -101,57 +102,7 @@ private:
 
   PGViewCache pg_view_cache_;
 
-  // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
-  // while allowing Distribution to read/write it for RDG
-
-  friend class Distribution;
-  const tsuba::PartitionMetadata& partition_metadata() const {
-    return rdg_.part_metadata();
-  }
-
-  void set_partition_metadata(const tsuba::PartitionMetadata& meta) {
-    rdg_.set_part_metadata(meta);
-  }
-
-  void update_rdg_metadata(const std::string& part_policy, uint32_t num_hosts) {
-    rdg_.set_view_name(fmt::format("rdg-{}-part{}", part_policy, num_hosts));
-  }
-
-  /// Per-host vector of master nodes
-  ///
-  /// master_nodes()[this_host].empty() is true
-  /// master_nodes()[host_i][x] contains LocalNodeID of masters
-  //    for which host_i has a mirror
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
-      const {
-    return rdg_.master_nodes();
-  }
-  void set_master_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
-    rdg_.set_master_nodes(std::move(a));
-  }
-
-  /// Per-host vector of mirror nodes
-  ///
-  /// mirror_nodes()[this_host].empty() is true
-  /// mirror_nodes()[host_i][x] contains LocalNodeID of mirrors
-  ///   that have a master on host_i
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes()
-      const {
-    return rdg_.mirror_nodes();
-  }
-  void set_mirror_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
-    rdg_.set_mirror_nodes(std::move(a));
-  }
-
-  /// Return the node property table for local nodes
-  const std::shared_ptr<arrow::Table>& node_properties() const {
-    return rdg_.node_properties();
-  }
-
-  /// Return the edge property table for local edges
-  const std::shared_ptr<arrow::Table>& edge_properties() const {
-    return rdg_.edge_properties();
-  }
+  friend class PropertyGraphRetractor;
 
   // recreate indexes from json
   katana::Result<void> recreate_node_property_indexes() {
@@ -187,8 +138,8 @@ public:
     std::shared_ptr<arrow::Schema> (PropertyGraph::*full_schema_fn)() const;
     std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_int)(
         int i) const;
-    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_str)(
-        const std::string& str) const;
+    Result<std::shared_ptr<arrow::ChunkedArray>> (
+        PropertyGraph::*property_fn_str)(const std::string& str) const;
     int32_t (PropertyGraph::*property_num_fn)() const;
 
     std::shared_ptr<arrow::Schema> loaded_schema() const {
@@ -203,7 +154,7 @@ public:
       return (const_g->*property_fn_int)(i);
     }
 
-    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+    Result<std::shared_ptr<arrow::ChunkedArray>> GetProperty(
         const std::string& str) const {
       return (const_g->*property_fn_str)(str);
     }
@@ -244,7 +195,7 @@ public:
       return ropv.GetProperty(i);
     }
 
-    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+    Result<std::shared_ptr<arrow::ChunkedArray>> GetProperty(
         const std::string& str) const {
       return ropv.GetProperty(str);
     }
@@ -369,46 +320,6 @@ public:
 
   uint32_t partition_id() const { return rdg_.partition_id(); }
 
-  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one chunk, change to arrow::Array.
-  const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_node_ids()
-      const {
-    return rdg_.host_to_owned_global_node_ids();
-  }
-  void set_host_to_owned_global_node_ids(
-      std::shared_ptr<arrow::ChunkedArray>&& a) {
-    rdg_.set_host_to_owned_global_node_ids(std::move(a));
-  }
-
-  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one chunk, change to arrow::Array.
-  const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_edge_ids()
-      const {
-    return rdg_.host_to_owned_global_edge_ids();
-  }
-  void set_host_to_owned_global_edge_ids(
-      std::shared_ptr<arrow::ChunkedArray>&& a) {
-    rdg_.set_host_to_owned_global_edge_ids(std::move(a));
-  }
-
-  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one chunk, change to arrow::Array.
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const {
-    return rdg_.local_to_user_id();
-  }
-  void set_local_to_user_id(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    rdg_.set_local_to_user_id(std::move(a));
-  }
-
-  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one chunk, change to arrow::Array.
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const {
-    return rdg_.local_to_global_id();
-  }
-  void set_local_to_global_id(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    rdg_.set_local_to_global_id(std::move(a));
-  }
-
   /// Create a new storage location for a graph and write everything into it.
   ///
   /// \returns io_error if, for instance, a file already exists
@@ -421,8 +332,6 @@ public:
   /// parts of the original read location of the graph.
   Result<void> Commit(const std::string& command_line);
   Result<void> WriteView(const std::string& command_line);
-  /// Tell the RDG where it's data is coming from
-  Result<void> InformPath(const std::string& input_path);
 
   /// Determine if two PropertyGraphs are Equal
   /// THIS IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
@@ -442,7 +351,7 @@ public:
 
   /// get the schema for loaded node properties
   std::shared_ptr<arrow::Schema> loaded_node_schema() const {
-    return node_properties()->schema();
+    return rdg_.node_properties()->schema();
   }
 
   /// get the schema for all node properties (includes unloaded properties)
@@ -452,7 +361,7 @@ public:
 
   /// get the schema for loaded edge properties
   std::shared_ptr<arrow::Schema> loaded_edge_schema() const {
-    return edge_properties()->schema();
+    return rdg_.edge_properties()->schema();
   }
 
   /// get the schema for all edge properties (includes unloaded properties)
@@ -487,11 +396,21 @@ public:
     return node_entity_type_manager_.HasAtomicType(name);
   }
 
+  /// \returns all node types
+  std::vector<std::string> ListAtomicNodeTypes() const {
+    return node_entity_type_manager_.ListAtomicTypes();
+  }
+
   /// \returns true iff an edge atomic type with @param name exists
   /// NB: no edge may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of edges with the type
   bool HasAtomicEdgeType(const std::string& name) const {
     return edge_entity_type_manager_.HasAtomicType(name);
+  }
+
+  /// \returns all edge types
+  std::vector<std::string> ListAtomicEdgeTypes() const {
+    return node_entity_type_manager_.ListAtomicTypes();
   }
 
   /// \returns true iff a node entity type @param node_entity_type_id exists
@@ -621,18 +540,18 @@ public:
 
   // num_rows() == num_nodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
-    if (i >= node_properties()->num_columns()) {
+    if (i >= rdg_.node_properties()->num_columns()) {
       return nullptr;
     }
-    return node_properties()->column(i);
+    return rdg_.node_properties()->column(i);
   }
 
   // num_rows() == num_edges() (all local edges)
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(int i) const {
-    if (i >= edge_properties()->num_columns()) {
+    if (i >= rdg_.edge_properties()->num_columns()) {
       return nullptr;
     }
-    return edge_properties()->column(i);
+    return rdg_.edge_properties()->column(i);
   }
 
   /// \returns true if a node property/type with @param name exists
@@ -649,19 +568,15 @@ public:
   ///
   /// \param name The name of the property to get.
   /// \return The property data or NULL if the property is not found.
-  std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(
-      const std::string& name) const {
-    return node_properties()->GetColumnByName(name);
-  }
+  Result<std::shared_ptr<arrow::ChunkedArray>> GetNodeProperty(
+      const std::string& name) const;
 
   std::string GetNodePropertyName(int32_t i) const {
     return loaded_node_schema()->field(i)->name();
   }
 
-  std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
-      const std::string& name) const {
-    return edge_properties()->GetColumnByName(name);
-  }
+  Result<std::shared_ptr<arrow::ChunkedArray>> GetEdgeProperty(
+      const std::string& name) const;
 
   std::string GetEdgePropertyName(int32_t i) const {
     return loaded_edge_schema()->field(i)->name();
@@ -675,18 +590,23 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetNodePropertyTyped(const std::string& name) {
-    auto chunked_array = GetNodeProperty(name);
-    if (!chunked_array) {
-      return ErrorCode::PropertyNotFound;
+    // TODO(amp): Use KATANA_CHECKED once that doesn't cause CUDA builds to fail.
+    auto chunked_array_result = GetNodeProperty(name);
+    if (!chunked_array_result) {
+      return chunked_array_result.assume_error();
     }
+    auto chunked_array = chunked_array_result.assume_value();
+    KATANA_LOG_ASSERT(chunked_array);
 
     auto array =
         std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
             chunked_array->chunk(0));
     if (!array) {
-      return ErrorCode::TypeError;
+      return KATANA_ERROR(
+          katana::ErrorCode::TypeError, "Incorrect arrow::Array type: {}",
+          chunked_array->type()->ToString());
     }
-    return array;
+    return MakeResult(std::move(array));
   }
 
   /// Get an edge property by name and cast it to a type.
@@ -697,18 +617,23 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetEdgePropertyTyped(const std::string& name) {
-    auto chunked_array = GetEdgeProperty(name);
-    if (!chunked_array) {
-      return ErrorCode::PropertyNotFound;
+    // TODO(amp): Use KATANA_CHECKED once that doesn't cause CUDA builds to fail.
+    auto chunked_array_result = GetEdgeProperty(name);
+    if (!chunked_array_result) {
+      return chunked_array_result.assume_error();
     }
+    auto chunked_array = chunked_array_result.assume_value();
+    KATANA_LOG_ASSERT(chunked_array);
 
     auto array =
         std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
             chunked_array->chunk(0));
     if (!array) {
-      return ErrorCode::TypeError;
+      return KATANA_ERROR(
+          katana::ErrorCode::TypeError, "Incorrect arrow::Array type: {}",
+          chunked_array->type()->ToString());
     }
-    return array;
+    return MakeResult(std::move(array));
   }
 
   const GraphTopology& topology() const noexcept { return topology_; }
@@ -876,6 +801,27 @@ public:
   const std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>&
   edge_indexes() const {
     return edge_indexes_;
+  }
+
+  // Returns true of an index exists for the named property
+  bool HasNodePropertyIndex(const std::string& property_name) const {
+    for (const auto& index : node_indexes()) {
+      if (index->column_name() == property_name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Returns the property index associated with the named property
+  katana::Result<katana::PropertyIndex<GraphTopology::Node>*>
+  GetNodePropertyIndex(const std::string& property_name) const {
+    for (const auto& index : node_indexes()) {
+      if (index->column_name() == property_name) {
+        return index.get();
+      }
+    }
+    return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
   }
 };
 

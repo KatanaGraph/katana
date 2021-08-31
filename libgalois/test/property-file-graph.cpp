@@ -73,9 +73,19 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
   KATANA_LOG_VASSERT(
-      g->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g->GetNodeEntityTypeID("node-name") != katana::kUnknownEntityType,
+      "Node Entity Type ID {} is of an kUnknownEntityType.",
+      g->GetNodeEntityTypeID("node-name"));
+
+  KATANA_LOG_VASSERT(
+      g->GetEdgeEntityTypeID("edge-name") != katana::kUnknownEntityType,
+      "Edge Entity Type ID {} is of an kUnknownEntityType.",
+      g->GetEdgeEntityTypeID("edge-name"));
+
+  KATANA_LOG_VASSERT(
+      g->GetNumNodeEntityTypes() == 2, "found {} entity types.",
       g->GetNumNodeEntityTypes());
-  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() != 0);
+  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() == 2);
 
   auto write_result = g->Write(rdg_dir, command_line);
 
@@ -96,9 +106,9 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   auto g2 = std::move(make_result.value());
 
   KATANA_LOG_VASSERT(
-      g2->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g2->GetNumNodeEntityTypes() == 2, "found {} entity types.",
       g2->GetNumNodeEntityTypes());
-  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() != 0);
+  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() == 2);
 
   KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
   KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);
@@ -169,9 +179,29 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
   KATANA_LOG_VASSERT(
-      g->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g->GetNodeEntityTypeID("node-name-1") != katana::kUnknownEntityType,
+      "Node Entity Type ID {} is of an kUnknownEntityType.",
+      g->GetNodeEntityTypeID("node-name-1"));
+
+  KATANA_LOG_VASSERT(
+      g->GetEdgeEntityTypeID("edge-name-1") != katana::kUnknownEntityType,
+      "Edge Entity Type ID {} is of an kUnknownEntityType.",
+      g->GetEdgeEntityTypeID("edge-name-1"));
+
+  KATANA_LOG_VASSERT(
+      g->GetNodeEntityTypeID("node-name-2") != katana::kUnknownEntityType,
+      "Node Entity Type ID {} is of an kUnknownEntityType.",
+      g->GetNodeEntityTypeID("node-name-2"));
+
+  KATANA_LOG_VASSERT(
+      g->GetEdgeEntityTypeID("edge-name-2") != katana::kUnknownEntityType,
+      "Edge Entity Type ID {} is of an kUnknownEntityType.",
+      g->GetEdgeEntityTypeID("edge-name-2"));
+
+  KATANA_LOG_VASSERT(
+      g->GetNumNodeEntityTypes() == 4, "found {} entity types.",
       g->GetNumNodeEntityTypes());
-  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() != 0);
+  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() == 4);
 
   auto write_result = g->Write(rdg_dir, command_line);
 
@@ -192,9 +222,9 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   auto g2 = std::move(make_result.value());
 
   KATANA_LOG_VASSERT(
-      g2->GetNumNodeEntityTypes() != 0, "found {} entity types.",
+      g2->GetNumNodeEntityTypes() == 4, "found {} entity types.",
       g2->GetNumNodeEntityTypes());
-  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() != 0);
+  KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() == 4);
 
   KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
   KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);

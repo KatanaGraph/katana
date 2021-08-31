@@ -358,7 +358,7 @@ struct SGDBlockJumpAlgo {
 
   void readGraph(Graph& g) { katana::readGraph(g, inputFile); }
 
-  size_t userIdToUserNode(size_t userId) { return userId + NUM_ITEM_NODES; }
+  size_t userIDToUserNode(size_t userID) { return userID + NUM_ITEM_NODES; }
 
   struct BlockInfo {
     size_t id;
@@ -422,7 +422,7 @@ struct SGDBlockJumpAlgo {
       double error = 0.0;
 
       // Set up item iterators
-      size_t itemId = 0;
+      size_t itemID = 0;
       Graph::iterator mm = g.begin(), em = g.begin();
       std::advance(mm, si.itemStart);
       std::advance(em, si.itemEnd);
@@ -430,7 +430,7 @@ struct SGDBlockJumpAlgo {
       GetDst fn{&g};
 
       // For each item in the range
-      for (; mm != em; ++mm, ++itemId) {
+      for (; mm != em; ++mm, ++itemID) {
         GNode item = *mm;
         Node& itemData = g.getData(item);
         size_t lastUser = si.userEnd + NUM_ITEM_NODES;
@@ -480,14 +480,14 @@ struct SGDBlockJumpAlgo {
       double error = 0.0;
 
       // Set up item iterators
-      size_t itemId = 0;
+      size_t itemID = 0;
       Graph::iterator mm = g.begin(), em = g.begin();
       std::advance(mm, si.itemStart);
       std::advance(em, si.itemEnd);
 
       // For each item in the range
-      for (; mm != em; ++mm, ++itemId) {
-        if (si.userOffsets[itemId] < 0)
+      for (; mm != em; ++mm, ++itemID) {
+        if (si.userOffsets[itemID] < 0)
           continue;
 
         GNode item = *mm;
@@ -495,7 +495,7 @@ struct SGDBlockJumpAlgo {
         size_t lastUser = si.userEnd + NUM_ITEM_NODES;
 
         // For each edge in the range
-        for (auto ii = g.edge_begin(item) + si.userOffsets[itemId],
+        for (auto ii = g.edge_begin(item) + si.userOffsets[itemID],
                   ei = g.edge_end(item);
              ii != ei; ++ii) {
           GNode user = g.getEdgeDst(ii);
@@ -528,18 +528,18 @@ struct SGDBlockJumpAlgo {
      */
     size_t getNextBlock(BlockInfo* sp) {
       size_t numBlocks = numXBlocks * numYBlocks;
-      size_t nextBlockId = sp->id + 1;
-      for (size_t i = 0; i < 2 * numBlocks; ++i, ++nextBlockId) {
+      size_t nextBlockID = sp->id + 1;
+      for (size_t i = 0; i < 2 * numBlocks; ++i, ++nextBlockID) {
         // Wrap around
-        if (nextBlockId == numBlocks)
-          nextBlockId = 0;
+        if (nextBlockID == numBlocks)
+          nextBlockID = 0;
 
-        BlockInfo& nextBlock = blocks[nextBlockId];
+        BlockInfo& nextBlock = blocks[nextBlockID];
 
         if (nextBlock.updates < maxUpdates && xLocks[nextBlock.x].try_lock()) {
           if (yLocks[nextBlock.y].try_lock()) {
             // Return while holding locks
-            return nextBlockId;
+            return nextBlockID;
           } else {
             xLocks[nextBlock.x].unlock();
           }
@@ -629,8 +629,8 @@ struct SGDBlockJumpAlgo {
             auto ii = g.edge_begin(item), ei = g.edge_end(item);
             size_t offset = 0;
             for (size_t i = 0; i < numXBlocks; ++i, ++s) {
-              size_t start = userIdToUserNode(s->userStart);
-              size_t end = userIdToUserNode(s->userEnd);
+              size_t start = userIDToUserNode(s->userStart);
+              size_t end = userIDToUserNode(s->userEnd);
 
               if (ii != ei && g.getEdgeDst(ii) >= start &&
                   g.getEdgeDst(ii) < end) {
@@ -1205,17 +1205,17 @@ struct SyncALSalgo {
       LocalState(Process&, katana::PerIterAllocTy&) {}
     };
 
-    struct DeterministicId {
+    struct DeterministicID {
       uintptr_t operator()(size_t x) const { return x; }
     };
 
     typedef std::tuple<
         katana::per_iter_alloc, katana::intent_to_read,
-        katana::local_state<LocalState>, katana::det_id<DeterministicId>>
+        katana::local_state<LocalState>, katana::det_id<DeterministicID>>
         ikdg_function_traits;
     typedef std::tuple<
         katana::per_iter_alloc, katana::fixed_neighborhood,
-        katana::local_state<LocalState>, katana::det_id<DeterministicId>>
+        katana::local_state<LocalState>, katana::det_id<DeterministicID>>
         add_remove_function_traits;
     typedef std::tuple<> nondet_function_traits;
 

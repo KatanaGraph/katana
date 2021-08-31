@@ -114,6 +114,10 @@ public:
     return topology_file_storage_.Unbind();
   }
 
+  katana::Result<void> UnbindTopologyFile() {
+    return topology_file_storage_.Unbind();
+  }
+
   katana::Result<void> RegisterNodeEntityTypeIDArrayFile(
       const std::string& new_type_id_array) {
     part_header_.set_node_entity_type_id_array_path(new_type_id_array);

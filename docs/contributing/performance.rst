@@ -112,3 +112,63 @@ Here is a rule of thumb to choose among these different options:
 
 Note the design space of the different dimensions is not yet fully explored. We
 may create more specializations in the future when the need arises.
+
+Profiling
+=========
+
+CPU
+---
+
+``perf`` is a commonly available tool for profiling execution on Linux. You can
+collect samples from any execution with ``perf record <command line to
+profile>`` and then use ``perf report`` to view the report.
+
+See `perf examples by Brendan Gregg <https://www.brendangregg.com/perf.html>`_
+for more.
+
+Memory
+------
+
+If you want to profile memory usage, you can enable ``jemalloc`` in the build
+with
+
+.. code-block:: bash
+
+   cmake -DKATANA_USE_JEMALLOC=on <other cmake options>
+
+This will replace the system ``malloc`` implementation with ``jemalloc``, and
+with ``jemalloc``, you can produce heap profiles.
+
+.. warning::
+
+   The standard conda package for jemalloc does not enable profiling. You need
+   to use a conan build instead.
+
+To enable profiles, you must also put ``prof:true`` in the environment variable
+``MALLOC_CONF``. Additional options can be passed to ``jemalloc`` by separating
+options with a comma.
+
+By default, heap profiles are produced only when explicitly requested like with
+:cpp:func:`katana::ProgressSpan::LogProfile`.
+
+Alternatively, you can ask ``jemalloc`` to produce a heap profile every **k**
+bytes of allocation. For example, the following configuration will produce a
+profile every 1GB of allocation.
+
+.. code-block:: bash
+
+   # log2(1GB) = 30
+   export MALLOC_CONF=prof:true,lg_prof_interval:30
+   <command line>
+
+Heap profiles (``jeprof.*``) are written to the current working directory of
+the executable.
+
+You can analyze a profile with ``jeprof``:
+
+.. code-block:: bash
+
+   jeprof --web <executable> <heap profile>
+
+The `jemalloc wiki <https://github.com/jemalloc/jemalloc/wiki>`_ contains more
+information.

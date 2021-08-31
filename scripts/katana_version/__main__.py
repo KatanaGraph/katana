@@ -723,7 +723,7 @@ def check_clean(args, config):
 
     is_dirty = git.is_dirty(config.open) or (config.has_enterprise and git.is_dirty(config.enterprise))
     if not args.clean and is_dirty:
-        raise StateError("Action only supported in clean repositories. (Stash your changes or consider the --pretend-clean override option)")
+        raise StateError("Action only supported in clean repositories. (Stash your changes.)")
 
 
 def setup_release_branch_subcommand(subparsers):

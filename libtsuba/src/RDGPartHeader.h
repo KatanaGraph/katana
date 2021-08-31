@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <optional>
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -138,6 +139,12 @@ public:
       const katana::Uri& old_location, const katana::Uri& new_location);
 
   katana::Result<void> ValidateEntityTypeIDStructures() const;
+  static bool IsPartitionFileUri(const katana::Uri& uri);
+  // TODO(vkarthik): Move this somewhere else because this depends on the Parse function here. Might
+  // need to reorganize all the parsing properly.
+  static katana::Result<uint64_t> ParseHostFromPartitionFile(
+      const std::string& file);
+
   bool IsEntityTypeIDsOutsideProperties() const;
   //
   // Property manipulation

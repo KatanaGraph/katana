@@ -55,7 +55,27 @@ CopyProperty(
 
 }  // namespace
 
+// TODO(vkarthik): repetitive code from RDGManifest, try to unify
+namespace {
+
+katana::Result<uint64_t>
+Parse(const std::string& str) {
+  uint64_t val = strtoul(str.c_str(), nullptr, 10);
+  if (val == ULONG_MAX && errno == ERANGE) {
+    return KATANA_ERROR(
+        katana::ResultErrno(), "manifest file found with out of range version");
+  }
+  return val;
+}
+
+}  // namespace
+
 namespace tsuba {
+
+// Regex for partition files
+const std::regex kPartitionFile(
+    "part_(?:(vers[0-9A-Za-z_]+))_(?:(rdg[0-9A-Za-z-]*))_(?:(node[0-9]*))$");
+const int kPartitionMatchHostIndex = 3;
 
 katana::Result<RDGPartHeader>
 RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
@@ -120,6 +140,21 @@ RDGPartHeader::Write(
   writes->StartStore(std::move(ff));
   TSUBA_PTP(internal::FaultSensitivity::Normal);
   return katana::ResultSuccess();
+}
+
+katana::Result<uint64_t>
+RDGPartHeader::ParseHostFromPartitionFile(const std::string& file) {
+  std::smatch sub_match;
+  if (!std::regex_match(file, sub_match, kPartitionFile)) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+  return Parse(sub_match[kPartitionMatchHostIndex]);
+}
+
+bool
+RDGPartHeader::IsPartitionFileUri(const katana::Uri& uri) {
+  bool res = std::regex_match(uri.BaseName(), kPartitionFile);
+  return res;
 }
 
 bool

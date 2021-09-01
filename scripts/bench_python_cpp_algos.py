@@ -18,7 +18,8 @@ def time_block(run_name):
     timer_algo_start = time.perf_counter()
     yield
     timer_algo_end = time.perf_counter()
-    print(f"[TIMER] Time to run {run_name} : {round((timer_algo_end - timer_algo_start), 2)} seconds")
+    print(
+        f"[TIMER] Time to run {run_name} : {round((timer_algo_end - timer_algo_start), 2)} seconds")
 
 
 def check_schema(graph: Graph, property_name):
@@ -26,6 +27,19 @@ def check_schema(graph: Graph, property_name):
     num_node_properties = len(node_schema)
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
+
+
+def create_json_dict():
+    data = {
+        "btimestamp": 0,
+        "db": "analytics",
+        "etimestamp": 0,
+        "import_time": 0,
+        "num_partitions": 0,
+        "queries": {},
+        "datetime": "",
+        "katana_sha": ""}
+    return data
 
 
 def run_bfs(graph: Graph, input_args, source_node_file):
@@ -73,7 +87,8 @@ def run_sssp(graph: Graph, input_args, source_node_file):
 
     sssp_plan = analytics.SsspPlan.delta_step(input_args["sssp_delta"])
     if "kron" in input_args["name"] or "urand" in input_args["name"]:
-        sssp_plan = analytics.SsspPlan.delta_step_fusion(input_args["sssp_delta"])
+        sssp_plan = analytics.SsspPlan.delta_step_fusion(
+            input_args["sssp_delta"])
 
     if not source_node_file == "":
         if not os.path.exists(source_node_file):
@@ -83,11 +98,13 @@ def run_sssp(graph: Graph, input_args, source_node_file):
 
         for source in sources:
             with time_block(f"sssp on {source}"):
-                analytics.sssp(graph, source, edge_prop_name, property_name, sssp_plan)
+                analytics.sssp(graph, source, edge_prop_name,
+                               property_name, sssp_plan)
 
             check_schema(graph, property_name)
 
-            analytics.sssp_assert_valid(graph, source, edge_prop_name, property_name)
+            analytics.sssp_assert_valid(
+                graph, source, edge_prop_name, property_name)
 
             stats = analytics.SsspStatistics(graph, property_name)
             print(f"STATS:\n{stats}")
@@ -95,11 +112,13 @@ def run_sssp(graph: Graph, input_args, source_node_file):
 
     else:
         with time_block("sssp"):
-            analytics.sssp(graph, start_node, edge_prop_name, property_name, sssp_plan)
+            analytics.sssp(graph, start_node, edge_prop_name,
+                           property_name, sssp_plan)
 
         check_schema(graph, property_name)
 
-        analytics.sssp_assert_valid(graph, start_node, edge_prop_name, property_name)
+        analytics.sssp_assert_valid(
+            graph, start_node, edge_prop_name, property_name)
 
         stats = analytics.SsspStatistics(graph, property_name)
         print(f"STATS:\n{stats}")
@@ -115,7 +134,8 @@ def run_jaccard(graph: Graph, input_args):
 
     check_schema(graph, property_name)
 
-    similarities: np.ndarray = graph.get_node_property(property_name).to_numpy()
+    similarities: np.ndarray = graph.get_node_property(
+        property_name).to_numpy()
     assert similarities[compare_node] == 1
 
     analytics.jaccard_assert_valid(graph, compare_node, property_name)
@@ -132,7 +152,8 @@ def run_pagerank(graph: Graph, _input_args):
     max_iteration = 1000
     alpha = 0.85
 
-    pagerank_plan = analytics.PagerankPlan.pull_topological(tolerance, max_iteration, alpha)
+    pagerank_plan = analytics.PagerankPlan.pull_topological(
+        tolerance, max_iteration, alpha)
 
     with time_block("pagerank"):
         analytics.pagerank(graph, property_name, pagerank_plan)
@@ -168,18 +189,21 @@ def run_bc(graph: Graph, input_args, source_node_file, num_sources):
 
             print(f"Using sources: {sources}")
             with time_block("betweenness centrality"):
-                analytics.betweenness_centrality(graph, property_name, sources, bc_plan)
+                analytics.betweenness_centrality(
+                    graph, property_name, sources, bc_plan)
 
             check_schema(graph, property_name)
 
-            stats = analytics.BetweennessCentralityStatistics(graph, property_name)
+            stats = analytics.BetweennessCentralityStatistics(
+                graph, property_name)
             print(f"STATS:\n{stats}")
             graph.remove_node_property(property_name)
     else:
         sources = [start_node]
         print(f"Using sources: {sources}")
         with time_block("betweenness centrality"):
-            analytics.betweenness_centrality(graph, property_name, sources, bc_plan)
+            analytics.betweenness_centrality(
+                graph, property_name, sources, bc_plan)
 
         check_schema(graph, property_name)
 
@@ -234,14 +258,18 @@ def run_louvain(graph: Graph, input_args):
     edge_prop_name = input_args["edge_wt"]
 
     with time_block("louvain"):
-        louvain_plan = analytics.LouvainClusteringPlan.do_all(False, 0.0001, 0.0001, 10000, 100)
-        analytics.louvain_clustering(graph, edge_prop_name, property_name, louvain_plan)
+        louvain_plan = analytics.LouvainClusteringPlan.do_all(
+            False, 0.0001, 0.0001, 10000, 100)
+        analytics.louvain_clustering(
+            graph, edge_prop_name, property_name, louvain_plan)
 
     check_schema(graph, property_name)
 
-    analytics.louvain_clustering_assert_valid(graph, edge_prop_name, property_name)
+    analytics.louvain_clustering_assert_valid(
+        graph, edge_prop_name, property_name)
 
-    stats = analytics.LouvainClusteringStatistics(graph, edge_prop_name, property_name)
+    stats = analytics.LouvainClusteringStatistics(
+        graph, edge_prop_name, property_name)
     print(f"STATS:\n{stats}")
     graph.remove_node_property(property_name)
 
@@ -303,7 +331,8 @@ def run_all_gap(args):
     def load_graph(graph_path, edge_properties=None):
         print(f"Running {args.application} on graph: {graph_path}")
         with time_block("read Graph"):
-            graph = Graph(graph_path, edge_properties=edge_properties, node_properties=[])
+            graph = Graph(
+                graph_path, edge_properties=edge_properties, node_properties=[])
         print(f"#Nodes: {len(graph)}, #Edges: {graph.num_edges()}")
         return graph
 
@@ -384,7 +413,8 @@ def run_all_gap(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Benchmark performance of routines")
+    parser = argparse.ArgumentParser(
+        description="Benchmark performance of routines")
 
     parser.add_argument("--input-dir", default="./", help="Path to the input directory (default: %(default)s)")
 
@@ -398,13 +428,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--graph",
         default="GAP-road",
-        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand"],
+        choices=["GAP-road", "GAP-kron",
+                 "GAP-twitter", "GAP-web", "GAP-urand"],
         help="Graph name (default: %(default)s)",
     )
     parser.add_argument(
         "--application",
         default="bfs",
-        choices=["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain"],
+        choices=["bfs", "sssp", "cc", "bc", "pagerank",
+                 "tc", "jaccard", "kcore", "louvain"],
         help="Application to run (default: %(default)s)",
     )
     parser.add_argument("--source-nodes", default="", help="Source nodes file(default: %(default)s)")
@@ -419,6 +451,7 @@ if __name__ == "__main__":
     if not parsed_args.threads:
         parsed_args.threads = int(os.cpu_count())
 
-    print(f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
+    print(
+        f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
 
     run_all_gap(parsed_args)

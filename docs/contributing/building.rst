@@ -1,12 +1,12 @@
 .. _building:
 
-If you haven't done so already, please clone the katana ( [open source](https://github.com/KatanaGraph/katana) / [enterprise](https://github.com/KatanaGraph/katana-enterprise) ) repo before you start building. 
+If you haven't done so already, please clone the katana ( `open source <https://github.com/KatanaGraph/katana>`_  / `enterprise <https://github.com/KatanaGraph/katana-enterprise>` ) repo before you start building. 
 
 ========
 Building
 ========
 
-If you are building katana-enterprise make sure to also read the :doc:`enterprise build addenda <index>`, available [here](https://docs.k9h.dev/0.1.99.dev+3.8.04ffe8.b7efb9/contributing/index.html#conda)
+If you are building katana-enterprise make sure to also read the :doc:`enterprise build addenda <index>`.
 
 Setting up a Build
 ==================
@@ -67,7 +67,7 @@ configured. Then, create and activate the development environment:
 The ``conda env update`` line can be run later to update your environment. Deactivate your environment
 ``conda deactivate``, then run the update commands, then reactivate ``conda activate katana-dev``.
 
-**NOTE** : If building katana-enterprise, please use [these](https://docs.k9h.dev/0.1.99.dev+3.8.04ffe8.b7efb9/contributing/index.html#conda) commands instead of the ones above. Once they've been run, the remaining process remains the same as below commands. 
+.. note:: If building katana-enterprise, please use `these <https://docs.k9h.dev/0.1.99.dev+3.8.04ffe8.b7efb9/contributing/index.html#conda>` commands instead of the ones above. Once they've been run, the remaining process remains the same as below commands. 
 
 Now, run ``cmake`` to configure your build directory and ``make`` to build Katana.
 

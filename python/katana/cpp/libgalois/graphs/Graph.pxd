@@ -7,8 +7,8 @@ from pyarrow.lib cimport CArray, CChunkedArray, CSchema, CTable, CUInt32Array, C
 from katana.cpp.boost cimport counting_iterator
 from katana.cpp.libgalois.datastructures cimport NUMAArray
 from katana.cpp.libstd.optional cimport optional
-from katana.cpp.libsupport.result cimport Result
 from katana.cpp.libsupport.entity_type_manager cimport EntityTypeManager
+from katana.cpp.libsupport.result cimport Result
 
 from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
 

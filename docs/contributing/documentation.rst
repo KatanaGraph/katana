@@ -52,7 +52,7 @@ similar to Markdown (``.md``) in spirit but has a slightly different syntax.
      - .. code-block::
 
           Visit `my link <https://invalid/>`_
-          
+
      - .. code-block::
 
           Visit [my link](https://invalid/)
@@ -98,6 +98,19 @@ similar to Markdown (``.md``) in spirit but has a slightly different syntax.
           ##### Level 5
 
           ###### Level 6
+   * - Conditional Include
+     - .. code-block::
+
+          .. only:: internal
+
+             Text to only include when internal is set.
+
+       The only condition currently defined is ``internal``. Conditional
+       including has limited scope as it cannot include other directives nor
+       alter the section structure. The body of the directive is always parsed,
+       so references must be valid regardless of the condition.
+
+     - (Not applicable)
 
 
 - https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html

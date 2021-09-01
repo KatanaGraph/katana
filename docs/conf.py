@@ -9,6 +9,16 @@ import pathlib
 import os
 import katana
 
+try:
+    import katana_enterprise
+except ImportError:
+    pass
+else:
+    # Tags can be defined with the -t argument to sphinx. Use not-internal to
+    # override an otherwise default internal tag.
+    if not tags.has("not-internal"):
+        tags.add("internal")
+
 doxygen_path = os.environ["KATANA_DOXYGEN_PATH"]
 
 # -- General configuration ---------------------------------------------------
@@ -26,12 +36,12 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
-    "sphinx_tabs.tabs"
+    "sphinx_tabs.tabs",
 ]
 
 breathe_default_project = "katana"
 breathe_projects = {"katana": str(pathlib.Path(doxygen_path))}
-breathe_default_members = ('members', 'undoc-members')
+breathe_default_members = ("members", "undoc-members")
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

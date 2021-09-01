@@ -285,20 +285,18 @@ if (NOT MySQL_FOUND)
   message(STATUS "Library MySQL not found, not building MySQL support")
 endif ()
 
-# Search for the highest compatible version of LLVM from the list of versions here.
-# LLVM minor versions are not ABI compatible, so we need to specifically say we support the 11.1 special release.
 message(CHECK_START "Looking for LLVM")
-foreach (llvm_ver IN ITEMS 12 11.1 11.0 10 9 8 7)
-  find_package(LLVM ${llvm_ver} QUIET CONFIG)
-  if (LLVM_FOUND)
-    break()
-  endif ()
-endforeach ()
-if (LLVM_FOUND)
+# Honor the build environment search order for LLVM versions. This may result in using a slightly older version of
+# llvm-support in cases where multiple are installed, however it enables the environment to select an older versions
+# intentionally if required. Conda does this and not allowing it to do so causes link errors.
+find_package(LLVM CONFIG)
+
+if(NOT LLVM_FOUND OR LLVM_VERSION VERSION_LESS 7)
+  message(FATAL_ERROR "Could not find LLVM. LLVM (>=7) is required. May have found a version: ${LLVM_VERSION} (${LLVM_DIR})")
+else()
   message(CHECK_PASS "found version ${LLVM_VERSION} (${LLVM_DIR})")
-else ()
-  message(FATAL_ERROR "Searched for LLVM 7 through 12 but did not find any compatible version")
-endif ()
+endif()
+
 if (NOT DEFINED LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Could not determine if LLVM has RTTI enabled.")
 endif ()

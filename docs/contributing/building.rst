@@ -9,16 +9,9 @@ If you are building katana-enterprise make sure to also read the :doc:`enterpris
 Setting up a Build
 ==================
 
-The quickest way to start hacking on Katana is to follow the Conda instructions below.
-If you have issues with missing system level dependencies, look at
-``scripts/setup_dev_ubuntu.sh`` and use that as the basis for installing a
-development environment on your own machine.
 The Katana repo supports both Conan and Conda for installing additional library
-dependencies.
-If you plan to use Conda, do **not** run ``scripts/setup_dev_ubuntu.sh``.
-
-If you are not familiar with either of Conan or Conda, follow the instructions
-for Conda.
+dependencies. The quickest way to start hacking on Katana is to follow the
+Conda instructions below.
 
 .. warning::
 
@@ -32,8 +25,10 @@ for Conda.
    ``git submodule update --recursive --init`` to make sure all submodules are
    initialized and reflect their checked-in state.
 
-Conda
------
+.. _building-with-conda:
+
+Building with Conda
+-------------------
 
 `Install conda <https://docs.conda.io/en/latest/miniconda.html>`_ if needed.
 See the `Conda User Guide <https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>`_ for more details.
@@ -44,10 +39,17 @@ See the `Conda User Guide <https://docs.conda.io/projects/conda/en/latest/user-g
    bash Miniconda3-latest-Linux-x86_64.sh
 
 .. warning::
+
     To avoid subtle dependency issues, make sure you download Miniconda instead of Anaconda.
 
+.. warning::
+
+   If you plan to use Conda do **not** run ``scripts/setup_dev_ubuntu.sh`` as
+   it will install a conflicting version of pyarrow. Conda can handle all
+   required dependencies itself.
+
 You will need to log out and back in again to ensure conda is properly
-configured. Then create and activate the development environment:
+configured. Then, create and activate the development environment:
 
 .. code-block:: bash
 
@@ -76,9 +78,6 @@ Now, run ``cmake`` to configure your build directory and ``make`` to build Katan
 This will build Katana and place the built libraries and executables in
 ``$BUILD_DIR``.
 
-For the Conda builds, using ``scripts/setup_dev_ubuntu.sh`` is **not** recommended; it can install a conflicting
-version of pyarrow.
-
 Conda Performance
 ^^^^^^^^^^^^^^^^^
 
@@ -98,10 +97,18 @@ Then you can use ``conda mambabuild`` (*note:* the top level command is ``conda`
 To get a leaner, Mamba using environment in a fresh install, use `Mambaforge <https://github.com/conda-forge/miniforge#mambaforge>`_.
 It is an installer, similar to miniconda, which installs an environment with conda-forge packages and mamba pre-installed (boa must still be installed separately).
 
-Conan
------
 
-For the Conan build you must run ``scripts/setup_dev_ubuntu.sh``, as this build depends on many system level packages.
+.. _building-with-conan:
+
+Building with Conan
+-------------------
+
+For the Conan build you must run ``scripts/setup_dev_ubuntu.sh``, as Conan
+build depends on system level packages that it does not install itself.
+
+If you have issues with missing system level dependencies, look at
+``scripts/setup_dev_ubuntu.sh`` and use that as the basis for installing a
+development environment on your own machine.
 
 After running ``scripts/setup_dev_ubuntu.sh``, run the following commands from
 the project source directory to build the system:
@@ -135,6 +142,74 @@ or source it into your shell,
 
    . $BUILD_DIR/python_env.sh
 
+Resolving Common Build Issues
+=============================
+
+If you have having issues from a clean build directory (i.e., empty directory),
+
+1. Make sure you have also checked out any git submodules: ``git submodule
+   update --recursive --init``
+
+2. If you are using Conda, make sure that you have installed Miniconda and not
+   Anaconda.
+
+3. If you are using Conda, make sure that you have activated your environment
+   for both the ``cmake`` and ``make`` steps: ``conda activate katana-dev``
+
+If you were previously successful building but now you are seeing ``cmake`` or
+unexpected build errors after updating your source directory,
+
+1. Make sure you have also checked out any git submodules: ``git submodule
+   update --recursive --init``
+
+2. Check if there were any system build environment changes since the last time
+   you successfully built. If you are :ref:`building-with-conda`, you can skip
+   this step as all dependences are managed through Conda.
+
+   To update your environment, run ``scripts/setup_dev_ubuntu.sh``.
+
+   This requires root privileges, if you don't have root, it is likely that
+   your system administrator has already updated your build environment.
+
+3. Check if there were any build environment changes since the last time you
+   successfully built.
+
+   When :ref:`building-with-conda`, run ``conda env update --name katana-dev
+   --file $SRC_DIR/conda_recipe/environment.yml``. If you have submodules, you
+   will have to run the previous command for the
+   ``conda_recipe/environment.yml`` in each submodule. Afterwards, logout and
+   login.
+
+   When :ref:`building-with-conan`, run ``conan install $SRC_DIR/config
+   --build=missing``. If you have submodules, you only have to run this command
+   for the main source directory.
+
+4. Clean out your build directory: ``make clean``. If you are using ``ccache``,
+   clean out your cache: ``ccache -C``.
+
+5. Remove your cached build variables to pick up on any build environment
+   changes (system or otherwise): ``rm ${BUILD_DIR}/CMakeCache.txt``
+
+6. Run your ``cmake`` command.
+
+   If you are using Conda, make sure you have activated your environment before
+   running ``cmake``.
+
+7. Run ``make``
+
+Careful readers may notice that the above sequence of commands is roughly the
+same as creating a new build directory and configuring from scratch. As you
+gain familiarity with the build, you will learn that you can skip certain steps
+above.
+
+If you still have issues, you should delete your build directory and follow the
+instructions for setting up from scratch.
+
+.. note::
+
+   Install ``ccache`` and use the cmake option
+   ``-DCMAKE_CXX_COMPILER_LAUNCHER=ccache`` if you tend to switch between
+   branches. This allows object files to be reused between compilations.
 
 Specifying and Resolving C++ Dependencies
 =========================================

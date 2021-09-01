@@ -78,6 +78,7 @@ public:
         version_ + 1, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }
 
+  // TODO(vkarthik): This should have previous_version_ for the second argument, no?
   RDGManifest SameVersion(
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
@@ -115,6 +116,10 @@ public:
   bool transpose() const { return transpose_; }
 
   void set_dir(katana::Uri dir) { dir_ = std::move(dir); }
+  void set_version(uint64_t version) { version_ = version; }
+  void set_prev_version(uint64_t prev_version) {
+    previous_version_ = prev_version;
+  }
 
   katana::Uri PartitionFileName(uint32_t host_id) const;
 
@@ -138,7 +143,6 @@ public:
       const std::string& file);
 
   static bool IsManifestUri(const katana::Uri& uri);
-
   std::string ToJsonString() const;
 
   /// Return the set of file names that hold this RDG's data by reading partition files

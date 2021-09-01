@@ -41,6 +41,9 @@ using EntityTypeIDToAtomicTypeNameMap =
 using TypeNameSet = std::set<std::string>;
 
 class KATANA_EXPORT EntityTypeManager {
+  // TODO (scober): add iterator over all types
+  // TODO (scober): add iterator over all atomic types
+  // TODO (scober): add convenient iteration over SetOfEntityTypeIDs
 public:
   EntityTypeManager() { Init(); }
 
@@ -159,12 +162,19 @@ public:
   }
 
   /// adds a new entity type for the atomic type with name \p name
+  ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
+  ///
   /// \returns the EntityTypeID for the new type
   Result<EntityTypeID> AddAtomicEntityType(const std::string& name);
 
   /// Get the intersection of the types named in \p names; or add the type if
   /// it does not already exist. If any types named in \p names do not exist,
   /// create them.
+  ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
   ///
   /// \returns the EntityTypeID of the intersection type.
   ///
@@ -180,8 +190,25 @@ public:
     return GetOrAddNonAtomicEntityType(res.assume_value());
   }
 
+  /// Get the intersection of the types named in \p names
+  ///
+  /// \returns the EntityTypeID of the intersection type.
+  template <typename Container>
+  Result<EntityTypeID> GetNonAtomicEntityTypeFromStrings(
+      const Container& names) const {
+    // We cannot use KATANA_CHECKED here because nvcc cannot handle it.
+    auto res = GetEntityTypeIDs(names);
+    if (!res) {
+      return res.error();
+    }
+    return GetNonAtomicEntityType(res.assume_value());
+  }
+
   /// Get the intersection of the types passed in; or add the type if it does
   /// not already exist.
+  ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
   ///
   /// \warning This operation is currently `O(number of types)` due to a linear
   ///     search. This can be fixed with a space--time trade-off if needed.
@@ -191,6 +218,18 @@ public:
       const SetOfEntityTypeIDs& type_id_set);
 
   /// Get the intersection of the types passed in.
+  ///
+  /// \warning This operation is currently `O(number of types)` due to a linear
+  ///     search. This can be fixed with a space--time trade-off if needed.
+  ///
+  /// \returns the EntityTypeID of the intersection type.
+  Result<EntityTypeID> GetNonAtomicEntityType(
+      const SetOfEntityTypeIDs& type_id_set) const;
+
+  /// Get the intersection of the types passed in.
+  ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
   ///
   /// \warning This function does not do proper error checking. Only use if you
   ///     can prove the intersection type does not already exist. Otherwise, use
@@ -215,6 +254,16 @@ public:
     return atomic_type_name_to_entity_type_id_.count(name) == 1;
   }
 
+  std::vector<std::string> ListAtomicTypes() const {
+    std::vector<std::string> types;
+    // TODO(aneesh) define an iterator-type alias and return an iterator over
+    // the names instead of constructing a vector.
+    for (const auto& kv : atomic_type_name_to_entity_type_id_) {
+      types.push_back(kv.first);
+    }
+    return types;
+  }
+
   /// \returns true iff an entity type \p entity_type_id exists
   /// (returns true for kUnknownEntityType)
   bool HasEntityType(EntityTypeID entity_type_id) const {
@@ -227,6 +276,9 @@ public:
     return atomic_type_name_to_entity_type_id_.at(name);
   }
 
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
+  ///
   /// \returns the EntityTypeID for an atomic type with name \p name, adding it
   /// if it doesn't exist.
   Result<EntityTypeID> GetOrAddEntityTypeID(const std::string& name);
@@ -269,9 +321,12 @@ public:
             ErrorCode::NotFound, "type {} does not exist", name);
       }
     }
-    return res;
+    return MakeResult(std::move(res));
   }
 
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
+  ///
   /// \returns the EntityTypeIDs for atomic types with \p names, adding them if
   /// needed.
   template <typename Container>
@@ -290,7 +345,7 @@ public:
       }
       res[id] = true;
     }
-    return res;
+    return MakeResult(std::move(res));
   }
 
   /// \returns the name of the atomic type if the EntityTypeID

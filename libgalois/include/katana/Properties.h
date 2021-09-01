@@ -505,5 +505,98 @@ struct StructProperty
   }
 };
 
+
+template <typename T>
+class VectorRef {
+  public:
+    using value_type = T;
+    using iterator = value_type*;
+    using const_iterator = const value_type*;
+
+    VectorRef(T* ptr=NULL, size_t size=1): data_(ptr), size_(size){}
+  
+    void setPtr(T* ptr) {data_ = ptr;}
+    void setSize(size_t size) {size_ = size;}
+    bool isDataNull() {return data_ == NULL;}
+
+    T& operator[](size_t index) {return data_[index];}
+    const T& operator[](size_t index) const {return data_[index];}
+    size_t size() {return size_;}
+
+    T* begin() { return iterator(&data_[0]); }
+    const T* begin() const { return const_iterator(&data_[0]); }
+    T* end() { return iterator(&data_[size_]); }
+    const T* end() const { return const_iterator(&data_[size_]); }
+  private:
+    T* data_;
+    size_t size_;
+};
+
+
+template <typename T, size_t N>
+class VectorPropertyView {
+  public:
+    using value_type = VectorRef<T>;
+    using reference = VectorRef<T>&;
+    using const_reference = const VectorRef<T>&;
+
+    static Result<VectorPropertyView> Make(arrow::LargeListArray& array){
+      auto double_array_pointer = std::static_pointer_cast<arrow::DoubleArray>(array.values());
+      return VectorPropertyView(array, internal::GetMutableValuesWorkAround<T>(double_array_pointer->data(), 1, 0));
+    }
+    reference GetValue(size_t index){
+      // return VectorRef(ptr_ + array_.value_offset(index), N);
+      return list_of_double_pointers_[index];
+      
+    }
+    // const_reference GetValue(size_t index) const {return list_of_double_pointers_[index];}
+    // reference operator[](size_t index){return list_of_double_pointers_[index];}
+    // const_reference operator[](size_t index) const {return list_of_double_pointers_[index];}
+    
+  private:
+    VectorPropertyView(arrow::LargeListArray& array, T* ptr) : array_(array), ptr_(ptr) {
+      // TODO(nojanp): check if this memory allocation could be eliminated
+      list_of_double_pointers_ = new VectorRef<T>[array.length()];
+      for(auto i = 0; i< array.length(); i++){
+        // list_of_double_pointers_[i] = VectorRef(ptr + array.value_offset(i), N);
+        list_of_double_pointers_[i].setPtr(ptr + array.value_offset(i));
+        list_of_double_pointers_[i].setSize(N);
+      }
+    }
+    arrow::LargeListArray& array_;
+    T* ptr_;
+    VectorRef<T>* list_of_double_pointers_;
+};
+
+template <typename T, size_t N>
+struct VectorProperty {
+
+    using ArrowType = arrow::LargeListType;
+    using ViewType = VectorPropertyView<T, N>;
+
+    static katana::Result<std::shared_ptr<arrow::Table>> Allocate(
+        size_t num_rows, const std::string& name) {
+
+      std::unique_ptr<arrow::ArrayBuilder> builder;
+      KATANA_CHECKED(arrow::MakeBuilder(
+      arrow::default_memory_pool(),
+      arrow::large_list(arrow::float64()),
+      &builder));
+      auto outer = dynamic_cast<arrow::LargeListBuilder*>(builder.get());
+      auto inner = dynamic_cast<arrow::DoubleBuilder*>(outer->value_builder());
+
+      for(size_t i = 0; i < num_rows; i++)
+      {
+        KATANA_CHECKED(outer->Append());
+        KATANA_CHECKED(inner->AppendEmptyValues(N)); 
+      }
+
+      std::shared_ptr<arrow::Array> array_of_list_of_double = KATANA_CHECKED(builder->Finish());
+      
+      return katana::Result<std::shared_ptr<arrow::Table>>(
+        arrow::Table::Make(arrow::schema({arrow::field(name, arrow::large_list(arrow::float64()))}), {array_of_list_of_double}));
+    }
+};
+
 }  // namespace katana
 #endif

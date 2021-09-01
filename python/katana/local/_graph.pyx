@@ -275,6 +275,14 @@ cdef class GraphBase:
         """
         return str(self.underlying_property_graph().rdg_dir(), encoding="UTF-8")
 
+    @property
+    def node_type_names(self):
+        """
+        The names of atomic node types in the graph.
+
+        :rtype: list
+        """
+        return self.underlying_property_graph().GetNodeTypeManager().GetAtomicTypeNames()
 
 cdef class Graph(GraphBase):
     """

@@ -69,6 +69,7 @@ set(sources
         src/analytics/local_clustering_coefficient/local_clustering_coefficient.cpp
         src/analytics/subgraph_extraction/subgraph_extraction.cpp
         src/analytics/leiden_clustering/leiden_clustering.cpp
+        src/analytics/matrix_completion/matrix_completion.cpp
     )
 
 find_package(LibXml2 2.9.1 REQUIRED)

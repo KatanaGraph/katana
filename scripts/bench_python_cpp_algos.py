@@ -39,6 +39,7 @@ def create_json_dict():
         "queries": {},
         "datetime": "",
         "katana_sha": ""}
+
     return data
 
 
@@ -338,6 +339,7 @@ def run_all_gap(args):
 
     # Load our graph
     input = next(item for item in inputs if item["name"] == args.graph)
+    data = create_json_dict()
     if args.application in ["bfs", "sssp", "bc", "jaccard"]:
         graph_path = f"{args.input_dir}/{input['name']}"
         if not os.path.exists(graph_path):

@@ -5,10 +5,12 @@
 
 #include <arrow/chunked_array.h>
 
+#include "katana/ProgressTracer.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
 #include "tsuba/ParquetReader.h"
+#include "tsuba/PropertyCache.h"
 
 namespace {
 
@@ -75,7 +77,8 @@ tsuba::LoadPropertySlice(
 
 katana::Result<void>
 tsuba::AddProperties(
-    const katana::Uri& uri,
+    const katana::Uri& uri, tsuba::PropertyCacheKey* cache_key,
+    tsuba::PropertyCache* cache,
     const std::vector<tsuba::PropStorageInfo*>& properties, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn) {
@@ -84,6 +87,25 @@ tsuba::AddProperties(
       return KATANA_ERROR(
           ErrorCode::Exists, "property {} must be absent to be added",
           std::quoted(prop->name()));
+    }
+    if (cache != nullptr) {
+      cache_key->name = prop->name();
+      auto column_table = cache->Get(*cache_key);
+      if (column_table) {
+        auto props = column_table.value();
+        KATANA_CHECKED_CONTEXT(
+            add_fn(props), "adding {}", std::quoted(prop->name()));
+        prop->WasLoaded(props->field(0)->type());
+        auto& tracer = katana::GetTracer();
+        auto upsert_scope =
+            tracer.StartActiveSpan("property loaded from cache");
+        upsert_scope.span().SetTags({
+            {"type", (cache_key->node_edge == tsuba::NodeEdge::kNode) ? "node"
+                                                                      : "edge"},
+            {"name", prop->name()},
+        });
+        return katana::ResultSuccess();
+      }
     }
     const katana::Uri& path = uri.Join(prop->path());
 
@@ -95,12 +117,24 @@ tsuba::AddProperties(
               return KATANA_CHECKED_CONTEXT(
                   LoadProperties(prop->name(), path), "error loading {}", path);
             });
-    auto on_complete = [add_fn,
-                        prop](const std::shared_ptr<arrow::Table>& props)
+    auto on_complete = [add_fn, prop, cache_key,
+                        cache](const std::shared_ptr<arrow::Table>& props)
         -> katana::CopyableResult<void> {
       KATANA_CHECKED_CONTEXT(
           add_fn(props), "adding {}", std::quoted(prop->name()));
       prop->WasLoaded(props->field(0)->type());
+      if (cache != nullptr) {
+        auto& tracer = katana::GetTracer();
+        auto upsert_scope =
+            tracer.StartActiveSpan("property inserted into cache");
+        upsert_scope.span().SetTags({
+            {"type", (cache_key->node_edge == tsuba::NodeEdge::kNode) ? "node"
+                                                                      : "edge"},
+            {"name", prop->name()},
+        });
+        cache_key->name = prop->name();
+        cache->Insert(*cache_key, props);
+      }
       return katana::CopyableResultSuccess();
     };
     if (grp) {

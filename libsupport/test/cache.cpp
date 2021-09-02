@@ -3,45 +3,36 @@
 #include <map>
 #include <random>
 
+#include "katana/Cache.h"
 #include "katana/Logging.h"
 #include "katana/Random.h"
 
 enum class NodeEdge { kNode, kEdge };
 
-// Basic Cache Key implementation
-struct CacheKey {
-  CacheKey(const NodeEdge& node_edge, const std::string& name)
-      : node_edge_(node_edge), name_(name) {}
-
-  bool operator==(const CacheKey& o) const {
-    return node_edge_ == o.node_edge_ && name_ == o.name_;
+// This code is replicated from libtsuba::PropertyCache.h to allow testing of
+// libsupport::Cache.h (libtsuba depends on libsupport, not the other way around)
+struct KATANA_EXPORT PropertyCacheKey {
+  NodeEdge node_edge;
+  std::string name;
+  PropertyCacheKey(NodeEdge _node_edge, const std::string& _name = "")
+      : node_edge(_node_edge), name(_name) {}
+  bool operator==(const PropertyCacheKey& o) const {
+    return node_edge == o.node_edge && name == o.name;
   }
+  struct Hash {
+    std::size_t operator()(const PropertyCacheKey& k) const {
+      using boost::hash_combine;
+      using boost::hash_value;
 
-  std::size_t hash() const noexcept {
-    using boost::hash_combine;
-    using boost::hash_value;
+      std::size_t seed = 0;
+      hash_combine(seed, hash_value(k.node_edge));
+      hash_combine(seed, hash_value(k.name));
 
-    std::size_t seed = 0;
-    hash_combine(seed, hash_value(node_edge_));
-    hash_combine(seed, hash_value(name_));
-
-    // Return the result.
-    return seed;
-  }
-
-  NodeEdge node_edge_;
-  std::string name_;
+      // Return the result.
+      return seed;
+    }
+  };
 };
-
-// inject custom specialization of std::hash to namespace std
-namespace std {
-template <>
-struct hash<CacheKey> {
-  std::size_t operator()(CacheKey const& key) const noexcept {
-    return key.hash();
-  }
-};
-}  // namespace std
 
 struct CacheValue {
   int64_t a;
@@ -86,8 +77,8 @@ SizeFiveValue() {
 
 void
 InsertRandom(
-    const std::vector<CacheKey>& keys,
-    tsuba::Cache<CacheKey, CacheValue>& cache) {
+    const std::vector<PropertyCacheKey>& keys,
+    katana::Cache<PropertyCacheKey, CacheValue>& cache) {
   for (const auto& key : keys) {
     cache.Insert(key, RandomValue());
   }
@@ -95,8 +86,8 @@ InsertRandom(
 
 void
 AssertLRUElements(
-    std::vector<CacheKey>::const_iterator endit, size_t num,
-    tsuba::Cache<CacheKey, CacheValue>& cache) {
+    std::vector<PropertyCacheKey>::const_iterator endit, size_t num,
+    katana::Cache<PropertyCacheKey, CacheValue>& cache) {
   for (auto it = endit - num; it < endit; ++it) {
     KATANA_LOG_ASSERT(cache.Get(*it).has_value());
   }
@@ -105,14 +96,16 @@ AssertLRUElements(
 
 void
 TestLRUBytes(
-    const std::vector<CacheKey>& node_keys,
-    const std::vector<CacheKey>& edge_keys) {
+    const std::vector<PropertyCacheKey>& node_keys,
+    const std::vector<PropertyCacheKey>& edge_keys) {
   count_evictions = 0;
   size_t byte_size = 4;
-  tsuba::Cache<CacheKey, CacheValue> cache(
+  katana::Cache<PropertyCacheKey, CacheValue> cache(
       byte_size, [](const CacheValue& value) { return BytesInValue(value); },
-      [&](const CacheKey&) { count_evictions++; });
+      [&](const PropertyCacheKey&) { count_evictions++; });
 
+  PropertyCacheKey key(NodeEdge::kNode, "not gonna happen");
+  KATANA_LOG_ASSERT(!cache.Get(key).has_value());
   auto nodeit = --node_keys.end();
   KATANA_LOG_ASSERT(nodeit != node_keys.begin());
   cache.Insert(*nodeit--, SizeOneValue());
@@ -146,11 +139,11 @@ TestLRUBytes(
 
 void
 TestLRUSize(
-    size_t lru_size, const std::vector<CacheKey>& node_keys,
-    const std::vector<CacheKey>& edge_keys) {
+    size_t lru_size, const std::vector<PropertyCacheKey>& node_keys,
+    const std::vector<PropertyCacheKey>& edge_keys) {
   count_evictions = 0;
-  tsuba::Cache<CacheKey, CacheValue> cache(
-      lru_size, [&](const CacheKey&) { count_evictions++; });
+  katana::Cache<PropertyCacheKey, CacheValue> cache(
+      lru_size, [&](const PropertyCacheKey&) { count_evictions++; });
 
   InsertRandom(node_keys, cache);
 
@@ -184,8 +177,8 @@ main(int argc, char** argv) {
     size = 1000000;
   }
 
-  std::vector<CacheKey> node_keys;
-  std::vector<CacheKey> edge_keys;
+  std::vector<PropertyCacheKey> node_keys;
+  std::vector<PropertyCacheKey> edge_keys;
   // Generate maximum overlap of names
   std::vector<std::string> names;
   size_t mid = size / 2;
@@ -195,11 +188,11 @@ main(int argc, char** argv) {
   KATANA_LOG_ASSERT(mid * mid >= size);
   for (size_t i = 0; i < mid; ++i) {
     names.emplace_back(katana::RandomAlphanumericString(16));
-    node_keys.emplace_back(CacheKey(NodeEdge::kNode, names.back()));
+    node_keys.emplace_back(PropertyCacheKey(NodeEdge::kNode, names.back()));
   }
 
   for (size_t i = 0, end = size - node_keys.size(); i < end; ++i) {
-    edge_keys.emplace_back(CacheKey(NodeEdge::kEdge, names[i]));
+    edge_keys.emplace_back(PropertyCacheKey(NodeEdge::kEdge, names[i]));
   }
 
   TestLRUSize(lru_size, node_keys, edge_keys);

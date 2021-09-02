@@ -275,7 +275,9 @@ def run_louvain(graph: Graph, input_args):
     graph.remove_node_property(property_name)
 
 
-def run_rootine(rootine, data, args_trails, average_range=3, **argv):
+def run_rootine(rootine, data, args_trails, **argv):
+    print(tuple(argv))
+    average_range = 3
     count = 0
     time_sum = 0
     glb_count = 0
@@ -285,7 +287,7 @@ def run_rootine(rootine, data, args_trails, average_range=3, **argv):
             count = 0
             time_sum = 0
         start = time.time()
-        rootine(*argv)
+        rootine(*tuple(argv))
         time_sum += time.time() - start
         count += 1
         glb_count += 1
@@ -473,7 +475,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Benchmark performance of routines")
 
-    parser.add_argument("--input-dir", default="./", help="Path to the input directory (default: %(default)s)")
+    parser.add_argument("--input-dir", default="./",
+                        help="Path to the input directory (default: %(default)s)")
 
     parser.add_argument(
         "--threads",
@@ -481,7 +484,8 @@ if __name__ == "__main__":
         default=None,
         help="Number of threads to use (default: query sinfo). Should match max threads.",
     )
-    parser.add_argument("--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.")
+    parser.add_argument("--thread-spin", default=False,
+                        action="store_true", help="Busy wait for work in thread pool.")
     parser.add_argument(
         "--graph",
         default="GAP-road",
@@ -496,8 +500,10 @@ if __name__ == "__main__":
                  "tc", "jaccard", "kcore", "louvain"],
         help="Application to run (default: %(default)s)",
     )
-    parser.add_argument("--source-nodes", default="", help="Source nodes file(default: %(default)s)")
-    parser.add_argument("--trials", type=int, default=1, help="Number of trials (default: %(default)s)")
+    parser.add_argument("--source-nodes", default="",
+                        help="Source nodes file(default: %(default)s)")
+    parser.add_argument("--trials", type=int, default=1,
+                        help="Number of trials (default: %(default)s)")
 
     parsed_args = parser.parse_args()
 

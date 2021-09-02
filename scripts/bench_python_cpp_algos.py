@@ -263,6 +263,15 @@ def run_all_gap(args):
             "sssp_delta": 13,
         },
         {
+            "name": "rmat15",
+            "symmetric_input": "rmat15_symmetric",
+            "symmetric_clean_input": "rmat15_cleaned_symmetric",
+            "transpose_input": "rmat15_transpose",
+            "source_node": 0,
+            "edge_wt": "value",
+            "sssp_delta": 1,
+        },
+        {
             "name": "GAP-kron",
             "symmetric_input": "GAP-kron",
             "symmetric_clean_input": "GAP-kron",
@@ -398,7 +407,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--graph",
         default="GAP-road",
-        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand"],
+        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand",
+        "rmat15"],
         help="Graph name (default: %(default)s)",
     )
     parser.add_argument(

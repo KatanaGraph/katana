@@ -282,7 +282,7 @@ def run_rootine(rootine, data, args_trails, argv):
 
         start = time.time()
         rootine(*argv)
-        data["queries"][str(rootine) + str(glb_count)
+        data["queries"][str(rootine.__name__) + "_" + str(glb_count)
                         ] = time.time() - start
         glb_count += 1
 
@@ -372,22 +372,6 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path)
 
-        # if args.application == "bfs":
-        #     for _ in range(args.trials):
-        #         run_bfs(graph, input, args.source_nodes)
-
-        # if args.application == "sssp":
-        #     for _ in range(args.trials):
-        #         run_sssp(graph, input, args.source_nodes)
-
-        # if args.application == "jaccard":
-        #     for _ in range(args.trials):
-        #         run_jaccard(graph, input)
-
-        # if args.application == "bc":
-        #     for _ in range(args.trials):
-        #         run_bc(graph, input, args.source_nodes, 4)
-
         if args.application == "bfs":
             data = run_rootine(run_bfs, data, args.trials,
                                (graph, input, args.source_nodes))
@@ -411,10 +395,6 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path, [])
 
-        # if args.application == "tc":
-        #     for _ in range(args.trials):
-        #         run_tc(graph, input)
-
         if args.application == "tc":
             data = run_rootine(run_tc, data, args.trials,
                                (graph, input))
@@ -425,18 +405,6 @@ def run_all_gap(args):
             print(f"Symmetric Graph doesn't exist: {graph_path}")
 
         graph = load_graph(graph_path, [])
-
-        # if args.application == "cc":
-        #     for _ in range(args.trials):
-        #         run_cc(graph, input)
-
-        # if args.application == "kcore":
-        #     for _ in range(args.trials):
-        #         run_kcore(graph, input)
-
-        # if args.application == "louvain":
-        #     for _ in range(args.trials):
-        #         run_louvain(graph, input)
 
         if args.application == "cc":
             data = run_rootine(run_cc, data, args.trials,
@@ -465,10 +433,6 @@ def run_all_gap(args):
             print(f"Symmetric Graph doesn't exist: {graph_path}")
 
         graph = load_graph(graph_path, [])
-
-        # if args.application == "pagerank":
-        #     for _ in range(args.trials):
-        #         run_pagerank(graph, input)
 
         if args.application == "pagerank":
             data = run_rootine(run_pagerank, data, args.trials, (graph, input))

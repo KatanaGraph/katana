@@ -15,6 +15,7 @@ from katana.local.atomic import (
 from katana.local.barrier import Barrier, SimpleBarrier, get_fast_barrier
 from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.local.dynamic_bitset import DynamicBitset
+from katana.local.entity_type import EntityType
 from katana.local.graph import Graph
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "get_fast_barrier",
     "initialize",
     "AllocationPolicy",
+    "EntityType",
 ]

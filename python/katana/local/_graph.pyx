@@ -4,6 +4,7 @@ import pyarrow
 from pyarrow.lib cimport pyarrow_unwrap_table, pyarrow_wrap_chunked_array, pyarrow_wrap_schema, to_shared
 
 from katana.cpp.libgalois.graphs cimport Graph as CGraph
+from katana.cpp.libsupport.entity_type_manager cimport EntityTypeManager
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
 
 from katana.native_interfacing._pyarrow_wrappers import unchunked
@@ -16,9 +17,11 @@ from cython.operator cimport dereference as deref
 from libc.stdint cimport uint32_t
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
+from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
+from .entity_type cimport EntityType
 
 __all__ = ["GraphBase", "Graph"]
 
@@ -275,6 +278,28 @@ cdef class GraphBase:
         """
         return str(self.underlying_property_graph().rdg_dir(), encoding="UTF-8")
 
+    @property
+    def node_types(self):
+        """
+        The types of atomic node types in the graph.
+
+        :rtype: list[EntityType]
+        """
+        cdef const EntityTypeManager* manager = &self.underlying_property_graph().GetNodeTypeManager()
+        type_ids = manager.GetAtomicEntityTypeIDs()
+        types = [EntityType.make(manager, type_id) for type_id in type_ids]
+        return types
+
+    @property
+    def edge_types(self):
+        """
+        The types of atomic edge types in the graph.
+
+        :rtype: list
+        """
+        cdef const EntityTypeManager* manager = &self.underlying_property_graph().GetEdgeTypeManager()
+        types = manager.GetAtomicEntityTypeIDs()
+        return [EntityType.make(manager, typeid) for typeid in types]
 
 cdef class Graph(GraphBase):
     """

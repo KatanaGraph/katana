@@ -342,6 +342,16 @@ public:
     return std::nullopt;
   }
 
+  /// \returns a vector containing all atomic type names
+  std::vector<EntityTypeID> GetAtomicEntityTypeIDs() const {
+    std::vector<EntityTypeID> type_vec;
+    type_vec.reserve(atomic_type_name_to_entity_type_id_.size());
+    for (const auto& entry : atomic_type_name_to_entity_type_id_) {
+      type_vec.push_back(entry.second);
+    }
+    return type_vec;
+  }
+
   /// \returns the set of entity types that intersect
   /// the atomic type \p entity_type_id
   /// (assumes that the atomic type exists)

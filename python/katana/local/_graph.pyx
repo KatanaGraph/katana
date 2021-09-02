@@ -283,11 +283,11 @@ cdef class GraphBase:
         """
         The types of atomic node types in the graph.
 
-        :rtype: list
+        :rtype: list[EntityType]
         """
         cdef const EntityTypeManager* manager = &self.underlying_property_graph().GetNodeTypeManager()
         type_ids = manager.GetAtomicEntityTypeIDs()
-        types = [EntityType.Make(manager, type_id) for type_id in type_ids]
+        types = [EntityType.make(manager, type_id) for type_id in type_ids]
         return types
 
     @property
@@ -299,7 +299,7 @@ cdef class GraphBase:
         """
         cdef const EntityTypeManager* manager = &self.underlying_property_graph().GetEdgeTypeManager()
         types = manager.GetAtomicEntityTypeIDs()
-        return [EntityType.Make(manager, typeid) for typeid in types]
+        return [EntityType.make(manager, typeid) for typeid in types]
 
 cdef class Graph(GraphBase):
     """

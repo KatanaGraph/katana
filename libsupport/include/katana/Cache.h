@@ -22,7 +22,7 @@
 
 namespace katana {
 
-template <typename Key, typename Value>
+template <typename Key, typename Value, typename CallerPointer = void*>
 class KATANA_EXPORT Cache {
   using ListType = std::list<Key>;
   struct MapValue {
@@ -37,7 +37,9 @@ public:
   /// Construct an LRU cache that has a fixed number of entries.
   Cache(
       size_t capacity,  // number of entries
-      std::function<void(const Key& key)> evict_cb = nullptr)
+      std::function<
+          void(const Key& key, uint64_t approx_bytes, CallerPointer rdg)>
+          evict_cb = nullptr)
       : policy_(ReplacementPolicy::kLRUSize),
         capacity_(capacity),
         value_to_bytes_(nullptr),
@@ -48,7 +50,9 @@ public:
   Cache(
       size_t capacity,  // bytes of entries
       std::function<size_t(const Value& value)> value_to_bytes,
-      std::function<void(const Key& key)> evict_cb = nullptr)
+      std::function<
+          void(const Key& key, uint64_t approx_bytes, CallerPointer rdg)>
+          evict_cb = nullptr)
       : policy_(ReplacementPolicy::kLRUBytes),
         capacity_(capacity),
         value_to_bytes_(std::move(value_to_bytes)),
@@ -75,7 +79,7 @@ public:
     return key_to_value_.find(key) != key_to_value_.end();
   }
 
-  void Insert(const Key& key, const Value& value) {
+  void Insert(const Key& key, const Value& value, CallerPointer rdg = nullptr) {
     auto mapit = key_to_value_.find(key);
     if (mapit == key_to_value_.end()) {
       lru_list_.push_front(key);
@@ -87,7 +91,7 @@ public:
       mapit->second.value = value;
       UpdateLRU(mapit);
     }
-    EvictIfNecessary();
+    EvictIfNecessary(rdg);
   }
 
   std::optional<Value> Get(const Key& key) {
@@ -112,34 +116,37 @@ private:
     return mapit->second.value;
   }
 
-  void EvictOne() {
+  void EvictOne(CallerPointer rdg) {
     // evict item from the end of most recently used list
     auto tail = --lru_list_.end();
     KATANA_LOG_ASSERT(tail != lru_list_.end());
     Key evicted_key = std::move(*tail);
     lru_list_.erase(tail);
     auto evicted_value = std::move(key_to_value_.at(evicted_key).value);
+    uint64_t approx_evicted_bytes = 0;
     key_to_value_.erase(evicted_key);
     if (value_to_bytes_ != nullptr) {
-      total_bytes_ -= value_to_bytes_(evicted_value);
+      approx_evicted_bytes = value_to_bytes_(evicted_value);
+      total_bytes_ -= approx_evicted_bytes;
     }
     if (evict_cb_) {
-      evict_cb_(evicted_key);
+      evict_cb_(evicted_key, approx_evicted_bytes, rdg);
     }
   }
 
-  void EvictIfNecessary() {
+  void EvictIfNecessary(CallerPointer rdg) {
     switch (policy_) {
     case ReplacementPolicy::kLRUSize: {
       while (size() > capacity_) {
-        EvictOne();
+        EvictOne(rdg);
       }
     } break;
     case ReplacementPolicy::kLRUBytes: {
       KATANA_LOG_DEBUG_ASSERT(value_to_bytes_ != nullptr);
-      // Allow a single entry to exceed our byte capacity
+      // Allow a single entry to exceed our byte capacity.
+      // The new entry has already been added to the cache, hence > 1.
       while (size() > capacity_ && key_to_value_.size() > 1) {
-        EvictOne();
+        EvictOne(rdg);
       }
     } break;
     default:
@@ -158,7 +165,8 @@ private:
   size_t total_bytes_{0};
 
   std::function<size_t(const Value& value)> value_to_bytes_;
-  std::function<void(const Key& key)> evict_cb_;
+  std::function<void(const Key& key, uint64_t approx_bytes, CallerPointer rdg)>
+      evict_cb_;
 };
 
 }  // namespace katana

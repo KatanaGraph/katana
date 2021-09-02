@@ -42,6 +42,9 @@ struct KATANA_EXPORT RDGLoadOptions {
   /// List of edge properties that should be loaded
   /// nullptr means all edge properties will be loaded
   std::optional<std::vector<std::string>> edge_properties{std::nullopt};
+  // Each table should only contain a single column.
+  // Callback provides a pointer to the RDG so we can evict
+  // even before the PropertyGraph is created.
   tsuba::PropertyCache* prop_cache{nullptr};
 };
 
@@ -153,10 +156,12 @@ public:
   /// Ensure the node property at index `i` was written back to storage
   /// then free its memory
   katana::Result<void> UnloadNodeProperty(int i);
+  katana::Result<void> UnloadNodeProperty(const std::string& name);
 
   /// Ensure the edge property at index `i` was written back to storage
   /// then free its memory
   katana::Result<void> UnloadEdgeProperty(int i);
+  katana::Result<void> UnloadEdgeProperty(const std::string& name);
 
   /// Load node property with a particular name and insert it into the
   /// property table at index. If index is invalid, the property is put
@@ -344,7 +349,7 @@ private:
 
   std::unique_ptr<RDGCore> core_;
   // Optional property cache
-  PropertyCache* prop_cache_{nullptr};
+  tsuba::PropertyCache* prop_cache_{nullptr};
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;

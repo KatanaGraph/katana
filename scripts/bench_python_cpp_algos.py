@@ -275,7 +275,9 @@ def run_louvain(graph: Graph, input_args):
     graph.remove_node_property(property_name)
 
 
-def run_rootine(rootine, data, args_trails, average_range=3, **argv):
+def run_rootine(rootine, data, args_trails, **argv):
+    print(tuple(argv))
+    average_range = 3
     count = 0
     time_sum = 0
     glb_count = 0
@@ -285,7 +287,7 @@ def run_rootine(rootine, data, args_trails, average_range=3, **argv):
             count = 0
             time_sum = 0
         start = time.time()
-        rootine(*argv)
+        rootine(*tuple(argv))
         time_sum += time.time() - start
         count += 1
         glb_count += 1

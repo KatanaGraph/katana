@@ -79,8 +79,9 @@ del a
     )
 
 
-@pytest.mark.xfail("This crashes because of direct access to the thread pool.")
+@pytest.mark.xfail
 def test_set_threads_after_shutdown():
+    # This crashes because of direct access to the thread pool.
     run_python_subprocess(
         """
 import katana.local

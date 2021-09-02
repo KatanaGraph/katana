@@ -29,7 +29,7 @@ def check_schema(graph: Graph, property_name):
     assert node_schema.names[new_property_id] == property_name
 
 
-def create_json_dict():
+def create_raw_json_dict():
     data = {
         "btimestamp": 0,
         "db": "analytics",
@@ -275,6 +275,24 @@ def run_louvain(graph: Graph, input_args):
     graph.remove_node_property(property_name)
 
 
+def run_rootine(rootine, data, args_trails, average_range=3, **argv):
+    count = 0
+    time_sum = 0
+    glb_count = 0
+    for _ in range(args_trails):
+        if count == average_range:
+            data[str(rootine) + str(glb_count)] = time_sum/average_range
+            count = 0
+            time_sum = 0
+        start = time.time()
+        rootine(*argv)
+        time_sum += time.time() - start
+        count += 1
+        glb_count += 1
+
+    return data
+
+
 def run_all_gap(args):
     katana.local.initialize()
     print("Using threads:", katana.set_active_threads(args.threads))
@@ -339,7 +357,8 @@ def run_all_gap(args):
 
     # Load our graph
     input = next(item for item in inputs if item["name"] == args.graph)
-    data = create_json_dict()
+    data = create_raw_json_dict()
+
     if args.application in ["bfs", "sssp", "bc", "jaccard"]:
         graph_path = f"{args.input_dir}/{input['name']}"
         if not os.path.exists(graph_path):
@@ -347,21 +366,37 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path)
 
+        # if args.application == "bfs":
+        #     for _ in range(args.trials):
+        #         run_bfs(graph, input, args.source_nodes)
+
+        # if args.application == "sssp":
+        #     for _ in range(args.trials):
+        #         run_sssp(graph, input, args.source_nodes)
+
+        # if args.application == "jaccard":
+        #     for _ in range(args.trials):
+        #         run_jaccard(graph, input)
+
+        # if args.application == "bc":
+        #     for _ in range(args.trials):
+        #         run_bc(graph, input, args.source_nodes, 4)
+
         if args.application == "bfs":
-            for _ in range(args.trials):
-                run_bfs(graph, input, args.source_nodes)
+            data = run_rootine(run_bfs, data, args.trials,
+                               (graph, input, args.source_nodes))
 
         if args.application == "sssp":
-            for _ in range(args.trials):
-                run_sssp(graph, input, args.source_nodes)
+            data = run_rootine(run_sssp, data, args.trials,
+                               (graph, input, args.source_nodes))
 
         if args.application == "jaccard":
-            for _ in range(args.trials):
-                run_jaccard(graph, input)
+            data = run_rootine(run_jaccard, data, args.trials,
+                               (graph, input))
 
         if args.application == "bc":
-            for _ in range(args.trials):
-                run_bc(graph, input, args.source_nodes, 4)
+            data = run_rootine(run_bc, data, args.trials,
+                               (graph, input, args.source_nodes, 4))
 
     elif args.application in ["tc"]:
         graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"
@@ -370,9 +405,13 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path, [])
 
+        # if args.application == "tc":
+        #     for _ in range(args.trials):
+        #         run_tc(graph, input)
+
         if args.application == "tc":
-            for _ in range(args.trials):
-                run_tc(graph, input)
+            data = run_rootine(run_tc, data, args.trials,
+                               (graph, input))
 
     elif args.application in ["cc", "kcore"]:
         graph_path = f"{args.input_dir}/{input['symmetric_input']}"
@@ -381,13 +420,25 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path, [])
 
+        # if args.application == "cc":
+        #     for _ in range(args.trials):
+        #         run_cc(graph, input)
+
+        # if args.application == "kcore":
+        #     for _ in range(args.trials):
+        #         run_kcore(graph, input)
+
+        # if args.application == "louvain":
+        #     for _ in range(args.trials):
+        #         run_louvain(graph, input)
+
         if args.application == "cc":
-            for _ in range(args.trials):
-                run_cc(graph, input)
+            data = run_rootine(run_cc, data, args.trials,
+                               (graph, input))
 
         if args.application == "kcore":
-            for _ in range(args.trials):
-                run_kcore(graph, input)
+            data = run_rootine(run_kcore, data, args.trials,
+                               (graph, input))
 
     elif args.application in ["louvain"]:
         graph_path = f"{args.input_dir}/{input['symmetric_input']}"
@@ -397,8 +448,8 @@ def run_all_gap(args):
         graph = load_graph(graph_path)
 
         if args.application == "louvain":
-            for _ in range(args.trials):
-                run_louvain(graph, input)
+            data = run_rootine(run_louvain, data, args.trials,
+                               (graph, input))
 
     elif args.application in ["pagerank"]:
         # Using transpose file pagerank pull which is expected
@@ -409,9 +460,13 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path, [])
 
+        # if args.application == "pagerank":
+        #     for _ in range(args.trials):
+        #         run_pagerank(graph, input)
+
         if args.application == "pagerank":
-            for _ in range(args.trials):
-                run_pagerank(graph, input)
+            data = run_rootine(run_pagerank, data, args.trials,
+                               (graph, input))
 
 
 if __name__ == "__main__":

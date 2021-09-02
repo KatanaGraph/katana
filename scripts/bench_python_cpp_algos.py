@@ -407,8 +407,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--graph",
         default="GAP-road",
-        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand",
-        "rmat15"],
+        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand", "rmat15"],
         help="Graph name (default: %(default)s)",
     )
     parser.add_argument(

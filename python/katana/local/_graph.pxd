@@ -2,10 +2,13 @@ from cython import final
 
 from libc.stdint cimport uint64_t
 from libcpp.memory cimport shared_ptr, unique_ptr
+from libcpp.vector cimport vector
 from pyarrow.lib cimport CTable, Schema
 
 from katana.cpp.libgalois.graphs.Graph cimport GraphTopology, _PropertyGraph
 from katana.cpp.libsupport.result cimport Result
+
+from .entity_type cimport EntityType
 
 
 cdef _convert_string_list(l)
@@ -31,6 +34,7 @@ cdef class GraphBase:
     cpdef uint64_t num_edges(PropertyGraphInterface)
 
     cpdef uint64_t get_edge_dest(PropertyGraphInterface, uint64_t)
+
 
 cdef class Graph(GraphBase):
     cdef:

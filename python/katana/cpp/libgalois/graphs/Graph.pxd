@@ -155,7 +155,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
         shared_ptr[CTable] node_properties()
         shared_ptr[CTable] edge_properties()
-        EntityTypeManager& GetNodeTypeManager()
+        EntityTypeManager& GetNodeTypeManager() const
+        EntityTypeManager& GetEdgeTypeManager() const
 
         const string& rdg_dir()
 

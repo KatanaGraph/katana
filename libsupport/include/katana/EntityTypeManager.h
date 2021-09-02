@@ -360,11 +360,11 @@ public:
   }
 
   /// \returns a vector containing all atomic type names
-  std::vector<std::string> GetAtomicTypeNames() const {
-    std::vector<std::string> type_vec;
+  std::vector<EntityTypeID> GetAtomicEntityTypeIDs() const {
+    std::vector<EntityTypeID> type_vec;
     type_vec.reserve(atomic_type_name_to_entity_type_id_.size());
     for (const auto& entry : atomic_type_name_to_entity_type_id_) {
-      type_vec.push_back(entry.first);
+      type_vec.push_back(entry.second);
     }
     return type_vec;
   }

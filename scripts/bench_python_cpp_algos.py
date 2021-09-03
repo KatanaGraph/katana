@@ -44,6 +44,12 @@ def create_raw_json_dict():
     return data
 
 
+def save_statistics_as_json(bench_stats, path="experiment.json"):
+
+    with open(path, "w") as fp:
+        json.dump(bench_stats, fp, indent=4)
+
+
 def run_bfs(graph: Graph, input_args, source_node_file):
     property_name = "NewProp"
     start_node = input_args["source_node"]
@@ -276,14 +282,14 @@ def run_louvain(graph: Graph, input_args):
     graph.remove_node_property(property_name)
 
 
-def run_rootine(rootine, data, args_trails, argv):
+def run_routine(routine, data, args_trails, argv):
 
     glb_count = 0
     for _ in range(args_trails):
 
         start = time.time()
-        rootine(*argv)
-        data["queries"][str(rootine.__name__) + "_" +
+        routine(*argv)
+        data["queries"][str(routine.__name__) + "_" +
                         str(glb_count)] = time.time() - start
         glb_count += 1
 
@@ -374,18 +380,18 @@ def run_all_gap(args):
         graph = load_graph(graph_path)
 
         if args.application == "bfs":
-            data = run_rootine(run_bfs, data, args.trials,
+            data = run_routine(run_bfs, data, args.trials,
                                (graph, input, args.source_nodes))
 
         if args.application == "sssp":
-            data = run_rootine(run_sssp, data, args.trials,
+            data = run_routine(run_sssp, data, args.trials,
                                (graph, input, args.source_nodes))
 
         if args.application == "jaccard":
             data = run_rootine(run_jaccard, data, args.trials, (graph, input))
 
         if args.application == "bc":
-            data = run_rootine(run_bc, data, args.trials,
+            data = run_routine(run_bc, data, args.trials,
                                (graph, input, args.source_nodes, 4))
 
     elif args.application in ["tc"]:
@@ -482,7 +488,7 @@ if __name__ == "__main__":
         "--application",
         default="bfs",
         choices=["bfs", "sssp", "cc", "bc", "pagerank",
-                 "tc", "jaccard", "kcore", "louvain"],
+                 "tc", "jaccard", "kcore", "louvain", "all"],
         help="Application to run (default: %(default)s)",
     )
     parser.add_argument("--source-nodes", default="",

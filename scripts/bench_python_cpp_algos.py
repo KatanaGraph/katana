@@ -431,7 +431,29 @@ def run_all_gap(args):
         graph = load_graph(graph_path, [])
 
         if args.application == "pagerank":
-            data = run_rootine(run_pagerank, data, args.trials, (graph, input))
+            data = run_routine(run_pagerank, data, args.trials, (graph, input))
+
+    elif args.application in ["all"]:
+        graph_path = f"{args.input_dir}/{input['transpose_input']}"
+        if not os.path.exists(graph_path):
+            print(f"Symmetric Graph doesn't exist: {graph_path}")
+
+        graph = load_graph(graph_path, [])
+        data = run_routine(run_bfs, data, args.trials,
+                           (graph, input, args.source_nodes))
+        data = run_routine(run_sssp, data, args.trials,
+                           (graph, input, args.source_nodes))
+        data = run_routine(run_jaccard, data, args.trials, (graph, input))
+        data = run_routine(run_bc, data, args.trials,
+                           (graph, input, args.source_nodes, 4))
+        data = run_routine(run_bc, data, args.trials, (graph, input))
+        data = run_routine(run_tc, data, args.trials, (graph, input))
+        data = run_routine(run_cc, data, args.trials, (graph, input))
+        data = run_routine(run_kcore, data, args.trials, (graph, input))
+        data = run_routine(run_louvain, data, args.trials, (graph, input))
+        data = run_routine(run_pagerank, data, args.trials, (graph, input))
+
+    print(data)
 
 
 if __name__ == "__main__":

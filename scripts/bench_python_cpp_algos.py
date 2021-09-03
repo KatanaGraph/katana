@@ -29,7 +29,7 @@ def check_schema(graph: Graph, property_name):
     assert node_schema.names[new_property_id] == property_name
 
 
-def create_raw_json_dict():
+def create_empty_statistics():
     data = {
         "btimestamp": 0,
         "db": "analytics",
@@ -268,17 +268,16 @@ def run_louvain(graph: Graph, input_args):
     graph.remove_node_property(property_name)
 
 
-def run_routine(routine, data, args_trails, argv):
+def run_routine(rootine, data, args_trails, argv):
 
     glb_count = 0
     for _ in range(args_trails):
 
         start = time.time()
-        routine(*argv)
-        data["queries"][str(routine.__name__) + "_" + str(glb_count)] = time.time() - start
+        rootine(*argv)
+        data["queries"][str(rootine.__name__) + "_" + str(glb_count)] = time.time() - start
         glb_count += 1
 
-    print(data)
     return data
 
 
@@ -354,7 +353,7 @@ def run_all_gap(args):
 
     # Load our graph
     input = next(item for item in inputs if item["name"] == args.graph)
-    data = create_raw_json_dict()
+    data = create_empty_statistics()
 
     if args.application in ["bfs", "sssp", "bc", "jaccard"]:
         graph_path = f"{args.input_dir}/{input['name']}"
@@ -370,7 +369,7 @@ def run_all_gap(args):
             data = run_routine(run_sssp, data, args.trials, (graph, input, args.source_nodes))
 
         if args.application == "jaccard":
-            data = run_rootine(run_jaccard, data, args.trials, (graph, input))
+            data = run_routine(run_jaccard, data, args.trials, (graph, input))
 
         if args.application == "bc":
             data = run_routine(run_bc, data, args.trials, (graph, input, args.source_nodes, 4))
@@ -383,7 +382,7 @@ def run_all_gap(args):
         graph = load_graph(graph_path, [])
 
         if args.application == "tc":
-            data = run_rootine(run_tc, data, args.trials, (graph, input))
+            data = run_routine(run_tc, data, args.trials, (graph, input))
 
     elif args.application in ["cc", "kcore"]:
         graph_path = f"{args.input_dir}/{input['symmetric_input']}"
@@ -393,10 +392,10 @@ def run_all_gap(args):
         graph = load_graph(graph_path, [])
 
         if args.application == "cc":
-            data = run_rootine(run_cc, data, args.trials, (graph, input))
+            data = run_routine(run_cc, data, args.trials, (graph, input))
 
         if args.application == "kcore":
-            data = run_rootine(run_kcore, data, args.trials, (graph, input))
+            data = run_routine(run_kcore, data, args.trials, (graph, input))
 
     elif args.application in ["louvain"]:
         graph_path = f"{args.input_dir}/{input['symmetric_input']}"
@@ -406,7 +405,7 @@ def run_all_gap(args):
         graph = load_graph(graph_path)
 
         if args.application == "louvain":
-            data = run_rootine(run_louvain, data, args.trials, (graph, input))
+            data = run_routine(run_louvain, data, args.trials, (graph, input))
 
     elif args.application in ["pagerank"]:
         # Using transpose file pagerank pull which is expected

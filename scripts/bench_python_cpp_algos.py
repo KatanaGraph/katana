@@ -275,7 +275,7 @@ def run_routine(rootine, data, args_trails, argv):
 
         start = time.time()
         rootine(*argv)
-        data["queries"][str(rootine.__name__) + "_" + str(glb_count)] = time.time() - start
+        data["routines"][str(rootine.__name__) + "_" + str(glb_count)] = time.time() - start
         glb_count += 1
 
     return data

@@ -3,6 +3,7 @@ import contextlib
 import os
 import sys
 import time
+import json
 
 import numpy as np
 from pyarrow import Schema

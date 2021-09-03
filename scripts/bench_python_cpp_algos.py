@@ -36,7 +36,7 @@ def create_empty_statistics():
         "etimestamp": 0,
         "import_time": 0,
         "num_partitions": 0,
-        "queries": {},
+        "routines": {},
         "datetime": "",
         "katana_sha": "",
     }
@@ -424,19 +424,42 @@ def run_all_gap(args):
         if not os.path.exists(graph_path):
             print(f"Symmetric Graph doesn't exist: {graph_path}")
 
-        graph = load_graph(graph_path, [])
+        graph_path = f"{args.input_dir}/{input['name']}"
+        if not os.path.exists(graph_path):
+            print(f"Graph doesn't exist: {graph_path}")
+
+        graph = load_graph(graph_path)
+
         data = run_routine(run_bfs, data, args.trials, (graph, input, args.source_nodes))
         data = run_routine(run_sssp, data, args.trials, (graph, input, args.source_nodes))
         data = run_routine(run_jaccard, data, args.trials, (graph, input))
         data = run_routine(run_bc, data, args.trials, (graph, input, args.source_nodes, 4))
-        data = run_routine(run_bc, data, args.trials, (graph, input))
+
+        graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"
+        if not os.path.exists(graph_path):
+            print(f"Symmetric clean Graph doesn't exist: {graph_path}")
+
+        graph = load_graph(graph_path, [])
+
         data = run_routine(run_tc, data, args.trials, (graph, input))
         data = run_routine(run_cc, data, args.trials, (graph, input))
         data = run_routine(run_kcore, data, args.trials, (graph, input))
-        data = run_routine(run_louvain, data, args.trials, (graph, input))
-        data = run_routine(run_pagerank, data, args.trials, (graph, input))
 
-    print(data)
+        graph_path = f"{args.input_dir}/{input['symmetric_input']}"
+        if not os.path.exists(graph_path):
+            print(f"Symmetric Graph doesn't exist: {graph_path}")
+
+        graph = load_graph(graph_path)
+
+        data = run_routine(run_louvain, data, args.trials, (graph, input))
+
+        graph_path = f"{args.input_dir}/{input['transpose_input']}"
+        if not os.path.exists(graph_path):
+            print(f"Symmetric Graph doesn't exist: {graph_path}")
+
+        graph = load_graph(graph_path, [])
+
+        data = run_routine(run_pagerank, data, args.trials, (graph, input))
 
 
 if __name__ == "__main__":

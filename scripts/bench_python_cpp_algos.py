@@ -448,6 +448,7 @@ def run_all_gap(args):
         data = run_routine(run_kcore, data, args.trials, (graph, input))
         data = run_routine(run_louvain, data, args.trials, (graph, input))
         data = run_routine(run_pagerank, data, args.trials, (graph, input))
+
     print(data)
 
 

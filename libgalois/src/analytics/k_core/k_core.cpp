@@ -227,7 +227,8 @@ katana::Result<void>
 katana::analytics::KCore(
     katana::PropertyGraph* pg, uint32_t k_core_number,
     const std::string& output_property_name, KCorePlan algo) {
-  katana::analytics::TemporaryPropertyGuard temporary_property{pg};
+  katana::analytics::TemporaryPropertyGuard temporary_property{
+      pg->NodeMutablePropertyView()};
   if (auto result = ConstructNodeProperties<std::tuple<KCoreNodeCurrentDegree>>(
           pg, {temporary_property.name()});
       !result) {

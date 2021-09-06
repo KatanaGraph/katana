@@ -60,10 +60,10 @@ struct is_serializable {
 
 //! Indicates if T is std::map or std::unordered_map
 template <typename, typename = void>
-struct is_map_type : std::false_type {};
+struct is_map : std::false_type {};
 
 template <typename T>
-struct is_map_type<T, std::void_t<typename T::mapped_type>> : std::true_type {};
+struct is_map<T, std::void_t<typename T::mapped_type>> : std::true_type {};
 
 }  // namespace katana
 

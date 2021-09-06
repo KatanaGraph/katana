@@ -66,5 +66,3 @@ katana::analytics::IsApproximateDegreeDistributionPowerLaw(
 
 thread_local int
     katana::analytics::TemporaryPropertyGuard::temporary_property_counter = 0;
-thread_local int katana::analytics::TemporaryEdgePropertyGuard::
-    temporary_edge_property_counter = 0;

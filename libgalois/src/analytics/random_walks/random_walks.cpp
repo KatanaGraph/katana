@@ -512,7 +512,7 @@ katana::analytics::RandomWalks(PropertyGraph* pg, RandomWalksPlan plan) {
     return RandomWalksWithWrap<Node2VecAlgo>(graph, plan);
   }
   case RandomWalksPlan::kEdge2Vec: {
-    TemporaryPropertyGuard tmp_edge_prop{pg};
+    TemporaryPropertyGuard tmp_edge_prop{pg->NodeMutablePropertyView()};
     auto graph = KATANA_CHECKED(
         Edge2VecAlgo::SortedGraphView::Make(pg, {}, {tmp_edge_prop.name()}));
     return RandomWalksWithWrap<Edge2VecAlgo>(graph, plan);

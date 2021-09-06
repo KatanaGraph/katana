@@ -34,13 +34,13 @@ class TypedPropertyGraph {
   using NodeView = PropertyViewTuple<NodeProps>;
   using EdgeView = PropertyViewTuple<EdgeProps>;
 
-  PropertyGraph* pfg_;
+  PropertyGraph* pg_;
 
   NodeView node_view_;
   EdgeView edge_view_;
 
   TypedPropertyGraph(PropertyGraph* pg, NodeView node_view, EdgeView edge_view)
-      : pfg_(pg),
+      : pg_(pg),
         node_view_(std::move(node_view)),
         edge_view_(std::move(edge_view)) {}
 
@@ -56,13 +56,13 @@ public:
 
   // Standard container concepts
 
-  node_iterator begin() const { return pfg_->begin(); }
+  node_iterator begin() const { return pg_->begin(); }
 
-  node_iterator end() const { return pfg_->end(); }
+  node_iterator end() const { return pg_->end(); }
 
-  size_t size() const { return pfg_->size(); }
+  size_t size() const { return pg_->size(); }
 
-  bool empty() const { return pfg_->empty(); }
+  bool empty() const { return pg_->empty(); }
 
   // Graph accessors
 
@@ -131,11 +131,11 @@ public:
    * @returns node iterator to the edge destination
    */
   node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    return pfg_->GetEdgeDest(edge);
+    return pg_->GetEdgeDest(edge);
   }
 
-  uint64_t num_nodes() const { return pfg_->num_nodes(); }
-  uint64_t num_edges() const { return pfg_->num_edges(); }
+  uint64_t num_nodes() const { return pg_->num_nodes(); }
+  uint64_t num_edges() const { return pg_->num_edges(); }
 
   /**
    * Gets the edge range of some node.
@@ -143,7 +143,7 @@ public:
    * @param node node to get the edge range of
    * @returns iterable edge range for node.
    */
-  edges_range edges(Node node) const { return pfg_->edges(node); }
+  edges_range edges(Node node) const { return pg_->edges(node); }
 
   /**
    * Gets the edge range of some node.
@@ -151,7 +151,7 @@ public:
    * @param node node to get the edge range of
    * @returns iterable edge range for node.
    */
-  edges_range edges(node_iterator node) const { return pfg_->edges(*node); }
+  edges_range edges(node_iterator node) const { return pg_->edges(*node); }
   // TODO(amp): [[deprecated("use edges(Node node)")]]
 
   /**
@@ -160,9 +160,7 @@ public:
    * @param node node to get the edge of
    * @returns iterator to first edge of node
    */
-  edge_iterator edge_begin(Node node) const {
-    return pfg_->edges(node).begin();
-  }
+  edge_iterator edge_begin(Node node) const { return pg_->edges(node).begin(); }
   // TODO(amp): [[deprecated("use edges(node)")]]
 
   /**
@@ -172,15 +170,16 @@ public:
    * @returns iterator to the end of the edges of node, i.e. the first edge of
    *     the next node (or an "end" iterator if there is no next node)
    */
-  edge_iterator edge_end(Node node) const { return pfg_->edges(node).end(); }
+  edge_iterator edge_end(Node node) const { return pg_->edges(node).end(); }
   // TODO(amp): [[deprecated("use edges(node)")]]
 
+  edges_range all_edges() const noexcept { return pg_->topology().all_edges(); }
   /**
    * Accessor for the underlying PropertyGraph.
    *
    * @returns pointer to the underlying PropertyGraph.
    */
-  const PropertyGraph& GetPropertyGraph() const { return *pfg_; }
+  const PropertyGraph& GetPropertyGraph() const { return *pg_; }
 
   // Graph constructors
   static Result<TypedPropertyGraph<NodeProps, EdgeProps>> Make(

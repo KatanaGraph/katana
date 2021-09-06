@@ -54,7 +54,8 @@ PagerankPushAsynchronous(
   katana::EnsurePreallocated(5, 5 * pg->num_nodes() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
-  katana::analytics::TemporaryPropertyGuard temporary_property{pg};
+  katana::analytics::TemporaryPropertyGuard temporary_property{
+      pg->NodeMutablePropertyView()};
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
           pg, {output_property_name, temporary_property.name()});
@@ -113,7 +114,8 @@ PagerankPushSynchronous(
   katana::EnsurePreallocated(5, 5 * pg->num_nodes() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
-  katana::analytics::TemporaryPropertyGuard temporary_property{pg};
+  katana::analytics::TemporaryPropertyGuard temporary_property{
+      pg->NodeMutablePropertyView()};
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
           pg, {output_property_name, temporary_property.name()});

@@ -358,7 +358,7 @@ public:
       katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
       const std::vector<std::string>& temp_node_property_names,
       katana::NUMAArray<uint64_t>& clusters_orig, LouvainClusteringPlan plan) {
-    TemporaryEdgePropertyGuard temp_edge_property{pg};
+    TemporaryPropertyGuard temp_edge_property{pg->EdgeMutablePropertyView()};
     std::vector<std::string> temp_edge_property_names = {
         temp_edge_property.name()};
 
@@ -508,12 +508,8 @@ AddDefaultEdgeWeight(
       KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
           pg, {}, {edge_weight_property_name})));
   katana::do_all(
-      katana::iterate(typed_graph),
-      [&](auto n) {
-        for (auto ii : typed_graph.edges(n)) {
-          typed_graph.template GetEdgeData<EdgeWeightType>(ii) = 1;
-        }
-      },
+      katana::iterate(typed_graph.all_edges()),
+      [&](auto e) { typed_graph.template GetEdgeData<EdgeWeightType>(e) = 1; },
       katana::steal(), katana::loopname("InitEdgeWeight"));
   return katana::ResultSuccess();
 }
@@ -530,7 +526,7 @@ LouvainClusteringWithWrap(
   std::vector<TemporaryPropertyGuard> temp_node_properties(3);
   std::generate_n(
       temp_node_properties.begin(), temp_node_properties.size(),
-      [&]() { return TemporaryPropertyGuard{pg}; });
+      [&]() { return TemporaryPropertyGuard{pg->NodeMutablePropertyView()}; });
   std::vector<std::string> temp_node_property_names(
       temp_node_properties.size());
   std::transform(
@@ -586,7 +582,8 @@ katana::analytics::LouvainClustering(
   // If edge property name empty, add int64_t property
   // add initialize it to 1.
   if (edge_weight_property_name.empty()) {
-    TemporaryEdgePropertyGuard temporary_edge_property{pg};
+    TemporaryPropertyGuard temporary_edge_property{
+        pg->EdgeMutablePropertyView()};
     struct EdgeWt : public katana::PODProperty<int64_t> {};
     KATANA_CHECKED(
         AddDefaultEdgeWeight<EdgeWt>(pg, temporary_edge_property.name()));
@@ -753,7 +750,8 @@ katana::analytics::LouvainClusteringStatistics::Compute(
   // If edge property name is empty, add int64_t edge property and
   // initialize it to 1.
   if (edge_weight_property_name.empty()) {
-    TemporaryEdgePropertyGuard temporary_edge_property{pg};
+    TemporaryPropertyGuard temporary_edge_property{
+        pg->EdgeMutablePropertyView()};
     struct EdgeWt : public katana::PODProperty<int64_t> {};
     KATANA_CHECKED(
         AddDefaultEdgeWeight<EdgeWt>(pg, temporary_edge_property.name()));

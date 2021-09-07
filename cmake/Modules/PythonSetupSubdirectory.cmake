@@ -165,6 +165,17 @@ LINKER_WRAPPER_FLAG_SEP=$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_LINKER_WRAPPER_FLA
 ")
 endfunction()
 
+
+# Build a python project as part of the cmake build.
+#
+# This attempts to pass all compiler and linker flags to setuptools in the python project. However,
+# CMake provides no way to directly get compiler or linker flags, so we need to reimplement the
+# logic by looking at the properties of our dependencies and putting things together. This is not
+# perfect, but works in most cases.
+#
+# Because of these issues with CMake, we also don't support transitive dependencies since there
+# is no way to trace the dependencies from CMake code. So ALL dependencies need to be provided
+# even if they "should" be implied by transitive dependencies.
 function(add_python_setuptools_target TARGET_NAME)
   set(no_value_options)
   set(one_value_options SETUP_DIRECTORY COMPONENT)

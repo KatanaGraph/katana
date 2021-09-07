@@ -268,14 +268,14 @@ def run_louvain(graph: Graph, input_args):
     graph.remove_node_property(property_name)
 
 
-def run_routine(rootine, data, args_trails, argv):
+def run_routine(routine, data, args_trails, argv):
 
     glb_count = 0
     for _ in range(args_trails):
 
         start = time.time()
-        rootine(*argv)
-        data["routines"][str(rootine.__name__) + "_" + str(glb_count)] = time.time() - start
+        routine(*argv)
+        data["routines"][str(routine.__name__) + "_" + str(glb_count)] = time.time() - start
         glb_count += 1
 
     return data
@@ -461,6 +461,9 @@ def run_all_gap(args):
 
         data = run_routine(run_pagerank, data, args.trials, (graph, input))
 
+        if args.save_json:
+            save_statistics_as_json(data)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark performance of routines")
@@ -474,6 +477,9 @@ if __name__ == "__main__":
         help="Number of threads to use (default: query sinfo). Should match max threads.",
     )
     parser.add_argument("--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.")
+
+    parser.add_argument("--save-json", default=False, help="Saving the benchmarking information as a JSON file.")
+
     parser.add_argument(
         "--graph",
         default="GAP-road",

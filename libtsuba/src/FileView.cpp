@@ -68,7 +68,9 @@ FileView::Bind(
   if (in_end < begin) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
-        "begin is larger than end or the size of the file");
+        "begin is larger than end or the size of the file - begin: {}, "
+        "requested end: {}, size of file: {}",
+        begin, end, buf.size);
   }
 
   // SCB 2020-07-23: Given that page_shift_ is treated as a compile-time

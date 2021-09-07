@@ -311,6 +311,18 @@ include(HandleSanitizer)
 
 include(CheckEndian)
 
+find_package(Arrow REQUIRED)
+if(TARGET arrow::arrow)
+  # Conan package
+  # These are the names we use elsewhere.
+else()
+  # Libarrow project cmake
+  get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
+  find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
+  add_library(arrow::arrow ALIAS arrow_shared)
+  add_library(arrow::parquet ALIAS parquet_shared)
+endif()
+
 # Testing-only dependencies
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
   find_package(benchmark REQUIRED)

@@ -43,16 +43,7 @@ target_include_directories(katana_support PUBLIC
 
 set_common_katana_library_options(katana_support ALWAYS_SHARED)
 
-find_package(Arrow REQUIRED)
-if(TARGET arrow::arrow)
-  # Conan package
-  target_link_libraries(katana_support PUBLIC arrow::arrow arrow::parquet)
-else()
-  # Libarrow project cmake
-   get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
-   find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
-   target_link_libraries(katana_support PUBLIC arrow_shared parquet_shared)
-endif()
+target_link_libraries(katana_support PUBLIC arrow::arrow arrow::parquet)
 
 
 find_package(nlohmann_json 3.7.3 REQUIRED)

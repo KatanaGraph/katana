@@ -44,9 +44,9 @@ def create_empty_statistics():
     return data
 
 
-def save_statistics_as_json(bench_stats, path="experiment.json"):
+def save_statistics_as_json(bench_stats, path="./"):
 
-    with open(path, "w") as fp:
+    with open(path + "experiments.json", "w") as fp:
         json.dump(bench_stats, fp, indent=4)
 
 
@@ -462,7 +462,7 @@ def run_all_gap(args):
         data = run_routine(run_pagerank, data, args.trials, (graph, input))
 
         if args.save_json:
-            save_statistics_as_json(data)
+            save_statistics_as_json(data, args.save_dir)
 
 
 if __name__ == "__main__":
@@ -479,6 +479,8 @@ if __name__ == "__main__":
     parser.add_argument("--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.")
 
     parser.add_argument("--save-json", default=False, help="Saving the benchmarking information as a JSON file.")
+
+    parser.add_argument("--save-dir", default="./", help="Path to the save directory (default: %(default)s)")
 
     parser.add_argument(
         "--graph",

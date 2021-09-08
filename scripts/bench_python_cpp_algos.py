@@ -4,8 +4,10 @@ import json
 import os
 import sys
 import time
+from datetime import datetime
 
 import numpy as np
+import pytz
 from pyarrow import Schema
 
 import katana.local
@@ -29,28 +31,32 @@ def check_schema(graph: Graph, property_name):
     assert node_schema.names[new_property_id] == property_name
 
 
-def create_empty_statistics():
+def create_empty_statistics(args):
+    now = datetime.now(pytz.timezone("US/Central"))
     data = {
-        "btimestamp": 0,
-        "db": "analytics",
-        "etimestamp": 0,
+        "graph": args.graph,
+        "threads": args.threads,
+        "thread-spin": args.thread_spin,
+        "source-nodes": args.source_nodes,
+        "trials": args.trials,
         "import_time": 0,
         "num_partitions": 0,
         "routines": {},
-        "datetime": "",
+        "duration": time.time(),
+        "datetime": now.strftime("%d/%m/%Y %H:%M:%S"),
         "katana_sha": "",
     }
 
     return data
 
 
-def save_statistics_as_json(bench_stats, path="./"):
-
-    with open(path + "experiments.json", "w") as fp:
+def save_statistics_as_json(bench_stats, path="."):
+    bench_stats["duration"] = time.time() - bench_stats["duration"]
+    with open(f"{path}/experiments.json", "w") as fp:
         json.dump(bench_stats, fp, indent=4)
 
 
-def run_bfs(graph: Graph, input_args, source_node_file):
+def bfs(graph: Graph, input_args, source_node_file=""):
     property_name = "NewProp"
     start_node = input_args["source_node"]
 
@@ -59,7 +65,7 @@ def run_bfs(graph: Graph, input_args, source_node_file):
     if "road" in input_args["name"]:
         bfs_plan = analytics.BfsPlan.asynchronous()
 
-    if not source_node_file == "":
+    if source_node_file:
         if not os.path.exists(source_node_file):
             print(f"Source node file doesn't exist: {source_node_file}")
         with open(source_node_file, "r") as fi:
@@ -88,7 +94,7 @@ def run_bfs(graph: Graph, input_args, source_node_file):
         graph.remove_node_property(property_name)
 
 
-def run_sssp(graph: Graph, input_args, source_node_file):
+def sssp(graph: Graph, input_args, source_node_file=""):
     property_name = "NewProp"
     start_node = input_args["source_node"]
     edge_prop_name = input_args["edge_wt"]
@@ -97,7 +103,7 @@ def run_sssp(graph: Graph, input_args, source_node_file):
     if "kron" in input_args["name"] or "urand" in input_args["name"]:
         sssp_plan = analytics.SsspPlan.delta_step_fusion(input_args["sssp_delta"])
 
-    if not source_node_file == "":
+    if source_node_file:
         if not os.path.exists(source_node_file):
             print(f"Source node file doesn't exist: {source_node_file}")
         with open(source_node_file, "r") as fi:
@@ -128,7 +134,7 @@ def run_sssp(graph: Graph, input_args, source_node_file):
         graph.remove_node_property(property_name)
 
 
-def run_jaccard(graph: Graph, input_args):
+def jaccard(graph: Graph, input_args):
     property_name = "NewProp"
     compare_node = input_args["source_node"]
 
@@ -147,7 +153,7 @@ def run_jaccard(graph: Graph, input_args):
     graph.remove_node_property(property_name)
 
 
-def run_pagerank(graph: Graph, _input_args):
+def pagerank(graph: Graph, _input_args):
     property_name = "NewProp"
 
     tolerance = 0.0001
@@ -168,13 +174,13 @@ def run_pagerank(graph: Graph, _input_args):
     graph.remove_node_property(property_name)
 
 
-def run_bc(graph: Graph, input_args, source_node_file, num_sources):
+def bc(graph: Graph, input_args, source_node_file="", num_sources=4):
     property_name = "NewProp"
     start_node = input_args["source_node"]
 
     bc_plan = analytics.BetweennessCentralityPlan.level()
 
-    if not source_node_file == "":
+    if source_node_file:
         if not os.path.exists(source_node_file):
             print(f"Source node file doesn't exist: {source_node_file}")
         with open(source_node_file, "r") as fi:
@@ -210,7 +216,7 @@ def run_bc(graph: Graph, input_args, source_node_file, num_sources):
         graph.remove_node_property(property_name)
 
 
-def run_tc(graph: Graph, _input_args):
+def tc(graph: Graph, _input_args):
     analytics.sort_all_edges_by_dest(graph)
     tc_plan = analytics.TriangleCountPlan.ordered_count(edges_sorted=True)
 
@@ -220,7 +226,7 @@ def run_tc(graph: Graph, _input_args):
     print(f"STATS:\nNumber of Triangles: {n}")
 
 
-def run_cc(graph: Graph, _input_args):
+def cc(graph: Graph, _input_args):
     property_name = "NewProp"
 
     with time_block("connected components"):
@@ -235,7 +241,7 @@ def run_cc(graph: Graph, _input_args):
     graph.remove_node_property(property_name)
 
 
-def run_kcore(graph: Graph, _input_args):
+def kcore(graph: Graph, _input_args):
     property_name = "NewProp"
     k = 10
 
@@ -251,7 +257,7 @@ def run_kcore(graph: Graph, _input_args):
     graph.remove_node_property(property_name)
 
 
-def run_louvain(graph: Graph, input_args):
+def louvain(graph: Graph, input_args):
     property_name = "NewProp"
     edge_prop_name = input_args["edge_wt"]
 
@@ -275,7 +281,7 @@ def run_routine(routine, data, args_trails, argv):
 
         start = time.time()
         routine(*argv)
-        data["routines"][str(routine.__name__) + "_" + str(glb_count)] = time.time() - start
+        data["routines"][f"{str(routine.__name__)}_{str(glb_count)}"] = time.time() - start
         glb_count += 1
 
     return data
@@ -353,73 +359,67 @@ def run_all_gap(args):
 
     # Load our graph
     input = next(item for item in inputs if item["name"] == args.graph)
-    data = create_empty_statistics()
+    data = create_empty_statistics(args)
 
-    if args.application in ["bfs", "sssp", "bc", "jaccard"]:
-        graph_path = f"{args.input_dir}/{input['name']}"
-        if not os.path.exists(graph_path):
-            print(f"Graph doesn't exist: {graph_path}")
+    routine_name_args_mappings = {
+        "bfs": [bfs, (args.source_nodes)],
+        "sssp": (sssp, (args.source_nodes)),
+        "jaccard": (jaccard, ()),
+        "bc": (bc, (args.source_nodes, 8)),
+        "tc": (tc, ()),
+        "cc": (cc, ()),
+        "kcore": (kcore, ()),
+        "louvain": (louvain, ()),
+        "pagerank": (pagerank, ()),
+    }
 
-        graph = load_graph(graph_path)
+    if args.application not in ["all"]:
+        if args.application in ["bfs", "sssp", "bc", "jaccard"]:
+            graph_path = f"{args.input_dir}/{input['name']}"
+            if not os.path.exists(graph_path):
+                print(f"Graph doesn't exist: {graph_path}")
 
-        if args.application == "bfs":
-            data = run_routine(run_bfs, data, args.trials, (graph, input, args.source_nodes))
+            graph = load_graph(graph_path)
 
-        if args.application == "sssp":
-            data = run_routine(run_sssp, data, args.trials, (graph, input, args.source_nodes))
+        elif args.application in ["tc"]:
+            graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"
+            if not os.path.exists(graph_path):
+                print(f"Symmetric clean Graph doesn't exist: {graph_path}")
 
-        if args.application == "jaccard":
-            data = run_routine(run_jaccard, data, args.trials, (graph, input))
+            graph = load_graph(graph_path, [])
 
-        if args.application == "bc":
-            data = run_routine(run_bc, data, args.trials, (graph, input, args.source_nodes, 4))
+        elif args.application in ["cc", "kcore"]:
+            graph_path = f"{args.input_dir}/{input['symmetric_input']}"
+            if not os.path.exists(graph_path):
+                print(f"Symmetric Graph doesn't exist: {graph_path}")
 
-    elif args.application in ["tc"]:
-        graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"
-        if not os.path.exists(graph_path):
-            print(f"Symmetric clean Graph doesn't exist: {graph_path}")
+            graph = load_graph(graph_path, [])
 
-        graph = load_graph(graph_path, [])
+        elif args.application in ["louvain"]:
+            graph_path = f"{args.input_dir}/{input['symmetric_input']}"
+            if not os.path.exists(graph_path):
+                print(f"Symmetric Graph doesn't exist: {graph_path}")
 
-        if args.application == "tc":
-            data = run_routine(run_tc, data, args.trials, (graph, input))
+            graph = load_graph(graph_path)
 
-    elif args.application in ["cc", "kcore"]:
-        graph_path = f"{args.input_dir}/{input['symmetric_input']}"
-        if not os.path.exists(graph_path):
-            print(f"Symmetric Graph doesn't exist: {graph_path}")
+        elif args.application in ["pagerank"]:
+            # Using transpose file pagerank pull which is expected
+            # to perform better than pagerank push algorithm
+            graph_path = f"{args.input_dir}/{input['transpose_input']}"
+            if not os.path.exists(graph_path):
+                print(f"Symmetric Graph doesn't exist: {graph_path}")
 
-        graph = load_graph(graph_path, [])
+            graph = load_graph(graph_path, [])
 
-        if args.application == "cc":
-            data = run_routine(run_cc, data, args.trials, (graph, input))
+        routine_args = (graph, input)
 
-        if args.application == "kcore":
-            data = run_routine(run_kcore, data, args.trials, (graph, input))
+        additional_args = routine_name_args_mappings[args.application][1]
+        if additional_args:
+            routine_args += additional_args
 
-    elif args.application in ["louvain"]:
-        graph_path = f"{args.input_dir}/{input['symmetric_input']}"
-        if not os.path.exists(graph_path):
-            print(f"Symmetric Graph doesn't exist: {graph_path}")
+        data = run_routine(routine_name_args_mappings[args.application][0], data, args.trials, routine_args)
 
-        graph = load_graph(graph_path)
-
-        if args.application == "louvain":
-            data = run_routine(run_louvain, data, args.trials, (graph, input))
-
-    elif args.application in ["pagerank"]:
-        # Using transpose file pagerank pull which is expected
-        # to perform better than pagerank push algorithm
-        graph_path = f"{args.input_dir}/{input['transpose_input']}"
-        if not os.path.exists(graph_path):
-            print(f"Symmetric Graph doesn't exist: {graph_path}")
-
-        graph = load_graph(graph_path, [])
-
-        if args.application == "pagerank":
-            data = run_routine(run_pagerank, data, args.trials, (graph, input))
-
-    elif args.application in ["all"]:
+    else:
         graph_path = f"{args.input_dir}/{input['transpose_input']}"
         if not os.path.exists(graph_path):
             print(f"Symmetric Graph doesn't exist: {graph_path}")
@@ -430,10 +430,10 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path)
 
-        data = run_routine(run_bfs, data, args.trials, (graph, input, args.source_nodes))
-        data = run_routine(run_sssp, data, args.trials, (graph, input, args.source_nodes))
-        data = run_routine(run_jaccard, data, args.trials, (graph, input))
-        data = run_routine(run_bc, data, args.trials, (graph, input, args.source_nodes, 4))
+        data = run_routine(bfs, data, args.trials, (graph, input, args.source_nodes))
+        data = run_routine(sssp, data, args.trials, (graph, input, args.source_nodes))
+        data = run_routine(jaccard, data, args.trials, (graph, input))
+        data = run_routine(bc, data, args.trials, (graph, input, args.source_nodes, 4))
 
         graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"
         if not os.path.exists(graph_path):
@@ -441,9 +441,9 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path, [])
 
-        data = run_routine(run_tc, data, args.trials, (graph, input))
-        data = run_routine(run_cc, data, args.trials, (graph, input))
-        data = run_routine(run_kcore, data, args.trials, (graph, input))
+        data = run_routine(tc, data, args.trials, (graph, input))
+        data = run_routine(cc, data, args.trials, (graph, input))
+        data = run_routine(kcore, data, args.trials, (graph, input))
 
         graph_path = f"{args.input_dir}/{input['symmetric_input']}"
         if not os.path.exists(graph_path):
@@ -451,7 +451,7 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path)
 
-        data = run_routine(run_louvain, data, args.trials, (graph, input))
+        data = run_routine(louvain, data, args.trials, (graph, input))
 
         graph_path = f"{args.input_dir}/{input['transpose_input']}"
         if not os.path.exists(graph_path):
@@ -459,10 +459,10 @@ def run_all_gap(args):
 
         graph = load_graph(graph_path, [])
 
-        data = run_routine(run_pagerank, data, args.trials, (graph, input))
+        data = run_routine(pagerank, data, args.trials, (graph, input))
 
-        if args.save_json:
-            save_statistics_as_json(data, args.save_dir)
+    if args.save_json:
+        save_statistics_as_json(data, args.save_dir)
 
 
 if __name__ == "__main__":

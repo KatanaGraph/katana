@@ -13,7 +13,7 @@ from pyarrow import Schema
 import katana.local
 from katana.local import Graph, analytics
 
-# TODO(amp): This script needs to be tested in CI.
+# TODO(giorgi): This script needs to be tested in CI.
 
 
 @contextlib.contextmanager

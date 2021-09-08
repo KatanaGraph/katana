@@ -19,4 +19,3 @@ jobs:
           error: 'You need at least one "JIRA: KAT-<issue number>" line below the title line. If there is no jira associated with this PR/commit you may also use JIRA: NOJIRA. Please see docs/contributing/git-style.rst#submitting-changes for examples'
           excludeTitle: 'true'
           excludeDescription: 'true'
-          checkAllCommitMessages: 'false'

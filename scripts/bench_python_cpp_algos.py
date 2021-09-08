@@ -56,7 +56,7 @@ def save_statistics_as_json(bench_stats, path="."):
     with open(f"{path}/experiments.json", "w") as fp:
         try:
             json.dump(bench_stats, fp, indent=4)
-        except:
+        except SystemError:
             print("JSON dump was unsuccessful.")
             return False
     return True

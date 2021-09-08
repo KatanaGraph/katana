@@ -59,6 +59,7 @@ def save_statistics_as_json(bench_stats, path="."):
         except:
             print("JSON dump was unsuccessful.")
             return False
+    return True
 
 
 def bfs(graph: Graph, input_args, source_node_file=""):

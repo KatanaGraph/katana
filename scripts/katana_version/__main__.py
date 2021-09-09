@@ -405,12 +405,15 @@ def get_branch_kind(current_branch, kinds: Iterable[BranchKind]):
 def check_at_branch(branch, config):
     check_remotes(config)
     if git.get_hash(f"{config.open.upstream_remote}/{branch}", config.open) != git.get_hash(git.HEAD, config.open):
-        raise StateError(f"{config.open.dir} HEAD is up to date with {branch}")
+        raise StateError(
+            f"{config.open.dir} HEAD is up NOT to date with {branch}. "
+            "Did you forget to merge the most recent version bump PR in the enterprise repository?"
+        )
 
     if config.has_enterprise and git.get_hash(
         f"{config.enterprise.upstream_remote}/{branch}", config.enterprise
     ) != git.get_hash(git.HEAD, config.enterprise):
-        raise StateError(f"{config.enterprise.dir} HEAD is up to date with {branch}")
+        raise StateError(f"{config.enterprise.dir} HEAD is NOT up to date with {branch}")
 
 
 def bump_subcommand(args):

@@ -369,7 +369,7 @@ def run_all_gap(args):
     data = create_empty_statistics(args)
     PathExt = namedtuple("PathExt", ["warn_prefix", "path_ext"])
     Routine = namedtuple("Routine", ["name", "args", "path", "edge_load"])
-
+    # For a minor optimization group the routines by their edge_load True or False
     routine_name_args_mappings = {
         "tc": Routine(tc, (), PathExt("Symmetric clean", input["symmetric_clean_input"]), True),
         "cc": Routine(cc, (), PathExt("Symmetric", input["symmetric_input"]), True),
@@ -408,8 +408,7 @@ def run_all_gap(args):
     else:
         first_routine = next(iter(routine_name_args_mappings))
         curr_edge_load = not routine_name_args_mappings[first_routine].edge_load
-        gaph = None
-        for k in routine_name_args_mappings.keys():
+        for k in routine_name_args_mappings:
 
             routine_to_run = routine_name_args_mappings[k]
             graph_path = f"{args.input_dir}/{routine_to_run.path.path_ext}"

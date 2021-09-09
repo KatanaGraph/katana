@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import time
+from collections import namedtuple
 from datetime import datetime
 
 import numpy as np
@@ -43,7 +44,7 @@ def create_empty_statistics(args):
         "import_time": 0,
         "num_partitions": 0,
         "routines": {},
-        "duration": time.time(),
+        "duration": 0,
         "datetime": now.strftime("%d/%m/%Y %H:%M:%S"),
         "katana_sha": "",
     }
@@ -51,8 +52,8 @@ def create_empty_statistics(args):
     return data
 
 
-def save_statistics_as_json(bench_stats, path="."):
-    bench_stats["duration"] = time.time() - bench_stats["duration"]
+def save_statistics_as_json(bench_stats, start_time, path="."):
+    bench_stats["duration"] = time.time() - start_time
     with open(f"{path}/experiments.json", "w") as fp:
         try:
             json.dump(bench_stats, fp, indent=4)
@@ -366,109 +367,72 @@ def run_all_gap(args):
     # Load our graph
     input = next(item for item in inputs if item["name"] == args.graph)
     data = create_empty_statistics(args)
+    PathExt = namedtuple("PathExt", ["warn_prefix", "path_ext"])
+    Routine = namedtuple("Routine", ["name", "args", "path", "edge_load"])
 
     routine_name_args_mappings = {
-        "bfs": [bfs, (args.source_nodes)],
-        "sssp": (sssp, (args.source_nodes)),
-        "jaccard": (jaccard, ()),
-        "bc": (bc, (args.source_nodes, args.num_sources)),
-        "tc": (tc, ()),
-        "cc": (cc, ()),
-        "kcore": (kcore, ()),
-        "louvain": (louvain, ()),
-        "pagerank": (pagerank, ()),
+        "tc": Routine(tc, (), PathExt("Symmetric clean", input["symmetric_clean_input"]), True),
+        "cc": Routine(cc, (), PathExt("Symmetric", input["symmetric_input"]), True),
+        "kcore": Routine(kcore, (), PathExt("Symmetric", input["symmetric_input"]), True),
+        "bfs": Routine(bfs, (args.source_nodes), PathExt("", input["name"]), False),
+        "sssp": Routine(sssp, (args.source_nodes), PathExt("", input["name"]), False),
+        "jaccard": Routine(jaccard, (), PathExt("", input["name"]), False),
+        "bc": Routine(bc, (args.source_nodes, args.num_sources), PathExt("", input["name"]), False),
+        "louvain": Routine(louvain, (), PathExt("Symmetric", input["symmetric_input"]), False),
+        "pagerank": Routine(pagerank, (), PathExt("Symmetric", input["transpose_input"]), False),
     }
-
+    start_time = time.time()
+    main_warn = "Graph doesn't exist:"
     if args.application not in ["all"]:
-        if args.application in ["bfs", "sssp", "bc", "jaccard"]:
-            graph_path = f"{args.input_dir}/{input['name']}"
-            if not os.path.exists(graph_path):
-                print(f"Graph doesn't exist: {graph_path}")
 
+        # Select the routine to run
+        routine_to_run = routine_name_args_mappings[args.application]
+        graph_path = f"{args.input_dir}/{routine_to_run.path.path_ext}"
+        if not os.path.exists(graph_path):
+            print(f"{routine_to_run.path.warn_prefix} {main_warn} {graph_path}")
+
+        if routine_to_run.edge_load:
+            graph = load_graph(graph_path, [])
+        else:
             graph = load_graph(graph_path)
-
-        elif args.application in ["tc"]:
-            graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"
-            if not os.path.exists(graph_path):
-                print(f"Symmetric clean Graph doesn't exist: {graph_path}")
-
-            graph = load_graph(graph_path, [])
-
-        elif args.application in ["cc", "kcore"]:
-            graph_path = f"{args.input_dir}/{input['symmetric_input']}"
-            if not os.path.exists(graph_path):
-                print(f"Symmetric Graph doesn't exist: {graph_path}")
-
-            graph = load_graph(graph_path, [])
-
-        elif args.application in ["louvain"]:
-            graph_path = f"{args.input_dir}/{input['symmetric_input']}"
-            if not os.path.exists(graph_path):
-                print(f"Symmetric Graph doesn't exist: {graph_path}")
-
-            graph = load_graph(graph_path)
-
-        elif args.application in ["pagerank"]:
-            # Using transpose file pagerank pull which is expected
-            # to perform better than pagerank push algorithm
-            graph_path = f"{args.input_dir}/{input['transpose_input']}"
-            if not os.path.exists(graph_path):
-                print(f"Symmetric Graph doesn't exist: {graph_path}")
-
-            graph = load_graph(graph_path, [])
 
         routine_args = (graph, input)
 
-        additional_args = routine_name_args_mappings[args.application][1]
+        additional_args = routine_name_args_mappings[args.application].args
         if additional_args:
             routine_args += additional_args
 
-        data = run_routine(routine_name_args_mappings[args.application][0], data, args.trials, routine_args)
+        data = run_routine(routine_name_args_mappings[args.application].name, data, args.trials, routine_args)
+        print("Run Complete!")
 
     else:
-        graph_path = f"{args.input_dir}/{input['transpose_input']}"
-        if not os.path.exists(graph_path):
-            print(f"Symmetric Graph doesn't exist: {graph_path}")
+        first_routine = next(iter(routine_name_args_mappings))
+        curr_edge_load = not routine_name_args_mappings[first_routine].edge_load
+        gaph = None
+        for k in routine_name_args_mappings.keys():
 
-        graph_path = f"{args.input_dir}/{input['name']}"
-        if not os.path.exists(graph_path):
-            print(f"Graph doesn't exist: {graph_path}")
+            routine_to_run = routine_name_args_mappings[k]
+            graph_path = f"{args.input_dir}/{routine_to_run.path.path_ext}"
+            if not os.path.exists(graph_path):
+                print(f"{routine_to_run.path.warn_prefix} {main_warn} {graph_path}")
 
-        graph = load_graph(graph_path)
+            if curr_edge_load != routine_to_run.edge_load:
+                if routine_to_run.edge_load:
+                    graph = load_graph(graph_path, [])
+                else:
+                    graph = load_graph(graph_path)
+                curr_edge_load = routine_to_run.edge_load
 
-        data = run_routine(bfs, data, args.trials, (graph, input, args.source_nodes))
-        data = run_routine(sssp, data, args.trials, (graph, input, args.source_nodes))
-        data = run_routine(jaccard, data, args.trials, (graph, input))
-        data = run_routine(bc, data, args.trials, (graph, input, args.source_nodes, args.num_sources))
+            routine_args = (graph, input)
 
-        graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"
-        if not os.path.exists(graph_path):
-            print(f"Symmetric clean Graph doesn't exist: {graph_path}")
+            additional_args = routine_name_args_mappings[k].args
+            if additional_args:
+                routine_args += additional_args
 
-        graph = load_graph(graph_path, [])
-
-        data = run_routine(tc, data, args.trials, (graph, input))
-        data = run_routine(cc, data, args.trials, (graph, input))
-        data = run_routine(kcore, data, args.trials, (graph, input))
-
-        graph_path = f"{args.input_dir}/{input['symmetric_input']}"
-        if not os.path.exists(graph_path):
-            print(f"Symmetric Graph doesn't exist: {graph_path}")
-
-        graph = load_graph(graph_path)
-
-        data = run_routine(louvain, data, args.trials, (graph, input))
-
-        graph_path = f"{args.input_dir}/{input['transpose_input']}"
-        if not os.path.exists(graph_path):
-            print(f"Symmetric Graph doesn't exist: {graph_path}")
-
-        graph = load_graph(graph_path, [])
-
-        data = run_routine(pagerank, data, args.trials, (graph, input))
+            data = run_routine(routine_name_args_mappings[k].name, data, args.trials, routine_args)
 
     if args.save_json:
-        save_success = save_statistics_as_json(data, args.save_dir)
+        save_success = save_statistics_as_json(data, start_time, args.save_dir)
 
     if save_success:
         return (True, data)

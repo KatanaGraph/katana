@@ -102,7 +102,8 @@ TestLRUBytes(
   size_t byte_size = 4;
   katana::Cache<PropertyCacheKey, CacheValue> cache(
       byte_size, [](const CacheValue& value) { return BytesInValue(value); },
-      [&](const PropertyCacheKey&) { count_evictions++; });
+      [&](const PropertyCacheKey&, [[maybe_unused]] uint64_t approx_bytes,
+          void*) { count_evictions++; });
 
   PropertyCacheKey key(NodeEdge::kNode, "not gonna happen");
   KATANA_LOG_ASSERT(!cache.Get(key).has_value());
@@ -143,7 +144,9 @@ TestLRUSize(
     const std::vector<PropertyCacheKey>& edge_keys) {
   count_evictions = 0;
   katana::Cache<PropertyCacheKey, CacheValue> cache(
-      lru_size, [&](const PropertyCacheKey&) { count_evictions++; });
+      lru_size,
+      [&](const PropertyCacheKey&, [[maybe_unused]] uint64_t approx_bytes,
+          void*) { count_evictions++; });
 
   InsertRandom(node_keys, cache);
 

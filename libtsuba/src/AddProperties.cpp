@@ -5,8 +5,10 @@
 
 #include <arrow/chunked_array.h>
 
+#include "katana/ArrowInterchange.h"
 #include "katana/ProgressTracer.h"
 #include "katana/Result.h"
+#include "katana/Time.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
 #include "tsuba/ParquetReader.h"
@@ -77,8 +79,8 @@ tsuba::LoadPropertySlice(
 
 katana::Result<void>
 tsuba::AddProperties(
-    const katana::Uri& uri, tsuba::PropertyCacheKey* cache_key,
-    tsuba::PropertyCache* cache,
+    const katana::Uri& uri, tsuba::NodeEdge node_edge,
+    tsuba::PropertyCache* cache, tsuba::RDG* rdg,
     const std::vector<tsuba::PropStorageInfo*>& properties, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn) {
@@ -89,21 +91,23 @@ tsuba::AddProperties(
           std::quoted(prop->name()));
     }
     if (cache != nullptr) {
-      cache_key->name = prop->name();
-      auto column_table = cache->Get(*cache_key);
+      tsuba::PropertyCacheKey cache_key(
+          node_edge, rdg->rdg_dir().string(), prop->name());
+      auto column_table = cache->Get(cache_key);
       if (column_table) {
         auto props = column_table.value();
         KATANA_CHECKED_CONTEXT(
             add_fn(props), "adding {}", std::quoted(prop->name()));
         prop->WasLoaded(props->field(0)->type());
         auto& tracer = katana::GetTracer();
-        auto upsert_scope =
-            tracer.StartActiveSpan("property loaded from cache");
-        upsert_scope.span().SetTags({
-            {"type", (cache_key->node_edge == tsuba::NodeEdge::kNode) ? "node"
-                                                                      : "edge"},
-            {"name", prop->name()},
-        });
+        tracer.GetActiveSpan().Log(
+            "property loaded from cache",
+            {{"type", cache_key.TypeAsConstChar()},
+             {"name", prop->name()},
+             {"approx_size", katana::ApproxTableMemUse(props)},
+             {"approx_size_human",
+              katana::BytesToStr(
+                  "{:.2f}{}", katana::ApproxTableMemUse(props))}});
         return katana::ResultSuccess();
       }
     }
@@ -117,24 +121,36 @@ tsuba::AddProperties(
               return KATANA_CHECKED_CONTEXT(
                   LoadProperties(prop->name(), path), "error loading {}", path);
             });
-    auto on_complete = [add_fn, prop, cache_key,
-                        cache](const std::shared_ptr<arrow::Table>& props)
+    auto on_complete = [add_fn, prop, node_edge, cache,
+                        rdg](const std::shared_ptr<arrow::Table>& props)
         -> katana::CopyableResult<void> {
+      if (cache != nullptr) {
+        auto& tracer = katana::GetTracer();
+        // Do not put uint8 types in property cache.  Users cannot create uint8
+        // properties via Cypher, but they can create them via parquet import.
+        if (props->column(0)->type()->Equals(arrow::uint8())) {
+          KATANA_WARN_ONCE(
+              "deprecated graph format; type is uint8: {}",
+              props->field(0)->name());
+        } else {
+          tracer.GetActiveSpan().Log(
+              "property inserted into cache",
+              {{"type",
+                (node_edge == tsuba::NodeEdge::kNode) ? "node" : "edge"},
+               {"name", prop->name()},
+               {"approx_size", katana::ApproxTableMemUse(props)},
+               {"approx_size_human",
+                katana::BytesToStr(
+                    "{:.2f}{}", katana::ApproxTableMemUse(props))}});
+          // Only match properties from the same RDG prefix
+          tsuba::PropertyCacheKey cache_key(
+              node_edge, rdg->rdg_dir().string(), prop->name());
+          cache->Insert(cache_key, props, rdg);
+        }
+      }
       KATANA_CHECKED_CONTEXT(
           add_fn(props), "adding {}", std::quoted(prop->name()));
       prop->WasLoaded(props->field(0)->type());
-      if (cache != nullptr) {
-        auto& tracer = katana::GetTracer();
-        auto upsert_scope =
-            tracer.StartActiveSpan("property inserted into cache");
-        upsert_scope.span().SetTags({
-            {"type", (cache_key->node_edge == tsuba::NodeEdge::kNode) ? "node"
-                                                                      : "edge"},
-            {"name", prop->name()},
-        });
-        cache_key->name = prop->name();
-        cache->Insert(*cache_key, props);
-      }
       return katana::CopyableResultSuccess();
     };
     if (grp) {

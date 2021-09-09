@@ -114,6 +114,7 @@ jobs:
         - g++
         - g++-9
         - clang++-10
+        - clang++-12
         # Only build and test the following configurations a subset of
         # configurations to reduce the total number of concurrent jobs.
         #
@@ -124,6 +125,8 @@ jobs:
             # MacOS ({g++} {Debug,Shared})
         - os: macOS-latest
           cxx: clang++-10
+        - os: macOS-latest
+          cxx: clang++-12
         - os: macOS-latest
           cxx: g++-9
         - os: macOS-latest
@@ -140,6 +143,9 @@ jobs:
         - os: ubuntu-18.04
           build_type: Debug
           cxx: clang++-10
+        - os: ubuntu-18.04
+          build_type: Debug
+          cxx: clang++-12
     steps:
     - uses: actions/checkout@v2
       with:

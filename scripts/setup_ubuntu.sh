@@ -59,10 +59,13 @@ fi
 
 add-apt-repository -y $NO_UPDATE ppa:git-core/ppa
 
+# clang-12 isn't present in the repos for any Ubuntu release up to 20.04
+curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE_CODENAME}/ llvm-toolchain-${RELEASE_CODENAME}-12 main"
+
 # Clang isn't present in the xenial repos so we need to add the repo
 # Clang-10 isn't present in the hirsute repos any more, so we need to add the upstream repo
 if [[ "$VERSION" == "16" ||  "$VERSION" == "21" ]]; then
-  curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
   apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE_CODENAME}/ llvm-toolchain-${RELEASE_CODENAME}-10 main"
 fi
 
@@ -111,7 +114,7 @@ run_as_original_user pip3 install testresources conan==1.36 PyGithub packaging
 # Developer tools
 #
 # pkg-config is required to build pyarrow correctly (seems to be a bug)
-DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck pkg-config clangd-10"
+DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck pkg-config clangd-10 clangd-12"
 # github actions require a more recent git
 GIT=git
 # Library dependencies
@@ -121,6 +124,7 @@ GIT=git
 # serialization.
 LIBRARIES="libxml2-dev
   llvm-10-dev
+  llvm-12-dev
   libarrow-dev=4.0.1-1
   libarrow-python-dev=4.0.1-1
   libparquet-dev=4.0.1-1
@@ -134,10 +138,10 @@ apt install -yq --allow-downgrades \
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
-  apt install -yq gcc-9 g++-9 clang-10
-  # in newer versions of ubuntu clang++-10 is installed as a part of clang-10
+  apt install -yq gcc-9 g++-9 clang-10 clang-12
+  # in newer versions of ubuntu clang++-NN is installed as a part of clang-NN
   if [[ "$VERSION" == "16" ]]; then
-    apt install clang++-10
+    apt install clang++-10 clang++-12
   fi
 fi
 

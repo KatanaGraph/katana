@@ -1,7 +1,10 @@
 #ifndef KATANA_LIBSUPPORT_KATANA_ARROWVISITOR_H_
 #define KATANA_LIBSUPPORT_KATANA_ARROWVISITOR_H_
 
+#include <type_traits>
+
 #include <arrow/api.h>
+#include <arrow/type.h>
 #include <arrow/vendored/datetime/date.h>
 
 #include "katana/ErrorCode.h"
@@ -34,127 +37,169 @@ struct is_string_like_type_patched {
   constexpr static bool value = test<T>(nullptr);
 };
 
+/// GetArrowTypeID returns the arrow type ID for a parameter. This is an
+/// extension point for VisitArrow. Overload this and VisitArrowCast for custom
+/// parameter types.
+inline arrow::Type::type
+GetArrowTypeID(const arrow::Scalar& scalar) {
+  return scalar.type->id();
+}
+
+/// VisitArrowCast downcasts or specializes a general type to its more specific
+/// type. The resulting type should be consistent with GetArrowTypeID. This is
+/// an extension point for VisitArrow. Overload this and GetArrowTypeID to
+/// support custom parameter types.
+template <typename T>
+constexpr decltype(auto)
+VisitArrowCast(const arrow::Scalar& scalar) {
+  // decltype(auto) is the complement of perfect forwarding,
+  // std::forward<T>(item), for return values. With just auto, we will get the
+  // decayed type, which will create a copy when casting to a reference type.
+  using ResultType = const typename arrow::TypeTraits<T>::ScalarType&;
+  return static_cast<ResultType>(scalar);
+}
+
+inline arrow::Type::type
+GetArrowTypeID(const arrow::Array& array) {
+  return array.type()->id();
+}
+
+template <typename T>
+constexpr decltype(auto)
+VisitArrowCast(const arrow::Array& array) {
+  using ResultType = const typename arrow::TypeTraits<T>::ArrayType&;
+  return static_cast<ResultType>(array);
+}
+
+inline arrow::Type::type
+GetArrowTypeID(const arrow::ArrayBuilder* builder) {
+  return builder->type()->id();
+}
+
+template <typename T>
+constexpr auto
+VisitArrowCast(arrow::ArrayBuilder* builder) {
+  using ResultType = typename arrow::TypeTraits<T>::BuilderType*;
+  return static_cast<ResultType>(builder);
+}
+
+/// Concept for visitors for VisitArrow.
+///
+/// A visitor for VisitArrow should model the following behavior.
+///
+/// Users can optionally subclass ArrowVisitor to signal they intend to follow
+/// the ArrowVisitor protocol but this is not required.
+///
+/// Example:
+///
+///     class MyVisitor {
+///     public:
+///       /// Return type of Call and AcceptFailed.
+///       using ResultType = void;
+///
+///       /// AcceptTypes gives the types accepted by Call as a tuple of tuples of
+///       /// arrow types. The ith tuple are the types accepted by the ith parameter to
+///       /// Call.
+///       ///
+///       /// Some care should be taken for visitors that accept more than one
+///       /// parameter as the number of template instantiations grows exponentially
+///       /// with the number of arguments.
+///       ///
+///       /// Prefer placing the most constrained parameters first in AcceptTypes and
+///       /// consider currying a visitor that takes k parameters into k visitors that
+///       /// take 1 parameter.
+///       using AcceptTypes = std::tuple<katana::AcceptNumericArrowTypes>;
+///
+///       /// Call is invoked by VisitArrow with the runtime arrow types lifted to
+///       /// ArrowTypes (e.g., arrow::Int32Type) and the parameters downcasted or
+///       /// specialized from their static parameter types (e.g., arrow::Scalar) to
+///       /// their specific runtime types (e.g., arrow::Int32Scalar).
+///       template <typename ArrowType, typename ArrayType>
+///       ResultType Call(const ArrayType& array) {
+///         // Due to AcceptTypes, VisitArrow will only invoke Call on numeric types.
+///         // In all other cases, AcceptFailed will be used instead.
+///       }
+///
+///       /// AcceptFailed is called by VisitArrow when there is no matching call. This
+///       /// happens if the runtime type does not match one known by VisitArrow or if
+///       /// the runtime type does not match AcceptTypes. AcceptFailed is invoked with
+///       /// the original arguments to VisitArrow.
+///       ResultType AcceptFailed(const arrow::Array&);
+///     };
+class ArrowVisitor {
+  // Declarations are omitted to give clearer compiler error messages.
+};
+
 namespace internal {
 
-// A VisitorBaseType specifies the type of argument that
-// VisitArrowInternal will accept, how to determine its
-// datatype, and how to specialize it to its particular type.
-// Currently the supported types are:
-// - const arrow::Array&
-// - const arrow::Scalar&
-// - arrow::ArrayBuilder*
-
-// Arrays are immutable, pass by const reference
-struct ArrayVisitorBaseType {
-  using ParamBase = const arrow::Array&;
-
-  template <typename ArrowType>
-  using ParamType = const typename arrow::TypeTraits<ArrowType>::ArrayType&;
-
-  static std::shared_ptr<arrow::DataType> Type(const arrow::Array& array) {
-    return array.type();
-  }
-};
-
-// Scalars are immutable, pass by const reference
-struct ScalarVisitorBaseType {
-  using ParamBase = const arrow::Scalar&;
-
-  template <typename ArrowType>
-  using ParamType = const typename arrow::TypeTraits<ArrowType>::ScalarType&;
-
-  static std::shared_ptr<arrow::DataType> Type(const arrow::Scalar& scalar) {
-    return scalar.type;
-  }
-};
-
-// Builders are mutable, pass by pointer
-struct BuilderVisitorBaseType {
-  using ParamBase = arrow::ArrayBuilder*;
-
-  template <typename ArrowType>
-  using ParamType = typename arrow::TypeTraits<ArrowType>::BuilderType*;
-
-  static std::shared_ptr<arrow::DataType> Type(arrow::ArrayBuilder* builder) {
-    return builder->type();
-  }
-};
-
-/// This function attempts to keep Arrow type-tests to a minimum by
-/// encapsulating the desired behavior. Its behavior is to:
-/// 1) Identify the Arrow type of the parameter
-/// 2) Specialize the parameter for use in a template environment
-/// 3) Call the templated visitor with the specialized parameter
+/// ArrowDispatcher uses runtime arrow type information to downcast or
+/// specialize general arguments like arrow::Scalar to their specific runtime
+/// type like arrow::Int32Scalar and call a function on a visitor with the
+/// those arguments along with their corresponding arrow types.
 ///
-/// In an ideal world, this is the *only* switch over Arrow types
-/// in the whole repo. Everything should either handle arrow data
-/// in a type-agnostic way, or use this interface to reach a
-/// type-aware template environment. It probably recreates
-/// functionality that exists elsewhere, notably in arrow::compute
+/// Effectively, given it converts
 ///
-/// A typical use case would involve creating a Visitor class
-/// and implementing methods to handle various types, eg:
-/// class Visitor {
-///   using ReturnType = void; // configurable
+///     ArrowDispatcher::Call(visitor, arrow::Scalar, arrow::Array)
 ///
-///   template <typename ArrowType, typename ArgumentType>
-///   katana::Result<ReturnType> Call(ArgumentType arg);
-/// };
-/// Arrow's type_traits.h offers tools to use SFINAE to differentiate
-/// types and write appropriate Call functions for each type
-
-// The VisitArrowInternalWrapper struct is used to keep track of the ArrowType for each argument
-// as we recursively cast each argument. The ArrowTypes are then used as
-// template arguments to the Call method of the Visitor class
-template <class... ArrowTypes>
-struct VisitArrowInternalWrapper {
-  // This function calls the visitor's templated Call method with the properly
-  // casted arguments and template parameters
-  template <class VisitorType, class... Processed, size_t... I>
-  static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
-  VisitArrowInternalCall(
-      VisitorType&& visitor, std::tuple<Processed...>&& processed,
-      std::index_sequence<I...>) {
-    return visitor.template Call<ArrowTypes...>(std::get<I>(processed)...);
+/// into
+///
+///    visitor.Call<arrow::Int32Type, arrow::Int64Type>(arrow::Int32Scalar, arrow::Int64Array)
+///
+/// See VisitArrow for details on how this is typically used.
+struct ArrowDispatcher {
+  template <typename V, typename Tuple, size_t... I>
+  constexpr static bool TupleContains(std::index_sequence<I...>) {
+    return (std::is_same_v<V, std::tuple_element_t<I, Tuple>> || ...);
   }
 
-  // This function recursively casts a single argument from Unprocessed...
-  // and puts it in the tuple<Processed...>. It additionally stores the
-  // ArrowType information in the VisitArrowInternalWrapper struct. When there are no more
-  // arguments to process (base case), it calls the Visitor class's Call
-  // function with template parameters ArrowTypes... and arguments
-  // Processed... with the function VisitArrowInternalCall
-  // TODO(Rob): May be more efficent to use a dummy variable to seperate
-  //            Processed and Unprocessed args instead of storing the
-  //            Processed args in a tuple
+  // CouldAccept returns true if the ith ArrowType is contained in the ith
+  // Visitor::AcceptTypes tuple.
+  template <size_t I, typename Visitor>
+  constexpr static bool CouldAccept() {
+    return true;
+  }
+
   template <
-      class VisitorBaseType, class VisitorType, class... Processed,
-      class... Unprocessed>
-  static katana::Result<typename std::decay_t<VisitorType>::ReturnType>
-  VisitArrowInternal(
-      VisitorType&& visitor, std::tuple<Processed...>&& processed,
-      typename VisitorBaseType::ParamBase&& param,
-      Unprocessed&&... unprocessed) {
-    switch (VisitorBaseType::Type(param)->id()) {
+      size_t I, typename Visitor, typename ArrowType, typename... ArrowTypes>
+  constexpr static bool CouldAccept() {
+    using Current =
+        std::tuple_element_t<I, std::tuple<ArrowType, ArrowTypes...>>;
+    using CurrentAcceptTuple =
+        std::tuple_element_t<I, typename Visitor::AcceptTypes>;
+    constexpr size_t N = std::tuple_size_v<CurrentAcceptTuple>;
+    return TupleContains<Current, CurrentAcceptTuple>(
+        std::make_index_sequence<N>());
+  }
+
+  template <typename... ArrowTypes, typename Visitor, typename... Args>
+  static typename std::decay_t<Visitor>::ResultType Call(
+      Visitor&& visitor, Args&&... args) {
+    constexpr auto index = sizeof...(ArrowTypes) - 1;
+    if constexpr (!CouldAccept<index, std::decay_t<Visitor>, ArrowTypes...>()) {
+      return visitor.AcceptFailed(std::forward<Args>(args)...);
+    } else if constexpr (index + 1 == sizeof...(Args)) {
+      return visitor.template Call<ArrowTypes...>(
+          VisitArrowCast<ArrowTypes>(std::forward<Args>(args))...);
+    } else {
+      return Dispatch<ArrowTypes...>(
+          std::forward<Visitor>(visitor), std::forward<Args>(args)...);
+    }
+  }
+
+  template <typename... ArrowTypes, typename Visitor, typename... Args>
+  static typename std::decay_t<Visitor>::ResultType Dispatch(
+      Visitor&& visitor, Args&&... args) {
+    constexpr auto index = sizeof...(ArrowTypes);
+    auto type_id =
+        GetArrowTypeID(std::get<index>(std::forward_as_tuple(args...)));
+
+    switch (type_id) {
 #define TYPE_CASE(EnumType)                                                    \
   case arrow::Type::EnumType: {                                                \
     using ArrowType =                                                          \
         typename arrow::TypeIdTraits<arrow::Type::EnumType>::Type;             \
-    using ParamType = typename VisitorBaseType::template ParamType<ArrowType>; \
-    auto new_processed = std::tuple_cat(                                       \
-        processed,                                                             \
-        std::tuple<ParamType>(std::move(static_cast<ParamType>(param))));      \
-    if constexpr (!sizeof...(Unprocessed)) /*base case*/ {                     \
-      return VisitArrowInternalWrapper<ArrowTypes..., ArrowType>::             \
-          template VisitArrowInternalCall(                                     \
-              std::forward<VisitorType>(visitor), std::move(new_processed),    \
-              std::make_index_sequence<sizeof...(Processed) + 1>{});           \
-    } else /*inductive case*/ {                                                \
-      return VisitArrowInternalWrapper<ArrowTypes..., ArrowType>::             \
-          template VisitArrowInternal<VisitorBaseType>(                        \
-              std::forward<VisitorType>(visitor), std::move(new_processed),    \
-              std::forward<Unprocessed>(unprocessed)...);                      \
-    }                                                                          \
+    return Call<ArrowTypes..., ArrowType>(                                     \
+        std::forward<Visitor>(visitor), std::forward<Args>(args)...);          \
   }
       TYPE_CASE(INT8)
       TYPE_CASE(UINT8)
@@ -180,93 +225,98 @@ struct VisitArrowInternalWrapper {
       TYPE_CASE(NA)
 #undef TYPE_CASE
     default:
-      return KATANA_ERROR(
-          katana::ErrorCode::ArrowError,
-          "unsupported Arrow type encountered ({})",
-          VisitorBaseType::Type(param)->ToString());
+      return visitor.AcceptFailed(std::forward<Args>(args)...);
     }
   }
 };
 
 template <typename T>
-using is_visit_arrow_base_t = typename std::disjunction<
-    std::is_same<std::decay_t<T>, arrow::Array>,
-    std::is_same<std::decay_t<T>, arrow::Scalar>,
-    std::is_same<std::decay_t<T>, arrow::ArrayBuilder*>>;
-
+constexpr bool
+PointerOrReferenceType() {
+  return std::is_pointer_v<T> || std::is_reference_v<T>;
+}
 }  // namespace internal
 
-// VisitArrow call that supports multiple args of type
-// arrow::Array&, arrow::Scalar&, and/or arrow::Builder*
-// (args can be any combination of these types)
-template <class VisitorType, class Arg0, class... Args>
-std::enable_if_t<
-    std::conjunction_v<
-        internal::is_visit_arrow_base_t<Arg0>,
-        internal::is_visit_arrow_base_t<Args>...>,
-    katana::Result<typename std::decay_t<VisitorType>::ReturnType>>
-VisitArrow(VisitorType&& visitor, Arg0&& arg0, Args&&... args) {
-  return internal::VisitArrowInternalWrapper<>::template VisitArrowInternal<
-      internal::ArrayVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{},
-      std::forward<Arg0>(arg0), std::forward<Args>(args)...);
-}
-
-// Single arg VisitArrow functions provided for backwards compatability
-template <class VisitorType>
+/// VisitArrow downcasts or specializes its arguments to their specific runtime
+/// types and then invokes Visitor::Call.
+///
+/// For example,
+///
+///     VisitArrow(visitor, arrow::Scalar, arrow::Array)
+///
+/// may invoke
+///
+///     visitor.Call<arrow::Int32Type, arrow::Int64Type>(arrow::Int32Scalar, arrow::Int64Array)
+///
+/// depending on the runtime types of the arguments to VisitArrow.
+///
+/// A typical visitor looks like:
+///
+///     class Visitor : public ArrowVisitor {
+///     public:
+///       using ResultType = Result<int>;
+///       using AcceptTypes = std::tuple<AcceptNumericArrowTypes>;
+///
+///       template <typename ArrowType, typename ScalarType>
+///       ResultType
+///       Call(const ScalarType& arg) {
+///         // return something for numeric scalar types
+///       }
+///
+///       ResultType
+///       AcceptFailed(const arrow::Scalar& arg) {
+///         // perhaps return an error when we receive an unexpected type
+///       }
+///     };
+///
+/// VisitArrow accepts arrow::Scalar, arrow::Array and arrow::ArrayBuilder*. To
+/// extend the set of valid parameter types, see GetArrowTypeID and
+/// VisitArrowCast.
+template <typename Visitor, typename... Args>
 auto
-VisitArrow(const arrow::Array& array, VisitorType&& visitor) {
-  return internal::VisitArrowInternalWrapper<>::template VisitArrowInternal<
-      internal::ArrayVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{}, std::move(array));
+VisitArrow(Visitor&& visitor, Args&&... args) {
+  static_assert(
+      (... && internal::PointerOrReferenceType<Args>()),
+      "cannot visit value types");
+  return internal::ArrowDispatcher::Call(
+      std::forward<Visitor>(visitor), std::forward<Args>(args)...);
 }
 
-template <class VisitorType>
-auto
-VisitArrow(const std::shared_ptr<arrow::Array>& array, VisitorType&& visitor) {
-  KATANA_LOG_DEBUG_ASSERT(array);
-  const arrow::Array& ref = *(array.get());
-  return VisitArrow(ref, std::forward<VisitorType>(visitor));
-}
+using AcceptNumericArrowTypes = std::tuple<
+    arrow::Int8Type, arrow::UInt8Type, arrow::Int16Type, arrow::UInt16Type,
+    arrow::Int32Type, arrow::UInt32Type, arrow::Int64Type, arrow::UInt64Type,
+    arrow::FloatType, arrow::DoubleType>;
 
-template <class VisitorType>
-auto
-VisitArrow(const arrow::Scalar& scalar, VisitorType&& visitor) {
-  return internal::VisitArrowInternalWrapper<>::template VisitArrowInternal<
-      internal::ScalarVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{}, std::move(scalar));
-}
+using AcceptListArrowTypes = std::tuple<arrow::ListType, arrow::LargeListType>;
 
-template <class VisitorType>
-auto
-VisitArrow(
-    const std::shared_ptr<arrow::Scalar>& scalar, VisitorType&& visitor) {
-  KATANA_LOG_DEBUG_ASSERT(scalar);
-  const arrow::Scalar& ref = *(scalar.get());
-  return VisitArrow(ref, std::forward<VisitorType>(visitor));
-}
+using AcceptStringArrowTypes =
+    std::tuple<arrow::StringType, arrow::LargeStringType>;
 
-template <class VisitorType>
-auto
-VisitArrow(arrow::ArrayBuilder* builder, VisitorType&& visitor) {
-  KATANA_LOG_DEBUG_ASSERT(builder);
-  return internal::VisitArrowInternalWrapper<>::template VisitArrowInternal<
-      internal::BuilderVisitorBaseType>(
-      std::forward<VisitorType>(visitor), std::tuple<>{}, std::move(builder));
-}
+using AcceptNullArrowTypes = std::tuple<arrow::NullType>;
 
-template <class VisitorType>
-auto
-VisitArrow(
-    const std::unique_ptr<arrow::ArrayBuilder>& builder,
-    VisitorType&& visitor) {
-  return VisitArrow(builder.get(), std::forward<VisitorType>(visitor));
-}
+using AcceptInstantArrowTypes = std::tuple<
+    arrow::Date32Type, arrow::Date64Type, arrow::Time32Type, arrow::Time64Type,
+    arrow::TimestampType>;
 
-class AppendScalarToBuilder {
+using AcceptAllArrowTypes = std::tuple<
+    arrow::Int8Type, arrow::UInt8Type, arrow::Int16Type, arrow::UInt16Type,
+    arrow::Int32Type, arrow::UInt32Type, arrow::Int64Type, arrow::UInt64Type,
+    arrow::FloatType, arrow::DoubleType, arrow::FloatType, arrow::DoubleType,
+    arrow::BooleanType, arrow::Date32Type, arrow::Date64Type, arrow::Time32Type,
+    arrow::Time64Type, arrow::TimestampType, arrow::StringType,
+    arrow::LargeStringType, arrow::StructType, arrow::ListType,
+    arrow::LargeListType, arrow::NullType>;
+
+template <typename... Args>
+using tuple_cat_t = decltype(std::tuple_cat(std::declval<Args>()...));
+
+// TODO(ddn): Move visitor to a function, callers should not need to see this
+// definition directly
+class AppendScalarToBuilder : public ArrowVisitor {
 public:
-  using ReturnType = void;
-  using ResultType = Result<ReturnType>;
+  using ResultType = Result<void>;
+
+  using AcceptTypes = std::tuple<AcceptAllArrowTypes>;
 
   AppendScalarToBuilder(arrow::ArrayBuilder* builder) : builder_(builder) {
     KATANA_LOG_DEBUG_ASSERT(builder_);
@@ -286,7 +336,7 @@ public:
   }
 
   template <typename ArrowType, typename ScalarType>
-  arrow::enable_if_t<
+  std::enable_if_t<
       arrow::is_number_type<ArrowType>::value ||
           arrow::is_boolean_type<ArrowType>::value ||
           arrow::is_temporal_type<ArrowType>::value,
@@ -339,9 +389,7 @@ public:
         return KATANA_ERROR(
             katana::ErrorCode::ArrowError, "failed to get scalar");
       }
-      if (auto res = VisitArrow(scalar_res.ValueOrDie(), visitor); !res) {
-        return res.error();
-      }
+      KATANA_CHECKED(VisitArrow(visitor, *scalar_res.ValueOrDie()));
     }
 
     return ResultSuccess();
@@ -361,20 +409,22 @@ public:
     }
     for (int f = 0, n = scalar.value.size(); f < n; ++f) {
       AppendScalarToBuilder visitor(builder.field_builder(f));
-      if (auto res = VisitArrow(scalar.value.at(f), visitor); !res) {
-        return res.error();
-      }
+      KATANA_CHECKED(VisitArrow(visitor, *scalar.value.at(f)));
     }
 
     return ResultSuccess();
+  }
+
+  ResultType AcceptFailed(const arrow::Scalar& scalar) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "no matching type {}",
+        scalar.type->name());
   }
 
 private:
   arrow::ArrayBuilder* builder_;
 };
 
-////////////////////////////////////////////
-// Visitor-based utility
 /// Take a vector of scalars of type data_type and return an Array
 /// scalars vector can contain nullptr entries
 KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> ArrayFromScalars(

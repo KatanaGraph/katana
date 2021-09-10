@@ -279,9 +279,6 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
   columns_.emplace_back(std::make_shared<arrow::ChunkedArray>(chunks));
 }
 
-////////////////////////////////////////////
-// Arrow utilities
-
 /// Return a ChunkeArray of Nulls of the given type and length
 KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> NullChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length);

@@ -6,7 +6,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 include(BuildCommon)
 
-string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_NVCC_SYNOPTIC)
+string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_CUDA_SYNOPTIC)
 
 ###### Documentation ######
 
@@ -99,7 +99,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   include(CPack)
 endif()
 
-if(KATANA_NVCC_SYNOPTIC)
+if(KATANA_CUDA_SYNOPTIC)
   enable_language(CUDA)
   find_package(CUDAToolkit)
 

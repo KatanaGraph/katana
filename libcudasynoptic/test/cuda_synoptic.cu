@@ -1,9 +1,8 @@
 
 #include <cuda_runtime.h>
 
-#include <katana/OpaqueID.h>
-
 #include "katana/Logging.h"
+#include "katana/OpaqueID.h"
 #include "katana/Range.h"
 #include "katana/config.h"
 

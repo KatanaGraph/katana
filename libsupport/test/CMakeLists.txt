@@ -30,6 +30,11 @@ add_unit_test(tracing)
 add_unit_test(uri)
 add_unit_test(zip_iterator)
 
+add_executable(arrow-bench arrow-bench.cpp)
+target_link_libraries(arrow-bench katana_support benchmark::benchmark)
+add_test(NAME arrow-bench COMMAND arrow-bench --benchmark_filter=/1024)
+set_tests_properties(arrow-bench PROPERTIES LABELS quick)
+
 add_executable(result-bench result-bench.cpp)
 target_link_libraries(result-bench katana_support benchmark::benchmark)
 add_test(NAME result-bench COMMAND result-bench --benchmark_filter=KatanaResultWithContext/1/1024/3/16)

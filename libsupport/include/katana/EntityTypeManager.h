@@ -88,7 +88,7 @@ public:
             std::move(atomic_entity_type_id_to_entity_type_ids)) {}
 
   /// This function can be used to convert "old style" graphs (storage format 1,
-  /// where types are represented by bool or uint8 properties) and "new style"
+  /// where types are represented by uint8 properties) and "new style"
   /// graphs (version > 2, where types are represented in our native type
   /// represenation). This function is serial but it likely iterates over
   /// O(nodes) and O(edges) vectors, so it is very slow. It should only be used
@@ -137,12 +137,6 @@ public:
     // assign the type ID for each row
     for (int64_t row = 0; row < num_rows; ++row) {
       TypeProperties::FieldEntity field_indices;
-      for (auto& bool_property : type_properties.bool_properties) {
-        if (bool_property.array->IsValid(row) &&
-            bool_property.array->Value(row)) {
-          field_indices.emplace_back(bool_property.field_index);
-        }
-      }
       for (auto& uint8_property : type_properties.uint8_properties) {
         if (uint8_property.array->IsValid(row) &&
             uint8_property.array->Value(row)) {
@@ -406,7 +400,6 @@ private:
 
   // Used by AssignEntityTypeIDsFromProperties()
   struct TypeProperties {
-    std::vector<PropertyColumn<arrow::BooleanArray>> bool_properties;
     std::vector<PropertyColumn<arrow::UInt8Array>> uint8_properties;
     using FieldEntity = std::vector<int>;
     std::map<FieldEntity, katana::EntityTypeID> type_field_indices_to_id;

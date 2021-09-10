@@ -24,16 +24,11 @@ katana::EntityTypeManager::DoAssignEntityTypeIDsFromProperties(
   for (int i = 0, n = schema->num_fields(); i < n; i++) {
     const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
 
-    // a bool or uint8 property is (always) considered a type
+    // a uint8 property is (always) considered a type
     // TODO(roshan) make this customizable by the user
-    if (current_field->type()->Equals(arrow::boolean())) {
+    if (current_field->type()->Equals(arrow::uint8())) {
       type_field_indices.push_back(i);
-      std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
-      auto bool_property =
-          std::static_pointer_cast<arrow::BooleanArray>(property);
-      type_properties.bool_properties.emplace_back(i, bool_property);
-    } else if (current_field->type()->Equals(arrow::uint8())) {
-      type_field_indices.push_back(i);
+      KATANA_LOG_DEBUG_ASSERT(properties->column(i)->num_chunks() == 1);
       std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
       auto uint8_property =
           std::static_pointer_cast<arrow::UInt8Array>(property);
@@ -62,12 +57,6 @@ katana::EntityTypeManager::DoAssignEntityTypeIDsFromProperties(
   for (int64_t row = 0, num_rows = properties->num_rows(); row < num_rows;
        ++row) {
     TypeProperties::FieldEntity field_indices;
-    for (auto bool_property : type_properties.bool_properties) {
-      if (bool_property.array->IsValid(row) &&
-          bool_property.array->Value(row)) {
-        field_indices.emplace_back(bool_property.field_index);
-      }
-    }
     for (auto uint8_property : type_properties.uint8_properties) {
       if (uint8_property.array->IsValid(row) &&
           uint8_property.array->Value(row)) {

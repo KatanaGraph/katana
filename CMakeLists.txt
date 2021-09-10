@@ -6,6 +6,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 include(BuildCommon)
 
+string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_NVCC_SYNOPTIC)
+
 ###### Documentation ######
 
 set_property(GLOBAL APPEND PROPERTY KATANA_DOXYGEN_DIRECTORIES
@@ -95,4 +97,11 @@ katana_cpack_open_components()
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   katana_reformat_cpack_dependencies()
   include(CPack)
+endif()
+
+if(KATANA_NVCC_SYNOPTIC)
+  enable_language(CUDA)
+  find_package(CUDAToolkit)
+
+  add_subdirectory(libcudasynoptic)
 endif()

@@ -103,5 +103,9 @@ if(KATANA_CUDA_SYNOPTIC)
   enable_language(CUDA)
   find_package(CUDAToolkit)
 
+  if(KATANA_USE_SANITIZER)
+    set(CMAKE_CUDA_LINK_EXECUTABLE "<CMAKE_LINKER> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+  endif()
+  
   add_subdirectory(libcudasynoptic)
 endif()

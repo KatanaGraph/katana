@@ -97,7 +97,7 @@ def bfs(graph: Graph, input_args, source_node_file=""):
         with time_block("bfs"):
             start_bfs = time.time()
             analytics.bfs(graph, start_node, property_name, plan=bfs_plan)
-            time_data[f"bfs"] = time.time() - start_bfs
+            time_data["bfs"] = time.time() - start_bfs
 
         start_schema_check = time.time()
         check_schema(graph, property_name)
@@ -155,7 +155,7 @@ def sssp(graph: Graph, input_args, source_node_file=""):
 
         start_schema_check = time.time()
         check_schema(graph, property_name)
-        time_data[f"sssp-schema-check"] = time.time() - start_schema_check
+        time_data["sssp-schema-check"] = time.time() - start_schema_check
 
         analytics.sssp_assert_valid(graph, start_node, edge_prop_name, property_name)
 
@@ -378,7 +378,7 @@ def run_routine(routine, data, load_time, args_trails, argv):
     for _ in range(args_trails):
         time_data = routine(*argv)
         data["routines"][f"{str(routine.__name__)}_{str(trial_count)}"] = convert_to_milisec(time_data)
-        data["routines"][f"{str(routine.__name__)}_{str(trial_count)}"]["graph-load-time"] = 1000 * load_time
+        data["routines"][f"{str(routine.__name__)}_{str(trial_count)}"]["graph-load-time"] = round(1000 * load_time)
 
         trial_count += 1
     print("Run Complete!")

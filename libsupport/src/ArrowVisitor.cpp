@@ -1,26 +1,27 @@
 #include "katana/ArrowVisitor.h"
 
+#include <arrow/array/builder_base.h>
 #include <arrow/type_traits.h>
 
 #include "katana/Logging.h"
 
-struct ToArrayVisitor {
+struct ToArrayVisitor : public katana::ArrowVisitor {
   // Internal data and constructor
   const std::vector<std::shared_ptr<arrow::Scalar>>& scalars;
   ToArrayVisitor(const std::vector<std::shared_ptr<arrow::Scalar>>& input)
       : scalars(input) {}
 
-  using ReturnType = std::shared_ptr<arrow::Array>;
-  using ResultType = katana::Result<ReturnType>;
+  using ResultType = katana::Result<std::shared_ptr<arrow::Array>>;
+
+  using AcceptTypes = std::tuple<katana::AcceptAllArrowTypes>;
 
   template <typename ArrowType, typename BuilderType>
   arrow::enable_if_null<ArrowType, ResultType> Call(BuilderType* builder) {
     return KATANA_CHECKED(builder->Finish());
-    ;
   }
 
   template <typename ArrowType, typename BuilderType>
-  arrow::enable_if_t<
+  std::enable_if_t<
       arrow::is_number_type<ArrowType>::value ||
           arrow::is_boolean_type<ArrowType>::value ||
           arrow::is_temporal_type<ArrowType>::value,
@@ -86,6 +87,12 @@ struct ToArrayVisitor {
     }
     return KATANA_CHECKED(builder->Finish());
   }
+
+  ResultType AcceptFailed(const arrow::ArrayBuilder* builder) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "no matching type {}",
+        builder->type()->name());
+  }
 };
 
 katana::Result<std::shared_ptr<arrow::Array>>
@@ -97,5 +104,5 @@ katana::ArrayFromScalars(
       arrow::MakeBuilder(arrow::default_memory_pool(), type, &builder));
   ToArrayVisitor visitor(scalars);
 
-  return katana::VisitArrow(builder, visitor);
+  return katana::VisitArrow(visitor, builder.get());
 }

@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
+import sys
 import tarfile
 from pathlib import Path
 from subprocess import PIPE, Popen
@@ -47,7 +48,9 @@ def main():
     err_code = docker_proc.wait()
     if err_code != 0:
         print(f"Failed to install and test Conda packages from {args.package_dir} in {args.docker_image}", file=stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

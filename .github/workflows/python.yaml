@@ -3,7 +3,10 @@ name: Python CI
 on:
   push:
     branches:
-    - master
+      - 'master'
+      - 'release/*'
+    tags:
+      - 'v*'
   pull_request:
 
 # Cancel any previous runs with the same key.
@@ -42,8 +45,9 @@ jobs:
   do_python_test:
     needs:
       - do_python
+    # Don't run this in tag CI runs. It's useless since it doesn't produce meaningful artifacts.
     if: |
-      github.event_name != 'pull_request' ||
+      github.event_name != 'pull_request' && !startsWith(github.ref, "refs/tags/") ||
       (
         !contains(github.event.pull_request.body, '[no test]') &&
         !contains(github.event.pull_request.body, '[no Python test]')
@@ -131,7 +135,6 @@ jobs:
       run: |
         . .github/workflows/activate_miniconda.sh
         REPO_ROOT="$(cd "$(dirname scripts/conda_build.sh)/.."; pwd)"
-        set -euo pipefail
         export KATANA_VERSION=$("$REPO_ROOT"/scripts/version show --pep440)
         echo $KATANA_VERSION
         cd metagraph-plugin/conda_recipe
@@ -181,7 +184,10 @@ jobs:
         run: python3 test/install_conda_packages_test.py pkgs ${{matrix.image}}
 
   upload_conda_packages:
-    if: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' && github.repository == 'KatanaGraph/katana' }}
+    if: |
+      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/release/v')
+        || startsWith(github.ref, 'refs/tags/v'))
+      && github.event_name == 'push' && github.repository == 'KatanaGraph/katana'
     environment: AnacondaUpload
     needs: test_conda_package_install
     runs-on: ubuntu-latest

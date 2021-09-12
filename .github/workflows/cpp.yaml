@@ -3,7 +3,8 @@ name: C/C++ CI
 on:
   push:
     branches:
-    - master
+      - 'master'
+      - 'release/*'
   pull_request:
 
 # Cancel any previous runs with the same key.

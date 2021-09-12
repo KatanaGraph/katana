@@ -274,7 +274,6 @@ tsuba::CreateSrcDestFromViewsForCopy(
 
 katana::Result<void>
 tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
-  // TODO(vkarthik): write tests
   // TODO(vkarthik): add do_all loop
   std::vector<uint64_t> manifest_uri_idxs;
   for (uint64_t i = 0; i < src_dst_files.size(); i++) {
@@ -285,9 +284,9 @@ tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
       continue;
     }
     tsuba::FileView fv;
-    KATANA_CHECKED(fv.Bind(src_file_uri.path(), false));
+    KATANA_CHECKED(fv.Bind(src_file_uri.string(), false));
     KATANA_CHECKED(
-        tsuba::FileStore(dst_file_uri.path(), fv.ptr<char>(), fv.size()));
+        tsuba::FileStore(dst_file_uri.string(), fv.ptr<char>(), fv.size()));
   }
 
   // Process all the manifest files, write them out.
@@ -303,7 +302,7 @@ tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
 
     auto rdg_manifest_json = rdg_manifest.ToJsonString();
     KATANA_CHECKED(tsuba::FileStore(
-        dst_file_uri.path(),
+        dst_file_uri.string(),
         reinterpret_cast<const uint8_t*>(rdg_manifest_json.data()),
         rdg_manifest_json.size()));
   }

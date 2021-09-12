@@ -284,7 +284,7 @@ tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
       continue;
     }
     tsuba::FileView fv;
-    KATANA_CHECKED(fv.Bind(src_file_uri.string(), false));
+    KATANA_CHECKED(fv.Bind(src_file_uri.string(), true));
     KATANA_CHECKED(
         tsuba::FileStore(dst_file_uri.string(), fv.ptr<char>(), fv.size()));
   }

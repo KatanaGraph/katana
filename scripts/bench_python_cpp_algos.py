@@ -348,8 +348,7 @@ def run_routine(routine, data, load_time, args_trails, argv):
     for _ in range(args_trails):
         time_data = routine(*argv)
         data["routines"][f"{routine.__name__}_{trial_count}"] = time_data
-        data["routines"][f"{routine.__name__}_{trial_count}"]["graph-load-time"] = round(1000 * load_time)
-
+        data["routines"][f"{routine.__name__}_{trial_count}"]["graph_load"] = load_time
         trial_count += 1
     print("Run Complete!")
     return data
@@ -444,6 +443,7 @@ def run_all_gap(args):
     }
     start_time = time.time()
     main_warn = "Graph doesn't exist:"
+    load_timer = {}
     if args.application not in ["all"]:
 
         # Select the routine to run
@@ -452,12 +452,11 @@ def run_all_gap(args):
         if not os.path.exists(graph_path):
             print(f"{routine_to_run.path.warn_prefix} {main_warn} {graph_path}")
 
-        start_load = time.time()
-        if routine_to_run.edge_load:
-            graph = load_graph(graph_path, [])
-        else:
-            graph = load_graph(graph_path)
-        load_time = time.time() - start_load
+        with time_block("graph_load", load_timer):
+            if routine_to_run.edge_load:
+                graph = load_graph(graph_path, [])
+            else:
+                graph = load_graph(graph_path)
 
         routine_args = (graph, input)
 
@@ -466,7 +465,7 @@ def run_all_gap(args):
             routine_args += additional_args
 
         data = run_routine(
-            routine_name_args_mappings[args.application].name, data, load_time, args.trials, routine_args
+            routine_name_args_mappings[args.application].name, data, load_timer["graph_load"], args.trials, routine_args
         )
 
     else:
@@ -480,12 +479,11 @@ def run_all_gap(args):
                 print(f"{routine_to_run.path.warn_prefix} {main_warn} {graph_path}")
 
             if curr_edge_load != routine_to_run.edge_load:
-                start_load = time.time()
-                if routine_to_run.edge_load:
-                    graph = load_graph(graph_path, [])
-                else:
-                    graph = load_graph(graph_path)
-                load_time = time.time() - start_load
+                with time_block("graph_load", load_timer):
+                    if routine_to_run.edge_load:
+                        graph = load_graph(graph_path, [])
+                    else:
+                        graph = load_graph(graph_path)
                 curr_edge_load = routine_to_run.edge_load
 
             routine_args = (graph, input)
@@ -493,8 +491,10 @@ def run_all_gap(args):
             additional_args = routine_name_args_mappings[k].args
             if additional_args:
                 routine_args += additional_args
-
-            data = run_routine(routine_name_args_mappings[k].name, data, load_time, args.trials, routine_args)
+            print(load_timer)
+            data = run_routine(
+                routine_name_args_mappings[k].name, data, load_timer["graph_load"], args.trials, routine_args
+            )
 
     if args.json_output:
         save_success = save_statistics_as_json(data, start_time, args.json_output)
@@ -518,7 +518,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.")
 
-    parser.add_argument("--json-output", default="", help="Path to the save directory (default: %(default)s)")
+    parser.add_argument("--json-output", help="Path at which to save performance data in JSON")
 
     parser.add_argument(
         "--graph",

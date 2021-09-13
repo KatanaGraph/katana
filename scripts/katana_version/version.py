@@ -121,6 +121,13 @@ def get_version(
                 ke_commit, config.enterprise, pretend_clean=pretend_clean, exclude_dirty=(SUBMODULE_PATH,), abbrev=6,
             )
 
+    if len(explicit_version.release) != 3:
+        raise ValueError(
+            f"Versions must have 3 main components (x.y.z). The version specified {explicit_version} "
+            f"(in a git tag, version.txt, or environment variable) has {len(explicit_version.release)} "
+            f"main components."
+        )
+
     computed_version = katana_version(
         *explicit_version.release,
         k_count,

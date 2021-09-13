@@ -47,7 +47,7 @@ jobs:
       - do_python
     # Don't run this in tag CI runs. It's useless since it doesn't produce meaningful artifacts.
     if: |
-      github.event_name != 'pull_request' && !startsWith(github.ref, "refs/tags/") ||
+      github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/') ||
       (
         !contains(github.event.pull_request.body, '[no test]') &&
         !contains(github.event.pull_request.body, '[no Python test]')

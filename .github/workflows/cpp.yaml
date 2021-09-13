@@ -174,10 +174,14 @@ jobs:
     ###
     # Install platform-level dependencies (OS-specific)
     ###
-    - name: Install dependencies
-      if: startsWith(matrix.os, 'ubuntu-')
+    - name: Install dependencies with CUDA
+      if: startsWith(matrix.os, 'ubuntu-') && (matrix.cxx=='g++' || (matrix.cxx=='clang++-12' && matrix.build_type=='Sanitizer'))
       run: |
         sudo scripts/setup_ubuntu.sh
+    - name: Install dependencies without CUDA
+      if: startsWith(matrix.os, 'ubuntu-') && (matrix.cxx!='g++' && (matrix.cxx!='clang++-12' || matrix.build_type!='Sanitizer'))
+      run: |
+        sudo scripts/setup_ubuntu.sh --no-cuda
     - name: Install dependencies
       if: startsWith(matrix.os, 'macOS-')
       run: scripts/setup_macos.sh

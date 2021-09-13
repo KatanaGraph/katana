@@ -2,6 +2,13 @@
 
 set -xeuo pipefail
 
+# Check the options
+INSTALL_CUDA=1
+if [ "$1" == "--no-cuda" ]; then
+  INSTALL_CUDA=
+  shift 1
+fi
+
 #
 # Install bootstrap requirements
 #
@@ -151,7 +158,9 @@ fi
 # https://lists.apache.org/thread.html/r4d2e768c330b6545649e066a1d9d1846ca7a3ea1d97e265205211166%40%3Cdev.arrow.apache.org%3E
 PYARROW_WITH_PARQUET=1 run_as_original_user pip3 install --no-binary pyarrow 'pyarrow>=4.0,<5.0.0a0'
 
-# Install CUDA
-curl https://developer.download.nvidia.com/compute/cuda/11.4.2/local_installers/cuda_11.4.2_470.57.02_linux.run \
-  --output /tmp/cuda_11.4.2_470.57.02_linux.run
-sh /tmp/cuda_11.4.2_470.57.02_linux.run --silent --toolkit
+# Maybe install CUDA
+if [ -n "${INSTALL_CUDA}" ]; then
+  curl https://developer.download.nvidia.com/compute/cuda/11.4.2/local_installers/cuda_11.4.2_470.57.02_linux.run \
+    --output /tmp/cuda_11.4.2_470.57.02_linux.run
+  sh /tmp/cuda_11.4.2_470.57.02_linux.run --silent --toolkit
+fi

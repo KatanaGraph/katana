@@ -75,7 +75,7 @@ jobs:
     - name: Install dependencies
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
-        sudo scripts/setup_ubuntu.sh --no-cuda
+        sudo scripts/setup_ubuntu.sh
     - name: Pre-build
       run: mkdir -p $HOME/build
     - name: Install C++ dependencies
@@ -177,12 +177,12 @@ jobs:
     - name: Install dependencies with CUDA
       if: startsWith(matrix.os, 'ubuntu-') && (matrix.cxx=='g++' || (matrix.cxx=='clang++-12' && matrix.build_type=='Sanitizer'))
       run: |
-        sudo scripts/setup_ubuntu.sh
+        sudo scripts/setup_ubuntu.sh --with-cuda
     - name: Install dependencies without CUDA
       if: startsWith(matrix.os, 'ubuntu-') && (matrix.cxx!='g++' && (matrix.cxx!='clang++-12' || matrix.build_type!='Sanitizer'))
       run: |
-        sudo scripts/setup_ubuntu.sh --no-cuda
-    - name: Install dependencies
+        sudo scripts/setup_ubuntu.sh
+    - name: Install dependencies macOS
       if: startsWith(matrix.os, 'macOS-')
       run: scripts/setup_macos.sh
     - name: Install C++ dependencies

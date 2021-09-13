@@ -139,7 +139,6 @@ def sssp(graph: Graph, input_args, source_node_file=""):
 
     else:
         with time_block(analytics.sssp.__name__, time_data):
-            start_sssp = time.time()
             analytics.sssp(graph, start_node, edge_prop_name, property_name, sssp_plan)
 
         with time_block(check_schema.__name__, time_data):
@@ -280,9 +279,7 @@ def cc(graph: Graph, _input_args):
     time_data = {}
 
     with time_block(analytics.connected_components.__name__, time_data):
-        start_cc = time.time()
         analytics.connected_components(graph, property_name)
-        time_data["cc"] = time.time() - start_cc
 
     with time_block(check_schema.__name__, time_data):
         check_schema(graph, property_name)

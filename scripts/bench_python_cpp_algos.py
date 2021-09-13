@@ -22,7 +22,8 @@ def time_block(run_name):
     timer_algo_start = time.perf_counter()
     yield
     timer_algo_end = time.perf_counter()
-    print(f"[TIMER] Time to run {run_name} : {round((timer_algo_end - timer_algo_start), 2)} seconds")
+    print(
+        f"[TIMER] Time to run {run_name} : {round((timer_algo_end - timer_algo_start), 2)} seconds")
 
 
 def check_schema(graph: Graph, property_name):
@@ -50,7 +51,7 @@ def create_empty_statistics(args):
 
 
 def save_statistics_as_json(bench_stats, start_time, file_name, path="."):
-    bench_stats["duration"] = time.time() - start_time
+    bench_stats["duration"] = round(1000 * time.time() - start_time)
     with open(f"{path}/{file_name}.json", "w") as fp:
         try:
             json.dump(bench_stats, fp, indent=4)
@@ -85,7 +86,8 @@ def bfs(graph: Graph, input_args, source_node_file=""):
 
             start_schema_check = time.time()
             check_schema(graph, property_name)
-            time_data[f"bfs-schema-check-on-{source}"] = time.time() - start_schema_check
+            time_data[f"bfs-schema-check-on-{source}"] = time.time() - \
+                start_schema_check
 
             analytics.bfs_assert_valid(graph, int(source), property_name)
 
@@ -122,7 +124,8 @@ def sssp(graph: Graph, input_args, source_node_file=""):
     start_plan = time.time()
     sssp_plan = analytics.SsspPlan.delta_step(input_args["sssp_delta"])
     if "kron" in input_args["name"] or "urand" in input_args["name"]:
-        sssp_plan = analytics.SsspPlan.delta_step_fusion(input_args["sssp_delta"])
+        sssp_plan = analytics.SsspPlan.delta_step_fusion(
+            input_args["sssp_delta"])
     time_data["sssp-plan"] = time.time() - start_plan
 
     if source_node_file:
@@ -134,14 +137,17 @@ def sssp(graph: Graph, input_args, source_node_file=""):
         for source in sources:
             with time_block(f"sssp on {source}"):
                 start_sssp = time.time()
-                analytics.sssp(graph, source, edge_prop_name, property_name, sssp_plan)
+                analytics.sssp(graph, source, edge_prop_name,
+                               property_name, sssp_plan)
                 time_data[f"sssp-on-{source}"] = time.time() - start_sssp
 
             start_schema_check = time.time()
             check_schema(graph, property_name)
-            time_data[f"sssp-schema-check-on-{source}"] = time.time() - start_schema_check
+            time_data[f"sssp-schema-check-on-{source}"] = time.time() - \
+                start_schema_check
 
-            analytics.sssp_assert_valid(graph, source, edge_prop_name, property_name)
+            analytics.sssp_assert_valid(
+                graph, source, edge_prop_name, property_name)
 
             stats = analytics.SsspStatistics(graph, property_name)
             print(f"STATS:\n{stats}")
@@ -150,14 +156,16 @@ def sssp(graph: Graph, input_args, source_node_file=""):
     else:
         with time_block("sssp"):
             start_sssp = time.time()
-            analytics.sssp(graph, start_node, edge_prop_name, property_name, sssp_plan)
+            analytics.sssp(graph, start_node, edge_prop_name,
+                           property_name, sssp_plan)
             time_data["sssp"] = time.time() - start_sssp
 
         start_schema_check = time.time()
         check_schema(graph, property_name)
         time_data["sssp-schema-check"] = time.time() - start_schema_check
 
-        analytics.sssp_assert_valid(graph, start_node, edge_prop_name, property_name)
+        analytics.sssp_assert_valid(
+            graph, start_node, edge_prop_name, property_name)
 
         stats = analytics.SsspStatistics(graph, property_name)
         print(f"STATS:\n{stats}")
@@ -180,7 +188,8 @@ def jaccard(graph: Graph, input_args):
     check_schema(graph, property_name)
     time_data["jaccard-schema-check"] = time.time() - start_schema_check
 
-    similarities: np.ndarray = graph.get_node_property(property_name).to_numpy()
+    similarities: np.ndarray = graph.get_node_property(
+        property_name).to_numpy()
     assert similarities[compare_node] == 1
 
     analytics.jaccard_assert_valid(graph, compare_node, property_name)
@@ -201,7 +210,8 @@ def pagerank(graph: Graph, _input_args):
     time_data = {}
 
     start_plan = time.time()
-    pagerank_plan = analytics.PagerankPlan.pull_topological(tolerance, max_iteration, alpha)
+    pagerank_plan = analytics.PagerankPlan.pull_topological(
+        tolerance, max_iteration, alpha)
     time_data["topological-plan"] = time.time() - start_plan
 
     with time_block("pagerank"):
@@ -248,14 +258,16 @@ def bc(graph: Graph, input_args, source_node_file="", num_sources=4):
             print(f"Using sources: {sources}")
             with time_block("betweenness centrality"):
                 start_bc = time.time()
-                analytics.betweenness_centrality(graph, property_name, sources, bc_plan)
+                analytics.betweenness_centrality(
+                    graph, property_name, sources, bc_plan)
                 time_data[f"bc-{run}"] = time.time() - start_bc
 
             start_schema_check = time.time()
             check_schema(graph, property_name)
             time_data["bc-schema-check"] = time.time() - start_schema_check
 
-            stats = analytics.BetweennessCentralityStatistics(graph, property_name)
+            stats = analytics.BetweennessCentralityStatistics(
+                graph, property_name)
             print(f"STATS:\n{stats}")
             graph.remove_node_property(property_name)
     else:
@@ -263,7 +275,8 @@ def bc(graph: Graph, input_args, source_node_file="", num_sources=4):
         print(f"Using sources: {sources}")
         with time_block("betweenness centrality"):
             start_bc = time.time()
-            analytics.betweenness_centrality(graph, property_name, sources, bc_plan)
+            analytics.betweenness_centrality(
+                graph, property_name, sources, bc_plan)
             time_data["bc"] = time.time() - start_bc
 
         start_schema_check = time.time()
@@ -347,20 +360,24 @@ def louvain(graph: Graph, input_args):
 
     with time_block("louvain"):
         start_plan = time.time()
-        louvain_plan = analytics.LouvainClusteringPlan.do_all(False, 0.0001, 0.0001, 10000, 100)
+        louvain_plan = analytics.LouvainClusteringPlan.do_all(
+            False, 0.0001, 0.0001, 10000, 100)
         time_data["louvain-plan"] = time.time() - start_plan
 
         start_louvain = time.time()
-        analytics.louvain_clustering(graph, edge_prop_name, property_name, louvain_plan)
+        analytics.louvain_clustering(
+            graph, edge_prop_name, property_name, louvain_plan)
         time_data["louvain"] = time.time() - start_louvain
 
     start_schema_check = time.time()
     check_schema(graph, property_name)
     time_data["louvain-schema-check"] = time.time() - start_schema_check
 
-    analytics.louvain_clustering_assert_valid(graph, edge_prop_name, property_name)
+    analytics.louvain_clustering_assert_valid(
+        graph, edge_prop_name, property_name)
 
-    stats = analytics.LouvainClusteringStatistics(graph, edge_prop_name, property_name)
+    stats = analytics.LouvainClusteringStatistics(
+        graph, edge_prop_name, property_name)
     print(f"STATS:\n{stats}")
     graph.remove_node_property(property_name)
     return time_data
@@ -377,8 +394,10 @@ def run_routine(routine, data, load_time, args_trails, argv):
     trial_count = 0
     for _ in range(args_trails):
         time_data = routine(*argv)
-        data["routines"][f"{str(routine.__name__)}_{str(trial_count)}"] = convert_to_milisec(time_data)
-        data["routines"][f"{str(routine.__name__)}_{str(trial_count)}"]["graph-load-time"] = round(1000 * load_time)
+        data["routines"][f"{str(routine.__name__)}_{str(trial_count)}"] = convert_to_milisec(
+            time_data)
+        data["routines"][f"{str(routine.__name__)}_{str(trial_count)}"]["graph-load-time"] = round(
+            1000 * load_time)
 
         trial_count += 1
     print("Run Complete!")
@@ -451,7 +470,8 @@ def run_all_gap(args):
     def load_graph(graph_path, edge_properties=None):
         print(f"Running {args.application} on graph: {graph_path}")
         with time_block("read Graph"):
-            graph = Graph(graph_path, edge_properties=edge_properties, node_properties=[])
+            graph = Graph(
+                graph_path, edge_properties=edge_properties, node_properties=[])
         print(f"#Nodes: {len(graph)}, #Edges: {graph.num_edges()}")
         return graph
 
@@ -524,10 +544,12 @@ def run_all_gap(args):
             if additional_args:
                 routine_args += additional_args
 
-            data = run_routine(routine_name_args_mappings[k].name, data, load_time, args.trials, routine_args)
+            data = run_routine(
+                routine_name_args_mappings[k].name, data, load_time, args.trials, routine_args)
 
     if args.save_json:
-        save_success = save_statistics_as_json(data, start_time, args.file_name, args.save_dir)
+        save_success = save_statistics_as_json(
+            data, start_time, args.file_name, args.save_dir)
 
     if save_success:
         return (True, data)
@@ -536,9 +558,11 @@ def run_all_gap(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Benchmark performance of routines")
+    parser = argparse.ArgumentParser(
+        description="Benchmark performance of routines")
 
-    parser.add_argument("--input-dir", default="./", help="Path to the input directory (default: %(default)s)")
+    parser.add_argument("--input-dir", default="./",
+                        help="Path to the input directory (default: %(default)s)")
 
     parser.add_argument(
         "--threads",
@@ -546,11 +570,14 @@ if __name__ == "__main__":
         default=None,
         help="Number of threads to use (default: query sinfo). Should match max threads.",
     )
-    parser.add_argument("--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.")
+    parser.add_argument("--thread-spin", default=False,
+                        action="store_true", help="Busy wait for work in thread pool.")
 
-    parser.add_argument("--save-json", default=False, help="Saving the benchmarking information as a JSON file.")
+    parser.add_argument("--save-json", default=False,
+                        help="Saving the benchmarking information as a JSON file.")
 
-    parser.add_argument("--save-dir", default="./", help="Path to the save directory (default: %(default)s)")
+    parser.add_argument("--save-dir", default="./",
+                        help="Path to the save directory (default: %(default)s)")
 
     parser.add_argument(
         "--file-name", default="benchmark_statistics", help="Name of the saved JSON file (default: %(default)s)"
@@ -559,18 +586,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--graph",
         default="GAP-road",
-        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand", "rmat15"],
+        choices=["GAP-road", "GAP-kron", "GAP-twitter",
+                 "GAP-web", "GAP-urand", "rmat15"],
         help="Graph name (default: %(default)s)",
     )
     parser.add_argument(
         "--application",
         default="bfs",
-        choices=["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain", "all"],
+        choices=["bfs", "sssp", "cc", "bc", "pagerank",
+                 "tc", "jaccard", "kcore", "louvain", "all"],
         help="Application to run (default: %(default)s)",
     )
-    parser.add_argument("--source-nodes", default="", help="Source nodes file(default: %(default)s)")
-    parser.add_argument("--trials", type=int, default=1, help="Number of trials (default: %(default)s)")
-    parser.add_argument("--num-sources", type=int, default=4, help="Number of sources (default: %(default)s)")
+    parser.add_argument("--source-nodes", default="",
+                        help="Source nodes file(default: %(default)s)")
+    parser.add_argument("--trials", type=int, default=1,
+                        help="Number of trials (default: %(default)s)")
+    parser.add_argument("--num-sources", type=int, default=4,
+                        help="Number of sources (default: %(default)s)")
     parsed_args = parser.parse_args()
 
     if not os.path.isdir(parsed_args.input_dir):
@@ -580,6 +612,7 @@ if __name__ == "__main__":
     if not parsed_args.threads:
         parsed_args.threads = int(os.cpu_count())
 
-    print(f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
+    print(
+        f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
 
     run_all_gap(parsed_args)

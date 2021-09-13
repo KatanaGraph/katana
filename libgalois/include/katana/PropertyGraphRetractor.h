@@ -69,10 +69,10 @@ public:
     return pg_->rdg_.edge_properties();
   }
 
-  /// Return true if type information has been loaded separate from properties.
-  /// Return false otherwise.
+  /// Return false if type information has been loaded separate from properties.
+  /// Return true otherwise.
   bool NeedsEntityTypeIDInference() {
-    return pg_->rdg_.IsEntityTypeIDsOutsideProperties();
+    return !pg_->rdg_.IsEntityTypeIDsOutsideProperties();
   }
 
   /// This is exposed because type id mappings change sometimes.

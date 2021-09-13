@@ -220,6 +220,7 @@ tsuba::CreateSrcDestFromViewsForCopy(
     auto rdg_manifest_res =
         tsuba::RDGManifest::Make(uri, rdg_view.view_type, version);
     if (!rdg_manifest_res) {
+      KATANA_LOG_WARN("not a valid manifest file, uri: {}", uri.string());
       continue;
     }
 
@@ -246,12 +247,11 @@ tsuba::CreateSrcDestFromViewsForCopy(
                 src_file_uri.BaseName()));
         auto dst_dir_uri = KATANA_CHECKED(katana::Uri::Make(dst_dir));
         dst_file_uri = tsuba::RDGManifest::PartitionFileName(
-            rdg_manifest.view_type(), dst_dir_uri, host_id, 1);
+            rdg_manifest.view_type(), dst_dir_uri, host_id, 1 /* version */);
       } else {
         auto dst_file_path = katana::Uri::JoinPath(dst_dir, fname);
         dst_file_uri = KATANA_CHECKED(katana::Uri::Make(dst_file_path));
       }
-
       src_dst_files.push_back(std::make_pair(src_file_uri, dst_file_uri));
     }
 

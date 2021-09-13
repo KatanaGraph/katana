@@ -6,7 +6,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 include(BuildCommon)
 
-string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_CUDA_SYNOPTIC)
+string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_USE_GPU)
 
 ###### Documentation ######
 
@@ -27,6 +27,15 @@ endif()
 
 add_sanitize_options()
 add_sanitize_blacklist(config/sanitizers/ubsan_blacklist.txt.in)
+
+if(KATANA_USE_GPU)
+  enable_language(CUDA)
+  find_package(CUDAToolkit)
+
+  if(KATANA_USE_SANITIZER)
+    set(CMAKE_CUDA_LINK_EXECUTABLE "<CMAKE_LINKER> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+  endif()
+endif()
 
 add_subdirectory(libsupport)
 add_subdirectory(libtsuba)
@@ -97,15 +106,4 @@ katana_cpack_open_components()
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   katana_reformat_cpack_dependencies()
   include(CPack)
-endif()
-
-if(KATANA_CUDA_SYNOPTIC)
-  enable_language(CUDA)
-  find_package(CUDAToolkit)
-
-  if(KATANA_USE_SANITIZER)
-    set(CMAKE_CUDA_LINK_EXECUTABLE "<CMAKE_LINKER> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-  endif()
-  
-  add_subdirectory(libcudasynoptic)
 endif()

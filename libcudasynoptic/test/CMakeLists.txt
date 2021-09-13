@@ -1,2 +1,0 @@
-add_executable(cuda_synoptic cuda_synoptic.cu)
-target_link_libraries(cuda_synoptic PUBLIC katana_support katana_galois)

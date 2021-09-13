@@ -74,7 +74,7 @@ namespace tsuba {
 
 // Regex for partition files
 const std::regex kPartitionFile(
-    "part_(?:(vers[0-9A-Za-z_]+))_(?:(rdg[0-9A-Za-z-]*))_(?:(node[0-9]*))$");
+    "part_vers(?:([0-9A-Za-z_]+))_(?:(rdg[0-9A-Za-z-]*))_node(?:([0-9]*))$");
 const int kPartitionMatchHostIndex = 3;
 
 katana::Result<RDGPartHeader>

@@ -75,7 +75,7 @@ jobs:
     - name: Install dependencies
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
-        sudo scripts/setup_ubuntu.sh
+        sudo scripts/setup_ubuntu.sh --no-cuda
     - name: Pre-build
       run: mkdir -p $HOME/build
     - name: Install C++ dependencies

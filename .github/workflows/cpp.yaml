@@ -200,11 +200,14 @@ jobs:
     - name: Configure
       run: |
         GPU_ARGS=()
-        GPU_ARGS+=("-DCMAKE_CUDA_COMPILER_LAUNCHER=ccache")
-        GPU_ARGS+=("-DCMAKE_CUDA_ARCHITECTURES=75")
-        GPU_ARGS+=("-DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc")
-        if [ "${{matrix.build_type}}" == "Sanitizer" ]; then
-          GPU_ARGS+=("-DCMAKE_LINKER=${{matrix.cxx}}")
+        if [ "${{matrix.cxx}}" == "g++" ] || [ [ "${{matrix.cxx}}" == 'clang++-12' ] && [ "${{matrix.build_type}}" == "Sanitizer" ] ]
+        then
+          GPU_ARGS+=("-DCMAKE_CUDA_COMPILER_LAUNCHER=ccache")
+          GPU_ARGS+=("-DCMAKE_CUDA_ARCHITECTURES=75")
+          GPU_ARGS+=("-DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc")
+          if [ "${{matrix.build_type}}" == "Sanitizer" ]; then
+            GPU_ARGS+=("-DCMAKE_LINKER=${{matrix.cxx}}")
+          fi
         fi
         .github/workflows/configure_cpp.sh \
           ${{matrix.os}} ${{matrix.cxx}} ${{matrix.build_type}} $HOME/build \
@@ -212,9 +215,12 @@ jobs:
 
     - name: Build
       run: |
-        export CUDA_HOME=/usr/local/cuda
-        export C_INCLUDE_PATH=${CUDA_HOME}/include:${C_INCLUDE_PATH}
-        export LIBRARY_PATH=${CUDA_HOME}/lib64:$LIBRARY_PATH
+        if [ "${{matrix.cxx}}" == "g++" ] || [ [ "${{matrix.cxx}}" == 'clang++-12' ] && [ "${{matrix.build_type}}" == "Sanitizer" ] ]
+        then
+          export CUDA_HOME=/usr/local/cuda
+          export C_INCLUDE_PATH=${CUDA_HOME}/include:${C_INCLUDE_PATH}
+          export LIBRARY_PATH=${CUDA_HOME}/lib64:$LIBRARY_PATH
+        fi
         cmake --build $HOME/build --parallel 2
 
     - name: Clean ccache

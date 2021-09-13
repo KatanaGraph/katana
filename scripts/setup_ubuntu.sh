@@ -4,7 +4,7 @@ set -xeuo pipefail
 
 # Check the options
 INSTALL_CUDA=1
-if [ "$1" == "--no-cuda" ]; then
+if [ "${1-}" == "--no-cuda" ]; then
   INSTALL_CUDA=
   shift 1
 fi

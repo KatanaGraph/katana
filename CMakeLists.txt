@@ -56,7 +56,7 @@ endif()
 
 add_subdirectory(tools)
 
-add_subdirectory(libgpuopen)
+add_subdirectory(libgpu)
 
 ####### Language Bindings #######
 

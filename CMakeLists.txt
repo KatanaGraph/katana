@@ -6,6 +6,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 include(BuildCommon)
 
+string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_USE_GPU)
+
 ###### Documentation ######
 
 set_property(GLOBAL APPEND PROPERTY KATANA_DOXYGEN_DIRECTORIES
@@ -26,6 +28,15 @@ endif()
 add_sanitize_options()
 add_sanitize_blacklist(config/sanitizers/ubsan_blacklist.txt.in)
 
+if(KATANA_USE_GPU)
+  enable_language(CUDA)
+  find_package(CUDAToolkit)
+
+  if(KATANA_USE_SANITIZER)
+    set(CMAKE_CUDA_LINK_EXECUTABLE "<CMAKE_LINKER> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+  endif()
+endif()
+
 add_subdirectory(libsupport)
 add_subdirectory(libtsuba)
 add_subdirectory(libgalois)
@@ -45,6 +56,7 @@ endif()
 
 add_subdirectory(tools)
 
+add_subdirectory(libgpu)
 
 ####### Language Bindings #######
 

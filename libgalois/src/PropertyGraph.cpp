@@ -216,6 +216,8 @@ katana::PropertyGraph::Make(
   katana::GraphTopology topo =
       KATANA_CHECKED(MapTopology(rdg.topology_file_storage()));
 
+  std::unique_ptr<katana::PropertyGraph> property_graph;
+
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 
@@ -233,7 +235,7 @@ katana::PropertyGraph::Make(
     EntityTypeManager edge_type_manager =
         KATANA_CHECKED(rdg.edge_entity_type_manager());
 
-    return std::make_unique<PropertyGraph>(
+    property_graph = std::make_unique<PropertyGraph>(
         std::move(rdg_file), std::move(rdg), std::move(topo),
         std::move(node_type_ids), std::move(edge_type_ids),
         std::move(node_type_manager), std::move(edge_type_manager));
@@ -262,11 +264,23 @@ katana::PropertyGraph::Make(
     KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
     KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
 
-    return std::make_unique<PropertyGraph>(
+    property_graph = std::make_unique<PropertyGraph>(
         std::move(rdg_file), std::move(rdg), std::move(topo),
         std::move(node_type_ids), std::move(edge_type_ids),
         std::move(node_type_manager), std::move(edge_type_manager));
   }
+
+  auto res = property_graph->recreate_node_property_indexes();
+  if (!res) {
+    return res.error();
+  }
+
+  res = property_graph->recreate_edge_property_indexes();
+  if (!res) {
+    return res.error();
+  }
+
+  return std::unique_ptr<katana::PropertyGraph>(std::move(property_graph));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -936,6 +950,13 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
 
   node_indexes_.push_back(std::move(index));
 
+  //save the column name the index was created from for easy assess dudring json load/store
+  node_property_indexes_column_name_.push_back(column_name);
+
+  //persist column names to json, index can now can be recreated using recreate_node_property_indexes()
+  rdg_.set_node_property_indexes_column_name(
+      node_property_indexes_column_name_);
+
   return katana::ResultSuccess();
 }
 
@@ -964,6 +985,13 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
   KATANA_CHECKED(index->BuildFromProperty());
 
   edge_indexes_.push_back(std::move(index));
+
+  //save the column name the index was created from for easy assess dudring json load/store
+  edge_property_indexes_column_name_.push_back(column_name);
+
+  //persist column names to json, index can now can be recreated using recreate_edge_property_indexes()
+  rdg_.set_edge_property_indexes_column_name(
+      edge_property_indexes_column_name_);
 
   return katana::ResultSuccess();
 }

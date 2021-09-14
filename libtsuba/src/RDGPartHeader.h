@@ -278,6 +278,30 @@ public:
     part_prop_info_list_ = std::move(part_prop_info_list);
   }
 
+  const std::vector<std::string>& node_property_indexes_column_name() const {
+    return node_property_indexes_column_name_;
+  }
+  std::vector<std::string>& node_property_indexes_column_name() {
+    return node_property_indexes_column_name_;
+  }
+  void set_node_property_indexes_column_name(
+      std::vector<std::string>& node_property_indexes_column_name) {
+    node_property_indexes_column_name_ =
+        std::move(node_property_indexes_column_name);
+  }
+
+  const std::vector<std::string>& edge_property_indexes_column_name() const {
+    return edge_property_indexes_column_name_;
+  }
+  std::vector<std::string>& edge_property_indexes_column_name() {
+    return edge_property_indexes_column_name_;
+  }
+  void set_edge_property_indexes_column_name(
+      std::vector<std::string>& edge_property_indexes_column_name) {
+    edge_property_indexes_column_name_ =
+        std::move(edge_property_indexes_column_name);
+  }
+
   const PartitionMetadata& metadata() const { return metadata_; }
   void set_metadata(const PartitionMetadata& metadata) { metadata_ = metadata; }
 
@@ -501,6 +525,12 @@ private:
   std::vector<PropStorageInfo> part_prop_info_list_;
   std::vector<PropStorageInfo> node_prop_info_list_;
   std::vector<PropStorageInfo> edge_prop_info_list_;
+
+  /// Column Names to create property index from on startup
+  std::vector<std::string>
+      node_property_indexes_column_name_;  //nhomann serializes this automagically. to/from json required if column name type is (in the future) changed from string to a custom one
+  std::vector<std::string>
+      edge_property_indexes_column_name_;  //nhomann serializes this automagically. to/from json required if column name type is (in the future) changed from string to a custom one
 
   /// Metadata filled in by CuSP, or from storage (meta partition file)
   PartitionMetadata metadata_;

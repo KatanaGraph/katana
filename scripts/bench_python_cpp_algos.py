@@ -87,10 +87,10 @@ def single_run(
     property_name,
     time_data,
     compare_node=None,
-    source=0,
+    src=0,
 ):
 
-    with time_block(f"{routine.__name__}_{source}", time_data):
+    with time_block(f"{routine.__name__}_{src}", time_data):
         routine(*routine_args)
 
     with time_block(check_schema.__name__, time_data):
@@ -247,6 +247,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
                     routine.args.stats,
                     property_name,
                     time_data,
+                    src=run,
                 )
         else:
             for source in sources:
@@ -263,6 +264,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
                     routine.args.stats,
                     property_name,
                     time_data,
+                    src=source,
                 )
 
     else:

@@ -96,11 +96,11 @@ def single_run(
     with time_block(check_schema.__name__, time_data):
         check_schema(graph, property_name)
 
-    if compare_node != None:
+    if compare_node is not None:
         similarities: np.ndarray = graph.get_node_property(property_name).to_numpy()
         assert similarities[compare_node] == 1
 
-    if assert_validation != None:
+    if assert_validation is not None:
         assert_validation(*assert_validation_args)
     if statistics:
         full_stats = statistics(*statistics_args)

@@ -38,7 +38,10 @@ Version Management Tool
 The tool ``scripts/version`` performs a number of tasks related to version
 management. Day to day uses are mentioned here and a full list of commands and
 options is available from: ``scripts/version --help`` (and ``--help`` on each
-subcommand).
+subcommand). Because of the dramatic action this script can take, it runs in
+"dry run" mode by default: it takes no actions, just prints what it would have
+done. To actually perform the action once you are comfortable with the actions
+it will take, call the script with ``--really``.
 
 **To show the current version**, run ``scripts/version show``. This will print out
 the version of the working tree. To see the version of a specific commit run

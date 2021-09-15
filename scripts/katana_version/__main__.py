@@ -879,7 +879,7 @@ This program assumes that your checkouts have the same name as the github reposi
         except (RuntimeError, ValueError, NotImplementedError, CommandError, InvalidVersion) as e:
             # If at first we don't succeed, fetch the upstream remote and try again.
             logger.debug("Exception", exc_info=True)
-            logger.warning("Something failed. Reattempting after fetching the upstream remote.")
+            print("INFO: Fetching upstream remote.")
             fetch_upstream(args.configuration)
             try:
                 execute_subcommand(args)
@@ -895,6 +895,11 @@ def execute_subcommand(args):
     if todos:
         print("=========== TODOS FOR THE DEVELOPER ===========")
         print("\n".join(todos))
+    if args.dry_run:
+        print(
+            "WARNING: This was a dry-run. Nothing was actually done. Once you are comfortable with the actions this "
+            "script will take, call it with --really."
+        )
 
 
 def fetch_upstream(config: Configuration):

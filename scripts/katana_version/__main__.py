@@ -427,7 +427,10 @@ def bump_subcommand(args):
     next_version = version.Version(args.next_version)
 
     current_branch = git.get_branch_checked_out(config.open)
-    return bump_both_repos(config, g, prev_version, next_version, current_branch)
+    todos = bump_both_repos(config, g, prev_version, next_version, current_branch)
+
+    warn_dry_run(args)
+    return todos
 
 
 def check_branch_not_exist(config: Configuration, branch_name):
@@ -551,6 +554,8 @@ def update_dependent_pr_subcommand(args):
         git.switch(enterprise_original_branch, config.enterprise, config.dry_run)
         git.switch(open_original_branch, config.open, config.dry_run)
 
+        warn_dry_run(args)
+
         return [f"TODO: Merge {enterprise_pr.html_url} as soon as possible."]
     raise StateError(
         "PR does not have an acceptable 'After:' annotation. Only external PR references are supported. "
@@ -630,6 +635,8 @@ def tag_subcommand(args):
         tag_repo(config.enterprise)
     fetch_upstream(config)
 
+    warn_dry_run(args)
+
 
 def setup_tag_subcommand(subparsers):
     parser = subparsers.add_parser("tag", help="Tag HEAD as a version.",)
@@ -661,6 +668,8 @@ def release_subcommand(args):
     args.version = str(ver)
     args.require_upstream = True
     tag_subcommand(args)
+
+    warn_dry_run(args)
     return bump_subcommand(args)
 
 
@@ -717,6 +726,8 @@ def release_branch_subcommand(args):
     todos = bump_both_repos(config, g, prev_version, next_version, "master")
     # Create a PR on the release branch which updates the version.txt to {version}rc1.
     todos.extend(bump_both_repos(config, g, prev_version, rc_version, release_branch_name))
+
+    warn_dry_run(args)
     return todos
 
 
@@ -895,6 +906,9 @@ def execute_subcommand(args):
     if todos:
         print("=========== TODOS FOR THE DEVELOPER ===========")
         print("\n".join(todos))
+
+
+def warn_dry_run(args):
     if args.dry_run:
         print(
             "WARNING: This was a dry-run. Nothing was actually done. Once you are comfortable with the actions this "

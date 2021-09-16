@@ -10,39 +10,16 @@
 
 namespace katana {
 
-//////////////////////////////////////////////////////////
-// Arrow Visitor
-/// This enables Arrow visitors of the form:
-/// class Visitor {
-///   using ReturnType = void; // configurable
 /// is_string_like_type_patched is true if the given type is string-like,
 /// which for arrow means that it is a variable-sized type that is UTF8
 /// encoded.
 ///
-///   template <typename ArrowType, typename ArgumentType>
-///   katana::Result<ReturnType> Call(ArgumentType arg);
-/// };
 /// Unlike arrow::is_string_like_type, this version is total, i.e., has a value
 /// for all types. arrow::is_string_like_type is only defined for types that
 /// have the member is_utf8.
 ///
-/// Visitor visitor;
-/// katana::VisitArrow(array, visitor);
-
-// These are fixed in arrow 3.0, but had a typo in 2.0
-// Use in place of:
-// - arrow::is_list_type
-// - arrow::enable_if_list_type
-// TODO(daniel) delete after upgrade
 /// test/arrow.cpp tracks the necessity of having this workaround.
 template <typename T>
-using is_list_type_patched = std::integral_constant<
-    bool, std::is_same<T, arrow::ListType>::value ||
-              std::is_same<T, arrow::LargeListType>::value ||
-              std::is_same<T, arrow::FixedSizeListType>::value>;
-template <typename T, typename R = void>
-using enable_if_list_type_patched =
-    arrow::enable_if_t<is_list_type_patched<T>::value, R>;
 struct is_string_like_type_patched {
   template <typename U>
   constexpr static arrow::enable_if_string_like<U, bool> test(void*) {
@@ -345,7 +322,7 @@ public:
   }
 
   template <typename ArrowType, typename ScalarType>
-  enable_if_list_type_patched<ArrowType, ResultType> Call(
+  arrow::enable_if_list_type<ArrowType, ResultType> Call(
       const ScalarType& scalar) {
     if (!scalar.is_valid) {
       return AppendNull();

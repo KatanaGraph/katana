@@ -15,10 +15,16 @@ namespace katana {
 /// This enables Arrow visitors of the form:
 /// class Visitor {
 ///   using ReturnType = void; // configurable
+/// is_string_like_type_patched is true if the given type is string-like,
+/// which for arrow means that it is a variable-sized type that is UTF8
+/// encoded.
 ///
 ///   template <typename ArrowType, typename ArgumentType>
 ///   katana::Result<ReturnType> Call(ArgumentType arg);
 /// };
+/// Unlike arrow::is_string_like_type, this version is total, i.e., has a value
+/// for all types. arrow::is_string_like_type is only defined for types that
+/// have the member is_utf8.
 ///
 /// Visitor visitor;
 /// katana::VisitArrow(array, visitor);
@@ -28,6 +34,7 @@ namespace katana {
 // - arrow::is_list_type
 // - arrow::enable_if_list_type
 // TODO(daniel) delete after upgrade
+/// test/arrow.cpp tracks the necessity of having this workaround.
 template <typename T>
 using is_list_type_patched = std::integral_constant<
     bool, std::is_same<T, arrow::ListType>::value ||
@@ -36,6 +43,19 @@ using is_list_type_patched = std::integral_constant<
 template <typename T, typename R = void>
 using enable_if_list_type_patched =
     arrow::enable_if_t<is_list_type_patched<T>::value, R>;
+struct is_string_like_type_patched {
+  template <typename U>
+  constexpr static arrow::enable_if_string_like<U, bool> test(void*) {
+    return true;
+  }
+
+  template <typename>
+  constexpr static bool test(...) {
+    return false;
+  }
+
+  constexpr static bool value = test<T>(nullptr);
+};
 
 namespace internal {
 

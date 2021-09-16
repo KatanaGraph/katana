@@ -117,18 +117,17 @@ template <class ArrowDateTimeType, typename Duration>
 void
 katana::TimeParser<ArrowDateTimeType, Duration>::ParseInto(
     const arrow::StringArray& strings, arrow::ArrayBuilder* untyped_builder) {
-  BuilderType* builder = dynamic_cast<BuilderType*>(untyped_builder);
-  KATANA_LOG_DEBUG_ASSERT(builder);
-  if (auto st = builder->Reserve(strings.length()); !st.ok()) {
+  BuilderType& builder = dynamic_cast<BuilderType&>(*untyped_builder);
+  if (auto st = builder.Reserve(strings.length()); !st.ok()) {
     KATANA_LOG_FATAL("builder failed to reserve space");
   }
   for (size_t i = 0, n = strings.length(); i < n; ++i) {
     std::string str = strings.GetString(i);
     auto r = Parse(str);
     if (r) {
-      builder->UnsafeAppend(*r);
+      builder.UnsafeAppend(*r);
     } else {
-      builder->UnsafeAppendNull();
+      builder.UnsafeAppendNull();
     }
   }
 }

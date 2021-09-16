@@ -117,7 +117,22 @@ def single_run(
 
 
 def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
+    """
+    default_run is a function that runs the all of the analytics routines based on the inputs.
 
+    Steps to add another routine:
+        1. Determine the steps to run the routine itself.
+        2. Insert the functions needed for the routine in the appropriate slots.
+        3. If there are any steps that are required but unfulfilled add them
+
+
+    :name: The name of the routine
+    :graph: The graph to use
+    :input_args: The input arguments
+    :num_sources: The number of sources for BC
+    :source_node_file: The source file containing source nodes
+    :return: Benchmarking data dictionary
+    """
     if name == "tc":
         return tc(graph, "")
 

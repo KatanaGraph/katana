@@ -18,10 +18,8 @@ from katana.local import Graph, analytics
 PathExt = namedtuple("PathExt", ["warn_prefix", "path_ext"])
 RoutinePaths = namedtuple("RoutinePaths", ["path", "edge_load"])
 
-RoutineFunc = namedtuple(
-    "RoutineFunc", ["plan", "routine", "validation", "stats"])
-RoutineArgs = namedtuple(
-    "RoutineArgs", ["plan", "routine", "validation", "stats"])
+RoutineFunc = namedtuple("RoutineFunc", ["plan", "routine", "validation", "stats"])
+RoutineArgs = namedtuple("RoutineArgs", ["plan", "routine", "validation", "stats"])
 
 Routine = namedtuple("Routine", ["func", "args"])
 
@@ -31,8 +29,7 @@ def time_block(run_name, time_data):
     timer_algo_start = time.perf_counter()
     yield
     timer_algo_end = time.perf_counter()
-    print(
-        f"[TIMER] Time to run {run_name} : {round((timer_algo_end - timer_algo_start), 2)} seconds")
+    print(f"[TIMER] Time to run {run_name} : {round((timer_algo_end - timer_algo_start), 2)} seconds")
     time_data[run_name] = round(1000 * (timer_algo_end - timer_algo_start))
 
 
@@ -77,8 +74,7 @@ def run_routine(data, load_time, graph, args, input):
     if args.application == "bc":
         num_sources = args.num_sources
     for _ in range(args.trials):
-        time_data = default_run(args.application, graph,
-                                input, num_sources, args.source_nodes)
+        time_data = default_run(args.application, graph, input, num_sources, args.source_nodes)
         data["routines"][f"{args.application}_{trial_count}"] = time_data
         data["routines"][f"{args.application}_{trial_count}"]["graph_load"] = load_time
         trial_count += 1
@@ -108,8 +104,7 @@ def single_run(
         check_schema(graph, property_name)
 
     if compare_node is not None:
-        similarities: np.ndarray = graph.get_node_property(
-            property_name).to_numpy()
+        similarities: np.ndarray = graph.get_node_property(property_name).to_numpy()
         assert similarities[compare_node] == 1
 
     if assert_validation is not None:
@@ -155,8 +150,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
             RoutineArgs(None, cc_bc_args, cc_bc_args, cc_bc_args),
         ),
         "kcore": Routine(
-            RoutineFunc(None, analytics.k_core,
-                        analytics.k_core_assert_valid, analytics.KCoreStatistics),
+            RoutineFunc(None, analytics.k_core, analytics.k_core_assert_valid, analytics.KCoreStatistics),
             RoutineArgs(None, k_args, k_args, k_args),
         ),
         "bfs": Routine(
@@ -168,8 +162,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
                 analytics.bfs_assert_valid,
                 analytics.BfsStatistics,
             ),
-            RoutineArgs([] if "road" in input_args["name"] else [
-                        15, 18], bfs_args, bfs_args, (graph, property_name)),
+            RoutineArgs([] if "road" in input_args["name"] else [15, 18], bfs_args, bfs_args, (graph, property_name)),
         ),
         "sssp": Routine(
             RoutineFunc(
@@ -180,12 +173,10 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
                 analytics.sssp_assert_valid,
                 analytics.SsspStatistics,
             ),
-            RoutineArgs([input_args["sssp_delta"]], sssp_args,
-                        sssp_args, (graph, property_name)),
+            RoutineArgs([input_args["sssp_delta"]], sssp_args, sssp_args, (graph, property_name)),
         ),
         "jaccard": Routine(
-            RoutineFunc(None, analytics.jaccard,
-                        analytics.jaccard_assert_valid, analytics.JaccardStatistics),
+            RoutineFunc(None, analytics.jaccard, analytics.jaccard_assert_valid, analytics.JaccardStatistics),
             RoutineArgs(None, jaccard_args, jaccard_args, jaccard_args),
         ),
         "bc": Routine(
@@ -204,8 +195,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
                 analytics.louvain_clustering_assert_valid,
                 analytics.LouvainClusteringStatistics,
             ),
-            RoutineArgs([False, 0.0001, 0.0001, 10000, 100],
-                        louvain_args, louvain_args, louvain_args),
+            RoutineArgs([False, 0.0001, 0.0001, 10000, 100], louvain_args, louvain_args, louvain_args),
         ),
         "pagerank": Routine(
             RoutineFunc(
@@ -214,8 +204,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
                 analytics.pagerank_assert_valid,
                 analytics.PagerankStatistics,
             ),
-            RoutineArgs((tolerance, max_iteration, alpha),
-                        pagerank_args, pagerank_args, pagerank_args),
+            RoutineArgs((tolerance, max_iteration, alpha), pagerank_args, pagerank_args, pagerank_args),
         ),
     }
 
@@ -385,8 +374,7 @@ def run_all_gap(args):
     def load_graph(graph_path, edge_properties=None):
         print(f"Running {args.application} on graph: {graph_path}")
         with time_block("read Graph", {}):
-            graph = Graph(
-                graph_path, edge_properties=edge_properties, node_properties=[])
+            graph = Graph(graph_path, edge_properties=edge_properties, node_properties=[])
         print(f"#Nodes: {len(graph)}, #Edges: {graph.num_edges()}")
         return graph
 
@@ -443,12 +431,10 @@ def run_all_gap(args):
                         graph = load_graph(graph_path)
                 curr_edge_load = routine_to_run.edge_load
             args.application = k
-            data = run_routine(
-                data, load_timer["graph_load"], graph, args, input)
+            data = run_routine(data, load_timer["graph_load"], graph, args, input)
 
     if args.json_output:
-        save_success = save_statistics_as_json(
-            data, start_time, args.json_output)
+        save_success = save_statistics_as_json(data, start_time, args.json_output)
 
     if save_success:
         return (True, data)
@@ -457,11 +443,9 @@ def run_all_gap(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Benchmark performance of routines")
+    parser = argparse.ArgumentParser(description="Benchmark performance of routines")
 
-    parser.add_argument("--input-dir", default="./",
-                        help="Path to the input directory (default: %(default)s)")
+    parser.add_argument("--input-dir", default="./", help="Path to the input directory (default: %(default)s)")
 
     parser.add_argument(
         "--threads",
@@ -469,32 +453,25 @@ if __name__ == "__main__":
         default=None,
         help="Number of threads to use (default: query sinfo). Should match max threads.",
     )
-    parser.add_argument("--thread-spin", default=False,
-                        action="store_true", help="Busy wait for work in thread pool.")
+    parser.add_argument("--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.")
 
-    parser.add_argument(
-        "--json-output", help="Path at which to save performance data in JSON")
+    parser.add_argument("--json-output", help="Path at which to save performance data in JSON")
 
     parser.add_argument(
         "--graph",
         default="GAP-road",
-        choices=["GAP-road", "GAP-kron", "GAP-twitter",
-                 "GAP-web", "GAP-urand", "rmat15"],
+        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand", "rmat15"],
         help="Graph name (default: %(default)s)",
     )
     parser.add_argument(
         "--application",
         default="bfs",
-        choices=["bfs", "sssp", "cc", "bc", "pagerank",
-                 "tc", "jaccard", "kcore", "louvain", "all"],
+        choices=["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain", "all"],
         help="Application to run (default: %(default)s)",
     )
-    parser.add_argument("--source-nodes", default="",
-                        help="Source nodes file(default: %(default)s)")
-    parser.add_argument("--trials", type=int, default=1,
-                        help="Number of trials (default: %(default)s)")
-    parser.add_argument("--num-sources", type=int, default=4,
-                        help="Number of sources (default: %(default)s)")
+    parser.add_argument("--source-nodes", default="", help="Source nodes file(default: %(default)s)")
+    parser.add_argument("--trials", type=int, default=1, help="Number of trials (default: %(default)s)")
+    parser.add_argument("--num-sources", type=int, default=4, help="Number of sources (default: %(default)s)")
     parsed_args = parser.parse_args()
 
     if not os.path.isdir(parsed_args.input_dir):
@@ -504,7 +481,6 @@ if __name__ == "__main__":
     if not parsed_args.threads:
         parsed_args.threads = int(os.cpu_count())
 
-    print(
-        f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
+    print(f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
 
     run_all_gap(parsed_args)

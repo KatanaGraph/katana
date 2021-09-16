@@ -37,6 +37,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx_tabs.tabs",
+    "sphinx_copybutton"
 ]
 
 breathe_default_project = "katana"

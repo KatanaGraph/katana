@@ -296,9 +296,8 @@ public:
     if (!scalar.is_valid) {
       return AppendNull();
     }
-    auto builder = dynamic_cast<BuilderType*>(builder_);
-    KATANA_LOG_DEBUG_ASSERT(builder);
-    if (auto st = builder->Append(scalar.value); !st.ok()) {
+    auto& builder = dynamic_cast<BuilderType&>(*builder_);
+    if (auto st = builder.Append(scalar.value); !st.ok()) {
       return KATANA_ERROR(
           katana::ErrorCode::ArrowError, "failed to allocate table: {}", st);
     }
@@ -312,9 +311,8 @@ public:
     if (!scalar.is_valid) {
       return AppendNull();
     }
-    auto builder = dynamic_cast<BuilderType*>(builder_);
-    KATANA_LOG_DEBUG_ASSERT(builder);
-    if (auto st = builder->Append(scalar.value->ToString()); !st.ok()) {
+    auto& builder = dynamic_cast<BuilderType&>(*builder_);
+    if (auto st = builder.Append(scalar.value->ToString()); !st.ok()) {
       return KATANA_ERROR(
           katana::ErrorCode::ArrowError, "failed to allocate table: {}", st);
     }
@@ -329,13 +327,12 @@ public:
     }
 
     using BuilderType = typename arrow::TypeTraits<ArrowType>::BuilderType;
-    auto builder = dynamic_cast<BuilderType*>(builder_);
-    KATANA_LOG_DEBUG_ASSERT(builder);
-    if (auto st = builder->Append(); !st.ok()) {
+    auto& builder = dynamic_cast<BuilderType&>(*builder_);
+    if (auto st = builder.Append(); !st.ok()) {
       return KATANA_ERROR(
           katana::ErrorCode::ArrowError, "failed to allocate table: {}", st);
     }
-    AppendScalarToBuilder visitor(builder->value_builder());
+    AppendScalarToBuilder visitor(builder.value_builder());
     for (int64_t i = 0, n = scalar.value->length(); i < n; ++i) {
       auto scalar_res = scalar.value->GetScalar(i);
       if (!scalar_res.ok()) {
@@ -357,14 +354,13 @@ public:
       return AppendNull();
     }
 
-    auto* builder = dynamic_cast<arrow::StructBuilder*>(builder_);
-    KATANA_LOG_DEBUG_ASSERT(builder);
-    if (auto st = builder->Append(); !st.ok()) {
+    auto& builder = dynamic_cast<arrow::StructBuilder&>(*builder_);
+    if (auto st = builder.Append(); !st.ok()) {
       return KATANA_ERROR(
           katana::ErrorCode::ArrowError, "failed to allocate table: {}", st);
     }
     for (int f = 0, n = scalar.value.size(); f < n; ++f) {
-      AppendScalarToBuilder visitor(builder->field_builder(f));
+      AppendScalarToBuilder visitor(builder.field_builder(f));
       if (auto res = VisitArrow(scalar.value.at(f), visitor); !res) {
         return res.error();
       }

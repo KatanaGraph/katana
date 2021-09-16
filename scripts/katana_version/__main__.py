@@ -405,12 +405,15 @@ def get_branch_kind(current_branch, kinds: Iterable[BranchKind]):
 def check_at_branch(branch, config):
     check_remotes(config)
     if git.get_hash(f"{config.open.upstream_remote}/{branch}", config.open) != git.get_hash(git.HEAD, config.open):
-        raise StateError(f"{config.open.dir} HEAD is up to date with {branch}")
+        raise StateError(
+            f"{config.open.dir} HEAD is up NOT to date with {branch}. "
+            "Did you forget to merge the most recent version bump PR in the enterprise repository?"
+        )
 
     if config.has_enterprise and git.get_hash(
         f"{config.enterprise.upstream_remote}/{branch}", config.enterprise
     ) != git.get_hash(git.HEAD, config.enterprise):
-        raise StateError(f"{config.enterprise.dir} HEAD is up to date with {branch}")
+        raise StateError(f"{config.enterprise.dir} HEAD is NOT up to date with {branch}")
 
 
 def bump_subcommand(args):
@@ -424,7 +427,10 @@ def bump_subcommand(args):
     next_version = version.Version(args.next_version)
 
     current_branch = git.get_branch_checked_out(config.open)
-    return bump_both_repos(config, g, prev_version, next_version, current_branch)
+    todos = bump_both_repos(config, g, prev_version, next_version, current_branch)
+
+    warn_dry_run(args)
+    return todos
 
 
 def check_branch_not_exist(config: Configuration, branch_name):
@@ -548,6 +554,8 @@ def update_dependent_pr_subcommand(args):
         git.switch(enterprise_original_branch, config.enterprise, config.dry_run)
         git.switch(open_original_branch, config.open, config.dry_run)
 
+        warn_dry_run(args)
+
         return [f"TODO: Merge {enterprise_pr.html_url} as soon as possible."]
     raise StateError(
         "PR does not have an acceptable 'After:' annotation. Only external PR references are supported. "
@@ -627,6 +635,8 @@ def tag_subcommand(args):
         tag_repo(config.enterprise)
     fetch_upstream(config)
 
+    warn_dry_run(args)
+
 
 def setup_tag_subcommand(subparsers):
     parser = subparsers.add_parser("tag", help="Tag HEAD as a version.",)
@@ -658,6 +668,8 @@ def release_subcommand(args):
     args.version = str(ver)
     args.require_upstream = True
     tag_subcommand(args)
+
+    warn_dry_run(args)
     return bump_subcommand(args)
 
 
@@ -714,6 +726,8 @@ def release_branch_subcommand(args):
     todos = bump_both_repos(config, g, prev_version, next_version, "master")
     # Create a PR on the release branch which updates the version.txt to {version}rc1.
     todos.extend(bump_both_repos(config, g, prev_version, rc_version, release_branch_name))
+
+    warn_dry_run(args)
     return todos
 
 
@@ -876,7 +890,7 @@ This program assumes that your checkouts have the same name as the github reposi
         except (RuntimeError, ValueError, NotImplementedError, CommandError, InvalidVersion) as e:
             # If at first we don't succeed, fetch the upstream remote and try again.
             logger.debug("Exception", exc_info=True)
-            logger.warning("Something failed. Reattempting after fetching the upstream remote.")
+            print("INFO: Fetching upstream remote.")
             fetch_upstream(args.configuration)
             try:
                 execute_subcommand(args)
@@ -892,6 +906,14 @@ def execute_subcommand(args):
     if todos:
         print("=========== TODOS FOR THE DEVELOPER ===========")
         print("\n".join(todos))
+
+
+def warn_dry_run(args):
+    if args.dry_run:
+        print(
+            "WARNING: This was a dry-run. Nothing was actually done. Once you are comfortable with the actions this "
+            "script will take, call it with --really."
+        )
 
 
 def fetch_upstream(config: Configuration):

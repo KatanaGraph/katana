@@ -69,7 +69,7 @@ struct ToArrayVisitor {
 
   template <typename ArrowType, typename BuilderType>
   std::enable_if_t<
-      katana::is_list_type_patched<ArrowType>::value ||
+      arrow::is_list_type<ArrowType>::value ||
           arrow::is_struct_type<ArrowType>::value,
       ResultType>
   Call(BuilderType* builder) {

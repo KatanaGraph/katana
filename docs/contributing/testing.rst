@@ -70,9 +70,23 @@ also possible to run Python tests directly with ``pytest``:
    # Running tests
    $BUILD_DIR/python_env.sh pytest python/test
 
+   # Running tests in one file
+   $BUILD_DIR/python_env.sh pytest python/test/my_test_file.py
+
+   # Running one test
+   $BUILD_DIR/python_env.sh pytest python/test/my_test_file.py::my_test
+
+   # Running all tests with a given marker (similar to ctest labels)
+   $BUILD_DIR/python_env.sh pytest -m my_marker python/test
+
    # Run pytest verbosely (-v), do not capture output (-s) and select tests
    # matching the filter (-k)
    $BUILD_DIR/python_env.sh pytest -v -s -k my_test python/test
+
+   # Running tests with a more sophisticated filter
+   # -k expressions can include python operators and can match
+   # against functions, classes, or even files
+   $BUILD_DIR/python_env.sh pytest -k 'my_test and not YourClass' python/test
 
 
 Notebooks

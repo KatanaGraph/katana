@@ -569,6 +569,27 @@ def setup_update_dependent_pr_subcommand(subparsers):
     parser.set_defaults(subcommand_impl=update_dependent_pr_subcommand)
 
 
+def tag_stable_subcommand(args):
+    print(args)
+    config: Configuration = args.configuration
+    ke_commit = args.commit
+
+    check_remotes(config)
+    check_clean(args, config)
+
+    version = get_version(config, commit=ke_commit)
+    tag = f"stable-{version}"
+
+    # Tag both repos.
+    git.tag_commit(tag, ke_commit, config.enterprise)
+    k_commit = git.submodule_commit_at(SUBMODULE_PATH, ke_commit, config.enterprise)
+    git.tag_commit(tag, k_commit, config.open)
+
+    # Push both if explicitly requested.
+    git.push(config.enterprise.origin_remote, tag, dir=config.enterprise, dry_run=config.dry_run)
+    git.push(config.open.origin_remote, tag, dir=config.open, dry_run=config.dry_run)
+
+
 def tag_subcommand(args):
     config: Configuration = args.configuration
 
@@ -626,6 +647,14 @@ def tag_subcommand(args):
     if config.has_enterprise:
         tag_repo(config.enterprise)
     fetch_upstream(config)
+
+
+def setup_tag_stable_subcommand(subparsers):
+    parser = subparsers.add_parser("tag_stable", help="Tag stable commits.")
+
+    parser.add_argument("commit", type=str)
+
+    parser.set_defaults(subcommand_impl=tag_stable_subcommand)
 
 
 def setup_tag_subcommand(subparsers):
@@ -856,6 +885,7 @@ This program assumes that your checkouts have the same name as the github reposi
     setup_provenance_subcommand(subparsers)
     setup_bump_subcommand(subparsers)
     setup_tag_subcommand(subparsers)
+    setup_tag_stable_subcommand(subparsers)
     setup_release_subcommand(subparsers)
     setup_release_branch_subcommand(subparsers)
     setup_update_dependent_pr_subcommand(subparsers)

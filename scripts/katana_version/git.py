@@ -225,6 +225,10 @@ def get_tags_of(ref, dir):
     return capture_command("git", *dir_arg(dir), "tag", f"--points-at={ref}").splitlines(keepends=False)
 
 
+def tag_commit(tag, commit, dir):
+    action_command("git", *dir_arg(dir), "tag", tag, commit)
+
+
 def get_refs_containing(ref, dir):
     return capture_command(
         "git", *dir_arg(dir), "for-each-ref", "--format=%(refname:short)", f"--contains={ref}"

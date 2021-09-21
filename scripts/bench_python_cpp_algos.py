@@ -111,7 +111,7 @@ def single_run(
         assert_validation(*assert_validation_args)
     if statistics:
         full_stats = statistics(*statistics_args)
-    print(f"STATS:\n{full_stats}")
+        print(f"STATS:\n{full_stats}")
     with time_block(f"{graph.remove_node_property.__name__}_{0}", time_data):
         graph.remove_node_property(property_name)
 

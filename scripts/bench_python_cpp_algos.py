@@ -15,6 +15,13 @@ import katana.local
 from katana.local import Graph, analytics
 
 # TODO(giorgi): This script needs to be tested in CI.
+PathExt = namedtuple("PathExt", ["warn_prefix", "path_ext"])
+RoutinePaths = namedtuple("RoutinePaths", ["path", "edge_load"])
+
+RoutineFunc = namedtuple("RoutineFunc", ["plan", "routine", "validation", "stats"])
+RoutineArgs = namedtuple("RoutineArgs", ["plan", "routine", "validation", "stats"])
+
+Routine = namedtuple("Routine", ["func", "args"])
 
 
 @contextlib.contextmanager
@@ -61,159 +68,175 @@ def save_statistics_as_json(bench_stats, start_time, path):
     return True
 
 
-def bfs(graph: Graph, input_args, source_node_file=""):
-    property_name = "NewProp"
-    start_node = input_args["source_node"]
-    time_data = {}
+def run_routine(data, load_time, graph, args, input):
+    trial_count = 0
+    num_sources = None
+    if args.application == "bc":
+        num_sources = args.num_sources
+    for _ in range(args.trials):
+        time_data = default_run(args.application, graph, input, num_sources, args.source_nodes)
+        data["routines"][f"{args.application}_{trial_count}"] = time_data
+        data["routines"][f"{args.application}_{trial_count}"]["graph_load"] = load_time
+        trial_count += 1
 
-    with time_block(analytics.BfsPlan.__name__, time_data):
-        bfs_plan = analytics.BfsPlan.synchronous_direction_opt(15, 18)
-        if "road" in input_args["name"]:
-            bfs_plan = analytics.BfsPlan.asynchronous()
-
-    if source_node_file:
-        if not os.path.exists(source_node_file):
-            print(f"Source node file doesn't exist: {source_node_file}")
-        with open(source_node_file, "r") as fi:
-            sources = [int(l) for l in fi.readlines()]
-        for source in sources:
-            with time_block(f"{analytics.bfs.__name__}_{sources}", time_data):
-                analytics.bfs(graph, int(source), property_name, plan=bfs_plan)
-
-            with time_block(check_schema.__name__, time_data):
-                check_schema(graph, property_name)
-
-            analytics.bfs_assert_valid(graph, int(source), property_name)
-
-            stats = analytics.BfsStatistics(graph, property_name)
-            print(f"STATS:\n{stats}")
-            with time_block(f"{graph.remove_node_property.__name__}_{sources}", time_data):
-                graph.remove_node_property(property_name)
-    else:
-
-        with time_block(analytics.bfs.__name__, time_data):
-            analytics.bfs(graph, start_node, property_name, plan=bfs_plan)
-
-        with time_block(check_schema.__name__, time_data):
-            check_schema(graph, property_name)
-
-        stats = analytics.BfsStatistics(graph, property_name)
-        print(f"STATS:\n{stats}")
-
-        with time_block(graph.remove_node_property.__name__, time_data):
-            graph.remove_node_property(property_name)
-
-    return time_data
+    print("Run Complete!")
+    return data
 
 
-def sssp(graph: Graph, input_args, source_node_file=""):
-    property_name = "NewProp"
-    start_node = input_args["source_node"]
-    edge_prop_name = input_args["edge_wt"]
-    time_data = {}
+def single_run(
+    graph,
+    routine,
+    routine_args,
+    assert_validation,
+    assert_validation_args,
+    statistics,
+    statistics_args,
+    property_name,
+    time_data,
+    compare_node=None,
+    src=0,
+):
 
-    with time_block(analytics.SsspPlan.__name__, time_data):
-        sssp_plan = analytics.SsspPlan.delta_step(input_args["sssp_delta"])
-        if "kron" in input_args["name"] or "urand" in input_args["name"]:
-            sssp_plan = analytics.SsspPlan.delta_step_fusion(input_args["sssp_delta"])
-
-    if source_node_file:
-        if not os.path.exists(source_node_file):
-            print(f"Source node file doesn't exist: {source_node_file}")
-        with open(source_node_file, "r") as fi:
-            sources = [int(l) for l in fi.readlines()]
-
-        for source in sources:
-            with time_block(f"{analytics.sssp.__name__}_{source}", time_data):
-                analytics.sssp(graph, source, edge_prop_name, property_name, sssp_plan)
-
-            with time_block(check_schema.__name__, time_data):
-                check_schema(graph, property_name)
-
-            analytics.sssp_assert_valid(graph, source, edge_prop_name, property_name)
-
-            stats = analytics.SsspStatistics(graph, property_name)
-            print(f"STATS:\n{stats}")
-            with time_block(f"{graph.remove_node_property.__name__}_{source}", time_data):
-                graph.remove_node_property(property_name)
-
-    else:
-        with time_block(analytics.sssp.__name__, time_data):
-            analytics.sssp(graph, start_node, edge_prop_name, property_name, sssp_plan)
-
-        with time_block(check_schema.__name__, time_data):
-            check_schema(graph, property_name)
-
-        analytics.sssp_assert_valid(graph, start_node, edge_prop_name, property_name)
-
-        stats = analytics.SsspStatistics(graph, property_name)
-        print(f"STATS:\n{stats}")
-
-        with time_block(graph.remove_node_property.__name__, time_data):
-            graph.remove_node_property(property_name)
-
-    return time_data
-
-
-def jaccard(graph: Graph, input_args):
-    property_name = "NewProp"
-    compare_node = input_args["source_node"]
-    time_data = {}
-
-    with time_block(analytics.jaccard.__name__, time_data):
-        analytics.jaccard(graph, compare_node, property_name)
+    with time_block(f"{routine.__name__}_{src}", time_data):
+        routine(*routine_args)
 
     with time_block(check_schema.__name__, time_data):
         check_schema(graph, property_name)
 
-    similarities: np.ndarray = graph.get_node_property(property_name).to_numpy()
-    assert similarities[compare_node] == 1
+    if compare_node is not None:
+        similarities: np.ndarray = graph.get_node_property(property_name).to_numpy()
+        assert similarities[compare_node] == 1
 
-    analytics.jaccard_assert_valid(graph, compare_node, property_name)
-
-    stats = analytics.JaccardStatistics(graph, compare_node, property_name)
-    print(f"STATS:\n{stats}")
-
-    with time_block(graph.remove_node_property.__name__, time_data):
+    if assert_validation is not None:
+        assert_validation(*assert_validation_args)
+    if statistics:
+        full_stats = statistics(*statistics_args)
+        print(f"STATS:\n{full_stats}")
+    with time_block(f"{graph.remove_node_property.__name__}_{0}", time_data):
         graph.remove_node_property(property_name)
 
-    return time_data
+
+def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
+    """
+    default_run is a function that runs the all of the analytics routines based on the inputs.
+
+    Steps to add another routine:
+        1. Determine the steps to run the routine itself.
+        2. Insert the functions needed for the routine in the appropriate slots.
+        3. If there are any steps that are required but unfulfilled add them
 
 
-def pagerank(graph: Graph, _input_args):
+    :name: The name of the routine
+    :graph: The graph to use
+    :input_args: The input arguments
+    :num_sources: The number of sources for BC
+    :source_node_file: The source file containing source nodes
+    :return: Benchmarking data dictionary
+    """
+    if name == "tc":
+        return tc(graph, "")
+
     property_name = "NewProp"
+    start_node = input_args["source_node"]
+    compare_node = input_args["source_node"]
+    edge_prop_name = input_args["edge_wt"]
 
     tolerance = 0.0001
     max_iteration = 1000
     alpha = 0.85
+    k = 10
+
+    cc_bc_args = [graph, property_name]
+    k_args = [graph, k, property_name]
+    jaccard_args = [graph, compare_node, property_name]
+    bfs_args = [graph, start_node, property_name]
+    sssp_args = [graph, start_node, edge_prop_name, property_name]
+    louvain_args = [graph, edge_prop_name, property_name]
+    pagerank_args = [graph, property_name]
     time_data = {}
+    func_arg_mapping = {
+        "cc": Routine(
+            RoutineFunc(
+                None,
+                analytics.connected_components,
+                analytics.connected_components_assert_valid,
+                analytics.ConnectedComponentsStatistics,
+            ),
+            RoutineArgs(None, cc_bc_args, cc_bc_args, cc_bc_args),
+        ),
+        "kcore": Routine(
+            RoutineFunc(None, analytics.k_core, analytics.k_core_assert_valid, analytics.KCoreStatistics),
+            RoutineArgs(None, k_args, k_args, k_args),
+        ),
+        "bfs": Routine(
+            RoutineFunc(
+                analytics.BfsPlan.asynchronous
+                if "road" in input_args["name"]
+                else analytics.BfsPlan.synchronous_direction_opt,
+                analytics.bfs,
+                analytics.bfs_assert_valid,
+                analytics.BfsStatistics,
+            ),
+            RoutineArgs([] if "road" in input_args["name"] else [15, 18], bfs_args, bfs_args, (graph, property_name)),
+        ),
+        "sssp": Routine(
+            RoutineFunc(
+                analytics.SsspPlan.delta_step
+                if "kron" in input_args["name"] or "urand" in input_args["name"]
+                else analytics.SsspPlan.delta_step_fusion,
+                analytics.sssp,
+                analytics.sssp_assert_valid,
+                analytics.SsspStatistics,
+            ),
+            RoutineArgs([input_args["sssp_delta"]], sssp_args, sssp_args, (graph, property_name)),
+        ),
+        "jaccard": Routine(
+            RoutineFunc(None, analytics.jaccard, analytics.jaccard_assert_valid, analytics.JaccardStatistics),
+            RoutineArgs(None, jaccard_args, jaccard_args, jaccard_args),
+        ),
+        "bc": Routine(
+            RoutineFunc(
+                analytics.BetweennessCentralityPlan.level,
+                analytics.betweenness_centrality,
+                None,
+                analytics.BetweennessCentralityStatistics,
+            ),
+            RoutineArgs([], cc_bc_args, None, cc_bc_args),
+        ),
+        "louvain": Routine(
+            RoutineFunc(
+                analytics.LouvainClusteringPlan.do_all,
+                analytics.louvain_clustering,
+                analytics.louvain_clustering_assert_valid,
+                analytics.LouvainClusteringStatistics,
+            ),
+            RoutineArgs([False, 0.0001, 0.0001, 10000, 100], louvain_args, louvain_args, louvain_args),
+        ),
+        "pagerank": Routine(
+            RoutineFunc(
+                analytics.PagerankPlan.pull_topological,
+                analytics.pagerank,
+                analytics.pagerank_assert_valid,
+                analytics.PagerankStatistics,
+            ),
+            RoutineArgs((tolerance, max_iteration, alpha), pagerank_args, pagerank_args, pagerank_args),
+        ),
+    }
 
-    with time_block(analytics.PagerankPlan.__name__, time_data):
-        pagerank_plan = analytics.PagerankPlan.pull_topological(tolerance, max_iteration, alpha)
+    routine = func_arg_mapping[name]
+    routine_args = list(routine.args.routine)
 
-    with time_block(analytics.pagerank.__name__, time_data):
-        analytics.pagerank(graph, property_name, pagerank_plan)
+    validation_args = None
+    if routine.args.validation:
+        validation_args = list(routine.args.validation)
 
-    with time_block(check_schema.__name__, time_data):
-        check_schema(graph, property_name)
+    if routine.func.plan:
+        with time_block(f"plan_{routine.func.plan.__name__}", time_data):
+            plan = routine.func.plan(*routine.args.plan)
 
-    analytics.pagerank_assert_valid(graph, property_name)
-
-    stats = analytics.PagerankStatistics(graph, property_name)
-    print(f"STATS:\n{stats}")
-    with time_block(graph.remove_node_property.__name__, time_data):
-        graph.remove_node_property(property_name)
-
-    return time_data
-
-
-def bc(graph: Graph, input_args, source_node_file="", num_sources=4):
-    property_name = "NewProp"
-    start_node = input_args["source_node"]
-    time_data = {}
-
-    with time_block(analytics.BetweennessCentralityPlan.__name__, time_data):
-        bc_plan = analytics.BetweennessCentralityPlan.level()
+        if name == "bc":
+            routine_args.append(None)
+            routine_args.append(plan)
 
     if source_node_file:
         if not os.path.exists(source_node_file):
@@ -221,39 +244,65 @@ def bc(graph: Graph, input_args, source_node_file="", num_sources=4):
         with open(source_node_file, "r") as fi:
             sources = [int(l) for l in fi.readlines()]
 
-        assert num_sources <= len(sources)
-        runs = (len(sources) + num_sources - 1) // num_sources
+        if name == "bc":
+            assert num_sources <= len(sources)
+            runs = (len(sources) + num_sources - 1) // num_sources
 
-        for run in range(0, runs):
-            start_idx = (num_sources * run) % len(sources)
-            rotated_sources = sources[start_idx:] + sources[:start_idx]
-            sources = rotated_sources[:num_sources]
+            for run in range(0, runs):
+                start_idx = (num_sources * run) % len(sources)
+                rotated_sources = sources[start_idx:] + sources[:start_idx]
+                sources = rotated_sources[:num_sources]
+                routine_args[-2] = sources
 
-            print(f"Using sources: {sources}")
-            with time_block(f"{analytics.betweenness_centrality.__name__}_{run}", time_data):
-                analytics.betweenness_centrality(graph, property_name, sources, bc_plan)
+                single_run(
+                    graph,
+                    routine.func.routine,
+                    routine_args,
+                    routine.func.validation,
+                    validation_args,
+                    routine.func.stats,
+                    routine.args.stats,
+                    property_name,
+                    time_data,
+                    src=run,
+                )
+        else:
+            for source in sources:
+                routine_args[1] = int(source)
+                validation_args[1] = int(source)
+                run_args = []
+                single_run(
+                    graph,
+                    routine.func.routine,
+                    routine_args,
+                    routine.func.validation,
+                    validation_args,
+                    routine.func.stats,
+                    routine.args.stats,
+                    property_name,
+                    time_data,
+                    src=source,
+                )
 
-            with time_block(check_schema.__name__, time_data):
-                check_schema(graph, property_name)
-
-            stats = analytics.BetweennessCentralityStatistics(graph, property_name)
-
-            print(f"STATS:\n{stats}")
-            with time_block(graph.remove_node_property.__name__, time_data):
-                graph.remove_node_property(property_name)
     else:
-        sources = [start_node]
-        print(f"Using sources: {sources}")
-        with time_block(analytics.betweenness_centrality.__name__, time_data):
-            analytics.betweenness_centrality(graph, property_name, sources, bc_plan)
+        if name == "bc":
+            routine_args[-2] = [start_node]
+        run_args = [
+            graph,
+            routine.func.routine,
+            routine_args,
+            routine.func.validation,
+            validation_args,
+            routine.func.stats,
+            routine.args.stats,
+            property_name,
+            time_data,
+        ]
 
-        with time_block(check_schema.__name__, time_data):
-            check_schema(graph, property_name)
+        if name == "jaccard":
+            run_args.append(compare_node)
 
-        stats = analytics.BetweennessCentralityStatistics(graph, property_name)
-        print(f"STATS:\n{stats}")
-        with time_block(graph.remove_node_property.__name__, time_data):
-            graph.remove_node_property(property_name)
+        single_run(*run_args)
 
     return time_data
 
@@ -272,86 +321,6 @@ def tc(graph: Graph, _input_args):
 
     print(f"STATS:\nNumber of Triangles: {n}")
     return time_data
-
-
-def cc(graph: Graph, _input_args):
-    property_name = "NewProp"
-    time_data = {}
-
-    with time_block(analytics.connected_components.__name__, time_data):
-        analytics.connected_components(graph, property_name)
-
-    with time_block(check_schema.__name__, time_data):
-        check_schema(graph, property_name)
-
-    analytics.connected_components_assert_valid(graph, property_name)
-
-    stats = analytics.ConnectedComponentsStatistics(graph, property_name)
-    print(f"STATS:\n{stats}")
-    with time_block(graph.remove_node_property.__name__, time_data):
-        graph.remove_node_property(property_name)
-    return time_data
-
-
-def kcore(graph: Graph, _input_args):
-    property_name = "NewProp"
-    k = 10
-    time_data = {}
-
-    with time_block(analytics.k_core.__name__, time_data):
-        analytics.k_core(graph, k, property_name)
-
-    with time_block(check_schema.__name__, time_data):
-        check_schema(graph, property_name)
-
-    analytics.k_core_assert_valid(graph, k, property_name)
-
-    stats = analytics.KCoreStatistics(graph, k, property_name)
-    print(f"STATS:\n{stats}")
-    with time_block(graph.remove_node_property.__name__, time_data):
-        graph.remove_node_property(property_name)
-    return time_data
-
-
-def louvain(graph: Graph, input_args):
-    property_name = "NewProp"
-    edge_prop_name = input_args["edge_wt"]
-    time_data = {}
-
-    with time_block(analytics.LouvainClusteringPlan.__name__, time_data):
-        louvain_plan = analytics.LouvainClusteringPlan.do_all(False, 0.0001, 0.0001, 10000, 100)
-
-    with time_block(analytics.louvain_clustering.__name__, time_data):
-        analytics.louvain_clustering(graph, edge_prop_name, property_name, louvain_plan)
-
-    with time_block(check_schema.__name__, time_data):
-        check_schema(graph, property_name)
-
-    analytics.louvain_clustering_assert_valid(graph, edge_prop_name, property_name)
-
-    stats = analytics.LouvainClusteringStatistics(graph, edge_prop_name, property_name)
-    print(f"STATS:\n{stats}")
-    with time_block(graph.remove_node_property.__name__, time_data):
-        graph.remove_node_property(property_name)
-    return time_data
-
-
-def convert_to_milisec(data):
-    for v in data:
-        data[v] = round(data[v] * 1000)
-    return data
-
-
-def run_routine(routine, data, load_time, args_trails, argv):
-
-    trial_count = 0
-    for _ in range(args_trails):
-        time_data = routine(*argv)
-        data["routines"][f"{routine.__name__}_{trial_count}"] = time_data
-        data["routines"][f"{routine.__name__}_{trial_count}"]["graph_load"] = load_time
-        trial_count += 1
-    print("Run Complete!")
-    return data
 
 
 def run_all_gap(args):
@@ -427,19 +396,18 @@ def run_all_gap(args):
     # Load our graph
     input = next(item for item in inputs if item["name"] == args.graph)
     data = create_empty_statistics(args)
-    PathExt = namedtuple("PathExt", ["warn_prefix", "path_ext"])
-    Routine = namedtuple("Routine", ["name", "args", "path", "edge_load"])
+
     # For a minor optimization group the routines by their edge_load True or False
     routine_name_args_mappings = {
-        "tc": Routine(tc, (), PathExt("Symmetric clean", input["symmetric_clean_input"]), True),
-        "cc": Routine(cc, (), PathExt("Symmetric", input["symmetric_input"]), True),
-        "kcore": Routine(kcore, (), PathExt("Symmetric", input["symmetric_input"]), True),
-        "bfs": Routine(bfs, (args.source_nodes), PathExt("", input["name"]), False),
-        "sssp": Routine(sssp, (args.source_nodes), PathExt("", input["name"]), False),
-        "jaccard": Routine(jaccard, (), PathExt("", input["name"]), False),
-        "bc": Routine(bc, (args.source_nodes, args.num_sources), PathExt("", input["name"]), False),
-        "louvain": Routine(louvain, (), PathExt("Symmetric", input["symmetric_input"]), False),
-        "pagerank": Routine(pagerank, (), PathExt("Symmetric", input["transpose_input"]), False),
+        "tc": RoutinePaths(PathExt("Symmetric clean", input["symmetric_clean_input"]), True),
+        "cc": RoutinePaths(PathExt("Symmetric", input["symmetric_input"]), True),
+        "kcore": RoutinePaths(PathExt("Symmetric", input["symmetric_input"]), True),
+        "bfs": RoutinePaths(PathExt("", input["name"]), False),
+        "sssp": RoutinePaths(PathExt("", input["name"]), False),
+        "jaccard": RoutinePaths(PathExt("", input["name"]), False),
+        "bc": RoutinePaths(PathExt("", input["name"]), False),
+        "louvain": RoutinePaths(PathExt("Symmetric", input["symmetric_input"]), False),
+        "pagerank": RoutinePaths(PathExt("Symmetric", input["transpose_input"]), False),
     }
     start_time = time.time()
     main_warn = "Graph doesn't exist:"
@@ -458,15 +426,7 @@ def run_all_gap(args):
             else:
                 graph = load_graph(graph_path)
 
-        routine_args = (graph, input)
-
-        additional_args = routine_name_args_mappings[args.application].args
-        if additional_args:
-            routine_args += additional_args
-
-        data = run_routine(
-            routine_name_args_mappings[args.application].name, data, load_timer["graph_load"], args.trials, routine_args
-        )
+        data = run_routine(data, load_timer["graph_load"], graph, args, input)
 
     else:
         first_routine = next(iter(routine_name_args_mappings))
@@ -485,16 +445,8 @@ def run_all_gap(args):
                     else:
                         graph = load_graph(graph_path)
                 curr_edge_load = routine_to_run.edge_load
-
-            routine_args = (graph, input)
-
-            additional_args = routine_name_args_mappings[k].args
-            if additional_args:
-                routine_args += additional_args
-            print(load_timer)
-            data = run_routine(
-                routine_name_args_mappings[k].name, data, load_timer["graph_load"], args.trials, routine_args
-            )
+            args.application = k
+            data = run_routine(data, load_timer["graph_load"], graph, args, input)
 
     if args.json_output:
         save_success = save_statistics_as_json(data, start_time, args.json_output)

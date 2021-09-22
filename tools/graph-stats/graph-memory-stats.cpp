@@ -30,12 +30,45 @@
 
 #include <fstream>
 // Import bad_alloc, expected in case of errors.
+#include <stdlib.h>
+
 #include <new>
+#include <type_traits>
+#include <typeinfo>
+#ifndef _MSC_VER
+#include <cxxabi.h>
+#endif
+#include <cstdlib>
+#include <memory>
+#include <string>
 
 #include "katana/Galois.h"
 #include "katana/LCGraph.h"
 #include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
+
+template <class T>
+std::string
+type_name() {
+  typedef typename std::remove_reference<T>::type TR;
+  std::unique_ptr<char, void (*)(void*)> own(
+#ifndef _MSC_VER
+      abi::__cxa_demangle(typeid(TR).name(), nullptr, nullptr, nullptr),
+#else
+      nullptr,
+#endif
+      std::free);
+  std::string r = own != nullptr ? own.get() : typeid(TR).name();
+  if (std::is_const<TR>::value)
+    r += " const";
+  if (std::is_volatile<TR>::value)
+    r += " volatile";
+  if (std::is_lvalue_reference<T>::value)
+    r += "&";
+  else if (std::is_rvalue_reference<T>::value)
+    r += "&&";
+  return r;
+}
 
 namespace cll = llvm::cl;
 static cll::opt<std::string> inputfilename(
@@ -44,69 +77,55 @@ static cll::opt<std::string> inputfilename(
 static cll::opt<std::string> outputfilename(
     cll::Positional, cll::desc("out-file"), cll::Required);
 
-typedef katana::OfflineGraph Graph;
-typedef Graph::GraphNode GNode;
+// void
+// printSchema(
+//     const std::unique_ptr<katana::PropertyGraph> graph,
+//     const std::shared_ptr<arrow::Schema>& schema) {
+//   for (int32_t i = 0; i < schema->num_fields(); ++i) {
+//     auto prop_name = schema->field(i)->name();
+//     auto field = schema->GetFieldByName(prop_name);
+//     int prop_size = sizeof(field);
+//     std::cout << prop_name << "type is: " << field->type()
+//               << " size is: " << prop_size << "\n";
+//   }
+// }
 
-static void
-dumpStackTrace(std::ofstream& memoryProfile) {
-  // Record 150 pointers to stack frame - enough for the example program.
-  const int maximumStackSize = 150;
-  void* callStack[maximumStackSize];
-  size_t framesInUse = backtrace(callStack, maximumStackSize);
-  // Now callStack is full of pointers. Request the names of the functions matching each frame.
-  char** mangledFunctionNames = backtrace_symbols(callStack, framesInUse);
-  // Writes all the function names in the stream.
-  for (size_t i = 0; i < framesInUse; ++i)
-    memoryProfile << mangledFunctionNames[i] << std::endl;
-  // To be fair, we should release mangledFunctionNames with free…
-}
+void
+doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
+  auto node_schema = graph->full_node_schema();
+  auto edge_schema = graph->full_edge_schema();
 
-static std::ofstream&
-resultFile() {
-  static std::ofstream memoryProfile;
-  static bool open = false;  // Init on 1st use, as usual.
-  if (!open) {
-    memoryProfile.open(outputfilename);
-    open = true;
+  for (int32_t i = 0; i < node_schema->num_fields(); ++i) {
+    auto prop_name = node_schema->field(i)->name();
+    auto field = node_schema->GetFieldByName(prop_name);
+    int prop_size = sizeof(field->type());
+    std::cout << prop_name << "type is: " << field->type()
+              << " size is: " << prop_size << "\n";
   }
-  // Else, handle errors, close the file…
-  // We won’t do it, to keep the example simple.
-  return memoryProfile;
+
+  std::cout << "Edge Schema\n";
+
+  for (int32_t i = 0; i < edge_schema->num_fields(); ++i) {
+    auto prop_name = edge_schema->field(i)->name();
+    auto field = edge_schema->GetFieldByName(prop_name);
+    int prop_size = sizeof(field);
+    std::cout << prop_name << "type is: " << field->type()
+              << " size is: " << prop_size << "\n";
+  }
 }
-
-void*
-operator new(std::size_t sz) {
-  // Allocate the requested memory for the caller.
-  void* requestedMemory = std::malloc(sz);
-  if (!requestedMemory)
-    throw std::bad_alloc();
-  // Share our allocations with the world.
-  std::ofstream& memoryProfile = resultFile();
-  memoryProfile << "Allocation, size = " << sz << " at "
-                << static_cast<void*>(requestedMemory) << std::endl;
-  dumpStackTrace(memoryProfile);
-  memoryProfile << "-----------" << std::endl;  // Poor man’s separator.
-  return requestedMemory;
-}
-
-// void
-// doNonGroupingAnalysis(Graph& graph, ofstream& myfile) {}
-
-// void
-// doGroupingAnalysis(Graph& graph, ofstream& myfile) {}
 
 int
 main(int argc, char** argv) {
+  katana::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
-  std::ofstream myfile("example.txt");
-  auto g = katana::PropertyGraph::Make(inputfilename);
-  // try {
-  //   Graph graph(inputfilename);
-  //   return 0;
-  // } catch (...) {
-  //   std::cerr << "failed\n";
-  //   return 1;
-  // }
 
+  // ofstream memeory_file("example.txt");
+  // memeory_file.open();
+  // memeory_file << "File containing memory analysis of a graph.\n";
+  // memeory_file.close();
+
+  auto g = katana::PropertyGraph::Make(inputfilename, tsuba::RDGLoadOptions());
+  std::cout << "Graph Sizeof is: " << sizeof(g) << "\n";
+  doNonGroupingAnalysis(std::move(g.value()));
   return 1;
 }

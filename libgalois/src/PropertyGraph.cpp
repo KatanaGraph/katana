@@ -6,6 +6,8 @@
 #include <memory>
 #include <utility>
 
+#include <arrow/array.h>
+
 #include "katana/ArrowInterchange.h"
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
@@ -397,6 +399,15 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
   // only relevant to actually construct when EntityTypeIDs are expected in properties
   // when EntityTypeIDs are not expected in properties then we have nothing to do here
   KATANA_LOG_WARN("Loading types from properties.");
+  int64_t total_num_node_props = full_node_schema()->num_fields();
+  for (int64_t i = 0; i < total_num_node_props; ++i) {
+    if (full_node_schema()->field(i)->type()->Equals(arrow::uint8())) {
+      KATANA_CHECKED_CONTEXT(
+          EnsureNodePropertyLoaded(full_node_schema()->field(i)->name()),
+          "loading uint8 property {} for type inference",
+          full_node_schema()->field(i)->name());
+    }
+  }
   node_entity_type_manager_ = EntityTypeManager{};
   node_entity_type_ids_ = EntityTypeIDArray{};
   node_entity_type_ids_.allocateInterleaved(num_nodes());
@@ -404,6 +415,15 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
       num_nodes(), rdg_.node_properties(), &node_entity_type_manager_,
       &node_entity_type_ids_));
 
+  int64_t total_num_edge_props = full_edge_schema()->num_fields();
+  for (int64_t i = 0; i < total_num_edge_props; ++i) {
+    if (full_edge_schema()->field(i)->type()->Equals(arrow::uint8())) {
+      KATANA_CHECKED_CONTEXT(
+          EnsureEdgePropertyLoaded(full_edge_schema()->field(i)->name()),
+          "loading uint8 property {} for type inference",
+          full_edge_schema()->field(i)->name());
+    }
+  }
   edge_entity_type_manager_ = EntityTypeManager{};
   edge_entity_type_ids_ = EntityTypeIDArray{};
   edge_entity_type_ids_.allocateInterleaved(num_edges());

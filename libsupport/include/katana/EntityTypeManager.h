@@ -103,7 +103,9 @@ public:
       const std::shared_ptr<arrow::Table>& properties,
       katana::EntityTypeManager* entity_type_manager,
       EntityTypeArray* entity_type_ids) {
-    KATANA_LOG_WARN("assigning entity type ids from properties");
+    KATANA_LOG_WARN(
+        "assigning entity type ids from properties with {} properties loaded",
+        properties->num_columns());
     static_assert(
         std::is_same_v<typename EntityTypeArray::value_type, EntityTypeID>);
     if (entity_type_ids->size() != topo_size) {

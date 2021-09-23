@@ -639,6 +639,20 @@ CheckedExpressionToValue(arrow::Status&&) {
 /// function calling KATANA_CHECKED_CONTEXT will return the error with
 /// additional error formatting. Otherwise, KATANA_CHECKED_CONTEXT will return
 /// the value of the Result object to the caller.
+///
+/// Because KATANA_CHECKED_CONTEXT is a macro, it will interpret all commas that
+/// are not enclosed in a pair of parentheses as delimiters for its own
+/// arguments. This is problematic for functions with multiple template
+/// parameters. The upshot of this is that
+///
+///     KATANA_CHECKED_CONTEXT(MakeSword<Handle, Blade>(), "third argument")
+///
+/// won't work the way you expect it to. The solution
+/// is to add more parentheses:
+///
+///     KATANA_CHECKED_CONTEXT((MakeSword<Handle,Blade>()), "second argument")
+///
+/// will work just fine.
 #define KATANA_CHECKED_CONTEXT(expression, ...)                                \
   KATANA_CHECKED_IMPL(                                                         \
       KATANA_CHECKED_NAME(_error_or_value, __COUNTER__), expression,           \
@@ -648,6 +662,9 @@ CheckedExpressionToValue(arrow::Status&&) {
 /// has an error, the function calling KATANA_CHECKED will return the error.
 /// Otherwise, KATANA_CHECKED will return the value of the Result object to the
 /// caller.
+///
+/// KATANA_CHECKED has the same issue with template parameters and commas as
+/// KATANA_CHECKED_CONTEXT.
 #define KATANA_CHECKED(expression)                                             \
   KATANA_CHECKED_CONTEXT(expression, "backtrace")
 

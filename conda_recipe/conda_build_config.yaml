@@ -1,5 +1,7 @@
 python:
+  - 3.7.* *_cpython
   - 3.8.* *_cpython
+  - 3.9.* *_cpython
 
 arrow_cpp:
   - 4

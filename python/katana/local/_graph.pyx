@@ -23,6 +23,8 @@ from libcpp.vector cimport vector
 from ..native_interfacing.buffer_access cimport to_pyarrow
 from .entity_type cimport EntityType
 
+from abc import abstractmethod
+
 __all__ = ["GraphBase", "Graph"]
 
 
@@ -301,6 +303,14 @@ cdef class GraphBase:
         types = manager.GetAtomicEntityTypeIDs()
         return [EntityType.make(manager, typeid) for typeid in types]
 
+    @abstractmethod
+    def global_out_degree(self, uint64_t node):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def global_in_degree(self, uint64_t node):
+        raise NotImplementedError()
+
 cdef class Graph(GraphBase):
     """
     A property graph loaded into memory.
@@ -355,3 +365,10 @@ cdef class Graph(GraphBase):
         Internal.
         """
         return <uint64_t>self.underlying_property_graph()
+
+    def global_out_degree(self, uint64_t node):
+        return len(self.edges(node))
+
+    def global_in_degree(self, uint64_t node):
+        # TODO(loc) needs shared-memory bi-directional view
+        raise NotImplementedError()

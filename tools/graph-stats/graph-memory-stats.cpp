@@ -23,22 +23,18 @@
 #include <vector>
 // Our special new must allocate memory as expected…
 #include <cstdio>
-#include <cstdlib>
 // …but also inspect the stack and print some results.
 #include <execinfo.h>
 #include <unistd.h>
 
-#include <fstream>
 // Import bad_alloc, expected in case of errors.
 #include <stdlib.h>
 
-#include <new>
 #include <type_traits>
 #include <typeinfo>
 #ifndef _MSC_VER
 #include <cxxabi.h>
 #endif
-#include <cstdlib>
 #include <memory>
 #include <string>
 
@@ -97,9 +93,8 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   for (int32_t i = 0; i < node_schema->num_fields(); ++i) {
     auto prop_name = node_schema->field(i)->name();
-    auto field = node_schema->GetFieldByName(prop_name);
-    int prop_size = sizeof(field->type());
-    std::cout << prop_name << "type is: " << field->type()
+    int prop_size = sizeof(edge_schema->field(i));
+    std::cout << prop_name << "type is: " << node_schema->field(i)->type()
               << " size is: " << prop_size << "\n";
   }
 
@@ -107,9 +102,8 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   for (int32_t i = 0; i < edge_schema->num_fields(); ++i) {
     auto prop_name = edge_schema->field(i)->name();
-    auto field = edge_schema->GetFieldByName(prop_name);
-    int prop_size = sizeof(field);
-    std::cout << prop_name << "type is: " << field->type()
+    int prop_size = sizeof(edge_schema->field(i));
+    std::cout << prop_name << "type is: " << edge_schema->field(i)->type()
               << " size is: " << prop_size << "\n";
   }
 }

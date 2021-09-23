@@ -17,6 +17,27 @@ overview of this process, this
 `description <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_
 from Atlassian.
 
+In your commits, you should include the Jira number in the body of your commit message. If there is no Jira associated with the commit, or you are an external contributor you may use `NOJIRA` instead. Examples:
+
+```
+This is a commit title line
+
+this is a commit message body line further explaining the commit
+JIRA: KAT-1234
+```
+
+or
+
+```
+This is a commit title line
+
+this is a commit message body line further explaining the commit
+JIRA: NOJIRA
+```
+
+please avoid using `NOJIRA` if there is an associated Jira
+
+
 Merging Changes
 ===============
 

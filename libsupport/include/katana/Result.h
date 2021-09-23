@@ -126,7 +126,7 @@
 ///     Result<Thing> MakeMoveOnlyThing() {
 ///       Thing t;
 ///       ....
-///       return Thing(std::move(t));
+///       return MakeResult(std::move(t));
 ///     }
 ///
 /// \file
@@ -449,11 +449,32 @@ template <class T>
 using Result = BOOST_OUTCOME_V2_NAMESPACE::std_result<
     T, ErrorInfo, internal::abort_policy>;
 
-// TODO(amber): Remove the function below when we have more recent compilers that
-// can construct Result<T> from T in a function's return statement.
+/// MakeResult is a workaround for older compilers that do not naturally
+/// convert move-only values into Results in return statements.
+///
+/// For example, in recent compilers, the following compiles:
+///
+///     Result<Thing> MakeMoveOnlyThing() {
+///       Thing t;
+///       ....
+///       return t;
+///     }
+///
+/// But on older compilers, you might see an error about copying a value that
+/// cannot be copied.
+///
+/// In these cases, you can use this pattern instead:
+///
+///     Result<Thing> MakeMoveOnlyThing() {
+///       Thing t;
+///       ....
+///       return MakeResult(std::move(t));
+///     }
 template <typename T>
 Result<T>
 MakeResult(T&& val) noexcept {
+  // TODO(amber): Remove this when we have more recent compilers that can
+  // construct Result<T> from T in a function's return statement.
   return Result<T>(std::forward<T>(val));
 }
 

@@ -47,7 +47,8 @@ run_as_original_user() {
   # protects characters like < from being interpreted as redirections if $@
   # were expanded directly.
   if [[ -n "${ORIGINAL_USER}" ]]; then
-    su -s /bin/bash - "${ORIGINAL_USER}" bash -c '"$@"' -- "$@"
+    export SHELL=/bin/bash
+    sudo -s -u "${ORIGINAL_USER}" bash -c '"$@"' -- "$@"
   else
     bash -c '"$@"' -- "$@"
   fi

@@ -37,8 +37,8 @@ public:
   uint32_t Num{1};
   /// The id number of this task
   uint32_t ID{0};
-  /// The local id of this task (within its machine)
-  uint32_t Local;
+  /// The local rank of this task (process ordinal number within within its machine)
+  uint32_t LocalRank;
 };
 
 class KATANA_EXPORT NullCommBackend : public CommBackend {

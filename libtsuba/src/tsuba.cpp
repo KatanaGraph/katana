@@ -247,7 +247,8 @@ tsuba::CreateSrcDestFromViewsForCopy(
                 src_file_uri.BaseName()));
         auto dst_dir_uri = KATANA_CHECKED(katana::Uri::Make(dst_dir));
         dst_file_uri = tsuba::RDGManifest::PartitionFileName(
-            rdg_manifest.view_type(), dst_dir_uri, host_id, 1 /* version */);
+            rdg_manifest.view_specifier(), dst_dir_uri, host_id,
+            1 /* version */);
       } else {
         auto dst_file_path = katana::Uri::JoinPath(dst_dir, fname);
         dst_file_uri = KATANA_CHECKED(katana::Uri::Make(dst_file_path));

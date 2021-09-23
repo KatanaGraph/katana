@@ -62,12 +62,6 @@ class KATANA_EXPORT RDGManifest {
   static std::string PartitionFileName(
       const std::string& view_type, uint32_t node_id, uint64_t version);
 
-  std::string view_specifier() const {
-    if (view_args_.size())
-      return fmt::format("{}-{}", view_type_, fmt::join(view_args_, "-"));
-    return view_type_;
-  }
-
 public:
   RDGManifest() = default;
 
@@ -121,9 +115,15 @@ public:
     previous_version_ = prev_version;
   }
 
+  std::string view_specifier() const {
+    if (view_args_.size())
+      return fmt::format("{}-{}", view_type_, fmt::join(view_args_, "-"));
+    return view_type_;
+  }
+
   katana::Uri PartitionFileName(uint32_t host_id) const;
 
-  katana::Uri FileName() { return FileName(dir_, view_type_, version_); }
+  katana::Uri FileName() { return FileName(dir_, view_specifier(), version_); }
 
   // Canonical naming
   static katana::Uri FileName(

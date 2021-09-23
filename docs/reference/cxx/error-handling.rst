@@ -13,6 +13,8 @@ Returning Errors
 
 .. doxygendefine:: KATANA_CHECKED_CONTEXT
 
+.. doxygenfunction:: katana::MakeResult
+
 Results
 =======
 

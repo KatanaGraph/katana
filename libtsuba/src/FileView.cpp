@@ -40,7 +40,7 @@ FileView::~FileView() {
 
 katana::Result<void>
 FileView::Unbind() {
-  if (valid_) {
+  if (bound_) {
     // Resolve all outstanding reads so they don't write to the memory we are
     // about to unmap
     if (auto res = Resolve(0, file_size_); !res) {
@@ -102,7 +102,7 @@ FileView::Bind(
   }
 
   cursor_ = 0;
-  valid_ = true;
+  bound_ = true;
   return katana::ResultSuccess();
 }
 
@@ -114,8 +114,8 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
   uint64_t last_page = 0;
   bool found_empty = false;
 
-  // We would check !valid_ but we want to call this in Bind before we have
-  // set valid_. fetches_ should be default constructed to
+  // We would check !bound_ but we want to call this in Bind before we have
+  // set bound_. fetches_ should be default constructed to
   // nullptr.
   if (!fetches_) {
     return KATANA_ERROR(ErrorCode::InvalidArgument, "not bound");
@@ -165,7 +165,7 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
 
 bool
 FileView::Equals(const FileView& other) const {
-  if (!valid_ || !other.valid_) {
+  if (!bound_ || !other.bound_) {
     return false;
   }
   if (size() != other.size()) {
@@ -191,7 +191,7 @@ FileView::Close() {
 
 arrow::Result<int64_t>
 FileView::Tell() const {
-  if (!valid_) {
+  if (!bound_) {
     return arrow::Status(
         arrow::StatusCode::Invalid, "Unbound FileView has no cursor position");
   }
@@ -200,12 +200,12 @@ FileView::Tell() const {
 
 bool
 FileView::closed() const {
-  return !valid_;
+  return !bound_;
 }
 
 arrow::Status
 FileView::Seek(int64_t seek_to) {
-  if (!valid_) {
+  if (!bound_) {
     return arrow::Status(
         arrow::StatusCode::Invalid, "Cannot Seek in unbound FileView");
   }
@@ -225,7 +225,7 @@ FileView::Read(int64_t nbytes) {
   if (nbytes <= 0) {
     return std::make_shared<arrow::Buffer>(map_start_, 0);
   }
-  if (!valid_) {
+  if (!bound_) {
     return arrow::Status(arrow::StatusCode::Invalid, "Unbound FileView");
   }
   int64_t nbytes_internal = nbytes;
@@ -260,7 +260,7 @@ FileView::Read(int64_t nbytes, void* out) {
   if (nbytes <= 0) {
     return nbytes;
   }
-  if (!valid_) {
+  if (!bound_) {
     return arrow::Status(arrow::StatusCode::Invalid, "Unbound FileView");
   }
   int64_t nbytes_internal = nbytes;

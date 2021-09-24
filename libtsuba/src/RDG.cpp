@@ -556,6 +556,10 @@ tsuba::RDG::DoMake(
   std::vector<PropStorageInfo*> part_info =
       KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
 
+  // these are not Node/Edge types but rather property types we are checking
+  KATANA_CHECKED(core_->EnsureNodeTypesLoaded(rdg_dir_));
+  KATANA_CHECKED(core_->EnsureEdgeTypesLoaded(rdg_dir_));
+
   if (part_info.empty()) {
     return grp.Finish();
   }
@@ -608,10 +612,6 @@ tsuba::RDG::DoMake(
           : host_to_owned_global_edge_ids_->length(),
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
-
-  // these are not Node/Edge types but rather property types we are checking
-  KATANA_CHECKED(core_->EnsureNodeTypesLoaded(rdg_dir_));
-  KATANA_CHECKED(core_->EnsureEdgeTypesLoaded(rdg_dir_));
 
   return katana::ResultSuccess();
 }

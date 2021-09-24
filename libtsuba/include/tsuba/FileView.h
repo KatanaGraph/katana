@@ -15,22 +15,6 @@
 namespace tsuba {
 
 class KATANA_EXPORT FileView : public arrow::io::RandomAccessFile {
-  struct FillingRange {
-    uint64_t first_page;
-    uint64_t last_page;
-    std::future<katana::CopyableResult<void>> work;
-  };
-
-  uint8_t* map_start_{nullptr};
-  int64_t file_size_{0};
-  uint8_t page_shift_{0};
-  int64_t cursor_{0};
-  int64_t mem_start_{0};
-  std::string filename_;
-  bool valid_{false};
-  std::vector<uint64_t> filling_;
-  std::unique_ptr<std::vector<FillingRange>> fetches_;
-
 public:
   FileView() = default;
   FileView(const FileView&) = delete;
@@ -43,10 +27,10 @@ public:
         cursor_(other.cursor_),
         mem_start_(other.mem_start_),
         filename_(std::move(other.filename_)),
-        valid_(other.valid_),
+        bound_(other.bound_),
         filling_(std::move(other.filling_)),
         fetches_(std::move(other.fetches_)) {
-    other.valid_ = false;
+    other.bound_ = false;
   }
 
   FileView& operator=(FileView&& other) noexcept {
@@ -60,11 +44,11 @@ public:
       cursor_ = other.cursor_;
       mem_start_ = other.mem_start_;
       filename_ = std::move(other.filename_);
-      valid_ = other.valid_;
+      bound_ = other.bound_;
       filling_ = std::move(other.filling_);
       fetches_ =
           std::unique_ptr<std::vector<FillingRange>>(std::move(other.fetches_));
-      other.valid_ = false;
+      other.bound_ = false;
     }
     return *this;
   }
@@ -93,7 +77,7 @@ public:
 
   katana::Result<void> Fill(uint64_t begin, uint64_t end, bool resolve);
 
-  bool Valid() const { return valid_; }
+  bool Valid() const { return bound_; }
 
   katana::Result<void> Unbind();
 
@@ -170,6 +154,22 @@ private:
   // Start asynchronously fetching data that we think we might need from storage
   // @start and @size give the location and range of the previous read
   katana::Result<void> PreFetch(int64_t start, int64_t size);
+
+  struct FillingRange {
+    uint64_t first_page;
+    uint64_t last_page;
+    std::future<katana::CopyableResult<void>> work;
+  };
+
+  uint8_t* map_start_{nullptr};
+  int64_t file_size_{0};
+  uint8_t page_shift_{0};
+  int64_t cursor_{0};
+  int64_t mem_start_{0};
+  std::string filename_;
+  bool bound_{false};
+  std::vector<uint64_t> filling_;
+  std::unique_ptr<std::vector<FillingRange>> fetches_;
 };
 }  // namespace tsuba
 

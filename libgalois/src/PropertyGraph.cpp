@@ -243,31 +243,15 @@ katana::PropertyGraph::Make(
   } else {
     // we must construct id_arrays and managers from properties
 
-    KATANA_LOG_DEBUG("loading EntityType data from properties");
-
-    EntityTypeManager node_type_manager{};
-    EntityTypeIDArray node_type_ids;
-    node_type_ids.allocateInterleaved(topo.num_nodes());
-
-    KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
-        topo.num_nodes(), rdg.node_properties(), &node_type_manager,
-        &node_type_ids));
-
-    EntityTypeManager edge_type_manager{};
-    EntityTypeIDArray edge_type_ids;
-    edge_type_ids.allocateInterleaved(topo.num_edges());
-
-    KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
-        topo.num_edges(), rdg.edge_properties(), &edge_type_manager,
-        &edge_type_ids));
-
-    KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
-    KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
-
-    return std::make_unique<PropertyGraph>(
+    auto pg = std::make_unique<PropertyGraph>(
         std::move(rdg_file), std::move(rdg), std::move(topo),
-        std::move(node_type_ids), std::move(edge_type_ids),
-        std::move(node_type_manager), std::move(edge_type_manager));
+        MakeDefaultEntityTypeIDArray(topo.num_nodes()),
+        MakeDefaultEntityTypeIDArray(topo.num_edges()), EntityTypeManager{},
+        EntityTypeManager{});
+
+    KATANA_CHECKED(pg->ConstructEntityTypeIDs());
+
+    return MakeResult(std::move(pg));
   }
 }
 

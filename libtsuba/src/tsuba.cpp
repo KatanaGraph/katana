@@ -215,12 +215,12 @@ tsuba::CreateSrcDestFromViewsForCopy(
   // List out all the files in a given view
   auto rdg_views = KATANA_CHECKED(tsuba::ListAvailableViews(src_dir, version));
   for (const auto& rdg_view : rdg_views.second) {
-    auto uri = KATANA_CHECKED(katana::Uri::Make(src_dir));
-
-    auto rdg_manifest_res =
-        tsuba::RDGManifest::Make(uri, rdg_view.view_type, version);
+    auto rdg_view_uri = KATANA_CHECKED(katana::Uri::Make(rdg_view.view_path));
+    auto rdg_manifest_res = tsuba::RDGManifest::Make(rdg_view_uri);
     if (!rdg_manifest_res) {
-      KATANA_LOG_WARN("not a valid manifest file, uri: {}", uri.string());
+      KATANA_LOG_WARN(
+          "not a valid manifest file: {}, {}", rdg_view_uri.string(),
+          rdg_manifest_res.error());
       continue;
     }
 
@@ -247,7 +247,8 @@ tsuba::CreateSrcDestFromViewsForCopy(
                 src_file_uri.BaseName()));
         auto dst_dir_uri = KATANA_CHECKED(katana::Uri::Make(dst_dir));
         dst_file_uri = tsuba::RDGManifest::PartitionFileName(
-            rdg_manifest.view_type(), dst_dir_uri, host_id, 1 /* version */);
+            rdg_manifest.view_specifier(), dst_dir_uri, host_id,
+            1 /* version */);
       } else {
         auto dst_file_path = katana::Uri::JoinPath(dst_dir, fname);
         dst_file_uri = KATANA_CHECKED(katana::Uri::Make(dst_file_path));

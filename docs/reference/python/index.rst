@@ -7,7 +7,9 @@ Python Library
    :no-members:
 
 .. toctree::
+
    katana
+   katana.local
    katana.local.analytics
    katana.local.atomic
    katana.local.datastructures

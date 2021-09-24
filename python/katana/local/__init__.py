@@ -1,3 +1,9 @@
+"""
+:py:mod:`katana.local` provides single-machine (local) graph data access, graph loading, and analytics. This API
+supports writing new graph algorithms using high-performance parallel loops. This API does not require or utilize a
+remote server and cannot load or process graphs that do not fit in memory.
+"""
+
 # Register numba overloads
 import katana.native_interfacing.pyarrow
 from katana.local._shared_mem_sys import initialize

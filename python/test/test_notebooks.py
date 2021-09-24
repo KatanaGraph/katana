@@ -9,8 +9,9 @@ NOTEBOOK_DIR = pathlib.Path(__file__).parent.parent / "examples" / "notebooks"
 
 NOTEBOOKS = [
     "jaccard_numba.ipynb",
-    "Katana Tutorial.ipynb",
 ]
+
+# TODO(amp, KAT-506): Test notebooks in docs directory.
 
 
 def execute_notebook(notebook_filename):

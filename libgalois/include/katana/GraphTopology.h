@@ -741,15 +741,9 @@ public:
     return node_property_index(nid);
   }
 
-  static std::unique_ptr<ProjectedShuffleTopology> MakeProjectedGraph(
-      const PropertyGraph* pg, const std::vector<std::string>& node_properties,
-      const std::vector<std::string>& edge_properties);
-
   static std::unique_ptr<ProjectedShuffleTopology> Make(
-      const PropertyGraph* pg, const std::vector<std::string>& node_properties,
-      const std::vector<std::string>& edge_properties) {
-    return MakeProjectedGraph(pg, node_properties, edge_properties);
-  }
+      const PropertyGraph* pg, const std::vector<std::string>& node_types,
+      const std::vector<std::string>& edge_types);
 
 private:
   NUMAArray<Edge> adj_indices_;

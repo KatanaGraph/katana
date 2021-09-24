@@ -28,7 +28,7 @@ endif()
 add_sanitize_options()
 add_sanitize_blacklist(config/sanitizers/ubsan_blacklist.txt.in)
 
-# Without these, build tree shared libraries are not use on a machine where Katana is already installed
+# Without these, build tree shared libraries are not used on a machine where Katana is already installed
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--disable-new-dtags" PARENT_SCOPE)
 SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--disable-new-dtags" PARENT_SCOPE)
 SET(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,--disable-new-dtags" PARENT_SCOPE)

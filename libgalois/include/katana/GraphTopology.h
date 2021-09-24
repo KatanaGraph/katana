@@ -607,6 +607,9 @@ private:
   const Topo* topo_ptr_;
 };
 
+/// filter nodes and edges based on their type values
+/// and creates a new local graph based on the filtered nodes and edges
+/// also maintains mappings from old to new and new to old nodes and edges
 class KATANA_EXPORT ProjectedShuffleTopology : public GraphTopologyTypes {
 public:
   ProjectedShuffleTopology() = default;
@@ -615,25 +618,6 @@ public:
 
   ProjectedShuffleTopology(const ProjectedShuffleTopology&) = delete;
   ProjectedShuffleTopology& operator=(const ProjectedShuffleTopology&) = delete;
-
-  //ProjectedShuffleTopology(const Edge* adj_indices, size_t num_nodes, const Node* dests,
-  //size_t num_edges) noexcept;
-
-  ProjectedShuffleTopology(
-      NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests,
-      NUMAArray<Node>&& old_to_new_nodes_mapping,
-      NUMAArray<Node>&& new_to_old_nodes_mapping,
-      NUMAArray<Edge>&& old_to_new_edges_mapping,
-      NUMAArray<Edge>&& new_to_old_edges_mapping) noexcept
-      : adj_indices_(std::move(adj_indices)),
-        dests_(std::move(dests)),
-        old_to_new_nodes_mapping_(std::move(old_to_new_nodes_mapping)),
-        new_to_old_nodes_mapping_(std::move(new_to_old_nodes_mapping)),
-        old_to_new_edges_mapping_(std::move(old_to_new_edges_mapping)),
-        new_to_old_edges_mapping_(std::move(new_to_old_edges_mapping)) {}
-
-  //static ProjectedShuffleTopology Copy(
-  //  const ProjectedShuffleTopology& that) noexcept;
 
   uint64_t num_nodes() const noexcept { return adj_indices_.size(); }
 
@@ -746,6 +730,19 @@ public:
       const std::vector<std::string>& edge_types);
 
 private:
+  ProjectedShuffleTopology(
+      NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests,
+      NUMAArray<Node>&& old_to_new_nodes_mapping,
+      NUMAArray<Node>&& new_to_old_nodes_mapping,
+      NUMAArray<Edge>&& old_to_new_edges_mapping,
+      NUMAArray<Edge>&& new_to_old_edges_mapping) noexcept
+      : adj_indices_(std::move(adj_indices)),
+        dests_(std::move(dests)),
+        old_to_new_nodes_mapping_(std::move(old_to_new_nodes_mapping)),
+        new_to_old_nodes_mapping_(std::move(new_to_old_nodes_mapping)),
+        old_to_new_edges_mapping_(std::move(old_to_new_edges_mapping)),
+        new_to_old_edges_mapping_(std::move(new_to_old_edges_mapping)) {}
+
   NUMAArray<Edge> adj_indices_;
   NUMAArray<Node> dests_;
   NUMAArray<Node> old_to_new_nodes_mapping_;

@@ -51,7 +51,16 @@ FileView::Unbind() {
         return KATANA_ERROR(katana::ResultErrno(), "unmapping buffer");
       }
     }
-    valid_ = false;
+    map_start_ = nullptr;
+    file_size_ = 0;
+    page_shift_ = 0;
+    cursor_ = 0;
+    mem_start_ = 0;
+    filename_ = "";
+    filling_ = std::vector<uint64_t>();
+    KATANA_LOG_DEBUG_ASSERT(fetches_->empty());
+
+    bound_ = false;
   }
   return katana::ResultSuccess();
 }
@@ -94,6 +103,7 @@ FileView::Bind(
 
   map_start_ = static_cast<uint8_t*>(tmp);
   mem_start_ = -1;
+  filling_.clear();
   filling_.resize(page_number(buf.size) / 64 + 1, 0);
   file_size_ = buf.size;
   fetches_ = std::make_unique<std::vector<FillingRange>>();

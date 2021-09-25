@@ -36,9 +36,9 @@ public:
   /// The number of tasks involved
   uint32_t Num{1};
   /// The id number of this task
-  uint32_t ID{0};
+  uint32_t Rank{0};
   /// The local rank of this task (process ordinal number within within its machine)
-  uint32_t LocalRank;
+  uint32_t LocalRank{0};
 };
 
 class KATANA_EXPORT NullCommBackend : public CommBackend {

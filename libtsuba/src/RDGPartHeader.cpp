@@ -134,7 +134,7 @@ RDGPartHeader::Write(
   KATANA_LOG_DEBUG("Next verison: {}", next_version);
   ff->Bind(RDGManifest::PartitionFileName(
                handle.impl_->rdg_manifest().viewtype(),
-               handle.impl_->rdg_manifest().dir(), Comm()->ID, next_version)
+               handle.impl_->rdg_manifest().dir(), Comm()->Rank, next_version)
                .string());
 
   writes->StartStore(std::move(ff));

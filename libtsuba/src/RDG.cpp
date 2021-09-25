@@ -619,7 +619,7 @@ tsuba::RDG::DoMake(
 katana::Result<tsuba::RDG>
 tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   uint32_t partition_id_to_load =
-      opts.partition_id_to_load.value_or(Comm()->ID);
+      opts.partition_id_to_load.value_or(Comm()->Rank);
 
   katana::Uri partition_path = manifest.PartitionFileName(partition_id_to_load);
 

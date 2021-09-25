@@ -19,7 +19,7 @@ Result<std::unique_ptr<WriteGroup>>
 WriteGroup::Make() {
   // Don't use `OneHostOnly` because we can skip its broadcast
   std::string tag;
-  if (Comm()->ID == 0) {
+  if (Comm()->Rank == 0) {
     tag = katana::RandomAlphanumericString(kTagLen);
   }
   tag = Comm()->Broadcast(0, tag, kTagLen);

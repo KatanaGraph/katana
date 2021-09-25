@@ -114,7 +114,7 @@ tsuba::Create(const std::string& name) {
   tsuba::RDGManifest manifest{};
 
   katana::CommBackend* comm = Comm();
-  if (comm->ID == 0) {
+  if (comm->Rank == 0) {
     std::string s = manifest.ToJsonString();
     if (auto res = tsuba::FileStore(
             tsuba::RDGManifest::FileName(

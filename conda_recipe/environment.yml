@@ -44,6 +44,10 @@ dependencies:
  - pylint=2.8.3
  - coverage
  - pandas
+# CUDA-enabled build in conda fails without these, not finding /lib64/libpthread.so.0
+ - gxx_linux-64
+ - gcc_linux-64
+ - cudatoolkit
 
 # The dependencies for pytest-notebook are incomplete, add them manually
  - pytest-notebook

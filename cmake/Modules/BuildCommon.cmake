@@ -67,6 +67,11 @@ set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather
 
 ###### Configure (users don't need to go beyond here) ######
 
+# Without these, build tree shared libraries are not used on a machine where Katana is already installed
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--disable-new-dtags")
+SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--disable-new-dtags")
+SET(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,--disable-new-dtags")
+
 cmake_host_system_information(RESULT KATANA_NUM_PHYSICAL_CORES QUERY NUMBER_OF_PHYSICAL_CORES)
 
 if (NOT KATANA_NUM_TEST_THREADS)

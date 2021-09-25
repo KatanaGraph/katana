@@ -100,7 +100,7 @@ tsuba::OneHostOnly(const std::function<katana::Result<void>()>& cb) {
   katana::Result<void> res = katana::ResultSuccess();
 
   bool failed = false;
-  if (Comm()->ID == 0) {
+  if (Comm()->Rank == 0) {
     res = cb();
     if (!res) {
       failed = true;

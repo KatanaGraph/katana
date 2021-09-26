@@ -9,6 +9,7 @@ CreateError() {
 
 katana::Result<void>
 GetError() {
+  auto suppressor = katana::GetTracer().SuppressTracer();
   auto scope = katana::GetTracer().StartActiveSpan("passing error");
   return CreateError().error().WithContext("passed along by GetError");
 }

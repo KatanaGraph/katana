@@ -164,7 +164,8 @@ katana::JSONTracer::Make(
 std::shared_ptr<katana::ProgressSpan>
 katana::JSONTracer::StartSpan(
     const std::string& span_name, const katana::ProgressContext& child_of) {
-  return JSONSpan::Make(span_name, child_of, out_callback_);
+  // this span cannot be suppressed
+  return JSONSpan::Make(span_name, child_of, false, out_callback_);
 }
 
 std::string
@@ -186,8 +187,9 @@ katana::JSONTracer::Extract(const std::string& carrier) {
 std::shared_ptr<katana::ProgressSpan>
 katana::JSONTracer::StartSpan(
     const std::string& span_name,
-    std::shared_ptr<katana::ProgressSpan> child_of) {
-  return JSONSpan::Make(span_name, std::move(child_of), out_callback_);
+    std::shared_ptr<katana::ProgressSpan> child_of, bool is_suppressed) {
+  return JSONSpan::Make(
+      span_name, std::move(child_of), is_suppressed, out_callback_);
 }
 
 std::unique_ptr<katana::ProgressContext>
@@ -197,6 +199,10 @@ katana::JSONContext::Clone() const noexcept {
 
 void
 katana::JSONSpan::SetTags(const katana::Tags& tags) {
+  if (IsSuppressed()) {
+    return;
+  }
+
   std::string span_data = GetSpanJSON(GetContext().GetSpanID());
   std::string log_data;
   std::string tag_data = GetTagsJSON(tags);
@@ -209,6 +215,10 @@ katana::JSONSpan::SetTags(const katana::Tags& tags) {
 
 void
 katana::JSONSpan::Log(const std::string& message, const katana::Tags& tags) {
+  if (IsSuppressed()) {
+    return;
+  }
+
   std::string span_data = GetSpanJSON(GetContext().GetSpanID());
   std::string log_data = GetLogJSON(message);
   std::string tag_data = GetTagsJSON(tags);
@@ -221,8 +231,8 @@ katana::JSONSpan::Log(const std::string& message, const katana::Tags& tags) {
 
 katana::JSONSpan::JSONSpan(
     const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent,
-    OutputCB out_callback)
-    : ProgressSpan(std::move(parent)),
+    bool is_suppressed, OutputCB out_callback)
+    : ProgressSpan(std::move(parent), is_suppressed),
       context_(JSONContext{"", ""}),
       out_callback_(std::move(out_callback)) {
   std::string parent_span_id{"null"};
@@ -239,6 +249,10 @@ katana::JSONSpan::JSONSpan(
   std::string span_id = GenerateID();
   context_ = JSONContext(trace_id, span_id);
 
+  if (IsSuppressed()) {
+    return;
+  }
+
   const std::string& message = span_name;
 
   std::string span_data = GetSpanJSON(span_id, span_name, parent_span_id);
@@ -252,14 +266,18 @@ katana::JSONSpan::JSONSpan(
 
 katana::JSONSpan::JSONSpan(
     const std::string& span_name, const katana::ProgressContext& parent,
-    OutputCB out_callback)
-    : ProgressSpan(nullptr),
+    bool is_suppressed, OutputCB out_callback)
+    : ProgressSpan(nullptr, is_suppressed),
       context_(JSONContext{"", ""}),
       out_callback_(std::move(out_callback)) {
   std::string parent_span_id = parent.GetSpanID();
   std::string trace_id = parent.GetTraceID();
   std::string span_id = GenerateID();
   context_ = JSONContext(trace_id, span_id);
+
+  if (IsSuppressed()) {
+    return;
+  }
 
   const std::string& message = span_name;
 
@@ -276,20 +294,23 @@ katana::JSONSpan::JSONSpan(
 std::shared_ptr<katana::ProgressSpan>
 katana::JSONSpan::Make(
     const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent,
-    OutputCB out_callback) {
-  return std::shared_ptr<JSONSpan>(
-      new JSONSpan(span_name, std::move(parent), std::move(out_callback)));
+    bool is_suppressed, OutputCB out_callback) {
+  return std::shared_ptr<JSONSpan>(new JSONSpan(
+      span_name, std::move(parent), is_suppressed, std::move(out_callback)));
 }
 std::shared_ptr<katana::ProgressSpan>
 katana::JSONSpan::Make(
     const std::string& span_name, const katana::ProgressContext& parent,
-    OutputCB out_callback) {
+    bool is_suppressed, OutputCB out_callback) {
   return std::shared_ptr<JSONSpan>(
-      new JSONSpan(span_name, parent, std::move(out_callback)));
+      new JSONSpan(span_name, parent, is_suppressed, std::move(out_callback)));
 }
 
 void
 katana::JSONSpan::Close() {
+  if (IsSuppressed()) {
+    return;
+  }
   std::string message{"finished"};
 
   std::string span_data = GetSpanJSON(GetContext().GetSpanID(), true);

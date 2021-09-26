@@ -90,7 +90,8 @@ katana::TextTracer::Make(uint32_t host_id, uint32_t num_hosts) {
 std::shared_ptr<katana::ProgressSpan>
 katana::TextTracer::StartSpan(
     const std::string& span_name, const katana::ProgressContext& child_of) {
-  return TextSpan::Make(span_name, child_of);
+  // this span cannot be suppressed
+  return TextSpan::Make(span_name, child_of, false);
 }
 
 std::string
@@ -112,8 +113,8 @@ katana::TextTracer::Extract(const std::string& carrier) {
 std::shared_ptr<katana::ProgressSpan>
 katana::TextTracer::StartSpan(
     const std::string& span_name,
-    std::shared_ptr<katana::ProgressSpan> child_of) {
-  return TextSpan::Make(span_name, std::move(child_of));
+    std::shared_ptr<katana::ProgressSpan> child_of, bool is_suppressed) {
+  return TextSpan::Make(span_name, std::move(child_of), is_suppressed);
 }
 
 std::unique_ptr<katana::ProgressContext>
@@ -123,6 +124,10 @@ katana::TextContext::Clone() const noexcept {
 
 void
 katana::TextSpan::SetTags(const katana::Tags& tags) {
+  if (IsSuppressed()) {
+    return;
+  }
+
   std::string message = "tags for " + span_name_;
   std::string tags_data = GetTagsText(tags);
   std::string host_data;
@@ -133,6 +138,10 @@ katana::TextSpan::SetTags(const katana::Tags& tags) {
 
 void
 katana::TextSpan::Log(const std::string& message, const katana::Tags& tags) {
+  if (IsSuppressed()) {
+    return;
+  }
+
   std::string tags_data = GetTagsText(tags);
   std::string host_data;
 
@@ -141,10 +150,15 @@ katana::TextSpan::Log(const std::string& message, const katana::Tags& tags) {
 }
 
 katana::TextSpan::TextSpan(
-    const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent)
-    : ProgressSpan(std::move(parent)),
+    const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent,
+    bool is_suppressed)
+    : ProgressSpan(std::move(parent), is_suppressed),
       context_(TextContext{"0", "0"}),
       span_name_(span_name) {
+  if (IsSuppressed()) {
+    return;
+  }
+
   std::string message = "starting " + span_name;
   std::string tags_data;
   std::string host_data;
@@ -158,10 +172,14 @@ katana::TextSpan::TextSpan(
 
 katana::TextSpan::TextSpan(
     const std::string& span_name,
-    [[maybe_unused]] const katana::ProgressContext& parent)
-    : ProgressSpan(nullptr),
+    [[maybe_unused]] const katana::ProgressContext& parent, bool is_suppressed)
+    : ProgressSpan(nullptr, is_suppressed),
       context_(TextContext{"0", "0"}),
       span_name_(span_name) {
+  if (IsSuppressed()) {
+    return;
+  }
+
   std::string message = "starting " + span_name;
   std::string tags_data;
   std::string host_data = GetHostStatsText();
@@ -172,19 +190,26 @@ katana::TextSpan::TextSpan(
 
 std::shared_ptr<katana::ProgressSpan>
 katana::TextSpan::Make(
-    const std::string& span_name,
-    std::shared_ptr<katana::ProgressSpan> parent) {
-  return std::shared_ptr<TextSpan>(new TextSpan(span_name, std::move(parent)));
+    const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent,
+    bool is_suppressed) {
+  return std::shared_ptr<TextSpan>(
+      new TextSpan(span_name, std::move(parent), is_suppressed));
 }
 
 std::shared_ptr<katana::ProgressSpan>
 katana::TextSpan::Make(
-    const std::string& span_name, const katana::ProgressContext& parent) {
-  return std::shared_ptr<TextSpan>(new TextSpan(span_name, parent));
+    const std::string& span_name, const katana::ProgressContext& parent,
+    bool is_suppressed) {
+  return std::shared_ptr<TextSpan>(
+      new TextSpan(span_name, parent, is_suppressed));
 }
 
 void
 katana::TextSpan::Close() {
+  if (IsSuppressed()) {
+    return;
+  }
+
   std::string message = "finished " + span_name_;
   std::string tags_data;
   std::string host_data;

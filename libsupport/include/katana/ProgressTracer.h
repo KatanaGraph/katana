@@ -49,6 +49,11 @@
 /// ProgressTracer. This prevents GetProgressTracer() from returning nullptr
 /// and ensures tracers are closed
 ///
+/// ProgressSuppressors will use RAII to re-enable tracers on close, they can also be nested
+/// so that nested suppressors will not re-enable tracers.
+/// Suppressing a tracer means all output associated with spans created while a trace is suppressed
+/// will have no output, but output associated with existing spans during this period may have output
+///
 /// ProgressScopes will only close their ProgressSpan when their ProgressSpan
 /// is the active span. This means that if a user exclusively uses
 /// ProgressScopes, then parent ProgressSpans will not be closed until their
@@ -98,6 +103,7 @@ struct HostStats {
 };
 
 class ProgressScope;
+class ProgressSuppressor;
 class ProgressSpan;
 class ProgressContext;
 
@@ -111,6 +117,9 @@ public:
 
   static ProgressTracer& Get() { return *tracer_; }
   static void Set(std::unique_ptr<ProgressTracer> tracer);
+  ProgressSuppressor SuppressTracer();
+  // UnsuppressTracer should not be used explicitly
+  void UnsuppressTracer();
 
   static uint64_t ParseProcSelfRssBytes();
   static HostStats GetHostStats();
@@ -129,6 +138,7 @@ public:
   /// no child_of value is given
   /// Otherwise creates a child span of the child_of span or active span
   /// Should only be used to handle multiple active spans simultaneously
+  /// Cannot be suppressed
   virtual std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, const ProgressContext& child_of) = 0;
 
@@ -164,7 +174,8 @@ protected:
 
 private:
   virtual std::shared_ptr<ProgressSpan> StartSpan(
-      const std::string& span_name, std::shared_ptr<ProgressSpan> child_of) = 0;
+      const std::string& span_name, std::shared_ptr<ProgressSpan> child_of,
+      bool is_suppressed) = 0;
   ProgressScope SetActiveSpan(std::shared_ptr<ProgressSpan> span);
 
   /// Close flushes any buffered spans
@@ -175,6 +186,7 @@ private:
   std::shared_ptr<ProgressSpan> active_span_ = nullptr;
   uint32_t host_id_;
   uint32_t num_hosts_;
+  bool is_suppressed_ = false;
   std::shared_ptr<ProgressSpan> default_active_span_ = nullptr;
 };
 
@@ -192,8 +204,7 @@ public:
   /// span relationships, and handle multiple active spans at a time
   ProgressSpan& span() { return *span_; }
 
-  /// Closes the underlying ProgressSpan if the ProgressScope was created
-  /// with the flag finish_on_close=true
+  /// Closes the underlying ProgressSpan
   /// Note that this will only close the underlying ProgressSpan when all
   /// of its active children ProgressSpans have been finished
   /// This will be called by RAII if it has not already been called
@@ -205,6 +216,27 @@ private:
   ProgressScope(std::shared_ptr<ProgressSpan> span) : span_(std::move(span)) {}
 
   std::shared_ptr<ProgressSpan> span_;
+};
+
+class KATANA_EXPORT [[nodiscard]] ProgressSuppressor {
+public:
+  ~ProgressSuppressor();
+  ProgressSuppressor(const ProgressSuppressor&) = delete;
+  ProgressSuppressor(ProgressSuppressor &&) = delete;
+  ProgressSuppressor& operator=(const ProgressSuppressor&) = delete;
+  ProgressSuppressor& operator=(ProgressSuppressor&&) = delete;
+
+  /// Ends tracer suppression if this is not a nested suppression
+  /// This will be called by RAII if it has not already been called
+  void Finish();
+
+private:
+  friend class ProgressTracer;
+
+  ProgressSuppressor(bool is_nested) : is_nested_(is_nested) {}
+
+  bool is_nested_;
+  bool is_finished_ = false;
 };
 
 class KATANA_EXPORT ProgressContext {
@@ -252,6 +284,7 @@ public:
   void MarkScopeClosed();
   virtual bool ScopeClosed();
   bool IsFinished() const { return finished_; }
+  bool IsSuppressed() const { return is_suppressed_; }
   const std::shared_ptr<ProgressSpan>& GetParentSpan() { return parent_; }
 
   /// Every ProgressSpan started must be finished
@@ -267,13 +300,16 @@ public:
   void Finish();
 
 protected:
-  ProgressSpan(std::shared_ptr<ProgressSpan> parent)
-      : parent_(std::move(parent)) {}
+  ProgressSpan(std::shared_ptr<ProgressSpan> parent, bool is_suppressed)
+      : parent_(std::move(parent)),
+        is_suppressed_(
+            is_suppressed || (parent_ != nullptr && parent_->IsSuppressed())) {}
 
 private:
   virtual void Close() = 0;
 
   std::shared_ptr<ProgressSpan> parent_ = nullptr;
+  bool is_suppressed_ = false;
   bool finished_ = false;
   bool scope_closed_ = false;
 };

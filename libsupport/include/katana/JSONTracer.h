@@ -31,8 +31,8 @@ private:
       : ProgressTracer(host_id, num_hosts), out_callback_(out_callback) {}
 
   std::shared_ptr<ProgressSpan> StartSpan(
-      const std::string& span_name,
-      std::shared_ptr<ProgressSpan> child_of) override;
+      const std::string& span_name, std::shared_ptr<ProgressSpan> child_of,
+      bool is_suppressed) override;
 
   void Close() override {}
 
@@ -73,16 +73,16 @@ private:
 
   JSONSpan(
       const std::string& span_name, std::shared_ptr<ProgressSpan> parent,
-      OutputCB out_callback);
+      bool is_suppressed, OutputCB out_callback);
   JSONSpan(
       const std::string& span_name, const ProgressContext& parent,
-      OutputCB out_callback);
+      bool is_suppressed, OutputCB out_callback);
   static std::shared_ptr<ProgressSpan> Make(
       const std::string& span_name, std::shared_ptr<ProgressSpan> parent,
-      OutputCB out_callback);
+      bool is_suppressed, OutputCB out_callback);
   static std::shared_ptr<ProgressSpan> Make(
       const std::string& span_name, const ProgressContext& parent,
-      OutputCB out_callback);
+      bool is_suppressed, OutputCB out_callback);
 
   void Close() override;
 

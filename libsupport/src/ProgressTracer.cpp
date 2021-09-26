@@ -120,9 +120,21 @@ katana::ProgressTracer::Set(std::unique_ptr<katana::ProgressTracer> tracer) {
   ProgressTracer::tracer_ = std::move(tracer);
 }
 
+katana::ProgressSuppressor
+katana::ProgressTracer::SuppressTracer() {
+  bool was_suppressed = is_suppressed_;
+  is_suppressed_ = true;
+  return ProgressSuppressor{was_suppressed};
+}
+
+void
+katana::ProgressTracer::UnsuppressTracer() {
+  is_suppressed_ = false;
+}
+
 katana::ProgressScope
 katana::ProgressTracer::StartActiveSpan(const std::string& span_name) {
-  return SetActiveSpan(StartSpan(span_name, active_span_));
+  return SetActiveSpan(StartSpan(span_name, active_span_, is_suppressed_));
 }
 katana::ProgressScope
 katana::ProgressTracer::StartActiveSpan(
@@ -151,7 +163,8 @@ katana::ProgressSpan&
 katana::ProgressTracer::GetActiveSpan() {
   if (active_span_ == nullptr) {
     if (default_active_span_ == nullptr) {
-      default_active_span_ = StartSpan("unnamed span", nullptr);
+      // always suppress unnamed spans
+      default_active_span_ = StartSpan("unnamed span", nullptr, true);
     }
     return *default_active_span_;
   }
@@ -189,6 +202,16 @@ katana::ProgressScope::~ProgressScope() {
 void
 katana::ProgressScope::Close() {
   span_->MarkScopeClosed();
+}
+
+katana::ProgressSuppressor::~ProgressSuppressor() { Finish(); }
+
+void
+katana::ProgressSuppressor::Finish() {
+  if (!is_nested_ && !is_finished_) {
+    katana::GetTracer().UnsuppressTracer();
+  }
+  is_finished_ = true;
 }
 
 std::string

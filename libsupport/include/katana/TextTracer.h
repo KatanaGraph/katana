@@ -26,8 +26,8 @@ private:
       : ProgressTracer(host_id, num_hosts) {}
 
   std::shared_ptr<ProgressSpan> StartSpan(
-      const std::string& span_name,
-      std::shared_ptr<ProgressSpan> child_of) override;
+      const std::string& span_name, std::shared_ptr<ProgressSpan> child_of,
+      bool is_suppressed) override;
 
   void Close() override {}
 };
@@ -64,12 +64,18 @@ public:
 private:
   friend TextTracer;
 
-  TextSpan(const std::string& span_name, std::shared_ptr<ProgressSpan> parent);
-  TextSpan(const std::string& span_name, const ProgressContext& parent);
+  TextSpan(
+      const std::string& span_name, std::shared_ptr<ProgressSpan> parent,
+      bool is_suppressed);
+  TextSpan(
+      const std::string& span_name, const ProgressContext& parent,
+      bool is_suppressed);
   static std::shared_ptr<ProgressSpan> Make(
-      const std::string& span_name, std::shared_ptr<ProgressSpan> parent);
+      const std::string& span_name, std::shared_ptr<ProgressSpan> parent,
+      bool is_suppressed);
   static std::shared_ptr<ProgressSpan> Make(
-      const std::string& span_name, const ProgressContext& parent);
+      const std::string& span_name, const ProgressContext& parent,
+      bool is_suppressed);
 
   void Close() override;
 

@@ -4,6 +4,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <mutex>
 
 #include <arrow/memory_pool.h>
@@ -13,13 +14,13 @@
 
 namespace {
 
-constexpr int kRandomIDLength = 15;
-
 std::mutex output_mutex;
 
 std::string
 GenerateID() {
-  return katana::RandomAlphanumericString(kRandomIDLength);
+  std::uniform_int_distribution<uint64_t> dist(
+      0, std::numeric_limits<uint64_t>::max());
+  return fmt::format("0x{:x}", dist(katana::GetGenerator()));
 }
 
 std::string

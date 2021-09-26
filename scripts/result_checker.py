@@ -19,6 +19,7 @@ import sys
 import tempfile
 
 mismatch_printed = 0
+missing_rows_printed = 0
 
 
 def print_mismatch(line1, line2):
@@ -27,6 +28,14 @@ def print_mismatch(line1, line2):
     if mismatch_printed < 20:
         print("ERROR: NOT MATCHED:\n\tExpected ({})\n\tFound ({})".format(line1.strip(), line2.strip()))
     mismatch_printed += 1
+
+
+def print_missing_row(split_line1_0):
+    # pylint: disable=global-statement
+    global missing_rows_printed
+    if missing_rows_printed < 20:
+        print("ERROR: MISSING ROW: ", split_line1_0)
+    missing_rows_printed += 1
 
 
 def check_results(
@@ -48,9 +57,12 @@ def check_results(
                 return (0, errors, mrows, None, None)
 
             while split_line1[0] < split_line2[0]:
-                print("ERROR: MISSING ROW: ", split_line1[0])
+                print_missing_row(split_line1[0])
                 mrows = mrows + 1
                 line1 = mfile.readline()
+                if len(line1) == 0:
+                    # EOF is reached on the master file (can happen when both systems can produce wrong results)
+                    break
                 offset = offset + len(line1)
                 split_line1 = line1.split(" ")
 
@@ -60,19 +72,29 @@ def check_results(
 
             if split_line1[0] == split_line2[0]:
                 # absolute value of difference in fields
-                field_difference = abs(float(split_line1[1]) - float(split_line2[1]))
+                f1 = float(split_line1[1])
+                f2 = float(split_line2[1])
+                max_abs_f = max(abs(f1), abs(f2))
+                field_difference = abs(f1 - f2)
+                if max_abs_f == 0:
+                    rel_err = 0
+                else:
+                    rel_err = field_difference / max_abs_f
 
-                global_error_squared += field_difference ** 2
+                global_error_squared += rel_err ** 2
                 num_nodes += 1
 
-                if field_difference > tolerance:
+                if field_difference > tolerance * max_abs_f:
                     print_mismatch(line1, line2)
                     errors = errors + 1
                 # TODO (Loc) make more general: deals with 2 fields in output (should
                 # optimally deal with arbitrary # of fields
                 elif len(split_line1) == 3:
-                    field_difference2 = abs(float(split_line1[2]) - float(split_line2[2]))
-                    if field_difference2 > tolerance:
+                    f1 = float(split_line1[2])
+                    f2 = float(split_line2[2])
+                    max_abs_f = max(abs(f1), abs(f2))
+                    field_difference2 = abs(f1 - f2)
+                    if field_difference2 > tolerance * max_abs_f:
                         print_mismatch(line1, line2)
                         errors = errors + 1
             else:
@@ -119,11 +141,18 @@ def check_results_string_column(
             # check to make sure row matches exactly between the files
             if all(split_line1[i] == split_line2[i] for i in exact_cols):
                 # absolute value of difference in fields
-                field_difference = abs(float(split_line1[numeric_col]) - float(split_line2[numeric_col]))
-                global_error_squared += field_difference ** 2
+                f1 = float(split_line1[numeric_col])
+                f2 = float(split_line2[numeric_col])
+                max_abs_f = max(abs(f1), abs(f2))
+                field_difference = abs(f1 - f2)
+                if max_abs_f == 0:
+                    rel_err = 0
+                else:
+                    rel_err = field_difference / max_abs_f
+                global_error_squared += rel_err ** 2
                 num_nodes += 1
 
-                if field_difference > tolerance:
+                if field_difference > tolerance * max_abs_f:
                     print_mismatch(line1, line2)
                     errors = errors + 1
             else:
@@ -155,7 +184,7 @@ def check(master_file, all_files, tolerance, mean_tolerance, stringcolumn):
         if offset == -1:
             break
 
-    rmse = (global_error_squared / num_nodes) ** 0.5
+    rmse = ((global_error_squared or 0) / (num_nodes or 1)) ** 0.5
     if rmse > mean_tolerance:
         print("\nRoot mean square error (for first field): ", rmse)
 

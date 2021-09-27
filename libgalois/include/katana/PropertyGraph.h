@@ -366,7 +366,7 @@ public:
     return node_entity_type_manager_.HasAtomicType(name);
   }
 
-  /// \returns all node types
+  /// \returns all atomic node types
   std::vector<std::string> ListAtomicNodeTypes() const {
     return node_entity_type_manager_.ListAtomicTypes();
   }
@@ -378,9 +378,9 @@ public:
     return edge_entity_type_manager_.HasAtomicType(name);
   }
 
-  /// \returns all edge types
+  /// \returns all atomic edge types
   std::vector<std::string> ListAtomicEdgeTypes() const {
-    return node_entity_type_manager_.ListAtomicTypes();
+    return edge_entity_type_manager_.ListAtomicTypes();
   }
 
   /// \returns true iff a node entity type @param node_entity_type_id exists

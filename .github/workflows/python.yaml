@@ -63,8 +63,11 @@ jobs:
     strategy:
       matrix:
         os:
-        - ubuntu-18.04
-        # - macOS-latest
+          - ubuntu-18.04
+        python_version:
+          - 3.7
+          - 3.8
+          - 3.9
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
@@ -129,13 +132,12 @@ jobs:
     - name: Build conda Packages
       run: |
         . .github/workflows/activate_miniconda.sh
-        scripts/conda_build.sh --output-folder $HOME/build/
+        scripts/conda_build.py --python-version {{matrix.python_version}} --output-folder $HOME/build/
 
     - name: Build conda Packages for Katana Metagraph Plugin
       run: |
         . .github/workflows/activate_miniconda.sh
-        REPO_ROOT="$(cd "$(dirname scripts/conda_build.sh)/.."; pwd)"
-        export KATANA_VERSION=$("$REPO_ROOT"/scripts/version show --pep440)
+        export KATANA_VERSION=$(scripts/version show --pep440)
         echo $KATANA_VERSION
         cd metagraph-plugin/conda_recipe
         conda mambabuild . -c conda-forge -c metagraph -c file://$HOME/build/ --output-folder $HOME/build/
@@ -404,15 +406,6 @@ jobs:
         run: |
           ccache --show-stats
           ccache --cleanup
-
-      # Upload path is relative to work directory and "~" and "${{env.HOME}}" do
-      # not seem to be expanded, so hard code HOME for now.
-      - name: Upload documentation (C++ and Python)
-        uses: actions/upload-artifact@v1
-        if: startsWith(matrix.os, 'ubuntu-')
-        with:
-          name: katana-docs-${{matrix.os}}
-          path: /home/runner/build/docs
 
       - name: Test python_env.sh
         if: startsWith(matrix.os, 'ubuntu-')

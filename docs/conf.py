@@ -29,7 +29,6 @@ doxygen_path = os.environ["KATANA_DOXYGEN_PATH"]
 extensions = [
     "breathe",
     "nbsphinx",
-    "pandoc",
     "sphinx.ext.intersphinx",
     #'sphinx.ext.autosummary',
     "sphinx.ext.autodoc",

@@ -28,6 +28,8 @@ doxygen_path = os.environ["KATANA_DOXYGEN_PATH"]
 # ones.
 extensions = [
     "breathe",
+    "nbsphinx",
+    "pandoc",
     "sphinx.ext.intersphinx",
     #'sphinx.ext.autosummary',
     "sphinx.ext.autodoc",
@@ -81,3 +83,8 @@ author = "Katana Graph"
 
 # TODO(ddn): Get this from katana.libgalois.version
 copyright = "Katana Graph, Inc. 2021"
+
+# -- Options for extensions --------------------------------------------------
+
+# nbsphinx configuration values
+nbsphinx_execute = "never"

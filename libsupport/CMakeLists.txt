@@ -23,6 +23,7 @@ set(sources
         src/JSON.cpp
         src/JSONTracer.cpp
         src/Logging.cpp
+        src/NoopTracer.cpp
         src/Random.cpp
         src/Result.cpp
         src/Plugin.cpp

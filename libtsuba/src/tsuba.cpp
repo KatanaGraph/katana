@@ -146,6 +146,7 @@ ParseManifestName(
 
 }  // namespace
 
+// TODO (scober, KAT-1870): write a test for this
 katana::Result<std::pair<uint64_t, std::vector<tsuba::RDGView>>>
 tsuba::ListAvailableViews(
     const std::string& rdg_dir, std::optional<uint64_t> version) {
@@ -154,7 +155,6 @@ tsuba::ListAvailableViews(
 
   std::vector<tsuba::RDGView> views_found;
   uint64_t latest_version = 0;
-  bool found_graph = false;
   for (const std::string& file : files) {
     std::string view_type;
     std::vector<std::string> view_args;
@@ -164,7 +164,18 @@ tsuba::ListAvailableViews(
       continue;
     }
 
+    // if a specific version was requested, only return views for that version
     if (version && view_version != version.value()) {
+      continue;
+    }
+
+    // otherwise only return views for the latest version
+    if (view_version > latest_version) {
+      // we only keep views from the latest
+      latest_version = view_version;
+      views_found.clear();
+    }
+    if (view_version < latest_version) {
       continue;
     }
 
@@ -175,14 +186,6 @@ tsuba::ListAvailableViews(
       continue;
     }
     const RDGManifest& manifest = manifest_res.value();
-
-    if (view_version > latest_version) {
-      // we only keep views from the latest
-      latest_version = view_version;
-      views_found.clear();
-    }
-
-    found_graph = true;
 
     if (manifest.num_hosts() == 0) {
       // emtpy sentinal; not a valid view
@@ -199,7 +202,7 @@ tsuba::ListAvailableViews(
     });
   }
 
-  if (!found_graph) {
+  if (views_found.empty()) {
     return KATANA_ERROR(
         tsuba::ErrorCode::NotFound, "no views found for that version");
   }

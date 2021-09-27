@@ -20,12 +20,16 @@ def main():
     parser.add_argument(
         "--tools-test-command", default="graph-convert --version", help="Command to use to test tools package"
     )
+    parser.add_argument(
+        "--python-version", help="The python version to use in the installation environment.", default="3.8"
+    )
 
     args = parser.parse_args()
 
     build_args = [
         f"BASE_IMAGE={args.docker_image}",
         f"PYTHON_PACKAGE={args.python_package}",
+        f"PYTHON_VERSION={args.python_version}",
         f"TOOLS_PACKAGE={args.tools_package}",
         f"TOOLS_TEST_COMMAND={args.tools_test_command}",
     ]

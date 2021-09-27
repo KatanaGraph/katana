@@ -132,7 +132,7 @@ jobs:
     - name: Build conda Packages
       run: |
         . .github/workflows/activate_miniconda.sh
-        scripts/conda_build.py --python-version {{matrix.python_version}} --output-folder $HOME/build/
+        scripts/conda_build.py --python-version ${{matrix.python_version}} --output-folder $HOME/build/
 
     - name: Build conda Packages for Katana Metagraph Plugin
       run: |
@@ -153,7 +153,7 @@ jobs:
       uses: actions/upload-artifact@v1
       if: startsWith(matrix.os, 'ubuntu-')
       with:
-        name: conda-pkgs-${{matrix.os}}
+        name: conda-pkgs-${{matrix.os}}-${{matrix.python_version}}
         path: /home/runner/build
     - name: Upload built packages
       uses: actions/upload-artifact@v1
@@ -168,10 +168,12 @@ jobs:
     strategy:
       matrix:
         image:
-          - ubuntu:16.04
           - ubuntu:latest
-          - centos:7
           - centos:latest
+        python_version:
+          - 3.7
+          - 3.8
+          - 3.9
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -180,10 +182,22 @@ jobs:
       - name: Download conda packages
         uses: actions/download-artifact@v2
         with:
-          name: conda-pkgs-ubuntu-18.04
+          name: conda-pkgs-ubuntu-18.04-3.7
           path: pkgs
+      - name: Download conda packages
+        uses: actions/download-artifact@v2
+        with:
+          name: conda-pkgs-ubuntu-18.04-3.8
+          path: pkgs
+      - name: Download conda packages
+        uses: actions/download-artifact@v2
+        with:
+          name: conda-pkgs-ubuntu-18.04-3.9
+          path: pkgs
+      - name: Reindex packages
+        run: conda index --check-md5 pkgs
       - name: Install in docker container
-        run: python3 test/install_conda_packages_test.py pkgs ${{matrix.image}}
+        run: python3 test/install_conda_packages_test.py pkgs ${{matrix.image}} ${{matrix.python_version}}
 
   upload_conda_packages:
     if: |
@@ -191,6 +205,12 @@ jobs:
         || startsWith(github.ref, 'refs/tags/v'))
       && github.event_name == 'push' && github.repository == 'KatanaGraph/katana'
     environment: AnacondaUpload
+    strategy:
+      matrix:
+        python_version:
+          - 3.7
+          - 3.8
+          - 3.9
     needs: test_conda_package_install
     runs-on: ubuntu-latest
     steps:
@@ -229,7 +249,7 @@ jobs:
       - name: Download Katana conda packages
         uses: actions/download-artifact@v2
         with:
-          name: conda-pkgs-ubuntu-18.04
+          name: conda-pkgs-ubuntu-18.04-${{matrix.python_version}}
           path: pkgs
 
       - name: Upload Katana conda packages to anaconda with label dev

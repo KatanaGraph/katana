@@ -27,9 +27,12 @@ RUN set -eu; \
 
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"
 
+ARG PYTHON_VERSION="3.8"
+
 RUN set -eu; \
     . /activate_miniconda.sh; \
     mamba update --quiet --yes --all; \
+    mamba install python=${PYTHON_VERSION}; \
     ${CONDA_CLEAN}
 
 FROM base_with_conda AS pre_install

@@ -90,6 +90,13 @@ PrintMapping(const std::unordered_map<std::string, int64_t>& u) {
 }
 
 void
+PrintStringMapping(const std::unordered_map<std::string, std::string>& u) {
+  for (const auto& n : u) {
+    std::cout << n.first << " : " << n.second << "\n";
+  }
+}
+
+void
 InsertPropertyTypeMemoryData(
     const std::unique_ptr<katana::PropertyGraph>& g,
     const std::unordered_map<std::string, int64_t>& u,
@@ -112,7 +119,9 @@ InsertPropertyTypeMemoryData(
 void
 doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   using map_element = std::unordered_map<std::string, int64_t>;
-  using memory_map = std::unordered_map<std::string, map_element>;
+  using map_string_element = std::unordered_map<std::string, std::string>;
+  using memory_map = std::unordered_map<
+      std::string, std::variant<map_element, map_string_element>>;
   memory_map mem_map = {};
   map_element basic_raw_stats = {};
   auto node_schema = graph->full_node_schema();
@@ -120,7 +129,9 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   int64_t total_num_node_props = node_schema->num_fields();
   int64_t total_num_edge_props = edge_schema->num_fields();
 
-  std::cout << "\n";
+  // arrow::DataType TypeMap;
+
+  // std::cout << static_cast<TypeMap>(0) << "\n";
 
   basic_raw_stats.insert(std::pair("Node-Schema-Size", total_num_node_props));
   basic_raw_stats.insert(std::pair("Edge-Schema-Size", total_num_edge_props));
@@ -136,22 +147,24 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   basic_raw_stats.insert(std::pair("Number-Edges", graph->num_edges()));
 
   PrintMapping(basic_raw_stats);
+  mem_map.insert(std::pair("General-Stats", basic_raw_stats));
 
   auto atomic_node_types = graph->ListAtomicNodeTypes();
 
   auto atomic_edge_types = graph->ListAtomicEdgeTypes();
 
-  // std::cout << "Node Types<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
-  // PrintAtomicTypes(atomic_node_types);
-  // std::cout << "Edge Types<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
-  // PrintAtomicTypes(atomic_edge_types);
-
   const katana::GraphTopology& g_topo = graph->topology();
 
-  auto node_iterator = g_topo.all_nodes();
-  auto edge_iterator = g_topo.all_edges();
-  map_element all_node_prop_stats;
-  map_element all_edge_prop_stats;
+  map_string_element all_node_prop_stats;
+  map_string_element all_edge_prop_stats;
+  map_element all_node_width_stats;
+  map_element all_edge_width_stats;
+
+  all_node_prop_stats.insert(std::pair("kUnknownName", "uint8"));
+  all_edge_prop_stats.insert(std::pair("kUnknownName", "uint8"));
+
+  all_node_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t) * 8));
+  all_edge_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t) * 8));
 
   std::cout << "\n";
   std::cout << "Node Schema\n";
@@ -159,42 +172,56 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   for (int32_t i = 0; i < node_schema->num_fields(); ++i) {
     std::string prop_name = node_schema->field(i)->name();
-    auto dtype = node_schema->field(i)->type()->name();
-    int64_t prop_size = sizeof(node_schema->field(i)->type()->name());
-    std::cout << prop_name << " : " << dtype << "\n";
-    all_node_prop_stats.insert(std::pair(prop_name, prop_size));
+    auto dtype = node_schema->field(i)->type();
+
+    all_node_width_stats.insert(
+        std::pair(prop_name, arrow::bit_width(dtype->id())));
+    all_node_prop_stats.insert(std::pair(prop_name, dtype->name()));
   }
 
-  // PrintMapping(all_node_prop_stats);
+  PrintStringMapping(all_node_prop_stats);
+  PrintMapping(all_node_width_stats);
+  mem_map.insert(std::pair("Node-Types", all_node_prop_stats));
 
   std::cout << "\n";
   std::cout << "Edge Schema\n";
-  std::cout << static_cast<arrow::Type::type>(0) << "\n";
   std::cout << "----------------------------------------\n";
 
   for (int32_t i = 0; i < edge_schema->num_fields(); ++i) {
     std::string prop_name = edge_schema->field(i)->name();
-    auto dtype = edge_schema->field(i)->type()->name();
-    int64_t prop_size = sizeof(edge_schema->field(i)->type()->name());
-    std::cout << prop_name << " : " << dtype << "\n";
-    all_node_prop_stats.insert(std::pair(prop_name, prop_size));
-  }
-  PrintMapping(all_edge_prop_stats);
+    auto dtype = edge_schema->field(i)->type();
 
+    all_edge_width_stats.insert(
+        std::pair(prop_name, arrow::bit_width(dtype->id())));
+    all_edge_prop_stats.insert(std::pair(prop_name, dtype->name()));
+  }
+
+  PrintStringMapping(all_edge_prop_stats);
+  PrintMapping(all_edge_width_stats);
+  mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));
+
+  auto node_iterator = g_topo.all_nodes();
+  // auto edge_iterator = g_topo.all_edges();
+
+  int64_t width;
   std::cout << "\n";
   int64_t node_size = 0;
   for (auto node : node_iterator) {
-    auto node_type = graph->GetTypeOfNode(node);
-    node_size += sizeof(node_type);
+    std::string node_type = *graph->GetNodeAtomicTypeName(node);
+    width = all_node_width_stats.find(node_type)->second;
+    // std::cout << node_type << " : " << width << " ";
+    node_size += width;
   }
   std::cout << "Total Number of bytes taken up by Nodes: " << node_size << "\n";
 
-  int64_t edge_size = 0;
-  for (auto edge : edge_iterator) {
-    auto edge_type = graph->GetTypeOfEdge(edge);
-    edge_size += sizeof(edge_type);
-  }
-  std::cout << "Total Number of bytes taken up by Edges: " << edge_size << "\n";
+  // int64_t edge_size = 0;
+  // for (auto edge : edge_iterator) {
+  //   auto edge_type = graph->GetTypeOfEdge(edge);
+  //   width = all_edge_width_stats.find(edge_type)->second;
+  //   edge_size += width;
+  //   std::cout << width << " ";
+  // }
+  // std::cout << "Total Number of bytes taken up by Edges: " << edge_size << "\n";
 }
 
 int

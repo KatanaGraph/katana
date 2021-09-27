@@ -113,14 +113,14 @@ void
 doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   using map_element = std::unordered_map<std::string, int64_t>;
   using memory_map = std::unordered_map<std::string, map_element>;
-
   memory_map mem_map = {};
   map_element basic_raw_stats = {};
-
   auto node_schema = graph->full_node_schema();
   auto edge_schema = graph->full_edge_schema();
   int64_t total_num_node_props = node_schema->num_fields();
   int64_t total_num_edge_props = edge_schema->num_fields();
+
+  std::cout << "\n";
 
   basic_raw_stats.insert(std::pair("Node-Schema-Size", total_num_node_props));
   basic_raw_stats.insert(std::pair("Edge-Schema-Size", total_num_edge_props));
@@ -141,10 +141,10 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   auto atomic_edge_types = graph->ListAtomicEdgeTypes();
 
-  std::cout << "Node Types<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
-  PrintAtomicTypes(atomic_node_types);
-  std::cout << "Edge Types<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
-  PrintAtomicTypes(atomic_edge_types);
+  // std::cout << "Node Types<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+  // PrintAtomicTypes(atomic_node_types);
+  // std::cout << "Edge Types<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+  // PrintAtomicTypes(atomic_edge_types);
 
   const katana::GraphTopology& g_topo = graph->topology();
 
@@ -169,6 +169,7 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   std::cout << "\n";
   std::cout << "Edge Schema\n";
+  std::cout << static_cast<arrow::Type::type>(0) << "\n";
   std::cout << "----------------------------------------\n";
 
   for (int32_t i = 0; i < edge_schema->num_fields(); ++i) {

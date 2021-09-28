@@ -196,4 +196,32 @@ FileFrame::Write(const std::shared_ptr<arrow::Buffer>& data) {
 }
 //////////// End arrow::io::BufferOutputStream method definitions ////////
 
+katana::Result<void>
+FileFrame::PaddedWrite(
+    const std::shared_ptr<arrow::Buffer>& data, size_t byte_boundry) {
+  return PaddedWrite(data->data(), data->size(), byte_boundry);
+}
+
+katana::Result<void>
+FileFrame::PaddedWrite(const void* data, int64_t nbytes, size_t byte_boundry) {
+  arrow::Status aro_sts = Write(data, nbytes);
+  if (!aro_sts.ok()) {
+    return tsuba::ArrowToTsuba(aro_sts.code());
+  }
+
+  size_t num_padding_bytes = calculate_padding_bytes(nbytes, byte_boundry);
+  KATANA_LOG_DEBUG(
+      "adding {} bytes of padding. nbytes = {}, byte_boundry = {}",
+      num_padding_bytes, nbytes, byte_boundry);
+  if (num_padding_bytes > 0) {
+    uint8_t padding[num_padding_bytes];
+    aro_sts = Write(&padding, num_padding_bytes * sizeof(uint8_t));
+    if (!aro_sts.ok()) {
+      return tsuba::ArrowToTsuba(aro_sts.code());
+    }
+  }
+
+  return katana::ResultSuccess();
+}
+
 } /* namespace tsuba */

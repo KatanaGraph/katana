@@ -5,6 +5,7 @@
 #include <future>
 #include <string>
 
+#include <arrow/status.h>
 #include <parquet/arrow/writer.h>
 
 #include "katana/Logging.h"
@@ -82,6 +83,26 @@ public:
   katana::Result<void> SetCursor(uint64_t new_cursor);
 
   const std::string& path() const { return path_; }
+
+  /// Calculate the number of padding bytes needed to reach nearest byte_boundry
+  /// size_t num_bytes : size of bytes
+  /// size_t byte_boundary : number of bytes per boundary
+  /// ex: if num_bytes = 65, and byte_boundry = 8, return = 7
+  static size_t calculate_padding_bytes(
+      size_t num_bytes, size_t byte_boundary) {
+    size_t padding = 0;
+    if (num_bytes >= byte_boundary) {
+      padding = ((byte_boundary)-num_bytes % (byte_boundary)) % (byte_boundary);
+    } else {
+      padding = byte_boundary - num_bytes;
+    }
+    return padding;
+  }
+
+  katana::Result<void> PaddedWrite(
+      const void* data, int64_t nbytes, size_t byte_boundry);
+  katana::Result<void> PaddedWrite(
+      const std::shared_ptr<arrow::Buffer>& data, size_t byte_boundry);
 
   ///// Begin arrow::io::BufferOutputStream methods ///////
 

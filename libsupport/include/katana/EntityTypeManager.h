@@ -237,7 +237,8 @@ public:
 
   /// \returns the number of atomic types
   size_t GetNumAtomicTypes() const {
-    return atomic_entity_type_id_to_type_name_.size();
+    // Drop kUnknownEntityType because it is not an atomic type
+    return atomic_entity_type_id_to_type_name_.size() - 1;
   }
 
   /// \returns the number of entity types (including kUnknownEntityType)
@@ -247,6 +248,9 @@ public:
 
   /// \returns true iff an atomic type \p name exists
   bool HasAtomicType(const std::string& name) const {
+    if (name == kUnknownEntityTypeName) {
+      return false;
+    }
     return atomic_type_name_to_entity_type_id_.count(name) == 1;
   }
 
@@ -255,6 +259,9 @@ public:
     // TODO(aneesh) define an iterator-type alias and return an iterator over
     // the names instead of constructing a vector.
     for (const auto& kv : atomic_type_name_to_entity_type_id_) {
+      if (kv.first == kUnknownEntityTypeName) {
+        continue;
+      }
       types.push_back(kv.first);
     }
     return types;
@@ -269,6 +276,7 @@ public:
   /// \returns the EntityTypeID for an atomic type with name \p name
   /// (assumes that the type exists)
   EntityTypeID GetEntityTypeID(const std::string& name) const {
+    KATANA_LOG_DEBUG_ASSERT(name != kUnknownEntityTypeName);
     return atomic_type_name_to_entity_type_id_.at(name);
   }
 
@@ -331,6 +339,9 @@ public:
   /// \p entity_type_id is an atomic type, nullopt otherwise
   std::optional<std::string> GetAtomicTypeName(
       EntityTypeID entity_type_id) const {
+    if (entity_type_id == kUnknownEntityType) {
+      return std::nullopt;
+    }
     auto found = atomic_entity_type_id_to_type_name_.find(entity_type_id);
     if (found != atomic_entity_type_id_to_type_name_.cend()) {
       return found->second;
@@ -338,12 +349,15 @@ public:
     return std::nullopt;
   }
 
-  /// \returns a vector containing all atomic type names
+  /// \returns a vector containing all atomic EntityTypeIDs
   std::vector<EntityTypeID> GetAtomicEntityTypeIDs() const {
     std::vector<EntityTypeID> type_vec;
     type_vec.reserve(atomic_type_name_to_entity_type_id_.size());
-    for (const auto& entry : atomic_type_name_to_entity_type_id_) {
-      type_vec.push_back(entry.second);
+    for (const auto& kv : atomic_type_name_to_entity_type_id_) {
+      if (kv.first == kUnknownEntityTypeName) {
+        continue;
+      }
+      type_vec.push_back(kv.second);
     }
     return type_vec;
   }
@@ -415,7 +429,8 @@ private:
     // assume kUnknownEntityType is 0
     static_assert(kUnknownEntityType == 0);
     static_assert(kUnknownEntityTypeName == std::string_view("kUnknownName"));
-    // add kUnknownEntityType
+    // add kUnknownEntityType: treat it as an atomic type internally
+    // but do not expose it as an atomic type to users of the class
     auto id = AddAtomicEntityType(std::string(kUnknownEntityTypeName));
     KATANA_LOG_ASSERT(id.value() == kUnknownEntityType);
   }

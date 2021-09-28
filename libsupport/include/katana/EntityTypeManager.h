@@ -22,7 +22,6 @@ namespace katana {
 /// EntityTypeID is represented using 8 bits
 using EntityTypeID = uint8_t;
 static constexpr EntityTypeID kUnknownEntityType = EntityTypeID{0};
-static constexpr std::string_view kUnknownEntityTypeName = "kUnknownName";
 static constexpr EntityTypeID kInvalidEntityType =
     std::numeric_limits<EntityTypeID>::max();
 /// A set of EntityTypeIDs
@@ -414,9 +413,9 @@ private:
   void Init() {
     // assume kUnknownEntityType is 0
     static_assert(kUnknownEntityType == 0);
-    static_assert(kUnknownEntityTypeName == std::string_view("kUnknownName"));
-    // add kUnknownEntityType
-    auto id = AddAtomicEntityType(std::string(kUnknownEntityTypeName));
+    // add kUnknownEntityType: do not treat it as an atomic type;
+    // treat it as an entity type that does not have any atomic subtypes
+    auto id = AddNonAtomicEntityType(SetOfEntityTypeIDs());
     KATANA_LOG_ASSERT(id.value() == kUnknownEntityType);
   }
 

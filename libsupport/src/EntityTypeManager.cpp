@@ -25,7 +25,6 @@ katana::EntityTypeManager::DoAssignEntityTypeIDsFromProperties(
     const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
 
     // a uint8 property is (always) considered a type
-    // TODO(roshan) make this customizable by the user
     if (current_field->type()->Equals(arrow::uint8())) {
       type_field_indices.push_back(i);
       KATANA_LOG_DEBUG_ASSERT(properties->column(i)->num_chunks() == 1);

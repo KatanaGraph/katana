@@ -1,6 +1,7 @@
 #include "RDGCore.h"
 
 #include "RDGPartHeader.h"
+#include "katana/ArrowInterchange.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/ParquetReader.h"
@@ -116,6 +117,40 @@ EnsureTypeLoaded(const katana::Uri& rdg_dir, tsuba::PropStorageInfo* psi) {
 namespace tsuba {
 
 katana::Result<void>
+RDGCore::AddPartitionMetadataArray(const std::shared_ptr<arrow::Table>& props) {
+  auto field = props->schema()->field(0);
+  const std::string& name = field->name();
+  std::shared_ptr<arrow::ChunkedArray> col = props->column(0);
+
+  if (name.find(kMirrorNodesPropName) == 0) {
+    AddMirrorNodes(std::move(col));
+  } else if (name.find(kMasterNodesPropName) == 0) {
+    AddMasterNodes(std::move(col));
+  } else if (name == kHostToOwnedGlobalNodeIDsPropName) {
+    set_host_to_owned_global_node_ids(std::move(col));
+  } else if (name == kHostToOwnedGlobalEdgeIDsPropName) {
+    set_host_to_owned_global_edge_ids(std::move(col));
+  } else if (name == kLocalToUserIDPropName) {
+    set_local_to_user_id(std::move(col));
+  } else if (name == kLocalToGlobalIDPropName) {
+    set_local_to_global_id(std::move(col));
+  } else if (name == kDeprecatedLocalToGlobalIDPropName) {
+    KATANA_LOG_WARN(
+        "deprecated graph format; replace the existing graph by storing the "
+        "current graph");
+    set_local_to_global_id(std::move(col));
+  } else if (name == kDeprecatedHostToOwnedGlobalNodeIDsPropName) {
+    KATANA_LOG_WARN(
+        "deprecated graph format; replace the existing graph by storing the "
+        "current graph");
+    set_host_to_owned_global_node_ids(std::move(col));
+  } else {
+    return KATANA_ERROR(ErrorCode::InvalidArgument, "checking metadata name");
+  }
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
 RDGCore::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
   return AddProperties(
       props, &node_properties_, &part_header_.node_prop_info_list());
@@ -140,23 +175,42 @@ RDGCore::UpsertEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
 }
 
 katana::Result<void>
-RDGCore::EnsureNodeTypesLoaded(const katana::Uri& rdg_dir) {
+RDGCore::EnsureNodeTypesLoaded() {
+  if (rdg_dir_.empty()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "no rdg_dir set, cannot ensure node types are loaded");
+  }
   for (auto& prop : part_header_.node_prop_info_list()) {
     KATANA_CHECKED_CONTEXT(
-        EnsureTypeLoaded(rdg_dir, &prop), "property {}",
+        EnsureTypeLoaded(rdg_dir_, &prop), "property {}",
         std::quoted(prop.name()));
   }
   return katana::ResultSuccess();
 }
 
 katana::Result<void>
-RDGCore::EnsureEdgeTypesLoaded(const katana::Uri& rdg_dir) {
+RDGCore::EnsureEdgeTypesLoaded() {
+  if (rdg_dir_.empty()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "no rdg_dir set, cannot ensure edge types are loaded");
+  }
   for (auto& prop : part_header_.edge_prop_info_list()) {
     KATANA_CHECKED_CONTEXT(
-        EnsureTypeLoaded(rdg_dir, &prop), "property {}",
+        EnsureTypeLoaded(rdg_dir_, &prop), "property {}",
         std::quoted(prop.name()));
   }
   return katana::ResultSuccess();
+}
+
+void
+tsuba::RDGCore::InitArrowVectors() {
+  // Create an empty array, accessed by Distribution during loading
+  host_to_owned_global_node_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
+  host_to_owned_global_edge_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
+  local_to_user_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
+  local_to_global_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
 }
 
 void

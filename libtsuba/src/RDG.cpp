@@ -45,28 +45,6 @@ using json = nlohmann::json;
 
 namespace {
 
-// special partition property names
-const char* kMirrorNodesPropName = "mirror_nodes";
-const char* kMasterNodesPropName = "master_nodes";
-const char* kHostToOwnedGlobalNodeIDsPropName = "host_to_owned_global_node_ids";
-const char* kHostToOwnedGlobalEdgeIDsPropName = "host_to_owned_global_edge_ids";
-const char* kLocalToUserIDPropName = "local_to_user_id";
-const char* kLocalToGlobalIDPropName = "local_to_global_id";
-// deprecated; only here to support backward compatibility
-const char* kDeprecatedLocalToGlobalIDPropName = "local_to_global_vector";
-const char* kDeprecatedHostToOwnedGlobalNodeIDsPropName =
-    "host_to_owned_global_ids";
-
-std::string
-MirrorPropName(unsigned i) {
-  return std::string(kMirrorNodesPropName) + "_" + std::to_string(i);
-}
-
-std::string
-MasterPropName(unsigned i) {
-  return std::string(kMasterNodesPropName) + "_" + std::to_string(i);
-}
-
 katana::Result<std::string>
 StoreArrowArrayAtName(
     const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
@@ -156,44 +134,9 @@ CommitRDG(
 
 }  // namespace
 
-katana::Result<void>
-tsuba::RDG::AddPartitionMetadataArray(
-    const std::shared_ptr<arrow::Table>& props) {
-  auto field = props->schema()->field(0);
-  const std::string& name = field->name();
-  std::shared_ptr<arrow::ChunkedArray> col = props->column(0);
-
-  if (name.find(kMirrorNodesPropName) == 0) {
-    AddMirrorNodes(std::move(col));
-  } else if (name.find(kMasterNodesPropName) == 0) {
-    AddMasterNodes(std::move(col));
-  } else if (name == kHostToOwnedGlobalNodeIDsPropName) {
-    set_host_to_owned_global_node_ids(std::move(col));
-  } else if (name == kHostToOwnedGlobalEdgeIDsPropName) {
-    set_host_to_owned_global_edge_ids(std::move(col));
-  } else if (name == kLocalToUserIDPropName) {
-    set_local_to_user_id(std::move(col));
-  } else if (name == kLocalToGlobalIDPropName) {
-    set_local_to_global_id(std::move(col));
-  } else if (name == kDeprecatedLocalToGlobalIDPropName) {
-    KATANA_LOG_WARN(
-        "deprecated graph format; replace the existing graph by storing the "
-        "current graph");
-    set_local_to_global_id(std::move(col));
-  } else if (name == kDeprecatedHostToOwnedGlobalNodeIDsPropName) {
-    KATANA_LOG_WARN(
-        "deprecated graph format; replace the existing graph by storing the "
-        "current graph");
-    set_host_to_owned_global_node_ids(std::move(col));
-  } else {
-    return KATANA_ERROR(ErrorCode::InvalidArgument, "checking metadata name");
-  }
-  return katana::ResultSuccess();
-}
-
 void
 tsuba::RDG::AddLineage(const std::string& command_line) {
-  lineage_.AddCommandLine(command_line);
+  core_->AddCommandLine(command_line);
 }
 
 tsuba::RDGFile::~RDGFile() {
@@ -211,61 +154,60 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
       "WritePartArrays master sz: {} mirrors sz: {} h2owned sz : {} "
       "h2owned_edges sz: {} l2u sz: {} "
       "l2g sz: {}",
-      master_nodes_.size(), mirror_nodes_.size(),
-      host_to_owned_global_node_ids_ == nullptr
+      master_nodes().size(), mirror_nodes().size(),
+      host_to_owned_global_node_ids() == nullptr
           ? 0
-          : host_to_owned_global_node_ids_->length(),
-      host_to_owned_global_edge_ids_ == nullptr
+          : host_to_owned_global_node_ids()->length(),
+      host_to_owned_global_edge_ids() == nullptr
           ? 0
-          : host_to_owned_global_edge_ids_->length(),
-      local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
-      local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
+          : host_to_owned_global_edge_ids()->length(),
+      local_to_user_id() == nullptr ? 0 : local_to_user_id()->length(),
+      local_to_global_id() == nullptr ? 0 : local_to_global_id()->length());
 
-  for (size_t i = 0; i < mirror_nodes_.size(); ++i) {
-    std::string name = MirrorPropName(i);
+  for (size_t i = 0; i < mirror_nodes().size(); ++i) {
+    std::string name = RDGCore::MirrorPropName(i);
     std::string path = KATANA_CHECKED_CONTEXT(
-        StoreArrowArrayAtName(mirror_nodes_[i], dir, name, desc), "storing {}",
+        StoreArrowArrayAtName(mirror_nodes()[i], dir, name, desc), "storing {}",
         name);
     next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
-  for (size_t i = 0; i < master_nodes_.size(); ++i) {
-    std::string name = MasterPropName(i);
+  for (size_t i = 0; i < master_nodes().size(); ++i) {
+    std::string name = RDGCore::MasterPropName(i);
     std::string path = KATANA_CHECKED_CONTEXT(
-        StoreArrowArrayAtName(master_nodes_[i], dir, name, desc), "storing {}",
+        StoreArrowArrayAtName(master_nodes()[i], dir, name, desc), "storing {}",
         name);
     next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
-  if (host_to_owned_global_node_ids_ != nullptr) {
-    std::string name = kHostToOwnedGlobalNodeIDsPropName;
+  if (host_to_owned_global_node_ids() != nullptr) {
+    std::string name = RDGCore::kHostToOwnedGlobalNodeIDsPropName;
     std::string path = KATANA_CHECKED_CONTEXT(
-        StoreArrowArrayAtName(host_to_owned_global_node_ids_, dir, name, desc),
+        StoreArrowArrayAtName(host_to_owned_global_node_ids(), dir, name, desc),
         "storing {}", name);
     next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
-  if (host_to_owned_global_edge_ids_ != nullptr) {
-    std::string name = kHostToOwnedGlobalEdgeIDsPropName;
+  if (host_to_owned_global_edge_ids() != nullptr) {
+    std::string name = RDGCore::kHostToOwnedGlobalEdgeIDsPropName;
     std::string path = KATANA_CHECKED_CONTEXT(
-        StoreArrowArrayAtName(host_to_owned_global_edge_ids_, dir, name, desc),
+        StoreArrowArrayAtName(host_to_owned_global_edge_ids(), dir, name, desc),
         "storing {}", name);
     next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
-  if (local_to_user_id_ != nullptr) {
-    std::string name = kLocalToUserIDPropName;
+  if (local_to_user_id() != nullptr) {
+    std::string name = RDGCore::kLocalToUserIDPropName;
     std::string path = KATANA_CHECKED_CONTEXT(
-        StoreArrowArrayAtName(local_to_user_id_, dir, name, desc), "storing {}",
-        name);
+        StoreArrowArrayAtName(local_to_user_id(), dir, name, desc),
+        "storing {}", name);
     next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
 
-  if (local_to_global_id_ != nullptr) {
-    std::string name = kLocalToGlobalIDPropName;
+  if (local_to_global_id() != nullptr) {
+    std::string name = RDGCore::kLocalToGlobalIDPropName;
     std::string path = KATANA_CHECKED_CONTEXT(
-        StoreArrowArrayAtName(
-            local_to_global_id_, dir, kLocalToGlobalIDPropName, desc),
+        StoreArrowArrayAtName(local_to_global_id(), dir, name, desc),
         "storing {}", name);
     next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
   }
@@ -292,7 +234,7 @@ tsuba::RDG::DoStoreTopology(
     write_group->StartStore(std::move(topology_ff));
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_topology_path(path_uri.BaseName());
-  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
+  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir()) {
     KATANA_LOG_DEBUG("persisting topology in new location");
     // we don't have an update, but we are persisting in a new location
     // store our in memory state
@@ -337,7 +279,7 @@ tsuba::RDG::DoStoreNodeEntityTypeIDArray(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_node_entity_type_id_array_path(
         path_uri.BaseName());
-  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
+  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir()) {
     KATANA_LOG_DEBUG("persisting node_entity_type_id_array in new location");
     // we don't have an update, but we are persisting in a new location
     // store our in memory state
@@ -385,7 +327,7 @@ tsuba::RDG::DoStoreEdgeEntityTypeIDArray(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     core_->part_header().set_edge_entity_type_id_array_path(
         path_uri.BaseName());
-  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
+  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir()) {
     KATANA_LOG_DEBUG("persisting edge_entity_type_id_array in new location");
     // we don't have an update, but we are persisting in a new location
     // store our in memory state
@@ -464,11 +406,11 @@ tsuba::RDG::DoStore(
   }
 
   // Update lineage and commit
-  lineage_.AddCommandLine(command_line);
+  core_->AddCommandLine(command_line);
   if (auto res = CommitRDG(
           handle, core_->part_header().metadata().policy_id_,
           core_->part_header().metadata().transposed_, versioning_action,
-          lineage_, std::move(write_group));
+          core_->lineage(), std::move(write_group));
       !res) {
     return res.error().WithContext("failed to finalize RDG");
   }
@@ -551,14 +493,14 @@ tsuba::RDG::DoMake(
       return res.error();
     }
   }
-  rdg_dir_ = metadata_dir;
+  core_->set_rdg_dir(metadata_dir);
 
   std::vector<PropStorageInfo*> part_info =
       KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
 
   // these are not Node/Edge types but rather property types we are checking
-  KATANA_CHECKED(core_->EnsureNodeTypesLoaded(rdg_dir_));
-  KATANA_CHECKED(core_->EnsureEdgeTypesLoaded(rdg_dir_));
+  KATANA_CHECKED(core_->EnsureNodeTypesLoaded());
+  KATANA_CHECKED(core_->EnsureEdgeTypesLoaded());
 
   if (part_info.empty()) {
     return grp.Finish();
@@ -569,49 +511,50 @@ tsuba::RDG::DoMake(
           metadata_dir, tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
           part_info, &grp,
           [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-            return rdg->AddPartitionMetadataArray(props);
+            return rdg->core_->AddPartitionMetadataArray(props);
           }),
       "populating partition metadata");
   KATANA_CHECKED(grp.Finish());
 
-  if (local_to_user_id_->length() == 0) {
+  if (local_to_user_id()->length() == 0) {
     // for backward compatibility
-    if (local_to_global_id_->length() !=
+    if (local_to_global_id()->length() !=
         core_->part_header().metadata().num_nodes_) {
       return KATANA_ERROR(
           tsuba::ErrorCode::InvalidArgument,
           "regenerate partitions: number of Global Node IDs {} does not "
           "match the number of master nodes {}",
-          local_to_global_id_->length(),
+          local_to_global_id()->length(),
           core_->part_header().metadata().num_nodes_);
     }
     // NB: this is a zero-copy slice, so the underlying data is shared
-    set_local_to_user_id(local_to_global_id_->Slice(0));
+    core_->set_local_to_user_id(local_to_global_id()->Slice(0));
   } else if (
-      local_to_user_id_->length() !=
+      local_to_user_id()->length() !=
       (core_->part_header().metadata().num_owned_ +
-       local_to_global_id_->length())) {
+       local_to_global_id()->length())) {
     return KATANA_ERROR(
         tsuba::ErrorCode::InvalidArgument,
         "regenerate partitions: number of User Node IDs {} do not match "
         "number of masters nodes {} plus the number of Global Node IDs {}",
-        local_to_user_id_->length(), core_->part_header().metadata().num_owned_,
-        local_to_global_id_->length());
+        local_to_user_id()->length(),
+        core_->part_header().metadata().num_owned_,
+        local_to_global_id()->length());
   }
 
   KATANA_LOG_DEBUG(
       "ReadPartMetadata master sz: {} mirrors sz: {} h2nod sz: {} h20e sz: {} "
       "l2u sz: "
       "{} l2g sz: {}",
-      master_nodes_.size(), mirror_nodes_.size(),
-      host_to_owned_global_node_ids_ == nullptr
+      master_nodes().size(), mirror_nodes().size(),
+      host_to_owned_global_node_ids() == nullptr
           ? 0
-          : host_to_owned_global_node_ids_->length(),
-      host_to_owned_global_edge_ids_ == nullptr
+          : host_to_owned_global_node_ids()->length(),
+      host_to_owned_global_edge_ids() == nullptr
           ? 0
-          : host_to_owned_global_edge_ids_->length(),
-      local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
-      local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
+          : host_to_owned_global_edge_ids()->length(),
+      local_to_user_id() == nullptr ? 0 : local_to_user_id()->length(),
+      local_to_global_id() == nullptr ? 0 : local_to_global_id()->length());
 
   return katana::ResultSuccess();
 }
@@ -640,7 +583,7 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
 
   KATANA_CHECKED(rdg.DoMake(node_props, edge_props, manifest.dir()));
 
-  rdg.set_partition_id(partition_id_to_load);
+  rdg.core_->set_partition_id(partition_id_to_load);
 
   return RDG(std::move(rdg));
 }
@@ -693,9 +636,9 @@ tsuba::RDG::Store(
       handle.impl_->rdg_manifest().num_hosts(),
       handle.impl_->rdg_manifest().policy_id(), tsuba::Comm()->Num,
       core_->part_header().metadata().policy_id_, versioning_action);
-  if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
+  if (handle.impl_->rdg_manifest().dir() != rdg_dir()) {
     KATANA_CHECKED(core_->part_header().ChangeStorageLocation(
-        rdg_dir_, handle.impl_->rdg_manifest().dir()));
+        rdg_dir(), handle.impl_->rdg_manifest().dir()));
   }
 
   auto desc_res = WriteGroup::Make();
@@ -937,6 +880,20 @@ tsuba::RDG::set_part_metadata(const tsuba::PartitionMetadata& metadata) {
   core_->part_header().set_metadata(metadata);
 }
 
+const katana::Uri&
+tsuba::RDG::rdg_dir() const {
+  return core_->rdg_dir();
+}
+void
+tsuba::RDG::set_rdg_dir(const katana::Uri& rdg_dir) {
+  return core_->set_rdg_dir(rdg_dir);
+}
+
+uint32_t
+tsuba::RDG::partition_id() const {
+  return core_->partition_id();
+}
+
 const std::shared_ptr<arrow::Table>&
 tsuba::RDG::node_properties() const {
   return core_->node_properties();
@@ -988,6 +945,64 @@ tsuba::RDG::full_edge_schema() const {
   return arrow::schema(fields);
 }
 
+const std::vector<std::shared_ptr<arrow::ChunkedArray>>&
+tsuba::RDG::master_nodes() const {
+  return core_->master_nodes();
+}
+const std::vector<std::shared_ptr<arrow::ChunkedArray>>&
+tsuba::RDG::mirror_nodes() const {
+  return core_->mirror_nodes();
+}
+const std::shared_ptr<arrow::ChunkedArray>&
+tsuba::RDG::host_to_owned_global_node_ids() const {
+  return core_->host_to_owned_global_node_ids();
+}
+const std::shared_ptr<arrow::ChunkedArray>&
+tsuba::RDG::host_to_owned_global_edge_ids() const {
+  return core_->host_to_owned_global_edge_ids();
+}
+const std::shared_ptr<arrow::ChunkedArray>&
+tsuba::RDG::local_to_user_id() const {
+  return core_->local_to_user_id();
+}
+const std::shared_ptr<arrow::ChunkedArray>&
+tsuba::RDG::local_to_global_id() const {
+  return core_->local_to_global_id();
+}
+
+void
+tsuba::RDG::set_master_nodes(
+    std::vector<std::shared_ptr<arrow::ChunkedArray>>&& master_nodes) {
+  return core_->set_master_nodes(std::move(master_nodes));
+}
+void
+tsuba::RDG::set_mirror_nodes(
+    std::vector<std::shared_ptr<arrow::ChunkedArray>>&& mirror_nodes) {
+  return core_->set_mirror_nodes(std::move(mirror_nodes));
+}
+void
+tsuba::RDG::set_host_to_owned_global_node_ids(
+    std::shared_ptr<arrow::ChunkedArray>&& host_to_owned_global_node_ids) {
+  return core_->set_host_to_owned_global_node_ids(
+      std::move(host_to_owned_global_node_ids));
+}
+void
+tsuba::RDG::set_host_to_owned_global_edge_ids(
+    std::shared_ptr<arrow::ChunkedArray>&& host_to_owned_global_edge_ids) {
+  return core_->set_host_to_owned_global_edge_ids(
+      std::move(host_to_owned_global_edge_ids));
+}
+void
+tsuba::RDG::set_local_to_user_id(
+    std::shared_ptr<arrow::ChunkedArray>&& local_to_user_id) {
+  return core_->set_local_to_user_id(std::move(local_to_user_id));
+}
+void
+tsuba::RDG::set_local_to_global_id(
+    std::shared_ptr<arrow::ChunkedArray>&& local_to_global_id) {
+  return core_->set_local_to_global_id(std::move(local_to_global_id));
+}
+
 const tsuba::FileView&
 tsuba::RDG::topology_file_storage() const {
   return core_->topology_file_storage();
@@ -1001,10 +1016,10 @@ tsuba::RDG::UnbindTopologyFileStorage() {
 katana::Result<void>
 tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
   katana::Uri dir = new_top.DirName();
-  if (dir != rdg_dir_) {
+  if (dir != rdg_dir()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
-        "new topology file must be in this RDG's directory ({})", rdg_dir_);
+        "new topology file must be in this RDG's directory ({})", rdg_dir());
   }
   return core_->RegisterTopologyFile(new_top.BaseName());
 }
@@ -1032,11 +1047,11 @@ tsuba::RDG::UnbindNodeEntityTypeIDArrayFileStorage() {
 katana::Result<void>
 tsuba::RDG::SetNodeEntityTypeIDArrayFile(const katana::Uri& new_type_id_array) {
   katana::Uri dir = new_type_id_array.DirName();
-  if (dir != rdg_dir_) {
+  if (dir != rdg_dir()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
         "new Node Entity Type ID file must be in this RDG's directory ({})",
-        rdg_dir_);
+        rdg_dir());
   }
   return core_->RegisterNodeEntityTypeIDArrayFile(new_type_id_array.BaseName());
 }
@@ -1054,29 +1069,18 @@ tsuba::RDG::UnbindEdgeEntityTypeIDArrayFileStorage() {
 katana::Result<void>
 tsuba::RDG::SetEdgeEntityTypeIDArrayFile(const katana::Uri& new_type_id_array) {
   katana::Uri dir = new_type_id_array.DirName();
-  if (dir != rdg_dir_) {
+  if (dir != rdg_dir()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
         "new Edge Entity Type ID file must be in this RDG's directory ({})",
-        rdg_dir_);
+        rdg_dir());
   }
   return core_->RegisterEdgeEntityTypeIDArrayFile(new_type_id_array.BaseName());
 }
 
-void
-tsuba::RDG::InitArrowVectors() {
-  // Create an empty array, accessed by Distribution during loading
-  host_to_owned_global_node_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
-  host_to_owned_global_edge_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
-  local_to_user_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
-  local_to_global_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
-}
+tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {}
 
-tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {
-  InitArrowVectors();
-}
-
-tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) { InitArrowVectors(); }
+tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) {}
 
 tsuba::RDG::~RDG() = default;
 tsuba::RDG::RDG(tsuba::RDG&& other) noexcept = default;

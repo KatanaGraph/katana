@@ -478,7 +478,7 @@ function(add_katana_sphinx_target target_name)
       COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
         -W
         -b html
-	-t internal
+        -t internal
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
@@ -490,7 +490,7 @@ function(add_katana_sphinx_target target_name)
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
         -b html
-	-t external
+        -t external
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"

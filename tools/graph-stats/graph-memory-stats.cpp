@@ -33,6 +33,11 @@ static cll::opt<std::string> inputfilename(
 static cll::opt<std::string> outputfilename(
     cll::Positional, cll::desc("out-file"), cll::Required);
 
+using map_element = std::unordered_map<std::string, int64_t>;
+using map_string_element = std::unordered_map<std::string, std::string>;
+using memory_map = std::unordered_map<
+    std::string, std::variant<map_element, map_string_element>>;
+
 void
 PrintAtomicTypes(const std::vector<std::string>& atomic_types) {
   for (auto atype : atomic_types) {
@@ -79,11 +84,36 @@ InsertPropertyTypeMemoryData(
 }
 
 void
+GatherMemoryAllocation(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::unique_ptr<katana::PropertyGraph> g,
+    const map_element& allocations, const map_element& usage,
+    const map_element& width, const map_string_element& types) {
+  for (int32_t i = 0; i < schema->num_fields(); ++i) {
+    std::string prop_name = schema->field(i)->name();
+    auto dtype = schema->field(i)->type();
+    auto prop_field = g->GetNodeProperty(prop_name).value()->chunk(0);
+    int64_t alloc_size = 0;
+    int64_t prop_size = 0;
+    auto bit_width = arrow::bit_width(dtype->id());
+
+    for (auto j = 0; j < prop_field->length(); j++) {
+      if (prop_field->IsValid(j)) {
+        auto scal_ptr = *prop_field->GetScalar(j);
+        auto data = *scal_ptr;
+        prop_size += sizeof(data);
+      }
+      alloc_size += bit_width;
+    }
+    allocations.insert(std::pair(prop_name, alloc_size));
+    usage.insert(std::pair(prop_name, prop_size));
+    width.insert(std::pair(prop_name, bit_width));
+    types.insert(std::pair(prop_name, dtype->name()));
+  }
+}
+
+void
 doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
-  using map_element = std::unordered_map<std::string, int64_t>;
-  using map_string_element = std::unordered_map<std::string, std::string>;
-  using memory_map = std::unordered_map<
-      std::string, std::variant<map_element, map_string_element>>;
   memory_map mem_map = {};
   map_element basic_raw_stats = {};
   auto node_schema = graph->full_node_schema();
@@ -114,6 +144,10 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   map_string_element all_edge_prop_stats;
   map_element all_node_width_stats;
   map_element all_edge_width_stats;
+  map_element all_node_alloc;
+  map_element all_edge_alloc;
+  map_element all_node_usage;
+  map_element all_edge_usage;
 
   all_node_prop_stats.insert(std::pair("kUnknownName", "uint8"));
   all_edge_prop_stats.insert(std::pair("kUnknownName", "uint8"));
@@ -124,25 +158,36 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   for (int32_t i = 0; i < node_schema->num_fields(); ++i) {
     std::string prop_name = node_schema->field(i)->name();
     auto dtype = node_schema->field(i)->type();
+    auto prop_field = graph->GetNodeProperty(prop_name).value()->chunk(0);
+    int64_t alloc_size = 0;
+    int64_t prop_size = 0;
+    auto bit_width = arrow::bit_width(dtype->id());
 
-    all_node_width_stats.insert(
-        std::pair(prop_name, arrow::bit_width(dtype->id())));
+    for (auto j = 0; j < prop_field->length(); j++) {
+      if (prop_field->IsValid(j)) {
+        auto scal_ptr = *prop_field->GetScalar(j);
+        auto data = *scal_ptr;
+        prop_size += sizeof(data);
+      }
+      alloc_size += bit_width;
+    }
+    all_node_alloc.insert(std::pair(prop_name, alloc_size));
+    all_node_usage.insert(std::pair(prop_name, prop_size));
+    all_node_width_stats.insert(std::pair(prop_name, bit_width));
     all_node_prop_stats.insert(std::pair(prop_name, dtype->name()));
   }
 
   PrintStringMapping(all_node_prop_stats);
   PrintMapping(all_node_width_stats);
+  PrintMapping(all_node_alloc);
+  PrintMapping(all_node_usage);
   mem_map.insert(std::pair("Node-Types", all_node_prop_stats));
 
-  for (int32_t i = 0; i < edge_schema->num_fields(); ++i) {
-    std::string prop_name = edge_schema->field(i)->name();
-    auto dtype = edge_schema->field(i)->type();
-    all_edge_width_stats.insert(
-        std::pair(prop_name, arrow::bit_width(dtype->id())));
-    all_edge_prop_stats.insert(std::pair(prop_name, dtype->name()));
-  }
+  GatherMemoryAllocation(
+      edge_schema, graph, all_edge_alloc, all_edge_usage, all_edge_width_stats,
+      all_edge_prop_stats)
 
-  PrintStringMapping(all_edge_prop_stats);
+      PrintStringMapping(all_edge_prop_stats);
   PrintMapping(all_edge_width_stats);
   mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));
 
@@ -186,7 +231,6 @@ main(int argc, char** argv) {
   katana::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
   auto g = katana::PropertyGraph::Make(inputfilename, tsuba::RDGLoadOptions());
-  std::cout << "Graph Sizeof is: " << sizeof(g) << "\n";
   doMemoryAnalysis(std::move(g.value()));
   return 1;
 }

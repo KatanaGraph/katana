@@ -1,7 +1,7 @@
 #!/bin/bash
 set -xeuo pipefail
 
-# Explicitly set location because macOS default is different.
+# Explicitly set location to make sure transferring the cache works if that is happening.
 ccache -o cache_dir=$HOME/.ccache
 
 # Use the compiler version in hash instead of mtime, this allows caching even when compiler is reinstalled and

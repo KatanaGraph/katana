@@ -7,11 +7,6 @@ CI_BUILD_TYPE=$3
 BUILD_DIR=$4
 shift 4
 
-case $OS in
-  *macOS*) export PATH=$PATH:/usr/local/opt/llvm/bin ;;
-  *) ;;
-esac
-
 case "$CXX" in
   *clang++*)   CC=${CXX/clang++/clang} ;;
   *g++*)       CC=${CXX/g++/gcc};;

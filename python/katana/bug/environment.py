@@ -19,6 +19,8 @@ def register_capture_routine(f):
 
 @register_capture_routine
 def _capture_system(zipout: zipfile.ZipFile):
+    import katana  # Imported here to avoid cyclical import
+
     capture_string(
         zipout,
         "os.txt",
@@ -30,8 +32,6 @@ def _capture_system(zipout: zipfile.ZipFile):
             {capture_command('lsb_release', '-a')}
             """,
     )
-
-    import katana  # Imported here to avoid cyclical import
 
     capture_string(
         zipout,
@@ -92,8 +92,24 @@ def _capture_system(zipout: zipfile.ZipFile):
 
 @register_capture_routine
 def _capture_build(zipout: zipfile.ZipFile):
-    for root in [Path(__file__).parents[3], Path(__file__).parents[5], Path.cwd()]:
-        for target_filename in ["CMakeCache.txt", "CMakeError.log", "CMakeOutput.log", "graph-worker*/link.txt"]:
+    """
+    Capture build related files into zip.
+    """
+    # The number of parent steps needed to go from __file__ to the root of the open repo.
+    PARENT_STEPS_TO_ROOT_FOR_OPEN = 3
+    # Similarly, for the root of the enterprise repo.
+    PARENT_STEPS_TO_ROOT_FOR_ENTERPRISE = 5
+    for root in [
+        Path(__file__).parents[PARENT_STEPS_TO_ROOT_FOR_OPEN],
+        Path(__file__).parents[PARENT_STEPS_TO_ROOT_FOR_ENTERPRISE],
+        Path.cwd(),
+    ]:
+        for target_filename in [
+            "CMakeCache.txt",
+            "CMakeError.log",
+            "CMakeOutput.log",
+            "graph-worker*/link.txt",
+        ]:
             capture_files(zipout, root.rglob(target_filename))
 
 
@@ -105,10 +121,17 @@ def capture_command(*args, **kwargs) -> str:
     return out
 
 
-def capture_files(zipout: zipfile.ZipFile, paths: Iterable[Union[Path, str]]):
+def capture_files(zipout: zipfile.ZipFile, paths: Iterable[Union[Path, str]]) -> None:
+    """
+    Add files and/or directory trees to the zip file.
+
+    :param zipout: The zip file to add files to.
+    :param paths: The paths to add to the zip file. And directories are added along with all their contents.
+    """
     for p in paths:
+        # Convert the path to an actual Path instance in case it was a str representation of the path.
         p = Path(p)
-        if p.is_file():
+        if p.is_file() or p.is_symlink():
             zipout.write(p)
         elif p.is_dir():
             capture_files(zipout, p.iterdir())
@@ -117,8 +140,17 @@ def capture_files(zipout: zipfile.ZipFile, paths: Iterable[Union[Path, str]]):
             pass
 
 
-def capture_string(zipout: zipfile.ZipFile, filename: str, s: str):
-    zipout.writestr(f"info/{filename}", "\n".join(l.strip() for l in s.strip().splitlines()))
+def capture_string(zipout: zipfile.ZipFile, filename: str, content: str) -> None:
+    """
+    Write content to a file in the zip file.
+
+    :param zipout: The zip file to write to.
+    :param filename: The file name to create in the archive. This will be prefixed with ``info/`` to separate it from
+        directly added files.
+    :param content: The string to write into the file. All white space at the beginning and ends of lines will be
+        stripped. This makes triple-quoted strings easier to use.
+    """
+    zipout.writestr(f"info/{filename}", "\n".join(l.strip() for l in content.strip().splitlines()))
 
 
 def get_filtered_environ():

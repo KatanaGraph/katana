@@ -25,8 +25,11 @@ build target. To build external documentation, enable the
 Annotating Internal or Draft only Content
 =========================================
 
-Restructured Text and Markdown
-==============================
+Files ending in ``-draft.[rst/ipynb]`` or ``-internal.[rst/ipynb]`` will not be
+included in external facing documentation.
+
+Restructured Text
+=================
 
 Most documentation is written in Restructured Text (``.rst``) format, which is
 similar to Markdown (``.md``) in spirit but has a slightly different syntax.
@@ -128,7 +131,12 @@ Jupyter Notebooks
 =================
 
 Guides on how to use Katana Graph in Python should be written as Jupyter
-Notebooks. 
+Notebooks. They will be parsed similar to Restructured Text (``.rst``) files.
+
+They should follow the following style template: 
+
+:ref:`how-to-template.ipynb`
+.. _link: how-to-template.ipynb
 
 API Documentation
 =================

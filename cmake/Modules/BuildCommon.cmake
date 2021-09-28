@@ -479,7 +479,6 @@ function(add_katana_sphinx_target target_name)
         -W
         -b html
 	-t internal
-	${sphinx_build_flags}
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"

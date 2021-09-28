@@ -72,12 +72,12 @@ public:
         version_ + 1, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }
 
-  // TODO(vkarthik): This should have previous_version_ for the second argument, no?
   RDGManifest SameVersion(
       uint32_t num_hosts, uint32_t policy_id, bool transpose,
       const RDGLineage& lineage) const {
     return RDGManifest(
-        version_, version_, num_hosts, policy_id, transpose, dir_, lineage);
+        version_, previous_version_, num_hosts, policy_id, transpose, dir_,
+        lineage);
   }
 
   bool IsEmptyRDG() const { return num_hosts() == 0; }

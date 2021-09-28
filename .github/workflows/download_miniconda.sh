@@ -4,7 +4,6 @@ set -xeuo pipefail
 MINICONDA_FILE="$HOME/.cache/miniconda/mambaforge.sh"
 case $1 in
   ubuntu-*) PLAT=Linux-x86_64 ;;
-  macOS-*)  PLAT=MacOSX-x86_64 ;;
   *)        echo "Unknown OS"; exit 10 ;;
 esac
 

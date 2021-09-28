@@ -64,7 +64,6 @@ jobs:
       matrix:
         os:
         - ubuntu-18.04
-        # - macOS-latest
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
@@ -98,11 +97,6 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
         sudo apt install -yq ccache curl libz-dev bzip2 make libnuma1
-    - name: Install dependencies
-      if: startsWith(matrix.os, 'macOS-')
-      run: |
-        brew install ccache curl
-      # TODO(amp): Does brew install need bzip2, libz-dev, and make?
 
     - name: Setup ccache
       run: |
@@ -153,12 +147,6 @@ jobs:
       with:
         name: conda-pkgs-${{matrix.os}}
         path: /home/runner/build
-    - name: Upload built packages
-      uses: actions/upload-artifact@v1
-      if: startsWith(matrix.os, 'macOS-')
-      with:
-        name: conda-pkgs-${{matrix.os}}
-        path: /Users/runner/build
 
   test_conda_package_install:
     needs: build_and_test_conda_package
@@ -320,7 +308,6 @@ jobs:
       matrix:
         os:
           - ubuntu-18.04
-        # - macOS-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -354,11 +341,6 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
           sudo apt install -yq ccache curl libz-dev bzip2 make libnuma1
-      - name: Install dependencies
-        if: startsWith(matrix.os, 'macOS-')
-        run: |
-          brew install ccache curl
-        # TODO(amp): Does brew install need bzip2, libz-dev, and make?
 
       - name: Setup ccache
         run: |
@@ -437,14 +419,3 @@ jobs:
           # Default timeout is 1500 seconds. Quick tests should not take more
           # than a few seconds typically.
           cd $HOME/build && ctest --output-on-failure --label-regex quick --parallel 2 --timeout 350
-
-      # MacOS tests seem to run into CI host level failures that are hard to
-      # reproduce locally. Rerun them for now.
-      - name: Test
-        # Disable macOS tests because they take up to 10X longer than ubuntu
-        # tests due to a yet undiagnosed performance issue.
-        if: startsWith(matrix.os, 'macOS-') && false
-        run: |
-          . .github/workflows/activate_miniconda.sh
-          export AWS_EC2_METADATA_DISABLED=true
-          cd $HOME/build && ctest --output-on-failure --label-regex quick --parallel 1 --repeat until-pass:2 --timeout 350

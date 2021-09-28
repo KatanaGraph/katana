@@ -101,12 +101,10 @@ jobs:
   build_and_test:
     needs: do_cpp_test
     runs-on: ${{matrix.os}}
-    continue-on-error: ${{matrix.os == 'macOS-latest'}}
     strategy:
       matrix:
         os:
         - ubuntu-18.04
-        # - macOS-latest
         build_type:
         - Debug
         - Release
@@ -123,17 +121,6 @@ jobs:
         # existing matrix "job" (i.e., point in the product space) by adding
         # more variables. Fallback to "exclude".
         exclude:
-            # MacOS ({g++} {Debug,Shared})
-        - os: macOS-latest
-          cxx: clang++-10
-        - os: macOS-latest
-          cxx: clang++-12
-        - os: macOS-latest
-          cxx: g++-9
-        - os: macOS-latest
-          build_type: Sanitizer
-        - os: macOS-latest
-          build_type: Release
             # Ubuntu ({g++-9,clang++-10} [most])
         - os: ubuntu-18.04
           build_type: Sanitizer
@@ -182,9 +169,6 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu-') && (matrix.cxx!='g++' && (matrix.cxx!='clang++-12' || matrix.build_type!='Sanitizer'))
       run: |
         sudo scripts/setup_ubuntu.sh
-    - name: Install dependencies macOS
-      if: startsWith(matrix.os, 'macOS-')
-      run: scripts/setup_macos.sh
     - name: Install C++ dependencies
       run: .github/workflows/setup_conan_install.sh $HOME/build
 
@@ -238,13 +222,3 @@ jobs:
         # Default timeout is 1500 seconds. Quick tests should not take more
         # than a few seconds typically.
         cd $HOME/build && ctest --output-on-failure --label-regex quick --parallel 2 --timeout 350
-
-    # MacOS tests seem to run into CI host level failures that are hard to
-    # reproduce locally. Rerun them for now.
-    - name: Test
-      # Disable macOS tests because they take up to 10X longer than ubuntu
-      # tests due to a yet undiagnosed performance issue.
-      if: startsWith(matrix.os, 'macOS-') && false
-      run: |
-        export AWS_EC2_METADATA_DISABLED=true
-        cd $HOME/build && ctest --output-on-failure --label-regex quick --parallel 1 --repeat until-pass:2 --timeout 350

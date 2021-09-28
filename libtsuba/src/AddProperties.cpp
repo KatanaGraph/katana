@@ -174,7 +174,7 @@ tsuba::AddPropertySlice(
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn) {
   uint64_t begin = range.first;
-  uint64_t size = range.second - range.first;
+  uint64_t size = range.second > range.first ? range.second - range.first : 0;
   for (tsuba::PropStorageInfo* prop : properties) {
     if (!prop->IsAbsent()) {
       return KATANA_ERROR(

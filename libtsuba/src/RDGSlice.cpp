@@ -42,6 +42,7 @@ tsuba::RDGSlice::DoMake(
             slice.edge_range.second * sizeof(katana::EntityTypeID), true),
         "loading edge type id array");
   }
+  core_->set_rdg_dir(metadata_dir);
   // all of the properties
   std::vector<PropStorageInfo*> node_properties =
       KATANA_CHECKED(core_->part_header().SelectNodeProperties(node_props));
@@ -69,29 +70,100 @@ tsuba::RDGSlice::DoMake(
   std::vector<PropStorageInfo*> edge_properties =
       KATANA_CHECKED(core_->part_header().SelectEdgeProperties(edge_props));
 
-  auto edge_result = AddPropertySlice(
-      metadata_dir, edge_properties, slice.edge_range, &grp,
-      [rdg = this](
-          const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
-        std::shared_ptr<arrow::Table> prop_table =
-            rdg->core_->edge_properties();
+  KATANA_CHECKED_CONTEXT(
+      AddPropertySlice(
+          metadata_dir, edge_properties, slice.edge_range, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props)
+              -> katana::Result<void> {
+            std::shared_ptr<arrow::Table> prop_table =
+                rdg->core_->edge_properties();
 
-        if (prop_table && prop_table->num_columns() > 0) {
-          for (int i = 0; i < props->num_columns(); ++i) {
-            prop_table = KATANA_CHECKED(prop_table->AddColumn(
-                prop_table->num_columns(), props->field(i), props->column(i)));
-          }
-        } else {
-          prop_table = props;
-        }
-        rdg->core_->set_edge_properties(std::move(prop_table));
-        return katana::ResultSuccess();
-      });
-  if (!edge_result) {
-    return edge_result.error();
+            if (prop_table && prop_table->num_columns() > 0) {
+              for (int i = 0; i < props->num_columns(); ++i) {
+                prop_table = KATANA_CHECKED(prop_table->AddColumn(
+                    prop_table->num_columns(), props->field(i),
+                    props->column(i)));
+              }
+            } else {
+              prop_table = props;
+            }
+            rdg->core_->set_edge_properties(std::move(prop_table));
+            return katana::ResultSuccess();
+          }),
+      "populating edge properties");
+  core_->set_rdg_dir(metadata_dir);
+
+  // check if there are any properties left to load
+  // any properties left at this point will really be partition metadata arrays
+  // (which we load via the property interface)
+  std::vector<PropStorageInfo*> part_info =
+      KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
+
+  // these are not Node/Edge types but rather property types we are checking
+  KATANA_CHECKED(core_->EnsureNodeTypesLoaded());
+  KATANA_CHECKED(core_->EnsureEdgeTypesLoaded());
+
+  if (part_info.empty()) {
+    return grp.Finish();
   }
 
-  return grp.Finish();
+  // metadata arrays that should be loaded unsliced, in their entirety
+  std::vector<PropStorageInfo*> no_slice;
+  // metadata arrays that should have their slice range adjusted for the fact
+  // that they only have entries for mirror nodes
+  std::vector<PropStorageInfo*> no_masters;
+  uint32_t num_masters = core_->part_header().metadata().num_owned_;
+  std::pair<uint64_t, uint64_t> no_masters_range = {
+      slice.node_range.first >= num_masters
+          ? slice.node_range.first - num_masters
+          : 0,
+      slice.node_range.second >= num_masters
+          ? slice.node_range.second - num_masters
+          : 0};
+  // metadata arrays that should be loaded with the same node slice range as
+  // regular node properties
+  std::vector<PropStorageInfo*> node_slicing;
+  std::pair<uint64_t, uint64_t> node_slicing_range = slice.node_range;
+
+  for (PropStorageInfo* prop : part_info) {
+    std::string name = prop->name();
+    if (name == RDGCore::kMasterNodesPropName ||
+        name == RDGCore::kMirrorNodesPropName ||
+        name == RDGCore::kHostToOwnedGlobalNodeIDsPropName ||
+        name == RDGCore::kHostToOwnedGlobalEdgeIDsPropName) {
+      no_slice.push_back(prop);
+    } else if (name == RDGCore::kLocalToGlobalIDPropName) {
+      no_masters.push_back(prop);
+    } else if (name == RDGCore::kLocalToUserIDPropName) {
+      node_slicing.push_back(prop);
+    }
+  }
+
+  KATANA_CHECKED_CONTEXT(
+      AddProperties(
+          metadata_dir, tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
+          no_slice, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+            return rdg->core_->AddPartitionMetadataArray(props);
+          }),
+      "populating partition metadata");
+  KATANA_CHECKED_CONTEXT(
+      AddPropertySlice(
+          metadata_dir, no_masters, no_masters_range, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+            return rdg->core_->AddPartitionMetadataArray(props);
+          }),
+      "populating partition metadata");
+  KATANA_CHECKED_CONTEXT(
+      AddPropertySlice(
+          metadata_dir, node_slicing, node_slicing_range, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+            return rdg->core_->AddPartitionMetadataArray(props);
+          }),
+      "populating partition metadata");
+  KATANA_CHECKED(grp.Finish());
+
+  return katana::ResultSuccess();
 }
 
 katana::Result<tsuba::RDGSlice>
@@ -118,6 +190,16 @@ tsuba::RDGSlice::Make(
   }
 
   return RDGSlice(std::move(rdg_slice));
+}
+
+const katana::Uri&
+tsuba::RDGSlice::rdg_dir() const {
+  return core_->rdg_dir();
+}
+
+uint32_t
+tsuba::RDGSlice::partition_id() const {
+  return core_->partition_id();
 }
 
 const std::shared_ptr<arrow::Table>&

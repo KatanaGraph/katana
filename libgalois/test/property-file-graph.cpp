@@ -28,7 +28,7 @@ void
 TestTypesFromPropertiesCompareTypesFromStorage() {
   /*
   Scenario 1:
-  1. create a graph in memory with a couple of bool and uint8 properties
+  1. create a graph in memory with a couple of uint8 properties
   2. Construct types from properties
   3. Commit to storage
   4. Load the graph and compare the type info from step 2 above
@@ -83,9 +83,12 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
       g->GetEdgeEntityTypeID("edge-name"));
 
   KATANA_LOG_VASSERT(
-      g->GetNumNodeEntityTypes() == 2, "found {} entity types.",
+      g->GetNumNodeEntityTypes() == 2, "found {} node entity types.",
       g->GetNumNodeEntityTypes());
-  KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() == 2);
+
+  KATANA_LOG_VASSERT(
+      g->GetNumEdgeEntityTypes() == 2, "found {} edge entity types.",
+      g->GetNumEdgeEntityTypes());
 
   auto write_result = g->Write(rdg_dir, command_line);
 
@@ -122,7 +125,7 @@ void
 TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   /*
   Scenario 2:
-  1. create a graph in memory with a couple of bool and uint8 properties
+  1. create a graph in memory with a couple of uint8 properties
   2. Construct composite types from properties
   3. Commit to storage
   4. Load the graph and compare the type info from step 2 above

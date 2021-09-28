@@ -1,9 +1,9 @@
 #include <boost/filesystem.hpp>
 
-#include "RDGManifest.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "tsuba/RDG.h"
+#include "tsuba/RDGManifest.h"
 
 namespace fs = boost::filesystem;
 

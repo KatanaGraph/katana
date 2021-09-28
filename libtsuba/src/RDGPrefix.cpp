@@ -1,10 +1,10 @@
 #include "tsuba/RDGPrefix.h"
 
 #include "RDGHandleImpl.h"
-#include "RDGManifest.h"
 #include "RDGPartHeader.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
+#include "tsuba/RDGManifest.h"
 #include "tsuba/file.h"
 
 namespace tsuba {

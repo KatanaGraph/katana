@@ -15,6 +15,7 @@
 namespace tsuba {
 
 class RDGHandleImpl;
+class RDGManifest;
 
 /// RDGHandle is an opaque indentifier for an RDG.
 struct RDGHandle {
@@ -58,6 +59,9 @@ KATANA_EXPORT katana::Result<RDGHandle> Open(
 
 KATANA_EXPORT katana::Result<RDGHandle> Open(
     const std::string& rdg_name, uint64_t version, uint32_t flags);
+
+KATANA_EXPORT katana::Result<RDGHandle> Open(
+    const RDGManifest rdg_manifest, uint32_t flags);
 
 /// Generate a new canonically named topology file name in the
 /// directory associated with handle. Exported to support

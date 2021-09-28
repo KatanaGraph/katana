@@ -95,6 +95,11 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
       .impl_ = new RDGHandleImpl(flags, std::move(manifest_res.value()))};
 }
 
+katana::Result<tsuba::RDGHandle>
+tsuba::Open(RDGManifest rdg_manifest, uint32_t flags) {
+  return RDGHandle{.impl_ = new RDGHandleImpl(flags, std::move(rdg_manifest))};
+}
+
 katana::Result<void>
 tsuba::Close(RDGHandle handle) {
   delete handle.impl_;

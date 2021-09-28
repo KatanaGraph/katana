@@ -3,8 +3,8 @@
 
 #include <cstdint>
 
-#include "RDGManifest.h"
 #include "katana/URI.h"
+#include "tsuba/RDGManifest.h"
 #include "tsuba/tsuba.h"
 
 namespace tsuba {

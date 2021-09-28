@@ -17,55 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <unordered_map>
-#include <vector>
-// Our special new must allocate memory as expected…
-#include <cstdio>
-// …but also inspect the stack and print some results.
-#include <execinfo.h>
-#include <unistd.h>
-
-// Import bad_alloc, expected in case of errors.
-#include <stdlib.h>
-
-#include <type_traits>
-#include <typeinfo>
-#ifndef _MSC_VER
-#include <cxxabi.h>
-#endif
-#include <memory>
 
 #include "katana/Galois.h"
-#include "katana/LCGraph.h"
 #include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
-
-template <class T>
-std::string
-type_name() {
-  typedef typename std::remove_reference<T>::type TR;
-  std::unique_ptr<char, void (*)(void*)> own(
-#ifndef _MSC_VER
-      abi::__cxa_demangle(typeid(TR).name(), nullptr, nullptr, nullptr),
-#else
-      nullptr,
-#endif
-      std::free);
-  std::string r = own != nullptr ? own.get() : typeid(TR).name();
-  if (std::is_const<TR>::value)
-    r += " const";
-  if (std::is_volatile<TR>::value)
-    r += " volatile";
-  if (std::is_lvalue_reference<T>::value)
-    r += "&";
-  else if (std::is_rvalue_reference<T>::value)
-    r += "&&";
-  return r;
-}
 
 namespace cll = llvm::cl;
 static cll::opt<std::string> inputfilename(
@@ -74,7 +33,6 @@ static cll::opt<std::string> inputfilename(
 static cll::opt<std::string> outputfilename(
     cll::Positional, cll::desc("out-file"), cll::Required);
 
-// std::cout << "decltype(i) is " << type_name<decltype(i)>() << '\n';
 void
 PrintAtomicTypes(const std::vector<std::string>& atomic_types) {
   for (auto atype : atomic_types) {
@@ -84,16 +42,20 @@ PrintAtomicTypes(const std::vector<std::string>& atomic_types) {
 
 void
 PrintMapping(const std::unordered_map<std::string, int64_t>& u) {
+  std::cout << "\n";
   for (const auto& n : u) {
     std::cout << n.first << " : " << n.second << "\n";
   }
+  std::cout << "\n";
 }
 
 void
 PrintStringMapping(const std::unordered_map<std::string, std::string>& u) {
+  std::cout << "\n";
   for (const auto& n : u) {
     std::cout << n.first << " : " << n.second << "\n";
   }
+  std::cout << "\n";
 }
 
 void
@@ -117,7 +79,7 @@ InsertPropertyTypeMemoryData(
 }
 
 void
-doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
+doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   using map_element = std::unordered_map<std::string, int64_t>;
   using map_string_element = std::unordered_map<std::string, std::string>;
   using memory_map = std::unordered_map<
@@ -128,10 +90,6 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   auto edge_schema = graph->full_edge_schema();
   int64_t total_num_node_props = node_schema->num_fields();
   int64_t total_num_edge_props = edge_schema->num_fields();
-
-  // arrow::DataType TypeMap;
-
-  // std::cout << static_cast<TypeMap>(0) << "\n";
 
   basic_raw_stats.insert(std::pair("Node-Schema-Size", total_num_node_props));
   basic_raw_stats.insert(std::pair("Edge-Schema-Size", total_num_edge_props));
@@ -145,9 +103,6 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
       std::pair("Number-Edge-Entity-Types", graph->GetNumNodeEntityTypes()));
   basic_raw_stats.insert(std::pair("Number-Nodes", graph->num_nodes()));
   basic_raw_stats.insert(std::pair("Number-Edges", graph->num_edges()));
-
-  PrintMapping(basic_raw_stats);
-  mem_map.insert(std::pair("General-Stats", basic_raw_stats));
 
   auto atomic_node_types = graph->ListAtomicNodeTypes();
 
@@ -166,10 +121,6 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   all_node_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t) * 8));
   all_edge_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t) * 8));
 
-  std::cout << "\n";
-  std::cout << "Node Schema\n";
-  std::cout << "---------------------------------------\n";
-
   for (int32_t i = 0; i < node_schema->num_fields(); ++i) {
     std::string prop_name = node_schema->field(i)->name();
     auto dtype = node_schema->field(i)->type();
@@ -183,14 +134,9 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   PrintMapping(all_node_width_stats);
   mem_map.insert(std::pair("Node-Types", all_node_prop_stats));
 
-  std::cout << "\n";
-  std::cout << "Edge Schema\n";
-  std::cout << "----------------------------------------\n";
-
   for (int32_t i = 0; i < edge_schema->num_fields(); ++i) {
     std::string prop_name = edge_schema->field(i)->name();
     auto dtype = edge_schema->field(i)->type();
-
     all_edge_width_stats.insert(
         std::pair(prop_name, arrow::bit_width(dtype->id())));
     all_edge_prop_stats.insert(std::pair(prop_name, dtype->name()));
@@ -201,41 +147,46 @@ doNonGroupingAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));
 
   auto node_iterator = g_topo.all_nodes();
-  // auto edge_iterator = g_topo.all_edges();
+  auto edge_iterator = g_topo.all_edges();
 
   int64_t width;
-  std::cout << "\n";
   int64_t node_size = 0;
+  map_element node_dist;
+  map_element edge_dist;
+
   for (auto node : node_iterator) {
     std::string node_type = *graph->GetNodeAtomicTypeName(node);
     width = all_node_width_stats.find(node_type)->second;
-    // std::cout << node_type << " : " << width << " ";
-    node_size += width;
+    node_dist[node_type]++;
+    node_size += width / 8;
   }
-  std::cout << "Total Number of bytes taken up by Nodes: " << node_size << "\n";
 
-  // int64_t edge_size = 0;
-  // for (auto edge : edge_iterator) {
-  //   auto edge_type = graph->GetTypeOfEdge(edge);
-  //   width = all_edge_width_stats.find(edge_type)->second;
-  //   edge_size += width;
-  //   std::cout << width << " ";
-  // }
-  // std::cout << "Total Number of bytes taken up by Edges: " << edge_size << "\n";
+  PrintMapping(node_dist);
+  mem_map.insert(std::pair("Node-Type-Distribution", node_dist));
+
+  int64_t edge_size = 0;
+  for (auto edge : edge_iterator) {
+    std::string edge_type = *graph->GetEdgeAtomicTypeName(edge);
+    width = all_edge_width_stats.find(edge_type)->second;
+    edge_dist[edge_type]++;
+    edge_size += width / 8;
+  }
+  PrintMapping(edge_dist);
+  mem_map.insert(std::pair("Edge-Type-Distribution", edge_dist));
+
+  basic_raw_stats.insert(std::pair("Node-Memory-Consumption", node_size));
+  basic_raw_stats.insert(std::pair("Edge-Memory-Consumption", edge_size));
+
+  mem_map.insert(std::pair("General-Stats", basic_raw_stats));
+  PrintMapping(basic_raw_stats);
 }
 
 int
 main(int argc, char** argv) {
   katana::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
-
-  // ofstream memeory_file("example.txt");
-  // memeory_file.open();
-  // memeory_file << "File containing memory analysis of a graph.\n";
-  // memeory_file.close();
-
   auto g = katana::PropertyGraph::Make(inputfilename, tsuba::RDGLoadOptions());
   std::cout << "Graph Sizeof is: " << sizeof(g) << "\n";
-  doNonGroupingAnalysis(std::move(g.value()));
+  doMemoryAnalysis(std::move(g.value()));
   return 1;
 }

@@ -44,6 +44,7 @@ set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
 # that this is a standard option.
 set(BUILD_TESTING ON CACHE BOOL "Build tests")
 set(BUILD_DOCS OFF CACHE BOOL "Build documentation with make doc")
+set(BUILD_EXTERNAL_DOCS OFF CACHE BOOL "Hide '*-draft*' documentation pages and directories when building documentation")
 # Set here to override the cmake default of "/usr/local" because
 # "/usr/local/lib" is not a default search location for ld.so
 set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
@@ -469,18 +470,35 @@ function(add_katana_sphinx_target target_name)
   endif ()
 
   get_target_property(PYTHON_ENV_SCRIPT ${target_name} PYTHON_ENV_SCRIPT)
-
-  add_custom_target(
+  if (NOT BUILD_EXTERNAL_DOCS)
+    set(sphinx_build_flags "-W -t internal")
+    add_custom_target(
       ${target_name}_sphinx_docs
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
         -W
         -b html
+	-t internal
+	${sphinx_build_flags}
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
-      COMMENT "Building ${target_name} sphinx documentation"
-  )
+      COMMENT "Building internal ${target_name} sphinx documentation"
+    )
+  else ()
+    add_custom_target(
+      ${target_name}_sphinx_docs
+      COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
+      COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
+        -b html
+	-t external
+        ${PROJECT_SOURCE_DIR}/docs
+        ${CMAKE_BINARY_DIR}/docs/${target_name}
+      COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
+      COMMENT "Building external ${target_name} sphinx documentation"
+    )
+  endif ()
+
 
   # The root of documentation is sphinx_docs, which include doxygen_docs via
   # the breathe extension

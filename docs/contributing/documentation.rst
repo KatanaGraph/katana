@@ -7,14 +7,23 @@ Building Documentation
 
 To build the documentation, enable the ``-DBUILD_DOCS=ON`` and
 ``-DKATANA_LANG_BINDINGS=python`` ``cmake`` options and then make the ``docs``
-build target.
+build target. To build external documentation, enable the
+``-DBUILD_EXTERNAL_DOCS=ON`` option as well.
 
 .. code-block:: bash
 
+   # internal documentation
    cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON
+
+   # external documentation
+   cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON \
+      -DBUILD_EXTERNAL_DOCS=ON
 
    cd $BUILD_DIR
    make docs
+
+Annotating Internal or Draft only Content
+=========================================
 
 Restructured Text and Markdown
 ==============================
@@ -114,6 +123,12 @@ similar to Markdown (``.md``) in spirit but has a slightly different syntax.
 
 
 - https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
+
+Jupyter Notebooks
+=================
+
+Guides on how to use Katana Graph in Python should be written as Jupyter
+Notebooks. 
 
 API Documentation
 =================

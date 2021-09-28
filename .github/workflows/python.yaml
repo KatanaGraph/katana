@@ -138,9 +138,7 @@ jobs:
       run: |
         . .github/workflows/activate_miniconda.sh
         export KATANA_VERSION=$(scripts/version show --pep440)
-        echo $KATANA_VERSION
-        cd metagraph-plugin/conda_recipe
-        conda mambabuild . -c conda-forge -c metagraph -c file://$HOME/build/ --python ${{matrix.python_version}} --output-folder $HOME/build/
+        conda mambabuild -c conda-forge -c metagraph -c file://$HOME/build/ --output-folder $HOME/build/ metagraph-plugin/conda_recipe
 
     - name: Clean ccache
       run: |

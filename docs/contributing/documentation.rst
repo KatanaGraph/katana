@@ -143,6 +143,7 @@ Orphaned notebookes require the following to be added to the notebook's JSON
 metadata:
 
 .. code-block:: json
+
    "nbsphinx": {
       "orphan": true
    },

@@ -133,10 +133,19 @@ Jupyter Notebooks
 Guides on how to use Katana Graph in Python should be written as Jupyter
 Notebooks. They will be parsed similar to Restructured Text (``.rst``) files.
 
-They should follow the following style template: 
+Orphaned Notebooks
+------------------
 
-:ref:`how-to-template.ipynb`
-.. _link: how-to-template.ipynb
+This means that it doesn’t appear in a toctree (see ``index.rst``),
+but other pages can still link to it.
+
+Orphaned notebookes require the following to be added to the notebook's JSON
+metadata:
+
+.. code-block:: json
+   "nbsphinx": {
+      "orphan": true
+   },
 
 API Documentation
 =================

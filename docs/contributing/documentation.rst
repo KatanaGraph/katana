@@ -5,19 +5,19 @@ Documentation
 Building Documentation
 ======================
 
-To build the documentation, enable the ``-DBUILD_DOCS=ON`` and
-``-DKATANA_LANG_BINDINGS=python`` ``cmake`` options and then make the ``docs``
-build target. To build external documentation, enable the
-``-DBUILD_EXTERNAL_DOCS=ON`` option as well.
+To build the documentation, set the ``-DBUILD_DOCS=`` option to either
+``internal`` or ``external`` and ``-DKATANA_LANG_BINDINGS=python`` ``cmake``
+options and then make the ``docs`` build target.
 
 .. code-block:: bash
 
    # internal documentation
-   cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON
+   cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python \
+      -DBUILD_DOCS=internal
 
    # external documentation
-   cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON \
-      -DBUILD_EXTERNAL_DOCS=ON
+   cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python \
+      -DBUILD_DOCS=external
 
    cd $BUILD_DIR
    make docs
@@ -27,6 +27,9 @@ Annotating Internal or Draft only Content
 
 Files ending in ``-draft.[rst/ipynb]`` or ``-internal.[rst/ipynb]`` will not be
 included in external facing documentation.
+
+Whole directories ending in ``-draft/`` will be omitted when building external
+documentation.
 
 Restructured Text
 =================

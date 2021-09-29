@@ -43,8 +43,7 @@ set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
 set(BUILD_TESTING ON CACHE BOOL "Build tests")
-set(BUILD_DOCS OFF CACHE BOOL "Build documentation with make doc")
-set(BUILD_EXTERNAL_DOCS OFF CACHE BOOL "Hide '*-draft*' documentation pages and directories when building documentation")
+set(BUILD_DOCS "" CACHE string "Build documentation with make doc. Supported values: <unset>, external, internal. external docs hid '*-draft*' and '*-internal* documentation pages and directories when building documentation")
 # Set here to override the cmake default of "/usr/local" because
 # "/usr/local/lib" is not a default search location for ld.so
 set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
@@ -470,8 +469,7 @@ function(add_katana_sphinx_target target_name)
   endif ()
 
   get_target_property(PYTHON_ENV_SCRIPT ${target_name} PYTHON_ENV_SCRIPT)
-  if (NOT BUILD_EXTERNAL_DOCS)
-    set(sphinx_build_flags "-W -t internal")
+  if (BUILD_DOCS STREQUAL "internal")
     add_custom_target(
       ${target_name}_sphinx_docs
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
@@ -484,7 +482,7 @@ function(add_katana_sphinx_target target_name)
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
       COMMENT "Building internal ${target_name} sphinx documentation"
     )
-  else ()
+  elseif (BUILD_DOCS STREQUAL "external")
     add_custom_target(
       ${target_name}_sphinx_docs
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
@@ -496,6 +494,9 @@ function(add_katana_sphinx_target target_name)
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
       COMMENT "Building external ${target_name} sphinx documentation"
     )
+  else ()
+    message(WARNING "The requested documentation type, ${BUILD_DOCS}, is not supported and is most likely not correct. Please specify either internal or external.")
+    return()
   endif ()
 
 

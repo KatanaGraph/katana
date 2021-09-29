@@ -92,7 +92,6 @@ GatherMemoryAllocation(
   int total_usage = 0;
   int alloc_size = 0;
   int prop_size = 0;
-  std::cout << total_alloc << ", " << total_usage << "\n";
 
   for (int32_t i = 0; i < schema->num_fields(); ++i) {
     std::string prop_name = schema->field(i)->name();

@@ -261,6 +261,22 @@ katana::EntityTypeManager::ReportDiff(
   return std::string(buf.begin(), buf.end());
 }
 
+std::string
+katana::EntityTypeManager::PrintEntityTypes() const {
+  fmt::memory_buffer buf;
+  auto end = GetNumEntityTypes();
+  for (size_t i = 0; i < end; ++i) {
+    auto res = EntityTypeToTypeNameSet(i);
+    if (res) {
+      fmt::format_to(std::back_inserter(buf), "{:2} {}\n", i, res.value());
+    } else {
+      fmt::format_to(
+          std::back_inserter(buf), "{:2} **error**: {}\n", i, res.error());
+    }
+  }
+  return std::string(buf.begin(), buf.end());
+}
+
 bool
 katana::EntityTypeManager::Equals(
     const katana::EntityTypeManager& other) const {

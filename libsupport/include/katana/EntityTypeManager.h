@@ -5,7 +5,6 @@
 #include <set>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 #include <arrow/array/array_primitive.h>
@@ -388,6 +387,9 @@ public:
   /// std::string ReportDiff() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   std::string ReportDiff(const EntityTypeManager& other) const;
 
+  /// std::string PrintTypes() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
+  std::string PrintEntityTypes() const;
+
 private:
   // Used by AssignEntityTypeIDsFromProperties()
   template <typename ArrowType>
@@ -444,3 +446,13 @@ private:
 };
 
 }  // namespace katana
+
+// Allow TypeNameSet foo; fmt::print("{}\n", foo);
+template <>
+struct KATANA_EXPORT fmt::formatter<katana::TypeNameSet>
+    : formatter<std::string> {
+  template <typename FormatContext>
+  auto format(const katana::TypeNameSet& tns, FormatContext& ctx) {
+    return format_to(ctx.out(), "{}", fmt::join(tns, ", "));
+  }
+};

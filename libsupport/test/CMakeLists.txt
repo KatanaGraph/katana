@@ -27,6 +27,7 @@ add_unit_test(result)
 add_unit_test(signals)
 add_unit_test(strings)
 add_unit_test(tracing)
+add_unit_test(type-manager)
 add_unit_test(uri)
 add_unit_test(zip_iterator)
 

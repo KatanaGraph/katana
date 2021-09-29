@@ -338,7 +338,8 @@ operator<<(std::ostream& out, const ErrorInfo& ei) {
 /// to store errors, e.g., collecting results across threads.
 class KATANA_EXPORT CopyableErrorInfo {
 public:
-  CopyableErrorInfo(const std::error_code& ec) : error_code_(ec) {}
+  CopyableErrorInfo(const std::error_code& ec, std::string message = "")
+      : error_code_(ec), message_(std::move(message)) {}
 
   CopyableErrorInfo() : CopyableErrorInfo(std::error_code()) {}
 

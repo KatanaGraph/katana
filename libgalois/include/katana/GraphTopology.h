@@ -710,10 +710,12 @@ public:
     return new_to_old_edges_mapping_[eid];
   }
 
-  // Need to redefine the method here so it overrides and hides base-class
-  // version of this method
   Edge original_edge_id(const Edge& eid) const noexcept {
     return edge_property_index(eid);
+  }
+
+  Edge projected_edge_id(const Edge& eid) const noexcept {
+    return old_to_new_edges_mapping_[eid];
   }
 
   PropertyIndex node_property_index(const Node& nid) const noexcept {
@@ -723,6 +725,10 @@ public:
 
   Node original_node_id(const Node& nid) const noexcept {
     return node_property_index(nid);
+  }
+
+  Node projected_node_id(const Node& nid) const noexcept {
+    return old_to_new_nodes_mapping_[nid];
   }
 
   static std::unique_ptr<ProjectedShuffleTopology> Make(

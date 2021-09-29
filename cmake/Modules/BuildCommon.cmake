@@ -499,7 +499,6 @@ function(add_katana_sphinx_target target_name)
     return()
   endif ()
 
-
   # The root of documentation is sphinx_docs, which include doxygen_docs via
   # the breathe extension
   add_dependencies(${target_name}_sphinx_docs ${target_name} doxygen_docs)

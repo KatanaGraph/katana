@@ -86,9 +86,8 @@ InsertPropertyTypeMemoryData(
 void
 GatherMemoryAllocation(
     const std::shared_ptr<arrow::Schema> schema,
-    const std::unique_ptr<katana::PropertyGraph> g,
-    const map_element& allocations, const map_element& usage,
-    const map_element& width, const map_string_element& types) {
+    const std::unique_ptr<katana::PropertyGraph>& g, map_element& allocations,
+    map_element& usage, map_element& width, map_string_element& types) {
   for (int32_t i = 0; i < schema->num_fields(); ++i) {
     std::string prop_name = schema->field(i)->name();
     auto dtype = schema->field(i)->type();
@@ -155,27 +154,9 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   all_node_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t) * 8));
   all_edge_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t) * 8));
 
-  for (int32_t i = 0; i < node_schema->num_fields(); ++i) {
-    std::string prop_name = node_schema->field(i)->name();
-    auto dtype = node_schema->field(i)->type();
-    auto prop_field = graph->GetNodeProperty(prop_name).value()->chunk(0);
-    int64_t alloc_size = 0;
-    int64_t prop_size = 0;
-    auto bit_width = arrow::bit_width(dtype->id());
-
-    for (auto j = 0; j < prop_field->length(); j++) {
-      if (prop_field->IsValid(j)) {
-        auto scal_ptr = *prop_field->GetScalar(j);
-        auto data = *scal_ptr;
-        prop_size += sizeof(data);
-      }
-      alloc_size += bit_width;
-    }
-    all_node_alloc.insert(std::pair(prop_name, alloc_size));
-    all_node_usage.insert(std::pair(prop_name, prop_size));
-    all_node_width_stats.insert(std::pair(prop_name, bit_width));
-    all_node_prop_stats.insert(std::pair(prop_name, dtype->name()));
-  }
+  GatherMemoryAllocation(
+      node_schema, graph, all_node_alloc, all_node_usage, all_node_width_stats,
+      all_node_prop_stats);
 
   PrintStringMapping(all_node_prop_stats);
   PrintMapping(all_node_width_stats);
@@ -185,9 +166,9 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   GatherMemoryAllocation(
       edge_schema, graph, all_edge_alloc, all_edge_usage, all_edge_width_stats,
-      all_edge_prop_stats)
+      all_edge_prop_stats);
 
-      PrintStringMapping(all_edge_prop_stats);
+  PrintStringMapping(all_edge_prop_stats);
   PrintMapping(all_edge_width_stats);
   mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));
 

@@ -146,15 +146,15 @@ ParseManifestName(
 
 }  // namespace
 
-// TODO (scober, KAT-1870): write a test for this
 katana::Result<std::pair<uint64_t, std::vector<tsuba::RDGView>>>
-tsuba::ListAvailableViews(
+tsuba::ListViewsOfVersion(
     const std::string& rdg_dir, std::optional<uint64_t> version) {
   auto rdg_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
   std::vector<std::string> files = KATANA_CHECKED(FileList(rdg_uri.string()));
 
   std::vector<tsuba::RDGView> views_found;
   uint64_t latest_version = 0;
+  bool acceptable_version_found = false;
   for (const std::string& file : files) {
     std::string view_type;
     std::vector<std::string> view_args;
@@ -168,6 +168,7 @@ tsuba::ListAvailableViews(
     if (version && view_version != version.value()) {
       continue;
     }
+    acceptable_version_found = true;
 
     // otherwise only return views for the latest version
     if (view_version > latest_version) {
@@ -188,7 +189,7 @@ tsuba::ListAvailableViews(
     const RDGManifest& manifest = manifest_res.value();
 
     if (manifest.num_hosts() == 0) {
-      // emtpy sentinal; not a valid view
+      // empty sentinal; not a valid view
       continue;
     }
 
@@ -202,12 +203,23 @@ tsuba::ListAvailableViews(
     });
   }
 
-  if (views_found.empty()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::NotFound, "no views found for that version");
+  if (!acceptable_version_found) {
+    if (version) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::NotFound, "no views found for requested version");
+    } else {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::NotFound, "no manifest files found in directory");
+    }
   }
 
   return std::make_pair(latest_version, views_found);
+}
+
+katana::Result<std::pair<uint64_t, std::vector<tsuba::RDGView>>>
+tsuba::ListAvailableViews(
+    const std::string& rdg_dir, std::optional<uint64_t> version) {
+  return ListViewsOfVersion(rdg_dir, version);
 }
 
 katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>

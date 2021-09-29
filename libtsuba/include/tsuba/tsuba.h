@@ -101,7 +101,8 @@ struct KATANA_EXPORT RDGView {
 /// \param rdg_dir is the RDG's URI prefix
 /// \param version is an optional version argument, if omitted this will return
 ///    the views for the latest version
-/// \returns a pair (RDG version, vector of RDGViews)
+/// \returns a pair (RDG version, vector of RDGViews) or ErrorCode::NotFound if
+/// rdg_dir contains no manifest files
 KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
 ListViewsOfVersion(
     const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);

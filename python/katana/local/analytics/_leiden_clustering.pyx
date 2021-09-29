@@ -1,23 +1,23 @@
 """
-Louvain Clustering
+Leiden Clustering
 ------------------
 
-.. autoclass:: katana.local.analytics.LouvainClusteringPlan
+.. autoclass:: katana.local.analytics.LeidenClusteringPlan
     :members:
     :special-members: __init__
     :undoc-members:
 
-.. autoclass:: katana.local.analytics._louvain_clustering._LouvainClusteringPlanAlgorithm
+.. autoclass:: katana.local.analytics._leiden_clustering._LeidenClusteringPlanAlgorithm
     :members:
     :undoc-members:
 
-.. autofunction:: katana.local.analytics.louvain_clustering
+.. autofunction:: katana.local.analytics.leiden_clustering
 
-.. autoclass:: katana.local.analytics.LouvainClusteringStatistics
+.. autoclass:: katana.local.analytics.LeidenClusteringStatistics
     :members:
     :undoc-members:
 
-.. autofunction:: katana.local.analytics.louvain_clustering_assert_valid
+.. autofunction:: katana.local.analytics.leiden_clustering_assert_valid
 """
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp cimport bool
@@ -31,53 +31,64 @@ from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
 
+# TODO(amp): Module needs documenting.
 
-cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" namespace "katana::analytics" nogil:
-    cppclass _LouvainClusteringPlan "katana::analytics::LouvainClusteringPlan" (_Plan):
+
+cdef extern from "katana/analytics/leiden_clustering/leiden_clustering.h" namespace "katana::analytics" nogil:
+    cppclass _LeidenClusteringPlan "katana::analytics::LeidenClusteringPlan" (_Plan):
         enum Algorithm:
-            kDoAll "katana::analytics::LouvainClusteringPlan::kDoAll"
-            kDeterministic "katana::analytics::LouvainClusteringPlan::kDeterministic"
+            kDoAll "katana::analytics::LeidenClusteringPlan::kDoAll"
+            kDeterministic "katana::analytics::LeidenClusteringPlan::kDeterministic"
 
-        _LouvainClusteringPlan.Algorithm algorithm() const
+        _LeidenClusteringPlan.Algorithm algorithm() const
         bool enable_vf() const
         double modularity_threshold_per_round() const
         double modularity_threshold_total() const
         uint32_t max_iterations() const
         uint32_t min_graph_size() const
-
-        # LouvainClusteringPlan()
+        double resolution() const
+        double randomness() const
+        # LeidenClusteringPlan()
 
         @staticmethod
-        _LouvainClusteringPlan DoAll(
+        _LeidenClusteringPlan DoAll(
                 bool enable_vf,
                 double modularity_threshold_per_round,
                 double modularity_threshold_total,
                 uint32_t max_iterations,
-                uint32_t min_graph_size
+                uint32_t min_graph_size,
+                double resolution,
+                double randomness
             )
 
         @staticmethod
-        _LouvainClusteringPlan Deterministic(
-            bool enable_vf,
-            double modularity_threshold_per_round,
-            double modularity_threshold_total,
-            uint32_t max_iterations,
-            uint32_t min_graph_size)
+        _LeidenClusteringPlan Deterministic(
+                bool enable_vf,
+                double modularity_threshold_per_round,
+                double modularity_threshold_total,
+                uint32_t max_iterations,
+                uint32_t min_graph_size,
+                double resolution,
+                double randomness
+            )
 
-    bool kDefaultEnableVF "katana::analytics::LouvainClusteringPlan::kDefaultEnableVF"
-    double kDefaultModularityThresholdPerRound "katana::analytics::LouvainClusteringPlan::kDefaultModularityThresholdPerRound"
-    double kDefaultModularityThresholdTotal "katana::analytics::LouvainClusteringPlan::kDefaultModularityThresholdTotal"
-    uint32_t kDefaultMaxIterations "katana::analytics::LouvainClusteringPlan::kDefaultMaxIterations"
-    uint32_t kDefaultMinGraphSize "katana::analytics::LouvainClusteringPlan::kDefaultMinGraphSize"
 
-    Result[void] LouvainClustering(_PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, _LouvainClusteringPlan plan)
+    bool kDefaultEnableVF "katana::analytics::LeidenClusteringPlan::kDefaultEnableVF"
+    double kDefaultModularityThresholdPerRound "katana::analytics::LeidenClusteringPlan::kDefaultModularityThresholdPerRound"
+    double kDefaultModularityThresholdTotal "katana::analytics::LeidenClusteringPlan::kDefaultModularityThresholdTotal"
+    double kDefaultResolution "katana::analytics::LeidenClusteringPlan::kDefaultResolution"
+    double kDefaultRandomness "katana::analytics::LeidenClusteringPlan::kDefaultModularityThresholdTotal"
+    uint32_t kDefaultMaxIterations "katana::analytics::LeidenClusteringPlan::kDefaultMaxIterations"
+    uint32_t kDefaultMinGraphSize "katana::analytics::LeidenClusteringPlan::kDefaultMinGraphSize"
 
-    Result[void] LouvainClusteringAssertValid(_PropertyGraph* pfg,
+    Result[void] LeidenClustering(_PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, _LeidenClusteringPlan plan)
+
+    Result[void] LeidenClusteringAssertValid(_PropertyGraph* pfg,
             const string& edge_weight_property_name,
             const string& output_property_name
             )
 
-    cppclass _LouvainClusteringStatistics "katana::analytics::LouvainClusteringStatistics":
+    cppclass _LeidenClusteringStatistics "katana::analytics::LeidenClusteringStatistics":
         uint64_t n_clusters
         uint64_t n_non_trivial_clusters
         uint64_t largest_cluster_size
@@ -87,38 +98,38 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
         void Print(ostream os)
 
         @staticmethod
-        Result[_LouvainClusteringStatistics] Compute(_PropertyGraph* pfg,
+        Result[_LeidenClusteringStatistics] Compute(_PropertyGraph* pfg,
             const string& edge_weight_property_name,
             const string& output_property_name
             )
 
 
-class _LouvainClusteringPlanAlgorithm(Enum):
+class _LeidenClusteringPlanAlgorithm(Enum):
     """
-    :see: :py:class:`~katana.local.analytics.LouvainClusteringPlan` constructors for algorithm documentation.
+    :see: :py:class:`~katana.local.analytics.LeidenClusteringPlan` constructors for algorithm documentation.
     """
-    DoAll = _LouvainClusteringPlan.Algorithm.kDoAll
-    Deterministic = _LouvainClusteringPlan.Algorithm.kDeterministic
+    DoAll = _LeidenClusteringPlan.Algorithm.kDoAll
+    Deterministic = _LeidenClusteringPlan.Algorithm.kDeterministic
 
 
-cdef class LouvainClusteringPlan(Plan):
+cdef class LeidenClusteringPlan(Plan):
     cdef:
-        _LouvainClusteringPlan underlying_
+        _LeidenClusteringPlan underlying_
 
     cdef _Plan* underlying(self) except NULL:
         return &self.underlying_
 
-    Algorithm = _LouvainClusteringPlanAlgorithm
+    Algorithm = _LeidenClusteringPlanAlgorithm
 
     @staticmethod
-    cdef LouvainClusteringPlan make(_LouvainClusteringPlan u):
-        f = <LouvainClusteringPlan>LouvainClusteringPlan.__new__(LouvainClusteringPlan)
+    cdef LeidenClusteringPlan make(_LeidenClusteringPlan u):
+        f = <LeidenClusteringPlan>LeidenClusteringPlan.__new__(LeidenClusteringPlan)
         f.underlying_ = u
         return f
 
     @property
     def algorithm(self) -> Algorithm:
-        return _LouvainClusteringPlanAlgorithm(self.underlying_.algorithm())
+        return _LeidenClusteringPlanAlgorithm(self.underlying_.algorithm())
 
     @property
     def enable_vf(self) -> bool:
@@ -147,13 +158,16 @@ cdef class LouvainClusteringPlan(Plan):
                 double modularity_threshold_per_round = kDefaultModularityThresholdPerRound,
                 double modularity_threshold_total = kDefaultModularityThresholdTotal,
                 uint32_t max_iterations = kDefaultMaxIterations,
-                uint32_t min_graph_size = kDefaultMinGraphSize
-            ) -> LouvainClusteringPlan:
+                uint32_t min_graph_size = kDefaultMinGraphSize,
+                double resolution = kDefaultResolution,
+                double randomness = kDefaultRandomness,
+    ) -> LeidenClusteringPlan:
         """
         Nondeterministic algorithm.
         """
-        return LouvainClusteringPlan.make(_LouvainClusteringPlan.DoAll(
-             enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size))
+        return LeidenClusteringPlan.make(_LeidenClusteringPlan.DoAll(
+            enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations,
+            min_graph_size, resolution, randomness))
 
     @staticmethod
     def deterministic(
@@ -161,17 +175,21 @@ cdef class LouvainClusteringPlan(Plan):
             double modularity_threshold_per_round = kDefaultModularityThresholdPerRound,
             double modularity_threshold_total = kDefaultModularityThresholdTotal,
             uint32_t max_iterations = kDefaultMaxIterations,
-            uint32_t min_graph_size = kDefaultMinGraphSize
-    ) -> LouvainClusteringPlan:
+            uint32_t min_graph_size = kDefaultMinGraphSize,
+            double resolution = kDefaultResolution,
+            double randomness = kDefaultRandomness,
+    ) -> LeidenClusteringPlan:
         """
          Deterministic algorithm using delayed updates
         """
-        return LouvainClusteringPlan.make(_LouvainClusteringPlan.Deterministic(
-            enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size))
+        return LeidenClusteringPlan.make(_LeidenClusteringPlan.Deterministic(
+            enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations,
+            min_graph_size, resolution, randomness))
 
-def louvain_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LouvainClusteringPlan plan = LouvainClusteringPlan()):
+
+def leiden_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LeidenClusteringPlan plan = LeidenClusteringPlan()):
     """
-    Compute the Louvain Clustering for pg.
+    Compute the Leiden Clustering for pg.
     The edge weights are taken from the property named
     edge_weight_property_name (which may be a 32- or 64-bit sign or unsigned
     int), and the computed cluster IDs are stored in the property named
@@ -185,8 +203,8 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
     :param edge_weight_property_name: may be a 32- or 64-bit sign or unsigned int
     :type output_property_name: str
     :param output_property_name: The output edge property
-    :type LouvainClusteringPlan: LouvainClusteringPlan
-    :param LouvainClusteringPlan: The Louvain Clustering Plan
+    :type LeidenClusteringPlan: LeidenClusteringPlan
+    :param LeidenClusteringPlan: The Leiden Clustering Plan
 
     .. code-block:: python
 
@@ -196,37 +214,37 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
         katana.local.initialize()
 
         graph = Graph(get_input("propertygraphs/ldbc_003"))
-        from katana.analytics import louvain_clustering, LouvainClusteringStatistics
-        louvain_clustering(graph, "value", "output")
-        stats = LouvainClusteringStatistics(graph, "value", "output")
+        from katana.analytics import leiden_clustering, LeidenClusteringStatistics
+        leiden_clustering(graph, "value", "output")
+        stats = LeidenClusteringStatistics(graph, "value", "output")
         print(stats)
 
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_void(LouvainClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
+        handle_result_void(LeidenClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
 
 
-def louvain_clustering_assert_valid(Graph pg, str edge_weight_property_name, str output_property_name ):
+def leiden_clustering_assert_valid(Graph pg, str edge_weight_property_name, str output_property_name ):
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_assert(LouvainClusteringAssertValid(pg.underlying_property_graph(),
+        handle_result_assert(LeidenClusteringAssertValid(pg.underlying_property_graph(),
                 edge_weight_property_name_str,
                 output_property_name_str
                 ))
 
 
-cdef _LouvainClusteringStatistics handle_result_LouvainClusteringStatistics(Result[_LouvainClusteringStatistics] res) nogil except *:
+cdef _LeidenClusteringStatistics handle_result_LeidenClusteringStatistics(Result[_LeidenClusteringStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())
     return res.value()
 
 
-cdef class LouvainClusteringStatistics:
-    cdef _LouvainClusteringStatistics underlying
+cdef class LeidenClusteringStatistics:
+    cdef _LeidenClusteringStatistics underlying
 
     def __init__(self, Graph pg,
             str edge_weight_property_name,
@@ -235,7 +253,7 @@ cdef class LouvainClusteringStatistics:
         cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
         cdef string output_property_name_str = bytes(output_property_name, "utf-8")
         with nogil:
-            self.underlying = handle_result_LouvainClusteringStatistics(_LouvainClusteringStatistics.Compute(
+            self.underlying = handle_result_LeidenClusteringStatistics(_LeidenClusteringStatistics.Compute(
                 pg.underlying_property_graph(),
                 edge_weight_property_name_str,
                 output_property_name_str

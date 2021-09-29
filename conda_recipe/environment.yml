@@ -54,9 +54,8 @@ dependencies:
  - jupyter_client<7
  - attrs<21,>=19
  - nbconvert<6
- - nbsphinx
- - pandoc
  - pexpect
+
  - python=3.8.* *_cpython
  - setuptools
  - shellcheck

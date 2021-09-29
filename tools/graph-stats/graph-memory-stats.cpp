@@ -77,8 +77,6 @@ InsertPropertyTypeMemoryData(
                 << " Has Atomic Type : " << g->HasAtomicNodeType(prop_name)
                 << "\n";
     }
-    // int64_t prop_size = 1;
-    // u.insert(std::pair(prop_name, prop_size));
   }
   PrintMapping(u);
 }
@@ -87,28 +85,46 @@ void
 GatherMemoryAllocation(
     const std::shared_ptr<arrow::Schema> schema,
     const std::unique_ptr<katana::PropertyGraph>& g, map_element& allocations,
-    map_element& usage, map_element& width, map_string_element& types) {
+    map_element& usage, map_element& width, map_string_element& types,
+    bool node_or_edge) {
+  std::shared_ptr<arrow::Array> prop_field;
+  int total_alloc = 0;
+  int total_usage = 0;
+  int alloc_size = 0;
+  int prop_size = 0;
+  std::cout << total_alloc << ", " << total_usage << "\n";
+
   for (int32_t i = 0; i < schema->num_fields(); ++i) {
     std::string prop_name = schema->field(i)->name();
     auto dtype = schema->field(i)->type();
-    auto prop_field = g->GetNodeProperty(prop_name).value()->chunk(0);
-    int64_t alloc_size = 0;
-    int64_t prop_size = 0;
+    if (node_or_edge) {
+      prop_field = g->GetNodeProperty(prop_name).value()->chunk(0);
+    } else {
+      prop_field = g->GetEdgeProperty(prop_name).value()->chunk(0);
+    }
+    alloc_size = 0;
+    prop_size = 0;
     auto bit_width = arrow::bit_width(dtype->id());
 
     for (auto j = 0; j < prop_field->length(); j++) {
       if (prop_field->IsValid(j)) {
         auto scal_ptr = *prop_field->GetScalar(j);
         auto data = *scal_ptr;
-        prop_size += sizeof(data);
+        prop_size += sizeof(data) / 8;
       }
-      alloc_size += bit_width;
+      alloc_size += bit_width / 8;
     }
+
+    total_alloc += alloc_size;
+    total_usage += prop_size;
+
     allocations.insert(std::pair(prop_name, alloc_size));
     usage.insert(std::pair(prop_name, prop_size));
     width.insert(std::pair(prop_name, bit_width));
     types.insert(std::pair(prop_name, dtype->name()));
   }
+  allocations.insert(std::pair("Total-Alloc", total_alloc));
+  usage.insert(std::pair("Total-Usage", total_usage));
 }
 
 void
@@ -137,8 +153,6 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   auto atomic_edge_types = graph->ListAtomicEdgeTypes();
 
-  const katana::GraphTopology& g_topo = graph->topology();
-
   map_string_element all_node_prop_stats;
   map_string_element all_edge_prop_stats;
   map_element all_node_width_stats;
@@ -156,52 +170,53 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   GatherMemoryAllocation(
       node_schema, graph, all_node_alloc, all_node_usage, all_node_width_stats,
-      all_node_prop_stats);
+      all_node_prop_stats, true);
 
+  std::cout << "Node Memory Stats"
+            << "\n";
+  std::cout << "---------------------------------------------------"
+            << "\n";
+  std::cout << "Type Statistics"
+            << "\n";
   PrintStringMapping(all_node_prop_stats);
+
+  std::cout << "Width Statstics"
+            << "\n";
   PrintMapping(all_node_width_stats);
+
+  std::cout << "Node Memory Allocation Statistics"
+            << "\n";
   PrintMapping(all_node_alloc);
+
+  std::cout << "Node Actual Memory Usage"
+            << "\n";
   PrintMapping(all_node_usage);
+
   mem_map.insert(std::pair("Node-Types", all_node_prop_stats));
 
   GatherMemoryAllocation(
       edge_schema, graph, all_edge_alloc, all_edge_usage, all_edge_width_stats,
-      all_edge_prop_stats);
+      all_edge_prop_stats, false);
 
+  std::cout << "Edge Memory Stats"
+            << "\n";
+  std::cout << "---------------------------------------------------"
+            << "\n";
+  std::cout << "Type Statistics"
+            << "\n";
   PrintStringMapping(all_edge_prop_stats);
+
+  std::cout << "Width Statstics"
+            << "\n";
   PrintMapping(all_edge_width_stats);
+  std::cout << "Edge Memory Allocation Statistics"
+            << "\n";
+  PrintMapping(all_edge_alloc);
+
+  std::cout << "Edge Actual Memory Usage"
+            << "\n";
+  PrintMapping(all_edge_usage);
   mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));
-
-  auto node_iterator = g_topo.all_nodes();
-  auto edge_iterator = g_topo.all_edges();
-
-  int64_t width;
-  int64_t node_size = 0;
-  map_element node_dist;
-  map_element edge_dist;
-
-  for (auto node : node_iterator) {
-    std::string node_type = *graph->GetNodeAtomicTypeName(node);
-    width = all_node_width_stats.find(node_type)->second;
-    node_dist[node_type]++;
-    node_size += width / 8;
-  }
-
-  PrintMapping(node_dist);
-  mem_map.insert(std::pair("Node-Type-Distribution", node_dist));
-
-  int64_t edge_size = 0;
-  for (auto edge : edge_iterator) {
-    std::string edge_type = *graph->GetEdgeAtomicTypeName(edge);
-    width = all_edge_width_stats.find(edge_type)->second;
-    edge_dist[edge_type]++;
-    edge_size += width / 8;
-  }
-  PrintMapping(edge_dist);
-  mem_map.insert(std::pair("Edge-Type-Distribution", edge_dist));
-
-  basic_raw_stats.insert(std::pair("Node-Memory-Consumption", node_size));
-  basic_raw_stats.insert(std::pair("Edge-Memory-Consumption", edge_size));
 
   mem_map.insert(std::pair("General-Stats", basic_raw_stats));
   PrintMapping(basic_raw_stats);

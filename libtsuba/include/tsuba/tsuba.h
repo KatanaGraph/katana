@@ -54,11 +54,8 @@ OpenFlagsValid(uint32_t flags) {
   return (flags & ~(kReadOnly | kReadWrite)) == 0;
 }
 
-KATANA_EXPORT katana::Result<RDGHandle> Open(
-    const std::string& rdg_name, uint32_t flags);
-
-KATANA_EXPORT katana::Result<RDGHandle> Open(
-    const std::string& rdg_name, uint64_t version, uint32_t flags);
+KATANA_EXPORT katana::Result<RDGManifest> FindManifest(
+    const std::string& rdg_name);
 
 KATANA_EXPORT katana::Result<RDGHandle> Open(
     const RDGManifest rdg_manifest, uint32_t flags);

@@ -56,13 +56,8 @@ FindAnyManifestForLatestVersion(const katana::Uri& name) {
 
 }  // namespace
 
-katana::Result<tsuba::RDGHandle>
-tsuba::Open(const std::string& rdg_name, uint32_t flags) {
-  if (!OpenFlagsValid(flags)) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument, "invalid value for flags ({:#x})", flags);
-  }
-
+katana::Result<tsuba::RDGManifest>
+tsuba::FindManifest(const std::string& rdg_name) {
   auto uri_res = katana::Uri::Make(rdg_name);
   if (!uri_res) {
     return uri_res.error();
@@ -75,8 +70,7 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
       return manifest_res.error();
     }
 
-    return RDGHandle{
-        .impl_ = new RDGHandleImpl(flags, std::move(manifest_res.value()))};
+    return std::move(manifest_res.value());
   }
 
   auto latest_uri = FindAnyManifestForLatestVersion(uri);
@@ -91,12 +85,16 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
     return manifest_res.error();
   }
 
-  return RDGHandle{
-      .impl_ = new RDGHandleImpl(flags, std::move(manifest_res.value()))};
+  return std::move(manifest_res.value());
 }
 
 katana::Result<tsuba::RDGHandle>
 tsuba::Open(RDGManifest rdg_manifest, uint32_t flags) {
+  if (!OpenFlagsValid(flags)) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "invalid value for flags ({:#x})", flags);
+  }
+
   return RDGHandle{.impl_ = new RDGHandleImpl(flags, std::move(rdg_manifest))};
 }
 

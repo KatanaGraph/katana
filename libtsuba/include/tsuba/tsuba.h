@@ -97,11 +97,16 @@ struct KATANA_EXPORT RDGView {
   bool transpose{false};
 };
 
-/// list the views in storage for a particular RDG
+/// list the views in storage for a particular version of an RDG
 /// \param rdg_dir is the RDG's URI prefix
 /// \param version is an optional version argument, if omitted this will return
 ///    the views for the latest version
 /// \returns a pair (RDG version, vector of RDGViews)
+KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
+ListViewsOfVersion(
+    const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
+
+/// deprecated; duplicate of ListViewsOfVersion maintained for compatibility
 KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
 ListAvailableViews(
     const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);

@@ -14,9 +14,9 @@ try:
 except ImportError:
     pass
 else:
-    # Tags can be defined with the -t argument to sphinx. Use not-internal to
+    # Tags can be defined with the -t argument to sphinx. Use external to
     # override an otherwise default internal tag.
-    if not tags.has("enterprise"):
+    if not tags.has("external"):
         tags.add("internal")
 
 doxygen_path = os.environ["KATANA_DOXYGEN_PATH"]

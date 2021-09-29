@@ -43,7 +43,7 @@ set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
 set(BUILD_TESTING ON CACHE BOOL "Build tests")
-set(BUILD_DOCS "" CACHE string "Build documentation with make doc. Supported values: <unset>, external, internal. external docs hid '*-draft*' and '*-internal* documentation pages and directories when building documentation")
+set(BUILD_DOCS "" CACHE STRING "Build documentation with make doc. Supported values: <unset>, external, internal. external docs hid '*-draft*' and '*-internal* documentation pages and directories when building documentation")
 # Set here to override the cmake default of "/usr/local" because
 # "/usr/local/lib" is not a default search location for ld.so
 set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")

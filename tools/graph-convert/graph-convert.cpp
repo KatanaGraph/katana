@@ -2903,17 +2903,11 @@ struct Gr2Kg : public Conversion {
       return res.error();
     }
 
-    auto manifest_res = tsuba::FindManifest(out_file_name);
-    if (!manifest_res) {
-      return manifest_res.error();
-    }
-    auto handle_res =
-        tsuba::Open(std::move(manifest_res.value()), tsuba::kReadWrite);
-    if (!handle_res) {
-      return handle_res.error();
-    }
-
-    tsuba::RDGFile handle(std::move(handle_res.value()));
+    tsuba::RDGManifest manifest =
+        KATANA_CHECKED(tsuba::FindManifest(out_file_name));
+    tsuba::RDGHandle rdg_handle =
+        KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite));
+    tsuba::RDGFile handle(std::move(rdg_handle));
 
     katana::Uri top_file_name = tsuba::MakeTopologyFileName(handle);
     if (auto res = tsuba::FileRemoteCopy(

@@ -58,19 +58,11 @@ FindAnyManifestForLatestVersion(const katana::Uri& name) {
 
 katana::Result<tsuba::RDGManifest>
 tsuba::FindManifest(const std::string& rdg_name) {
-  auto uri_res = katana::Uri::Make(rdg_name);
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  katana::Uri uri = std::move(uri_res.value());
+  katana::Uri uri = KATANA_CHECKED(katana::Uri::Make(rdg_name));
 
   if (RDGManifest::IsManifestUri(uri)) {
-    auto manifest_res = tsuba::RDGManifest::Make(uri);
-    if (!manifest_res) {
-      return manifest_res.error();
-    }
-
-    return std::move(manifest_res.value());
+    RDGManifest manifest = KATANA_CHECKED(tsuba::RDGManifest::Make(uri));
+    return manifest;
   }
 
   auto latest_uri = FindAnyManifestForLatestVersion(uri);
@@ -80,12 +72,9 @@ tsuba::FindManifest(const std::string& rdg_name) {
         uri.string());
   }
 
-  auto manifest_res = tsuba::RDGManifest::Make(latest_uri.value());
-  if (!manifest_res) {
-    return manifest_res.error();
-  }
-
-  return std::move(manifest_res.value());
+  RDGManifest manifest =
+      KATANA_CHECKED(tsuba::RDGManifest::Make(latest_uri.value()));
+  return manifest;
 }
 
 katana::Result<tsuba::RDGHandle>

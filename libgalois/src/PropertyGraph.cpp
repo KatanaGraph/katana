@@ -259,7 +259,7 @@ katana::PropertyGraph::Make(
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
-  auto manifest = KATANA_CHECKED(tsuba::FindManifest(rdg_name));
+  tsuba::RDGManifest manifest = KATANA_CHECKED(tsuba::FindManifest(rdg_name));
   tsuba::RDGFile rdg_file{
       KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite))};
   tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
@@ -479,16 +479,10 @@ katana::Result<void>
 katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
     tsuba::RDG::RDGVersioningPolicy versioning_action) {
-  auto manifest_res = tsuba::FindManifest(uri);
-  if (!manifest_res) {
-    return manifest_res.error();
-  }
-  auto open_res =
-      tsuba::Open(std::move(manifest_res.value()), tsuba::kReadWrite);
-  if (!open_res) {
-    return open_res.error();
-  }
-  auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
+  tsuba::RDGManifest manifest = KATANA_CHECKED(tsuba::FindManifest(uri));
+  tsuba::RDGHandle rdg_handle =
+      KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite));
+  auto new_file = std::make_unique<tsuba::RDGFile>(rdg_handle);
 
   if (auto res = DoWrite(*new_file, command_line, versioning_action); !res) {
     return res.error();

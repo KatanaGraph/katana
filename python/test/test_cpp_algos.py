@@ -19,6 +19,7 @@ from katana.local.analytics import (
     JaccardStatistics,
     KCoreStatistics,
     KTrussStatistics,
+    LeidenClusteringStatistics,
     LouvainClusteringStatistics,
     PagerankStatistics,
     SsspStatistics,
@@ -37,6 +38,8 @@ from katana.local.analytics import (
     k_core_assert_valid,
     k_truss,
     k_truss_assert_valid,
+    leiden_clustering,
+    leiden_clustering_assert_valid,
     local_clustering_coefficient,
     louvain_clustering,
     louvain_clustering_assert_valid,
@@ -343,7 +346,22 @@ def test_louvain_clustering():
 
     LouvainClusteringStatistics(graph, "value", "output")
 
-    # TODO(amp): This is non-deterministic. Are there bounds on the results we could check?
+    # TODO(amp): Switch to useing deterministic algorithm so we can check results.
+    # assert stats.n_clusters == 83
+    # assert stats.n_non_trivial_clusters == 13
+    # assert stats.largest_cluster_size == 297
+
+
+def test_leiden_clustering():
+    graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
+
+    leiden_clustering(graph, "value", "output")
+
+    leiden_clustering_assert_valid(graph, "value", "output")
+
+    LeidenClusteringStatistics(graph, "value", "output")
+
+    # TODO(amp): Switch to useing deterministic algorithm so we can check results.
     # assert stats.n_clusters == 83
     # assert stats.n_non_trivial_clusters == 13
     # assert stats.largest_cluster_size == 297

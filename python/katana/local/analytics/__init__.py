@@ -75,6 +75,12 @@ from katana.local.analytics._independent_set import (
 from katana.local.analytics._jaccard import JaccardPlan, JaccardStatistics, jaccard, jaccard_assert_valid
 from katana.local.analytics._k_core import KCorePlan, KCoreStatistics, k_core, k_core_assert_valid
 from katana.local.analytics._k_truss import KTrussPlan, KTrussStatistics, k_truss, k_truss_assert_valid
+from katana.local.analytics._leiden_clustering import (
+    LeidenClusteringPlan,
+    LeidenClusteringStatistics,
+    leiden_clustering,
+    leiden_clustering_assert_valid,
+)
 from katana.local.analytics._local_clustering_coefficient import (
     LocalClusteringCoefficientPlan,
     local_clustering_coefficient,

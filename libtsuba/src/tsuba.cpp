@@ -28,7 +28,7 @@ FileList(const std::string& dir) {
 }
 
 katana::Result<katana::Uri>
-FindLatestManifestFile(const katana::Uri& name) {
+FindAnyManifestForLatestVersion(const katana::Uri& name) {
   KATANA_LOG_DEBUG_ASSERT(!tsuba::RDGManifest::IsManifestUri(name));
   auto list_res = FileList(name.string());
   if (!list_res) {
@@ -79,7 +79,7 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
         .impl_ = new RDGHandleImpl(flags, std::move(manifest_res.value()))};
   }
 
-  auto latest_uri = FindLatestManifestFile(uri);
+  auto latest_uri = FindAnyManifestForLatestVersion(uri);
   if (!latest_uri) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "failed to find latest RDGManifest at {}",

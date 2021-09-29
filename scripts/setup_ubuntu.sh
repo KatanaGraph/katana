@@ -137,7 +137,8 @@ LIBRARIES="libxml2-dev
   libarrow-python-dev=4.0.1-1
   libparquet-dev=4.0.1-1
   libnuma-dev
-  python3-numpy"
+  python3-numpy
+  libreadline-dev"
 
 apt install -yq --allow-downgrades \
   $DEVELOPER_TOOLS \

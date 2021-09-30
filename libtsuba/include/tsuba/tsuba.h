@@ -58,7 +58,7 @@ KATANA_EXPORT katana::Result<RDGManifest> FindManifest(
     const std::string& rdg_name);
 
 KATANA_EXPORT katana::Result<RDGHandle> Open(
-    const RDGManifest rdg_manifest, uint32_t flags);
+    RDGManifest rdg_manifest, uint32_t flags);
 
 /// Generate a new canonically named topology file name in the
 /// directory associated with handle. Exported to support

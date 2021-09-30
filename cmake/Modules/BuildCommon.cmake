@@ -468,8 +468,8 @@ function(add_katana_sphinx_target target_name)
     return()
   endif ()
 
-  #TODO(andrew): done this way since `set(tag_option "-t external") ... sphinx-build ${tag_option}...` does not work as expected
   get_target_property(PYTHON_ENV_SCRIPT ${target_name} PYTHON_ENV_SCRIPT)
+  #TODO(andrew): done this way since `set(tag_option "-t external") ... sphinx-build ${tag_option}...` does not work as expected
   if (BUILD_DOCS STREQUAL "internal")
     add_custom_target(
       ${target_name}_sphinx_docs

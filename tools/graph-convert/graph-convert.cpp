@@ -40,6 +40,7 @@
 #include "katana/Strings.h"
 #include "tsuba/CSRTopology.h"
 #include "tsuba/Errors.h"
+#include "tsuba/RDGManifest.h"
 #include "tsuba/file.h"
 
 // TODO: move these enums to a common location for all graph convert tools
@@ -2902,12 +2903,11 @@ struct Gr2Kg : public Conversion {
       return res.error();
     }
 
-    auto handle_res = tsuba::Open(out_file_name, tsuba::kReadWrite);
-    if (!handle_res) {
-      return handle_res.error();
-    }
-
-    tsuba::RDGFile handle(std::move(handle_res.value()));
+    tsuba::RDGManifest manifest =
+        KATANA_CHECKED(tsuba::FindManifest(out_file_name));
+    tsuba::RDGHandle rdg_handle =
+        KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite));
+    tsuba::RDGFile handle(std::move(rdg_handle));
 
     katana::Uri top_file_name = tsuba::MakeTopologyFileName(handle);
     if (auto res = tsuba::FileRemoteCopy(

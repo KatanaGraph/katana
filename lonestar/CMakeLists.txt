@@ -11,7 +11,7 @@ function(stem_app app output)
 endfunction()
 
 function(add_test_scale type app)
-  set(no_value_options NOT_QUICK NO_VERIFY)
+  set(no_value_options NO_CI NO_VERIFY)
   set(single_value_options INPUT INPUT_URI)
   set(multi_value_options)
   cmake_parse_arguments(X "${no_value_options}" "${single_value_options}" "${multi_value_options}" ${ARGN})
@@ -31,7 +31,7 @@ function(add_test_scale type app)
     set(command ${app} ${X_INPUT_URI} ${X_UNPARSED_ARGUMENTS} -t ${thr})
     set(output_location ${PROJECT_BINARY_DIR}/Testing/verify/run${suffix})
     if(NOT X_NO_VERIFY)
-	    list(APPEND command -output -outputLocation=${output_location})
+      list(APPEND command -output -outputLocation=${output_location})
     endif()
 
     add_test(NAME setup-clean${suffix}
@@ -49,7 +49,7 @@ function(add_test_scale type app)
         COMMAND python3 ${RESULT_CHECKER} -t=0.01 -m=0.001 -sort=1 ${verification_log} ${output_location})
     endif()
 
-    if(NOT X_NOT_QUICK)
+    if(NOT X_NO_CI)
       # Allow parallel tests
       set_tests_properties(setup-make${suffix} setup-clean${suffix}
       PROPERTIES
@@ -60,13 +60,13 @@ function(add_test_scale type app)
       set_tests_properties(run${suffix}
         PROPERTIES
           FIXTURES_REQUIRED run${suffix}
-          FIXTURES_SETUP verify${suffix}
-          ENVIRONMENT KATANA_DO_NOT_BIND_THREADS=1 LABELS quick)
+          FIXTURES_SETUP verify${suffix})
+      set_common_katana_test_options(run${suffix})
       set_tests_properties(verify${suffix}
         PROPERTIES
           DEPENDS run${suffix}
-          FIXTURES_REQUIRED verify${suffix}
-          LABELS quick)
+          FIXTURES_REQUIRED verify${suffix})
+      set_common_katana_test_options(verify${suffix} SKIP_LEAK_DETECTION)
     endif()
   endforeach()
 endfunction(add_test_scale)

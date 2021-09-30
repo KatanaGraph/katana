@@ -1,4 +1,4 @@
-# Galois: taken from:
+# Katana: taken from:
 #   https://github.com/llvm/llvm-project/blob/master/llvm/cmake/modules/HandleLLVMOptions.cmake
 
 include(CheckCCompilerFlag)
@@ -7,12 +7,15 @@ include(CheckCXXCompilerFlag)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
 function(determine_libasan_path)
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libclang_rt.asan-x86_64.so
+  set(libasan libasan.so)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(libasan libclang_rt.asan-x86_64.so)
+  endif()
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=${libasan}
     OUTPUT_VARIABLE LIBASAN_PATH
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   set(KATANA_LIBASAN_PATH "${LIBASAN_PATH}" PARENT_SCOPE)
 endfunction()
-
 
 function(add_sanitize_options)
   if(NOT KATANA_USE_SANITIZER)
@@ -56,8 +59,10 @@ function(add_sanitize_options)
 
   get_filename_component(LIBASAN_DIR ${KATANA_LIBASAN_PATH} DIRECTORY)
 
-  append("-shared-libsan" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  link_libraries("-shared-libsan -rpath ${LIBASAN_DIR}")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    append("-shared-libsan" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    link_libraries("-shared-libsan -rpath ${LIBASAN_DIR}")
+  endif()
 
   if (KATANA_USE_SANITIZER STREQUAL "Address")
     append_common_sanitizer_flags()
@@ -102,22 +107,6 @@ function(add_sanitize_options)
     append("-fsanitize=fuzzer-no-link" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
 
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" PARENT_SCOPE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" PARENT_SCOPE)
-endfunction()
-
-function(add_sanitize_blacklist FILENAME)
-  if (KATANA_USE_SANITIZER MATCHES ".*Undefined.*")
-    set(BLACKLIST_CONFIGURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${FILENAME}")
-    message(STATUS "Looking for blacklist file: ${BLACKLIST_CONFIGURE_FILE}")
-    if (EXISTS "${BLACKLIST_CONFIGURE_FILE}")
-      string(REPLACE ".in" "" BLACKLIST_FILE "${BLACKLIST_CONFIGURE_FILE}")
-      string(REPLACE "${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}" BLACKLIST_FILE "${BLACKLIST_FILE}")
-      configure_file("${BLACKLIST_CONFIGURE_FILE}" "${BLACKLIST_FILE}")
-      append("-fsanitize-blacklist=${BLACKLIST_FILE}"
-             CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    endif()
-  endif()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" PARENT_SCOPE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" PARENT_SCOPE)
 endfunction()

@@ -13,10 +13,12 @@ function(compare_with_sample test_arg compare_arg input expected)
   add_test(NAME create${suffix}
     COMMAND graph-convert ${test_arg} ${CMAKE_CURRENT_SOURCE_DIR}/${input} ${base_input}.test
   )
+  set_common_katana_test_options(create${suffix})
 
   add_test(NAME convert${suffix}
     COMMAND graph-convert ${compare_arg} ${base_input}.test ${base_input}.compare
   )
+  set_common_katana_test_options(convert${suffix})
 
   add_test(NAME compare${suffix}
     COMMAND ${CMAKE_COMMAND} -E compare_files ${base_input}.compare ${CMAKE_CURRENT_SOURCE_DIR}/${expected}
@@ -34,9 +36,9 @@ function(compare_with_sample test_arg compare_arg input expected)
 
   set_tests_properties(compare${suffix}
     PROPERTIES
-      LABELS quick
       DEPENDS convert${suffix}
       FIXTURES_REQUIRED convert${suffix})
+  set_common_katana_test_options(compare${suffix})
 endfunction()
 
 compare_with_sample(-edgelist2gr -gr2edgelist test-inputs/with-blank-lines.edgelist test-inputs/with-blank-lines.edgelist.expected)

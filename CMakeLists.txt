@@ -23,10 +23,10 @@ endif()
 if(KATANA_USE_SANITIZER)
   determine_libasan_path()
   add_subdirectory(libsanitize)
+  add_sanitize_options()
+  add_sanitize_suppression(config/sanitizers/lsan_suppressions.txt.in)
+  add_sanitize_suppression(config/sanitizers/ubsan_suppressions.txt.in)
 endif()
-
-add_sanitize_options()
-add_sanitize_blacklist(config/sanitizers/ubsan_blacklist.txt.in)
 
 if(KATANA_USE_GPU)
   enable_language(CUDA)

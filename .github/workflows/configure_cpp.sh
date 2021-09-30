@@ -13,6 +13,7 @@ case "$CXX" in
   *-gnu-c++*)  CC=${CXX/c++/cc};;
 esac
 
+linker=
 case $CI_BUILD_TYPE in
   Release)
     BUILD_TYPE=Release
@@ -21,6 +22,7 @@ case $CI_BUILD_TYPE in
   Sanitizer)
     BUILD_TYPE=Release
     SANITIZER="Address;Undefined"
+    linker=$CXX
     ;;
   Debug)
     BUILD_TYPE=Debug
@@ -41,7 +43,9 @@ cmake -S . -B $BUILD_DIR \
   -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
   $CMAKE_TOOLCHAIN_ARG \
   -DCMAKE_CXX_COMPILER="$CXX" \
+  -DCMAKE_CXX_LINKER="${linker}" \
   -DCMAKE_C_COMPILER="$CC" \
+  -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
   -DCMAKE_C_COMPILER_LAUNCHER=ccache \
   -DKATANA_USE_SANITIZER="$SANITIZER" \

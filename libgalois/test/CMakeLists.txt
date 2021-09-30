@@ -1,5 +1,5 @@
 function(add_test_unit name)
-  set(no_value_options NOT_QUICK)
+  set(no_value_options NO_CI)
   set(multi_value_options REQUIRES)
   cmake_parse_arguments(X "${no_value_options}" "" "${multi_value_options}" ${ARGN})
 
@@ -21,17 +21,11 @@ function(add_test_unit name)
 
   add_test(NAME ${test_name} COMMAND ${command_line})
 
-  set_tests_properties(${test_name}
-    PROPERTIES
-      ENVIRONMENT KATANA_DO_NOT_BIND_THREADS=1)
-
-  # Allow parallel tests
-  if(NOT X_NOT_QUICK)
-    set_tests_properties(${test_name}
-      PROPERTIES
-        LABELS quick
-      )
+  set(labels slow)
+  if(NOT X_NO_CI)
+    set(labels)
   endif()
+  set_common_katana_test_options(${test_name} LABELS ${labels})
 endfunction()
 
 add_test_unit(acquire)
@@ -63,7 +57,7 @@ add_test_unit(graph-predicates "${BASEINPUT}/propertygraphs/rmat10")
 add_test_unit(property-file-graph-rdg-conversion "${BASEINPUT}/propertygraphs/ldbc_003")
 add_test_unit(property-graph)
 add_test_unit(property-graph-diff)
-add_test_unit(property-graph-bench NOT_QUICK)
+add_test_unit(property-graph-bench NO_CI)
 add_test_unit(property-graph-topology)
 add_test_unit(property-index)
 add_test_unit(reduction)

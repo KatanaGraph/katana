@@ -22,13 +22,17 @@ individual assertions and subtests.
 
 Tests are divided into groups by their label property. A test can be given a
 label with the ``set_property``/``set_tests_properties`` command, e.g.,
-``set_property(TEST my-test PROPERTY LABEL my-label)``
+``set_property(TEST my-test PROPERTY LABEL my-label)``. A test may have more than
+one label.
 
 Labels:
 
-- **quick**: Quick tests have no external dependencies and can be run in parallel
-  with other quick tests. Each quick test should run in a second or less. These
-  tests are run as part of our continuous integration pipeline.
+- **ci**: Tests that are run during continuous integration. They will be run in
+  parallel with other tests.
+
+- **slow**: Tests that won't be run during continuous integration.
+
+- **python**: Tests that require the python language bindings.
 
 - **gpu**: Tests that require a GPU.
 
@@ -37,11 +41,11 @@ Running
 
 All tests can be run with ``ctest``.
 
-To run all quick tests,
+To run all CI tests,
 
 .. code-block:: bash
 
-   ctest -L quick
+   ctest -L ci
 
 To run tests whose names match ``regex``, with verbose output, and with ``4``
 tests runnning in parallel at a time,
@@ -169,7 +173,7 @@ Now you can run any test that you wish.  For example:
 
 .. code-block:: bash
 
-   ctest -L quick
+   ctest -L ci
 
 There are several tools you can use to process obtained profiling data
 after test run.  One popular tool is ``gcovr``.  You can obtain (html)

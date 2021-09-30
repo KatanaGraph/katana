@@ -30,7 +30,7 @@ installation issues.
 
 .. code-block::
 
-   ctest -L quick
+   ctest -L ci
 
 This runs code tests locally on your machine.  Most of the tests require sample
 graphs. You can get them with ``make input``. See :ref:`testing` for more

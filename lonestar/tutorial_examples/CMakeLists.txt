@@ -27,4 +27,4 @@ add_test_scale(small example-torus-improved 2 100 NO_VERIFY)
 add_test_scale(small1 example-spanningtree INPUT rome99 INPUT_URI "${BASEINPUT}/reference/structured/rome99.gr" NO_VERIFY)
 add_test_scale(small2 example-spanningtree INPUT rmat10 INPUT_URI "${BASEINPUT}/scalefree/rmat10.gr" NO_VERIFY)
 add_test_scale(small example-triangle-count INPUT rmat15_cleaned_symmetric
-  INPUT_URI "${BASEINPUT}/propertygraphs/rmat15_cleaned_symmetric" --symmetricGraph NOT_QUICK NO_VERIFY)
+  INPUT_URI "${BASEINPUT}/propertygraphs/rmat15_cleaned_symmetric" --symmetricGraph NO_CI NO_VERIFY)

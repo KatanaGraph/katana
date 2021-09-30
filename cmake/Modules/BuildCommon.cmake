@@ -661,3 +661,43 @@ file(CREATE_LINK
     )
   endif()
 endfunction()
+
+function(add_sanitize_suppression FILENAME)
+  set(SUPPRESSION_CONFIGURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${FILENAME}")
+  message(STATUS "Looking for suppression file: ${SUPPRESSION_CONFIGURE_FILE}")
+  string(REPLACE ".in" "" SUPPRESSION_FILE "${SUPPRESSION_CONFIGURE_FILE}")
+  string(REPLACE "${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}" SUPPRESSION_FILE "${SUPPRESSION_FILE}")
+  configure_file("${SUPPRESSION_CONFIGURE_FILE}" "${SUPPRESSION_FILE}")
+endfunction()
+
+function(set_common_katana_test_options test_name)
+  set(options SKIP_LEAK_DETECTION)
+  set(one_value_args)
+  set(multi_value_args LABELS)
+  cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+
+  if(NOT X_LABELS)
+    set(X_LABELS ci)
+  endif()
+
+  set_property(TEST ${test_name} APPEND
+    PROPERTY ENVIRONMENT KATANA_DO_NOT_BIND_THREADS=1)
+  if(KATANA_USE_SANITIZER)
+    set_property(TEST ${test_name} APPEND
+      PROPERTY ENVIRONMENT LSAN_OPTIONS=suppressions=${PROJECT_BINARY_DIR}/config/sanitizers/lsan_suppressions.txt)
+    set_property(TEST ${test_name} APPEND
+      PROPERTY ENVIRONMENT UBSAN_OPTIONS=print_stacktrack=1:suppressions=${PROJECT_BINARY_DIR}/config/sanitizers/ubsan_suppressions.txt)
+    set_property(TEST ${test_name} APPEND
+      PROPERTY ENVIRONMENT LD_PRELOAD=${KATANA_LIBASAN_PATH}:$<TARGET_FILE:katana_disable_dlclose>)
+    if(X_SKIP_LEAK_DETECTION)
+      set_property(TEST ${test_name} APPEND
+        PROPERTY ENVIRONMENT ASAN_OPTIONS=${KATANA_ASAN_OPTIONS}:detect_leaks=0)
+    else()
+      set_property(TEST ${test_name} APPEND
+        PROPERTY ENVIRONMENT ASAN_OPTIONS=${KATANA_ASAN_OPTIONS})
+    endif()
+  endif()
+
+  set_property(TEST ${test_name} APPEND
+    PROPERTY LABELS ${X_LABELS})
+endfunction()

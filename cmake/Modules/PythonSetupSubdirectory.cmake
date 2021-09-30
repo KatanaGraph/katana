@@ -342,7 +342,7 @@ echo PYTHONPATH=\$PYTHONPATH
 endfunction()
 
 function(add_python_setuptools_tests TARGET_NAME)
-  set(no_value_options NOT_QUICK)
+  set(no_value_options NO_CI)
   set(one_value_options PATH)
   set(multi_value_options)
 
@@ -354,9 +354,9 @@ function(add_python_setuptools_tests TARGET_NAME)
            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   set_property(TEST ${TARGET_NAME} APPEND
                PROPERTY ENVIRONMENT KATANA_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
-  if(NOT X_NOT_QUICK)
-    set_tests_properties(${TARGET_NAME} PROPERTIES LABELS "quick;python")
-  else()
-    set_tests_properties(${TARGET_NAME} PROPERTIES LABELS python)
+  set(labels ci python)
+  if(NOT X_NO_CI)
+    set(labels slow python)
   endif()
+  set_common_katana_test_options(${TARGET_NAME} LABELS ${labels})
 endfunction()

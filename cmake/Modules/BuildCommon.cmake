@@ -479,11 +479,11 @@ function(add_katana_sphinx_target target_name)
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
         -b html
-	${sphinx_options}
+        ${sphinx_options}
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
-      COMMENT "Building external ${target_name} sphinx documentation"
+      COMMENT "Building ${target_name} sphinx documentation"
   )
 
   # The root of documentation is sphinx_docs, which include doxygen_docs via

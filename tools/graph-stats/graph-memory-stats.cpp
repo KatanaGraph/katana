@@ -22,7 +22,12 @@
 #include <string>
 #include <unordered_map>
 
+#include <arrow/array/builder_base.h>
+#include <arrow/type_traits.h>
+
+#include "katana/ArrowVisitor.h"
 #include "katana/Galois.h"
+#include "katana/Logging.h"
 #include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -37,6 +42,140 @@ using map_element = std::unordered_map<std::string, int64_t>;
 using map_string_element = std::unordered_map<std::string, std::string>;
 using memory_map = std::unordered_map<
     std::string, std::variant<map_element, map_string_element>>;
+
+struct Visitor : public katana::ArrowVisitor {
+  using ResultType = katana::Result<int64_t>;
+  using AcceptTypes = std::tuple<
+      arrow::Int8Type, arrow::UInt8Type, arrow::Int16Type, arrow::UInt16Type,
+      arrow::Int32Type, arrow::UInt32Type, arrow::Int64Type, arrow::UInt64Type,
+      arrow::FloatType, arrow::DoubleType, arrow::FloatType, arrow::DoubleType,
+      arrow::BooleanType, arrow::Date32Type, arrow::Date64Type,
+      arrow::Time32Type, arrow::Time64Type, arrow::TimestampType,
+      arrow::StringType, arrow::LargeStringType, arrow::StructType,
+      arrow::NullType>;
+
+  template <typename ArrowType, typename ScalarType>
+  std::enable_if_t<
+      arrow::is_number_type<ArrowType>::value ||
+          arrow::is_boolean_type<ArrowType>::value ||
+          arrow::is_temporal_type<ArrowType>::value,
+      ResultType>
+  Call(const ScalarType& scalar) {
+    return scalar.value;
+  }
+
+  template <typename ArrowType, typename ScalarType>
+  arrow::enable_if_string_like<ArrowType, ResultType> Call(
+      const ScalarType& scalar) {
+    const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
+    auto res = (arrow::util::string_view)(*typed_scalar->value);
+    // TODO (giorgi): make this KATANA_CHECKED
+    // if (!res.ok()) {
+    //   return KATANA_ERROR(
+    //       katana::ErrorCode::ArrowError, "arrow builder failed append: {}",
+    //       res);
+    // }
+    return res;
+  }
+
+  ResultType AcceptFailed(const arrow::Scalar& scalar) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "no matching type {}",
+        scalar.type->name());
+  }
+};
+
+// struct ToArrayVisitor : public katana::ArrowVisitor {
+//   // Internal data and constructor
+//   const std::shared_ptr<arrow::Array> scalars;
+//   ToArrayVisitor(const std::shared_ptr<arrow::Array> input) : scalars(input) {}
+
+//   using ResultType = katana::Result<std::shared_ptr<arrow::Array>>;
+
+//   using AcceptTypes = std::tuple<katana::AcceptAllArrowTypes>;
+
+//   template <typename ArrowType, typename BuilderType>
+//   arrow::enable_if_null<ArrowType, ResultType> Call(BuilderType* builder) {
+//     return KATANA_CHECKED(builder->Finish());
+//   }
+
+//   template <typename ArrowType, typename BuilderType>
+//   std::enable_if_t<
+//       arrow::is_number_type<ArrowType>::value ||
+//           arrow::is_boolean_type<ArrowType>::value ||
+//           arrow::is_temporal_type<ArrowType>::value,
+//       ResultType>
+//   Call(BuilderType* builder) {
+//     using ScalarType = typename arrow::TypeTraits<ArrowType>::ScalarType;
+
+//     KATANA_CHECKED(builder->Reserve(scalars->length()));
+//     for (auto j = 0; j < scalars->length(); j++) {
+//       auto scalar = *scalars->GetScalar(j);
+//       if (scalar != nullptr && scalar->is_valid) {
+//         const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
+//         builder->UnsafeAppend(typed_scalar->value);
+//       } else {
+//         builder->UnsafeAppendNull();
+//       }
+//     }
+//     return KATANA_CHECKED(builder->Finish());
+//   }
+
+//   template <typename ArrowType, typename BuilderType>
+//   arrow::enable_if_string_like<ArrowType, ResultType> Call(
+//       BuilderType* builder) {
+//     using ScalarType = typename arrow::TypeTraits<ArrowType>::ScalarType;
+//     // same as above, but with string_view and Append instead of UnsafeAppend
+//     for (auto j = 0; j < scalars->length(); j++) {
+//       auto scalar = *scalars->GetScalar(j);
+//       if (scalar != nullptr && scalar->is_valid) {
+//         // ->value->ToString() works, scalar->ToString() yields "..."
+//         const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
+//         if (auto res = builder->Append(
+//                 (arrow::util::string_view)(*typed_scalar->value));
+//             !res.ok()) {
+//           return KATANA_ERROR(
+//               katana::ErrorCode::ArrowError, "arrow builder failed append: {}",
+//               res);
+//         }
+//       } else {
+//         if (auto res = builder->AppendNull(); !res.ok()) {
+//           return KATANA_ERROR(
+//               katana::ErrorCode::ArrowError,
+//               "arrow builder failed append null: {}", res);
+//         }
+//       }
+//     }
+//     return KATANA_CHECKED(builder->Finish());
+//   }
+
+//   template <typename ArrowType, typename BuilderType>
+//   std::enable_if_t<
+//       arrow::is_list_type<ArrowType>::value ||
+//           arrow::is_struct_type<ArrowType>::value,
+//       ResultType>
+//   Call(BuilderType* builder) {
+//     using ScalarType = typename arrow::TypeTraits<ArrowType>::ScalarType;
+//     // use a visitor to traverse more complex types
+//     katana::AppendScalarToBuilder visitor(builder);
+//     for (auto j = 0; j < scalars->length(); j++) {
+//       auto scalar = *scalars->GetScalar(j);
+//       if (scalar != nullptr && scalar->is_valid) {
+//         const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
+//         KATANA_CHECKED(visitor.Call<ArrowType>(*typed_scalar));
+//       } else {
+//         KATANA_CHECKED(builder->AppendNull());
+//       }
+//     }
+//     return KATANA_CHECKED(builder->Finish());
+//   }
+
+//   ResultType AcceptFailed(const arrow::ArrayBuilder* builder) {
+//     return KATANA_ERROR(
+//         katana::ErrorCode::ArrowError, "no matching type {}",
+//         builder->type()->name());
+//   }
+// };
 
 void
 PrintAtomicTypes(const std::vector<std::string>& atomic_types) {
@@ -61,6 +200,21 @@ PrintStringMapping(const std::unordered_map<std::string, std::string>& u) {
     std::cout << n.first << " : " << n.second << "\n";
   }
   std::cout << "\n";
+}
+
+katana::Result<std::shared_ptr<arrow::Array>>
+RunVisit(const std::shared_ptr<arrow::Array> scalars) {
+  Visitor v;
+  int64_t total = 0;
+  for (auto j = 0; j < scalars->length(); j++) {
+    auto s = *scalars->GetScalar(j);
+    auto res = katana::VisitArrow(v, *s);
+    KATANA_LOG_VASSERT(res, "unexpected errror {}", res.error());
+    total += res.value();
+  }
+
+  KATANA_LOG_VASSERT(
+      total == scalars->length(), "{} != {}", total, scalars->length());
 }
 
 void
@@ -104,7 +258,7 @@ GatherMemoryAllocation(
     alloc_size = 0;
     prop_size = 0;
     auto bit_width = arrow::bit_width(dtype->id());
-
+    auto visited_arr = RunVisit(prop_field);
     for (auto j = 0; j < prop_field->length(); j++) {
       if (prop_field->IsValid(j)) {
         auto scal_ptr = *prop_field->GetScalar(j);
@@ -121,6 +275,7 @@ GatherMemoryAllocation(
     usage.insert(std::pair(prop_name, prop_size));
     width.insert(std::pair(prop_name, bit_width));
     types.insert(std::pair(prop_name, dtype->name()));
+    // std::cout << "Size: " << visited_arr->value().size() << "\n";
   }
   allocations.insert(std::pair("Total-Alloc", total_alloc));
   usage.insert(std::pair("Total-Usage", total_usage));

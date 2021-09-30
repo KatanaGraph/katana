@@ -41,7 +41,7 @@ struct KATANA_EXPORT GraphTopologyTypes {
 
 class KATANA_EXPORT EdgeShuffleTopology;
 class KATANA_EXPORT EdgeTypeAwareTopology;
-class KATANA_EXPORT ProjectedShuffleTopology;
+class KATANA_EXPORT ProjectedSTypeTopology;
 
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
@@ -608,16 +608,16 @@ private:
 };
 
 /// filter nodes and edges based on their type values
-/// and creates a new local graph based on the filtered nodes and edges
-/// also maintains mappings from old to new and new to old nodes and edges
-class KATANA_EXPORT ProjectedShuffleTopology : public GraphTopologyTypes {
+/// and creates a new projected graph based on the filtered nodes and edges
+/// also maintains mappings from original to projected and projected to original nodes and edges
+class KATANA_EXPORT ProjectedTopology : public GraphTopologyTypes {
 public:
-  ProjectedShuffleTopology() = default;
-  ProjectedShuffleTopology(ProjectedShuffleTopology&&) = default;
-  ProjectedShuffleTopology& operator=(ProjectedShuffleTopology&&) = default;
+  ProjectedTopology() = default;
+  ProjectedTopology(ProjectedTopology&&) = default;
+  ProjectedTopology& operator=(ProjectedTopology&&) = default;
 
-  ProjectedShuffleTopology(const ProjectedShuffleTopology&) = delete;
-  ProjectedShuffleTopology& operator=(const ProjectedShuffleTopology&) = delete;
+  ProjectedTopology(const ProjectedTopology&) = delete;
+  ProjectedTopology& operator=(const ProjectedTopology&) = delete;
 
   uint64_t num_nodes() const noexcept { return adj_indices_.size(); }
 
@@ -627,22 +627,24 @@ public:
 
   const Node* dest_data() const noexcept { return dests_.data(); }
 
-  /// Checks equality against another instance of ProjectedShuffleTopology.
+  /// Checks equality against another instance of ProjectedTopology.
   /// WARNING: Expensive operation due to element-wise checks on large arrays
-  /// @param that: ProjectedShuffleTopology instance to compare against
+  /// @param that: ProjectedTopology instance to compare against
   /// @returns true if topology arrays are equal
-  bool Equals(const ProjectedShuffleTopology& that) const noexcept {
-    if (this == &that) {
+  /// should take O(|V| + |E|) in the worst case
+  bool Equals(const ProjectedTopology& projected_topo_) const noexcept {
+    if (this == &projected_topo_) {
       return true;
     }
-    if (num_nodes() != that.num_nodes()) {
+    if (num_nodes() != projected_topo_.num_nodes()) {
       return false;
     }
-    if (num_edges() != that.num_edges()) {
+    if (num_edges() != projected_topo_.num_edges()) {
       return false;
     }
 
-    return adj_indices_ == that.adj_indices_ && dests_ == that.dests_;
+    return adj_indices_ == projected_topo_.adj_indices_ &&
+           dests_ == projected_topo_.dests_;
   }
 
   /// Gets the edge range of some node.
@@ -650,8 +652,8 @@ public:
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
   edges_range edges(Node node) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(node <= adj_indices_.size());
-    edge_iterator e_beg{node > 0 ? adj_indices_[node - 1] : 0};
+    KATANA_LOG_DEBUG_ASSERT(node < adj_indices_.size());
+    edge_iterator e_beg{node != 0 ? adj_indices_[node - 1] : 0};
     edge_iterator e_end{adj_indices_[node]};
 
     return MakeStandardRange(e_beg, e_end);
@@ -664,13 +666,15 @@ public:
       return Node{0};
     }
 
+    // finds the node idx which contains the edge corresponding to eid
+    // since last entry in adj_indices corresponds to the total number of edges
+    // the value corresponding to iterator it should be greater than eid
     auto it = std::upper_bound(adj_indices_.begin(), adj_indices_.end(), eid);
     KATANA_LOG_DEBUG_ASSERT(it != adj_indices_.end());
     KATANA_LOG_DEBUG_ASSERT(*it > eid);
 
-    auto d = std::distance(adj_indices_.begin(), it);
-    KATANA_LOG_DEBUG_ASSERT(static_cast<size_t>(d) < num_nodes());
-    KATANA_LOG_DEBUG_ASSERT(d > 0);
+    const size_t d = it - adj_indices_.begin();
+    KATANA_LOG_DEBUG_ASSERT(d < num_nodes());
 
     return static_cast<Node>(d);
   }
@@ -707,54 +711,68 @@ public:
 
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < num_edges());
-    return new_to_old_edges_mapping_[eid];
+    return projected_to_original_edges_mapping_[eid];
   }
 
-  Edge original_edge_id(const Edge& eid) const noexcept {
+  /// @param eid the input eid (must be projected edge id)
+  Edge projected_to_original_edge_id(const Edge& eid) const noexcept {
     return edge_property_index(eid);
   }
 
-  Edge projected_edge_id(const Edge& eid) const noexcept {
-    return old_to_new_edges_mapping_[eid];
+  /// @param eid the input eid (must be original edge id)
+  Edge original_to_projected_edge_id(const Edge& eid) const noexcept {
+    return original_to_projected_edges_mapping_[eid];
   }
 
   PropertyIndex node_property_index(const Node& nid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(nid < num_nodes());
-    return new_to_old_nodes_mapping_[nid];
+    return projected_to_original_nodes_mapping_[nid];
   }
 
-  Node original_node_id(const Node& nid) const noexcept {
+  /// @param nid the input node id (must be projected node id)
+  Node projected_to_original_node_id(const Node& nid) const noexcept {
     return node_property_index(nid);
   }
 
-  Node projected_node_id(const Node& nid) const noexcept {
-    return old_to_new_nodes_mapping_[nid];
+  /// @param nid the input node id (must be original node id)
+  Node original_to_projected_node_id(const Node& nid) const noexcept {
+    return original_to_projected_nodes_mapping_[nid];
   }
 
-  static std::unique_ptr<ProjectedShuffleTopology> Make(
+  /// this function creates a topology by filtering nodes and edges
+  /// @param node_types nodes with types in node_types are filtered
+  /// @param edge_types edges with types in edge_types are filtered
+  static std::unique_ptr<ProjectedTopology> MakeTypeProjectedTopology(
       const PropertyGraph* pg, const std::vector<std::string>& node_types,
       const std::vector<std::string>& edge_types);
 
 private:
-  ProjectedShuffleTopology(
+  ProjectedTopology(
       NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests,
-      NUMAArray<Node>&& old_to_new_nodes_mapping,
-      NUMAArray<Node>&& new_to_old_nodes_mapping,
-      NUMAArray<Edge>&& old_to_new_edges_mapping,
-      NUMAArray<Edge>&& new_to_old_edges_mapping) noexcept
+      NUMAArray<Node>&& original_to_projected_nodes_mapping,
+      NUMAArray<Node>&& projected_to_original_nodes_mapping,
+      NUMAArray<Edge>&& original_to_projected_edges_mapping,
+      NUMAArray<Edge>&& projected_to_original_edges_mapping)
       : adj_indices_(std::move(adj_indices)),
         dests_(std::move(dests)),
-        old_to_new_nodes_mapping_(std::move(old_to_new_nodes_mapping)),
-        new_to_old_nodes_mapping_(std::move(new_to_old_nodes_mapping)),
-        old_to_new_edges_mapping_(std::move(old_to_new_edges_mapping)),
-        new_to_old_edges_mapping_(std::move(new_to_old_edges_mapping)) {}
+        original_to_projected_nodes_mapping_(
+            std::move(original_to_projected_nodes_mapping)),
+        projected_to_original_nodes_mapping_(
+            std::move(projected_to_original_nodes_mapping)),
+        original_to_projected_edges_mapping_(
+            std::move(original_to_projected_edges_mapping)),
+        projected_to_original_edges_mapping_(
+            std::move(projected_to_original_edges_mapping)) {}
 
+  // TODO(udit) : we can let go of original_to_projected_nodes_mapping_ and original_to_projected_edges_mapping_
+  // by doing a binary search on projected_to_original_nodes_mapping_ and projected_to_original_edges_mapping_
+  // it's a trade-off
   NUMAArray<Edge> adj_indices_;
   NUMAArray<Node> dests_;
-  NUMAArray<Node> old_to_new_nodes_mapping_;
-  NUMAArray<Node> new_to_old_nodes_mapping_;
-  NUMAArray<Edge> old_to_new_edges_mapping_;
-  NUMAArray<Edge> new_to_old_edges_mapping_;
+  NUMAArray<Node> original_to_projected_nodes_mapping_;
+  NUMAArray<Node> projected_to_original_nodes_mapping_;
+  NUMAArray<Edge> original_to_projected_edges_mapping_;
+  NUMAArray<Edge> projected_to_original_edges_mapping_;
 };
 
 namespace internal {
@@ -1184,8 +1202,7 @@ using PGViewNodesSortedByDegreeEdgesSortedByDestID =
 using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
 using PGViewEdgeTypeAwareBiDir =
     BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
-using PGViewProjectedGraph =
-    BasicPropGraphViewWrapper<ProjectedShuffleTopology>;
+using PGViewProjectedGraph = BasicPropGraphViewWrapper<ProjectedTopology>;
 
 template <typename PGView>
 struct PGViewBuilder {};
@@ -1256,7 +1273,7 @@ struct PGViewBuilder<PGViewProjectedGraph> {
       const PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto topo = viewCache.BuildOrGetProjectedGraphTopo(pg);
 
-    return PGViewProjectedGraph{pg, ProjectedShuffleTopology{topo}};
+    return PGViewProjectedGraph{pg, ProjectedTopology{topo}};
   }
 };
 
@@ -1277,7 +1294,7 @@ class KATANA_EXPORT PGViewCache {
   std::vector<std::unique_ptr<EdgeTypeAwareTopology>> edge_type_aware_topos_;
   std::unique_ptr<CondensedTypeIDMap> edge_type_id_map_;
   // TODO(amber): define a node_type_id_map_;
-  std::unique_ptr<ProjectedShuffleTopology> projected_topos_;
+  std::unique_ptr<ProjectedTopology> projected_topos_;
 
   template <typename>
   friend struct internal::PGViewBuilder;
@@ -1316,7 +1333,7 @@ private:
       const PropertyGraph* pg,
       const EdgeShuffleTopology::TransposeKind& tpose_kind) noexcept;
 
-  ProjectedShuffleTopology* BuildOrGetProjectedGraphTopo(
+  ProjectedTopology* BuildOrGetProjectedGraphTopo(
       const PropertyGraph* pg, const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties) noexcept;
 };

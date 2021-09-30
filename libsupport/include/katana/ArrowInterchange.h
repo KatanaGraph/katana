@@ -25,13 +25,9 @@ namespace katana {
 template <typename ArrowArrayType>
 Result<std::shared_ptr<ArrowArrayType>>
 ViewCast(const std::shared_ptr<arrow::Array>& gen_array) {
-  auto maybe_res = gen_array->View(
-      arrow::TypeTraits<typename ArrowArrayType::TypeClass>::type_singleton());
-  if (!maybe_res.ok()) {
-    return katana::ErrorCode::ArrowError;
-  }
-  return std::static_pointer_cast<ArrowArrayType>(
-      std::move(maybe_res.ValueOrDie()));
+  return std::static_pointer_cast<ArrowArrayType>(KATANA_CHECKED(
+      gen_array->View(arrow::TypeTraits<
+                      typename ArrowArrayType::TypeClass>::type_singleton())));
 }
 
 template <typename T>

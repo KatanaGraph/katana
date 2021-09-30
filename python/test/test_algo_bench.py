@@ -1,7 +1,20 @@
+import argparse
+import contextlib
+import json
+import os
+import sys
+import time
+from collections import namedtuple
+from datetime import datetime
+
+import numpy as np
+import pytz
+from pyarrow import Schema
+
 from scripts.bench_python_cpp_algos import *
 
 
-def get_args(json_output, input_dir="./", graph="GAP-road", app="bfs", source_nodes="", trails=1, num_sources=4, thread_spin=False, threads=None):
+def GenerateArgs(json_output, input_dir="./", graph="GAP-road", app="bfs", source_nodes="", trails=1, num_sources=4, thread_spin=False, threads=None):
 
     parser = argparse.ArgumentParser(
         description="Benchmark performance of routines")
@@ -44,7 +57,23 @@ def get_args(json_output, input_dir="./", graph="GAP-road", app="bfs", source_no
     return parser
 
 
-def mainTest():
+def GenerateGroundTruth(args):
+    now = datetime.now(pytz.timezone("US/Central"))
+    data = {
+        "graph": type(args.graph),
+        "threads": type(args.threads),
+        "thread-spin": type(args.thread_spin),
+        "source-nodes": type(args.source_nodes),
+        "trials": type(args.trials),
+        "num-sources": type(args.num_sources),
+        "routines": type({}),
+        "duration": type(0),
+        "datetime": type(now.strftime("%d/%m/%Y %H:%M:%S")),
+    }
+    return data
+
+
+def MainTest():
     pass
 
 
@@ -53,4 +82,36 @@ def GenerateTest():
 
 
 if __name__ == "__main__":
-    mainTest()
+
+    all_args = [
+        {"json_output": "../../../bench_statistics.json",
+         "input_dir": "../../inputs/v24/propertygraphs",
+         "graph": "GAP-road",
+         "app": "all",
+         "source_nodes": "",
+         "trails": 1,
+         "num_sources": 4,
+         "thread_spin": False,
+         "threads": None},
+
+        {"json_output": "../../../bench_statistics.json",
+         "input_dir": "../../inputs/v24/propertygraphs",
+         "graph": "GAP-road",
+         "app": "all",
+         "source_nodes": "",
+         "trails": 10,
+         "num_sources": 16,
+         "thread_spin": True,
+         "threads": 1},
+    ]
+    all_apps = ["tc", "cc", "kcore", "bfs", "sssp",
+                "jaccard", "bc", "louvain", "pagerank", "all"]
+
+    all_graphs = ["GAP-road", "rmat15", "GAP-kron",
+                  "GAP-twitter", "GAP-web", "GAP-urand"]
+
+    args = GenerateArgs(**all_args[0])
+    ground_truth = GenerateGroundTruth(args)
+
+    print(args)
+    print(ground_truth)

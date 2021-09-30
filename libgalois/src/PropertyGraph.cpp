@@ -270,7 +270,7 @@ katana::PropertyGraph::Make(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    tsuba::RDGManifest rdg_manifest, const tsuba::RDGLoadOptions& opts) {
+    const tsuba::RDGManifest& rdg_manifest, const tsuba::RDGLoadOptions& opts) {
   tsuba::RDGFile rdg_file{
       KATANA_CHECKED(tsuba::Open(std::move(rdg_manifest), tsuba::kReadWrite))};
   tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));

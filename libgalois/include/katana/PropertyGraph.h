@@ -238,7 +238,8 @@ public:
       EntityTypeManager&& edge_type_manager);
 
   static Result<std::unique_ptr<katana::PropertyGraph>> Make(
-      tsuba::RDGManifest rdg_manifest, const tsuba::RDGLoadOptions& opts);
+      const tsuba::RDGManifest& rdg_manifest,
+      const tsuba::RDGLoadOptions& opts);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.

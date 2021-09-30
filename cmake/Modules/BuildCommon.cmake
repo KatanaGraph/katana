@@ -469,36 +469,22 @@ function(add_katana_sphinx_target target_name)
   endif ()
 
   get_target_property(PYTHON_ENV_SCRIPT ${target_name} PYTHON_ENV_SCRIPT)
-  #TODO(andrew): done this way since `set(tag_option "-t external") ... sphinx-build ${tag_option}...` does not work as expected
+  set(sphinx_options "-t;${BUILD_DOCS}")
   if (BUILD_DOCS STREQUAL "internal")
-    add_custom_target(
-      ${target_name}_sphinx_docs
-      COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
-      COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
-        -W
-        -b html
-        -t internal
-        ${PROJECT_SOURCE_DIR}/docs
-        ${CMAKE_BINARY_DIR}/docs/${target_name}
-      COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
-      COMMENT "Building internal ${target_name} sphinx documentation"
-    )
-  elseif (BUILD_DOCS STREQUAL "external")
-    add_custom_target(
+    set(sphinx_options "-W;${sphinx_options}")
+  endif ()
+
+  add_custom_target(
       ${target_name}_sphinx_docs
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
         -b html
-        -t external
+	${sphinx_options}
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"
       COMMENT "Building external ${target_name} sphinx documentation"
-    )
-  else ()
-    message(WARNING "The requested documentation type, ${BUILD_DOCS}, is not supported and is most likely not correct. Please specify either internal or external.")
-    return()
-  endif ()
+  )
 
   # The root of documentation is sphinx_docs, which include doxygen_docs via
   # the breathe extension

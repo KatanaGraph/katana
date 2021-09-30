@@ -28,8 +28,8 @@ Annotating Internal or Draft only Content
 Files ending in ``-draft.[rst/ipynb]`` or ``-internal.[rst/ipynb]`` will not be
 included in external facing documentation.
 
-Whole directories ending in ``-draft/`` will be omitted when building external
-documentation.
+Whole directories ending in ``-draft/`` or ``-internal/`` will be omitted when
+building external documentation.
 
 Restructured Text
 =================

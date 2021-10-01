@@ -14,9 +14,9 @@ try:
 except ImportError:
     pass
 else:
-    # Tags can be defined with the -t argument to sphinx. Use not-internal to
+    # Tags can be defined with the -t argument to sphinx. Use external to
     # override an otherwise default internal tag.
-    if not tags.has("not-internal"):
+    if not tags.has("external"):
         tags.add("internal")
 
 doxygen_path = os.environ["KATANA_DOXYGEN_PATH"]
@@ -51,8 +51,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -73,6 +72,12 @@ html_static_path = ["_static"]
 autodoc_preserve_defaults = True
 autodoc_member_order = "groupwise"
 
+suppress_warning = []
+nitpick_ignore = []
+
+# Exclude drafts from external documentation
+if tags.has("external"):
+    exclude_patterns.extend(["**-draft*","**-internal*"])
 
 # Standard Sphinx values
 project = "Katana Graph"

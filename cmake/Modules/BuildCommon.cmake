@@ -43,7 +43,7 @@ set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
 set(BUILD_TESTING ON CACHE BOOL "Build tests")
-set(BUILD_DOCS OFF CACHE BOOL "Build documentation with make doc")
+set(BUILD_DOCS "" CACHE STRING "Build documentation with make doc. Supported values: <unset>, external, internal. external docs hide '*-draft*' and '*-internal* documentation pages and directories when building documentation")
 # Set here to override the cmake default of "/usr/local" because
 # "/usr/local/lib" is not a default search location for ld.so
 set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
@@ -469,13 +469,17 @@ function(add_katana_sphinx_target target_name)
   endif ()
 
   get_target_property(PYTHON_ENV_SCRIPT ${target_name} PYTHON_ENV_SCRIPT)
+  set(sphinx_options "-t;${BUILD_DOCS}")
+  if (BUILD_DOCS STREQUAL "internal")
+    set(sphinx_options "-W;${sphinx_options}")
+  endif ()
 
   add_custom_target(
       ${target_name}_sphinx_docs
       COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND env KATANA_DOXYGEN_PATH="${CMAKE_BINARY_DIR}/docs/doxygen" ${PYTHON_ENV_SCRIPT} sphinx-build
-        -W
         -b html
+        ${sphinx_options}
         ${PROJECT_SOURCE_DIR}/docs
         ${CMAKE_BINARY_DIR}/docs/${target_name}
       COMMAND ${CMAKE_COMMAND} -E echo "${target_name} documentation at file://${CMAKE_BINARY_DIR}/docs/${target_name}/index.html"

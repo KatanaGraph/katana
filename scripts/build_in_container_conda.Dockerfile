@@ -41,7 +41,7 @@ WORKDIR /build
 
 ENTRYPOINT ["bash", "-l", "-c", "\"$@\"", "\"$0\""]
 
-ENV CMAKE_SETTINGS="-DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON" \
+ENV CMAKE_SETTINGS="-DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=internal" \
     CMAKE_BUILD_TYPE="Release" \
     CMAKE_GENERATOR="Unix Makefiles"
 

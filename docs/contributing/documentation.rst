@@ -5,19 +5,34 @@ Documentation
 Building Documentation
 ======================
 
-To build the documentation, enable the ``-DBUILD_DOCS=ON`` and
-``-DKATANA_LANG_BINDINGS=python`` ``cmake`` options and then make the ``docs``
-build target.
+To build the documentation, set the ``-DBUILD_DOCS=`` option to either
+``internal`` or ``external`` and ``-DKATANA_LANG_BINDINGS=python`` ``cmake``
+options and then make the ``docs`` build target.
 
 .. code-block:: bash
 
-   cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON
+   # internal documentation
+   cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python \
+      -DBUILD_DOCS=internal
+
+   # external documentation
+   cmake -S $SRC_DIR -B $BUILD_DIR -DKATANA_LANG_BINDINGS=python \
+      -DBUILD_DOCS=external
 
    cd $BUILD_DIR
    make docs
 
-Restructured Text and Markdown
-==============================
+Annotating Internal or Draft only Content
+=========================================
+
+Files ending in ``-draft.[rst/ipynb]`` or ``-internal.[rst/ipynb]`` will not be
+included in external facing documentation.
+
+Whole directories ending in ``-draft/`` or ``-internal/`` will be omitted when
+building external documentation.
+
+Restructured Text
+=================
 
 Most documentation is written in Restructured Text (``.rst``) format, which is
 similar to Markdown (``.md``) in spirit but has a slightly different syntax.
@@ -114,6 +129,27 @@ similar to Markdown (``.md``) in spirit but has a slightly different syntax.
 
 
 - https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
+
+Jupyter Notebooks
+=================
+
+Guides on how to use Katana Graph in Python should be written as Jupyter
+Notebooks. They will be parsed similar to Restructured Text (``.rst``) files.
+
+Orphaned Notebooks
+------------------
+
+This means that it doesn’t appear in a toctree (see ``index.rst``),
+but other pages can still link to it.
+
+Orphaned notebookes require the following to be added to the notebook's JSON
+metadata:
+
+.. code-block:: json
+
+   "nbsphinx": {
+      "orphan": true
+   },
 
 API Documentation
 =================

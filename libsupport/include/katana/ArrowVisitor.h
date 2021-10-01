@@ -83,6 +83,17 @@ VisitArrowCast(arrow::ArrayBuilder* builder) {
   return static_cast<ResultType>(builder);
 }
 
+inline arrow::Type::type
+GetArrowTypeID(const arrow::DataType& type) {
+  return type.id();
+}
+
+template <typename T>
+constexpr decltype(auto)
+VisitArrowCast(const arrow::DataType& type) {
+  return static_cast<const T&>(type);
+}
+
 /// Concept for visitors for VisitArrow.
 ///
 /// A visitor for VisitArrow should model the following behavior.

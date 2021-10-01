@@ -335,57 +335,6 @@ safe_advance(IterTy b, IterTy e, Distance n) {
   return safe_advance_dispatch(b, e, n, category);
 }
 
-/**
- * Finds the midpoint of a range.  The first half is always be bigger than
- * the second half if the range has an odd length.
- */
-template <typename IterTy>
-IterTy
-split_range(IterTy b, IterTy e) {
-  std::advance(b, (std::distance(b, e) + 1) / 2);
-  return b;
-}
-
-/**
- * Returns a continuous block from the range based on the number of
- * divisions and the id of the block requested
- */
-template <
-    typename IterTy,
-    typename std::enable_if<!std::is_integral<IterTy>::value>::type* = nullptr>
-std::pair<IterTy, IterTy>
-block_range(IterTy b, IterTy e, unsigned id, unsigned num) {
-  size_t dist = std::distance(b, e);
-  size_t numper = std::max((dist + num - 1) / num, (size_t)1);  // round up
-  size_t A = std::min(numper * id, dist);
-  size_t B = std::min(numper * (id + 1), dist);
-  std::advance(b, A);
-
-  if (dist != B) {
-    e = b;
-    std::advance(e, B - A);
-  }
-
-  return std::make_pair(b, e);
-}
-
-template <
-    typename IntTy,
-    typename std::enable_if<std::is_integral<IntTy>::value>::type* = nullptr>
-std::pair<IntTy, IntTy>
-block_range(IntTy b, IntTy e, unsigned id, unsigned num) {
-  IntTy dist = e - b;
-  IntTy numper = std::max((dist + num - 1) / num, (IntTy)1);  // round up
-  IntTy A = std::min(numper * id, dist);
-  IntTy B = std::min(numper * (id + 1), dist);
-  b += A;
-  if (dist != B) {
-    e = b;
-    e += (B - A);
-  }
-  return std::make_pair(b, e);
-}
-
 namespace internal {
 template <typename I>
 using IteratorValueType = typename std::iterator_traits<I>::value_type;

@@ -21,6 +21,7 @@
 #define KATANA_LIBGALOIS_KATANA_STABLEITERATOR_H_
 
 #include "katana/Chunk.h"
+#include "katana/Range.h"
 #include "katana/config.h"
 #include "katana/gstl.h"
 

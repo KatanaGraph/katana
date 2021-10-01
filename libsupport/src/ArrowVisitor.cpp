@@ -5,6 +5,102 @@
 
 #include "katana/Logging.h"
 
+// TODO(ddn): Move visitor to a function, callers should not need to see this
+// definition directly
+class AppendScalarToBuilder : public ArrowVisitor {
+public:
+  using ResultType = Result<void>;
+
+  using AcceptTypes = std::tuple<AcceptAllArrowTypes>;
+
+  template <
+      typename ArrowTypeScalar, typename ArrowTypeBuilder, typename BuilderType>
+  arrow::enable_if_null<ArrowTypeScalar, ResultType> Call(
+      const arrow::NullScalar&, BuilderType* builder) {
+    return KATANA_CHECKED(builder->AppendNull());
+  }
+
+  template <
+      typename ArrowTypeScalar, typename ArrowTypeBuilder, typename ScalarType,
+      typename BuilderType>
+  std::enable_if_t<
+      std::is_same<ArrowTypeScalar, ArrowTypeBuilder>::value &&
+          (arrow::is_number_type<ArrowType>::value ||
+           arrow::is_boolean_type<ArrowType>::value ||
+           arrow::is_temporal_type<ArrowType>::value),
+      ResultType>
+  Call(const ScalarType& scalar, BuilderType* builder) {
+    if (!scalar.is_valid) {
+      return KATANA_CHECKED(builder->AppendNull());
+    }
+    KATANA_CHECKED(builder->Append(scalar.value));
+    return ResultSuccess();
+  }
+
+  template <typename ArrowType, typename ScalarType>
+  arrow::enable_if_string_like<ArrowType, ResultType> Call(
+      const ScalarType& scalar) {
+    if (!scalar.is_valid) {
+      return KATANA_CHECKED(builder->AppendNull());
+    }
+    KATANA_CHECKED(builder->Append(static_cast<arrow::util::string_view>(*scalar.value)));
+    return ResultSuccess();
+  }
+
+  template <typename ArrowType, typename ScalarType>
+  arrow::enable_if_list_type<ArrowType, ResultType> Call(
+      const ScalarType& scalar) {
+    if (!scalar.is_valid) {
+      return AppendNull();
+    }
+
+    using BuilderType = typename arrow::TypeTraits<ArrowType>::BuilderType;
+    auto& builder = dynamic_cast<BuilderType&>(*builder_);
+    if (auto st = builder.Append(); !st.ok()) {
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError, "failed to allocate table: {}", st);
+    }
+    AppendScalarToBuilder visitor(builder.value_builder());
+    for (int64_t i = 0, n = scalar.value->length(); i < n; ++i) {
+      auto scalar_res = scalar.value->GetScalar(i);
+      if (!scalar_res.ok()) {
+        return KATANA_ERROR(
+            katana::ErrorCode::ArrowError, "failed to get scalar");
+      }
+      KATANA_CHECKED(VisitArrow(visitor, *scalar_res.ValueOrDie()));
+    }
+
+    return ResultSuccess();
+  }
+
+  template <typename ArrowType, typename ScalarType>
+  arrow::enable_if_struct<ArrowType, ResultType> Call(
+      const ScalarType& scalar) {
+    if (!scalar.is_valid) {
+      return AppendNull();
+    }
+
+    auto& builder = dynamic_cast<arrow::StructBuilder&>(*builder_);
+    if (auto st = builder.Append(); !st.ok()) {
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError, "failed to allocate table: {}", st);
+    }
+    for (int f = 0, n = scalar.value.size(); f < n; ++f) {
+      AppendScalarToBuilder visitor(builder.field_builder(f));
+      KATANA_CHECKED(VisitArrow(visitor, *scalar.value.at(f)));
+    }
+
+    return ResultSuccess();
+  }
+
+  ResultType AcceptFailed(
+      const arrow::Scalar& scalar, arrow::ArrayBuilder* builder) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "no matching types {}, {}",
+        scalar.type->name(), builder->type()->name());
+  }
+};
+
 struct ToArrayVisitor : public katana::ArrowVisitor {
   // Internal data and constructor
   const std::vector<std::shared_ptr<arrow::Scalar>>& scalars;

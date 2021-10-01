@@ -321,6 +321,9 @@ using AcceptAllArrowTypes = std::tuple<
 template <typename... Args>
 using tuple_cat_t = decltype(std::tuple_cat(std::declval<Args>()...));
 
+KATANA_EXPORT AppendTo(
+    const arrow::Scalar& scalar, arrow::ArrayBuilder* builder);
+
 // TODO(ddn): Move visitor to a function, callers should not need to see this
 // definition directly
 class AppendScalarToBuilder : public ArrowVisitor {

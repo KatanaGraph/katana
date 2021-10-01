@@ -41,7 +41,7 @@ struct KATANA_EXPORT GraphTopologyTypes {
 
 class KATANA_EXPORT EdgeShuffleTopology;
 class KATANA_EXPORT EdgeTypeAwareTopology;
-class KATANA_EXPORT ProjectedSTypeTopology;
+class KATANA_EXPORT ProjectedTypeTopology;
 
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
@@ -607,7 +607,7 @@ private:
   const Topo* topo_ptr_;
 };
 
-/// filter nodes and edges based on their type values
+/// filter nodes and edges
 /// and creates a new projected graph based on the filtered nodes and edges
 /// also maintains mappings from original to projected and projected to original nodes and edges
 class KATANA_EXPORT ProjectedTopology : public GraphTopologyTypes {
@@ -740,11 +740,19 @@ public:
   }
 
   /// this function creates a topology by filtering nodes and edges
-  /// @param node_types nodes with types in node_types are filtered
-  /// @param edge_types edges with types in edge_types are filtered
+  /// @param node_types the types that the selected nodes must have
+  /// @param edge_types the types that the selected edges must have
   static std::unique_ptr<ProjectedTopology> MakeTypeProjectedTopology(
       const PropertyGraph* pg, const std::vector<std::string>& node_types,
       const std::vector<std::string>& edge_types);
+
+  /// this function creates an empty graph with num_new_nodes nodes
+  static std::unique_ptr<ProjectedTopology> CreateEmptyEdgeProjectedTopology(
+      const katana::PropertyGraph* pg, uint32_t num_new_nodes);
+
+  /// this function creates an empty graph
+  static std::unique_ptr<ProjectedTopology> CreateEmptyProjectedTopology(
+      const katana::PropertyGraph* pg);
 
 private:
   ProjectedTopology(
@@ -773,6 +781,80 @@ private:
   NUMAArray<Node> projected_to_original_nodes_mapping_;
   NUMAArray<Edge> original_to_projected_edges_mapping_;
   NUMAArray<Edge> projected_to_original_edges_mapping_;
+};
+
+template <typename Topo>
+class KATANA_EXPORT ProjectedTopologyWrapper : public GraphTopologyTypes {
+public:
+  explicit ProjectedTopologyWrapper(const Topo* t) noexcept : topo_ptr_(t) {
+    KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
+  }
+
+  auto num_nodes() const noexcept { return topo().num_nodes(); }
+
+  auto num_edges() const noexcept { return topo().num_edges(); }
+
+  /// Gets the edge range of some node.
+  ///
+  /// \param node node to get the edge range of
+  /// \returns iterable edge range for node.
+  auto edges(const Node& N) const noexcept { return topo().edges(N); }
+
+  auto edge_dest(const Edge& eid) const noexcept {
+    return topo().edge_dest(eid);
+  }
+
+  auto edge_source(const Edge& eid) const noexcept {
+    return topo().edge_source(eid);
+  }
+
+  /// @param node node to get degree for
+  /// @returns Degree of node N
+  auto degree(const Node& node) const noexcept { return topo().degree(node); }
+
+  auto nodes(const Node& begin, const Node& end) const noexcept {
+    return topo().nodes(begin, end);
+  }
+
+  auto all_nodes() const noexcept { return topo().all_nodes(); }
+
+  auto all_edges() const noexcept { return topo().all_edges(); }
+
+  // Standard container concepts
+
+  auto begin() const noexcept { return topo().begin(); }
+
+  auto end() const noexcept { return topo().end(); }
+
+  auto size() const noexcept { return topo().size(); }
+
+  auto empty() const noexcept { return topo().empty(); }
+
+  auto edge_property_index(const Edge& e) const noexcept {
+    return topo().edge_property_index(e);
+  }
+
+  auto node_property_index(const Node& nid) const noexcept {
+    return topo().node_property_index(nid);
+  }
+  auto projected_to_original_node_id(const Node& nid) const noexcept {
+    return topo().projected_to_original_node_id(nid);
+  }
+  auto original_to_projected_node_id(const Node& nid) const noexcept {
+    return topo().original_to_projected_node_id(nid);
+  }
+  auto projected_to_original_edge_id(const Edge& eid) const noexcept {
+    return topo().projected_to_original_edge_id(eid);
+  }
+  auto original_to_projected_edge_id(const Edge& eid) const noexcept {
+    return topo().original_to_projected_edge_id(eid);
+  }
+
+protected:
+  const Topo& topo() const noexcept { return *topo_ptr_; }
+
+private:
+  const Topo* topo_ptr_;
 };
 
 namespace internal {

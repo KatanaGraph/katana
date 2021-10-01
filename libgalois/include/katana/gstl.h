@@ -213,31 +213,6 @@ makeStr(const T& x) {
 }
 }  // end namespace gstl
 
-template <typename I>
-class IterRange {
-  I m_beg;
-  I m_end;
-
-public:
-  IterRange(const I& b, const I& e) : m_beg(b), m_end(e) {}
-  const I& begin(void) const { return m_beg; }
-  const I& end(void) const { return m_end; }
-};
-
-template <typename I>
-auto
-makeIterRange(const I& beg, const I& end) {
-  return IterRange<I>(beg, end);
-}
-
-template <typename C>
-auto
-makeIterRange(C&& cont) {
-  using I = decltype(std::forward<C>(cont).begin());
-  return IterRange<I>(
-      std::forward<C>(cont).begin(), std::forward<C>(cont).end());
-}
-
 namespace internal {
 
 template <typename T, typename C>

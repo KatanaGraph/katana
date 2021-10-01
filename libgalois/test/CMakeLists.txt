@@ -1,135 +1,84 @@
-function(add_test_unit name) set(no_value_options NOT_QUICK) set(
-    multi_value_options
-        REQUIRES) cmake_parse_arguments(X
-                                        "${no_value_options}"
-                                        ""
-                                        "${multi_value_options}" ${ARGN})
+function(add_test_unit name)
+  set(no_value_options NOT_QUICK)
+  set(multi_value_options REQUIRES)
+  cmake_parse_arguments(X "${no_value_options}" "" "${multi_value_options}" ${ARGN})
 
-    foreach (required ${X_REQUIRES}) if (
-        $ {
-          $ { required }
-        } MATCHES
-        "TRUE") else() message(STATUS
-                               "NOT compiling ${name} (missing: "
-                               "${required})") return () endif() endforeach()
+  foreach(required ${X_REQUIRES})
+    if(${${required}} MATCHES "TRUE")
+    else()
+      message(STATUS "NOT compiling ${name} (missing: ${required})")
+      return()
+    endif()
+  endforeach()
 
-        set(test_name unit - ${name})
+  set(test_name unit-${name})
 
-            add_executable(${test_name} ${name}.cpp) target_link_libraries(${
-                test_name} katana_galois)
+  add_executable(${test_name} ${name}.cpp)
+  target_link_libraries(${test_name} katana_galois)
 
-                list(APPEND command_line
-                     "$<TARGET_FILE:${test_name}>") list(APPEND command_line ${
-                    X_UNPARSED_ARGUMENTS})
+  list(APPEND command_line "$<TARGET_FILE:${test_name}>")
+  list(APPEND command_line ${X_UNPARSED_ARGUMENTS})
 
-                    add_test(NAME ${test_name} COMMAND ${command_line})
+  add_test(NAME ${test_name} COMMAND ${command_line})
 
-                        set_tests_properties(
-                            ${test_name} PROPERTIES ENVIRONMENT
-                                KATANA_DO_NOT_BIND_THREADS = 1)
+  set_tests_properties(${test_name}
+    PROPERTIES
+      ENVIRONMENT KATANA_DO_NOT_BIND_THREADS=1)
 
-#Allow parallel tests
-                            if (NOT X_NOT_QUICK) set_tests_properties(
-                                ${test_name} PROPERTIES LABELS
-                                    quick) endif() endfunction()
+  # Allow parallel tests
+  if(NOT X_NOT_QUICK)
+    set_tests_properties(${test_name}
+      PROPERTIES
+        LABELS quick
+      )
+  endif()
+endfunction()
 
-                                add_test_unit(acquire) add_test_unit(bandwidth) add_test_unit(barriers 1024 2) add_test_unit(
-                                    empty - member -
-                                    lcgraph) add_test_unit(flatmap) add_test_unit(floating - point - errors)
-                                    add_test_unit(foreach) add_test_unit(forward - declare - graph) add_test_unit(
-                                        gcollections) add_test_unit(graph) add_test_unit(graph - compile)
-                                        add_test_unit(gslist) add_test_unit(hwtopo) add_test_unit(lock) add_test_unit(
-                                            loop -
-                                            overhead REQUIRES
-                                                OPENMP_FOUND) add_test_unit(mem) add_test_unit(morph - graph)
-                                            add_test_unit(morph - graph - removal) add_test_unit(move) add_test_unit(
-                                                offset) add_test_unit(oneach) add_test_unit(papi 2) add_test_unit(range)
-                                                add_test_unit(pc) add_test_unit(property - file - graph) add_test_unit(
-                                                    graph - predicates
-                                                    "${BASEINPUT}/"
-                                                    "propertygraphs/rmat10")
-                                                    add_test_unit(
-                                                        property - file -
-                                                        graph - rdg -
-                                                        conversion
-                                                        "${BASEINPUT}/"
-                                                        "propertygraphs/"
-                                                        "ldbc_003") add_test_unit(property - graph) add_test_unit(property - graph - diff)
-                                                        add_test_unit(property - graph - bench NOT_QUICK) add_test_unit(
-                                                            property - graph -
-                                                            topology) add_test_unit(property - index)
-                                                            add_test_unit(reduction) add_test_unit(sort) add_test_unit(
-                                                                static) add_test_unit(traits)
-                                                                add_test_unit(extra - traits) add_test_unit(
-                                                                    two -
-                                                                    level -
-                                                                    iterator) add_test_unit(wakeup - overhead)
-                                                                    add_test_unit(worklists - compile) add_test_unit(
-                                                                        test -
-                                                                            projection
-                                                                            "${"
-                                                                            "BA"
-                                                                            "SE"
-                                                                            "IN"
-                                                                            "PU"
-                                                                            "T}"
-                                                                            "/p"
-                                                                            "ro"
-                                                                            "pe"
-                                                                            "rt"
-                                                                            "yg"
-                                                                            "ra"
-                                                                            "ph"
-                                                                            "s/"
-                                                                            "ld"
-                                                                            "bc"
-                                                                            "_0"
-                                                                            "0"
-                                                                            "3" City,
-                                                                        Comment,
-                                                                        Company,
-                                                                        Continent,
-                                                                        Country,
-                                                                        Forum
-                                                                            HAS_CREATOR,
-                                                                        HAS_INTEREST,
-                                                                        HAS_MEMBER,
-                                                                        HAS_MODERATOR,
-                                                                        HAS_TAG,
-                                                                        HAS_TYPE,
-                                                                        IS_LOCATED_IN,
-                                                                        IS_PART_OF,
-                                                                        IS_SUBCLASS_OF,
-                                                                        KNOWS,
-                                                                        LIKES)
+add_test_unit(acquire)
+add_test_unit(bandwidth)
+add_test_unit(barriers 1024 2)
+add_test_unit(empty-member-lcgraph)
+add_test_unit(flatmap)
+add_test_unit(floating-point-errors)
+add_test_unit(foreach)
+add_test_unit(forward-declare-graph)
+add_test_unit(gcollections)
+add_test_unit(graph)
+add_test_unit(graph-compile)
+add_test_unit(gslist)
+add_test_unit(hwtopo)
+add_test_unit(lock)
+add_test_unit(loop-overhead REQUIRES OPENMP_FOUND)
+add_test_unit(mem)
+add_test_unit(morph-graph)
+add_test_unit(morph-graph-removal)
+add_test_unit(move)
+add_test_unit(offset)
+add_test_unit(oneach)
+add_test_unit(papi 2)
+add_test_unit(range)
+add_test_unit(pc)
+add_test_unit(property-file-graph)
+add_test_unit(graph-predicates "${BASEINPUT}/propertygraphs/rmat10")
+add_test_unit(property-file-graph-rdg-conversion "${BASEINPUT}/propertygraphs/ldbc_003")
+add_test_unit(property-graph)
+add_test_unit(property-graph-diff)
+add_test_unit(property-graph-bench NOT_QUICK)
+add_test_unit(property-graph-topology)
+add_test_unit(property-index)
+add_test_unit(reduction)
+add_test_unit(sort)
+add_test_unit(static)
+add_test_unit(traits)
+add_test_unit(extra-traits)
+add_test_unit(two-level-iterator)
+add_test_unit(wakeup-overhead)
+add_test_unit(worklists-compile)
+add_test_unit(test-projection)
 
-                                                                        target_link_libraries(
-                                                                            unit -
-                                                                            wakeup -
-                                                                            overhead
-                                                                                LLVMSupport)
-                                                                            target_link_libraries(
-                                                                                unit -
-                                                                                graph -
-                                                                                predicates
-                                                                                    LLVMSupport)
-                                                                                target_link_libraries(
-                                                                                    unit -
-                                                                                    property -
-                                                                                    file -
-                                                                                    graph -
-                                                                                    rdg -
-                                                                                    conversion
-                                                                                        LLVMSupport)
-                                                                                    target_link_libraries(
-                                                                                        unit -
-                                                                                        test -
-                                                                                        projection
-                                                                                            LLVMSupport)
+target_link_libraries(unit-wakeup-overhead LLVMSupport)
+target_link_libraries(unit-graph-predicates LLVMSupport)
+target_link_libraries(unit-property-file-graph-rdg-conversion LLVMSupport)
+target_link_libraries(unit-test-projection LLVMSupport)
 
-                                                                                        target_link_libraries(
-                                                                                            unit -
-                                                                                            property -
-                                                                                            graph -
-                                                                                            bench benchmark::
-                                                                                                benchmark)
+target_link_libraries(unit-property-graph-bench benchmark::benchmark)

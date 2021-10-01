@@ -145,7 +145,7 @@ but other pages can still link to it.
 Orphaned notebookes require the following to be added to the notebook's JSON
 metadata:
 
-.. code-block:: json
+.. code-block:: javascript
 
    "nbsphinx": {
       "orphan": true

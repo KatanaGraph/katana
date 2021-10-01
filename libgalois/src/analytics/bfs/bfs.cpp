@@ -139,7 +139,7 @@ BitsetToWl(const G& graph, const katana::DynamicBitset& bitset, WL* wl) {
       katana::chunk_size<kChunkSize>(), katana::loopname("BitsetToWl"));
 }
 
-template <bool CONCURRENT, typename T, typename P, typename R>
+template <typename T, typename P, typename R>
 void
 AsynchronousAlgo(
     const Graph& graph, const GNode source, katana::NUMAArray<Dist>* node_data,
@@ -149,11 +149,10 @@ AsynchronousAlgo(
   using BSWL = gwl::BulkSynchronous<gwl::PerSocketChunkLIFO<kChunkSize>>;
   using WL = FIFO;
 
-  using Loop = typename std::conditional<
-      CONCURRENT, katana::ForEach, katana::WhileQ<katana::SerFIFO<T>>>::type;
+  using Loop = katana::ForEach;
 
   KATANA_GCC7_IGNORE_UNUSED_BUT_SET
-  constexpr bool use_CAS = CONCURRENT && !std::is_same<WL, BSWL>::value;
+  constexpr bool use_CAS = !std::is_same<WL, BSWL>::value;
   KATANA_END_GCC7_IGNORE_UNUSED_BUT_SET
 
   Loop loop;
@@ -165,11 +164,7 @@ AsynchronousAlgo(
 
   katana::InsertBag<T> init_bag;
 
-  if (CONCURRENT) {
-    pushWrap(init_bag, source, 1, "parallel");
-  } else {
-    pushWrap(init_bag, source, 1);
-  }
+  pushWrap(init_bag, source, 1, "parallel");
 
   loop(
       katana::iterate(init_bag),
@@ -222,64 +217,14 @@ AsynchronousAlgo(
   }
 }
 
-template <bool CONCURRENT, typename T, typename P, typename R>
-void
-SynchronousAlgo(
-    Graph* graph, const GNode source, const P& pushWrap, const R& edgeRange) {
-  using Cont = typename std::conditional<
-      CONCURRENT, katana::InsertBag<T>, katana::SerStack<T>>::type;
-  using Loop = typename std::conditional<
-      CONCURRENT, katana::DoAll, katana::StdForEach>::type;
-
-  Loop loop;
-
-  auto curr = std::make_unique<Cont>();
-  auto next = std::make_unique<Cont>();
-
-  Dist next_level = 0U;
-  graph->GetData<BfsNodeDistance>(source) = 0U;
-
-  if (CONCURRENT) {
-    pushWrap(*next, source, "parallel");
-  } else {
-    pushWrap(*next, source);
-  }
-
-  KATANA_LOG_DEBUG_ASSERT(!next->empty());
-
-  while (!next->empty()) {
-    std::swap(curr, next);
-    next->clear();
-    ++next_level;
-
-    loop(
-        katana::iterate(*curr),
-        [&](const T& item) {
-          for (auto e : edgeRange(item)) {
-            auto dest = graph->GetEdgeDest(e);
-            auto& dest_data = graph->GetData<BfsNodeDistance>(dest);
-
-            if (dest_data == BfsImplementation::kDistanceInfinity) {
-              dest_data = next_level;
-              pushWrap(*next, *dest);
-            }
-          }
-        },
-        katana::steal(), katana::chunk_size<kChunkSize>(),
-        katana::loopname("Synchronous"));
-  }
-}
-
-template <bool CONCURRENT, typename P>
+template <typename P>
 void
 SynchronousDirectOpt(
     const BiDirGraphView& bidir_view, katana::NUMAArray<GNode>* node_data,
     const GNode source, const P& pushWrap, const uint32_t alpha,
     const uint32_t beta) {
-  using Cont = typename std::conditional<
-      CONCURRENT, katana::InsertBag<GNode>, katana::SerStack<GNode>>::type;
-  using Loop = typename std::conditional<
-      CONCURRENT, katana::DoAll, katana::StdForEach>::type;
+  using Cont = katana::InsertBag<GNode>;
+  using Loop = katana::DoAll;
 
   katana::GAccumulator<uint32_t> work_items;
   katana::StatTimer bitset_to_wl_timer("Bitset_To_WL_Timer");
@@ -301,11 +246,7 @@ SynchronousDirectOpt(
 
   (*node_data)[source] = source;
 
-  if (CONCURRENT) {
-    pushWrap(*next_frontier, source, "parallel");
-  } else {
-    pushWrap(*next_frontier, source);
-  }
+  pushWrap(*next_frontier, source, "parallel");
 
   work_items += 1;
 
@@ -427,7 +368,6 @@ ComputeParentFromDistance(
       katana::loopname(std::string("ComputeParentFromDistance").c_str()));
 }
 
-template <bool CONCURRENT>
 katana::Result<void>
 RunAlgo(
     BfsPlan algo, Graph* graph, const BiDirGraphView& bidir_view,
@@ -443,7 +383,7 @@ RunAlgo(
     InitNodeDataVec(BfsImplementation::kDistanceInfinity, &node_data);
 
     exec_time.start();
-    SynchronousDirectOpt<CONCURRENT>(
+    SynchronousDirectOpt(
         bidir_view, &node_data, source, NodePushWrap(), algo.alpha(),
         algo.beta());
     exec_time.stop();
@@ -461,7 +401,7 @@ RunAlgo(
     InitNodeDataVec(BfsImplementation::kDistanceInfinity, &node_dist);
 
     exec_time.start();
-    AsynchronousAlgo<CONCURRENT, UpdateRequest>(
+    AsynchronousAlgo<UpdateRequest>(
         *graph, source, &node_dist, ReqPushWrap(), OutEdgeRangeFn{graph});
     ComputeParentFromDistance(bidir_view, &node_parent, node_dist, source);
     exec_time.stop();
@@ -501,7 +441,7 @@ BfsImpl(
   katana::EnsurePreallocated(8, approxNodeData);
   katana::ReportPageAllocGuard page_alloc;
 
-  if (auto res = RunAlgo<true>(algo, graph, bidir_view, source); !res) {
+  if (auto res = RunAlgo(algo, graph, bidir_view, source); !res) {
     return res.error();
   }
 
@@ -534,14 +474,12 @@ katana::analytics::Bfs(
   return BfsImpl(&graph, bidir_view, start_node, algo);
 }
 
-template <bool CONCURRENT, typename LevelVec>
+template <typename LevelVec>
 void
 ComputeLevels(
     const Graph& graph, const GNode& source, LevelVec& levels) noexcept {
-  using Cont = typename std::conditional<
-      CONCURRENT, katana::InsertBag<GNode>, katana::SerStack<GNode>>::type;
-  using Loop = typename std::conditional<
-      CONCURRENT, katana::DoAll, katana::StdForEach>::type;
+  using Cont = katana::InsertBag<GNode>;
+  using Loop = katana::DoAll;
 
   Loop loop;
 
@@ -684,7 +622,7 @@ katana::analytics::BfsAssertValid(
   katana::ParallelSTL::fill(
       levels.begin(), levels.end(), BfsImplementation::kDistanceInfinity);
 
-  ComputeLevels<true>(graph, source, levels);
+  ComputeLevels(graph, source, levels);
 
   return CheckParentByLevel(bidir_view, source, levels);
 }

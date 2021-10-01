@@ -142,8 +142,7 @@ CheckReachabilityAsync(
   using FIFO = katana::PerSocketChunkFIFO<kChunkSize>;
   using WL = FIFO;
 
-  using Loop = typename std::conditional<
-      true, katana::ForEach, katana::WhileQ<katana::SerFIFO<Item>>>::type;
+  using Loop = katana::ForEach;
 
   Loop loop;
 

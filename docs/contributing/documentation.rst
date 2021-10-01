@@ -149,7 +149,7 @@ metadata:
 
    "nbsphinx": {
       "orphan": true
-   },
+   }
 
 API Documentation
 =================

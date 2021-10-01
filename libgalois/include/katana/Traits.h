@@ -235,7 +235,6 @@ wl(Args... args) {
   return s_wl<T, Args...>(std::move(args)...);
 }
 
-//
 /**
  * Indicates the operator may request the parallel loop to be suspended and a
  * given function run in serial

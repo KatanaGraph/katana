@@ -388,20 +388,20 @@ block_range(IntTy b, IntTy e, unsigned id, unsigned num) {
 
 namespace internal {
 template <typename I>
-using Val_ty = typename std::iterator_traits<I>::value_type;
+using IteratorValueType = typename std::iterator_traits<I>::value_type;
 }  // namespace internal
 
 //! Destroy a range
 template <typename I>
-std::enable_if_t<!std::is_scalar<internal::Val_ty<I>>::value>
+std::enable_if_t<!std::is_scalar<internal::IteratorValueType<I>>::value>
 uninitialized_destroy(I first, I last) {
-  using T = internal::Val_ty<I>;
+  using T = internal::IteratorValueType<I>;
   for (; first != last; ++first)
     (&*first)->~T();
 }
 
 template <class I>
-std::enable_if_t<std::is_scalar<internal::Val_ty<I>>::value>
+std::enable_if_t<std::is_scalar<internal::IteratorValueType<I>>::value>
 uninitialized_destroy(I, I) {}
 
 }  // namespace katana

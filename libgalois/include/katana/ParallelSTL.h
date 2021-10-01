@@ -311,14 +311,14 @@ map_reduce(
 }
 
 template <typename I>
-std::enable_if_t<!std::is_scalar<internal::Val_ty<I>>::value>
+std::enable_if_t<!std::is_scalar<internal::IteratorValueType<I>>::value>
 destroy(I first, I last) {
-  using T = internal::Val_ty<I>;
+  using T = internal::IteratorValueType<I>;
   do_all(iterate(first, last), [=](T& i) { (&i)->~T(); });
 }
 
 template <class I>
-std::enable_if_t<std::is_scalar<internal::Val_ty<I>>::value>
+std::enable_if_t<std::is_scalar<internal::IteratorValueType<I>>::value>
 destroy(I, I) {}
 
 /**

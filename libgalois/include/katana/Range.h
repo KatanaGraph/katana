@@ -33,6 +33,73 @@
 namespace katana {
 
 /**
+ * Finds the midpoint of a range.  The first half is always be bigger than
+ * the second half if the range has an odd length.
+ */
+template <typename Iterator>
+Iterator
+split_range(Iterator b, Iterator e) {
+  std::advance(b, (std::distance(b, e) + 1) / 2);
+  return b;
+}
+
+/**
+ * Returns a contiguous block from the range based on the number of divisions
+ * and the index of the block requested.
+ */
+template <typename Iterator>
+std::enable_if_t<
+    !std::is_integral<Iterator>::value, std::pair<Iterator, Iterator>>
+block_range(Iterator begin, Iterator end, unsigned idx, unsigned num) {
+  if (num == 0 || idx >= num) {
+    return std::make_pair(end, end);
+  }
+
+  size_t dist = std::distance(begin, end);
+
+  size_t block_size = dist / num;
+  size_t remaining = dist % num;
+
+  // Each block contains at least floor(dist / num) elements and may also have
+  // one more element to account for the k remaining elements (i.e., dist % num
+  // or dist - floor(dist / num)).
+  //
+  // Assign an extra element to the first k blocks (size is block_size + 1), and
+  // when idx >= k, account for the extra elements by adding k.
+  size_t b =
+      idx < remaining ? idx * (block_size + 1) : idx * block_size + remaining;
+  size_t e = b + block_size + (idx < remaining ? 1 : 0);
+
+  Iterator block_begin = begin;
+  std::advance(block_begin, b);
+
+  Iterator block_end = block_begin;
+  if (e == dist) {
+    // A micro-optimization to avoid advancing a non-random access iterator
+    // when idx == num - 1.
+    block_end = end;
+  } else {
+    std::advance(block_end, e - b);
+  }
+
+  return std::make_pair(block_begin, block_end);
+}
+
+/**
+ * Returns an integral range (a, b] that divides the input range (A, B] into
+ * contiguous blocks based on the number of divisions and the index of the block
+ * requested.
+ */
+template <typename Integer>
+std::enable_if_t<std::is_integral<Integer>::value, std::pair<Integer, Integer>>
+block_range(Integer begin, Integer end, unsigned idx, unsigned num) {
+  auto ret = block_range(
+      boost::counting_iterator<Integer>(begin),
+      boost::counting_iterator<Integer>(end), idx, num);
+  return std::make_pair(*ret.first, *ret.second);
+}
+
+/**
  * A LocalRange is a range specialized to containers that have a concept of
  * local ranges (i.e., local_begin and local_end).
  *

@@ -83,6 +83,17 @@ VisitArrowCast(arrow::ArrayBuilder* builder) {
   return static_cast<ResultType>(builder);
 }
 
+inline arrow::Type::type
+GetArrowTypeID(const arrow::DataType& type) {
+  return type.id();
+}
+
+template <typename T>
+constexpr decltype(auto)
+VisitArrowCast(const arrow::DataType& type) {
+  return static_cast<const T&>(type);
+}
+
 /// Concept for visitors for VisitArrow.
 ///
 /// A visitor for VisitArrow should model the following behavior.
@@ -312,6 +323,8 @@ using tuple_cat_t = decltype(std::tuple_cat(std::declval<Args>()...));
 
 // TODO(ddn): Move visitor to a function, callers should not need to see this
 // definition directly
+// TODO(daniel): Direct usage is Deprecated, interface will migrate to
+// AppendToBuilder below
 class AppendScalarToBuilder : public ArrowVisitor {
 public:
   using ResultType = Result<void>;
@@ -424,6 +437,9 @@ public:
 private:
   arrow::ArrayBuilder* builder_;
 };
+
+KATANA_EXPORT Result<void> AppendToBuilder(
+    const arrow::Scalar& scalar, arrow::ArrayBuilder* builder);
 
 /// Take a vector of scalars of type data_type and return an Array
 /// scalars vector can contain nullptr entries

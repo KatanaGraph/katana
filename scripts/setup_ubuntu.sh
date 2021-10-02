@@ -117,7 +117,7 @@ else
 fi
 
 run_as_original_user pip3 install --upgrade "pip$PIP_VERSION" "setuptools$SETUPTOOLS_VERSION"
-run_as_original_user pip3 install testresources conan==1.36 PyGithub packaging
+run_as_original_user pip3 install testresources conan==1.40.3 PyGithub packaging
 
 # Developer tools
 #

@@ -42,29 +42,15 @@ using map_string_element = std::unordered_map<std::string, std::string>;
 using memory_map = std::unordered_map<
     std::string, std::variant<map_element, map_string_element>>;
 
-inline std::shared_ptr<arrow::DataType>
-GetArrowType(const arrow::Scalar& scalar) {
-  return scalar.type;
-}
-
-inline std::shared_ptr<arrow::DataType>
-GetArrowType(const arrow::Array& array) {
-  return array.type();
-}
-
-inline std::shared_ptr<arrow::DataType>
-GetArrowType(const arrow::ArrayBuilder* builder) {
-  return builder->type();
-}
-
 struct Visitor : public katana::ArrowVisitor {
-  using ResultType = katana::Result<int64_t>;
+  using ResultType = katana::Result<std::pair<int64_t, int64_t>>;
   using AcceptTypes = std::tuple<katana::AcceptAllFlatTypes>;
 
   template <typename ArrowType, typename ArrayType>
   arrow::enable_if_null<ArrowType, ResultType> Call(const ArrayType& scalars) {
-    std::cout << scalars.total_values_length() << "\n";
-    return 0;
+    std::cout << scalars.type()->ToString() << " : " << scalars.length()
+              << "\n";
+    return std::pair(0, 0);
   }
 
   template <typename ArrowType, typename ArrayType>
@@ -74,23 +60,31 @@ struct Visitor : public katana::ArrowVisitor {
           arrow::is_temporal_type<ArrowType>::value,
       ResultType>
   Call(const ArrayType& scalars) {
-    // ResultType width = 0;
-    std::cout << scalars.total_values_length() << "\n";
-    return 0;
+    using mainType = typename ArrayType::TypeClass;
+    int64_t real_used_space = 0;
+    for (auto j = 0; j < scalars.length(); j++) {
+      if (!scalars.IsNull(j)) {
+        real_used_space += sizeof(mainType) / 8;
+      }
+    }
+
+    int64_t space_allocated = sizeof(mainType) / 8 * scalars.length();
+    return std::pair(space_allocated, real_used_space);
   }
 
   template <typename ArrowType, typename ArrayType>
   arrow::enable_if_string_like<ArrowType, ResultType> Call(
       const ArrayType& scalars) {
-    std::cout << scalars.total_values_length() << "\n";
-
-    return 0;
+    using widthType = typename ArrayType::offset_type;
+    int64_t total_width = scalars.total_values_length();
+    widthType metadata_size = sizeof(widthType) / 8 * scalars.length();
+    return std::pair(total_width + metadata_size, total_width);
   }
 
-  template <typename Param>
-  ResultType AcceptFailed(Param&& param) {
+  ResultType AcceptFailed(const arrow::Array& scalars) {
     return KATANA_ERROR(
-        "Instant functions do not accept {}", GetArrowType(param)->ToString());
+        katana::ErrorCode::ArrowError, "no matching type {}",
+        scalars.type()->ToString());
   }
 };
 
@@ -186,17 +180,15 @@ PrintStringMapping(const std::unordered_map<std::string, std::string>& u) {
   std::cout << "\n";
 }
 
-void
+std::pair<int64_t, int16_t>
 RunVisit(const std::shared_ptr<arrow::Array> scalars) {
-  int64_t total = 0;
   Visitor v;
   arrow::Array* arr = scalars.get();
   auto res = katana::VisitArrow(v, *arr);
   KATANA_LOG_VASSERT(res, "unexpected errror {}", res.error());
-  total += res.value();
-
-  // KATANA_LOG_VASSERT(
-  //     total == scalars->length(), "{} != {}", total, scalars->length());
+  std::cout << "Default Memory Usage: " << res.value().first
+            << " Grouping Memory Usage: " << res.value().second << "\n";
+  return std::pair(res.value().first, res.value().second);
 }
 
 void
@@ -226,8 +218,6 @@ GatherMemoryAllocation(
   std::shared_ptr<arrow::Array> prop_field;
   int total_alloc = 0;
   int total_usage = 0;
-  int alloc_size = 0;
-  int prop_size = 0;
 
   for (int32_t i = 0; i < schema->num_fields(); ++i) {
     std::string prop_name = schema->field(i)->name();
@@ -237,27 +227,15 @@ GatherMemoryAllocation(
     } else {
       prop_field = g->GetEdgeProperty(prop_name).value()->chunk(0);
     }
-    alloc_size = 0;
-    prop_size = 0;
     auto bit_width = arrow::bit_width(dtype->id());
-    RunVisit(prop_field);
-    for (auto j = 0; j < prop_field->length(); j++) {
-      if (prop_field->IsValid(j)) {
-        auto scal_ptr = *prop_field->GetScalar(j);
-        auto data = *scal_ptr;
-        prop_size += sizeof(data) / 8;
-      }
-      alloc_size += bit_width / 8;
-    }
-
-    total_alloc += alloc_size;
-    total_usage += prop_size;
-
-    allocations.insert(std::pair(prop_name, alloc_size));
-    usage.insert(std::pair(prop_name, prop_size));
+    std::cout << prop_name << ": ";
+    auto mem_allocations = RunVisit(prop_field);
+    int non_group = mem_allocations.first;
+    int group = mem_allocations.second;
+    allocations.insert(std::pair(prop_name, non_group));
+    usage.insert(std::pair(prop_name, group));
     width.insert(std::pair(prop_name, bit_width));
     types.insert(std::pair(prop_name, dtype->name()));
-    // std::cout << "Size: " << visited_arr->value().size() << "\n";
   }
   allocations.insert(std::pair("Total-Alloc", total_alloc));
   usage.insert(std::pair("Total-Usage", total_usage));

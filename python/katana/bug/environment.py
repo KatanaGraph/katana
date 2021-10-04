@@ -116,8 +116,14 @@ def _capture_build(zipout: zipfile.ZipFile):
 def capture_command(*args, **kwargs) -> str:
     # pylint: disable=subprocess-run-check
     # Not using check=True because I want to capture both success and failure the same way.
-    res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)
-    out = res.stdout.decode("utf-8").strip("\n")
+    out = ""
+
+    try:
+        res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)
+        out = res.stdout.decode("utf-8").strip("\n")
+    except OSError as err:
+        out = f"errno: {err.errno}, filename: {err.filename}, strerror: {err.strerror}"
+
     return out
 
 

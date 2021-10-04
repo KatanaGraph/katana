@@ -74,9 +74,11 @@ add_test_unit(extra-traits)
 add_test_unit(two-level-iterator)
 add_test_unit(wakeup-overhead)
 add_test_unit(worklists-compile)
+add_test_unit(test-projection "${BASEINPUT}/propertygraphs/ldbc_003" City,Comment,Company,Continent,Country,Forum HAS_CREATOR,HAS_INTEREST,HAS_MEMBER,HAS_MODERATOR,HAS_TAG,HAS_TYPE,IS_PART_OF,IS_SUBCLASS_OF,KNOWS,LIKES)
 
 target_link_libraries(unit-wakeup-overhead LLVMSupport)
 target_link_libraries(unit-graph-predicates LLVMSupport)
 target_link_libraries(unit-property-file-graph-rdg-conversion LLVMSupport)
+target_link_libraries(unit-test-projection LLVMSupport)
 
 target_link_libraries(unit-property-graph-bench benchmark::benchmark)

@@ -435,6 +435,258 @@ katana::EdgeTypeAwareTopology::MakeFrom(
       pg, edge_type_index, e_topo, std::move(per_type_adj_indices)});
 }
 
+std::unique_ptr<katana::ProjectedTopology>
+katana::ProjectedTopology::CreateEmptyEdgeProjectedTopology(
+    const katana::PropertyGraph* pg, uint32_t num_new_nodes) {
+  const auto& topology = pg->topology();
+
+  katana::NUMAArray<Edge> out_indices;
+  out_indices.allocateInterleaved(num_new_nodes);
+
+  katana::NUMAArray<Node> out_dests;
+  katana::NUMAArray<Node> original_to_projected_nodes_mapping;
+  original_to_projected_nodes_mapping.allocateInterleaved(topology.num_nodes());
+  katana::ParallelSTL::fill(
+      original_to_projected_nodes_mapping.begin(),
+      original_to_projected_nodes_mapping.end(),
+      static_cast<Node>(topology.num_nodes()));
+
+  katana::NUMAArray<Node> projected_to_original_nodes_mapping;
+  projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
+
+  katana::NUMAArray<Edge> original_to_projected_edges_mapping;
+  katana::NUMAArray<Edge> projected_to_original_edges_mapping;
+
+  original_to_projected_edges_mapping.allocateInterleaved(topology.num_edges());
+  katana::ParallelSTL::fill(
+      original_to_projected_edges_mapping.begin(),
+      original_to_projected_edges_mapping.end(), Edge{topology.num_edges()});
+
+  return std::make_unique<katana::ProjectedTopology>(katana::ProjectedTopology{
+      std::move(out_indices), std::move(out_dests),
+      std::move(original_to_projected_nodes_mapping),
+      std::move(projected_to_original_nodes_mapping),
+      std::move(original_to_projected_edges_mapping),
+      std::move(projected_to_original_edges_mapping)});
+}
+
+std::unique_ptr<katana::ProjectedTopology>
+katana::ProjectedTopology::CreateEmptyProjectedTopology(
+    const katana::PropertyGraph* pg) {
+  return CreateEmptyEdgeProjectedTopology(pg, 0);
+}
+
+std::unique_ptr<katana::ProjectedTopology>
+katana::ProjectedTopology::MakeTypeProjectedTopology(
+    const katana::PropertyGraph* pg, const std::vector<std::string>& node_types,
+    const std::vector<std::string>& edge_types) {
+  KATANA_LOG_DEBUG_ASSERT(pg);
+
+  const auto& topology = pg->topology();
+  if (topology.empty()) {
+    return std::make_unique<ProjectedTopology>(ProjectedTopology());
+  }
+
+  // calculate number of new nodes
+  uint32_t num_new_nodes = 0;
+  uint32_t num_new_edges = 0;
+
+  katana::DynamicBitset bitset_nodes;
+  bitset_nodes.resize(topology.num_nodes());
+
+  NUMAArray<Node> original_to_projected_nodes_mapping;
+  original_to_projected_nodes_mapping.allocateInterleaved(topology.num_nodes());
+
+  if (node_types.empty()) {
+    num_new_nodes = topology.num_nodes();
+    // set all nodes
+    katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
+      bitset_nodes.set(src);
+      original_to_projected_nodes_mapping[src] = 1;
+    });
+  } else {
+    katana::ParallelSTL::fill(
+        original_to_projected_nodes_mapping.begin(),
+        original_to_projected_nodes_mapping.end(), Node{0});
+
+    std::set<katana::EntityTypeID> node_entity_type_ids;
+
+    for (auto node_type : node_types) {
+      auto entity_type_id = pg->GetNodeEntityTypeID(node_type);
+      node_entity_type_ids.insert(entity_type_id);
+    }
+
+    katana::GAccumulator<uint32_t> accum_num_new_nodes;
+    katana::GAccumulator<uint64_t> accum_num_new_edges;
+
+    katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
+      for (auto type : node_entity_type_ids) {
+        if (pg->DoesNodeHaveType(src, type)) {
+          accum_num_new_nodes += 1;
+          auto it_begin = topology.edges(src).begin();
+          auto it_end = topology.edges(src).end();
+
+          accum_num_new_edges += it_end - it_begin;
+          bitset_nodes.set(src);
+          // this sets the correspondign entry in the array to 1
+          // will perform a prefix sum on this array later on
+          original_to_projected_nodes_mapping[src] = 1;
+          return;
+        }
+      }
+    });
+    num_new_nodes = accum_num_new_nodes.reduce();
+    num_new_edges = accum_num_new_edges.reduce();
+
+    if (num_new_nodes == 0) {
+      // no nodes selected;
+      // return empty graph
+      return CreateEmptyProjectedTopology(pg);
+    }
+  }
+
+  // fill old to new nodes mapping
+  katana::ParallelSTL::partial_sum(
+      original_to_projected_nodes_mapping.begin(),
+      original_to_projected_nodes_mapping.end(),
+      original_to_projected_nodes_mapping.begin());
+
+  NUMAArray<Node> projected_to_original_nodes_mapping;
+  projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
+
+  katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
+    if (bitset_nodes.test(src)) {
+      original_to_projected_nodes_mapping[src]--;
+      projected_to_original_nodes_mapping
+          [original_to_projected_nodes_mapping[src]] = src;
+    } else {
+      original_to_projected_nodes_mapping[src] = topology.num_nodes();
+    }
+  });
+
+  // calculate number of new edges
+  katana::DynamicBitset bitset_edges;
+  bitset_edges.resize(topology.num_edges());
+
+  NUMAArray<Edge> out_indices;
+  out_indices.allocateInterleaved(num_new_nodes);
+
+  // initializes the edge-index array to all zeros
+  katana::ParallelSTL::fill(out_indices.begin(), out_indices.end(), Edge{0});
+
+  if (edge_types.empty()) {
+    // set all edges incident to projected nodes
+    katana::do_all(
+        katana::iterate(Node{0}, Node{num_new_nodes}),
+        [&](auto src) {
+          auto old_src = projected_to_original_nodes_mapping[src];
+          for (Edge e : topology.edges(old_src)) {
+            auto dest = topology.edge_dest(e);
+            if (bitset_nodes.test(dest)) {
+              bitset_edges.set(e);
+              out_indices[src] += 1;
+            }
+          }
+        },
+        katana::steal());
+  } else {
+    std::set<katana::EntityTypeID> edge_entity_type_ids;
+
+    for (auto edge_type : edge_types) {
+      auto entity_type_id = pg->GetEdgeEntityTypeID(edge_type);
+      edge_entity_type_ids.insert(entity_type_id);
+    }
+
+    katana::GAccumulator<uint32_t> accum_num_new_edges;
+
+    katana::do_all(
+        katana::iterate(Node{0}, Node{num_new_nodes}),
+        [&](auto src) {
+          auto old_src = projected_to_original_nodes_mapping[src];
+
+          for (Edge e : topology.edges(old_src)) {
+            auto dest = topology.edge_dest(e);
+            if (bitset_nodes.test(dest)) {
+              for (auto type : edge_entity_type_ids) {
+                if (pg->DoesEdgeHaveType(e, type)) {
+                  accum_num_new_edges += 1;
+                  bitset_edges.set(e);
+                  out_indices[src] += 1;
+                  break;
+                }
+              }
+            }
+          }
+        },
+        katana::steal());
+
+    num_new_edges = accum_num_new_edges.reduce();
+
+    if (num_new_edges == 0) {
+      // no edge selected
+      // return empty graph with only selected nodes
+      return CreateEmptyEdgeProjectedTopology(pg, num_new_nodes);
+    }
+  }
+
+  // Prefix sum calculation of the edge index array
+  katana::ParallelSTL::partial_sum(
+      out_indices.begin(), out_indices.end(), out_indices.begin());
+
+  NUMAArray<Edge> out_dests_offset;
+  out_dests_offset.allocateInterleaved(num_new_nodes);
+
+  // temporary buffer for storing the starting point of each node's
+  // adjacency
+  out_dests_offset[0] = 0;
+  katana::do_all(
+      katana::iterate(Node{1}, Node{num_new_nodes}),
+      [&](Node n) { out_dests_offset[n] = out_indices[n - 1]; },
+      katana::no_stats());
+
+  NUMAArray<Node> out_dests;
+  NUMAArray<Edge> original_to_projected_edges_mapping;
+  NUMAArray<Edge> projected_to_original_edges_mapping;
+
+  out_dests.allocateInterleaved(num_new_edges);
+  original_to_projected_edges_mapping.allocateInterleaved(topology.num_edges());
+  projected_to_original_edges_mapping.allocateInterleaved(num_new_edges);
+
+  // Update out_dests with the new destination ids
+  katana::do_all(
+      katana::iterate(Node{0}, Node{num_new_nodes}),
+      [&](Node n) {
+        auto src = projected_to_original_nodes_mapping[n];
+
+        for (Edge e : topology.edges(src)) {
+          if (bitset_edges.test(e)) {
+            auto e_new = out_dests_offset[n];
+            out_dests_offset[n]++;
+
+            auto dest = topology.edge_dest(e);
+            dest = original_to_projected_nodes_mapping[dest];
+            out_dests[e_new] = dest;
+
+            original_to_projected_edges_mapping[e] = e_new;
+            projected_to_original_edges_mapping[e_new] = e;
+          }
+        }
+      },
+      katana::steal());
+
+  katana::do_all(katana::iterate(topology.all_edges()), [&](auto edge) {
+    if (!bitset_edges.test(edge)) {
+      original_to_projected_edges_mapping[edge] = topology.num_edges();
+    }
+  });
+
+  return std::make_unique<ProjectedTopology>(ProjectedTopology{
+      std::move(out_indices), std::move(out_dests),
+      std::move(original_to_projected_nodes_mapping),
+      std::move(projected_to_original_nodes_mapping),
+      std::move(original_to_projected_edges_mapping),
+      std::move(projected_to_original_edges_mapping)});
+}
 const katana::GraphTopology*
 katana::PGViewCache::GetOriginalTopology(
     const PropertyGraph* pg) const noexcept {
@@ -537,6 +789,20 @@ katana::PGViewCache::BuildOrGetEdgeTypeAwareTopo(
         CheckTopology(pg, edge_type_aware_topos_.back().get()));
     return edge_type_aware_topos_.back().get();
   }
+}
+
+katana::ProjectedTopology*
+katana::PGViewCache::BuildOrGetProjectedGraphTopo(
+    const PropertyGraph* pg, const std::vector<std::string>& node_types,
+    const std::vector<std::string>& edge_types) noexcept {
+  if (projected_topos_) {
+    return projected_topos_.get();
+  }
+
+  projected_topos_ =
+      ProjectedTopology::MakeTypeProjectedTopology(pg, node_types, edge_types);
+  KATANA_LOG_DEBUG_ASSERT(projected_topos_);
+  return projected_topos_.get();
 }
 
 katana::GraphTopology

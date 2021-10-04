@@ -504,7 +504,7 @@ operator!=(const CopyableErrorInfo& a, const CopyableErrorInfo& b) {
   return !(a == b);
 }
 
-// TODO (serge): make these functions back inline after the issue in nvcc is
+// TODO(serge): make these functions back inline after the issue in nvcc is
 // fixed. Currently nvcc fails in CI if this is inline and leaks to .cu files.
 KATANA_EXPORT Result<void> ResultSuccess();
 KATANA_EXPORT CopyableResult<void> CopyableResultSuccess();

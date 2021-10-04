@@ -271,10 +271,9 @@ public:
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
       PropertyGraph* pg);
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
-      PropertyGraph* pg, const std::vector<std::string>& node_properties,
-      const std::vector<std::string>& edge_properties,
-      const std::vector<std::string>& node_types,
-      const std::vector<std::string>& edge_types);
+      PropertyGraph* pg, const PGView& pg_view,
+      const std::vector<std::string>& node_properties,
+      const std::vector<std::string>& edge_properties);
 };
 
 /**
@@ -361,11 +360,9 @@ TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(PropertyGraph* pg) {
 template <typename PGView, typename NodeProps, typename EdgeProps>
 Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
 TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
-    PropertyGraph* pg, const std::vector<std::string>& node_properties,
-    const std::vector<std::string>& edge_properties,
-    const std::vector<std::string>& node_types,
-    const std::vector<std::string>& edge_types) {
-  auto pg_view = pg->BuildView<PGView>(node_types, edge_types);
+    PropertyGraph* pg, const PGView& pg_view,
+    const std::vector<std::string>& node_properties,
+    const std::vector<std::string>& edge_properties) {
   KATANA_LOG_DEBUG_ASSERT(pg);
   auto node_view_result =
       internal::MakeNodePropertyViews<NodeProps>(pg, node_properties);

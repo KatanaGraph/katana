@@ -122,7 +122,7 @@ def capture_command(*args, **kwargs) -> str:
         res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)
         out = res.stdout.decode("utf-8").strip("\n")
     except OSError as err:
-        out = f"errno: {err.errno}, filename: {err.filename}, strerror: {err.strerror}"
+        out = f"error executing {args}: {err}"
 
     return out
 

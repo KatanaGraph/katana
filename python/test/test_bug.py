@@ -1,8 +1,6 @@
 import zipfile
 from tempfile import NamedTemporaryFile
 
-from pandas.core.algorithms import isin
-
 
 def test_bug_capture_environment():
     import katana.bug
@@ -21,5 +19,5 @@ def test_bug_capture_command_pass_invalid_command():
     from katana.bug.environment import capture_command
 
     # Make sure it doesn't fail for non existent command
-    result = capture_command("notreal", "xyz")
+    result = capture_command("non-existent-executable", "xyz")
     assert isinstance(result) == str

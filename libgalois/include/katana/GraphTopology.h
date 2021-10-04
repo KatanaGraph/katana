@@ -785,8 +785,12 @@ private:
 
 template <typename Topo>
 class KATANA_EXPORT ProjectedTopologyWrapper : public GraphTopologyTypes {
+  using Base = Topo;
+
 public:
-  explicit ProjectedTopologyWrapper(const Topo* t) noexcept : topo_ptr_(t) {
+  explicit ProjectedTopologyWrapper(
+      const PropertyGraph* pg, const Topo* t) noexcept
+      : prop_graph_(pg), topo_ptr_(t) {
     KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
   }
 
@@ -850,10 +854,13 @@ public:
     return topo().original_to_projected_edge_id(eid);
   }
 
+  const PropertyGraph& property_graph() const noexcept { return *prop_graph_; }
+
 protected:
   const Topo& topo() const noexcept { return *topo_ptr_; }
 
 private:
+  const PropertyGraph* prop_graph_;
   const Topo* topo_ptr_;
 };
 
@@ -1284,7 +1291,7 @@ using PGViewNodesSortedByDegreeEdgesSortedByDestID =
 using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
 using PGViewEdgeTypeAwareBiDir =
     BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
-using PGViewProjectedGraph = BasicPropGraphViewWrapper<ProjectedTopology>;
+using PGViewProjectedGraph = ProjectedTopologyWrapper<ProjectedTopology>;
 
 template <typename PGView>
 struct PGViewBuilder {};
@@ -1352,10 +1359,13 @@ template <>
 struct PGViewBuilder<PGViewProjectedGraph> {
   template <typename ViewCache>
   static PGViewProjectedGraph BuildView(
-      const PropertyGraph* pg, ViewCache& viewCache) noexcept {
-    auto topo = viewCache.BuildOrGetProjectedGraphTopo(pg);
+      const PropertyGraph* pg, const std::vector<std::string>& node_types,
+      const std::vector<std::string>& edge_types,
+      ViewCache& viewCache) noexcept {
+    auto topo =
+        viewCache.BuildOrGetProjectedGraphTopo(pg, node_types, edge_types);
 
-    return PGViewProjectedGraph{pg, ProjectedTopology{topo}};
+    return PGViewProjectedGraph{pg, topo};
   }
 };
 
@@ -1392,6 +1402,14 @@ public:
   template <typename PGView>
   PGView BuildView(const PropertyGraph* pg) noexcept {
     return internal::PGViewBuilder<PGView>::BuildView(pg, *this);
+  }
+
+  template <typename PGView>
+  PGView BuildView(
+      const PropertyGraph* pg, const std::vector<std::string>& node_types,
+      const std::vector<std::string>& edge_types) noexcept {
+    return internal::PGViewBuilder<PGView>::BuildView(
+        pg, node_types, edge_types, *this);
   }
 
 private:

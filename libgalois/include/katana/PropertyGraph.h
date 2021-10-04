@@ -216,6 +216,14 @@ public:
   PGView BuildView() noexcept {
     return pg_view_cache_.BuildView<PGView>(this);
   }
+
+  template <typename PGView>
+  PGView BuildView(
+      const std::vector<std::string>& node_types,
+      const std::vector<std::string>& edge_types) noexcept {
+    return pg_view_cache_.BuildView<PGView>(this, node_types, edge_types);
+  }
+
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(

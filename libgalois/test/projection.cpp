@@ -70,11 +70,10 @@ main(int argc, char** argv) {
   std::vector<std::string> edge_types;
   SplitString(edgeTypes, &edge_types);
 
-  auto graph =
-      ProjectedGraphView::MakeTypeProjectedTopology(&g, node_types, edge_types);
+  auto graph = ProjectedGraphView::Make(&g, {}, {}, node_types, edge_types);
 
-  katana::gPrint("\n Num Nodes: ", graph->num_nodes());
-  katana::gPrint("\n Num Edges: ", graph->num_edges());
+  katana::gPrint("\n Num Nodes: ", graph.value().num_nodes());
+  katana::gPrint("\n Num Edges: ", graph.value().num_edges());
 
   return 0;
 }

@@ -270,6 +270,11 @@ public:
       const std::vector<std::string>& edge_properties);
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
       PropertyGraph* pg);
+  static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
+      PropertyGraph* pg, const std::vector<std::string>& node_properties,
+      const std::vector<std::string>& edge_properties,
+      const std::vector<std::string>& node_types,
+      const std::vector<std::string>& edge_types);
 };
 
 /**
@@ -351,6 +356,32 @@ TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(PropertyGraph* pg) {
   return TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
       pg_view, pg->loaded_node_schema()->field_names(),
       pg->loaded_edge_schema()->field_names());
+}
+
+template <typename PGView, typename NodeProps, typename EdgeProps>
+Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
+TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
+    PropertyGraph* pg, const std::vector<std::string>& node_properties,
+    const std::vector<std::string>& edge_properties,
+    const std::vector<std::string>& node_types,
+    const std::vector<std::string>& edge_types) {
+  auto pg_view = pg->BuildView<PGView>(node_types, edge_types);
+  KATANA_LOG_DEBUG_ASSERT(pg);
+  auto node_view_result =
+      internal::MakeNodePropertyViews<NodeProps>(pg, node_properties);
+  if (!node_view_result) {
+    return node_view_result.error();
+  }
+
+  auto edge_view_result =
+      internal::MakeEdgePropertyViews<EdgeProps>(pg, edge_properties);
+  if (!edge_view_result) {
+    return edge_view_result.error();
+  }
+
+  return TypedPropertyGraphView(
+      pg_view, std::move(node_view_result.value()),
+      std::move(edge_view_result.value()));
 }
 }  // namespace katana
 

@@ -267,14 +267,16 @@ public:
     fmt::format_to(std::back_inserter(out), " ({}:{})", base_name, line_no);
 
     std::string code = ec.message();
-    std::string msg(out.data());
+    char* data = out.data();
+    data[out.size()] = '\0';
+
+    std::string msg(data);
 
     std::string combined = "\n" + code + "\n" + msg;
     const char* output = combined.c_str();
 
     ErrorInfo ei(ec);
-    // TODO(micah) sometimes random characters get printed at the end.
-    ei.Prepend(output, output + combined.length());
+    ei.Prepend(output, output + combined.length() + 1);
 
     return ei;
   }

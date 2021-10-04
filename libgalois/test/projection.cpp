@@ -61,19 +61,25 @@ main(int argc, char** argv) {
 
   katana::PropertyGraph g = LoadGraph(inputFile);
 
-  katana::gPrint("\n Original Num Nodes: ", g.num_nodes());
-  katana::gPrint("\n Original Num Edges: ", g.num_edges());
-
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);
 
   std::vector<std::string> edge_types;
   SplitString(edgeTypes, &edge_types);
 
-  auto graph = ProjectedGraphView::Make(&g, {}, {}, node_types, edge_types);
+  auto pg_view =
+      g.BuildView<ProjectedPropertyGraphView>(node_types, edge_types);
 
-  katana::gPrint("\n Num Nodes: ", graph.value().num_nodes());
-  katana::gPrint("\n Num Edges: ", graph.value().num_edges());
+  auto graph = ProjectedGraphView::Make(&g, pg_view, {}, {});
+
+  KATANA_LOG_VASSERT(
+      graph.value().num_nodes() > 0 &&
+          g.num_nodes() >= graph.value().num_nodes(),
+      "\n Num Nodes: {}", graph.value().num_nodes());
+  KATANA_LOG_VASSERT(
+      graph.value().num_edges() > 0 &&
+          g.num_edges() >= graph.value().num_edges(),
+      "\n Num Edges: {}", graph.value().num_edges());
 
   return 0;
 }

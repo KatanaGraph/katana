@@ -274,6 +274,8 @@ public:
       PropertyGraph* pg, const PGView& pg_view,
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
+  static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
+      PropertyGraph* pg, const PGView& pg_view);
 };
 
 /**
@@ -379,6 +381,15 @@ TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
   return TypedPropertyGraphView(
       pg_view, std::move(node_view_result.value()),
       std::move(edge_view_result.value()));
+}
+
+template <typename PGView, typename NodeProps, typename EdgeProps>
+Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
+TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(PropertyGraph* pg, const PGView& pg_view) {
+  
+  return TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
+      pg_view, pg->loaded_node_schema()->field_names(),
+      pg->loaded_edge_schema()->field_names());
 }
 }  // namespace katana
 

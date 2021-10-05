@@ -20,4 +20,4 @@ def test_bug_capture_command_pass_invalid_command():
 
     # Make sure it doesn't fail for non existent command
     result = capture_command("non-existent-executable", "xyz")
-    assert isinstance(result) == str
+    assert isinstance(result, str)

@@ -5,6 +5,8 @@
 
 #include "katana/Logging.h"
 
+namespace {
+
 struct ToArrayVisitor : public katana::ArrowVisitor {
   // Internal data and constructor
   const std::vector<std::shared_ptr<arrow::Scalar>>& scalars;
@@ -94,6 +96,15 @@ struct ToArrayVisitor : public katana::ArrowVisitor {
         builder->type()->name());
   }
 };
+
+}  // namespace
+
+katana::Result<void>
+katana::AppendToBuilder(
+    const arrow::Scalar& scalar, arrow::ArrayBuilder* builder) {
+  katana::AppendScalarToBuilder visitor(builder);
+  return katana::VisitArrow(visitor, scalar);
+}
 
 katana::Result<std::shared_ptr<arrow::Array>>
 katana::ArrayFromScalars(

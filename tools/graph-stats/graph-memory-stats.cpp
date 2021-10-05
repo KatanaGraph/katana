@@ -77,7 +77,12 @@ struct Visitor : public katana::ArrowVisitor {
       const ArrayType& scalars) {
     using widthType = typename ArrayType::offset_type;
     int64_t total_width = scalars.total_values_length();
-    widthType metadata_size = sizeof(widthType) / 8 * scalars.length();
+    int64_t metadata_size = 0;
+    for (auto j = 0; j < scalars.length(); j++) {
+      if (!scalars.IsNull(j)) {
+        metadata_size += sizeof(widthType) / 8;
+      }
+    }
     return std::pair(total_width + metadata_size, total_width);
   }
 
@@ -114,13 +119,20 @@ PrintStringMapping(const std::unordered_map<std::string, std::string>& u) {
 }
 
 std::pair<int64_t, int16_t>
-RunVisit(const std::shared_ptr<arrow::Array> scalars) {
+RunVisit(
+    const std::shared_ptr<arrow::Array> scalars, std::string& name,
+    map_element& allocations, map_element& usage, int64_t& total_alloc,
+    int64_t& total_usage) {
   Visitor v;
   arrow::Array* arr = scalars.get();
   auto res = katana::VisitArrow(v, *arr);
   KATANA_LOG_VASSERT(res, "unexpected errror {}", res.error());
-  std::cout << "Default Memory Usage: " << res.value().first
-            << " Grouping Memory Usage: " << res.value().second << "\n";
+
+  allocations.insert(std::pair(name, res.value().first));
+  usage.insert(std::pair(name, res.value().second));
+
+  total_alloc += res.value().first;
+  total_usage += res.value().second;
   return std::pair(res.value().first, res.value().second);
 }
 
@@ -149,8 +161,8 @@ GatherMemoryAllocation(
     map_element& usage, map_element& width, map_string_element& types,
     bool node_or_edge) {
   std::shared_ptr<arrow::Array> prop_field;
-  int total_alloc = 0;
-  int total_usage = 0;
+  int64_t total_alloc = 0;
+  int64_t total_usage = 0;
 
   for (int32_t i = 0; i < schema->num_fields(); ++i) {
     std::string prop_name = schema->field(i)->name();
@@ -161,14 +173,11 @@ GatherMemoryAllocation(
       prop_field = g->GetEdgeProperty(prop_name).value()->chunk(0);
     }
     auto bit_width = arrow::bit_width(dtype->id());
-    std::cout << prop_name << ": ";
-    auto mem_allocations = RunVisit(prop_field);
-    int non_group = mem_allocations.first;
-    int group = mem_allocations.second;
-    allocations.insert(std::pair(prop_name, non_group));
-    usage.insert(std::pair(prop_name, group));
+    auto mem_allocations = RunVisit(
+        prop_field, prop_name, allocations, usage, total_alloc, total_usage);
     width.insert(std::pair(prop_name, bit_width));
     types.insert(std::pair(prop_name, dtype->name()));
+    (void)mem_allocations;
   }
   allocations.insert(std::pair("Total-Alloc", total_alloc));
   usage.insert(std::pair("Total-Usage", total_usage));
@@ -231,11 +240,11 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
             << "\n";
   PrintMapping(all_node_width_stats);
 
-  std::cout << "Node Memory Allocation Statistics"
+  std::cout << "Node No Grouping Memory Usage"
             << "\n";
   PrintMapping(all_node_alloc);
 
-  std::cout << "Node Actual Memory Usage"
+  std::cout << "Node Estimated Grouping Memory Usage"
             << "\n";
   PrintMapping(all_node_usage);
 
@@ -256,11 +265,11 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   std::cout << "Width Statstics"
             << "\n";
   PrintMapping(all_edge_width_stats);
-  std::cout << "Edge Memory Allocation Statistics"
+  std::cout << "Edge No Grouping Memory Usage"
             << "\n";
   PrintMapping(all_edge_alloc);
 
-  std::cout << "Edge Actual Memory Usage"
+  std::cout << "Edge Estimated Grouping Memory Usage"
             << "\n";
   PrintMapping(all_edge_usage);
   mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));

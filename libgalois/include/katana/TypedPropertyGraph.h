@@ -385,8 +385,8 @@ TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
 
 template <typename PGView, typename NodeProps, typename EdgeProps>
 Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
-TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(PropertyGraph* pg, const PGView& pg_view) {
-  
+TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
+    PropertyGraph* pg, const PGView& pg_view) {
   return TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
       pg_view, pg->loaded_node_schema()->field_names(),
       pg->loaded_edge_schema()->field_names());

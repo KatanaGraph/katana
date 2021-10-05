@@ -64,11 +64,11 @@ struct Visitor : public katana::ArrowVisitor {
     int64_t real_used_space = 0;
     for (auto j = 0; j < scalars.length(); j++) {
       if (!scalars.IsNull(j)) {
-        real_used_space += sizeof(mainType) / 8;
+        real_used_space += sizeof(mainType);
       }
     }
 
-    int64_t space_allocated = sizeof(mainType) / 8 * scalars.length();
+    int64_t space_allocated = sizeof(mainType) * scalars.length();
     return std::pair(space_allocated, real_used_space);
   }
 
@@ -77,12 +77,7 @@ struct Visitor : public katana::ArrowVisitor {
       const ArrayType& scalars) {
     using widthType = typename ArrayType::offset_type;
     int64_t total_width = scalars.total_values_length();
-    int64_t metadata_size = 0;
-    for (auto j = 0; j < scalars.length(); j++) {
-      if (!scalars.IsNull(j)) {
-        metadata_size += sizeof(widthType) / 8;
-      }
-    }
+    int64_t metadata_size = sizeof(widthType) * scalars.length();
     return std::pair(total_width + metadata_size, total_width);
   }
 
@@ -221,8 +216,8 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   all_node_prop_stats.insert(std::pair("kUnknownName", "uint8"));
   all_edge_prop_stats.insert(std::pair("kUnknownName", "uint8"));
 
-  all_node_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t) * 8));
-  all_edge_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t) * 8));
+  all_node_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t)));
+  all_edge_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t)));
 
   GatherMemoryAllocation(
       node_schema, graph, all_node_alloc, all_node_usage, all_node_width_stats,

@@ -91,10 +91,13 @@ FileView::Bind(
   void* tmp = nullptr;
 
   // Map enough virtual memory to hold entire file, but do not populate it
-  tmp = mmap(nullptr, buf.size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (tmp == MAP_FAILED) {
-    return KATANA_ERROR(
-        katana::ResultErrno(), "reserving contiguous range {}", buf.size);
+  if (buf.size > 0) {
+    tmp =
+        mmap(nullptr, buf.size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (tmp == MAP_FAILED) {
+      return KATANA_ERROR(
+          katana::ResultErrno(), "reserving contiguous range {}", buf.size);
+    }
   }
 
   if (auto res = Unbind(); !res) {
@@ -231,12 +234,13 @@ FileView::Seek(int64_t seek_to) {
 
 arrow::Result<std::shared_ptr<arrow::Buffer>>
 FileView::Read(int64_t nbytes) {
-  // sanitize inputs
-  if (nbytes <= 0) {
-    return std::make_shared<arrow::Buffer>(map_start_, 0);
-  }
   if (!bound_) {
     return arrow::Status(arrow::StatusCode::Invalid, "Unbound FileView");
+  }
+
+  // sanitize inputs
+  if (nbytes <= 0 || !map_start_) {
+    return std::make_shared<arrow::Buffer>(map_start_, 0);
   }
   int64_t nbytes_internal = nbytes;
   if (cursor_ + nbytes > file_size_) {

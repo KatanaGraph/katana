@@ -6,12 +6,13 @@ import sys
 import time
 from collections import namedtuple
 from datetime import datetime
+import pytest
 
 import numpy as np
 import pytz
 from pyarrow import Schema
 
-from scripts.bench_python_cpp_algos import *
+import katana
 
 
 def GenerateArgs(json_output, input_dir="./", graph="GAP-road", app="bfs", source_nodes="", trails=1, num_sources=4, thread_spin=False, threads=None):

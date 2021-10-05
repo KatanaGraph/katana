@@ -26,6 +26,7 @@
 
 #include "katana/ArrowVisitor.h"
 #include "katana/Galois.h"
+#include "katana/JSON.h"
 #include "katana/Logging.h"
 #include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
@@ -147,6 +148,27 @@ InsertPropertyTypeMemoryData(
     }
   }
   PrintMapping(u);
+}
+
+katana::Result<void>
+SaveToJson(
+    const katana::Result<std::string>& json_to_dump,
+    const std::string& out_path, const std::string& name_extension) {
+  std::ofstream myfile;
+  std::string path_to_save = out_path + name_extension;
+
+  if (!json_to_dump) {
+    return json_to_dump.error();
+  }
+  std::string serialized = std::move(json_to_dump.value());
+
+  serialized = serialized + "\n";
+
+  myfile.open(path_to_save);
+  myfile << serialized;
+  myfile.close();
+
+  return katana::ResultSuccess();
 }
 
 void
@@ -271,6 +293,38 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
 
   mem_map.insert(std::pair("General-Stats", basic_raw_stats));
   PrintMapping(basic_raw_stats);
+
+  auto basic_raw_json_res = SaveToJson(
+      katana::JsonDump(basic_raw_stats), outputfilename,
+      "basic_raw_stats.json");
+
+  auto all_node_prop_json_res = SaveToJson(
+      katana::JsonDump(all_node_prop_stats), outputfilename,
+      "node_prop_stats.json");
+  auto all_node_width_json_res = SaveToJson(
+      katana::JsonDump(all_node_width_stats), outputfilename,
+      "node_width_stats.json");
+
+  auto all_edge_prop_json_res = SaveToJson(
+      katana::JsonDump(all_edge_prop_stats), outputfilename,
+      "edge_prop_stats.json");
+  auto all_edge_width_json_res = SaveToJson(
+      katana::JsonDump(all_edge_width_stats), outputfilename,
+      "edge_width_stats.json");
+
+  auto all_node_alloc_json_res = SaveToJson(
+      katana::JsonDump(all_node_alloc), outputfilename,
+      "default_node_alloc.json");
+  auto all_edge_alloc_json_res = SaveToJson(
+      katana::JsonDump(all_edge_alloc), outputfilename,
+      "default_edge_alloc.json");
+
+  auto all_node_usage_json_res = SaveToJson(
+      katana::JsonDump(all_node_usage), outputfilename,
+      "grouping_node_usage.json");
+  auto all_edge_usage_json_res = SaveToJson(
+      katana::JsonDump(all_edge_usage), outputfilename,
+      "grouping_edge_usage.json");
 }
 
 int

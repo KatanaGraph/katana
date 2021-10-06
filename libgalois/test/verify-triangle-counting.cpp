@@ -1,10 +1,9 @@
+#include "katana/PropertyGraph.h"
+#include "katana/SharedMemSys.h"
 #include "katana/analytics/triangle_count/triangle_count.h"
 
-#include "katana/SharedMemSys.h"
-#include "katana/PropertyGraph.h"
-
-std::unique_ptr<katana::PropertyGraph> MakeGridWithDiagonals() noexcept {
-
+std::unique_ptr<katana::PropertyGraph>
+MakeGridWithDiagonals() noexcept {
   katana::SymmetricGraphTopologyBuilder builder;
   builder.AddNodes(4);
 
@@ -20,21 +19,22 @@ std::unique_ptr<katana::PropertyGraph> MakeGridWithDiagonals() noexcept {
 
   katana::GraphTopology topo = builder.ConvertToCSR();
 
-  auto res =  katana::PropertyGraph::Make(std::move(topo));
+  auto res = katana::PropertyGraph::Make(std::move(topo));
   KATANA_LOG_ASSERT(res);
   return std::move(res.value());
 }
 
-int main() {
-
+int
+main() {
   katana::SharedMemSys S;
 
   std::unique_ptr<katana::PropertyGraph> pg = MakeGridWithDiagonals();
 
-  katana::analytics::TriangleCountPlan plan = katana::analytics::TriangleCountPlan::NodeIteration(
-      katana::analytics::TriangleCountPlan::kRelabel);
+  katana::analytics::TriangleCountPlan plan =
+      katana::analytics::TriangleCountPlan::NodeIteration(
+          katana::analytics::TriangleCountPlan::kRelabel);
 
-  auto num_tri  = katana::analytics::TriangleCount(pg.get(), plan);
+  auto num_tri = katana::analytics::TriangleCount(pg.get(), plan);
   KATANA_LOG_ASSERT(num_tri);
 
   KATANA_LOG_ASSERT(num_tri.value() == 4);

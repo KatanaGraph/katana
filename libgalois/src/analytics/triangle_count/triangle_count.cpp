@@ -28,7 +28,7 @@ using SortedGraphView =
 using Node = SortedGraphView::Node;
 using edge_iterator = SortedGraphView::edge_iterator;
 
-constexpr static const unsigned kChunkSize = 64U;
+constexpr static const unsigned kChunkSize = 16U;
 
 /**
  * Like std::lower_bound but doesn't dereference iterators. Returns the first
@@ -181,32 +181,6 @@ OrderedCountFunc(
   numTriangles += numTriangles_local;
 }
 
-void
-OrderedCountFuncAlt(
-    const SortedGraphView* graph, Node a,
-    katana::GAccumulator<size_t>& numTriangles) {
-
-  size_t numTriangles_local = 0;
-  for (auto edges_a : graph->edges(a)) {
-    Node b = graph->edge_dest(edges_a);
-    if (a > b) {
-      continue;
-    }
-
-    for (auto edges_b : graph->edges(b)) {
-      auto c = graph->edge_dest(edges_b);
-      if (b > c) {
-        continue;
-      }
-
-      if (graph->has_edge(a, c)) {
-        numTriangles_local += 1;
-      }
-    }
-  }
-  numTriangles += numTriangles_local;
-}
-
 /*
  * Simple counting loop, instead of binary searching.
  */
@@ -351,6 +325,8 @@ katana::analytics::TriangleCount(
 
   katana::EnsurePreallocated(1, 16 * (pg->num_nodes() + pg->num_edges()));
   katana::ReportPageAllocGuard page_alloc;
+
+  KATANA_LOG_VERBOSE("Done relabeling. Starting TriangleCount");
 
   size_t total_count;
   katana::StatTimer execTime("TriangleCount", "TriangleCount");

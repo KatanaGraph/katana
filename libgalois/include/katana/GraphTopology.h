@@ -1431,8 +1431,7 @@ KATANA_EXPORT GraphTopology CreateUniformRandomTopology(
     const size_t num_nodes, const size_t edges_per_node) noexcept;
 
 template <bool IS_SYMMETRIC = false>
-class KATANA_EXPORT TopologyBuilderImpl: public GraphTopologyTypes {
-
+class KATANA_EXPORT TopologyBuilderImpl : public GraphTopologyTypes {
   using AdjVec = std::vector<Node>;
 
   std::vector<AdjVec> all_nodes_adj_;
@@ -1445,15 +1444,14 @@ class KATANA_EXPORT TopologyBuilderImpl: public GraphTopologyTypes {
     KATANA_LOG_DEBUG_ASSERT(IsValidNode(src));
     auto& adj_list = all_nodes_adj_[src];
 
-    [[maybe_unused]] bool not_found  = (
-        std::find(adj_list.begin(), adj_list.end(), dst) == adj_list.end());
+    [[maybe_unused]] bool not_found =
+        (std::find(adj_list.begin(), adj_list.end(), dst) == adj_list.end());
     KATANA_LOG_DEBUG_ASSERT(not_found);
 
     adj_list.emplace_back(dst);
   }
 
 public:
-
   void AddNodes(size_t num) noexcept {
     all_nodes_adj_.resize(all_nodes_adj_.size() + num);
   }
@@ -1470,13 +1468,9 @@ public:
     return all_nodes_adj_[src].size();
   }
 
-  size_t num_nodes() const noexcept {
-    return all_nodes_adj_.size();
-  }
+  size_t num_nodes() const noexcept { return all_nodes_adj_.size(); }
 
-  bool empty() const noexcept {
-    return num_nodes() == size_t{0}; 
-  }
+  bool empty() const noexcept { return num_nodes() == size_t{0}; }
 
   size_t num_edges() const noexcept {
     size_t res = 0;
@@ -1496,18 +1490,18 @@ public:
     size_t prefix_sum = 0;
     for (Node n = 0; n < num_nodes(); ++n) {
       adj_indices[n] = prefix_sum + degree(n);
-      std::copy(all_nodes_adj_[n].begin(), all_nodes_adj_[n].end(), &dests[prefix_sum]);
+      std::copy(
+          all_nodes_adj_[n].begin(), all_nodes_adj_[n].end(),
+          &dests[prefix_sum]);
       prefix_sum += degree(n);
     }
 
     return GraphTopology{std::move(adj_indices), std::move(dests)};
   }
-
 };
 
 using AsymmetricGraphTopologyBuilder = TopologyBuilderImpl<false>;
 using SymmetricGraphTopologyBuilder = TopologyBuilderImpl<true>;
-
 
 }  // end namespace katana
 

@@ -5,6 +5,10 @@ ISORT="${ISORT:-isort}"
 
 set -eu
 
+# Know the specific versions used to reproduce the formatting checks locally
+${BLACK} --version
+${ISORT} --version
+
 GIT_ROOT=$(readlink -f $(dirname $0)/..)
 
 if [ $# -eq 0 ]; then

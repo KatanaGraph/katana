@@ -1458,7 +1458,7 @@ public:
 
   void AddEdge(Node src, Node dst) noexcept {
     AddEdgeImpl(src, dst);
-    if (IS_SYMMETRIC) {
+    if constexpr (IS_SYMMETRIC) {
       AddEdgeImpl(dst, src);
     }
   }

@@ -59,7 +59,7 @@ main(int argc, char** argv) {
   katana::SharedMemSys sys;
   cll::ParseCommandLineOptions(argc, argv);
 
-  katana::PropertyGraph g = LoadGraph(inputFile);
+  katana::PropertyGraph full_graph = LoadGraph(inputFile);
 
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);
@@ -68,18 +68,18 @@ main(int argc, char** argv) {
   SplitString(edgeTypes, &edge_types);
 
   auto pg_view =
-      g.BuildView<ProjectedPropertyGraphView>(node_types, edge_types);
+      full_graph.BuildView<ProjectedPropertyGraphView>(node_types, edge_types);
 
-  auto graph = ProjectedGraphView::Make(&g, pg_view, {}, {});
+  auto projected_graph = ProjectedGraphView::Make(&full_graph, pg_view, {}, {});
 
   KATANA_LOG_VASSERT(
-      graph.value().num_nodes() > 0 &&
-          g.num_nodes() >= graph.value().num_nodes(),
-      "\n Num Nodes: {}", graph.value().num_nodes());
+      projected_graph.value().num_nodes() > 0 &&
+          full_graph.num_nodes() >= projected_graph.value().num_nodes(),
+      "\n Num Nodes: {}", projected_graph.value().num_nodes());
   KATANA_LOG_VASSERT(
-      graph.value().num_edges() > 0 &&
-          g.num_edges() >= graph.value().num_edges(),
-      "\n Num Edges: {}", graph.value().num_edges());
+      projected_graph.value().num_edges() > 0 &&
+          full_graph.num_edges() >= projected_graph.value().num_edges(),
+      "\n Num Edges: {}", projected_graph.value().num_edges());
 
   return 0;
 }

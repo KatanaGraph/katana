@@ -94,7 +94,9 @@ def test_single_trial_gaps():
         "threads": None,
     }
 
-    all_apps = katbench.APP_CHOICES
+    options = katbench.initialize_global_vars()
+
+    all_apps = options[0]
     all_graphs = ["rmat15"]
 
     for graph in all_graphs:
@@ -115,5 +117,4 @@ def run_single_t(arguments):
 
 
 if __name__ == "__main__":
-    katbench.initialize_global_vars()
     test_single_trial_gaps()

@@ -12,10 +12,10 @@ import numpy as np
 import pytz
 from pyarrow import Schema
 
-from katana.benchmarking import *
+import katana.benchmarking.bench_python_cpp_algos as katbench
 
 
-def GenerateArgs(json_output, input_dir="./", graph="GAP-road", app="bfs", source_nodes="", trails=1, num_sources=4, thread_spin=False, threads=None):
+def generate_args(json_output, input_dir="./", graph="GAP-road", app="bfs", source_nodes="", trails=1, num_sources=4, thread_spin=False, threads=1):
 
     parser = argparse.ArgumentParser(
         description="Benchmark performance of routines")
@@ -37,15 +37,13 @@ def GenerateArgs(json_output, input_dir="./", graph="GAP-road", app="bfs", sourc
     parser.add_argument(
         "--graph",
         default=graph,
-        choices=["GAP-road", "GAP-kron", "GAP-twitter",
-                 "GAP-web", "GAP-urand", "rmat15"],
+        choices=katbench.GRAPH_CHOICES,
         help="Graph name (default: %(default)s)",
     )
     parser.add_argument(
         "--application",
         default=app,
-        choices=["bfs", "sssp", "cc", "bc", "pagerank",
-                 "tc", "jaccard", "kcore", "louvain", "all"],
+        choices=katbench.APP_CHOICES,
         help="Application to run (default: %(default)s)",
     )
     parser.add_argument("--source-nodes", default=source_nodes,
@@ -55,64 +53,67 @@ def GenerateArgs(json_output, input_dir="./", graph="GAP-road", app="bfs", sourc
     parser.add_argument("--num-sources", type=int, default=4,
                         help="Number of sources (default: %(default)s)")
 
-    return parser
+    parsed_args = parser.parse_args()
+
+    if not os.path.isdir(parsed_args.input_dir):
+        print(f"input directory : {parsed_args.input_dir} doesn't exist")
+        sys.exit(1)
+    if not parsed_args.threads:
+        parsed_args.threads = int(os.cpu_count())
+    print(
+        f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
+
+    return parsed_args
 
 
-def GenerateGroundTruth(args):
-    now = datetime.now(pytz.timezone("US/Central"))
-    data = {
-        "graph": type(args.graph),
-        "threads": type(args.threads),
-        "thread-spin": type(args.thread_spin),
-        "source-nodes": type(args.source_nodes),
-        "trials": type(args.trials),
-        "num-sources": type(args.num_sources),
-        "routines": type({}),
-        "duration": type(0),
-        "datetime": type(now.strftime("%d/%m/%Y %H:%M:%S")),
-    }
-    return data
+def assert_routine_output(routine_output, max_time=1_000_000):
+    for subproccess in routine_output:
+        assert 0 <= routine_output[
+            subproccess] <= max_time, f"Invalid time for subproccess {subproccess}: took {routine_output[subproccess]} ms"
 
 
-def MainTest():
-    pass
+def assert_types_match(ground_truth, outp):
+    for sec in ground_truth:
+        assert sec in outp, f"Output missing an element: {sec}"
+        truth_type = type(ground_truth[sec])
+        out_type = type(outp[sec])
+        assert truth_type == out_type, f"Expected types for {sec} do not match - Expected:{truth_type}, Got:{out_type}"
+
+    return True
 
 
-def GenerateTest():
-    pass
+def test_single_trial_gaps():
+    arguments = {"json_output": "../../../bench_statistics.json",
+                 "input_dir": "../../inputs/v24/propertygraphs",
+                 "graph": "rmat15",
+                 "app": "all",
+                 "source_nodes": "",
+                 "trails": 1,
+                 "num_sources": np.random.randint(4, 64),
+                 "thread_spin": False,
+                 "threads": None}
+
+    all_apps = katbench.APP_CHOICES
+    all_graphs = ["rmat15"]
+
+    for graph in all_graphs:
+        arguments["graph"] = graph
+        for app in all_apps:
+            arguments["app"] = app
+            run_single_t(arguments)
+
+
+def run_single_t(arguments):
+    args = generate_args(**arguments)
+    ground_truth = katbench.create_empty_statistics(args)
+    output_tuple = katbench.run_all_gap(args)
+    assert output_tuple.write_success, "Writing JSON statistics to disc failed!"
+    assert_types_match(ground_truth, output_tuple.write_data)
+    for subroutine in output_tuple.write_data["routines"]:
+        assert_routine_output(
+            output_tuple.write_data["routines"][subroutine])
 
 
 if __name__ == "__main__":
-
-    all_args = [
-        {"json_output": "../../../bench_statistics.json",
-         "input_dir": "../../inputs/v24/propertygraphs",
-         "graph": "GAP-road",
-         "app": "all",
-         "source_nodes": "",
-         "trails": 1,
-         "num_sources": 4,
-         "thread_spin": False,
-         "threads": None},
-
-        {"json_output": "../../../bench_statistics.json",
-         "input_dir": "../../inputs/v24/propertygraphs",
-         "graph": "GAP-road",
-         "app": "all",
-         "source_nodes": "",
-         "trails": 10,
-         "num_sources": 16,
-         "thread_spin": True,
-         "threads": 1},
-    ]
-    all_apps = ["tc", "cc", "kcore", "bfs", "sssp",
-                "jaccard", "bc", "louvain", "pagerank", "all"]
-
-    all_graphs = ["GAP-road", "rmat15", "GAP-kron",
-                  "GAP-twitter", "GAP-web", "GAP-urand"]
-
-    args = GenerateArgs(**all_args[0])
-    ground_truth = GenerateGroundTruth(args)
-
-    print(args)
-    print(ground_truth)
+    katbench.initialize_global_vars()
+    test_single_trial_gaps()

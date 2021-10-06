@@ -20,17 +20,17 @@ looping constructs that allow writing custom graph algorithms.
      - Data placement
      - Distributed
      - Graph scale
-   * - `The Local API`_
+   * - `Katana Local API`_
      - :ref:`Client <Client-Environment>`, :ref:`Cluster <Cluster-Environment>`, :ref:`Local <Local-environment>`
      - Calling process
      - No
      - Small
-   * - `The Distributed API`_
+   * - `Katana Distributed API`_
      - :ref:`Cluster <Cluster-Environment>`
      - Cluster
      - Directly
      - Large
-   * - `The Remote API`_
+   * - `Katana Remote API`_
      - :ref:`Client <Client-Environment>`
      - Cluster
      - Indirectly by remote execution
@@ -60,7 +60,7 @@ The target audience of ``katana.remote`` is all users of Katana enterprise.
 People would solely use ``katana.remote`` if they want a high-level and easy to
 use interface to out-of-the-box features provided by Katana, but do not require
 custom algorithms or new integrations. People who need more control or features
-will use `the distributed API`_ along with ``katana.remote``.  ``katana.remote``
+will use `the distributed API <Katana Distributed API>`_ along with ``katana.remote``.  ``katana.remote``
 supports launching functions which use ``katana.distributed`` on the Katana
 cluster.
 
@@ -115,13 +115,14 @@ Cluster Environment
 -------------------
 
 This cluster environment exists inside the Katana cluster. This environment
-provides `the local API`_ and `the distributed API`_. This environment executes
-within MPI and inherits its execution model (Single Program Multiple Data;
-SPMD). All programs running in this environment must be written with this model
-in mind. The programs are implicitly parallel due to how they are executed and
-can also include explicit parallelism in the form of Katana parallel loops.
-Non-Katana parallelism is unsafe and unsupported. The user can write new
-high-performance algorithms to execute in this environment.
+provides `the local API <Katana Local API>`_ and `the distributed API <Katana
+Distributed API>`_. This environment executes within MPI and inherits its
+execution model (Single Program Multiple Data; SPMD). All programs running in
+this environment must be written with this model in mind. The programs are
+implicitly parallel due to how they are executed and can also include explicit
+parallelism in the form of Katana parallel loops.  Non-Katana parallelism is
+unsafe and unsupported. The user can write new high-performance algorithms to
+execute in this environment.
 
 .. _Local-Environment:
 
@@ -129,7 +130,7 @@ Local-only Environment
 ----------------------
 
 This is the environment provided by the open-source edition of Katana. The only
-API available is `the local API`_.  This environment allows a user to process
+API available is `the local API <Katana Local API>`_.  This environment allows a user to process
 and analyze small graphs (up to 10s of GBs), including writing new algorithms,
 but does not support large scale, distributed execution. Programs running in
 this environment are sequential other than within the Katana parallel loops.

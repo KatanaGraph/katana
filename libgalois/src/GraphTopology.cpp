@@ -7,7 +7,7 @@
 #include "katana/Random.h"
 
 void
-katana::GraphTopology::Print() noexcept {
+katana::GraphTopology::Print() const noexcept {
   auto print_array = [](const auto& arr, const auto& name) {
     std::cout << name << ": [ ";
     for (const auto& i : arr) {
@@ -301,7 +301,7 @@ katana::ShuffleTopology::MakeSortedByDegree(
     auto d1 = seed_topo.degree(i1);
     auto d2 = seed_topo.degree(i2);
     if (d1 == d2) {
-      return d1 < d2;
+      return i1 < i2;
     }
     return d1 < d2;
   };
@@ -754,7 +754,11 @@ katana::PGViewCache::BuildOrGetShuffTopo(
     KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
     return it->get();
   } else {
-    auto e_topo = BuildOrGetEdgeShuffTopo(pg, tpose_kind, edge_sort_todo);
+    // EdgeShuffleTopology e_topo below is going to serve as a seed for
+    // ShuffleTopology, so we only care about transpose state, and not the sort
+    // state. Because, when creating ShuffleTopology, once we shuffle the nodes, we
+    // will need to re-sort the edges even if they were already sorted
+    auto e_topo = BuildOrGetEdgeShuffTopo(pg, tpose_kind, EdgeShuffleTopology::EdgeSortKind::kAny);
     KATANA_LOG_DEBUG_ASSERT(e_topo->has_transpose_state(tpose_kind));
 
     fully_shuff_topos_.emplace_back(ShuffleTopology::MakeFromTopo(

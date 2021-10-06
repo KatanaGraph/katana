@@ -181,6 +181,32 @@ OrderedCountFunc(
   numTriangles += numTriangles_local;
 }
 
+void
+OrderedCountFuncAlt(
+    const SortedGraphView* graph, Node a,
+    katana::GAccumulator<size_t>& numTriangles) {
+
+  size_t numTriangles_local = 0;
+  for (auto edges_a : graph->edges(a)) {
+    Node b = graph->edge_dest(edges_a);
+    if (a > b) {
+      continue;
+    }
+
+    for (auto edges_b : graph->edges(b)) {
+      auto c = graph->edge_dest(edges_b);
+      if (b > c) {
+        continue;
+      }
+
+      if (graph->has_edge(a, c)) {
+        numTriangles_local += 1;
+      }
+    }
+  }
+  numTriangles += numTriangles_local;
+}
+
 /*
  * Simple counting loop, instead of binary searching.
  */
@@ -267,7 +293,10 @@ katana::analytics::TriangleCount(
 
   timer_graph_read.start();
 
+  katana::StatTimer timer_relabel("GraphRelabelTimer", "TriangleCount");
+  timer_relabel.start();
   SortedGraphView sorted_view = pg->BuildView<SortedGraphView>();
+  timer_relabel.stop();
 
   // TODO(amber): Today we sort unconditionally. Figure out a way to re-enable the
   // logic below

@@ -303,22 +303,22 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
       katana::JsonDump(all_edge_alloc), outputfilename,
       "default_edge_alloc.json");
   KATANA_LOG_VASSERT(
-      all_edge_width_json_res, "unexpected errror {}",
-      all_edge_width_json_res.error());
+      all_edge_alloc_json_res, "unexpected errror {}",
+      all_edge_alloc_json_res.error());
 
   auto all_node_usage_json_res = SaveToJson(
       katana::JsonDump(all_node_usage), outputfilename,
       "grouping_node_usage.json");
   KATANA_LOG_VASSERT(
-      all_edge_width_json_res, "unexpected errror {}",
-      all_edge_width_json_res.error());
+      all_node_usage_json_res, "unexpected errror {}",
+      all_node_usage_json_res.error());
 
   auto all_edge_usage_json_res = SaveToJson(
       katana::JsonDump(all_edge_usage), outputfilename,
       "grouping_edge_usage.json");
   KATANA_LOG_VASSERT(
-      all_edge_width_json_res, "unexpected errror {}",
-      all_edge_width_json_res.error());
+      all_edge_usage_json_res, "unexpected errror {}",
+      all_edge_usage_json_res.error());
 }
 
 int

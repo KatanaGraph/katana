@@ -160,8 +160,8 @@ SaveToJson(
   if (!json_to_dump) {
     return json_to_dump.error();
   }
-  std::string serialized = std::move(json_to_dump.value());
 
+  std::string serialized = std::move(json_to_dump.value());
   serialized = serialized + "\n";
 
   myfile.open(path_to_save);
@@ -297,34 +297,64 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   auto basic_raw_json_res = SaveToJson(
       katana::JsonDump(basic_raw_stats), outputfilename,
       "basic_raw_stats.json");
+  KATANA_LOG_VASSERT(
+      basic_raw_json_res, "unexpected errror {}", basic_raw_json_res.error());
 
   auto all_node_prop_json_res = SaveToJson(
       katana::JsonDump(all_node_prop_stats), outputfilename,
       "node_prop_stats.json");
+  KATANA_LOG_VASSERT(
+      all_node_prop_json_res, "unexpected errror {}",
+      all_node_prop_json_res.error());
+
   auto all_node_width_json_res = SaveToJson(
       katana::JsonDump(all_node_width_stats), outputfilename,
       "node_width_stats.json");
+  KATANA_LOG_VASSERT(
+      all_node_width_json_res, "unexpected errror {}",
+      all_node_width_json_res.error());
 
   auto all_edge_prop_json_res = SaveToJson(
       katana::JsonDump(all_edge_prop_stats), outputfilename,
       "edge_prop_stats.json");
+  KATANA_LOG_VASSERT(
+      all_edge_prop_json_res, "unexpected errror {}",
+      all_edge_prop_json_res.error());
+
   auto all_edge_width_json_res = SaveToJson(
       katana::JsonDump(all_edge_width_stats), outputfilename,
       "edge_width_stats.json");
+  KATANA_LOG_VASSERT(
+      all_edge_width_json_res, "unexpected errror {}",
+      all_edge_width_json_res.error());
 
   auto all_node_alloc_json_res = SaveToJson(
       katana::JsonDump(all_node_alloc), outputfilename,
       "default_node_alloc.json");
+  KATANA_LOG_VASSERT(
+      all_node_alloc_json_res, "unexpected errror {}",
+      all_node_alloc_json_res.error());
+
   auto all_edge_alloc_json_res = SaveToJson(
       katana::JsonDump(all_edge_alloc), outputfilename,
       "default_edge_alloc.json");
+  KATANA_LOG_VASSERT(
+      all_edge_width_json_res, "unexpected errror {}",
+      all_edge_width_json_res.error());
 
   auto all_node_usage_json_res = SaveToJson(
       katana::JsonDump(all_node_usage), outputfilename,
       "grouping_node_usage.json");
+  KATANA_LOG_VASSERT(
+      all_edge_width_json_res, "unexpected errror {}",
+      all_edge_width_json_res.error());
+
   auto all_edge_usage_json_res = SaveToJson(
       katana::JsonDump(all_edge_usage), outputfilename,
       "grouping_edge_usage.json");
+  KATANA_LOG_VASSERT(
+      all_edge_width_json_res, "unexpected errror {}",
+      all_edge_width_json_res.error());
 }
 
 int

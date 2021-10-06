@@ -223,7 +223,6 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   basic_raw_stats.insert(std::pair("Number-Edges", graph->num_edges()));
 
   auto atomic_node_types = graph->ListAtomicNodeTypes();
-
   auto atomic_edge_types = graph->ListAtomicEdgeTypes();
 
   map_string_element all_node_prop_stats;
@@ -245,24 +244,7 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
       node_schema, graph, all_node_alloc, all_node_usage, all_node_width_stats,
       all_node_prop_stats, true);
 
-  std::cout << "Node Memory Stats"
-            << "\n";
-  std::cout << "---------------------------------------------------"
-            << "\n";
-  std::cout << "Type Statistics"
-            << "\n";
   PrintStringMapping(all_node_prop_stats);
-
-  std::cout << "Width Statstics"
-            << "\n";
-  PrintMapping(all_node_width_stats);
-
-  std::cout << "Node No Grouping Memory Usage"
-            << "\n";
-  PrintMapping(all_node_alloc);
-
-  std::cout << "Node Estimated Grouping Memory Usage"
-            << "\n";
   PrintMapping(all_node_usage);
 
   mem_map.insert(std::pair("Node-Types", all_node_prop_stats));
@@ -271,24 +253,6 @@ doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
       edge_schema, graph, all_edge_alloc, all_edge_usage, all_edge_width_stats,
       all_edge_prop_stats, false);
 
-  std::cout << "Edge Memory Stats"
-            << "\n";
-  std::cout << "---------------------------------------------------"
-            << "\n";
-  std::cout << "Type Statistics"
-            << "\n";
-  PrintStringMapping(all_edge_prop_stats);
-
-  std::cout << "Width Statstics"
-            << "\n";
-  PrintMapping(all_edge_width_stats);
-  std::cout << "Edge No Grouping Memory Usage"
-            << "\n";
-  PrintMapping(all_edge_alloc);
-
-  std::cout << "Edge Estimated Grouping Memory Usage"
-            << "\n";
-  PrintMapping(all_edge_usage);
   mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));
 
   mem_map.insert(std::pair("General-Stats", basic_raw_stats));

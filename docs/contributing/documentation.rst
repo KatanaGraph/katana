@@ -2,6 +2,39 @@
 Documentation
 =============
 
+Overview
+========
+
+=====================
+Product Documentation
+=====================
+
+People turn to documentation for many different reasons, so it is important to
+consider the audience and what their needs are. What a person wants out of
+documentation depends on their background, what they want to do and their
+experience with the Katana system.
+
+The initial experience for users will be focused around answering questions like
+"what does this system do?", "how can I test drive it?", "how can I install
+it?", while a developer looking to modify the Katana system itself, will be more
+interested in how the code is organized. And once someone gains experience,
+their focus will shift from tutorials and getting started guides, which help
+explain new concepts, to reference information, which serves as a reminder about
+details once a concept is known.
+
+The documentation for the Katana system is organized in major groups, which
+answer specific questions:
+
+- :ref:`getting-started`: How do I install the system? What are its basic
+  requirements?
+- :ref:`user-guide`: After I've installed Katana, how do I do common
+  activities?
+- :ref:`use-cases`: I don't know much about Katana, why should I use it?
+- :ref:`reference`: If I know the concept but am a little fuzzy on the details,
+  can you give me a refresher?
+- :ref:`contributing`: I'd like to improve to Katana itself. What should I
+  know?
+
 Building Documentation
 ======================
 

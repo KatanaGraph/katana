@@ -22,16 +22,16 @@ RoutineArgs = namedtuple("RoutineArgs", ["plan", "routine", "validation", "stats
 Routine = namedtuple("Routine", ["func", "args"])
 OutputTuple = namedtuple("OutputTuple", ["write_success", "write_data"])
 
-APP_CHOICES = ["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain", "all"]
-GRAPH_CHOICES = ["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand", "rmat15"]
+APPS = ["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain", "all"]
+GRAPHS = ["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand", "rmat15"]
 
 
 def initialize_global_vars():
-    global APP_CHOICES
-    global GRAPH_CHOICES
+    global APPS
+    global GRAPHS
 
-    APP_CHOICES = APP_CHOICES
-    GRAPH_CHOICES = GRAPH_CHOICES
+    APP_CHOICES = APPS
+    GRAPH_CHOICES = GRAPHS
 
 
 @contextlib.contextmanager

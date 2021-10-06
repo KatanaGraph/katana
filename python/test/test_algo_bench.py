@@ -12,7 +12,7 @@ import numpy as np
 import pytz
 from pyarrow import Schema
 
-import katana
+from katana.benchmarking import *
 
 
 def GenerateArgs(json_output, input_dir="./", graph="GAP-road", app="bfs", source_nodes="", trails=1, num_sources=4, thread_spin=False, threads=None):

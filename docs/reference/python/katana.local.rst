@@ -12,6 +12,7 @@ fit in the memory of a single computer) either as a way to test drive Katana or
 as part of a real data science pipeline that does not require scale out.
 
 .. toctree::
+   :maxdepth: 1
 
    katana.local.graph
    katana.local.analytics

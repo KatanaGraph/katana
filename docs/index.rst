@@ -4,6 +4,8 @@ Katana
 
 .. toctree::
    
+   getting-started/index
+   user-guides/index
    reference/index
    contributing/index
 

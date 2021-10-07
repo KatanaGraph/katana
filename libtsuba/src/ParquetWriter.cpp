@@ -11,110 +11,8 @@ using Result = katana::Result<T>;
 
 namespace {
 
-template <class Builder>
-Result<std::shared_ptr<arrow::Array>>
-ResetBuilder(Builder* builder) {
-  std::shared_ptr<arrow::Array> array;
-  KATANA_CHECKED(builder->Finish(&array));
-  return array;
-}
-
-// max is 0x7FFFFFFE according to error messages
-constexpr uint64_t kMaxStringChunkSize = 0x7FFFFFFE;
 // this value was determined empirically
 constexpr int64_t kMaxRowsPerFile = 0x3FFFFFFE;
-
-katana::Result<std::vector<std::shared_ptr<arrow::Array>>>
-LargeStringToChunkedString(
-    const std::shared_ptr<arrow::LargeStringArray>& arr) {
-  std::vector<std::shared_ptr<arrow::Array>> chunks;
-
-  arrow::StringBuilder builder;
-
-  uint64_t inserted = 0;
-  for (uint64_t i = 0, size = arr->length(); i < size; ++i) {
-    if (inserted >= kMaxStringChunkSize) {
-      chunks.emplace_back(KATANA_CHECKED(ResetBuilder(&builder)));
-      inserted = 0;
-    }
-    inserted += 4;
-    if (!arr->IsValid(i)) {
-      KATANA_CHECKED(builder.AppendNull());
-      continue;
-    }
-    arrow::util::string_view val = arr->GetView(i);
-    uint64_t val_size = val.size();
-    KATANA_LOG_ASSERT(val_size < kMaxStringChunkSize);
-    if (inserted + val_size >= kMaxStringChunkSize) {
-      chunks.emplace_back(KATANA_CHECKED(ResetBuilder(&builder)));
-      inserted = 0;
-    }
-    KATANA_CHECKED(builder.Append(val));
-    inserted += val_size;
-  }
-
-  std::shared_ptr<arrow::Array> new_arr;
-  auto status = builder.Finish(&new_arr);
-  if (!status.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
-  }
-  if (new_arr->length() > 0) {
-    chunks.emplace_back(new_arr);
-  }
-  return chunks;
-}
-
-// HandleBadParquetTypes here and HandleBadParquetTypes in ParquetReader.cpp
-// workaround a libarrow2.0 limitation in reading and writing LargeStrings to
-// parquet files.
-katana::Result<std::shared_ptr<arrow::ChunkedArray>>
-HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
-  switch (old_array->type()->id()) {
-  case arrow::Type::type::LARGE_STRING: {
-    std::vector<std::shared_ptr<arrow::Array>> new_chunks;
-    for (const auto& chunk : old_array->chunks()) {
-      auto arr = std::static_pointer_cast<arrow::LargeStringArray>(chunk);
-      auto new_chunk_res = LargeStringToChunkedString(arr);
-      if (!new_chunk_res) {
-        return new_chunk_res.error();
-      }
-      const auto& chunks = new_chunk_res.value();
-      new_chunks.insert(new_chunks.end(), chunks.begin(), chunks.end());
-    }
-
-    auto maybe_res = arrow::ChunkedArray::Make(new_chunks, arrow::utf8());
-    if (!maybe_res.ok()) {
-      return KATANA_ERROR(
-          tsuba::ErrorCode::ArrowError, "building chunked array: {}",
-          maybe_res.status());
-    }
-    return maybe_res.ValueOrDie();
-  }
-  default:
-    return old_array;
-  }
-}
-
-katana::Result<std::shared_ptr<arrow::Table>>
-HandleBadParquetTypes(const std::shared_ptr<arrow::Table>& old_table) {
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> new_arrays;
-  std::vector<std::shared_ptr<arrow::Field>> new_fields;
-
-  for (int i = 0, size = old_table->num_columns(); i < size; ++i) {
-    auto new_array_res = HandleBadParquetTypes(old_table->column(i));
-    if (!new_array_res) {
-      return new_array_res.error();
-    }
-    std::shared_ptr<arrow::ChunkedArray> new_array =
-        std::move(new_array_res.value());
-    auto old_field = old_table->field(i);
-    new_fields.emplace_back(
-        std::make_shared<arrow::Field>(old_field->name(), new_array->type()));
-    new_arrays.emplace_back(new_array);
-  }
-  return arrow::Table::Make(arrow::schema(new_fields), new_arrays);
-}
 
 uint64_t
 EstimateElementSize(const std::shared_ptr<arrow::ChunkedArray>& chunked_array) {
@@ -174,7 +72,6 @@ DoStoreParquet(
       std::launch::async,
       [table = std::move(table), ff = std::move(ff), desc, writer_props,
        arrow_props]() mutable -> katana::CopyableResult<void> {
-        table = KATANA_CHECKED(HandleBadParquetTypes(table));
         auto write_result = parquet::arrow::WriteTable(
             *table, arrow::default_memory_pool(), ff,
             std::numeric_limits<int64_t>::max(), writer_props, arrow_props);

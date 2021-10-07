@@ -29,10 +29,8 @@ def generate_args(
 
     options = katbench.initialize_global_vars()
 
-    parser = argparse.ArgumentParser(
-        description="Benchmark performance of routines")
-    parser.add_argument("--input-dir", default=input_dir,
-                        help="Path to the input directory (default: %(default)s)")
+    parser = argparse.ArgumentParser(description="Benchmark performance of routines")
+    parser.add_argument("--input-dir", default=input_dir, help="Path to the input directory (default: %(default)s)")
 
     parser.add_argument(
         "--threads",
@@ -44,8 +42,7 @@ def generate_args(
         "--thread-spin", default=thread_spin, action="store_true", help="Busy wait for work in thread pool."
     )
 
-    parser.add_argument("--json-output", default=json_output,
-                        help="Path at which to save performance data in JSON")
+    parser.add_argument("--json-output", default=json_output, help="Path at which to save performance data in JSON")
 
     parser.add_argument(
         "--graph", default=graph, choices=options[0], help="Graph name (default: %(default)s)",
@@ -53,12 +50,9 @@ def generate_args(
     parser.add_argument(
         "--application", default=app, choices=options[1], help="Application to run (default: %(default)s)",
     )
-    parser.add_argument("--source-nodes", default=source_nodes,
-                        help="Source nodes file(default: %(default)s)")
-    parser.add_argument("--trials", type=int, default=trails,
-                        help="Number of trials (default: %(default)s)")
-    parser.add_argument("--num-sources", type=int, default=num_sources,
-                        help="Number of sources (default: %(default)s)")
+    parser.add_argument("--source-nodes", default=source_nodes, help="Source nodes file(default: %(default)s)")
+    parser.add_argument("--trials", type=int, default=trails, help="Number of trials (default: %(default)s)")
+    parser.add_argument("--num-sources", type=int, default=num_sources, help="Number of sources (default: %(default)s)")
 
     parsed_args = parser.parse_args()
 
@@ -67,8 +61,7 @@ def generate_args(
         sys.exit(1)
     if not parsed_args.threads:
         parsed_args.threads = int(os.cpu_count())
-    print(
-        f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
+    print(f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
 
     return parsed_args
 

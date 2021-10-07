@@ -487,10 +487,10 @@ if __name__ == "__main__":
     parser.add_argument("--json-output", help="Path at which to save performance data in JSON")
 
     parser.add_argument(
-        "--graph", default="GAP-road", choices=all_apps, help="Graph name (default: %(default)s)",
+        "--graph", default="GAP-road", choices=all_graphs, help="Graph name (default: %(default)s)",
     )
     parser.add_argument(
-        "--application", default="bfs", choices=all_graphs, help="Application to run (default: %(default)s)",
+        "--application", default="bfs", choices=all_apps, help="Application to run (default: %(default)s)",
     )
     parser.add_argument("--source-nodes", default="", help="Source nodes file(default: %(default)s)")
     parser.add_argument("--trials", type=int, default=1, help="Number of trials (default: %(default)s)")

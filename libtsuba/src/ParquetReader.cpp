@@ -6,6 +6,7 @@
 
 #include <arrow/array/util.h>
 #include <arrow/chunked_array.h>
+#include <arrow/compute/cast.h>
 #include <arrow/type.h>
 #include <arrow/type_fwd.h>
 #include <parquet/arrow/schema.h>
@@ -21,53 +22,22 @@ using ErrorCode = tsuba::ErrorCode;
 
 namespace {
 
-Result<std::shared_ptr<arrow::ChunkedArray>>
-ChunkedStringToLargeString(const std::shared_ptr<arrow::ChunkedArray>& arr) {
-  arrow::LargeStringBuilder builder;
-
-  for (const auto& chunk : arr->chunks()) {
-    std::shared_ptr<arrow::StringArray> string_array =
-        std::static_pointer_cast<arrow::StringArray>(chunk);
-    for (uint64_t i = 0, size = string_array->length(); i < size; ++i) {
-      if (!string_array->IsValid(i)) {
-        auto status = builder.AppendNull();
-        if (!status.ok()) {
-          return KATANA_ERROR(
-              ErrorCode::ArrowError, "appending null to array: {}", status);
-        }
-        continue;
-      }
-      auto status = builder.Append(string_array->GetView(i));
-      if (!status.ok()) {
-        return KATANA_ERROR(
-            ErrorCode::ArrowError, "appending string to array: {}", status);
-      }
-    }
-  }
-
-  std::shared_ptr<arrow::Array> new_arr;
-  auto status = builder.Finish(&new_arr);
-  if (!status.ok()) {
-    return KATANA_ERROR(ErrorCode::ArrowError, "finishing array: {}", status);
-  }
-
-  auto maybe_res = arrow::ChunkedArray::Make({new_arr}, arrow::large_utf8());
-  if (!maybe_res.ok()) {
-    return KATANA_ERROR(
-        ErrorCode::ArrowError, "building chunked array: {}",
-        maybe_res.status());
-  }
-  return maybe_res.ValueOrDie();
-}
-
-// HandleBadParquetTypes here and HandleBadParquetTypes in ParquetWriter.cpp
-// workaround a libarrow2.0 limitation in reading and writing LargeStrings to
-// parquet files.
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
   switch (old_array->type()->id()) {
   case arrow::Type::type::STRING: {
-    return ChunkedStringToLargeString(old_array);
+    auto opts = arrow::compute::CastOptions();
+    opts.to_type = arrow::large_utf8();
+    arrow::Datum cast_res =
+        KATANA_CHECKED(arrow::compute::Cast(old_array, opts));
+    return cast_res.chunked_array();
+  }
+  case arrow::Type::type::BINARY: {
+    auto opts = arrow::compute::CastOptions();
+    opts.to_type = arrow::large_binary();
+    arrow::Datum cast_res =
+        KATANA_CHECKED(arrow::compute::Cast(old_array, opts));
+    return cast_res.chunked_array();
   }
   default:
     return old_array;
@@ -452,12 +422,8 @@ tsuba::ParquetReader::FixTable(std::shared_ptr<arrow::Table>&& _table) {
   std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
   arrow::SchemaBuilder schema_builder;
   for (int i = 0, size = table->num_columns(); i < size; ++i) {
-    auto fixed_column_res = HandleBadParquetTypes(table->column(i));
-    if (!fixed_column_res) {
-      return fixed_column_res.error();
-    }
-    std::shared_ptr<arrow::ChunkedArray> fixed_column(
-        std::move(fixed_column_res.value()));
+    std::shared_ptr<arrow::ChunkedArray> fixed_column =
+        KATANA_CHECKED(HandleBadParquetTypes(table->column(i)));
     new_columns.emplace_back(fixed_column);
     auto new_field = std::make_shared<arrow::Field>(
         table->field(i)->name(), fixed_column->type());
@@ -476,16 +442,28 @@ tsuba::ParquetReader::FixTable(std::shared_ptr<arrow::Table>&& _table) {
 
   table = arrow::Table::Make(final_schema, new_columns);
 
-  // Combine multiple chunks into one. Binary and string columns (c.f. large
-  // binary and large string columns) are a special case. They may not be
+  // Combine multiple chunks into one. Binary and string columns (c.f.
+  // binary and string columns) are a special case. They may not be
   // combined into a single chunk due to the fact the offset type for these
   // columns is int32_t and thus the maximum size of an arrow::Array for these
   // types is 2^31.
-  auto combine_result = table->CombineChunks(arrow::default_memory_pool());
-  if (!combine_result.ok()) {
-    return KATANA_ERROR(
-        ErrorCode::ArrowError, "arrow error: {}", combine_result.status());
+  table = KATANA_CHECKED(table->CombineChunks(arrow::default_memory_pool()));
+
+  // lots of the code base assumes chunks will exist, but arrow allows zero length
+  // chunked arrays to have zero chunks. Let's be helpful.
+  if (table->num_rows() == 0) {
+    auto columns = table->columns();
+    auto schema = table->schema();
+
+    for (auto& col : columns) {
+      if (col->num_chunks() == 0) {
+        col = std::make_shared<arrow::ChunkedArray>(
+            KATANA_CHECKED(arrow::MakeArrayOfNull(col->type(), 0)));
+      }
+    }
+
+    table = arrow::Table::Make(schema, columns);
   }
 
-  return combine_result.ValueOrDie();
+  return table;
 }

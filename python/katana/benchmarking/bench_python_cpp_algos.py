@@ -503,5 +503,4 @@ if __name__ == "__main__":
     if not parsed_args.threads:
         parsed_args.threads = int(os.cpu_count())
     print(f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
-
     main(parsed_args)

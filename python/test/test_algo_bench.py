@@ -90,7 +90,7 @@ def test_single_trial_gaps():
         "graph": "rmat15",
         "app": "all",
         "source_nodes": "",
-        "trails": 1,
+        "trails": np.random.randint(1, 15),
         "num_sources": np.random.randint(4, 64),
         "thread_spin": False,
         "threads": None,

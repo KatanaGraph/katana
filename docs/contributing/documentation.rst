@@ -5,10 +5,6 @@ Documentation
 Overview
 ========
 
-=====================
-Product Documentation
-=====================
-
 People turn to documentation for many different reasons, so it is important to
 consider the audience and what their needs are. What a person wants out of
 documentation depends on their background, what they want to do and their
@@ -29,7 +25,6 @@ answer specific questions:
   requirements?
 - :ref:`user-guide`: After I've installed Katana, how do I do common
   activities?
-- :ref:`use-cases`: I don't know much about Katana, why should I use it?
 - :ref:`reference`: If I know the concept but am a little fuzzy on the details,
   can you give me a refresher?
 - :ref:`contributing`: I'd like to improve to Katana itself. What should I

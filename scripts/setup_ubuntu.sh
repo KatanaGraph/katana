@@ -133,6 +133,9 @@ GIT=git
 LIBRARIES="libxml2-dev
   llvm-10-dev
   llvm-12-dev
+  libllvm12
+  libclang-cpp12
+  libclang-common-12-dev
   libarrow-dev=4.0.1-1
   libarrow-python-dev=4.0.1-1
   libparquet-dev=4.0.1-1

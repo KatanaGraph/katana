@@ -23,7 +23,7 @@ answer specific questions:
 
 - :ref:`getting-started`: How do I install the system? What are its basic
   requirements?
-- :ref:`user-guide`: After I've installed Katana, how do I do common
+- :ref:`user-guides`: After I've installed Katana, how do I do common
   activities?
 - :ref:`reference`: If I know the concept but am a little fuzzy on the details,
   can you give me a refresher?

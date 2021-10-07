@@ -128,6 +128,15 @@ the project source directory to build the system:
    cmake -S $SRC_DIR -B $BUILD_DIR -DCMAKE_TOOLCHAIN_FILE=conan_paths.cmake -DKATANA_LANG_BINDINGS=python
    make
 
+Compiling with ``clang``
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you want to compile with ``clang`` instead of ``gcc``, make sure ``libstdc++-dev`` is present in your system, e.g.
+
+.. code-block:: bash
+
+   sudo apt-get install libstdc++-11-dev
+
 Python
 ======
 

@@ -1,6 +1,4 @@
 /*
- * This file belongs to the Galois project, a C++ library for exploiting
- * parallelism. The code is being released under the terms of the 3-Clause BSD
  * License (a copy is located in LICENSE.txt at the top-level directory).
  *
  * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
@@ -30,6 +28,9 @@
 #include "katana/Logging.h"
 #include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
+#include "tsuba/Errors.h"
+#include "tsuba/FaultTest.h"
+#include "tsuba/FileView.h"
 
 namespace cll = llvm::cl;
 static cll::opt<std::string> inputfilename(
@@ -49,8 +50,7 @@ struct Visitor : public katana::ArrowVisitor {
 
   template <typename ArrowType, typename ArrayType>
   arrow::enable_if_null<ArrowType, ResultType> Call(const ArrayType& scalars) {
-    std::cout << scalars.type()->ToString() << " : " << scalars.length()
-              << "\n";
+    fmt::print("{} : {}\n", scalars.type()->ToString(), scalars.length());
     return std::pair(0, 0);
   }
 
@@ -92,62 +92,34 @@ struct Visitor : public katana::ArrowVisitor {
 void
 PrintAtomicTypes(const std::vector<std::string>& atomic_types) {
   for (auto atype : atomic_types) {
-    std::cout << atype << "\n";
   }
 }
 
+template <typename T>
 void
-PrintMapping(const std::unordered_map<std::string, int64_t>& u) {
-  std::cout << "\n";
+PrintMapping(const std::shared_ptr<T> u) {
   for (const auto& n : u) {
-    std::cout << n.first << " : " << n.second << "\n";
+    fmt::print("{} : {}\n", n->first, n->second);
   }
-  std::cout << "\n";
 }
 
-void
-PrintStringMapping(const std::unordered_map<std::string, std::string>& u) {
-  std::cout << "\n";
-  for (const auto& n : u) {
-    std::cout << n.first << " : " << n.second << "\n";
-  }
-  std::cout << "\n";
-}
-
-std::pair<int64_t, int16_t>
+std::pair<int64_t, int64_t>
 RunVisit(
-    const std::shared_ptr<arrow::Array> scalars, std::string& name,
-    map_element& allocations, map_element& usage, int64_t& total_alloc,
-    int64_t& total_usage) {
+    const std::shared_ptr<arrow::Array> scalars, const std::string name,
+    const std::shared_ptr<map_element> allocations,
+    const std::shared_ptr<map_element> usage, int64_t* total_alloc,
+    int64_t* total_usage) {
   Visitor v;
   arrow::Array* arr = scalars.get();
   auto res = katana::VisitArrow(v, *arr);
   KATANA_LOG_VASSERT(res, "unexpected errror {}", res.error());
 
-  allocations.insert(std::pair(name, res.value().first));
-  usage.insert(std::pair(name, res.value().second));
+  allocations->insert(std::pair(name, res.value().first));
+  usage->insert(std::pair(name, res.value().second));
 
   total_alloc += res.value().first;
   total_usage += res.value().second;
   return std::pair(res.value().first, res.value().second);
-}
-
-void
-InsertPropertyTypeMemoryData(
-    const std::unique_ptr<katana::PropertyGraph>& g,
-    const std::unordered_map<std::string, int64_t>& u,
-    const std::vector<std::string>& list_type_names) {
-  std::cout << g->num_nodes() << "\n";
-  for (auto prop_name : list_type_names) {
-    if (g->HasAtomicEdgeType(prop_name)) {
-      auto prop_type = g->GetEdgeEntityTypeID(prop_name);
-      std::cout << prop_name << " : " << prop_type << "\n";
-      std::cout << prop_name
-                << " Has Atomic Type : " << g->HasAtomicNodeType(prop_name)
-                << "\n";
-    }
-  }
-  PrintMapping(u);
 }
 
 katana::Result<void>
@@ -161,8 +133,18 @@ SaveToJson(
     return json_to_dump.error();
   }
 
-  std::string serialized = std::move(json_to_dump.value());
+  std::string serialized(json_to_dump.value());
   serialized = serialized + "\n";
+
+  auto ff = std::make_unique<tsuba::FileFrame>();
+  if (auto res = ff->Init(serialized.size()); !res) {
+    return res.error();
+  }
+
+  if (auto res = ff->Write(serialized.data(), serialized.size()); !res.ok()) {
+    return KATANA_ERROR(
+        tsuba::ArrowToTsuba(res.code()), "arrow error: {}", res);
+  }
 
   myfile.open(path_to_save);
   myfile << serialized;
@@ -174,9 +156,10 @@ SaveToJson(
 void
 GatherMemoryAllocation(
     const std::shared_ptr<arrow::Schema> schema,
-    const std::unique_ptr<katana::PropertyGraph>& g, map_element& allocations,
-    map_element& usage, map_element& width, map_string_element& types,
-    bool node_or_edge) {
+    const std::unique_ptr<katana::PropertyGraph>& g,
+    std::shared_ptr<map_element> allocations,
+    std::shared_ptr<map_element> usage, std::shared_ptr<map_element> width,
+    std::shared_ptr<map_string_element> types, bool node_or_edge) {
   std::shared_ptr<arrow::Array> prop_field;
   int64_t total_alloc = 0;
   int64_t total_usage = 0;
@@ -191,71 +174,65 @@ GatherMemoryAllocation(
     }
     auto bit_width = arrow::bit_width(dtype->id());
     auto mem_allocations = RunVisit(
-        prop_field, prop_name, allocations, usage, total_alloc, total_usage);
-    width.insert(std::pair(prop_name, bit_width));
-    types.insert(std::pair(prop_name, dtype->name()));
+        prop_field, prop_name, allocations, usage, &total_alloc, &total_usage);
+    width->insert(std::pair(prop_name, bit_width));
+    types->insert(std::pair(prop_name, dtype->name()));
     (void)mem_allocations;
   }
-  allocations.insert(std::pair("Total-Alloc", total_alloc));
-  usage.insert(std::pair("Total-Usage", total_usage));
+  allocations->insert(std::pair("Total-Alloc", total_alloc));
+  usage->insert(std::pair("Total-Usage", total_usage));
 }
 
 void
 doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
   memory_map mem_map = {};
-  map_element basic_raw_stats = {};
+  std::shared_ptr<map_element> basic_raw_stats = {};
   auto node_schema = graph->full_node_schema();
   auto edge_schema = graph->full_edge_schema();
   int64_t total_num_node_props = node_schema->num_fields();
   int64_t total_num_edge_props = edge_schema->num_fields();
 
-  basic_raw_stats.insert(std::pair("Node-Schema-Size", total_num_node_props));
-  basic_raw_stats.insert(std::pair("Edge-Schema-Size", total_num_edge_props));
-  basic_raw_stats.insert(
+  basic_raw_stats->insert(std::pair("Node-Schema-Size", total_num_node_props));
+  basic_raw_stats->insert(std::pair("Edge-Schema-Size", total_num_edge_props));
+  basic_raw_stats->insert(
       std::pair("Number-Node-Atomic-Types", graph->GetNumNodeAtomicTypes()));
-  basic_raw_stats.insert(
+  basic_raw_stats->insert(
       std::pair("Number-Edge-Atomic-Types", graph->GetNumEdgeAtomicTypes()));
-  basic_raw_stats.insert(
+  basic_raw_stats->insert(
       std::pair("Number-Node-Entity-Types", graph->GetNumNodeEntityTypes()));
-  basic_raw_stats.insert(
+  basic_raw_stats->insert(
       std::pair("Number-Edge-Entity-Types", graph->GetNumNodeEntityTypes()));
-  basic_raw_stats.insert(std::pair("Number-Nodes", graph->num_nodes()));
-  basic_raw_stats.insert(std::pair("Number-Edges", graph->num_edges()));
+  basic_raw_stats->insert(std::pair("Number-Nodes", graph->num_nodes()));
+  basic_raw_stats->insert(std::pair("Number-Edges", graph->num_edges()));
 
   auto atomic_node_types = graph->ListAtomicNodeTypes();
   auto atomic_edge_types = graph->ListAtomicEdgeTypes();
 
-  map_string_element all_node_prop_stats;
-  map_string_element all_edge_prop_stats;
-  map_element all_node_width_stats;
-  map_element all_edge_width_stats;
-  map_element all_node_alloc;
-  map_element all_edge_alloc;
-  map_element all_node_usage;
-  map_element all_edge_usage;
-
-  all_node_prop_stats.insert(std::pair("kUnknownName", "uint8"));
-  all_edge_prop_stats.insert(std::pair("kUnknownName", "uint8"));
-
-  all_node_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t)));
-  all_edge_width_stats.insert(std::pair("kUnknownName", sizeof(uint8_t)));
+  std::shared_ptr<map_string_element> all_node_prop_stats;
+  std::shared_ptr<map_string_element> all_edge_prop_stats;
+  std::shared_ptr<map_element> all_node_width_stats;
+  std::shared_ptr<map_element> all_edge_width_stats;
+  std::shared_ptr<map_element> all_node_alloc;
+  std::shared_ptr<map_element> all_edge_alloc;
+  std::shared_ptr<map_element> all_node_usage;
+  std::shared_ptr<map_element> all_edge_usage;
 
   GatherMemoryAllocation(
       node_schema, graph, all_node_alloc, all_node_usage, all_node_width_stats,
       all_node_prop_stats, true);
 
-  PrintStringMapping(all_node_prop_stats);
-  PrintMapping(all_node_usage);
+  PrintMapping<map_string_element>(all_node_prop_stats);
+  PrintMapping<map_element>(all_node_usage);
 
-  mem_map.insert(std::pair("Node-Types", all_node_prop_stats));
+  mem_map.insert(std::pair("Node-Types", *all_node_prop_stats));
 
   GatherMemoryAllocation(
       edge_schema, graph, all_edge_alloc, all_edge_usage, all_edge_width_stats,
       all_edge_prop_stats, false);
 
-  mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));
+  mem_map.insert(std::pair("Edge-Types", *all_edge_prop_stats));
 
-  mem_map.insert(std::pair("General-Stats", basic_raw_stats));
+  mem_map.insert(std::pair("General-Stats", *basic_raw_stats));
   PrintMapping(basic_raw_stats);
 
   auto basic_raw_json_res = SaveToJson(

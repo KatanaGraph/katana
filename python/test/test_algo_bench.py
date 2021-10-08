@@ -1,6 +1,5 @@
 import argparse
 import os
-
 import test.benchmarking.bench_python_cpp_algos
 
 
@@ -104,14 +103,9 @@ def run_on_all_graphs(arguments):
 
 def run_single_t(arguments):
     args = generate_args(**arguments)
-    ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(
-        args)
-    output_tuple = test.benchmarking.bench_python_cpp_algos.run_all_gap(
-        args)
+    ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(args)
+    output_tuple = test.benchmarking.bench_python_cpp_algos.run_all_gap(args)
     assert output_tuple.write_success, "Writing JSON statistics to disc failed!"
     assert_types_match(ground_truth, output_tuple.write_data)
     for subroutine in output_tuple.write_data["routines"]:
         assert_routine_output(output_tuple.write_data["routines"][subroutine])
-
-
-test_single_trail_gaps()

@@ -39,10 +39,10 @@ static cll::opt<std::string> inputfilename(
 static cll::opt<std::string> outputfilename(
     cll::Positional, cll::desc("out-file"), cll::Required);
 
-using map_element = std::unordered_map<std::string, int64_t>;
-using map_string_element = std::unordered_map<std::string, std::string>;
-using memory_map = std::unordered_map<
-    std::string, std::variant<map_element, map_string_element>>;
+using MemoryUsageMap = std::unordered_map<std::string, int64_t>;
+using TypeInformationMap = std::unordered_map<std::string, std::string>;
+using FullReportMap = std::unordered_map<
+    std::string, std::variant<MemoryUsageMap, TypeInformationMap>>;
 
 struct Visitor : public katana::ArrowVisitor {
   using ResultType = katana::Result<std::pair<int64_t, int64_t>>;
@@ -95,20 +95,11 @@ PrintAtomicTypes(const std::vector<std::string>& atomic_types) {
   }
 }
 
-template <typename T>
-void
-PrintMapping(const std::shared_ptr<T> u) {
-  for (const auto& n : u) {
-    fmt::print("{} : {}\n", n->first, n->second);
-  }
-}
-
 std::pair<int64_t, int64_t>
 RunVisit(
     const std::shared_ptr<arrow::Array> scalars, const std::string name,
-    const std::shared_ptr<map_element> allocations,
-    const std::shared_ptr<map_element> usage, int64_t* total_alloc,
-    int64_t* total_usage) {
+    MemoryUsageMap* allocations, MemoryUsageMap* usage, int64_t& total_alloc,
+    int64_t& total_usage) {
   Visitor v;
   arrow::Array* arr = scalars.get();
   auto res = katana::VisitArrow(v, *arr);
@@ -157,9 +148,8 @@ void
 GatherMemoryAllocation(
     const std::shared_ptr<arrow::Schema> schema,
     const std::unique_ptr<katana::PropertyGraph>& g,
-    std::shared_ptr<map_element> allocations,
-    std::shared_ptr<map_element> usage, std::shared_ptr<map_element> width,
-    std::shared_ptr<map_string_element> types, bool node_or_edge) {
+    MemoryUsageMap* allocations, MemoryUsageMap* usage, MemoryUsageMap* width,
+    TypeInformationMap* types, bool node_or_edge) {
   std::shared_ptr<arrow::Array> prop_field;
   int64_t total_alloc = 0;
   int64_t total_usage = 0;
@@ -174,7 +164,7 @@ GatherMemoryAllocation(
     }
     auto bit_width = arrow::bit_width(dtype->id());
     auto mem_allocations = RunVisit(
-        prop_field, prop_name, allocations, usage, &total_alloc, &total_usage);
+        prop_field, prop_name, allocations, usage, total_alloc, total_usage);
     width->insert(std::pair(prop_name, bit_width));
     types->insert(std::pair(prop_name, dtype->name()));
     (void)mem_allocations;
@@ -185,55 +175,51 @@ GatherMemoryAllocation(
 
 void
 doMemoryAnalysis(const std::unique_ptr<katana::PropertyGraph> graph) {
-  memory_map mem_map = {};
-  std::shared_ptr<map_element> basic_raw_stats = {};
+  FullReportMap mem_map = {};
+  MemoryUsageMap basic_raw_stats = {};
   auto node_schema = graph->full_node_schema();
   auto edge_schema = graph->full_edge_schema();
   int64_t total_num_node_props = node_schema->num_fields();
   int64_t total_num_edge_props = edge_schema->num_fields();
 
-  basic_raw_stats->insert(std::pair("Node-Schema-Size", total_num_node_props));
-  basic_raw_stats->insert(std::pair("Edge-Schema-Size", total_num_edge_props));
-  basic_raw_stats->insert(
+  basic_raw_stats.insert(std::pair("Node-Schema-Size", total_num_node_props));
+  basic_raw_stats.insert(std::pair("Edge-Schema-Size", total_num_edge_props));
+  basic_raw_stats.insert(
       std::pair("Number-Node-Atomic-Types", graph->GetNumNodeAtomicTypes()));
-  basic_raw_stats->insert(
+  basic_raw_stats.insert(
       std::pair("Number-Edge-Atomic-Types", graph->GetNumEdgeAtomicTypes()));
-  basic_raw_stats->insert(
+  basic_raw_stats.insert(
       std::pair("Number-Node-Entity-Types", graph->GetNumNodeEntityTypes()));
-  basic_raw_stats->insert(
+  basic_raw_stats.insert(
       std::pair("Number-Edge-Entity-Types", graph->GetNumNodeEntityTypes()));
-  basic_raw_stats->insert(std::pair("Number-Nodes", graph->num_nodes()));
-  basic_raw_stats->insert(std::pair("Number-Edges", graph->num_edges()));
+  basic_raw_stats.insert(std::pair("Number-Nodes", graph->num_nodes()));
+  basic_raw_stats.insert(std::pair("Number-Edges", graph->num_edges()));
 
   auto atomic_node_types = graph->ListAtomicNodeTypes();
   auto atomic_edge_types = graph->ListAtomicEdgeTypes();
 
-  std::shared_ptr<map_string_element> all_node_prop_stats;
-  std::shared_ptr<map_string_element> all_edge_prop_stats;
-  std::shared_ptr<map_element> all_node_width_stats;
-  std::shared_ptr<map_element> all_edge_width_stats;
-  std::shared_ptr<map_element> all_node_alloc;
-  std::shared_ptr<map_element> all_edge_alloc;
-  std::shared_ptr<map_element> all_node_usage;
-  std::shared_ptr<map_element> all_edge_usage;
+  TypeInformationMap all_node_prop_stats;
+  TypeInformationMap all_edge_prop_stats;
+  MemoryUsageMap all_node_width_stats;
+  MemoryUsageMap all_edge_width_stats;
+  MemoryUsageMap all_node_alloc;
+  MemoryUsageMap all_edge_alloc;
+  MemoryUsageMap all_node_usage;
+  MemoryUsageMap all_edge_usage;
 
   GatherMemoryAllocation(
-      node_schema, graph, all_node_alloc, all_node_usage, all_node_width_stats,
-      all_node_prop_stats, true);
+      node_schema, graph, &all_node_alloc, &all_node_usage,
+      &all_node_width_stats, &all_node_prop_stats, true);
 
-  PrintMapping<map_string_element>(all_node_prop_stats);
-  PrintMapping<map_element>(all_node_usage);
-
-  mem_map.insert(std::pair("Node-Types", *all_node_prop_stats));
+  mem_map.insert(std::pair("Node-Types", all_node_prop_stats));
 
   GatherMemoryAllocation(
-      edge_schema, graph, all_edge_alloc, all_edge_usage, all_edge_width_stats,
-      all_edge_prop_stats, false);
+      edge_schema, graph, &all_edge_alloc, &all_edge_usage,
+      &all_edge_width_stats, &all_edge_prop_stats, false);
 
-  mem_map.insert(std::pair("Edge-Types", *all_edge_prop_stats));
+  mem_map.insert(std::pair("Edge-Types", all_edge_prop_stats));
 
-  mem_map.insert(std::pair("General-Stats", *basic_raw_stats));
-  PrintMapping(basic_raw_stats);
+  mem_map.insert(std::pair("General-Stats", basic_raw_stats));
 
   auto basic_raw_json_res = SaveToJson(
       katana::JsonDump(basic_raw_stats), outputfilename,

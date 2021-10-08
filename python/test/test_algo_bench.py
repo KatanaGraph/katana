@@ -1,102 +1,96 @@
 import argparse
-import contextlib
-import json
 import os
-import sys
-import time
-from collections import namedtuple
-from datetime import datetime
 
-import numpy as np
-import pytest
-import pytz
-from pyarrow import Schema
-
-import katana.benchmarking.bench_python_cpp_algos as katbench
+import test.benchmarking.bench_python_cpp_algos
 
 
 def generate_args(
-    json_output,
-    input_dir="./",
-    graph="GAP-road",
-    app="bfs",
-    source_nodes="",
-    trails=1,
-    num_sources=4,
-    thread_spin=False,
-    threads=1,
+    json_output, input_dir, graph, app, source_nodes, trails, num_sources, thread_spin, threads,
 ):
+    parser = argparse.Namespace()
+    parser.input_dir = input_dir
+    parser.threads = threads
+    parser.thread_spin = thread_spin
+    parser.json_output = json_output
+    parser.graph = graph
+    parser.application = app
+    parser.source_nodes = source_nodes
+    parser.trials = trails
+    parser.num_sources = num_sources
 
-    options = katbench.initialize_global_vars()
+    if not parser.threads:
+        parser.threads = int(os.cpu_count())
 
-    parser = argparse.ArgumentParser(description="Benchmark performance of routines")
-    parser.add_argument("--input-dir", default=input_dir, help="Path to the input directory (default: %(default)s)")
-
-    parser.add_argument(
-        "--threads",
-        type=int,
-        default=threads,
-        help="Number of threads to use (default: query sinfo). Should match max threads.",
-    )
-    parser.add_argument(
-        "--thread-spin", default=thread_spin, action="store_true", help="Busy wait for work in thread pool."
-    )
-
-    parser.add_argument("--json-output", default=json_output, help="Path at which to save performance data in JSON")
-
-    parser.add_argument(
-        "--graph", default=graph, choices=options[0], help="Graph name (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--application", default=app, choices=options[1], help="Application to run (default: %(default)s)",
-    )
-    parser.add_argument("--source-nodes", default=source_nodes, help="Source nodes file(default: %(default)s)")
-    parser.add_argument("--trials", type=int, default=trails, help="Number of trials (default: %(default)s)")
-    parser.add_argument("--num-sources", type=int, default=num_sources, help="Number of sources (default: %(default)s)")
-
-    parsed_args = parser.parse_args()
-
-    if not os.path.isdir(parsed_args.input_dir):
-        print(f"input directory : {parsed_args.input_dir} doesn't exist")
-        sys.exit(1)
-    if not parsed_args.threads:
-        parsed_args.threads = int(os.cpu_count())
-    print(f"Using input directory: {parsed_args.input_dir} and Threads: {parsed_args.threads}")
-
-    return parsed_args
+    return parser
 
 
-def assert_routine_output(routine_output, max_time=1_000_000):
+def assert_routine_output(routine_output, max_time=250_000):
     for subproccess in routine_output:
         assert (
             0 <= routine_output[subproccess] <= max_time
-        ), f"Invalid time for subproccess {subproccess}: took {routine_output[subproccess]} ms"
+        ), f"Invalid completion time for subproccess {subproccess}: took {routine_output[subproccess]} ms"
 
 
 def assert_types_match(ground_truth, outp):
-    for sec in ground_truth:
-        assert sec in outp, f"Output missing an element: {sec}"
-        truth_type = type(ground_truth[sec])
-        out_type = type(outp[sec])
-        assert truth_type == out_type, f"Expected types for {sec} do not match - Expected:{truth_type}, Got:{out_type}"
+    for element in ground_truth:
+        assert element in outp, f"Output missing an element: {element}"
+        truth_type = type(ground_truth[element])
+        out_type = type(outp[element])
+        assert (
+            truth_type == out_type
+        ), f"Expected types for {element} do not match - Expected:{truth_type}, Got:{out_type}"
 
     return True
 
 
-def test_single_trial_gaps():
+def get_default_args():
     arguments = {
-        "json_output": "../../../bench_statistics.json",
-        "input_dir": "../../inputs/v24/propertygraphs",
+        "json_output": os.path.join(os.path.dirname(__file__), "../../../../../../bench_statistics.json"),
+        "input_dir": os.path.join(os.path.dirname(__file__), "../../../../../inputs/v24/propertygraphs"),
         "graph": "rmat15",
         "app": "all",
         "source_nodes": "",
-        "trails": np.random.randint(1, 15),
-        "num_sources": np.random.randint(4, 64),
+        "trails": 1,
+        "num_sources": 4,
         "thread_spin": False,
         "threads": None,
     }
+    return arguments
 
-    options = katbench.initialize_global_vars()
+
+def test_single_trail_gaps():
+    arguments = get_default_args()
+    run_on_all_graphs(arguments)
+
+
+def test_multi_trail_gaps():
+    arguments = get_default_args()
+    arguments["trails"] = 10
+    run_on_all_graphs(arguments)
+
+
+def test_more_sources_gaps():
+    arguments = get_default_args()
+    for i in range(6):
+        arguments["num_sources"] = pow(2, i)
+        run_on_all_graphs(arguments)
+
+
+def test_thread_gaps():
+    arguments = get_default_args()
+    for i in range(6):
+        arguments["threads"] = pow(2, i)
+        run_on_all_graphs(arguments)
+
+
+def test_thread_spin():
+    arguments = get_default_args()
+    arguments["thread_spin"] = True
+    run_on_all_graphs(arguments)
+
+
+def run_on_all_graphs(arguments):
+    options = test.benchmarking.bench_python_cpp_algos.initialize_global_vars()
 
     all_apps = options[0]
     all_graphs = ["rmat15"]
@@ -110,13 +104,14 @@ def test_single_trial_gaps():
 
 def run_single_t(arguments):
     args = generate_args(**arguments)
-    ground_truth = katbench.create_empty_statistics(args)
-    output_tuple = katbench.run_all_gap(args)
+    ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(
+        args)
+    output_tuple = test.benchmarking.bench_python_cpp_algos.run_all_gap(
+        args)
     assert output_tuple.write_success, "Writing JSON statistics to disc failed!"
     assert_types_match(ground_truth, output_tuple.write_data)
     for subroutine in output_tuple.write_data["routines"]:
         assert_routine_output(output_tuple.write_data["routines"][subroutine])
 
 
-if __name__ == "__main__":
-    test_single_trial_gaps()
+test_single_trail_gaps()

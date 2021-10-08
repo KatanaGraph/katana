@@ -455,12 +455,12 @@ def run_all_gap(args):
             data = run_routine(data, load_timer["graph_load"], graph, args, input)
 
     if args.json_output:
+        save_success = False
         save_success = save_statistics_as_json(data, start_time, args.json_output)
-
-    if save_success:
+    else:
         return OutputTuple(True, data)
 
-    return OutputTuple(False, {})
+    return OutputTuple(save_success, data)
 
 
 def main(parsed_args):

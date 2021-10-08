@@ -44,7 +44,7 @@ def assert_types_match(ground_truth, outp):
 
 def get_default_args():
     arguments = {
-        "json_output": os.path.join(os.path.dirname(__file__), "../../../../../../bench_statistics.json"),
+        "json_output": "",
         "input_dir": os.path.join(os.path.dirname(__file__), "../../../../../inputs/v24/propertygraphs"),
         "graph": "rmat15",
         "app": "all",

@@ -20,7 +20,7 @@ RoutinePaths = namedtuple("RoutinePaths", ["path", "edge_load"])
 RoutineFunc = namedtuple("RoutineFunc", ["plan", "routine", "validation", "stats"])
 RoutineArgs = namedtuple("RoutineArgs", ["plan", "routine", "validation", "stats"])
 Routine = namedtuple("Routine", ["func", "args"])
-OutputTuple = namedtuple("OutputTuple", ["write_success", "write_data"])
+OutputTuple = namedtuple("OutputTuple", ["write_success", "time_write_data", "analytics_write_data"])
 
 
 def initialize_global_vars():
@@ -77,16 +77,18 @@ def save_statistics_as_json(bench_stats, start_time, path):
 def run_routine(data, load_time, graph, args, input):
     trial_count = 0
     num_sources = None
+
     if args.application == "bc":
         num_sources = args.num_sources
+
     for _ in range(args.trials):
-        time_data = default_run(args.application, graph, input, num_sources, args.source_nodes)
+        time_data, analytics_data = default_run(args.application, graph, input, num_sources, args.source_nodes)
         data["routines"][f"{args.application}_{trial_count}"] = time_data
         data["routines"][f"{args.application}_{trial_count}"]["graph_load"] = load_time
         trial_count += 1
 
     print("Run Complete!")
-    return data
+    return data, analytics_data
 
 
 def single_run(
@@ -104,7 +106,7 @@ def single_run(
 ):
 
     with time_block(f"{routine.__name__}_{src}", time_data):
-        routine(*routine_args)
+        routine_output = routine(*routine_args)
 
     with time_block(check_schema.__name__, time_data):
         check_schema(graph, property_name)
@@ -120,6 +122,8 @@ def single_run(
         print(f"STATS:\n{full_stats}")
     with time_block(f"{graph.remove_node_property.__name__}_{0}", time_data):
         graph.remove_node_property(property_name)
+
+    return routine_output
 
 
 def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
@@ -260,7 +264,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
                 sources = rotated_sources[:num_sources]
                 routine_args[-2] = sources
 
-                single_run(
+                analytics_data = single_run(
                     graph,
                     routine.func.routine,
                     routine_args,
@@ -277,7 +281,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
                 routine_args[1] = int(source)
                 validation_args[1] = int(source)
                 run_args = []
-                single_run(
+                analytics_data = single_run(
                     graph,
                     routine.func.routine,
                     routine_args,
@@ -307,10 +311,9 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
 
         if name == "jaccard":
             run_args.append(compare_node)
+        analytics_data = single_run(*run_args)
 
-        single_run(*run_args)
-
-    return time_data
+    return time_data, analytics_data
 
 
 def tc(graph: Graph, _input_args):
@@ -326,7 +329,7 @@ def tc(graph: Graph, _input_args):
         n = analytics.triangle_count(graph, tc_plan)
 
     print(f"STATS:\nNumber of Triangles: {n}")
-    return time_data
+    return time_data, n
 
 
 def run_all_gap(args):
@@ -432,11 +435,13 @@ def run_all_gap(args):
             else:
                 graph = load_graph(graph_path)
 
-        data = run_routine(data, load_timer["graph_load"], graph, args, input)
+        time_data, analytics_data = run_routine(data, load_timer["graph_load"], graph, args, input)
+        analytics_data = [analytics_data]
 
     else:
         first_routine = next(iter(routine_name_args_mappings))
         curr_edge_load = not routine_name_args_mappings[first_routine].edge_load
+        analytics_data = []
         for k in routine_name_args_mappings:
 
             routine_to_run = routine_name_args_mappings[k]
@@ -452,15 +457,15 @@ def run_all_gap(args):
                         graph = load_graph(graph_path)
                 curr_edge_load = routine_to_run.edge_load
             args.application = k
-            data = run_routine(data, load_timer["graph_load"], graph, args, input)
-
+            time_data, analytics_data_part = run_routine(data, load_timer["graph_load"], graph, args, input)
+            analytics_data.append(analytics_data_part)
     if args.json_output:
         save_success = False
         save_success = save_statistics_as_json(data, start_time, args.json_output)
     else:
-        return OutputTuple(True, data)
+        return OutputTuple(True, time_data, analytics_data)
 
-    return OutputTuple(save_success, data)
+    return OutputTuple(save_success, time_data, analytics_data)
 
 
 def main(parsed_args):

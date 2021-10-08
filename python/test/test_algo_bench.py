@@ -2,6 +2,9 @@ import argparse
 import os
 import test.benchmarking.bench_python_cpp_algos
 
+from katana.example_data import get_input
+from katana.local import Graph
+
 
 def generate_args(
     json_output, input_dir, graph, app, source_nodes, trails, num_sources, thread_spin, threads,
@@ -101,11 +104,19 @@ def run_on_all_graphs(arguments):
             run_single_t(arguments)
 
 
+def assert_algorithm_output(routine_outputs):
+    print(routine_outputs)
+
+
 def run_single_t(arguments):
     args = generate_args(**arguments)
     ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(args)
     output_tuple = test.benchmarking.bench_python_cpp_algos.run_all_gap(args)
     assert output_tuple.write_success, "Writing JSON statistics to disc failed!"
-    assert_types_match(ground_truth, output_tuple.write_data)
-    for subroutine in output_tuple.write_data["routines"]:
-        assert_routine_output(output_tuple.write_data["routines"][subroutine])
+    assert_types_match(ground_truth, output_tuple.time_write_data)
+    for subroutine in output_tuple.time_write_data["routines"]:
+        assert_routine_output(output_tuple.time_write_data["routines"][subroutine])
+        assert_algorithm_output(output_tuple.analytics_write_data)
+
+
+test_single_trail_gaps()

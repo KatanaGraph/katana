@@ -23,6 +23,13 @@ if [ -z "${KATANA_COMPONENTS}" ]; then
 fi
 echo "Building with components: ${KATANA_COMPONENTS}"
 
+if [ -z "${KATANA_GPU_OPTIONS}" ]; then
+  KATANA_GPU_OPTIONS=""
+  echo "Building without GPU support"
+else
+  echo "Building with GPU support"
+fi
+
 # Useful debugging addition to the below: -DCMAKE_VERBOSE_MAKEFILE=ON
 cmake \
   $CMAKE_CCACHE_OPTION \
@@ -32,6 +39,7 @@ cmake \
   -DKATANA_LANG_BINDINGS=python \
   -DCMAKE_BUILD_TYPE=Release \
   -DKATANA_COMPONENTS="${KATANA_COMPONENTS}" \
+  ${KATANA_GPU_OPTIONS} \
   -Wno-dev \
   -S "$SRC_DIR"
 cmake --build . --parallel ${CMAKE_BUILD_PARALLEL_LEVEL}

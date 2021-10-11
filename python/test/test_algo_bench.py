@@ -97,6 +97,7 @@ def test_thread_spin():
 def test_bfs():
     arguments = get_default_args()
     arguments["app"] = "bfs"
+    print(arguments)
     stats = run_single_test(arguments)[0]
     assert stats.n_reached_nodes == 29352
 
@@ -181,3 +182,6 @@ def run_single_test(arguments):
     for subroutine in output_tuple.time_write_data["routines"]:
         assert_routine_output(output_tuple.time_write_data["routines"][subroutine])
     return output_tuple.analytics_write_data
+
+
+test_bfs()

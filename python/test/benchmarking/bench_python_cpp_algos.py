@@ -102,7 +102,7 @@ def single_run(
 ):
 
     with time_block(f"{routine.__name__}_{src}", time_data):
-        routine_output = routine(*routine_args)
+        routine(*routine_args)
 
     with time_block(check_schema.__name__, time_data):
         check_schema(graph, property_name)
@@ -119,7 +119,7 @@ def single_run(
     with time_block(f"{graph.remove_node_property.__name__}_{0}", time_data):
         graph.remove_node_property(property_name)
 
-    return routine_output
+    return full_stats
 
 
 def default_run(name, graph, input_args, num_sources=None, source_node_file=""):

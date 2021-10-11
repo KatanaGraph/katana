@@ -23,6 +23,7 @@
 #include <arrow/type_traits.h>
 
 #include "katana/ArrowVisitor.h"
+#include "katana/ErrorCode.h"
 #include "katana/Galois.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
@@ -138,9 +139,15 @@ SaveToJson(
   }
 
   myfile.open(path_to_save);
+
+  if (!myfile) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "Could not open file at {}",
+        path_to_save);
+  }
+
   myfile << serialized;
   myfile.close();
-
   return katana::ResultSuccess();
 }
 
@@ -158,8 +165,12 @@ GatherMemoryAllocation(
     std::string prop_name = schema->field(i)->name();
     auto dtype = schema->field(i)->type();
     if (node_or_edge) {
+      KATANA_LOG_ASSERT(
+          g->GetNodeProperty(prop_name).value()->num_chunks() == 1);
       prop_field = g->GetNodeProperty(prop_name).value()->chunk(0);
     } else {
+      KATANA_LOG_ASSERT(
+          g->GetEdgeProperty(prop_name).value()->num_chunks() == 1);
       prop_field = g->GetEdgeProperty(prop_name).value()->chunk(0);
     }
     auto bit_width = arrow::bit_width(dtype->id());

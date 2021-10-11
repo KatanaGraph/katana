@@ -70,7 +70,7 @@ def test_single_trail_gaps():
 
 def test_multi_trail_gaps():
     arguments = get_default_args()
-    arguments["trails"] = 10
+    arguments["trails"] = 3
     run_on_all_graphs(arguments)
 
 
@@ -161,9 +161,8 @@ def test_k_core():
 
 
 def run_on_all_graphs(arguments):
-    options = test.benchmarking.bench_python_cpp_algos.initialize_global_vars()
 
-    all_apps = options[0]
+    all_apps = test.benchmarking.bench_python_cpp_algos.APPS
     all_graphs = ["rmat15"]
 
     for graph in all_graphs:
@@ -182,3 +181,6 @@ def run_single_test(arguments):
     for subroutine in output_tuple.time_write_data["routines"]:
         assert_routine_output(output_tuple.time_write_data["routines"][subroutine])
     return output_tuple.analytics_write_data
+
+
+test_multi_trail_gaps()

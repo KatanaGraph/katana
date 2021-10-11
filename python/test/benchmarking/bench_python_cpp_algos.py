@@ -22,12 +22,8 @@ RoutineArgs = namedtuple("RoutineArgs", ["plan", "routine", "validation", "stats
 Routine = namedtuple("Routine", ["func", "args"])
 OutputTuple = namedtuple("OutputTuple", ["write_success", "time_write_data", "analytics_write_data"])
 
-
-def initialize_global_vars():
-    APPS = ["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain", "all"]
-    GRAPHS = ["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand", "rmat15"]
-
-    return (APPS, GRAPHS)
+APPS = ["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain", "all"]
+GRAPHS = ["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand", "rmat15"]
 
 
 @contextlib.contextmanager
@@ -474,9 +470,6 @@ def main(parsed_args):
 
 
 if __name__ == "__main__":
-    options = initialize_global_vars()
-    all_apps = options[0]
-    all_graphs = options[1]
     parser = argparse.ArgumentParser(description="Benchmark performance of routines")
 
     parser.add_argument("--input-dir", default="./", help="Path to the input directory (default: %(default)s)")
@@ -492,10 +485,10 @@ if __name__ == "__main__":
     parser.add_argument("--json-output", help="Path at which to save performance data in JSON")
 
     parser.add_argument(
-        "--graph", default="GAP-road", choices=all_graphs, help="Graph name (default: %(default)s)",
+        "--graph", default="GAP-road", choices=APPS, help="Graph name (default: %(default)s)",
     )
     parser.add_argument(
-        "--application", default="bfs", choices=all_apps, help="Application to run (default: %(default)s)",
+        "--application", default="bfs", choices=GRAPHS, help="Application to run (default: %(default)s)",
     )
     parser.add_argument("--source-nodes", default="", help="Source nodes file(default: %(default)s)")
     parser.add_argument("--trials", type=int, default=1, help="Number of trials (default: %(default)s)")

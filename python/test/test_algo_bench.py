@@ -123,7 +123,7 @@ def test_pagerank():
     arguments["app"] = "pagerank"
     stats = run_single_test(arguments)[0]
     assert stats.min_rank == approx(0.1499999761581421)
-    assert stats.max_rank == approx(21345.28515625, abs=12)
+    assert stats.max_rank == approx(21345.28515625, abs=100)
     assert stats.average_rank == approx(0.9, abs=0.1)
 
 

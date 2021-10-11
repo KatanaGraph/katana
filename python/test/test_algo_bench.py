@@ -174,13 +174,12 @@ def run_on_all_graphs(arguments):
 
 def run_single_test(arguments):
     args = generate_args(**arguments)
-    ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(args)
+    ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(
+        args)
     output_tuple = test.benchmarking.bench_python_cpp_algos.run_all_gap(args)
     assert output_tuple.write_success, "Writing JSON statistics to disc failed!"
     assert_types_match(ground_truth, output_tuple.time_write_data)
     for subroutine in output_tuple.time_write_data["routines"]:
-        assert_routine_output(output_tuple.time_write_data["routines"][subroutine])
+        assert_routine_output(
+            output_tuple.time_write_data["routines"][subroutine])
     return output_tuple.analytics_write_data
-
-
-test_multi_trail_gaps()

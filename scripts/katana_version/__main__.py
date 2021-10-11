@@ -723,18 +723,24 @@ def setup_release_subcommand(subparsers):
 def release_branch_subcommand(args):
     config: Configuration = args.configuration
     check_clean(args, config)
-    current_branch = get_current_branch_from_either_repository(config)
-    get_branch_kind(current_branch, [BranchKind.MASTER])
-    check_at_branch("master", config)
-    if config.has_enterprise:
-        git.switch("master", config.enterprise, config.dry_run)
-    git.switch("master", config.open, config.dry_run)
+    if not args.allow_arbitrary_branch:
+        current_branch = get_current_branch_from_either_repository(config)
+        get_branch_kind(current_branch, [BranchKind.MASTER])
+        check_at_branch("master", config)
+        if config.has_enterprise:
+            git.switch("master", config.enterprise, config.dry_run)
+        else:
+            # Do not switch branches in open if we did so in enterprise. This allows external/katana to lag
+            # at branch time.
+            git.switch("master", config.open, config.dry_run)
 
     prev_version, _ = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
     next_version = version.Version(args.next_version)
     rc_version = version.Version(f"{prev_version}rc1")
 
-    check_branch_version("master", BranchKind.MASTER, next_version, prev_version)
+    check_branch_version(
+        get_current_branch_from_either_repository(config), BranchKind.MASTER, next_version, prev_version
+    )
 
     g = GithubFacade(config)
 
@@ -770,11 +776,17 @@ def check_clean(args, config):
 
 
 def setup_release_branch_subcommand(subparsers):
-    parser = subparsers.add_parser(
+    parser: argparse.ArgumentParser = subparsers.add_parser(
         "release_branch",
         help="Create the release branch for an upcoming release and create the versioning commits around it.",
     )
 
+    parser.add_argument(
+        "--allow-arbitrary-branch",
+        help="Allow creating a release branch from any commit instead of just from master. "
+        "This should be used with care.",
+        action="store_true",
+    )
     parser.add_argument("next_version", type=str)
 
     setup_global_log_arguments(parser)

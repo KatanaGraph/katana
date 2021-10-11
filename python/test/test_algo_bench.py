@@ -1,6 +1,7 @@
 import argparse
 import os
 import test.benchmarking.bench_python_cpp_algos
+from pytest import approx
 
 from katana.example_data import get_input
 from katana.local import Graph
@@ -46,9 +47,10 @@ def assert_types_match(ground_truth, outp):
 
 
 def get_default_args():
+
     arguments = {
         "json_output": "",
-        "input_dir": os.path.join(os.path.dirname(__file__), "../../../../../inputs/v24/propertygraphs"),
+        "input_dir": get_input("propertygraphs/"),
         "graph": "rmat15",
         "app": "all",
         "source_nodes": "",
@@ -91,6 +93,72 @@ def test_thread_spin():
     run_on_all_graphs(arguments)
 
 
+def test_bfs():
+    arguments = get_default_args()
+    arguments["app"] = "bfs"
+    stats = run_single_t(arguments)[0]
+    assert stats.n_reached_nodes == 29352
+
+
+def test_sssp():
+    arguments = get_default_args()
+    arguments["app"] = "sssp"
+    stats = run_single_t(arguments)[0]
+    assert stats.max_distance == 104.0
+
+
+def test_jaccard():
+    arguments = get_default_args()
+    arguments["app"] = "jaccard"
+    stats = run_single_t(arguments)[0]
+    assert stats.max_similarity == approx(0.060981)
+    assert stats.min_similarity == approx(0.0)
+    assert stats.average_similarity == approx(4.1105422339459704e-05)
+
+
+def test_pagerank():
+    arguments = get_default_args()
+    arguments["app"] = "pagerank"
+    stats = run_single_t(arguments)[0]
+    assert stats.min_rank == approx(0.1499999761581421)
+    assert stats.max_rank == approx(21345.28515625, abs=12)
+    assert stats.average_rank == approx(0.9, abs=0.1)
+
+
+def test_betweenness_centrality():
+    arguments = get_default_args()
+    arguments["app"] = "bc"
+    stats = run_single_t(arguments)[0]
+    print(stats.min_centrality, stats.max_centrality, stats.average_centrality)
+    assert stats.min_centrality == 0
+    assert stats.max_centrality == approx(361.0888977050781)
+    assert stats.average_centrality == approx(0.26196303963661194)
+
+
+def test_triangle_count():
+    arguments = get_default_args()
+    arguments["app"] = "tc"
+    stats = run_single_t(arguments)[0]
+    assert stats == 282617
+
+
+def test_connected_components():
+    arguments = get_default_args()
+    arguments["app"] = "cc"
+    stats = run_single_t(arguments)[0]
+    assert stats.total_components == 3417
+    assert stats.total_non_trivial_components == 1
+    assert stats.largest_component_size == 29353
+    assert stats.largest_component_ratio == approx(0.895782470703125)
+
+
+def test_k_core():
+    arguments = get_default_args()
+    arguments["app"] = "kcore"
+    stats = run_single_t(arguments)[0]
+    assert stats.number_of_nodes_in_kcore == 11958
+
+
 def run_on_all_graphs(arguments):
     options = test.benchmarking.bench_python_cpp_algos.initialize_global_vars()
 
@@ -104,19 +172,14 @@ def run_on_all_graphs(arguments):
             run_single_t(arguments)
 
 
-def assert_algorithm_output(routine_outputs):
-    print(routine_outputs)
-
-
 def run_single_t(arguments):
     args = generate_args(**arguments)
-    ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(args)
+    ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(
+        args)
     output_tuple = test.benchmarking.bench_python_cpp_algos.run_all_gap(args)
     assert output_tuple.write_success, "Writing JSON statistics to disc failed!"
     assert_types_match(ground_truth, output_tuple.time_write_data)
     for subroutine in output_tuple.time_write_data["routines"]:
-        assert_routine_output(output_tuple.time_write_data["routines"][subroutine])
-        assert_algorithm_output(output_tuple.analytics_write_data)
-
-
-test_single_trail_gaps()
+        assert_routine_output(
+            output_tuple.time_write_data["routines"][subroutine])
+    return output_tuple.analytics_write_data

@@ -230,8 +230,8 @@ public:
   /// Remove all edge properties
   void DropEdgeProperties();
 
-  // Write the list of node and edge column names persisted to json. Consumes
-  // the provided parameters.
+  // Set the list of node and edge column names to persist. Consumes the
+  // provided parameters.
   void set_node_property_index_columns(
       std::vector<std::string>&& node_property_index_columns);
   void set_edge_property_index_columns(

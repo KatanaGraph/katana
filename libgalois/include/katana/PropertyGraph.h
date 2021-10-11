@@ -74,6 +74,9 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
+  // Recreate indexes from json
+  katana::Result<void> RecreatePropertyIndexes();
+
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
@@ -91,42 +94,14 @@ private:
   // List of node indexes on this graph.
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
       node_indexes_;
-  //And the columns that created them to persist in json
-  std::vector<std::string> node_property_indexes_column_name_;
 
   // List of edge indexes on this graph.
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
       edge_indexes_;
-  //And the columns that created them to persist in json
-  std::vector<std::string> edge_property_indexes_column_name_;
 
   PGViewCache pg_view_cache_;
 
   friend class PropertyGraphRetractor;
-
-  // recreate indexes from json
-  katana::Result<void> recreate_node_property_indexes() {
-    node_property_indexes_column_name_ =
-        rdg_.node_property_indexes_column_name();
-    for (const std::string& column_name : node_property_indexes_column_name_) {
-      auto result = MakeNodeIndex(column_name);
-      if (!result) {
-        return result.error();
-      }
-    }
-    return katana::ResultSuccess();
-  }
-  katana::Result<void> recreate_edge_property_indexes() {
-    edge_property_indexes_column_name_ =
-        rdg_.edge_property_indexes_column_name();
-    for (const std::string& column_name : edge_property_indexes_column_name_) {
-      auto result = MakeEdgeIndex(column_name);
-      if (!result) {
-        return result.error();
-      }
-    }
-    return katana::ResultSuccess();
-  }
 
 public:
   /// PropertyView provides a uniform interface when you don't need to

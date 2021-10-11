@@ -230,15 +230,16 @@ public:
   /// Remove all edge properties
   void DropEdgeProperties();
 
-  // write the list of node and edge column names persisted to json, private as it is called only when the node and edge property index vectors are pushed back
-  void set_node_property_indexes_column_name(
-      std::vector<std::string>& node_property_indexes_column_name);
-  void set_edge_property_indexes_column_name(
-      std::vector<std::string>& edge_property_indexes_column_name);
+  // Write the list of node and edge column names persisted to json. Consumes
+  // the provided parameters.
+  void set_node_property_index_columns(
+      std::vector<std::string>&& node_property_index_columns);
+  void set_edge_property_index_columns(
+      std::vector<std::string>&& edge_property_index_columns);
 
-  // read the same as above and recreate indexes
-  std::vector<std::string>& node_property_indexes_column_name();
-  std::vector<std::string>& edge_property_indexes_column_name();
+  // Return the list of node and edge column names.
+  const std::vector<std::string>& node_property_index_columns();
+  const std::vector<std::string>& edge_property_index_columns();
 
   /// Remove topology data
   katana::Result<void> DropTopology();

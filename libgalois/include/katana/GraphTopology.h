@@ -167,7 +167,7 @@ public:
     return edge_property_index(eid);
   }
 
-  void Print() noexcept;
+  void Print() const noexcept;
 
 private:
   // need these friend relationships to construct instances of friend classes below
@@ -422,12 +422,13 @@ private:
 
     katana::do_all(
         katana::iterate(seed_topo.all_nodes()),
-        [&](auto old_srd_id) {
-          auto new_srd_id = old_to_new_map[old_srd_id];
+        [&](auto old_src_id) {
+          auto new_srd_id = old_to_new_map[old_src_id];
           auto new_out_index = new_srd_id > 0 ? degrees[new_srd_id - 1] : 0;
 
-          for (auto e : seed_topo.edges(old_srd_id)) {
+          for (auto e : seed_topo.edges(old_src_id)) {
             auto new_edge_dest = old_to_new_map[seed_topo.edge_dest(e)];
+            KATANA_LOG_DEBUG_ASSERT(new_edge_dest < seed_topo.num_nodes());
 
             auto new_edge_id = new_out_index;
             ++new_out_index;
@@ -438,6 +439,7 @@ private:
             // copy over edge_property_index mapping from old edge to new edge
             edge_prop_indices[new_edge_id] = seed_topo.edge_property_index(e);
           }
+          KATANA_LOG_DEBUG_ASSERT(new_out_index == degrees[new_srd_id]);
         },
         katana::steal(), katana::no_stats());
 
@@ -1324,7 +1326,7 @@ struct PGViewBuilder<PGViewNodesSortedByDegreeEdgesSortedByDestID> {
   static PGViewNodesSortedByDegreeEdgesSortedByDestID BuildView(
       const PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto sorted_topo = viewCache.BuildOrGetShuffTopo(
-        pg, EdgeShuffleTopology::TransposeKind::kYes,
+        pg, EdgeShuffleTopology::TransposeKind::kNo,
         ShuffleTopology::NodeSortKind::kSortedByDegree,
         EdgeShuffleTopology::EdgeSortKind::kSortedByDestID);
 
@@ -1427,6 +1429,87 @@ private:
 /// \r GraphTopology instance
 KATANA_EXPORT GraphTopology CreateUniformRandomTopology(
     const size_t num_nodes, const size_t edges_per_node) noexcept;
+
+/// A simple incremental topology builder for small sized graphs.
+/// Typical usage:
+/// AddNodes(10); // creates 10 nodes (0..9) with no edges
+/// AddEdge(0, 3); // creates an edge between nodes 0 and 3.
+/// Once done adding edges, call ConvertToCSR() to obtain a GraphTopology instance
+template <bool IS_SYMMETRIC = false>
+class KATANA_EXPORT TopologyBuilderImpl : public GraphTopologyTypes {
+  using AdjVec = std::vector<Node>;
+
+  // TODO(Amber/Yan): Add a flag that allows multi-edges in AddEdge() method
+
+public:
+  void AddNodes(size_t num) noexcept {
+    all_nodes_adj_.resize(all_nodes_adj_.size() + num);
+  }
+
+  void AddEdge(Node src, Node dst) noexcept {
+    AddEdgeImpl(src, dst);
+    if constexpr (IS_SYMMETRIC) {
+      AddEdgeImpl(dst, src);
+    }
+  }
+
+  size_t degree(Node src) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(IsValidNode(src));
+    return all_nodes_adj_[src].size();
+  }
+
+  size_t num_nodes() const noexcept { return all_nodes_adj_.size(); }
+
+  bool empty() const noexcept { return num_nodes() == size_t{0}; }
+
+  size_t num_edges() const noexcept {
+    size_t res = 0;
+    for (const AdjVec& v : all_nodes_adj_) {
+      res += v.size();
+    }
+    return res;
+  }
+
+  GraphTopology ConvertToCSR() const noexcept {
+    NUMAArray<Edge> adj_indices;
+    NUMAArray<Node> dests;
+
+    adj_indices.allocateInterleaved(num_nodes());
+    dests.allocateInterleaved(num_edges());
+
+    size_t prefix_sum = 0;
+    for (Node n = 0; n < num_nodes(); ++n) {
+      adj_indices[n] = prefix_sum + degree(n);
+      std::copy(
+          all_nodes_adj_[n].begin(), all_nodes_adj_[n].end(),
+          &dests[prefix_sum]);
+      prefix_sum += degree(n);
+    }
+
+    return GraphTopology{std::move(adj_indices), std::move(dests)};
+  }
+
+private:
+  bool IsValidNode(Node id) const noexcept {
+    return id < all_nodes_adj_.size();
+  }
+
+  void AddEdgeImpl(Node src, Node dst) noexcept {
+    KATANA_LOG_DEBUG_ASSERT(IsValidNode(src));
+    auto& adj_list = all_nodes_adj_[src];
+
+    [[maybe_unused]] bool not_found =
+        (std::find(adj_list.begin(), adj_list.end(), dst) == adj_list.end());
+    KATANA_LOG_DEBUG_ASSERT(not_found);
+
+    adj_list.emplace_back(dst);
+  }
+
+  std::vector<AdjVec> all_nodes_adj_;
+};
+
+using AsymmetricGraphTopologyBuilder = TopologyBuilderImpl<false>;
+using SymmetricGraphTopologyBuilder = TopologyBuilderImpl<true>;
 
 }  // end namespace katana
 

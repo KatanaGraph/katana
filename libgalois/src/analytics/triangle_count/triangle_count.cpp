@@ -28,7 +28,7 @@ using SortedGraphView =
 using Node = SortedGraphView::Node;
 using edge_iterator = SortedGraphView::edge_iterator;
 
-constexpr static const unsigned kChunkSize = 64U;
+constexpr static const unsigned kChunkSize = 16U;
 
 /**
  * Like std::lower_bound but doesn't dereference iterators. Returns the first
@@ -267,7 +267,10 @@ katana::analytics::TriangleCount(
 
   timer_graph_read.start();
 
+  katana::StatTimer timer_relabel("GraphRelabelTimer", "TriangleCount");
+  timer_relabel.start();
   SortedGraphView sorted_view = pg->BuildView<SortedGraphView>();
+  timer_relabel.stop();
 
   // TODO(amber): Today we sort unconditionally. Figure out a way to re-enable the
   // logic below
@@ -322,6 +325,8 @@ katana::analytics::TriangleCount(
 
   katana::EnsurePreallocated(1, 16 * (pg->num_nodes() + pg->num_edges()));
   katana::ReportPageAllocGuard page_alloc;
+
+  KATANA_LOG_VERBOSE("Done relabeling. Starting TriangleCount");
 
   size_t total_count;
   katana::StatTimer execTime("TriangleCount", "TriangleCount");

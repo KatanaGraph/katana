@@ -401,8 +401,7 @@ tsuba::ParquetReader::NumRows(const katana::Uri& uri) {
 
 Result<uint64_t>
 tsuba::ParquetReader::NumFiles(const katana::Uri& uri) {
-  return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))
-      ->NumFiles();
+  return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->NumFiles();
 }
 
 Result<std::shared_ptr<arrow::Schema>>

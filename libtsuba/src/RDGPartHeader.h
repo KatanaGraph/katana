@@ -500,7 +500,8 @@ private:
 
   // Some property files are split up, so we make sure to keep track of all offset files
   static katana::Result<std::vector<std::string>> GetOffsetFiles(
-      const std::vector<PropStorageInfo>& storage_info, std::string prop_dir_name) {
+      const std::vector<PropStorageInfo>& storage_info,
+      std::string prop_dir_name) {
     std::vector<std::string> prop_offset_files;
     auto reader = KATANA_CHECKED(tsuba::ParquetReader::Make());
     for (const auto& prop : storage_info) {

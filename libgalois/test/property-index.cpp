@@ -1,6 +1,7 @@
 #include <arrow/api.h>
 #include <arrow/type.h>
 #include <arrow/type_traits.h>
+#include <boost/filesystem.hpp>
 
 #include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
@@ -11,8 +12,12 @@ template <typename node_or_edge>
 struct NodeOrEdge {
   static katana::Result<katana::PropertyIndex<node_or_edge>*> MakeIndex(
       katana::PropertyGraph* pg, const std::string& column_name);
+  static katana::Result<katana::PropertyIndex<node_or_edge>*> GetIndex(
+      katana::PropertyGraph* pg, const std::string& column_name);
   static katana::Result<void> AddProperties(
       katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties);
+  static std::shared_ptr<arrow::Array> GetProperty(
+      katana::PropertyGraph* pg, const std::string& column_name);
   static size_t num_entities(katana::PropertyGraph* pg);
 };
 
@@ -21,13 +26,27 @@ using Edge = NodeOrEdge<katana::GraphTopology::Edge>;
 
 template <>
 katana::Result<katana::PropertyIndex<katana::GraphTopology::Node>*>
-Node::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
-  auto result = pg->MakeNodeIndex(column_name);
-  if (!result) {
-    return result.error();
+Node::GetIndex(katana::PropertyGraph* pg, const std::string& column_name) {
+  for (const auto& index : pg->node_indexes()) {
+    if (index->column_name() == column_name) {
+      return index.get();
+    }
   }
 
-  for (const auto& index : pg->node_indexes()) {
+  return KATANA_ERROR(katana::ErrorCode::NotFound, "Created index not found");
+}
+
+template <>
+katana::Result<katana::PropertyIndex<katana::GraphTopology::Node>*>
+Node::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
+  KATANA_CHECKED(pg->MakeNodeIndex(column_name));
+  return Node::GetIndex(pg, column_name);
+}
+
+template <>
+katana::Result<katana::PropertyIndex<katana::GraphTopology::Edge>*>
+Edge::GetIndex(katana::PropertyGraph* pg, const std::string& column_name) {
+  for (const auto& index : pg->edge_indexes()) {
     if (index->column_name() == column_name) {
       return index.get();
     }
@@ -39,18 +58,8 @@ Node::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
 template <>
 katana::Result<katana::PropertyIndex<katana::GraphTopology::Edge>*>
 Edge::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
-  auto result = pg->MakeEdgeIndex(column_name);
-  if (!result) {
-    return result.error();
-  }
-
-  for (const auto& index : pg->edge_indexes()) {
-    if (index->column_name() == column_name) {
-      return index.get();
-    }
-  }
-
-  return KATANA_ERROR(katana::ErrorCode::NotFound, "Created index not found");
+  KATANA_CHECKED(pg->MakeEdgeIndex(column_name));
+  return Edge::GetIndex(pg, column_name);
 }
 
 template <>
@@ -77,6 +86,22 @@ katana::Result<void>
 Edge::AddProperties(
     katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties) {
   return pg->AddEdgeProperties(properties);
+}
+
+template <>
+std::shared_ptr<arrow::Array>
+Node::GetProperty(katana::PropertyGraph* pg, const std::string& column_name) {
+  auto prop_result = pg->GetNodeProperty(column_name);
+  KATANA_LOG_ASSERT(prop_result);
+  return prop_result.value()->chunk(0);
+}
+
+template <>
+std::shared_ptr<arrow::Array>
+Edge::GetProperty(katana::PropertyGraph* pg, const std::string& column_name) {
+  auto prop_result = pg->GetEdgeProperty(column_name);
+  KATANA_LOG_ASSERT(prop_result);
+  return prop_result.value()->chunk(0);
 }
 
 template <typename c_type>
@@ -200,11 +225,8 @@ TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
 }
 
 template <typename node_or_edge>
-void
-TestStringIndex(size_t num_nodes, size_t line_width) {
-  using IndexType = katana::StringPropertyIndex<node_or_edge>;
-  using ArrayType = arrow::LargeStringArray;
-
+std::unique_ptr<katana::PropertyGraph>
+MakeStringGraph(size_t num_nodes, size_t line_width) {
   LinePolicy policy{line_width};
 
   std::unique_ptr<katana::PropertyGraph> g =
@@ -230,6 +252,32 @@ TestStringIndex(size_t num_nodes, size_t line_width) {
       nonuniform_index_result, "Could not create index: {}",
       nonuniform_index_result.error());
 
+  return g;
+}
+
+template <typename node_or_edge>
+std::unique_ptr<katana::PropertyGraph>
+TestStringIndex(
+    std::unique_ptr<katana::PropertyGraph> g, size_t num_nodes,
+    size_t line_width) {
+  using IndexType = katana::StringPropertyIndex<node_or_edge>;
+  using ArrayType = arrow::LargeStringArray;
+
+  if (!g) {
+    g = MakeStringGraph<node_or_edge>(num_nodes, line_width);
+  }
+
+  auto uniform_index_result =
+      NodeOrEdge<node_or_edge>::GetIndex(g.get(), "uniform");
+  KATANA_LOG_VASSERT(
+      uniform_index_result, "Could not get index: {}",
+      uniform_index_result.error());
+  auto nonuniform_index_result =
+      NodeOrEdge<node_or_edge>::GetIndex(g.get(), "nonuniform");
+  KATANA_LOG_VASSERT(
+      nonuniform_index_result, "Could not get index: {}",
+      nonuniform_index_result.error());
+
   auto* uniform_index = static_cast<IndexType*>(uniform_index_result.value());
   auto* nonuniform_index =
       static_cast<IndexType*>(nonuniform_index_result.value());
@@ -253,8 +301,8 @@ TestStringIndex(size_t num_nodes, size_t line_width) {
   }
 
   // The non-uniform index starts at "aaaa" and increases by 2.
-  auto typed_prop =
-      std::static_pointer_cast<ArrayType>(nonuniform_prop->column(0)->chunk(0));
+  auto typed_prop = std::static_pointer_cast<ArrayType>(
+      NodeOrEdge<node_or_edge>::GetProperty(g.get(), "nonuniform"));
   it = nonuniform_index->Find("aaaj");
   KATANA_LOG_ASSERT(it == nonuniform_index->end());
   it = nonuniform_index->LowerBound("aaaj");
@@ -263,6 +311,31 @@ TestStringIndex(size_t num_nodes, size_t line_width) {
   it = nonuniform_index->UpperBound("aaak");
   KATANA_LOG_ASSERT(it != nonuniform_index->end());
   KATANA_LOG_ASSERT(typed_prop->GetView(*it) == "aaam");
+
+  return g;
+}
+
+std::unique_ptr<katana::PropertyGraph>
+ReloadGraph(std::unique_ptr<katana::PropertyGraph> g) {
+  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  KATANA_LOG_ASSERT(uri_res);
+  std::string rdg_dir(uri_res.value().path());
+
+  auto write_result = g->Write(rdg_dir, "test command line");
+
+  if (!write_result) {
+    boost::filesystem::remove_all(rdg_dir);
+    KATANA_LOG_FATAL("writing result: {}", write_result.error());
+  }
+
+  katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
+      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+  boost::filesystem::remove_all(rdg_dir);
+  if (!make_result) {
+    KATANA_LOG_FATAL("making result: {}", make_result.error());
+  }
+
+  return std::move(make_result.value());
 }
 
 int
@@ -274,8 +347,14 @@ main() {
   TestPrimitiveIndex<katana::GraphTopology::Node, double_t>(10, 3);
   TestPrimitiveIndex<katana::GraphTopology::Edge, double_t>(10, 3);
 
-  TestStringIndex<katana::GraphTopology::Node>(10, 3);
-  TestStringIndex<katana::GraphTopology::Edge>(10, 3);
+  auto node_g = TestStringIndex<katana::GraphTopology::Node>(nullptr, 10, 3);
+  auto edge_g = TestStringIndex<katana::GraphTopology::Edge>(nullptr, 10, 3);
+
+  node_g = ReloadGraph(std::move(node_g));
+  edge_g = ReloadGraph(std::move(edge_g));
+
+  TestStringIndex<katana::GraphTopology::Node>(std::move(node_g), 10, 3);
+  TestStringIndex<katana::GraphTopology::Edge>(std::move(edge_g), 10, 3);
 
   return 0;
 }

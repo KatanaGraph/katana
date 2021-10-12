@@ -104,6 +104,9 @@ public:
     KATANA_LOG_WARN(
         "assigning entity type ids from properties with {} properties loaded",
         properties->num_columns());
+    KATANA_LOG_WARN(
+        "store the RDG to avoid overhead from assigning entity type ids from "
+        "properties in the future");
     static_assert(
         std::is_same_v<typename EntityTypeArray::value_type, EntityTypeID>);
     if (entity_type_ids->size() != topo_size) {

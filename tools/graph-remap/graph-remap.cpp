@@ -21,6 +21,7 @@
 #include "katana/FileGraph.h"
 #include "katana/Galois.h"
 #include "llvm/Support/CommandLine.h"
+#include "tsuba/RDGInspection.h"
 
 namespace cll = llvm::cl;
 
@@ -33,52 +34,12 @@ static cll::opt<std::string> outputFilename(
 
 using Writer = katana::FileGraphWriter;
 
-/**
- * Create node map from file
- */
-std::map<uint32_t, uint32_t>
-createNodeMap() {
-  katana::gInfo("Creating node map");
-  // read new mapping
-  std::ifstream mapFile(mappingFilename);
-  mapFile.seekg(0, std::ios_base::end);
-
-  int64_t endOfFile = mapFile.tellg();
-  if (!mapFile) {
-    KATANA_DIE("failed to read file");
-  }
-
-  mapFile.seekg(0, std::ios_base::beg);
-  if (!mapFile) {
-    KATANA_DIE("failed to read file");
-  }
-
-  // remap node listed on line n in the mapping to node n
-  std::map<uint32_t, uint32_t> remapper;
-  uint64_t counter = 0;
-  while (((int64_t)mapFile.tellg() + 1) != endOfFile) {
-    uint64_t nodeID;
-    mapFile >> nodeID;
-    if (!mapFile) {
-      KATANA_DIE("failed to read file");
-    }
-    remapper[nodeID] = counter++;
-  }
-
-  KATANA_LOG_ASSERT(remapper.size() == counter);
-  katana::gInfo("Remapping ", counter, " nodes");
-
-  katana::gInfo("Node map created");
-
-  return remapper;
-}
-
 int
 main(int argc, char** argv) {
   katana::SharedMemSys G;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  std::map<uint32_t, uint32_t> remapper = createNodeMap();
+  std::map<uint32_t, uint32_t> remapper = tsuba::createNodeMap(mappingFilename);
 
   katana::gInfo("Loading graph to remap");
   katana::BufferedGraph<void> graphToRemap;

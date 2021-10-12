@@ -17,6 +17,7 @@
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "tsuba/Errors.h"
+#include "tsuba/ParquetReader.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/RDG.h"
 #include "tsuba/WriteGroup.h"
@@ -140,6 +141,7 @@ public:
 
   katana::Result<void> ValidateEntityTypeIDStructures() const;
   static bool IsPartitionFileUri(const katana::Uri& uri);
+
   // TODO(vkarthik): Move this somewhere else because this depends on the Parse function here. Might
   // need to reorganize all the parsing properly.
   static katana::Result<uint64_t> ParseHostFromPartitionFile(
@@ -276,6 +278,27 @@ public:
   }
   void set_part_properties(std::vector<PropStorageInfo>&& part_prop_info_list) {
     part_prop_info_list_ = std::move(part_prop_info_list);
+  }
+
+  const std::vector<std::string>& node_prop_offset_files() const {
+    return node_prop_offset_files_;
+  }
+  void set_node_prop_offset_files(std::vector<std::string>&& node_prop_offset_files) {
+    node_prop_offset_files_ = std::move(node_prop_offset_files);
+  }
+
+  const std::vector<std::string>& edge_prop_offset_files() const {
+    return edge_prop_offset_files_;
+  }
+  void set_edge_prop_offset_files(std::vector<std::string>&& edge_prop_offset_files) {
+    edge_prop_offset_files_ = std::move(edge_prop_offset_files);
+  }
+  
+  const std::vector<std::string>& part_prop_offset_files() const {
+    return part_prop_offset_files_;
+  }
+  void set_part_prop_offset_files(std::vector<std::string>&& part_prop_offset_files) {
+    part_prop_offset_files_ = std::move(part_prop_offset_files);
   }
 
   const PartitionMetadata& metadata() const { return metadata_; }
@@ -472,6 +495,22 @@ private:
     return DoSelectProperties(storage_info);
   }
 
+  // Some property files are split up, so we make sure to keep track of all offset files
+  static katana::Result<std::vector<std::string>> GetOffsetFiles(const std::vector<PropStorageInfo>& storage_info) {
+    std::vector<std::string> prop_offset_files;
+    auto reader = KATANA_CHECKED(tsuba::ParquetReader::Make());
+    for (const auto& prop : storage_info) {
+      auto uri_path = KATANA_CHECKED(katana::Uri::Make(prop.path()));
+      auto num_files = KATANA_CHECKED(reader->NumOffsetFiles(uri_path));
+      auto base_dir = uri_path.BaseName();
+      for (uint64_t i = 0; i < num_files; i++) {
+        auto file_name = katana::Uri::JoinPath(base_dir, fmt::format("{}.part_{:09}", prop.name(), i));
+        prop_offset_files.push_back(file_name);
+      }
+    }
+    return prop_offset_files;
+  }
+
   static katana::Result<RDGPartHeader> MakeJson(
       const katana::Uri& partition_path);
 
@@ -500,6 +539,11 @@ private:
   std::vector<PropStorageInfo> part_prop_info_list_;
   std::vector<PropStorageInfo> node_prop_info_list_;
   std::vector<PropStorageInfo> edge_prop_info_list_;
+
+  // Keep a list of all the offset files
+  std::vector<std::string> part_prop_offset_files_;
+  std::vector<std::string> node_prop_offset_files_;
+  std::vector<std::string> edge_prop_offset_files_;
 
   /// Metadata filled in by CuSP, or from storage (meta partition file)
   PartitionMetadata metadata_;

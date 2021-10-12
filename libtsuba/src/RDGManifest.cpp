@@ -237,6 +237,17 @@ RDGManifest::FileNames() {
       for (const auto& part_prop : header.part_prop_info_list()) {
         fnames.emplace(part_prop.path());
       }
+      // Some properties may have split files, so we add them to fnames as well
+      // node_prop_offset_files() etc, all return strings instead of objects
+      for (const auto& node_prop : header.node_prop_offset_files()) {
+        fnames.emplace(node_prop);
+      }
+      for (const auto& edge_prop : header.edge_prop_offset_files()) {
+        fnames.emplace(edge_prop);
+      }
+      for (const auto& part_prop : header.part_prop_offset_files()) {
+        fnames.emplace(part_prop);
+      }
       // Duplicates eliminated by set
       fnames.emplace(header.topology_path());
       if (const auto& n = header.node_entity_type_id_array_path(); !n.empty()) {

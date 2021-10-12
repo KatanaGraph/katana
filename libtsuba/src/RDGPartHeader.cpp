@@ -101,6 +101,17 @@ RDGPartHeader::Make(const katana::Uri& partition_path) {
   if (!res) {
     return res.error();
   }
+
+  // Iterate over properties and find any potential part files
+  auto node_offset_files = KATANA_CHECKED(GetOffsetFiles(res.value().node_prop_info_list()));
+  res.value().set_node_prop_offset_files(std::move(node_offset_files));
+
+  auto edge_offset_files = KATANA_CHECKED(GetOffsetFiles(res.value().edge_prop_info_list()));
+  res.value().set_edge_prop_offset_files(std::move(edge_offset_files));
+
+  auto part_offset_files = KATANA_CHECKED(GetOffsetFiles(res.value().part_prop_info_list()));
+  res.value().set_part_prop_offset_files(std::move(part_offset_files));
+
   return res;
 }
 

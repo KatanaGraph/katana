@@ -409,7 +409,8 @@ private:
         },
         katana::no_stats());
 
-    KATANA_LOG_DEBUG_ASSERT(std::is_sorted(degrees.begin(), degrees.end()));
+    KATANA_LOG_DEBUG_ASSERT(
+        std::is_sorted(degrees.begin(), degrees.end(), std::greater<>()));
 
     katana::ParallelSTL::partial_sum(
         degrees.begin(), degrees.end(), degrees.begin());
@@ -1435,11 +1436,9 @@ KATANA_EXPORT GraphTopology CreateUniformRandomTopology(
 /// AddNodes(10); // creates 10 nodes (0..9) with no edges
 /// AddEdge(0, 3); // creates an edge between nodes 0 and 3.
 /// Once done adding edges, call ConvertToCSR() to obtain a GraphTopology instance
-template <bool IS_SYMMETRIC = false>
+template <bool IS_SYMMETRIC = false, bool ALLOW_MULTI_EDGE = false>
 class KATANA_EXPORT TopologyBuilderImpl : public GraphTopologyTypes {
   using AdjVec = std::vector<Node>;
-
-  // TODO(Amber/Yan): Add a flag that allows multi-edges in AddEdge() method
 
 public:
   void AddNodes(size_t num) noexcept {
@@ -1470,6 +1469,12 @@ public:
     return res;
   }
 
+  void Print() const noexcept {
+    for (size_t n = 0; n < all_nodes_adj_.size(); ++n) {
+      fmt::print("Node {}: [{}]\n", n, fmt::join(all_nodes_adj_[n], ", "));
+    }
+  }
+
   GraphTopology ConvertToCSR() const noexcept {
     NUMAArray<Edge> adj_indices;
     NUMAArray<Node> dests;
@@ -1498,11 +1503,16 @@ private:
     KATANA_LOG_DEBUG_ASSERT(IsValidNode(src));
     auto& adj_list = all_nodes_adj_[src];
 
-    [[maybe_unused]] bool not_found =
-        (std::find(adj_list.begin(), adj_list.end(), dst) == adj_list.end());
-    KATANA_LOG_DEBUG_ASSERT(not_found);
-
-    adj_list.emplace_back(dst);
+    if constexpr (ALLOW_MULTI_EDGE) {
+      adj_list.emplace_back(dst);
+    } else {
+      auto it = std::find(adj_list.begin(), adj_list.end(), dst);
+      bool not_found = (it == adj_list.end());
+      KATANA_LOG_DEBUG_ASSERT(not_found);
+      if (not_found) {
+        adj_list.emplace_back(dst);
+      }
+    }
   }
 
   std::vector<AdjVec> all_nodes_adj_;

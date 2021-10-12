@@ -76,6 +76,11 @@ public:
     return reinterpret_cast<T*>(map_start_); /* NOLINT */
   }
 
+  /// only data up to cursor is written out, flavors of Write
+  /// automatically track this, so SetCursor is only useful when
+  /// treating the FileFrame like a buffer (e.g., using ptr())
+  katana::Result<void> SetCursor(uint64_t new_cursor);
+
   const std::string& path() const { return path_; }
 
   ///// Begin arrow::io::BufferOutputStream methods ///////

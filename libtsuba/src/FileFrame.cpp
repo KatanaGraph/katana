@@ -137,6 +137,15 @@ FileFrame::PersistAsync() {
   return tsuba::FileStoreAsync(path_, map_start_, cursor_);
 }
 
+katana::Result<void>
+FileFrame::SetCursor(uint64_t new_cursor) {
+  if (new_cursor > map_size_) {
+    KATANA_CHECKED(GrowBuffer(new_cursor - map_size_));
+  }
+  cursor_ = new_cursor;
+  return katana::ResultSuccess();
+}
+
 /////// Begin arrow::io::BufferOutputStream method definitions //////
 
 arrow::Status

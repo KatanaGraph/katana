@@ -182,6 +182,3 @@ def run_single_test(arguments):
     for subroutine in output_tuple.time_write_data["routines"]:
         assert_routine_output(output_tuple.time_write_data["routines"][subroutine])
     return output_tuple.analytics_write_data
-
-
-test_bfs()

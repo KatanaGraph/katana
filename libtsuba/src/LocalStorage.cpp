@@ -23,6 +23,26 @@
 
 namespace fs = boost::filesystem;
 
+namespace {
+
+katana::Result<void>
+EnsureDirectories(const std::string& uri) {
+  fs::path m_path{uri};
+  fs::path dir = m_path.parent_path();
+  if (!dir.empty()) {
+    if (boost::system::error_code err; !fs::create_directories(dir, err)) {
+      if (err) {
+        return KATANA_ERROR(
+            std::error_code(err.value(), err.category()),
+            "creating parent directories: {}", err.message());
+      }
+    }
+  }
+  return katana::ResultSuccess();
+}
+
+}  // namespace
+
 void
 tsuba::LocalStorage::CleanUri(std::string* uri) {
   if (uri->find(uri_scheme()) != 0) {
@@ -35,17 +55,9 @@ katana::Result<void>
 tsuba::LocalStorage::WriteFile(
     std::string uri, const uint8_t* data, uint64_t size) {
   CleanUri(&uri);
-  fs::path m_path{uri};
-  fs::path dir = m_path.parent_path();
-  if (!dir.empty()) {
-    if (boost::system::error_code err; !fs::create_directories(dir, err)) {
-      if (err) {
-        return KATANA_ERROR(
-            std::error_code(err.value(), err.category()),
-            "creating parent directories: {}", err.message());
-      }
-    }
-  }
+  KATANA_CHECKED(EnsureDirectories(uri));
+
+  KATANA_LOG_ERROR("writing {} bytes into  {}", size, uri);
 
   std::ofstream ofile(uri);
   if (!ofile.good()) {
@@ -65,6 +77,8 @@ tsuba::LocalStorage::RemoteCopyFile(
     uint64_t size) {
   CleanUri(&source_uri);
   CleanUri(&dest_uri);
+
+  KATANA_CHECKED(EnsureDirectories(dest_uri));
 
   std::ifstream ifile(source_uri, std::ios_base::binary);
   if (!ifile) {
@@ -89,11 +103,17 @@ katana::Result<void>
 tsuba::LocalStorage::ReadFile(
     std::string uri, uint64_t start, uint64_t size, uint8_t* data) {
   CleanUri(&uri);
-  std::ifstream ifile(uri);
+  std::ifstream ifile(uri, std::ios_base::binary);
+  if (!ifile) {
+    return KATANA_ERROR(
+        ErrorCode::LocalStorageError, "failed to open source file {}",
+        std::quoted(uri));
+  }
 
   ifile.seekg(start);
   if (!ifile) {
-    return KATANA_ERROR(ErrorCode::LocalStorageError, "failed to seek");
+    return KATANA_ERROR(
+        ErrorCode::LocalStorageError, "failed to seek, {}", start);
   }
 
   ifile.read(reinterpret_cast<char*>(data), size); /* NOLINT */

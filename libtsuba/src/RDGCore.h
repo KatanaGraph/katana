@@ -13,14 +13,10 @@ namespace tsuba {
 
 class KATANA_EXPORT RDGCore {
 public:
-  RDGCore() {
-    InitEmptyProperties();
-    InitArrowVectors();
-  }
+  RDGCore() : RDGCore(RDGPartHeader{}) {}
 
   RDGCore(RDGPartHeader&& part_header) : part_header_(std::move(part_header)) {
     InitEmptyProperties();
-    InitArrowVectors();
   }
 
   bool Equals(const RDGCore& other) const;
@@ -206,7 +202,8 @@ public:
 
   katana::Result<void> RegisterTopologyFile(const std::string& new_top) {
     part_header_.set_topology_path(new_top);
-    return topology_file_storage_.Unbind();
+    return topology_file_storage_.Bind(
+        rdg_dir_.Join(new_top).string(), /*resolve =*/false);
   }
 
   katana::Result<void> UnbindTopologyFile() {
@@ -248,9 +245,6 @@ private:
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
-  // Called while constructing to put these arrays into a usable state for
-  // Distribution
-  void InitArrowVectors();
   std::shared_ptr<arrow::ChunkedArray> host_to_owned_global_node_ids_;
   std::shared_ptr<arrow::ChunkedArray> host_to_owned_global_edge_ids_;
   std::shared_ptr<arrow::ChunkedArray> local_to_user_id_;

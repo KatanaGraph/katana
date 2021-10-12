@@ -444,7 +444,6 @@ def check_branch_not_exist(config: Configuration, branch_name):
 def bump_both_repos(config: Configuration, g: GithubFacade, prev_version, next_version, base):
     check_remotes(config)
     next_version_str = format_version_pep440(next_version)
-    current_branch = git.get_branch_checked_out(config.open)
     if config.dry_run:
         print(f"WRITE: {next_version_str} to {config.open.dir / CONFIG_VERSION_PATH}")
     else:
@@ -479,9 +478,6 @@ def bump_both_repos(config: Configuration, g: GithubFacade, prev_version, next_v
             files=[config.enterprise.dir / SUBMODULE_PATH],
             pr_body=f"After: {open_pr.base.repo.full_name}#{open_pr.number}\n\n{main_body}",
         )
-
-    git.switch(current_branch, config.enterprise, dry_run=config.dry_run)
-    git.switch(current_branch, config.open, dry_run=config.dry_run)
 
     todos = [f"TODO: Review and merge {open_pr.html_url} as soon as possible."]
     if enterprise_pr:
@@ -746,9 +742,8 @@ def release_branch_subcommand(args):
     next_version = version.Version(args.next_version)
     rc_version = version.Version(f"{prev_version}rc1")
 
-    check_branch_version(
-        get_current_branch_from_either_repository(config), BranchKind.MASTER, next_version, prev_version
-    )
+    # Always pretend we are on master. We either actually are, or the user has overridden things.
+    check_branch_version("master", BranchKind.MASTER, next_version, prev_version)
 
     g = GithubFacade(config)
 

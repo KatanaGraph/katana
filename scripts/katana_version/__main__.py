@@ -446,7 +446,7 @@ def bump_both_repos(config: Configuration, g: GithubFacade, prev_version, next_v
     next_version_str = format_version_pep440(next_version)
     current_branch = git.get_branch_checked_out(config.open)
     if config.dry_run:
-        print(next_version_str)
+        print(f"WRITE: {next_version_str} to {config.open.dir / CONFIG_VERSION_PATH}")
     else:
         with open(config.open.dir / CONFIG_VERSION_PATH, "wt", encoding="utf-8") as fi:
             fi.write(next_version_str)
@@ -673,11 +673,6 @@ def setup_tag_subcommand(subparsers):
     parser.add_argument("version", type=str)
 
     parser.add_argument(
-        "--pretend-upstream",
-        help=argparse.SUPPRESS,  # Pretend the commit is already up stream. (for testing)
-        action="store_true",
-    )
-    parser.add_argument(
         "--require-upstream", help="Fail if the commit to be tagged isn't already upstream.", action="store_true"
     )
 
@@ -707,12 +702,6 @@ def setup_release_subcommand(subparsers):
 
     parser.add_argument("next_version", type=str)
 
-    parser.add_argument(
-        "--pretend-upstream",
-        help=argparse.SUPPRESS,  # Pretend the commit is already up stream. (for testing)
-        action="store_true",
-    )
-
     setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
     setup_global_action_arguments(parser)
@@ -733,6 +722,25 @@ def release_branch_subcommand(args):
             # Do not switch branches in open if we did so in enterprise. This allows external/katana to lag
             # at branch time.
             git.switch("master", config.open, config.dry_run)
+    else:
+        print(
+            "WARNING: Branching from HEAD instead of upstream/master. Be careful! This will create an out of date "
+            "release branch."
+        )
+
+    # Check if HEAD is on the upstream master branch.
+    if (
+        not git.is_ancestor_of(git.HEAD, f"{config.open.upstream_remote}/master", config.open)
+        and not args.pretend_upstream
+    ):
+        raise StateError(f"{config.open.dir} HEAD is not on upstream master")
+
+    if (
+        config.has_enterprise
+        and not git.is_ancestor_of(git.HEAD, f"{config.enterprise.upstream_remote}/master", config.enterprise)
+        and not args.pretend_upstream
+    ):
+        raise StateError(f"{config.enterprise.dir} HEAD is not on upstream master")
 
     prev_version, _ = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
     next_version = version.Version(args.next_version)
@@ -811,8 +819,15 @@ def setup_global_repo_arguments(parser, *, top_level=False):
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "--pretend-upstream",
+        help="Pretend the commit is already on upstream master. (For testing only!)"
+        if top_level
+        else argparse.SUPPRESS,
+        action="store_true",
+    )
+    parser.add_argument(
         "--pretend-clean",
-        help="Pretend that the working tree is clean." if top_level else argparse.SUPPRESS,
+        help="Pretend that the working tree is clean. (For testing only!)" if top_level else argparse.SUPPRESS,
         dest="clean",
         action="store_true",
     )

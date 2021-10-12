@@ -75,10 +75,11 @@ public:
   /// Get the number of rows for the table stored in a parquet file
   ///   \param uri an identifier for a parquet file
   katana::Result<int64_t> NumRows(const katana::Uri& uri);
-  
-  /// Get the number of offset files for the parquet file
+
+  /// Get the number of files for the logical parquet file
   ///   \param uri an identifier for a parquet file
-  katana::Result<uint64_t> NumOffsetFiles(const katana::Uri& uri);
+  katana::Result<uint64_t> NumFiles(const katana::Uri& uri);
+
 private:
   ParquetReader(std::optional<Slice> slice, bool make_cannonical)
       : slice_(slice), make_cannonical_{make_cannonical} {}

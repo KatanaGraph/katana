@@ -223,7 +223,7 @@ RDGManifest::FileNames() {
     auto header_res = RDGPartHeader::Make(header_uri);
 
     if (!header_res) {
-      KATANA_LOG_DEBUG(
+      KATANA_LOG_WARN(
           "problem uri: {} host: {} ver: {} view_name: {}  : {}", header_uri, i,
           version(), view_specifier(), header_res.error());
     } else {

@@ -283,21 +283,24 @@ public:
   const std::vector<std::string>& node_prop_offset_files() const {
     return node_prop_offset_files_;
   }
-  void set_node_prop_offset_files(std::vector<std::string>&& node_prop_offset_files) {
+  void set_node_prop_offset_files(
+      std::vector<std::string>&& node_prop_offset_files) {
     node_prop_offset_files_ = std::move(node_prop_offset_files);
   }
 
   const std::vector<std::string>& edge_prop_offset_files() const {
     return edge_prop_offset_files_;
   }
-  void set_edge_prop_offset_files(std::vector<std::string>&& edge_prop_offset_files) {
+  void set_edge_prop_offset_files(
+      std::vector<std::string>&& edge_prop_offset_files) {
     edge_prop_offset_files_ = std::move(edge_prop_offset_files);
   }
-  
+
   const std::vector<std::string>& part_prop_offset_files() const {
     return part_prop_offset_files_;
   }
-  void set_part_prop_offset_files(std::vector<std::string>&& part_prop_offset_files) {
+  void set_part_prop_offset_files(
+      std::vector<std::string>&& part_prop_offset_files) {
     part_prop_offset_files_ = std::move(part_prop_offset_files);
   }
 
@@ -496,15 +499,21 @@ private:
   }
 
   // Some property files are split up, so we make sure to keep track of all offset files
-  static katana::Result<std::vector<std::string>> GetOffsetFiles(const std::vector<PropStorageInfo>& storage_info) {
+  static katana::Result<std::vector<std::string>> GetOffsetFiles(
+      const std::vector<PropStorageInfo>& storage_info, std::string prop_dir_name) {
     std::vector<std::string> prop_offset_files;
     auto reader = KATANA_CHECKED(tsuba::ParquetReader::Make());
     for (const auto& prop : storage_info) {
-      auto uri_path = KATANA_CHECKED(katana::Uri::Make(prop.path()));
-      auto num_files = KATANA_CHECKED(reader->NumOffsetFiles(uri_path));
-      auto base_dir = uri_path.BaseName();
+      auto full_path = katana::Uri::JoinPath(prop_dir_name, prop.path());
+      auto uri_path = KATANA_CHECKED(katana::Uri::Make(full_path));
+      auto num_files = KATANA_CHECKED(reader->NumFiles(uri_path));
+      // num_files can be 1, which means there are no split property files
+      if (num_files == 1) {
+        continue;
+      }
       for (uint64_t i = 0; i < num_files; i++) {
-        auto file_name = katana::Uri::JoinPath(base_dir, fmt::format("{}.part_{:09}", prop.name(), i));
+        auto file_name = fmt::format("{}.part_{:09}", prop.path(), i);
+        // Let's keep things consistent and only keep track of the file name, not full path
         prop_offset_files.push_back(file_name);
       }
     }

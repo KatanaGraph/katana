@@ -317,9 +317,7 @@ public:
     return concatenated_table;
   }
 
-  Result<uint64_t> NumOffsetFiles() {
-    return fvs_.size();
-  }
+  Result<uint64_t> NumFiles() { return fvs_.size(); }
 
 private:
   BlockedParquetReader(
@@ -402,8 +400,9 @@ tsuba::ParquetReader::NumRows(const katana::Uri& uri) {
 }
 
 Result<uint64_t>
-tsuba::ParquetReader::NumOffsetFiles(const katana::Uri& uri) {
-  return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->NumOffsetFiles();
+tsuba::ParquetReader::NumFiles(const katana::Uri& uri) {
+  return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))
+      ->NumFiles();
 }
 
 Result<std::shared_ptr<arrow::Schema>>

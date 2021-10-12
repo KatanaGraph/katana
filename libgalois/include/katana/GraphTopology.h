@@ -1430,26 +1430,16 @@ private:
 KATANA_EXPORT GraphTopology CreateUniformRandomTopology(
     const size_t num_nodes, const size_t edges_per_node) noexcept;
 
+/// A simple incremental topology builder for small sized graphs.
+/// Typical usage:
+/// AddNodes(10); // creates 10 nodes (0..9) with no edges
+/// AddEdge(0, 3); // creates an edge between nodes 0 and 3.
+/// Once done adding edges, call ConvertToCSR() to obtain a GraphTopology instance
 template <bool IS_SYMMETRIC = false>
 class KATANA_EXPORT TopologyBuilderImpl : public GraphTopologyTypes {
   using AdjVec = std::vector<Node>;
 
-  std::vector<AdjVec> all_nodes_adj_;
-
-  bool IsValidNode(Node id) const noexcept {
-    return id < all_nodes_adj_.size();
-  }
-
-  void AddEdgeImpl(Node src, Node dst) noexcept {
-    KATANA_LOG_DEBUG_ASSERT(IsValidNode(src));
-    auto& adj_list = all_nodes_adj_[src];
-
-    [[maybe_unused]] bool not_found =
-        (std::find(adj_list.begin(), adj_list.end(), dst) == adj_list.end());
-    KATANA_LOG_DEBUG_ASSERT(not_found);
-
-    adj_list.emplace_back(dst);
-  }
+  // TODO(Amber/Yan): Add a flag that allows multi-edges in AddEdge() method
 
 public:
   void AddNodes(size_t num) noexcept {
@@ -1498,6 +1488,24 @@ public:
 
     return GraphTopology{std::move(adj_indices), std::move(dests)};
   }
+
+private:
+  bool IsValidNode(Node id) const noexcept {
+    return id < all_nodes_adj_.size();
+  }
+
+  void AddEdgeImpl(Node src, Node dst) noexcept {
+    KATANA_LOG_DEBUG_ASSERT(IsValidNode(src));
+    auto& adj_list = all_nodes_adj_[src];
+
+    [[maybe_unused]] bool not_found =
+        (std::find(adj_list.begin(), adj_list.end(), dst) == adj_list.end());
+    KATANA_LOG_DEBUG_ASSERT(not_found);
+
+    adj_list.emplace_back(dst);
+  }
+
+  std::vector<AdjVec> all_nodes_adj_;
 };
 
 using AsymmetricGraphTopologyBuilder = TopologyBuilderImpl<false>;

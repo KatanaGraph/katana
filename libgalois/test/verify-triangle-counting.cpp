@@ -24,20 +24,31 @@ MakeGridWithDiagonals() noexcept {
   return std::move(res.value());
 }
 
+void
+RunTriCount(
+    std::unique_ptr<katana::PropertyGraph>&& pg,
+    const size_t num_expected_triangles) noexcept {
+  using Plan = katana::analytics::TriangleCountPlan;
+  std::vector<Plan> plans{
+      Plan::NodeIteration(Plan::kRelabel), Plan::EdgeIteration(Plan::kRelabel),
+      Plan::OrderedCount(Plan::kRelabel)};
+
+  for (const auto& p : plans) {
+    katana::Result<size_t> num_tri =
+        katana::analytics::TriangleCount(pg.get(), p);
+    KATANA_LOG_VASSERT(num_tri, "TriangleCount failed and returned error");
+    KATANA_LOG_VASSERT(
+        num_tri.value() == num_expected_triangles,
+        "Wrong number of triangles. Found: {}, Expected: {}", num_tri.value(),
+        num_expected_triangles);
+  }
+}
+
 int
 main() {
   katana::SharedMemSys S;
 
-  std::unique_ptr<katana::PropertyGraph> pg = MakeGridWithDiagonals();
-
-  katana::analytics::TriangleCountPlan plan =
-      katana::analytics::TriangleCountPlan::NodeIteration(
-          katana::analytics::TriangleCountPlan::kRelabel);
-
-  auto num_tri = katana::analytics::TriangleCount(pg.get(), plan);
-  KATANA_LOG_ASSERT(num_tri);
-
-  KATANA_LOG_ASSERT(num_tri.value() == 4);
+  RunTriCount(MakeGridWithDiagonals(), 4);
 
   return 0;
 }

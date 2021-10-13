@@ -10,6 +10,7 @@
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
+#include "tsuba/ParquetReader.h"
 #include "tsuba/tsuba.h"
 template <typename T>
 using Result = katana::Result<T>;
@@ -211,7 +212,7 @@ Result<void>
 AddPropertySubFiles(std::set<std::string>& fnames, std::string full_path) {
   auto reader = KATANA_CHECKED(tsuba::ParquetReader::Make());
   auto uri_path = KATANA_CHECKED(katana::Uri::Make(full_path));
-  auto sub_files = KATANA_CHECKED(reader->GetSubFiles(uri_path));
+  auto sub_files = KATANA_CHECKED(reader->GetFiles(uri_path));
   for (const auto& sub_file : sub_files) {
     auto sub_file_uri = KATANA_CHECKED(katana::Uri::Make(sub_file));
     fnames.emplace(

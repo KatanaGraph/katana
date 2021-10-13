@@ -17,7 +17,6 @@
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "tsuba/Errors.h"
-#include "tsuba/ParquetReader.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/RDG.h"
 #include "tsuba/WriteGroup.h"
@@ -141,7 +140,6 @@ public:
 
   katana::Result<void> ValidateEntityTypeIDStructures() const;
   static bool IsPartitionFileUri(const katana::Uri& uri);
-
   // TODO(vkarthik): Move this somewhere else because this depends on the Parse function here. Might
   // need to reorganize all the parsing properly.
   static katana::Result<uint64_t> ParseHostFromPartitionFile(

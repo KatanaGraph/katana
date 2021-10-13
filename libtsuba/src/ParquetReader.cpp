@@ -317,7 +317,7 @@ public:
     return concatenated_table;
   }
 
-  Result<std::vector<std::string>> GetSubFiles() {
+  Result<std::vector<std::string>> GetFiles() {
     std::vector<std::string> sub_files;
     sub_files.reserve(fvs_.size());
     // Bind some the file views so we can get the filenames
@@ -325,7 +325,6 @@ public:
       KATANA_CHECKED(EnsureReader(i, false));
     }
     for (const auto& fv : fvs_) {
-      KATANA_LOG_WARN("fv->filename(): {}", fv->filename());
       sub_files.emplace_back(fv->filename());
     }
     return sub_files;
@@ -412,8 +411,8 @@ tsuba::ParquetReader::NumRows(const katana::Uri& uri) {
 }
 
 Result<std::vector<std::string>>
-tsuba::ParquetReader::GetSubFiles(const katana::Uri& uri) {
-  return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->GetSubFiles();
+tsuba::ParquetReader::GetFiles(const katana::Uri& uri) {
+  return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->GetFiles();
 }
 
 Result<std::shared_ptr<arrow::Schema>>

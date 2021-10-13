@@ -110,7 +110,7 @@ public:
   }
 
   uint64_t size() const { return file_size_; }
-  std::string filename() const { return filename_; }
+  const std::string& filename() const { return filename_; }
 
   // support iterating through characters
   const char* begin() const { return ptr<char>(); }

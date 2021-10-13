@@ -28,9 +28,9 @@ fi
 sudo bash -x "${REPO_ROOT}/scripts/setup_ubuntu.sh" --no-setup-toolchain-variants
 "${REPO_ROOT}/scripts/setup_conan.sh"
 
-# make clang-{tidy,format}-10 the default
-sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 90
-sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-10 90
+# make clang-{tidy,format}-12 the default
+sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-12 90
+sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 90
 
 
 cat <<EOF

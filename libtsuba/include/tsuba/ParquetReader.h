@@ -76,9 +76,10 @@ public:
   ///   \param uri an identifier for a parquet file
   katana::Result<int64_t> NumRows(const katana::Uri& uri);
 
-  /// Get the number of files for the logical parquet file
+  /// Get the possible sub files for the logical parquet file, will return
+  /// a original parquet file if there are no sub files
   ///   \param uri an identifier for a parquet file
-  katana::Result<uint64_t> NumFiles(const katana::Uri& uri);
+  katana::Result<std::vector<std::string>> GetSubFiles(const katana::Uri& uri);
 
 private:
   ParquetReader(std::optional<Slice> slice, bool make_cannonical)

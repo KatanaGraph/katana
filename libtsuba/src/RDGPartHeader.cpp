@@ -98,21 +98,6 @@ RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
 katana::Result<RDGPartHeader>
 RDGPartHeader::Make(const katana::Uri& partition_path) {
   auto part_header = KATANA_CHECKED(MakeJson(partition_path));
-  auto part_dir_name = partition_path.DirName().string();
-
-  // Iterate over properties and find any potential part files
-  auto node_offset_files = KATANA_CHECKED(
-      GetOffsetFiles(part_header.node_prop_info_list(), part_dir_name));
-  part_header.set_node_prop_offset_files(std::move(node_offset_files));
-
-  auto edge_offset_files = KATANA_CHECKED(
-      GetOffsetFiles(part_header.edge_prop_info_list(), part_dir_name));
-  part_header.set_edge_prop_offset_files(std::move(edge_offset_files));
-
-  auto part_offset_files = KATANA_CHECKED(
-      GetOffsetFiles(part_header.part_prop_info_list(), part_dir_name));
-  part_header.set_part_prop_offset_files(std::move(part_offset_files));
-
   return part_header;
 }
 

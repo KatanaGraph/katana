@@ -409,7 +409,8 @@ private:
         },
         katana::no_stats());
 
-    KATANA_LOG_DEBUG_ASSERT(std::is_sorted(degrees.begin(), degrees.end()));
+    KATANA_LOG_DEBUG_ASSERT(
+        std::is_sorted(degrees.begin(), degrees.end(), std::greater<>()));
 
     katana::ParallelSTL::partial_sum(
         degrees.begin(), degrees.end(), degrees.begin());

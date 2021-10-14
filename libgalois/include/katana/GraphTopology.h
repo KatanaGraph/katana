@@ -788,6 +788,10 @@ public:
     return original_to_projected_nodes_mapping_[nid];
   }
 
+  const uint8_t* node_bitmask() const noexcept { return node_bitmask_.data(); }
+
+  const uint8_t* edge_bitmask() const noexcept { return edge_bitmask_.data(); }
+
   /// this function creates a topology by filtering nodes and edges
   /// @param node_types the types that the selected nodes must have
   /// @param edge_types the types that the selected edges must have
@@ -809,7 +813,9 @@ private:
       NUMAArray<Node>&& original_to_projected_nodes_mapping,
       NUMAArray<Node>&& projected_to_original_nodes_mapping,
       NUMAArray<Edge>&& original_to_projected_edges_mapping,
-      NUMAArray<Edge>&& projected_to_original_edges_mapping)
+      NUMAArray<Edge>&& projected_to_original_edges_mapping,
+      NUMAArray<uint8_t>&& node_bitmask, 
+      NUMAArray<uint8_t>&& edge_bitmask)
       : adj_indices_(std::move(adj_indices)),
         dests_(std::move(dests)),
         original_to_projected_nodes_mapping_(
@@ -819,7 +825,9 @@ private:
         original_to_projected_edges_mapping_(
             std::move(original_to_projected_edges_mapping)),
         projected_to_original_edges_mapping_(
-            std::move(projected_to_original_edges_mapping)) {}
+            std::move(projected_to_original_edges_mapping)),
+        node_bitmask_(std::move(node_bitmask)),
+        edge_bitmask_(std::move(edge_bitmask)) {}
 
   // TODO(udit) : we can let go of original_to_projected_nodes_mapping_ and original_to_projected_edges_mapping_
   // by doing a binary search on projected_to_original_nodes_mapping_ and projected_to_original_edges_mapping_
@@ -830,6 +838,8 @@ private:
   NUMAArray<Node> projected_to_original_nodes_mapping_;
   NUMAArray<Edge> original_to_projected_edges_mapping_;
   NUMAArray<Edge> projected_to_original_edges_mapping_;
+  NUMAArray<uint8_t> node_bitmask_;
+  NUMAArray<uint8_t> edge_bitmask_;
 };
 
 template <typename Topo>
@@ -904,6 +914,13 @@ public:
   }
 
   const PropertyGraph& property_graph() const noexcept { return *prop_graph_; }
+
+  auto node_bitmask() const noexcept {
+        return topo().node_bitmask();
+  }
+  auto edge_bitmask() const noexcept {
+        return topo().edge_bitmask();
+  }
 
 protected:
   const Topo& topo() const noexcept { return *topo_ptr_; }

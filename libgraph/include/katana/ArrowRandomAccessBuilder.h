@@ -64,17 +64,16 @@ private:
 };
 
 /// InPlaceBuilder directly writes to the memory of an arrow::NumericBuilder
-/// Finalize() does not copy data, only shared_ptr
-/// Thread-safe for concurrent accesses to different indices
-/// - Guaranteed by boost::atomic_ref to bytes of null bitmask
+/// Finalize() does not copy data, only shared_ptr and null bitmask
 template <typename ArrowType>
 class InPlaceBuilder : private arrow::NumericBuilder<ArrowType> {
 public:
   using ArrowBuilder = typename arrow::NumericBuilder<ArrowType>;
   using typename ArrowBuilder::value_type;
 
-  InPlaceBuilder(size_t length) : arrow::NumericBuilder<ArrowType>() {
-    auto st = ArrowBuilder::AppendNulls(length);
+  InPlaceBuilder(size_t length)
+      : arrow::NumericBuilder<ArrowType>(), valid_(length, false) {
+    auto st = ArrowBuilder::data_builder_.Resize(length);
     KATANA_LOG_ASSERT(st.ok());
   }
 
@@ -82,34 +81,25 @@ public:
   // 1) builder[index] = value; where it creates a non-null entry
   // 2) value = builder[index]; ONLY IF option 1 has already used that index
   value_type& operator[](size_t index) {
-    KATANA_LOG_DEBUG_VASSERT(
-        index < size(), "index: {}, size: {}", index, size());
-    boost::atomic_ref<uint8_t> byte = byte_ref(index);
-    byte |= arrow::BitUtil::kBitmask[index % 8];
+    valid_[index] = true;
     return ArrowBuilder::operator[](index);
   }
 
-  void UnsetValue(size_t index) {
-    boost::atomic_ref<uint8_t> byte = byte_ref(index);
-    byte &= arrow::BitUtil::kFlippedBitmask[index % 8];
-  }
+  void UnsetValue(size_t index) { valid_[index] = false; }
 
-  bool IsValid(size_t index) {
-    boost::atomic_ref<uint8_t> byte = byte_ref(index);
-    return (byte.load() >> (index & 0x07)) & 1;
-  }
+  bool IsValid(size_t index) const { return valid_[index]; }
 
   size_t size() const { return ArrowBuilder::length(); }
 
   katana::Result<std::shared_ptr<arrow::Array>> Finalize() {
+    KATANA_CHECKED(ArrowBuilder::AppendToBitmap(valid_.data(), valid_.size()));
+    KATANA_LOG_ASSERT(valid_.size() == size());
+    valid_ = std::vector<uint8_t>{};
     return KATANA_CHECKED(ArrowBuilder::Finish());
   }
 
 private:
-  boost::atomic_ref<uint8_t> byte_ref(size_t index) {
-    uint8_t* ptr = this->null_bitmap_builder_.mutable_data() + (index / 8);
-    return boost::atomic_ref<uint8_t>(*ptr);
-  }
+  std::vector<uint8_t> valid_;
 };
 
 template <typename ArrowType>
@@ -144,19 +134,19 @@ VECTOR_BACKED_BUILDER(uint8_t, uint8_t, arrow::UInt8Type);
 VECTOR_BACKED_BUILDER(int16_t, int16_t, arrow::Int16Type);
 VECTOR_BACKED_BUILDER(uint16_t, uint16_t, arrow::UInt16Type);
 
-VECTOR_BACKED_BUILDER(int32_t, int32_t, arrow::Int32Type);
+/*VECTOR_BACKED_BUILDER(int32_t, int32_t, arrow::Int32Type);
 VECTOR_BACKED_BUILDER(uint32_t, uint32_t, arrow::UInt32Type);
 VECTOR_BACKED_BUILDER(int64_t, int64_t, arrow::Int64Type);
 VECTOR_BACKED_BUILDER(uint64_t, uint64_t, arrow::UInt64Type);
 VECTOR_BACKED_BUILDER(float, float, arrow::FloatType);
-VECTOR_BACKED_BUILDER(double, double, arrow::DoubleType);
+VECTOR_BACKED_BUILDER(double, double, arrow::DoubleType);*/
 
-/*IN_PLACE_BUILDER(arrow::Int32Type);
+IN_PLACE_BUILDER(arrow::Int32Type);
 IN_PLACE_BUILDER(arrow::UInt32Type);
 IN_PLACE_BUILDER(arrow::Int64Type);
-IN_PLACE_BUILDER(arrow::UInt64Type);*/
-//IN_PLACE_BUILDER(arrow::FloatType);
-//IN_PLACE_BUILDER(arrow::DoubleType);
+IN_PLACE_BUILDER(arrow::UInt64Type);
+IN_PLACE_BUILDER(arrow::FloatType);
+IN_PLACE_BUILDER(arrow::DoubleType);
 
 #undef VECTOR_BACKED_BUILDER
 #undef IN_PLACE_BUILDER

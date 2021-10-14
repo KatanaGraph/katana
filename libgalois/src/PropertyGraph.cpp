@@ -1310,11 +1310,15 @@ katana::PropertyGraph::GetNodePropertyIndex(
 katana::Result<void>
 katana::PropertyGraph::RecreatePropertyIndexes() {
   for (const std::string& column_name : rdg_.node_property_index_columns()) {
-    KATANA_CHECKED(MakeNodeIndex(column_name));
+    if (HasNodeProperty(column_name)) {
+      KATANA_CHECKED(MakeNodeIndex(column_name));
+    }
   }
 
   for (const std::string& column_name : rdg_.edge_property_index_columns()) {
-    KATANA_CHECKED(MakeEdgeIndex(column_name));
+    if (HasEdgeProperty(column_name)) {
+      KATANA_CHECKED(MakeEdgeIndex(column_name));
+    }
   }
 
   return katana::ResultSuccess();

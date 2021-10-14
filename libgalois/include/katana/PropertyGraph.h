@@ -74,7 +74,7 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
-  /// Recreate indexes listed in RDG metadata.
+  /// Recreate indexes from column names in RDG metadata.
   katana::Result<void> RecreatePropertyIndexes();
 
   tsuba::RDG rdg_;

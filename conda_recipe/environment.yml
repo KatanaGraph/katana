@@ -48,6 +48,8 @@ dependencies:
  - gxx_linux-64
  - gcc_linux-64
  - cudatoolkit
+ - cudatoolkit-dev
+ - clangxx
 
 # The dependencies for pytest-notebook are incomplete, add them manually
  - pytest-notebook

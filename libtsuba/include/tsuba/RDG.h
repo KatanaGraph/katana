@@ -233,9 +233,9 @@ public:
   // Set the list of node and edge column names to persist. Consumes the
   // provided parameters.
   void set_node_property_index_columns(
-      std::vector<std::string>&& node_property_index_columns);
+      const std::vector<std::string>& node_property_index_columns);
   void set_edge_property_index_columns(
-      std::vector<std::string>&& edge_property_index_columns);
+      const std::vector<std::string>& edge_property_index_columns);
 
   // Return the list of node and edge column names.
   const std::vector<std::string>& node_property_index_columns();

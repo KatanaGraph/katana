@@ -217,16 +217,16 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
 
 void
 tsuba::RDG::set_node_property_index_columns(
-    std::vector<std::string>&& node_property_index_columns) {
+    const std::vector<std::string>& node_property_index_columns) {
   core_->part_header().set_node_property_index_columns(
-      std::move(node_property_index_columns));
+      node_property_index_columns);
 }
 
 void
 tsuba::RDG::set_edge_property_index_columns(
-    std::vector<std::string>&& edge_property_index_columns) {
+    const std::vector<std::string>& edge_property_index_columns) {
   core_->part_header().set_edge_property_index_columns(
-      std::move(edge_property_index_columns));
+      edge_property_index_columns);
 }
 
 const std::vector<std::string>&

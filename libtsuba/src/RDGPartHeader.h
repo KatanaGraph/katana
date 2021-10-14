@@ -283,8 +283,8 @@ public:
   }
 
   void set_node_property_index_columns(
-      std::vector<std::string>&& node_property_index_columns) {
-    node_property_index_columns_ = std::move(node_property_index_columns);
+      const std::vector<std::string>& node_property_index_columns) {
+    node_property_index_columns_ = node_property_index_columns;
   }
 
   const std::vector<std::string>& edge_property_index_columns() const {
@@ -292,8 +292,8 @@ public:
   }
 
   void set_edge_property_index_columns(
-      std::vector<std::string>&& edge_property_index_columns) {
-    edge_property_index_columns_ = std::move(edge_property_index_columns);
+      const std::vector<std::string>& edge_property_index_columns) {
+    edge_property_index_columns_ = edge_property_index_columns;
   }
 
   const PartitionMetadata& metadata() const { return metadata_; }

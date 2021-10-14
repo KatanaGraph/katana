@@ -477,13 +477,13 @@ katana::PropertyGraph::DoWrite(
   std::transform(
       node_indexes_.begin(), node_indexes_.end(), node_index_columns.begin(),
       [](const auto& index) { return index->column_name(); });
-  rdg_.set_node_property_index_columns(std::move(node_index_columns));
+  rdg_.set_node_property_index_columns(node_index_columns);
 
   std::vector<std::string> edge_index_columns(edge_indexes_.size());
   std::transform(
       edge_indexes_.begin(), edge_indexes_.end(), edge_index_columns.begin(),
       [](const auto& index) { return index->column_name(); });
-  rdg_.set_edge_property_index_columns(std::move(edge_index_columns));
+  rdg_.set_edge_property_index_columns(edge_index_columns);
 
   return rdg_.Store(
       handle, command_line, versioning_action, std::move(topology_res),

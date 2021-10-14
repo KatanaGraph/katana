@@ -76,6 +76,10 @@ public:
   ///   \param uri an identifier for a parquet file
   katana::Result<int64_t> NumRows(const katana::Uri& uri);
 
+  /// Get the files for the logical parquet table
+  ///   \param uri an identifier for a parquet file
+  katana::Result<std::vector<std::string>> GetFiles(const katana::Uri& uri);
+
 private:
   ParquetReader(std::optional<Slice> slice, bool make_cannonical)
       : slice_(slice), make_cannonical_{make_cannonical} {}

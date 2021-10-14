@@ -10,6 +10,7 @@
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
+#include "tsuba/ParquetReader.h"
 #include "tsuba/tsuba.h"
 template <typename T>
 using Result = katana::Result<T>;
@@ -207,6 +208,19 @@ RDGManifest::ParseViewArgsFromName(const std::string& file) {
   return view_args;
 }
 
+Result<void>
+AddPropertySubFiles(std::set<std::string>& fnames, std::string full_path) {
+  auto reader = KATANA_CHECKED(tsuba::ParquetReader::Make());
+  auto uri_path = KATANA_CHECKED(katana::Uri::Make(full_path));
+  auto sub_files = KATANA_CHECKED(reader->GetFiles(uri_path));
+  for (const auto& sub_file : sub_files) {
+    auto sub_file_uri = KATANA_CHECKED(katana::Uri::Make(sub_file));
+    fnames.emplace(
+        sub_file_uri.BaseName());  // Only want the file name without dir
+  }
+  return katana::ResultSuccess();
+}
+
 // Return the set of file names that hold this RDG's data by reading partition files
 // Useful to garbage collect unused files
 Result<std::set<std::string>>
@@ -223,19 +237,25 @@ RDGManifest::FileNames() {
     auto header_res = RDGPartHeader::Make(header_uri);
 
     if (!header_res) {
-      KATANA_LOG_DEBUG(
+      KATANA_LOG_WARN(
           "problem uri: {} host: {} ver: {} view_name: {}  : {}", header_uri, i,
           version(), view_specifier(), header_res.error());
     } else {
       auto header = std::move(header_res.value());
       for (const auto& node_prop : header.node_prop_info_list()) {
         fnames.emplace(node_prop.path());
+        KATANA_CHECKED(AddPropertySubFiles(
+            fnames, katana::Uri::JoinPath(dir().string(), node_prop.path())));
       }
       for (const auto& edge_prop : header.edge_prop_info_list()) {
         fnames.emplace(edge_prop.path());
+        KATANA_CHECKED(AddPropertySubFiles(
+            fnames, katana::Uri::JoinPath(dir().string(), edge_prop.path())));
       }
       for (const auto& part_prop : header.part_prop_info_list()) {
         fnames.emplace(part_prop.path());
+        KATANA_CHECKED(AddPropertySubFiles(
+            fnames, katana::Uri::JoinPath(dir().string(), part_prop.path())));
       }
       // Duplicates eliminated by set
       fnames.emplace(header.topology_path());

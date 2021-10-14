@@ -97,11 +97,7 @@ RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
 
 katana::Result<RDGPartHeader>
 RDGPartHeader::Make(const katana::Uri& partition_path) {
-  katana::Result<RDGPartHeader> res = MakeJson(partition_path);
-  if (!res) {
-    return res.error();
-  }
-  return res;
+  return KATANA_CHECKED(MakeJson(partition_path));
 }
 
 katana::Result<void>

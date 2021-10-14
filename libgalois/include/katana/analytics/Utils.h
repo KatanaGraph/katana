@@ -62,53 +62,106 @@ ConstructNodeProperties(
 }
 
 inline std::shared_ptr<arrow::ChunkedArray>
-ApplyBitMask(const std::shared_ptr<arrow::ChunkedArray>& chunked_array, const uint8_t* bit_mask) {
+ApplyBitMask(
+    const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+    const uint8_t* bit_mask) {
+  uint32_t num_chunks = chunked_array->num_chunks();
 
-        uint32_t num_chunks = chunked_array->num_chunks();
+  uint32_t offset{0};
 
-        uint32_t offset{0};
+  std::vector<std::shared_ptr<arrow::Array>> new_chunks;
 
-        std::vector<std::shared_ptr<arrow::Array>> new_chunks;
+  katana::gPrint("\n inside: {}", num_chunks);
 
-        for(uint32_t i = 0; i<num_chunks ;i++) {
-                
-                std::shared_ptr<arrow::Array> array = chunked_array->chunk(i);     
-                std::shared_ptr<arrow::Buffer> mask = 
-                        std::make_shared<arrow::Buffer>(bit_mask+offset, array->length());
-        std::shared_ptr<arrow::ArrayData> data = array->data()->Copy();
+  for (uint32_t i = 0; i < num_chunks; i++) {
+    std::shared_ptr<arrow::Array> array = chunked_array->chunk(i);
+    std::shared_ptr<arrow::Buffer> mask =
+        std::make_shared<arrow::Buffer>(bit_mask + offset, array->length());
+    std::shared_ptr<arrow::ArrayData> data = array->data()->Copy();
 
-        data->buffers[0] = mask;
-        data->null_count = arrow::kUnknownNullCount;
-                
-        new_chunks.emplace_back(std::move(arrow::MakeArray(data)));
-        }
-        
-        auto res_new_chunked_array =  arrow::ChunkedArray::Make(new_chunks);
-        if(res_new_chunked_array.ok()){
-                return res_new_chunked_array.ValueOrDie();
-        }
-        else {
-                return nullptr;
-        }
+    uint32_t p{0};
+    for (uint32_t j = 0; j < array->length(); j++) {
+      if ((*mask)[j]) {
+        p++;
+      }
+    }
+
+    katana::gPrint("\n p : {}", p);
+    data->buffers[0] = mask;
+    data->null_count = arrow::kUnknownNullCount;
+
+    p = 0;
+    for (uint32_t j = 0; j < array->length(); j++) {
+      if ((*data->buffers[0])[j]) {
+        p++;
+      }
+    }
+
+    katana::gPrint("\n p : {}", p);
+    auto array_ptr = arrow::MakeArray(data);
+    uint32_t num{0};
+
+    katana::gPrint("\n length: {}", array_ptr->length());
+
+    katana::gPrint("\n offset: {} ", array_ptr->offset());
+
+    for (uint32_t len = 0; len < array_ptr->length(); len++) {
+      if (array_ptr->IsValid(len)) {
+        num++;
+      }
+    }
+
+    katana::gPrint("\n num: {}", num);
+    new_chunks.emplace_back(std::move(arrow::MakeArray(data)));
+    offset += array_ptr->length();
+  }
+
+  auto res_new_chunked_array = arrow::ChunkedArray::Make(new_chunks);
+  if (res_new_chunked_array.ok()) {
+    return res_new_chunked_array.ValueOrDie();
+  } else {
+    return nullptr;
+  }
 }
 
-inline katana::Result<std::shared_ptr<arrow::Table>> 
-AddBitMaskToTable(std::shared_ptr<arrow::Table> table, const uint8_t* bit_mask) {
+inline katana::Result<std::shared_ptr<arrow::Table>>
+AddBitMaskToTable(
+    std::shared_ptr<arrow::Table> table, const uint8_t* bit_mask) {
+  std::vector<std::shared_ptr<arrow::Field>> fields;
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
 
-        std::vector<std::shared_ptr<arrow::Field>> fields;
-        std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
+  for (const auto& field : table->fields()) {
+    fields.emplace_back(field);
+  }
 
-        for(const auto& field: table->fields()) {
-                fields.emplace_back(field);
+  for (const auto& col : table->columns()) {
+    auto new_col = ApplyBitMask(col, bit_mask);
+
+    uint32_t num_chunks = new_col->num_chunks();
+
+    katana::gPrint("\n num chunks: {}", num_chunks);
+
+    uint32_t total_length{0};
+    for (uint32_t chunk = 0; chunk < num_chunks; chunk++) {
+      auto node_prop_array = new_col->chunk(chunk);
+      uint32_t array_length = node_prop_array->length();
+
+      total_length += array_length;
+      uint32_t valid{0};
+      for (uint32_t len = 0; len < array_length; len++) {
+        if (node_prop_array->IsValid(len)) {
+          valid++;
         }
+      }
 
-        for(const auto& col : table->columns()) {
-                auto new_col = ApplyBitMask(col, bit_mask);
-                columns.emplace_back(std::move(new_col));
-        }
+      katana::gPrint("\n valid: {}", valid);
+    }
 
-        return arrow::Table::Make(arrow::schema(fields), columns);
-        
+    katana::gPrint("\n total length {}", total_length);
+    columns.emplace_back(std::move(new_col));
+  }
+
+  return arrow::Table::Make(arrow::schema(fields), columns);
 }
 
 template <typename PGView, typename NodeProps>
@@ -121,7 +174,17 @@ ConstructNodeProperties(
     return res_table.error();
   }
 
-  auto bit_mask = pg_view->node_bitmask();
+  auto bit_mask = pg_view.node_bitmask();
+
+  uint32_t valid{0};
+  for (uint32_t i = 0; i < pg->num_nodes(); i++) {
+    if (bit_mask[i]) {
+      valid++;
+    }
+  }
+
+  katana::gPrint("\n inside vaid: {}", valid);
+
   res_table = AddBitMaskToTable(res_table.value(), bit_mask);
 
   if (!res_table) {
@@ -154,7 +217,7 @@ ConstructEdgeProperties(
     return res_table.error();
   }
 
-  auto bit_mask = pg_view->edge_bitmask();
+  auto bit_mask = pg_view.edge_bitmask();
   res_table = AddBitMaskToTable(res_table.value(), bit_mask);
 
   if (!res_table) {

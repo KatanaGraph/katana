@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <random>
+//#include <omp.h>
 
 #include "katana/ArrowRandomAccessBuilder.h"
 
@@ -29,7 +30,7 @@ GetCanonical(size_t size) {
   std::vector<std::optional<T>> vec;
   vec.reserve(size);
   for (size_t i = 0; i < size; ++i) {
-    if (i % 10) {
+    if (i % 2) {
       vec.push_back(GetValue<T>(i));
     } else {
       vec.push_back(std::nullopt);
@@ -38,33 +39,34 @@ GetCanonical(size_t size) {
   return vec;
 }
 
-template <typename ArrowType>
+template <typename RandomBuilder>
 katana::Result<void>
-TestBuilder(size_t size) {
-  using T = typename katana::ArrowRandomAccessBuilder<ArrowType>::value_type;
+TestBuilder(size_t size, int threads) {
+  using T = typename RandomBuilder::value_type;
+  using ArrowType = typename RandomBuilder::ArrowType;
   using ArrayType = typename arrow::TypeTraits<ArrowType>::ArrayType;
   auto canon = GetCanonical<T>(size);
 
-  std::vector<std::pair<size_t, std::optional<T>>> inserts;
-  inserts.reserve(size);
-  for (size_t i = 0; i < size; ++i) {
-    inserts.push_back(std::make_pair(i, canon[i]));
-  }
-  std::mt19937 rand(20210922);
-  std::shuffle(inserts.begin(), inserts.end(), rand);
-
   katana::ArrowRandomAccessBuilder<ArrowType> sink(size);
+
   katana::do_all(
-      katana::iterate(size_t{0}, size),
-      [&](size_t i) {
-        auto [idx, data] = inserts[i];
-        if (data) {
-          sink[idx] = *data;
+      katana::iterate(0, threads),
+      [&](size_t tid) {
+        for (size_t i = tid; i < size; i += threads) {
+          if (canon[i]) {
+            sink[i] = *canon[i];
+          }
         }
       },
       katana::no_stats());
   auto array = KATANA_CHECKED(sink.Finalize());
   auto typed = std::dynamic_pointer_cast<ArrayType>(array);
+
+  if ((size_t)array->length() != size) {
+    return KATANA_ERROR(
+        katana::ErrorCode::AssertionFailed, "expected size of {}, got {}", size,
+        array->length());
+  }
 
   for (size_t i = 0; i < size; ++i) {
     bool valid = canon[i].has_value();
@@ -93,31 +95,68 @@ TestBuilder(size_t size) {
 
 template <typename ArrowType>
 int
-Test() {
-  if (TestBuilder<ArrowType>(100000))
+TestVectorBacked(int threads) {
+  KATANA_LOG_DEBUG(
+      "testing VectorBacked with type {}",
+      arrow::TypeTraits<ArrowType>::type_singleton()->ToString());
+  katana::setActiveThreads(threads);
+  using Config = katana::internal::VectorBackedBuilderConfig<ArrowType>;
+  if (auto res = TestBuilder<typename Config::Type>(1 << 21, threads); res) {
+    KATANA_LOG_DEBUG("passed");
     return 0;
-  else
+  } else {
+    KATANA_LOG_ERROR("{}", res.error());
     return 1;
+  }
+}
+
+template <typename ArrowType>
+int
+TestInPlace(int threads) {
+  KATANA_LOG_DEBUG(
+      "testing InPlace with type {}",
+      arrow::TypeTraits<ArrowType>::type_singleton()->ToString());
+  katana::setActiveThreads(threads);
+  using Builder = katana::internal::InPlaceBuilder<ArrowType>;
+  if (auto res = TestBuilder<Builder>(1 << 21, threads); res) {
+    KATANA_LOG_DEBUG("passed");
+    return 0;
+  } else {
+    KATANA_LOG_ERROR("{}", res.error());
+    return 1;
+  }
 }
 
 int
 main() {
   katana::SharedMemSys Katana_runtime;
-  katana::setActiveThreads(8);
+  int threads = 4;
 
   int errors = 0;
-  errors += Test<arrow::Int8Type>();
-  errors += Test<arrow::UInt8Type>();
-  errors += Test<arrow::Int16Type>();
-  errors += Test<arrow::UInt16Type>();
-  errors += Test<arrow::Int32Type>();
-  errors += Test<arrow::UInt32Type>();
-  errors += Test<arrow::Int64Type>();
-  errors += Test<arrow::UInt64Type>();
-  errors += Test<arrow::FloatType>();
-  errors += Test<arrow::DoubleType>();
-  errors += Test<arrow::BooleanType>();
-  errors += Test<arrow::StringType>();
-  errors += Test<arrow::LargeStringType>();
+  errors += TestVectorBacked<arrow::Int8Type>(threads);
+  errors += TestVectorBacked<arrow::UInt8Type>(threads);
+  errors += TestVectorBacked<arrow::Int16Type>(threads);
+  errors += TestVectorBacked<arrow::UInt16Type>(threads);
+  errors += TestVectorBacked<arrow::Int32Type>(threads);
+  errors += TestVectorBacked<arrow::UInt32Type>(threads);
+  errors += TestVectorBacked<arrow::Int64Type>(threads);
+  errors += TestVectorBacked<arrow::UInt64Type>(threads);
+  errors += TestVectorBacked<arrow::FloatType>(threads);
+  errors += TestVectorBacked<arrow::DoubleType>(threads);
+  errors += TestVectorBacked<arrow::BooleanType>(threads);
+  errors += TestVectorBacked<arrow::StringType>(threads);
+  errors += TestVectorBacked<arrow::LargeStringType>(threads);
+
+  errors += TestInPlace<arrow::Int8Type>(threads);
+  errors += TestInPlace<arrow::UInt8Type>(threads);
+  errors += TestInPlace<arrow::Int16Type>(threads);
+  errors += TestInPlace<arrow::UInt16Type>(threads);
+  errors += TestInPlace<arrow::Int32Type>(threads);
+  errors += TestInPlace<arrow::UInt32Type>(threads);
+  errors += TestInPlace<arrow::Int64Type>(threads);
+  errors += TestInPlace<arrow::UInt64Type>(threads);
+  errors += TestInPlace<arrow::FloatType>(threads);
+  errors += TestInPlace<arrow::DoubleType>(threads);
+
   return errors;
 }

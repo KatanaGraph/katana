@@ -9,15 +9,16 @@
 
 namespace katana {
 
-namespace {
+namespace internal {
 
 /// VectorBackedBuilder uses std::vector for storage
 /// Finalize() makes a copy of the data
 /// Thread-safe for concurrent accesses to different indices
 /// - Guaranteed by null mask stored as bytes in std::vector
-template <typename ValueType, typename StorageType, typename ArrowType>
+template <typename ValueType, typename StorageType, typename ArrowType_>
 class VectorBackedBuilder {
 public:
+  using ArrowType = ArrowType_;
   using value_type = ValueType;
   using reference = ValueType&;
 
@@ -65,15 +66,16 @@ private:
 
 /// InPlaceBuilder directly writes to the memory of an arrow::NumericBuilder
 /// Finalize() does not copy data, only shared_ptr and null bitmask
-template <typename ArrowType>
-class InPlaceBuilder : private arrow::NumericBuilder<ArrowType> {
+template <typename ArrowType_>
+class InPlaceBuilder : private arrow::NumericBuilder<ArrowType_> {
 public:
+  using ArrowType = ArrowType_;
   using ArrowBuilder = typename arrow::NumericBuilder<ArrowType>;
   using typename ArrowBuilder::value_type;
 
   InPlaceBuilder(size_t length)
       : arrow::NumericBuilder<ArrowType>(), valid_(length, false) {
-    auto st = ArrowBuilder::data_builder_.Resize(length);
+    auto st = ArrowBuilder::Resize(length);
     KATANA_LOG_ASSERT(st.ok());
   }
 
@@ -92,7 +94,8 @@ public:
   size_t size() const { return ArrowBuilder::length(); }
 
   katana::Result<std::shared_ptr<arrow::Array>> Finalize() {
-    KATANA_CHECKED(ArrowBuilder::AppendToBitmap(valid_.data(), valid_.size()));
+    KATANA_LOG_ASSERT(size() == 0);
+    ArrowBuilder::UnsafeAppendToBitmap(valid_.data(), valid_.size());
     KATANA_LOG_ASSERT(valid_.size() == size());
     valid_ = std::vector<uint8_t>{};
     return KATANA_CHECKED(ArrowBuilder::Finish());
@@ -103,22 +106,15 @@ private:
 };
 
 template <typename ArrowType>
-struct RandomBuilderTypeConfig;
+struct VectorBackedBuilderConfig;
 
 #define VECTOR_BACKED_BUILDER(ValueType, StorageType, ArrowType)               \
   template <>                                                                  \
-  struct RandomBuilderTypeConfig<ArrowType> {                                  \
-    using RandomBuilderType =                                                  \
-        VectorBackedBuilder<ValueType, StorageType, ArrowType>;                \
+  struct VectorBackedBuilderConfig<ArrowType> {                                \
+    using Type = VectorBackedBuilder<ValueType, StorageType, ArrowType>;       \
   }
 
-#define IN_PLACE_BUILDER(ArrowType)                                            \
-  template <>                                                                  \
-  struct RandomBuilderTypeConfig<ArrowType> {                                  \
-    using RandomBuilderType = InPlaceBuilder<ArrowType>;                       \
-  }
-
-// arrow::BooleanArray is bit-compacted, promote to byte for thread-safety
+//arrow::BooleanArray is bit-compacted, promote to byte for thread-safety
 VECTOR_BACKED_BUILDER(bool, uint8_t, arrow::BooleanType);
 
 // Intermediate storage is mandatory for non-PODs, as Data size is unknown
@@ -126,32 +122,67 @@ VECTOR_BACKED_BUILDER(std::string, std::string, arrow::StringType);
 VECTOR_BACKED_BUILDER(std::string, std::string, arrow::LargeStringType);
 
 // TODO(daniel) these should be fine as InPlace
-// For some reason, using InPlace makes the partitioner
-// unable to partition Types, stored as uint8_t
-// Marking anything smaller than 32-bit as Vector for now
+// For some reason, using InPlace makes the partitioner barf
 VECTOR_BACKED_BUILDER(int8_t, int8_t, arrow::Int8Type);
 VECTOR_BACKED_BUILDER(uint8_t, uint8_t, arrow::UInt8Type);
 VECTOR_BACKED_BUILDER(int16_t, int16_t, arrow::Int16Type);
 VECTOR_BACKED_BUILDER(uint16_t, uint16_t, arrow::UInt16Type);
 
-/*VECTOR_BACKED_BUILDER(int32_t, int32_t, arrow::Int32Type);
+VECTOR_BACKED_BUILDER(int32_t, int32_t, arrow::Int32Type);
 VECTOR_BACKED_BUILDER(uint32_t, uint32_t, arrow::UInt32Type);
 VECTOR_BACKED_BUILDER(int64_t, int64_t, arrow::Int64Type);
 VECTOR_BACKED_BUILDER(uint64_t, uint64_t, arrow::UInt64Type);
 VECTOR_BACKED_BUILDER(float, float, arrow::FloatType);
-VECTOR_BACKED_BUILDER(double, double, arrow::DoubleType);*/
-
-IN_PLACE_BUILDER(arrow::Int32Type);
-IN_PLACE_BUILDER(arrow::UInt32Type);
-IN_PLACE_BUILDER(arrow::Int64Type);
-IN_PLACE_BUILDER(arrow::UInt64Type);
-IN_PLACE_BUILDER(arrow::FloatType);
-IN_PLACE_BUILDER(arrow::DoubleType);
+VECTOR_BACKED_BUILDER(double, double, arrow::DoubleType);
 
 #undef VECTOR_BACKED_BUILDER
-#undef IN_PLACE_BUILDER
 
-}  // namespace
+template <typename ArrowType>
+struct RandomBuilderTypeConfig;
+
+#define USE_VECTOR_BACKED(ArrowType)                                           \
+  template <>                                                                  \
+  struct RandomBuilderTypeConfig<ArrowType> {                                  \
+    using RandomBuilderType =                                                  \
+        typename VectorBackedBuilderConfig<ArrowType>::Type;                   \
+  }
+
+#define USE_IN_PLACE(ArrowType)                                                \
+  template <>                                                                  \
+  struct RandomBuilderTypeConfig<ArrowType> {                                  \
+    using RandomBuilderType = InPlaceBuilder<ArrowType>;                       \
+  }
+
+USE_VECTOR_BACKED(arrow::BooleanType);
+USE_VECTOR_BACKED(arrow::StringType);
+USE_VECTOR_BACKED(arrow::LargeStringType);
+
+USE_VECTOR_BACKED(arrow::Int8Type);
+USE_VECTOR_BACKED(arrow::UInt8Type);
+USE_VECTOR_BACKED(arrow::Int16Type);
+USE_VECTOR_BACKED(arrow::UInt16Type);
+USE_VECTOR_BACKED(arrow::Int32Type);
+USE_VECTOR_BACKED(arrow::UInt32Type);
+USE_VECTOR_BACKED(arrow::Int64Type);
+USE_VECTOR_BACKED(arrow::UInt64Type);
+USE_VECTOR_BACKED(arrow::FloatType);
+USE_VECTOR_BACKED(arrow::DoubleType);
+
+/*USE_IN_PLACE(arrow::Int8Type);
+USE_IN_PLACE(arrow::UInt8Type);
+USE_IN_PLACE(arrow::Int16Type);
+USE_IN_PLACE(arrow::UInt16Type);
+USE_IN_PLACE(arrow::Int32Type);
+USE_IN_PLACE(arrow::UInt32Type);
+USE_IN_PLACE(arrow::Int64Type);
+USE_IN_PLACE(arrow::UInt64Type);
+USE_IN_PLACE(arrow::FloatType);
+USE_IN_PLACE(arrow::DoubleType);*/
+
+#undef USE_VECTOR_BACKED
+#undef USE_IN_PLACE
+
+}  // namespace internal
 
 /// ArrowRandomAccessBuilder encapsulates the concept of building
 /// an arrow::Array from <index, value> pairs arriving in unknown order
@@ -162,7 +193,7 @@ template <typename ArrowType>
 class ArrowRandomAccessBuilder {
 public:
   using RandomBuilderType =
-      typename RandomBuilderTypeConfig<ArrowType>::RandomBuilderType;
+      typename internal::RandomBuilderTypeConfig<ArrowType>::RandomBuilderType;
   using value_type = typename RandomBuilderType::value_type;
 
   ArrowRandomAccessBuilder(size_t length) : builder_(length) {}

@@ -80,7 +80,7 @@ ApplyBitMask(
   auto status = array_ptr->ValidateFull();
 
   KATANA_LOG_ASSERT(status.ok());
-  new_chunks.emplace_back(std::move(arrow::MakeArray(data)));
+  new_chunks.emplace_back(arrow::MakeArray(data));
 
   auto res_new_chunked_array = arrow::ChunkedArray::Make(new_chunks);
   if (res_new_chunked_array.ok()) {

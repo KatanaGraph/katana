@@ -99,15 +99,6 @@ public:
     return GetData<NodeIndex>(*node);
   }
 
-  template <typename NodeIndex>
-  bool IsValid(const Node& node) {
-    constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_col_index>(node_view_).IsValid(node);
-  }
-  template <typename NodeIndex>
-  bool IsValid(const node_iterator& node) {
-    return IsValid<NodeIndex>(*node);
-  }
   /**
    * Gets the edge data.
    *
@@ -133,11 +124,6 @@ public:
     return std::get<prop_col_index>(edge_view_).GetValue(*edge);
   }
 
-  template <typename EdgeIndex>
-  bool IsEdgeValid(const edge_iterator& edge) {
-    constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_).IsValid(*edge);
-  }
   /**
    * Gets the destination for an edge.
    *
@@ -253,12 +239,6 @@ public:
         .GetValue(PGView::node_property_index(node));
   }
 
-  template <typename NodeIndex>
-  bool IsValid(const Node& node) const {
-    constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_col_index>(node_view_)
-        .IsValid(PGView::node_property_index(node));
-  }
   /**
    * Gets the edge data.
    *
@@ -283,13 +263,6 @@ public:
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     return std::get<prop_col_index>(edge_view_)
         .GetValue(PGView::edge_property_index(edge));
-  }
-
-  template <typename EdgeIndex>
-  bool IsEdgeValid(const Edge& edge) const {
-    constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_)
-        .IsValid(PGView::edge_property_index(edge));
   }
 
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(

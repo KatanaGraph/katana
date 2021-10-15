@@ -814,8 +814,7 @@ private:
       NUMAArray<Node>&& projected_to_original_nodes_mapping,
       NUMAArray<Edge>&& original_to_projected_edges_mapping,
       NUMAArray<Edge>&& projected_to_original_edges_mapping,
-      NUMAArray<uint8_t>&& node_bitmask, 
-      NUMAArray<uint8_t>&& edge_bitmask)
+      NUMAArray<uint8_t>&& node_bitmask, NUMAArray<uint8_t>&& edge_bitmask)
       : adj_indices_(std::move(adj_indices)),
         dests_(std::move(dests)),
         original_to_projected_nodes_mapping_(
@@ -915,12 +914,8 @@ public:
 
   const PropertyGraph& property_graph() const noexcept { return *prop_graph_; }
 
-  auto node_bitmask() const noexcept {
-        return topo().node_bitmask();
-  }
-  auto edge_bitmask() const noexcept {
-        return topo().edge_bitmask();
-  }
+  auto node_bitmask() const noexcept { return topo().node_bitmask(); }
+  auto edge_bitmask() const noexcept { return topo().edge_bitmask(); }
 
 protected:
   const Topo& topo() const noexcept { return *topo_ptr_; }

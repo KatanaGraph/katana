@@ -81,6 +81,10 @@ main(int argc, char** argv) {
   auto res_node_prop = katana::analytics::ConstructNodeProperties<
       ProjectedPropertyGraphView, NodeData>(&full_graph, pg_view, node_props);
 
+  if (!res_node_prop) {
+    KATANA_LOG_FATAL(
+        "Failed to Construct Properties: {}", res_node_prop.error());
+  }
   auto res_projected_graph =
       ProjectedGraphView::Make(&full_graph, pg_view, node_props, {});
 

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KatanaGraph/katana/tree/master/scripts/katana_requirements/schema.json",
+  "title": "Requirements File",
+  "description": "The requirements of a project in a generic form.",
+  "type": "object",
+  "properties": {
+      "label_descriptions": {
+        "type": "object",
+        "items": {
+          "type" : "object",
+          "additionalProperties": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "packaging_system_descriptions": {
+        "type": "object",
+        "items": {
+          "type" : "object",
+          "additionalProperties": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+  },
+  "additionalProperties": {
+    "type": "object",
+    "description": "A package requirement.",
+    "properties": {
+      "name_overrides": {
+        "type": "object",
+        "description": "The name of the package in different packaging systems, if it is different from the generic name.",
+        "additionalProperties": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The name of the package in this packaging system or null if the package does not exist in this system."
+        }
+      },
+      "version": {
+        "type": "array",
+        "description": "The generic version requirements. This is represented as a pair of dotted versions. The first is the inclusive minimum version. The second is the exclusive upper bound on the version. Unlike conda, the upper-bound also excludes any pre-release versions working up to the bound. So [\"1\", \"2\"] will exclude the version 2.0rc1 even though it is technically before 2.",
+        "prefixItems": [
+          {
+            "description": "The minimum supported version. I.e., the inclusive lower-bound on the version.",
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          {
+            "description": "The exclusive upper-bound on the version. Generally, the version that will break compatibility with us.",
+            "type": [
+              "string",
+              "number",
+              "null"
+            ]
+          }
+        ],
+        "items": {
+          "type": [
+            "string",
+            "number",
+            "null"
+          ]
+        },
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "version_overrides": {
+        "type": "object",
+        "description": "Version requirement overrides for specific packaging systems. System specific versions can include anything supported by that system. Specifying null for a system means the package is not available in that system. (These will often need to be quoted due to YAML special characters)",
+        "additionalProperties": {
+          "type": ["string", "number"],
+          "description": "The packaging system specific version requirement string for this package."
+        }
+      },
+      "labels": {
+        "type": "array",
+        "description": "Labels for this package.",
+        "items": {
+          "type": "string"
+        },
+        "uniqueItems": true
+      }
+    },
+    "required": [
+      "version"
+    ]
+  }
+}

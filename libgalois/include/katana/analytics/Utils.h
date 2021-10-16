@@ -7,6 +7,7 @@
 
 #include <arrow/type.h>
 
+#include "arrow/util/bitmap.h"
 #include "katana/ErrorCode.h"
 #include "katana/Properties.h"
 #include "katana/PropertyGraph.h"
@@ -64,15 +65,13 @@ ConstructNodeProperties(
 inline std::shared_ptr<arrow::ChunkedArray>
 ApplyBitMask(
     const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
-    const uint8_t* bit_mask) {
+    const std::shared_ptr<arrow::Buffer>& bit_mask) {
   std::vector<std::shared_ptr<arrow::Array>> new_chunks;
 
   std::shared_ptr<arrow::Array> array = chunked_array->chunk(0);
-  std::shared_ptr<arrow::Buffer> mask =
-      std::make_shared<arrow::Buffer>(bit_mask, array->length());
   std::shared_ptr<arrow::ArrayData> data = array->data()->Copy();
 
-  data->buffers[0] = mask;
+  data->buffers[0] = bit_mask;
   data->null_count = arrow::kUnknownNullCount;
 
   auto array_ptr = arrow::MakeArray(data);
@@ -80,7 +79,7 @@ ApplyBitMask(
   auto status = array_ptr->ValidateFull();
 
   KATANA_LOG_ASSERT(status.ok());
-  new_chunks.emplace_back(arrow::MakeArray(data));
+  new_chunks.emplace_back(array_ptr);
 
   auto res_new_chunked_array = arrow::ChunkedArray::Make(new_chunks);
   if (res_new_chunked_array.ok()) {
@@ -92,7 +91,8 @@ ApplyBitMask(
 
 inline katana::Result<std::shared_ptr<arrow::Table>>
 AddBitMaskToTable(
-    std::shared_ptr<arrow::Table> table, const uint8_t* bit_mask) {
+    std::shared_ptr<arrow::Table> table,
+    const std::shared_ptr<arrow::Buffer>& bit_mask) {
   std::vector<std::shared_ptr<arrow::Field>> fields;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
 
@@ -122,6 +122,21 @@ ConstructNodeProperties(
 
   auto bit_mask = pg_view.node_bitmask();
 
+  /*uint32_t val{0};
+
+  for(uint32_t i = 0 ; i<pg->num_nodes() ; i++) {
+        katana::gPrint("\n i: {}", i);
+        katana::gPrint("\n i: {}", i);
+
+
+        if(bit_mask->GetBit(i)){
+                val++;
+        }
+        } 
+
+        katana::gPrint("\n val: {}", val);
+        katana::gPrint("\n val: {}", val);
+*/
   res_table = AddBitMaskToTable(res_table.value(), bit_mask);
 
   if (!res_table) {

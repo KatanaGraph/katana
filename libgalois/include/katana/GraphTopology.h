@@ -7,6 +7,7 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
+#include "arrow/util/bitmap.h"
 #include "katana/DynamicBitset.h"
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
@@ -788,9 +789,13 @@ public:
     return original_to_projected_nodes_mapping_[nid];
   }
 
-  const uint8_t* node_bitmask() const noexcept { return node_bitmask_.data(); }
+  const std::shared_ptr<arrow::Buffer>& node_bitmask() const noexcept {
+    return node_bitmask_.buffer();
+  }
 
-  const uint8_t* edge_bitmask() const noexcept { return edge_bitmask_.data(); }
+  const std::shared_ptr<arrow::Buffer>& edge_bitmask() const noexcept {
+    return edge_bitmask_.buffer();
+  }
 
   /// this function creates a topology by filtering nodes and edges
   /// @param node_types the types that the selected nodes must have
@@ -814,7 +819,8 @@ private:
       NUMAArray<Node>&& projected_to_original_nodes_mapping,
       NUMAArray<Edge>&& original_to_projected_edges_mapping,
       NUMAArray<Edge>&& projected_to_original_edges_mapping,
-      NUMAArray<uint8_t>&& node_bitmask, NUMAArray<uint8_t>&& edge_bitmask)
+      NUMAArray<uint8_t>&& node_bitmask_data,
+      NUMAArray<uint8_t>&& edge_bitmask_data)
       : adj_indices_(std::move(adj_indices)),
         dests_(std::move(dests)),
         original_to_projected_nodes_mapping_(
@@ -825,8 +831,14 @@ private:
             std::move(original_to_projected_edges_mapping)),
         projected_to_original_edges_mapping_(
             std::move(projected_to_original_edges_mapping)),
-        node_bitmask_(std::move(node_bitmask)),
-        edge_bitmask_(std::move(edge_bitmask)) {}
+        node_bitmask_data_(std::move(node_bitmask_data)),
+        edge_bitmask_data_(std::move(edge_bitmask_data)),
+        node_bitmask_(
+            static_cast<void*>(node_bitmask_data_.data()), 0,
+            (int64_t)original_to_projected_nodes_mapping_.size()),
+        edge_bitmask_(
+            edge_bitmask_data_.data(), 0,
+            (int64_t)original_to_projected_edges_mapping_.size()) {}
 
   // TODO(udit) : we can let go of original_to_projected_nodes_mapping_ and original_to_projected_edges_mapping_
   // by doing a binary search on projected_to_original_nodes_mapping_ and projected_to_original_edges_mapping_
@@ -837,8 +849,10 @@ private:
   NUMAArray<Node> projected_to_original_nodes_mapping_;
   NUMAArray<Edge> original_to_projected_edges_mapping_;
   NUMAArray<Edge> projected_to_original_edges_mapping_;
-  NUMAArray<uint8_t> node_bitmask_;
-  NUMAArray<uint8_t> edge_bitmask_;
+  NUMAArray<uint8_t> node_bitmask_data_;
+  NUMAArray<uint8_t> edge_bitmask_data_;
+  arrow::internal::Bitmap node_bitmask_;
+  arrow::internal::Bitmap edge_bitmask_;
 };
 
 template <typename Topo>
@@ -914,8 +928,12 @@ public:
 
   const PropertyGraph& property_graph() const noexcept { return *prop_graph_; }
 
-  auto node_bitmask() const noexcept { return topo().node_bitmask(); }
-  auto edge_bitmask() const noexcept { return topo().edge_bitmask(); }
+  const std::shared_ptr<arrow::Buffer>& node_bitmask() const noexcept {
+    return topo().node_bitmask();
+  }
+  const std::shared_ptr<arrow::Buffer>& edge_bitmask() const noexcept {
+    return topo().edge_bitmask();
+  }
 
 protected:
   const Topo& topo() const noexcept { return *topo_ptr_; }

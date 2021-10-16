@@ -114,7 +114,7 @@ def _capture_build(zipout: zipfile.ZipFile):
             "graph-convert.dir/link.txt",
             "graph-worker.dir/link.txt",
         ]:
-            files = root.rglob(target_filename)
+            files = list(root.rglob(target_filename))
             capture_files(zipout, [f for f in files if f not in already_added])
             already_added.update(files)
 

@@ -13,6 +13,8 @@ def test_bug_capture_environment():
             files = {f.filename for f in zipin.filelist}
             for fn in ["info/os.txt", "info/python.txt", "info/conda.txt", "info/cmake.txt", "etc/ld.so.conf"]:
                 assert fn in files
+            # Check that we have a link.txt. This cannot be added above because the path varies with the build dir
+            assert any("link.txt" in fn for fn in files)
 
 
 def test_bug_capture_command_pass_invalid_command():

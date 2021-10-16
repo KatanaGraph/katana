@@ -99,6 +99,9 @@ def _capture_build(zipout: zipfile.ZipFile):
     PARENT_STEPS_TO_ROOT_FOR_OPEN = 3
     # Similarly, for the root of the enterprise repo.
     PARENT_STEPS_TO_ROOT_FOR_ENTERPRISE = 5
+
+    already_added = set()
+
     for root in [
         Path(__file__).parents[PARENT_STEPS_TO_ROOT_FOR_OPEN],
         Path(__file__).parents[PARENT_STEPS_TO_ROOT_FOR_ENTERPRISE],
@@ -108,9 +111,12 @@ def _capture_build(zipout: zipfile.ZipFile):
             "CMakeCache.txt",
             "CMakeError.log",
             "CMakeOutput.log",
-            "graph-worker*/link.txt",
+            "graph-convert.dir/link.txt",
+            "graph-worker.dir/link.txt",
         ]:
-            capture_files(zipout, root.rglob(target_filename))
+            files = root.rglob(target_filename)
+            capture_files(zipout, [f for f in files if f not in already_added])
+            already_added.update(files)
 
 
 def capture_command(*args, **kwargs) -> str:

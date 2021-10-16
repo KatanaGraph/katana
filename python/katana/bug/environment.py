@@ -192,6 +192,10 @@ def get_filtered_environ():
     return result
 
 
+def is_interactive():
+    return hasattr(sys, "ps1")
+
+
 def capture_environment(filename: Optional[Union[str, Path, Any]] = None):
     """
     Capture the execution and build environment in as much detail as reasonably possible
@@ -203,7 +207,8 @@ def capture_environment(filename: Optional[Union[str, Path, Any]] = None):
     :return: A file path where the captured environment information is stored.
     """
     # pylint: disable=consider-using-with
-    # with is used, but not on the same line, and pylint does do flow analysis.
+    # with is used, but not on the same line, and pylint does not do flow analysis.
+
     if filename is None:
         file = tempfile.NamedTemporaryFile(delete=False, mode="wb", prefix="environment_information_", suffix=".zip")
         filename = file.name
@@ -222,12 +227,35 @@ def capture_environment(filename: Optional[Union[str, Path, Any]] = None):
         if filename is not None:
             file.close()
 
+    if is_interactive() and filename is not None:
+        # This is an interactive shell, but might not be IPython
+        path = Path(filename)
+        try:
+            from IPython import get_ipython
+            from IPython.display import HTML, display
+
+            if get_ipython():
+                # If IPython is importable and actually loaded, display the link.
+
+                environment_information_directory = Path.cwd() / "environment_information"
+                environment_information_directory.mkdir(parents=True, exist_ok=True)
+
+                download_path = environment_information_directory / path.name
+                download_path.symlink_to(path)
+
+                # IPython.display.FileLink cannot be used since it creates a link that tries to open the file as text.
+
+                display(
+                    HTML(
+                        f"""
+                    Environment information file download link:
+                    <a href="/files/{download_path.relative_to(Path.cwd())}" target="_blank">
+                        {download_path.name}
+                    </a>
+                    """
+                    )
+                )
+        except ImportError:
+            pass  # Fail silently if we don't have IPython. The output of the function is still useful.
+
     return filename
-
-
-def main():
-    print("Captured environment to:", capture_environment())
-
-
-if __name__ == "__main__":
-    sys.exit(main())

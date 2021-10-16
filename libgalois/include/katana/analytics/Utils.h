@@ -122,21 +122,6 @@ ConstructNodeProperties(
 
   auto bit_mask = pg_view.node_bitmask();
 
-  /*uint32_t val{0};
-
-  for(uint32_t i = 0 ; i<pg->num_nodes() ; i++) {
-        katana::gPrint("\n i: {}", i);
-        katana::gPrint("\n i: {}", i);
-
-
-        if(bit_mask->GetBit(i)){
-                val++;
-        }
-        } 
-
-        katana::gPrint("\n val: {}", val);
-        katana::gPrint("\n val: {}", val);
-*/
   res_table = AddBitMaskToTable(res_table.value(), bit_mask);
 
   if (!res_table) {

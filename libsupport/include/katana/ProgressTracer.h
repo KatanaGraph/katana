@@ -184,7 +184,7 @@ class KATANA_EXPORT [[nodiscard]] ProgressScope {
 public:
   ~ProgressScope();
   ProgressScope(const ProgressScope&) = delete;
-  ProgressScope(ProgressScope &&) = delete;
+  ProgressScope(ProgressScope&&) = delete;
   ProgressScope& operator=(const ProgressScope&) = delete;
   ProgressScope& operator=(ProgressScope&&) = delete;
 

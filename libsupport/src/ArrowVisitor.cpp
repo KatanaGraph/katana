@@ -19,10 +19,12 @@ public:
 
   template <typename ScalarArrowType, typename BuilderArrowType>
   static constexpr bool MatchPrimitive =
-      std::is_same<ScalarArrowType, BuilderArrowType>::value &&
-      (arrow::is_number_type<ScalarArrowType>::value ||
-       arrow::is_boolean_type<ScalarArrowType>::value ||
-       arrow::is_temporal_type<ScalarArrowType>::value);
+      (arrow::is_number_type<ScalarArrowType>::value &&
+       arrow::is_number_type<BuilderArrowType>::value) ||
+      (arrow::is_boolean_type<ScalarArrowType>::value &&
+       arrow::is_boolean_type<BuilderArrowType>::value) ||
+      (arrow::is_temporal_type<ScalarArrowType>::value &&
+       arrow::is_temporal_type<BuilderArrowType>::value);
 
   template <typename ScalarArrowType, typename BuilderArrowType>
   static constexpr bool MatchString =

@@ -1,28 +1,6 @@
-#include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
+#include "katana/TopologyGeneration.h"
 #include "katana/analytics/triangle_count/triangle_count.h"
-
-std::unique_ptr<katana::PropertyGraph>
-MakeGridWithDiagonals() noexcept {
-  katana::SymmetricGraphTopologyBuilder builder;
-  builder.AddNodes(4);
-
-  // Build a square
-  builder.AddEdge(0, 1);
-  builder.AddEdge(1, 2);
-  builder.AddEdge(2, 3);
-  builder.AddEdge(3, 0);
-
-  // Add two diagonals, each creating 2 triangles (total 4)
-  builder.AddEdge(0, 2);
-  builder.AddEdge(1, 3);
-
-  katana::GraphTopology topo = builder.ConvertToCSR();
-
-  auto res = katana::PropertyGraph::Make(std::move(topo));
-  KATANA_LOG_ASSERT(res);
-  return std::move(res.value());
-}
 
 void
 RunTriCount(
@@ -48,7 +26,30 @@ int
 main() {
   katana::SharedMemSys S;
 
-  RunTriCount(MakeGridWithDiagonals(), 4);
+  // Grid tests
+  RunTriCount(katana::MakeGrid(2, 2, true), 4);
+  RunTriCount(katana::MakeGrid(3, 4, true), 24);
+  RunTriCount(katana::MakeGrid(5, 7, true), 96);
+
+  // Ferris wheel tests
+  RunTriCount(katana::MakeFerrisWheel(5), 4);
+  RunTriCount(katana::MakeFerrisWheel(6), 5);
+  RunTriCount(katana::MakeFerrisWheel(9), 8);
+
+  // Sawtooth tests
+  RunTriCount(katana::MakeSawtooth(1), 1);
+  RunTriCount(katana::MakeSawtooth(2), 2);
+  RunTriCount(katana::MakeSawtooth(3), 3);
+
+  // Clique tests
+  RunTriCount(katana::MakeClique(3), 1);
+  RunTriCount(katana::MakeClique(4), 4);
+  RunTriCount(katana::MakeClique(5), 10);
+
+  // Triangular array tests
+  RunTriCount(katana::MakeTriangle(1), 1);
+  RunTriCount(katana::MakeTriangle(3), 9);
+  RunTriCount(katana::MakeTriangle(4), 16);
 
   return 0;
 }

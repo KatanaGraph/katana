@@ -49,6 +49,7 @@ set(sources
         src/ThreadTimer.cpp
         src/Threads.cpp
         src/Timer.cpp
+        src/TopologyGeneration.cpp
         src/analytics/Utils.cpp
         src/analytics/betweenness_centrality/betweenness_centrality.cpp
         src/analytics/betweenness_centrality/level.cpp

@@ -57,8 +57,6 @@ tsuba::LocalStorage::WriteFile(
   CleanUri(&uri);
   KATANA_CHECKED(EnsureDirectories(uri));
 
-  KATANA_LOG_ERROR("writing {} bytes into  {}", size, uri);
-
   std::ofstream ofile(uri);
   if (!ofile.good()) {
     return KATANA_ERROR(

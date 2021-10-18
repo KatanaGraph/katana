@@ -81,7 +81,6 @@ if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
   apt-add-repository -y $NO_UPDATE ppa:ubuntu-toolchain-r/test
 fi
 
-
 if [ "$VERSION" == "21" ]; then
     # no hirsute aka 21.04 release of apache arrow yet, use focal one instead
     # we must also get libre2-5 from focal
@@ -122,7 +121,7 @@ run_as_original_user pip3 install testresources conan==1.40.3 PyGithub packaging
 # Developer tools
 #
 # pkg-config is required to build pyarrow correctly (seems to be a bug)
-DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck pkg-config clangd-10 clangd-12"
+DEVELOPER_TOOLS="clang-format-12 clang-format-10 clang-tidy-12 doxygen graphviz ccache cmake shellcheck pkg-config clangd-12"
 # github actions require a more recent git
 GIT=git
 # Library dependencies
@@ -137,6 +136,7 @@ LIBRARIES="libxml2-dev
   libarrow-python-dev=4.0.1-1
   libparquet-dev=4.0.1-1
   libnuma-dev
+  libreadline-dev
   python3-numpy"
 
 apt install -yq --allow-downgrades \

@@ -58,10 +58,10 @@ if __name__ == "__main__":
     clang_format = os.environ.get("CLANG_FORMAT")
 
     if not clang_format:
-        # If the user doesn't specify, try clang-format-10 and then clang-format.
+        # If the user doesn't specify, try clang-format-12 and then clang-format.
         # Trying the specific version first makes sure we get the correct version even if clang-format points to a
         # newer version.
-        clang_format_names = ["clang-format-10", "clang-format"]
+        clang_format_names = ["clang-format-12", "clang-format"]
         for candidate in clang_format_names:
             try:
                 subprocess.check_call([candidate, "--version"])

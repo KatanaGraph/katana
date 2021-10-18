@@ -234,7 +234,7 @@ public:
       typename ErrorEnum, typename U = std::enable_if_t<
                               std::is_error_code_enum_v<ErrorEnum> ||
                               std::is_error_condition_enum_v<ErrorEnum>>>
-  ErrorInfo(ErrorEnum&& err)
+  ErrorInfo(ErrorEnum && err)
       : ErrorInfo(make_error_code(std::forward<ErrorEnum>(err))) {}
 
   /// Construct an ErrorInfo with a context message that overrides
@@ -273,7 +273,7 @@ public:
   }
 
   template <typename F, typename... Args>
-  ErrorInfo WithContext(F&& fmt_string, Args&&... args) {
+  ErrorInfo WithContext(F && fmt_string, Args && ... args) {
     SpillMessage();
 
     PrependFmt(std::forward<F>(fmt_string), std::forward<Args>(args)...);
@@ -286,7 +286,7 @@ public:
       std::is_error_code_enum_v<ErrorEnum> ||
           std::is_error_condition_enum_v<ErrorEnum>,
       ErrorInfo>
-  WithContext(ErrorEnum err, F&& fmt_string, Args&&... args) {
+  WithContext(ErrorEnum err, F && fmt_string, Args && ... args) {
     SpillMessage();
 
     error_code_ = make_error_code(err);
@@ -296,11 +296,11 @@ public:
     return *this;
   }
 
-  std::ostream& Write(std::ostream& out) const;
+  std::ostream& Write(std::ostream & out) const;
 
 private:
   template <typename F, typename... Args>
-  void PrependFmt(F fmt_string, Args&&... args) {
+  void PrependFmt(F fmt_string, Args && ... args) {
     std::vector<char> out;
     fmt::format_to(
         std::back_inserter(out), fmt_string, std::forward<Args>(args)...);

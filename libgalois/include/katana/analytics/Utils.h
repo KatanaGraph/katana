@@ -113,8 +113,9 @@ AddBitMaskToTable(
 template <typename PGView, typename NodeProps>
 inline katana::Result<void>
 ConstructNodeProperties(
-    PropertyGraph* pg, const PGView& pg_view,
+    const PGView& pg_view,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
+  auto pg = const_cast<PropertyGraph*>(pg_view.get_property_graph());
   auto res_table = katana::AllocateTable<NodeProps>(pg->num_nodes(), names);
   if (!res_table) {
     return res_table.error();
@@ -147,8 +148,9 @@ ConstructEdgeProperties(
 template <typename PGView, typename EdgeProps>
 inline katana::Result<void>
 ConstructEdgeProperties(
-    PropertyGraph* pg, const PGView& pg_view,
+    const PGView& pg_view,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
+  auto pg = const_cast<PropertyGraph*>(pg_view.get_property_graph());
   auto res_table = katana::AllocateTable<EdgeProps>(pg->num_edges(), names);
   if (!res_table) {
     return res_table.error();

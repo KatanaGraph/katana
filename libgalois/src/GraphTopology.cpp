@@ -712,9 +712,10 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   NUMAArray<Node> projected_to_original_nodes_mapping;
   projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
 
+  uint32_t num_nodes_bytes =
+      (uint32_t)std::ceil((double)topology.num_nodes() / 8.0);
   NUMAArray<uint8_t> node_bitmask;
-  node_bitmask.allocateInterleaved(
-      std::ceil((double)topology.num_nodes() / 8.0));
+  node_bitmask.allocateInterleaved(num_nodes_bytes);
 
   katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
     if (bitset_nodes.test(src)) {
@@ -727,8 +728,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   });
 
   katana::do_all(
-      katana::iterate(
-          (uint32_t)0, (uint32_t)std::ceil((double)topology.num_nodes() / 8.0)),
+      katana::iterate((uint32_t)0, num_nodes_bytes),
       [&](uint32_t i) {
         auto node_start = i * 8;
         auto node_end = (i + 1) * 8;

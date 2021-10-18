@@ -79,14 +79,13 @@ main(int argc, char** argv) {
   std::vector<std::string> node_props;
   node_props.emplace_back(temp_node_property.name());
   auto res_node_prop = katana::analytics::ConstructNodeProperties<
-      ProjectedPropertyGraphView, NodeData>(&full_graph, pg_view, node_props);
+      ProjectedPropertyGraphView, NodeData>(pg_view, node_props);
 
   if (!res_node_prop) {
     KATANA_LOG_FATAL(
         "Failed to Construct Properties: {}", res_node_prop.error());
   }
-  auto res_projected_graph =
-      ProjectedGraphView::Make(&full_graph, pg_view, node_props, {});
+  auto res_projected_graph = ProjectedGraphView::Make(pg_view, node_props, {});
 
   auto projected_graph = res_projected_graph.value();
 

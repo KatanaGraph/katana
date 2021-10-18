@@ -856,11 +856,11 @@ private:
 };
 
 template <typename Topo>
-class KATANA_EXPORT ProjectedTopologyWrapper : public GraphTopologyTypes {
+class KATANA_EXPORT ProjectedPropGraphViewWrapper : public GraphTopologyTypes {
   using Base = Topo;
 
 public:
-  explicit ProjectedTopologyWrapper(
+  explicit ProjectedPropGraphViewWrapper(
       const PropertyGraph* pg, const Topo* t) noexcept
       : prop_graph_(pg), topo_ptr_(t) {
     KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
@@ -933,6 +933,10 @@ public:
   }
   const std::shared_ptr<arrow::Buffer>& edge_bitmask() const noexcept {
     return topo().edge_bitmask();
+  }
+
+  const PropertyGraph* get_property_graph() const noexcept {
+    return prop_graph_;
   }
 
 protected:
@@ -1380,7 +1384,7 @@ using PGViewNodesSortedByDegreeEdgesSortedByDestID =
 using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
 using PGViewEdgeTypeAwareBiDir =
     BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
-using PGViewProjectedGraph = ProjectedTopologyWrapper<ProjectedTopology>;
+using PGViewProjectedGraph = ProjectedPropGraphViewWrapper<ProjectedTopology>;
 
 template <typename PGView>
 struct PGViewBuilder {};

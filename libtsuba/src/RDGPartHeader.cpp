@@ -33,6 +33,9 @@ const char* kEdgeEntityTypeIDDictionaryKey =
 const char* kNodeEntityTypeIDNameKey = "kg.v1.node_entity_type_id_name";
 // Name maps from Atomic Edge Entity Type ID to set of string names for the Edge Entity Type ID
 const char* kEdgeEntityTypeIDNameKey = "kg.v1.edge_entity_type_id_name";
+// List of node and edge indexed columns
+const char* kNodePropertyIndexColumnsKey = "kg.v1.node_property_index_columns";
+const char* kEdgePropertyIndexColumnsKey = "kg.v1.edge_property_index_columns";
 
 //
 //constexpr std::string_view  mirror_nodes_prop_name = "mirror_nodes";
@@ -284,6 +287,8 @@ tsuba::to_json(json& j, const tsuba::RDGPartHeader& header) {
       {kEdgeEntityTypeIDDictionaryKey, header.edge_entity_type_id_dictionary_},
       {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
       {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
+      {kNodePropertyIndexColumnsKey, header.node_property_index_columns_},
+      {kEdgePropertyIndexColumnsKey, header.edge_property_index_columns_},
   };
 }
 
@@ -314,6 +319,16 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
         .get_to(header.edge_entity_type_id_dictionary_);
     j.at(kNodeEntityTypeIDNameKey).get_to(header.node_entity_type_id_name_);
     j.at(kEdgeEntityTypeIDNameKey).get_to(header.edge_entity_type_id_name_);
+  }
+
+  header.node_property_index_columns_ = {};
+  if (auto it = j.find(kNodePropertyIndexColumnsKey); it != j.end()) {
+    it->get_to(header.node_property_index_columns_);
+  }
+
+  header.edge_property_index_columns_ = {};
+  if (auto it = j.find(kEdgePropertyIndexColumnsKey); it != j.end()) {
+    it->get_to(header.edge_property_index_columns_);
   }
 }
 

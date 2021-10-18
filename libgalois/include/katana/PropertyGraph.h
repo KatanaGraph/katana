@@ -74,6 +74,9 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
+  /// Recreate indexes from column names in RDG metadata.
+  katana::Result<void> RecreatePropertyIndexes();
+
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
   GraphTopology topology_;
@@ -88,9 +91,11 @@ private:
   /// The edge EntityTypeID for each edge's most specific type
   EntityTypeIDArray edge_entity_type_ids_;
 
-  // List of node and edge indexes on this graph.
+  /// List of node indexes on this graph.
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
       node_indexes_;
+
+  /// List of edge indexes on this graph.
   std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
       edge_indexes_;
 

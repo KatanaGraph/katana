@@ -219,6 +219,8 @@ katana::PropertyGraph::Make(
   katana::GraphTopology topo =
       KATANA_CHECKED(MapTopology(rdg.topology_file_storage()));
 
+  std::unique_ptr<katana::PropertyGraph> property_graph;
+
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 
@@ -236,7 +238,7 @@ katana::PropertyGraph::Make(
     EntityTypeManager edge_type_manager =
         KATANA_CHECKED(rdg.edge_entity_type_manager());
 
-    return std::make_unique<PropertyGraph>(
+    property_graph = std::make_unique<PropertyGraph>(
         std::move(rdg_file), std::move(rdg), std::move(topo),
         std::move(node_type_ids), std::move(edge_type_ids),
         std::move(node_type_manager), std::move(edge_type_manager));
@@ -244,16 +246,18 @@ katana::PropertyGraph::Make(
   } else {
     // we must construct id_arrays and managers from properties
 
-    auto pg = std::make_unique<PropertyGraph>(
+    property_graph = std::make_unique<PropertyGraph>(
         std::move(rdg_file), std::move(rdg), std::move(topo),
         MakeDefaultEntityTypeIDArray(topo.num_nodes()),
         MakeDefaultEntityTypeIDArray(topo.num_edges()), EntityTypeManager{},
         EntityTypeManager{});
 
-    KATANA_CHECKED(pg->ConstructEntityTypeIDs());
-
-    return MakeResult(std::move(pg));
+    KATANA_CHECKED(property_graph->ConstructEntityTypeIDs());
   }
+
+  KATANA_CHECKED(property_graph->RecreatePropertyIndexes());
+
+  return MakeResult(std::move(property_graph));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -467,6 +471,19 @@ katana::PropertyGraph::DoWrite(
       !rdg_.edge_entity_type_id_array_file_storage().Valid()
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(edge_entity_type_ids_))
           : nullptr;
+
+  // Update lists of node and edge index columns.
+  std::vector<std::string> node_index_columns(node_indexes_.size());
+  std::transform(
+      node_indexes_.begin(), node_indexes_.end(), node_index_columns.begin(),
+      [](const auto& index) { return index->column_name(); });
+  rdg_.set_node_property_index_columns(node_index_columns);
+
+  std::vector<std::string> edge_index_columns(edge_indexes_.size());
+  std::transform(
+      edge_indexes_.begin(), edge_indexes_.end(), edge_index_columns.begin(),
+      [](const auto& index) { return index->column_name(); });
+  rdg_.set_edge_property_index_columns(edge_index_columns);
 
   return rdg_.Store(
       handle, command_line, versioning_action, std::move(topology_res),
@@ -1288,4 +1305,21 @@ katana::PropertyGraph::GetNodePropertyIndex(
     }
   }
   return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+}
+
+katana::Result<void>
+katana::PropertyGraph::RecreatePropertyIndexes() {
+  for (const std::string& column_name : rdg_.node_property_index_columns()) {
+    if (HasNodeProperty(column_name)) {
+      KATANA_CHECKED(MakeNodeIndex(column_name));
+    }
+  }
+
+  for (const std::string& column_name : rdg_.edge_property_index_columns()) {
+    if (HasEdgeProperty(column_name)) {
+      KATANA_CHECKED(MakeEdgeIndex(column_name));
+    }
+  }
+
+  return katana::ResultSuccess();
 }

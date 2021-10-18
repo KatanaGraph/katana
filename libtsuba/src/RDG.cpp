@@ -215,6 +215,30 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   return next_properties;
 }
 
+void
+tsuba::RDG::set_node_property_index_columns(
+    const std::vector<std::string>& node_property_index_columns) {
+  core_->part_header().set_node_property_index_columns(
+      node_property_index_columns);
+}
+
+void
+tsuba::RDG::set_edge_property_index_columns(
+    const std::vector<std::string>& edge_property_index_columns) {
+  core_->part_header().set_edge_property_index_columns(
+      edge_property_index_columns);
+}
+
+const std::vector<std::string>&
+tsuba::RDG::node_property_index_columns() {
+  return core_->part_header().node_property_index_columns();
+}
+
+const std::vector<std::string>&
+tsuba::RDG::edge_property_index_columns() {
+  return core_->part_header().edge_property_index_columns();
+}
+
 katana::Result<void>
 tsuba::RDG::DoStoreTopology(
     RDGHandle handle, std::unique_ptr<FileFrame> topology_ff,

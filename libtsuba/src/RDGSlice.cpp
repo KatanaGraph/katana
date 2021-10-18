@@ -6,6 +6,7 @@
 #include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
 #include "tsuba/Errors.h"
+#include "tsuba/RDGPrefix.h"
 
 katana::Result<void>
 tsuba::RDGSlice::DoMake(
@@ -27,19 +28,31 @@ tsuba::RDGSlice::DoMake(
     katana::Uri edge_types_path = metadata_dir.Join(
         core_->part_header().edge_entity_type_id_array_path());
 
+    // NB: we add sizeof(EntityTypeIDArrayHeader) to every range element because
+    // the structure of this file is
+    // [header, value, value, value, ...]
+    // it would be nice if RDGCore could handle this format complication, but
+    // the uses are different enough between RDG and RDGSlice that it probably
+    // doesn't make sense
     KATANA_CHECKED_CONTEXT(
         core_->node_entity_type_id_array_file_storage().Bind(
             node_types_path.string(),
-            slice.node_range.first * sizeof(katana::EntityTypeID),
-            slice.node_range.second * sizeof(katana::EntityTypeID), true),
+            sizeof(EntityTypeIDArrayHeader) +
+                slice.node_range.first * sizeof(katana::EntityTypeID),
+            sizeof(EntityTypeIDArrayHeader) +
+                slice.node_range.second * sizeof(katana::EntityTypeID),
+            true),
         "loading node type id array; begin: {}, end: {}",
         slice.node_range.first * sizeof(katana::EntityTypeID),
         slice.node_range.second * sizeof(katana::EntityTypeID));
     KATANA_CHECKED_CONTEXT(
         core_->edge_entity_type_id_array_file_storage().Bind(
             edge_types_path.string(),
-            slice.edge_range.first * sizeof(katana::EntityTypeID),
-            slice.edge_range.second * sizeof(katana::EntityTypeID), true),
+            sizeof(EntityTypeIDArrayHeader) +
+                slice.edge_range.first * sizeof(katana::EntityTypeID),
+            sizeof(EntityTypeIDArrayHeader) +
+                slice.edge_range.second * sizeof(katana::EntityTypeID),
+            true),
         "loading edge type id array");
   }
   core_->set_rdg_dir(metadata_dir);

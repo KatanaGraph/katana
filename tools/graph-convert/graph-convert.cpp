@@ -41,6 +41,7 @@
 #include "tsuba/CSRTopology.h"
 #include "tsuba/Errors.h"
 #include "tsuba/RDGManifest.h"
+#include "tsuba/RDGPrefix.h"
 #include "tsuba/file.h"
 
 // TODO: move these enums to a common location for all graph convert tools
@@ -2922,24 +2923,35 @@ struct Gr2Kg : public Conversion {
       return res.error();
     }
     auto node_types = std::make_unique<tsuba::FileFrame>();
-    KATANA_CHECKED(
-        node_types->Init(header.num_nodes * sizeof(katana::EntityTypeID)));
-    KATANA_CHECKED(
-        node_types->SetCursor(header.num_nodes * sizeof(katana::EntityTypeID)));
+    size_t node_type_buffer_size =
+        header.num_nodes * sizeof(katana::EntityTypeID) +
+        sizeof(tsuba::EntityTypeIDArrayHeader);
+    KATANA_CHECKED(node_types->Init(node_type_buffer_size));
+    KATANA_CHECKED(node_types->SetCursor(node_type_buffer_size));
+
+    auto* node_header =
+        KATANA_CHECKED(node_types->ptr<tsuba::EntityTypeIDArrayHeader>());
+    node_header->size = header.num_nodes;
     katana::EntityTypeManager node_type_manager;
     std::fill_n(
-        KATANA_CHECKED(node_types->ptr<katana::EntityTypeID>()),
+        reinterpret_cast<katana::EntityTypeID*>(
+            KATANA_CHECKED(node_types->ptr<uint8_t>()) + sizeof(uint64_t)),
         header.num_nodes,
         KATANA_CHECKED(node_type_manager.AddAtomicEntityType("vertex")));
 
     auto edge_types = std::make_unique<tsuba::FileFrame>();
-    KATANA_CHECKED(
-        edge_types->Init(header.num_edges * sizeof(katana::EntityTypeID)));
-    KATANA_CHECKED(
-        edge_types->SetCursor(header.num_edges * sizeof(katana::EntityTypeID)));
+    size_t edge_type_buffer_size =
+        header.num_edges * sizeof(katana::EntityTypeID) + sizeof(uint64_t);
+    KATANA_CHECKED(edge_types->Init(edge_type_buffer_size));
+    KATANA_CHECKED(edge_types->SetCursor(edge_type_buffer_size));
+
+    auto* edge_header =
+        KATANA_CHECKED(edge_types->ptr<tsuba::EntityTypeIDArrayHeader>());
+    edge_header->size = header.num_edges;
     katana::EntityTypeManager edge_type_manager;
     std::fill_n(
-        KATANA_CHECKED(edge_types->ptr<katana::EntityTypeID>()),
+        reinterpret_cast<katana::EntityTypeID*>(
+            KATANA_CHECKED(edge_types->ptr<uint8_t>()) + sizeof(uint64_t)),
         header.num_edges,
         KATANA_CHECKED(edge_type_manager.AddAtomicEntityType("edge")));
 

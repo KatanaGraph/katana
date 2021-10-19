@@ -36,6 +36,7 @@
 #include "tsuba/FaultTest.h"
 #include "tsuba/ParquetWriter.h"
 #include "tsuba/PropertyCache.h"
+#include "tsuba/RDGTopology.h"
 #include "tsuba/ReadGroup.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/file.h"
@@ -213,47 +214,6 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   }
 
   return next_properties;
-}
-
-katana::Result<void>
-tsuba::RDG::DoStoreTopology(
-    RDGHandle handle, std::unique_ptr<FileFrame> topology_ff,
-    std::unique_ptr<WriteGroup>& write_group) {
-  if (!topology_ff && !topology_file_storage().Valid()) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument,
-        "no topology file frame update, but topology_file_storage is invalid");
-  }
-
-  if (topology_ff) {
-    KATANA_LOG_DEBUG("Persisting new topology");
-    // we have an update, store the passed in memory state
-    katana::Uri path_uri = MakeTopologyFileName(handle);
-    topology_ff->Bind(path_uri.string());
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-    write_group->StartStore(std::move(topology_ff));
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-    core_->part_header().set_topology_path(path_uri.BaseName());
-  } else if (handle.impl_->rdg_manifest().dir() != rdg_dir()) {
-    KATANA_LOG_DEBUG("persisting topology in new location");
-    // we don't have an update, but we are persisting in a new location
-    // store our in memory state
-    katana::Uri path_uri = MakeTopologyFileName(handle);
-
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-    // depends on `topology_file_storage_` outliving writes
-    write_group->StartStore(
-        path_uri.string(), core_->topology_file_storage().ptr<uint8_t>(),
-        core_->topology_file_storage().size());
-    TSUBA_PTP(internal::FaultSensitivity::Normal);
-    core_->part_header().set_topology_path(path_uri.BaseName());
-  } else {
-    // no update, rdg_dir is unchanged, assert if we don't have a valid path
-    KATANA_LOG_ASSERT(core_->part_header().topology_path().empty() == false);
-  }
-  // else: no update, not persisting in a new location, so nothing for us to do
-
-  return katana::ResultSuccess();
 }
 
 //TODO : emcginnis combine the Edge and Node DoStoreNode/EntityTypeIDArray
@@ -470,11 +430,19 @@ tsuba::RDG::DoMake(
           }),
       "populating edge properties");
 
-  katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
-  if (auto res = core_->topology_file_storage().Bind(t_path.string(), true);
-      !res) {
-    return res.error();
-  }
+  KATANA_CHECKED_CONTEXT(
+      core_->MakeTopologyManager(metadata_dir), "populating topologies");
+
+  // find & bind the default csr topology
+  RDGTopology shadow_csr = RDGTopology::MakeShadowCSR();
+  RDGTopology* csr = KATANA_CHECKED_CONTEXT(
+      core_->topology_manager().GetTopology(shadow_csr),
+      "unable to find csr topology, must have csr topology");
+
+  KATANA_LOG_VASSERT(csr != nullptr, "csr topology is null");
+  //TODO: emcginnis is there any reason we should be binding the csr topology here?
+  // getting it makes sense, to make sure it is present, but I don't think we need to bind it
+  KATANA_CHECKED_CONTEXT(csr->Bind(metadata_dir), "binding csr topology");
 
   if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
     katana::Uri node_entity_type_id_array_path = metadata_dir.Join(
@@ -619,7 +587,6 @@ katana::Result<void>
 tsuba::RDG::Store(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
-    std::unique_ptr<FileFrame> topology_ff,
     std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
     std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
     const katana::EntityTypeManager& node_entity_type_manager,
@@ -648,7 +615,7 @@ tsuba::RDG::Store(
   // All write buffers must outlive desc
   std::unique_ptr<WriteGroup> desc = std::move(desc_res.value());
 
-  auto res = DoStoreTopology(handle, std::move(topology_ff), desc);
+  auto res = core_->topology_manager().DoStore(handle, desc);
   if (!res) {
     return res.error();
   }
@@ -707,6 +674,16 @@ tsuba::RDG::RemoveNodeProperty(int i) {
 katana::Result<void>
 tsuba::RDG::RemoveEdgeProperty(int i) {
   return core_->RemoveEdgeProperty(i);
+}
+
+void
+tsuba::RDG::UpsertTopology(tsuba::RDGTopology topo) {
+  core_->UpsertTopology(std::move(topo));
+}
+
+void
+tsuba::RDG::AddTopology(tsuba::RDGTopology topo) {
+  core_->AddTopology(std::move(topo));
 }
 
 namespace {
@@ -915,8 +892,8 @@ tsuba::RDG::DropEdgeProperties() {
 }
 
 katana::Result<void>
-tsuba::RDG::DropTopology() {
-  return core_->UnbindTopologyFile();
+tsuba::RDG::DropAllTopologies() {
+  return core_->UnbindAllTopologyFile();
 }
 
 std::shared_ptr<arrow::Schema>
@@ -1003,25 +980,24 @@ tsuba::RDG::set_local_to_global_id(
   return core_->set_local_to_global_id(std::move(local_to_global_id));
 }
 
-const tsuba::FileView&
-tsuba::RDG::topology_file_storage() const {
-  return core_->topology_file_storage();
-}
-
 katana::Result<void>
-tsuba::RDG::UnbindTopologyFileStorage() {
-  return core_->topology_file_storage().Unbind();
-}
-
-katana::Result<void>
-tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
+tsuba::RDG::AddCSRTopologyByFile(const katana::Uri& new_top) {
   katana::Uri dir = new_top.DirName();
   if (dir != rdg_dir()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
         "new topology file must be in this RDG's directory ({})", rdg_dir());
   }
-  return core_->RegisterTopologyFile(new_top.BaseName());
+  return core_->RegisterCSRTopologyFile(new_top.BaseName(), rdg_dir());
+}
+
+katana::Result<tsuba::RDGTopology*>
+tsuba::RDG::GetTopology(const tsuba::RDGTopology& shadow) {
+  RDGTopology* topology =
+      KATANA_CHECKED(core_->topology_manager().GetTopology(shadow));
+  KATANA_CHECKED_CONTEXT(topology->Bind(rdg_dir()), "binding topology file");
+  KATANA_CHECKED_CONTEXT(topology->Map(), "mapping topology file");
+  return topology;
 }
 
 const tsuba::FileView&

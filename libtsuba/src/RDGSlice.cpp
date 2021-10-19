@@ -5,8 +5,10 @@
 #include "RDGHandleImpl.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
+#include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/RDGPrefix.h"
+#include "tsuba/RDGTopology.h"
 
 katana::Result<void>
 tsuba::RDGSlice::DoMake(
@@ -14,12 +16,19 @@ tsuba::RDGSlice::DoMake(
     const std::optional<std::vector<std::string>>& edge_props,
     const katana::Uri& metadata_dir, const SliceArg& slice) {
   ReadGroup grp;
-  katana::Uri topology_path =
-      metadata_dir.Join(core_->part_header().topology_path());
+
   KATANA_CHECKED_CONTEXT(
-      core_->topology_file_storage().Bind(
-          topology_path.string(), slice.topo_off,
-          slice.topo_off + slice.topo_size, true),
+      core_->MakeTopologyManager(metadata_dir), "populating topologies");
+
+  tsuba::RDGTopology shadow = tsuba::RDGTopology::MakeShadowCSR();
+  tsuba::RDGTopology* topo = KATANA_CHECKED_CONTEXT(
+      core_->topology_manager().GetTopology(shadow),
+      "unable to find csr topology, must have csr topology to Make an "
+      "RDGSlice");
+
+  KATANA_CHECKED_CONTEXT(
+      topo->Bind(
+          metadata_dir, slice.topo_off, slice.topo_off + slice.topo_size, true),
       "loading topology array");
 
   if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
@@ -227,7 +236,14 @@ tsuba::RDGSlice::edge_properties() const {
 
 const tsuba::FileView&
 tsuba::RDGSlice::topology_file_storage() const {
-  return core_->topology_file_storage();
+  tsuba::RDGTopology shadow = tsuba::RDGTopology::MakeShadowCSR();
+  auto res = core_->topology_manager().GetTopology(shadow);
+  KATANA_LOG_VASSERT(res, "CSR topology is no longer available");
+
+  tsuba::RDGTopology* topo = res.value();
+
+  KATANA_LOG_VASSERT(topo->bound(), "CSR topology file store is not bound");
+  return topo->file_storage();
 }
 
 const tsuba::FileView&

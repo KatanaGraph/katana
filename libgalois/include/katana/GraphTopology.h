@@ -1,6 +1,7 @@
 #ifndef KATANA_LIBGALOIS_KATANA_GRAPHTOPOLOGY_H_
 #define KATANA_LIBGALOIS_KATANA_GRAPHTOPOLOGY_H_
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -8,8 +9,11 @@
 
 #include "katana/DynamicBitset.h"
 #include "katana/Iterators.h"
+#include "katana/Logging.h"
 #include "katana/NUMAArray.h"
+#include "katana/Result.h"
 #include "katana/config.h"
+#include "tsuba/RDGTopology.h"
 
 namespace katana {
 
@@ -196,32 +200,29 @@ public:
   EdgeShuffleTopology(const EdgeShuffleTopology&) = delete;
   EdgeShuffleTopology& operator=(const EdgeShuffleTopology&) = delete;
 
-  enum class TransposeKind : int { kNo = 0, kYes };
-
-  enum class EdgeSortKind : int {
-    kAny = 0,  // don't care. Sorted or Unsorted
-    kSortedByDestID,
-    kSortedByEdgeType,
-    kSortedByNodeType
-  };
-
   bool is_transposed() const noexcept {
-    return has_transpose_state(TransposeKind::kYes);
+    return has_transpose_state(tsuba::RDGTopology::TransposeKind::kYes);
   }
 
-  bool has_transpose_state(const TransposeKind& expected) const noexcept {
+  bool has_transpose_state(
+      const tsuba::RDGTopology::TransposeKind& expected) const noexcept {
     return tpose_state_ == expected;
   }
 
-  TransposeKind transpose_state() const noexcept { return tpose_state_; }
-  EdgeSortKind edge_sort_state() const noexcept { return edge_sort_state_; }
+  tsuba::RDGTopology::TransposeKind transpose_state() const noexcept {
+    return tpose_state_;
+  }
+  tsuba::RDGTopology::EdgeSortKind edge_sort_state() const noexcept {
+    return edge_sort_state_;
+  }
 
   bool is_valid() const noexcept { return is_valid_; }
 
   void invalidate() noexcept { is_valid_ = false; }
 
-  bool has_edges_sorted_by(const EdgeSortKind& kind) const noexcept {
-    if (kind == EdgeSortKind::kAny) {
+  bool has_edges_sorted_by(
+      const tsuba::RDGTopology::EdgeSortKind& kind) const noexcept {
+    if (kind == tsuba::RDGTopology::EdgeSortKind::kAny) {
       return true;
     }
     return edge_sort_state_ == kind;
@@ -244,21 +245,28 @@ public:
       const PropertyGraph* pg);
 
   static std::unique_ptr<EdgeShuffleTopology> Make(
-      const PropertyGraph* pg, const TransposeKind& tpose_todo,
-      const EdgeSortKind& edge_sort_todo) noexcept {
+      PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_todo,
+      const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo) noexcept {
     std::unique_ptr<EdgeShuffleTopology> ret;
 
-    if (tpose_todo == TransposeKind::kYes) {
+    if (tpose_todo == tsuba::RDGTopology::TransposeKind::kYes) {
       ret = MakeTransposeCopy(pg);
-      KATANA_LOG_DEBUG_ASSERT(ret->has_transpose_state(TransposeKind::kYes));
+      KATANA_LOG_DEBUG_ASSERT(
+          ret->has_transpose_state(tsuba::RDGTopology::TransposeKind::kYes));
     } else {
       ret = MakeOriginalCopy(pg);
-      KATANA_LOG_DEBUG_ASSERT(ret->has_transpose_state(TransposeKind::kNo));
+      KATANA_LOG_DEBUG_ASSERT(
+          ret->has_transpose_state(tsuba::RDGTopology::TransposeKind::kNo));
     }
 
     ret->sortEdges(pg, edge_sort_todo);
     return ret;
   }
+
+  static std::unique_ptr<EdgeShuffleTopology> Make(
+      tsuba::RDGTopology* rdg_topo);
+
+  katana::Result<tsuba::RDGTopology> ToRDGTopology() const;
 
   edge_iterator find_edge(const Node& src, const Node& dst) const noexcept;
 
@@ -266,6 +274,13 @@ public:
 
   bool has_edge(const Node& src, const Node& dst) const noexcept {
     return find_edge(src, dst) != edges(src).end();
+  }
+
+  // unfortunately, without access to this data EdgeTypeAware would be unable to
+  // create an RDGTopology from itself. We can't even make this protected
+  // as EdgeTypeAware inherits from BasicTopologyWrapper<EdgeShuffleTopology>
+  const PropertyIndex* edge_property_index_data() const noexcept {
+    return edge_prop_indices_.data();
   }
 
 protected:
@@ -277,17 +292,18 @@ protected:
       const PropertyGraph* pg, const PropIndexVec& node_prop_indices) noexcept;
 
   void sortEdges(
-      const PropertyGraph* pg, const EdgeSortKind& edge_sort_todo) noexcept {
+      const PropertyGraph* pg,
+      const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo) noexcept {
     switch (edge_sort_todo) {
-    case EdgeSortKind::kAny:
+    case tsuba::RDGTopology::EdgeSortKind::kAny:
       return;
-    case EdgeSortKind::kSortedByDestID:
+    case tsuba::RDGTopology::EdgeSortKind::kSortedByDestID:
       SortEdgesByDestID();
       return;
-    case EdgeSortKind::kSortedByEdgeType:
+    case tsuba::RDGTopology::EdgeSortKind::kSortedByEdgeType:
       SortEdgesByTypeThenDest(pg);
       return;
-    case EdgeSortKind::kSortedByNodeType:
+    case tsuba::RDGTopology::EdgeSortKind::kSortedByNodeType:
       KATANA_LOG_FATAL("Not implemented yet");
       return;
     default:
@@ -297,7 +313,8 @@ protected:
   }
 
   EdgeShuffleTopology(
-      const TransposeKind& tpose_todo, const EdgeSortKind& edge_sort_todo,
+      const tsuba::RDGTopology::TransposeKind& tpose_todo,
+      const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo,
       AdjIndexVec&& adj_indices, EdgeDestVec&& dests,
       PropIndexVec&& edge_prop_indices) noexcept
       : Base(std::move(adj_indices), std::move(dests)),
@@ -310,13 +327,17 @@ protected:
 
 private:
   bool is_valid_ = true;
-  TransposeKind tpose_state_ = TransposeKind::kNo;
-  EdgeSortKind edge_sort_state_ = EdgeSortKind::kAny;
+  tsuba::RDGTopology::TransposeKind tpose_state_ =
+      tsuba::RDGTopology::TransposeKind::kNo;
+  tsuba::RDGTopology::EdgeSortKind edge_sort_state_ =
+      tsuba::RDGTopology::EdgeSortKind::kAny;
 
   // TODO(amber): In the future, we may need to keep a copy of edge_type_ids in
   // addition to edge_prop_indices_. Today, we assume that we can use
   // PropertyGraph.edge_type_set_id(edge_prop_indices_[edge_id]) to obtain
   // edge_type_id. This may not be true when we group properties
+  // when this is done, the Write path must also be updated to pass the edge_type_ids index
+  // to RDG. For now, we pass nullptr.
   PropIndexVec edge_prop_indices_;
 };
 
@@ -325,22 +346,21 @@ class KATANA_EXPORT ShuffleTopology : public EdgeShuffleTopology {
   using Base = EdgeShuffleTopology;
 
 public:
-  enum class NodeSortKind : int {
-    kAny = 0,
-    kSortedByDegree,
-    kSortedByNodeType,
-  };
-
   PropertyIndex node_property_index(const Node& nid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(nid < num_nodes());
     return node_prop_indices_[nid];
   }
 
-  bool has_nodes_sorted_by(const NodeSortKind& kind) const noexcept {
-    if (kind == NodeSortKind::kAny) {
+  bool has_nodes_sorted_by(
+      const tsuba::RDGTopology::NodeSortKind& kind) const noexcept {
+    if (kind == tsuba::RDGTopology::NodeSortKind::kAny) {
       return true;
     }
     return node_sort_state_ == kind;
+  }
+
+  tsuba::RDGTopology::NodeSortKind node_sort_state() const noexcept {
+    return node_sort_state_;
   }
 
   static std::unique_ptr<ShuffleTopology> MakeFrom(
@@ -354,18 +374,18 @@ public:
 
   static std::unique_ptr<ShuffleTopology> MakeFromTopo(
       const PropertyGraph* pg, const EdgeShuffleTopology& seed_topo,
-      const NodeSortKind& node_sort_todo,
-      const EdgeSortKind& edge_sort_todo) noexcept {
+      const tsuba::RDGTopology::NodeSortKind& node_sort_todo,
+      const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo) noexcept {
     std::unique_ptr<ShuffleTopology> ret;
 
     switch (node_sort_todo) {
-    case NodeSortKind::kAny:
+    case tsuba::RDGTopology::NodeSortKind::kAny:
       ret = MakeFrom(pg, seed_topo);
       break;
-    case NodeSortKind::kSortedByDegree:
+    case tsuba::RDGTopology::NodeSortKind::kSortedByDegree:
       ret = MakeSortedByDegree(pg, seed_topo);
       break;
-    case NodeSortKind::kSortedByNodeType:
+    case tsuba::RDGTopology::NodeSortKind::kSortedByNodeType:
       ret = MakeSortedByNodeType(pg, seed_topo);
       break;
     default:
@@ -377,11 +397,15 @@ public:
     return ret;
   }
 
+  static std::unique_ptr<ShuffleTopology> Make(tsuba::RDGTopology* rdg_topo);
+
+  katana::Result<tsuba::RDGTopology> ToRDGTopology() const;
+
 private:
   template <typename CmpFunc>
   static std::unique_ptr<ShuffleTopology> MakeNodeSortedTopo(
       const EdgeShuffleTopology& seed_topo, const CmpFunc& cmp,
-      const NodeSortKind& node_sort_todo) {
+      const tsuba::RDGTopology::NodeSortKind& node_sort_todo) {
     GraphTopology::PropIndexVec node_prop_indices;
     node_prop_indices.allocateInterleaved(seed_topo.num_nodes());
 
@@ -452,10 +476,11 @@ private:
   }
 
   ShuffleTopology(
-      const TransposeKind& tpose_todo, const NodeSortKind& node_sort_todo,
-      const EdgeSortKind& edge_sort_todo, AdjIndexVec&& adj_indices,
-      PropIndexVec&& node_prop_indices, EdgeDestVec&& dests,
-      PropIndexVec&& edge_prop_indices) noexcept
+      const tsuba::RDGTopology::TransposeKind& tpose_todo,
+      const tsuba::RDGTopology::NodeSortKind& node_sort_todo,
+      const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo,
+      AdjIndexVec&& adj_indices, PropIndexVec&& node_prop_indices,
+      EdgeDestVec&& dests, PropIndexVec&& edge_prop_indices) noexcept
       :
 
         Base(
@@ -466,7 +491,8 @@ private:
     KATANA_LOG_DEBUG_ASSERT(node_prop_indices_.size() == num_nodes());
   }
 
-  NodeSortKind node_sort_state_ = NodeSortKind::kAny;
+  tsuba::RDGTopology::NodeSortKind node_sort_state_ =
+      tsuba::RDGTopology::NodeSortKind::kAny;
 
   // TODO(amber): In the future, we may need to keep a copy of node_type_ids in
   // addition to node_prop_indices_. Today, we assume that we can use
@@ -497,6 +523,9 @@ public:
       const PropertyGraph* pg) noexcept;
   // TODO(amber): add MakeFromNodeTypes
 
+  static std::unique_ptr<CondensedTypeIDMap> MakeFromIndexToTypeMap(
+      EntityType* index_to_type_map);
+
   EntityType GetType(uint32_t index) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(size_t(index) < index_to_type_map_.size());
     return index_to_type_map_[index];
@@ -525,6 +554,22 @@ public:
 
   bool is_valid() const noexcept { return is_valid_; }
   void invalidate() noexcept { is_valid_ = false; };
+
+  const EntityType* index_to_type_map_data() const noexcept {
+    return &index_to_type_map_[0];
+  }
+
+  bool index_to_type_map_matches(size_t size, const EntityType* other) const {
+    if (size != num_unique_types()) {
+      return false;
+    }
+    for (size_t i = 0; i < num_unique_types(); i++) {
+      if (other[i] != GetType(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
 private:
   CondensedTypeIDMap(
@@ -602,6 +647,7 @@ public:
   auto original_edge_id(const Edge& eid) const noexcept {
     return topo().original_edge_id(eid);
   }
+  void Print() const noexcept { topo_ptr_->Print(); }
 
 protected:
   const Topo& topo() const noexcept { return *topo_ptr_; }
@@ -895,6 +941,10 @@ public:
       const PropertyGraph* pg, const CondensedTypeIDMap* edge_type_index,
       const EdgeShuffleTopology* e_topo) noexcept;
 
+  static std::unique_ptr<EdgeTypeAwareTopology> Make(
+      tsuba::RDGTopology* rdg_topo, const CondensedTypeIDMap* edge_type_index,
+      const EdgeShuffleTopology* e_topo);
+
   /// @param N node to get edges for
   /// @param edge_type edge_type to get edges of
   /// @returns Range to edges of node N that have edge type == edge_type
@@ -1033,8 +1083,15 @@ public:
   }
 
   bool has_transpose_state(
-      const EdgeShuffleTopology::TransposeKind& k) const noexcept {
+      const tsuba::RDGTopology::TransposeKind& k) const noexcept {
     return edge_shuff_topo_->has_transpose_state(k);
+  }
+
+  tsuba::RDGTopology::TransposeKind transpose_state() const noexcept {
+    return edge_shuff_topo_->transpose_state();
+  }
+  tsuba::RDGTopology::EdgeSortKind edge_sort_state() const noexcept {
+    return edge_shuff_topo_->edge_sort_state();
   }
 
   bool is_valid() const noexcept { return edge_shuff_topo_->is_valid(); }
@@ -1042,6 +1099,8 @@ public:
   void invalidate() noexcept {
     const_cast<EdgeShuffleTopology*>(edge_shuff_topo_)->invalidate();
   }
+
+  katana::Result<tsuba::RDGTopology> ToRDGTopology() const;
 
 private:
   // Must invoke SortAllEdgesByDataThenDst() before
@@ -1051,16 +1110,13 @@ private:
       const EdgeShuffleTopology* topo) noexcept;
 
   EdgeTypeAwareTopology(
-      const PropertyGraph* pg, const CondensedTypeIDMap* edge_type_index,
+      const CondensedTypeIDMap* edge_type_index,
       const EdgeShuffleTopology* e_topo,
       AdjIndexVec&& per_type_adj_indices) noexcept
-      :
-
-        Base(e_topo),
+      : Base(e_topo),
         edge_type_index_(edge_type_index),
         edge_shuff_topo_(e_topo),
         per_type_adj_indices_(std::move(per_type_adj_indices)) {
-    KATANA_LOG_ASSERT(pg);
     KATANA_LOG_DEBUG_ASSERT(edge_type_index);
 
     KATANA_LOG_DEBUG_ASSERT(
@@ -1131,7 +1187,7 @@ public:
 
   explicit SortedTopologyWrapper(const Topo* t) noexcept : Base(t) {
     KATANA_LOG_DEBUG_ASSERT(Base::topo().has_edges_sorted_by(
-        EdgeShuffleTopology::EdgeSortKind::kSortedByDestID));
+        tsuba::RDGTopology::EdgeSortKind::kSortedByDestID));
   }
 
   auto find_edge(const Node& src, const Node& dst) const noexcept {
@@ -1270,13 +1326,13 @@ class BasicPropGraphViewWrapper : public Topo {
 
 public:
   explicit BasicPropGraphViewWrapper(
-      const PropertyGraph* pg, const Topo& topo) noexcept
+      PropertyGraph* pg, const Topo& topo) noexcept
       : Base(topo), prop_graph_(pg) {}
 
   const PropertyGraph& property_graph() const noexcept { return *prop_graph_; }
 
 private:
-  const PropertyGraph* prop_graph_;
+  PropertyGraph* prop_graph_;
 };
 
 namespace internal {
@@ -1296,10 +1352,10 @@ template <>
 struct PGViewBuilder<PGViewBiDirectional> {
   template <typename ViewCache>
   static internal::PGViewBiDirectional BuildView(
-      const PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
-        pg, EdgeShuffleTopology::TransposeKind::kYes,
-        EdgeShuffleTopology::EdgeSortKind::kAny);
+        pg, tsuba::RDGTopology::TransposeKind::kYes,
+        tsuba::RDGTopology::EdgeSortKind::kAny);
     auto bidir_topo =
         SimpleBiDirTopology{viewCache.GetOriginalTopology(pg), tpose_topo};
 
@@ -1311,10 +1367,10 @@ template <>
 struct PGViewBuilder<PGViewEdgesSortedByDestID> {
   template <typename ViewCache>
   static PGViewEdgesSortedByDestID BuildView(
-      const PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto sorted_topo = viewCache.BuildOrGetEdgeShuffTopo(
-        pg, EdgeShuffleTopology::TransposeKind::kNo,
-        EdgeShuffleTopology::EdgeSortKind::kSortedByDestID);
+        pg, tsuba::RDGTopology::TransposeKind::kNo,
+        tsuba::RDGTopology::EdgeSortKind::kSortedByDestID);
 
     return PGViewEdgesSortedByDestID{
         pg, EdgesSortedByDestTopology{sorted_topo}};
@@ -1325,11 +1381,11 @@ template <>
 struct PGViewBuilder<PGViewNodesSortedByDegreeEdgesSortedByDestID> {
   template <typename ViewCache>
   static PGViewNodesSortedByDegreeEdgesSortedByDestID BuildView(
-      const PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto sorted_topo = viewCache.BuildOrGetShuffTopo(
-        pg, EdgeShuffleTopology::TransposeKind::kNo,
-        ShuffleTopology::NodeSortKind::kSortedByDegree,
-        EdgeShuffleTopology::EdgeSortKind::kSortedByDestID);
+        pg, tsuba::RDGTopology::TransposeKind::kNo,
+        tsuba::RDGTopology::NodeSortKind::kSortedByDegree,
+        tsuba::RDGTopology::EdgeSortKind::kSortedByDestID);
 
     return PGViewNodesSortedByDegreeEdgesSortedByDestID{
         pg, NodesSortedByDegreeEdgesSortedByDestIDTopology{sorted_topo}};
@@ -1340,11 +1396,11 @@ template <>
 struct PGViewBuilder<PGViewEdgeTypeAwareBiDir> {
   template <typename ViewCache>
   static PGViewEdgeTypeAwareBiDir BuildView(
-      const PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto out_topo = viewCache.BuildOrGetEdgeTypeAwareTopo(
-        pg, EdgeShuffleTopology::TransposeKind::kNo);
+        pg, tsuba::RDGTopology::TransposeKind::kNo);
     auto in_topo = viewCache.BuildOrGetEdgeTypeAwareTopo(
-        pg, EdgeShuffleTopology::TransposeKind::kYes);
+        pg, tsuba::RDGTopology::TransposeKind::kYes);
 
     return PGViewEdgeTypeAwareBiDir{
         pg, EdgeTypeAwareBiDirTopology{out_topo, in_topo}};
@@ -1355,7 +1411,7 @@ template <>
 struct PGViewBuilder<PGViewProjectedGraph> {
   template <typename ViewCache>
   static PGViewProjectedGraph BuildView(
-      const PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto topo = viewCache.BuildOrGetProjectedGraphTopo(pg);
 
     return PGViewProjectedGraph{pg, ProjectedTopology{topo}};
@@ -1393,9 +1449,11 @@ public:
   PGViewCache& operator=(const PGViewCache&) = delete;
 
   template <typename PGView>
-  PGView BuildView(const PropertyGraph* pg) noexcept {
+  PGView BuildView(PropertyGraph* pg) noexcept {
     return internal::PGViewBuilder<PGView>::BuildView(pg, *this);
   }
+
+  katana::Result<std::vector<tsuba::RDGTopology>> ToRDGTopology();
 
 private:
   const GraphTopology* GetOriginalTopology(
@@ -1404,19 +1462,17 @@ private:
   CondensedTypeIDMap* BuildOrGetEdgeTypeIndex(const PropertyGraph* pg) noexcept;
 
   EdgeShuffleTopology* BuildOrGetEdgeShuffTopo(
-      const PropertyGraph* pg,
-      const EdgeShuffleTopology::TransposeKind& tpose_kind,
-      const EdgeShuffleTopology::EdgeSortKind& sort_kind) noexcept;
+      PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_kind,
+      const tsuba::RDGTopology::EdgeSortKind& sort_kind) noexcept;
 
   ShuffleTopology* BuildOrGetShuffTopo(
-      const PropertyGraph* pg,
-      const EdgeShuffleTopology::TransposeKind& tpose_kind,
-      const ShuffleTopology::NodeSortKind& node_sort_todo,
-      const EdgeShuffleTopology::EdgeSortKind& edge_sort_todo) noexcept;
+      PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_kind,
+      const tsuba::RDGTopology::NodeSortKind& node_sort_todo,
+      const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo) noexcept;
 
   EdgeTypeAwareTopology* BuildOrGetEdgeTypeAwareTopo(
-      const PropertyGraph* pg,
-      const EdgeShuffleTopology::TransposeKind& tpose_kind) noexcept;
+      PropertyGraph* pg,
+      const tsuba::RDGTopology::TransposeKind& tpose_kind) noexcept;
 
   ProjectedTopology* BuildOrGetProjectedGraphTopo(
       const PropertyGraph* pg, const std::vector<std::string>& node_properties,

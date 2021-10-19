@@ -15,6 +15,7 @@ katana::PropertyGraphRetractor::InformPath(const std::string& input_path) {
 
 Result<void>
 katana::PropertyGraphRetractor::DropTopologies() {
+  //TODO: emcginnis reset all topologies in PGViewCache
   pg_->topology_ = GraphTopology{};
-  return pg_->rdg_.DropTopology();
+  return pg_->rdg_.DropAllTopologies();
 }

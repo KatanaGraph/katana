@@ -1,6 +1,7 @@
 #include "RDGCore.h"
 
 #include "RDGPartHeader.h"
+#include "RDGTopologyManager.h"
 #include "katana/ArrowInterchange.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
@@ -213,14 +214,13 @@ RDGCore::InitEmptyProperties() {
 
 bool
 RDGCore::Equals(const RDGCore& other) const {
-  // Assumption: t_f_s and other.t_f_s are both fully loaded into memory
-  return topology_file_storage_.size() == other.topology_file_storage_.size() &&
-         !memcmp(
-             topology_file_storage_.ptr<uint8_t>(),
-             other.topology_file_storage_.ptr<uint8_t>(),
-             topology_file_storage_.size()) &&
+  // Assumption: all RDGTopology objeccts in topology_manger_ and other.topology_manager_
+  // are bound to their files
+  return topology_manager_.Equals(other.topology_manager_) &&
          node_properties_->Equals(*other.node_properties_, true) &&
          edge_properties_->Equals(*other.edge_properties_, true);
+
+  return true;
 }
 
 katana::Result<void>

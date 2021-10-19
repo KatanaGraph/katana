@@ -6,10 +6,9 @@ import textwrap
 from enum import Enum
 from functools import partial
 from pathlib import Path
-from typing import Optional
 
-import yaml
-from katana_requirements import OutputFormat, Requirements
+from katana_requirements.data import KATANA_REQUIREMENTS_FILE_NAME, load
+from katana_requirements.model import OutputFormat, Requirements
 
 
 class OutputSeparation(Enum):
@@ -31,7 +30,7 @@ class OutputSeparation(Enum):
 
 
 # This table makes amp sad, but I couldn't figure out a better way to attach values to each element while still having
-# construction by string name work correctly.
+# construction by name work correctly.
 OUTPUT_SEPARATION_DEFINITIONS = {
     OutputSeparation.LINE: ("", "\n", "\n"),
     OutputSeparation.QUOTE: ("'", "' '", "'"),
@@ -47,9 +46,6 @@ def print_str_table(table: dict):
         print(f"{name:>10}: {description_lines[0]}")
         if len(description_lines) > 1:
             print(continuation_indent + ("\n" + continuation_indent).join(description_lines[1:]))
-
-
-KATANA_REQUIREMENTS_FILE_NAME = "katana_requirements.yaml"
 
 
 def setup_general_arguments(parser):
@@ -89,15 +85,8 @@ def packaging_systems_subcommand(args, inputs, data):
     print_str_table(data.packaging_systems)
 
 
-def select_packages(args, data):
-    labels_to_find = frozenset(args.label)
-
-    for p in data.packages:
-        package_disabled = p.name_overrides.get(args.format.value, True) is None
-        has_specified_label = p.labels & labels_to_find
-        labels_provided = labels_to_find
-        if (not labels_provided or has_specified_label) and not package_disabled:
-            yield p
+def select_packages(args, data: Requirements):
+    return data.select_packages(args.label, args.format.value)
 
 
 def list_subcommand(args, inputs, data):
@@ -113,17 +102,36 @@ def list_subcommand(args, inputs, data):
     print(args.separation.suffix, end="")
 
 
-def install_subcommand(args, inputs, data):
-    # pylint: disable=unused-argument
+def setup_install_arguments(parser):
+    comma = ", "
 
-    packages = list(select_packages(args, data))
-    install_package_list(args, packages)
+    parser.add_argument(
+        "--format",
+        "-f",
+        help=f"The output format: {comma.join(v.value for v in OutputFormat)}",
+        type=OutputFormat,
+        default=OutputFormat.YAML,
+    )
+    parser.add_argument(
+        "--command",
+        "-c",
+        help="The install command to use. This is split on whitespace before use. (Default based on --format.)",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "--argument",
+        "--arg",
+        "-a",
+        help="Additional arguments to the package installer. Useful for --yes and --quiet and similar arguments.",
+        type=str,
+        default=[],
+        action="append",
+    )
+    setup_general_arguments(parser)
 
 
 def install_package_list(args, packages, silent=False):
-    if args.format == OutputFormat.CONDA:
-        args.format = OutputFormat.CONDA_CMD_LINE
-
     # TODO(amp): Remove special cases for these throughout the system. This should probably be configurable.
     if args.command:
         command = args.command.split()
@@ -170,6 +178,13 @@ def bisect_list_for_working(packages, func):
             return step(lower_bound, pivot - 1)
 
     return step(0, len(packages))
+
+
+def install_subcommand(args, inputs, data):
+    # pylint: disable=unused-argument
+
+    packages = list(select_packages(args, data))
+    install_package_list(args, packages)
 
 
 def bisect_install_subcommand(args, inputs, data):
@@ -242,26 +257,7 @@ def main():
     # Subcommand: install
     install_parser = subparsers.add_parser("install", help="Install packages using a known packaging system")
 
-    install_parser.add_argument(
-        "--format",
-        "-f",
-        help=f"The output format: {comma.join(v.value for v in OutputFormat)}",
-        type=OutputFormat,
-        default=OutputFormat.YAML,
-    )
-    install_parser.add_argument(
-        "--command", "-c", help="The packaging system to use. (Default based on --format.)", type=str, default=None,
-    )
-    install_parser.add_argument(
-        "--argument",
-        "--arg",
-        "-a",
-        help="Additional arguments to the package installer. Useful for --yes and --quiet and similar arguments.",
-        type=str,
-        default=[],
-        action="append",
-    )
-    setup_general_arguments(install_parser)
+    setup_install_arguments(install_parser)
     install_parser.set_defaults(cmd=install_subcommand)
 
     # Subcommand: bisect_install
@@ -270,47 +266,12 @@ def main():
         help="Try to install subsets of packages to determine a set of working dependencies and a set of non-working.",
     )
 
-    bisect_install_parser.add_argument(
-        "--format",
-        "-f",
-        help=f"The output format: {comma.join(v.value for v in OutputFormat)}",
-        type=OutputFormat,
-        default=OutputFormat.YAML,
-    )
-    bisect_install_parser.add_argument(
-        "--command", "-c", help="The packaging system to use. (Default based on --format.)", type=str, default=None,
-    )
-    bisect_install_parser.add_argument(
-        "--argument",
-        "--arg",
-        "-a",
-        help="Additional arguments to the package installer. Useful for --yes and --quiet and similar arguments.",
-        type=str,
-        default=[],
-        action="append",
-    )
-    setup_general_arguments(bisect_install_parser)
+    setup_install_arguments(bisect_install_parser)
     bisect_install_parser.set_defaults(cmd=bisect_install_subcommand)
 
     args = parser.parse_args()
 
-    input_options = args.input or [
-        # Enterprise requirements file
-        Path(__file__).absolute().parent.parent.parent.parent.parent / KATANA_REQUIREMENTS_FILE_NAME,
-        # Open requirements file
-        Path(__file__).absolute().parent.parent.parent / KATANA_REQUIREMENTS_FILE_NAME,
-    ]
-    inputs = [f for f in input_options if f.exists()]
-
-    data: Optional[Requirements] = None
-    for input in reversed(inputs):
-        # Use BaseLoader so everything is loaded as a string.
-        d = Requirements.from_dict(yaml.load(open(input, "r"), Loader=yaml.BaseLoader))
-
-        if data:
-            data = data.merge(d)
-        else:
-            data = d
+    data, inputs = load(args.input)
 
     if args.cmd:
         args.cmd(args, inputs, data)

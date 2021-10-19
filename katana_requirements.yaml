@@ -27,18 +27,26 @@ packaging_system_descriptions:
     The native packaging system of Ubuntu. Provides a wide range of packages, but tends to be a bit out of date, so
     external repositories are sometimes needed which can complicate compability.
 
+boa:
+  version: [0.6, 1]
+  labels:
+    - conda/dev
 backward-cpp:
   version: [ 1.4, 2 ]
   labels:
     - conan
+    - conda
+  version_overrides:
+    conan: 1.5
 benchmark:
   version: [ 1.5.3, 2 ]
   labels:
     - conan
 black:
-  version: [ 19.10b0, 19.11 ]
-  version_overrides:
-    conda: "==19.10b0"
+  version: [ 19.10a0, 19.11 ]
+  labels:
+    - conda/dev
+    - pip/dev
 boost:
   version: [ 1.74.0, 2 ]
   name_overrides:
@@ -49,7 +57,7 @@ boost:
     - conda
     - conan
 breathe:
-  version: [ 4.30, null ]
+  version: [ 4.30, ¯\(ツ)/¯ ]
   labels:
     - conda
 cmake:
@@ -96,10 +104,14 @@ eigen:
   version: [ 3.3.7, 4 ]
   labels:
     - conan
+    - conda
 elfutils:
+  labels:
+    - conda/dev
+    - apt
   version: [ 0.185, null ]
 fmt:
-  version: [ 6.2.1, 7 ]
+  version: [ 6.2.1, 9 ]
   labels:
     - conan
     - conda
@@ -118,6 +130,10 @@ jinja2:
     - conda/dev
 jupyter:
   version: [ 1, null ]
+  labels:
+    - conda
+jupyter_core:
+  version: [ 4.7, null ]
   labels:
     - conda
 jupyterlab:
@@ -148,7 +164,11 @@ libcurl:
   labels:
     - conda
     - conan
+  version_overrides:
+    conan: 7.74.0
 libxml2:
+  name_overrides:
+    apt: libxml2-dev
   version: [ 2.9.10, 3 ]
   labels:
     - conda
@@ -158,9 +178,12 @@ llvm:
   labels:
     - conda/dev
 llvmdev:
+  name_overrides:
+    apt: llvm-dev
   version: *llvm_version
   labels:
     - conda
+    - apt
 make:
   version: [ 4.3, null ]
   labels:
@@ -194,6 +217,8 @@ numba:
     - conda
     - deb/pip
 numpy:
+  name_overrides:
+    apt: python3-numpy
   version: [ 1.21, 2 ]
   labels:
     - conda
@@ -210,19 +235,22 @@ openssl:
     - conda
     - conan
   version_overrides:
-    conda: ">=1.1.1"
+    conan: "1.1.1h"
 packaging:
   version: [ 1.6, null ]
   labels:
     - conda
+    - pip/dev
 pandas:
-  version: [ 1.3, 2 ]
+  version: [ 1.1, 2 ]
   labels:
     - conda
+    - pip
 pandoc:
   version: [ 2, null ]
   labels:
     - conda/dev
+    - pip/dev
 parquet-cpp:
   name_overrides:
     apt: libparquet-dev
@@ -238,10 +266,17 @@ pyarrow:
     - conda
     - deb/pip-no-binary
 pydata-sphinx-theme:
+  name_overrides:
+    pip: "git+https://github.com/pydata/pydata-sphinx-theme.git"
   version: [ 0.6.3, null ]
+  version_overrides:
+    pip: "@v0.6.3"
   labels:
+    - pip
     - conda/dev
 pygithub:
+  name_overrides:
+    pip: PyGithub
   version: [ 1.54, 2 ]
   labels:
     - conda/dev
@@ -255,13 +290,13 @@ pytest:
   labels:
     - conda/dev
 python:
-  labels:
-    - conda
-    - apt
   name_overrides:
     conan: null
     apt: python3
   version: [ 3.7, 4.0 ]
+  labels:
+    - conda
+    - apt
 sphinx-copybutton:
   version: [ 0.4, null ]
   labels:
@@ -279,16 +314,148 @@ zlib:
   labels:
     - conda
     - apt
+git:
+  version: [ 2, 3 ]
+  labels:
+    - apt/dev
+readline:
+  name_overrides:
+    apt: libreadline-dev
+  version: [ 8, null ]
+  labels:
+    - conda
+    - apt
+    - conan
+libnuma:
+  name_overrides:
+    apt: libnuma-dev
+    conda: numactl-devel-cos6-x86_64
+  version: [2, null]
+  labels:
+    - apt
+    - conda/dev
+ccache:
+  version: [3, 4]
+  labels:
+    - apt/dev
+    - conda/apt
+clang-format:
+  version: *llvm_version
+  labels:
+    - apt/dev
+    - conda/dev
+clang-tidy:
+  version: *llvm_version
+  labels:
+    - apt/dev
+    - conda/dev
+clangd:
+  version: *llvm_version
+  labels:
+    - apt/dev
+    - conda/dev
+graphviz:
+  version: [2, null]
+  labels:
+    - apt/dev
+spellcheck:
+  version: [0.7, null]
+  labels:
+    - apt/dev
+pkg-config:
+  version: [0.29, null]
+  labels:
+    - apt/dev
+    - conda/dev
+testresources:
+  version: [2, 3]
+  labels:
+    - pip
+nbconvert:
+  version: [5.6, 6]
+  labels:
+    - pip/dev
+    - conda/dev
+pip:
+  name_overrides:
+    conda: null
+    apt: python3-pip
+  version: [21, null]
+  labels:
+    - pip
+    - apt
+setuptools:
+  version: [50, null]
+  labels:
+    - pip/dev
+    - conda/dev
+scipy:
+  version: [1, 2]
+sphinxcontrib-applehelp:
+  version: [1.0.2, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-devhelp:
+  version: [1.0.2, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-htmlhelp:
+  version: [1.0.3, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-jsmath:
+  version: [1.0.1, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-qthelp:
+  version: [1.0.3, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-serializinghtml:
+  version: [1.1.4, null]
+  labels:
+    - pip/dev
+    - conda/dev
+pytest-asyncio:
+  version: [0.15, 1]
+  labels:
+    - pip/dev
+    - conda/dev
+pytest-timeout:
+  version: [1.4.2, 2]
+  labels:
+    - pip/dev
+    - conda/dev
+pyyaml:
+  version: [5.4.1, 6]
+  labels:
+    - pip
+    - conda
 
-# TODO: Should we have handling for "missing dependencies"?
 
-## The dependencies for pytest-notebook are incomplete, add them manually
-#pytest-notebook
-#jupyter_client<7
-#attrs<21,>=19
-#nbconvert<6
-#nbsphinx
-#pandoc
-#pexpect
-#setuptools
-#shellcheck
+# The dependencies for pytest-notebook are incomplete, add them manually
+pytest-notebook:
+  version: [0.6.1, 1]
+  labels:
+    - pip
+    - conda
+jupyter_client:
+  version: [6, 7]
+  labels:
+    - pip
+    - conda
+attrs:
+  version: [19, 21]
+  labels:
+    - pip
+    - conda
+pexpect:
+  version: [4.8, 5]
+  labels:
+    - pip
+    - conda

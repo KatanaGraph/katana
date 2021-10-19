@@ -836,8 +836,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   out_dests.allocateInterleaved(num_new_edges);
   original_to_projected_edges_mapping.allocateInterleaved(topology.num_edges());
   projected_to_original_edges_mapping.allocateInterleaved(num_new_edges);
-  edge_bitmask.allocateInterleaved(
-      std::ceil((double)topology.num_edges() / 8.0));
+  edge_bitmask.allocateInterleaved((topology.num_edges() + 7) / 8);
 
   // Update out_dests with the new destination ids
   katana::do_all(
@@ -867,10 +866,11 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
     }
   });
 
+  uint32_t num_edges_bytes = (topology.num_edges() + 7) / 8;
+
   // TODO(udit) find another way to do the following
   katana::do_all(
-      katana::iterate(
-          (uint32_t)0, (uint32_t)std::ceil((double)topology.num_edges() / 8.0)),
+      katana::iterate(static_cast<uint32_t>(0), num_edges_bytes),
       [&](uint32_t i) {
         auto edge_start = i * 8;
         auto edge_end = (i + 1) * 8;
@@ -879,7 +879,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
         uint8_t val{0};
         while (edge_start != edge_end) {
           if (bitset_edges.test(edge_start)) {
-            uint8_t bit_offset = (uint8_t)1;
+            uint8_t bit_offset = static_cast<uint8_t>(1);
             bit_offset <<= (edge_start % 8);
             val = val | bit_offset;
           }

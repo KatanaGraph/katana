@@ -46,7 +46,7 @@ struct KATANA_EXPORT GraphTopologyTypes {
 
 class KATANA_EXPORT EdgeShuffleTopology;
 class KATANA_EXPORT EdgeTypeAwareTopology;
-class KATANA_EXPORT ProjectedTypeTopology;
+class KATANA_EXPORT ProjectedTopology;
 
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.

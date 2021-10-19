@@ -62,69 +62,15 @@ ConstructNodeProperties(
   return pg->AddNodeProperties(res_table.value());
 }
 
-inline std::shared_ptr<arrow::ChunkedArray>
-ApplyBitMask(
-    const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
-    const std::shared_ptr<arrow::Buffer>& bit_mask) {
-  std::vector<std::shared_ptr<arrow::Array>> new_chunks;
-
-  std::shared_ptr<arrow::Array> array = chunked_array->chunk(0);
-  std::shared_ptr<arrow::ArrayData> data = array->data()->Copy();
-
-  data->buffers[0] = bit_mask;
-  data->null_count = arrow::kUnknownNullCount;
-
-  auto array_ptr = arrow::MakeArray(data);
-
-  auto status = array_ptr->ValidateFull();
-
-  KATANA_LOG_ASSERT(status.ok());
-  new_chunks.emplace_back(array_ptr);
-
-  auto res_new_chunked_array = arrow::ChunkedArray::Make(new_chunks);
-  if (res_new_chunked_array.ok()) {
-    return res_new_chunked_array.ValueOrDie();
-  } else {
-    return nullptr;
-  }
-}
-
-inline katana::Result<std::shared_ptr<arrow::Table>>
-AddBitMaskToTable(
-    std::shared_ptr<arrow::Table> table,
-    const std::shared_ptr<arrow::Buffer>& bit_mask) {
-  std::vector<std::shared_ptr<arrow::Field>> fields;
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
-
-  for (const auto& field : table->fields()) {
-    fields.emplace_back(field);
-  }
-
-  for (const auto& col : table->columns()) {
-    KATANA_LOG_ASSERT(col->num_chunks() == 1);
-    auto new_col = ApplyBitMask(col, bit_mask);
-
-    columns.emplace_back(std::move(new_col));
-  }
-
-  return arrow::Table::Make(arrow::schema(fields), columns);
-}
-
 template <typename PGView, typename NodeProps>
 inline katana::Result<void>
 ConstructNodeProperties(
     const PGView& pg_view,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
   auto pg = const_cast<PropertyGraph*>(pg_view.get_property_graph());
-  auto res_table = katana::AllocateTable<NodeProps>(pg->num_nodes(), names);
-  if (!res_table) {
-    return res_table.error();
-  }
-
   auto bit_mask = pg_view.node_bitmask();
-
-  res_table = AddBitMaskToTable(res_table.value(), bit_mask);
-
+  auto res_table =
+      katana::AllocateTable<NodeProps>(pg->num_nodes(), names, bit_mask);
   if (!res_table) {
     return res_table.error();
   }
@@ -151,14 +97,9 @@ ConstructEdgeProperties(
     const PGView& pg_view,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
   auto pg = const_cast<PropertyGraph*>(pg_view.get_property_graph());
-  auto res_table = katana::AllocateTable<EdgeProps>(pg->num_edges(), names);
-  if (!res_table) {
-    return res_table.error();
-  }
-
   auto bit_mask = pg_view.edge_bitmask();
-  res_table = AddBitMaskToTable(res_table.value(), bit_mask);
-
+  auto res_table =
+      katana::AllocateTable<EdgeProps>(pg->num_edges(), names, bit_mask);
   if (!res_table) {
     return res_table.error();
   }

@@ -9,7 +9,6 @@
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
-#include "stdio.h"
 #include "tsuba/RDG.h"
 
 namespace cll = llvm::cl;

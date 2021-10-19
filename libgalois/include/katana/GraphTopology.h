@@ -835,10 +835,11 @@ private:
         edge_bitmask_data_(std::move(edge_bitmask_data)),
         node_bitmask_(
             static_cast<void*>(node_bitmask_data_.data()), 0,
-            (int64_t)original_to_projected_nodes_mapping_.size()),
+            static_cast<int64_t>(original_to_projected_nodes_mapping_.size())),
         edge_bitmask_(
             edge_bitmask_data_.data(), 0,
-            (int64_t)original_to_projected_edges_mapping_.size()) {}
+            static_cast<int64_t>(original_to_projected_edges_mapping_.size())) {
+  }
 
   // TODO(udit) : we can let go of original_to_projected_nodes_mapping_ and original_to_projected_edges_mapping_
   // by doing a binary search on projected_to_original_nodes_mapping_ and projected_to_original_edges_mapping_

@@ -614,10 +614,10 @@ katana::ProjectedTopology::CreateEmptyEdgeProjectedTopology(
       original_to_projected_edges_mapping.end(), Edge{topology.num_edges()});
 
   NUMAArray<uint8_t> node_bitmask;
-  node_bitmask.allocateInterleaved(topology.num_nodes());
+  node_bitmask.allocateInterleaved(std::ceil(topology.num_nodes() / 8));
 
   NUMAArray<uint8_t> edge_bitmask;
-  edge_bitmask.allocateInterleaved(topology.num_edges());
+  edge_bitmask.allocateInterleaved(std::ceil(topology.num_edges() / 8));
 
   return std::make_unique<katana::ProjectedTopology>(katana::ProjectedTopology{
       std::move(out_indices), std::move(out_dests),
@@ -712,8 +712,8 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   NUMAArray<Node> projected_to_original_nodes_mapping;
   projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
 
-  uint32_t num_nodes_bytes =
-      (uint32_t)std::ceil((double)topology.num_nodes() / 8.0);
+  uint32_t num_nodes_bytes = (topology.num_nodes() + 7) / 8;
+
   NUMAArray<uint8_t> node_bitmask;
   node_bitmask.allocateInterleaved(num_nodes_bytes);
 
@@ -727,8 +727,9 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
     }
   });
 
+  // TODO(udit) find another way to do the following
   katana::do_all(
-      katana::iterate((uint32_t)0, num_nodes_bytes),
+      katana::iterate(static_cast<uint32_t>(0), num_nodes_bytes),
       [&](uint32_t i) {
         auto node_start = i * 8;
         auto node_end = (i + 1) * 8;
@@ -866,6 +867,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
     }
   });
 
+  // TODO(udit) find another way to do the following
   katana::do_all(
       katana::iterate(
           (uint32_t)0, (uint32_t)std::ceil((double)topology.num_edges() / 8.0)),

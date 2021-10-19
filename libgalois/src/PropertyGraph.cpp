@@ -21,6 +21,7 @@
 #include "tsuba/FileFrame.h"
 #include "tsuba/RDG.h"
 #include "tsuba/RDGManifest.h"
+#include "tsuba/RDGPrefix.h"
 #include "tsuba/tsuba.h"
 
 namespace {
@@ -152,8 +153,8 @@ WriteTopology(const katana::GraphTopology& topology) {
 /// favor of this method.
 katana::Result<katana::PropertyGraph::EntityTypeIDArray>
 MapEntityTypeIDsArray(const tsuba::FileView& file_view) {
-  const auto* data = file_view.ptr<uint64_t>();
-  const int64_t type_ID_array_size = data[0];
+  const auto* data = file_view.ptr<tsuba::EntityTypeIDArrayHeader>();
+  const auto header = data[0];
 
   if (file_view.size() == 0) {
     return katana::ErrorCode::InvalidArgument;
@@ -166,10 +167,10 @@ MapEntityTypeIDsArray(const tsuba::FileView& file_view) {
 
   // allocate type IDs array
   katana::PropertyGraph::EntityTypeIDArray entity_type_id_array;
-  entity_type_id_array.allocateInterleaved(type_ID_array_size);
+  entity_type_id_array.allocateInterleaved(header.size);
 
   katana::ParallelSTL::copy(
-      &type_IDs_array[0], &type_IDs_array[type_ID_array_size],
+      &type_IDs_array[0], &type_IDs_array[header.size],
       entity_type_id_array.begin());
 
   return katana::MakeResult(std::move(entity_type_id_array));
@@ -184,8 +185,10 @@ WriteEntityTypeIDsArray(
     return res.error();
   }
 
-  uint64_t data[1] = {entity_type_id_array.size()};
-  arrow::Status aro_sts = ff->Write(&data, sizeof(uint64_t));
+  tsuba::EntityTypeIDArrayHeader data[1] = {
+      {.size = entity_type_id_array.size()}};
+  arrow::Status aro_sts =
+      ff->Write(&data, sizeof(tsuba::EntityTypeIDArrayHeader));
 
   if (!aro_sts.ok()) {
     return tsuba::ArrowToTsuba(aro_sts.code());

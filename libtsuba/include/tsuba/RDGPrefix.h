@@ -52,6 +52,15 @@ private:
   static katana::Result<RDGPrefix> DoMakePrefix(const RDGManifest& manifest);
 };
 
+/// EntityTypeIDArrayHeader describes the header in the on disk representation
+/// of EntityTypeID arrays, it could be probably be rolled into RDGPrefix but it
+/// has slightly different uses so for now it is separate
+struct EntityTypeIDArrayHeader {
+  // NB: we could add __attribute__((packed)) or similar, but with only one
+  // member it should be fine for now
+  uint64_t size;
+};
+
 }  // namespace tsuba
 
 #endif

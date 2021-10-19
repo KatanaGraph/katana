@@ -174,6 +174,9 @@ public:
         const std::shared_ptr<arrow::Table>& props);
     Result<void> (PropertyGraph::*remove_property_int)(int i);
     Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
+    Result<void> (PropertyGraph::*ensure_loaded_property_fn)(
+        const std::string& str);
+    Result<void> (PropertyGraph::*unload_property_fn)(const std::string& str);
 
     std::shared_ptr<arrow::Schema> loaded_schema() const {
       return ropv.loaded_schema();
@@ -210,6 +213,14 @@ public:
     }
     Result<void> RemoveProperty(const std::string& str) const {
       return (g->*remove_property_str)(str);
+    }
+
+    Result<void> EnsurePropertyLoaded(const std::string& str) const {
+      return (g->*ensure_loaded_property_fn)(str);
+    }
+
+    Result<void> UnloadProperty(const std::string& str) const {
+      return (g->*unload_property_fn)(str);
     }
   };
 
@@ -712,6 +723,8 @@ public:
         .upsert_properties_fn = &PropertyGraph::UpsertNodeProperties,
         .remove_property_int = &PropertyGraph::RemoveNodeProperty,
         .remove_property_str = &PropertyGraph::RemoveNodeProperty,
+        .ensure_loaded_property_fn = &PropertyGraph::EnsureNodePropertyLoaded,
+        .unload_property_fn = &PropertyGraph::UnloadNodeProperty,
     };
   }
   ReadOnlyPropertyView NodeReadOnlyPropertyView() const {
@@ -741,6 +754,8 @@ public:
         .upsert_properties_fn = &PropertyGraph::UpsertEdgeProperties,
         .remove_property_int = &PropertyGraph::RemoveEdgeProperty,
         .remove_property_str = &PropertyGraph::RemoveEdgeProperty,
+        .ensure_loaded_property_fn = &PropertyGraph::EnsureEdgePropertyLoaded,
+        .unload_property_fn = &PropertyGraph::UnloadEdgeProperty,
     };
   }
   ReadOnlyPropertyView EdgeReadOnlyPropertyView() const {

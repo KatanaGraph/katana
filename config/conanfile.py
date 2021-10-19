@@ -1,26 +1,22 @@
 #!/usr/bin/env python3
+import os
+import sys
 
 from conans import ConanFile
 from conans.model.version import Version
+
+# TODO(amp): Replace with normal import once we have a script utilities python project in this repo.
+# Add the project root to the python path just in case.
+conan_file_path = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(conan_file_path)
+
+from scripts import katana_requirements
 
 
 class KatanaConan(ConanFile):
     settings = ("os", "compiler", "build_type", "arch")
 
-    # Several packages are installed via APT:
-    #  - arrow
-    #  - llvm
-    requires = (
-        "backward-cpp/1.5",
-        "benchmark/1.5.3",
-        "boost/1.74.0",
-        "eigen/3.3.7",
-        "fmt/6.2.1",
-        "jemalloc/5.2.1",
-        "libcurl/7.74.0",
-        "nlohmann_json/3.7.3",
-        "openssl/1.1.1h",
-    )
+    requires = tuple(katana_requirements.package_list(["conan"], katana_requirements.OutputFormat.CONAN))
 
     default_options = {
         "jemalloc:enable_prof": True,

@@ -3,16 +3,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
-#include <deque>
-#include <fstream>
 #include <iostream>
 #include <limits>
-#include <map>
 #include <optional>
-#include <random>
-#include <sstream>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
@@ -605,66 +598,63 @@ katana::Result<katana::GraphComponents>
 katana::ConvertGraphML(
     const std::string& infilename, size_t chunk_size, bool verbose) {
   xmlTextReaderPtr reader;
+
+  reader = xmlNewTextReaderFilename(infilename.c_str());
+  if (reader == NULL) {
+    return KATANA_ERROR(ErrorCode::NotFound, "Unable to open {}", infilename);
+  }
+  auto res = ConvertGraphML(reader, chunk_size, verbose);
+  xmlFreeTextReader(reader);
+  return res;
+}
+
+katana::Result<katana::GraphComponents>
+katana::ConvertGraphML(
+    xmlTextReaderPtr reader, size_t chunk_size, bool verbose) {
   int ret = 0;
+  bool finishedGraph = false;
 
   katana::PropertyGraphBuilder builder{chunk_size};
 
-  bool finishedGraph = false;
-  if (verbose) {
-    std::cout << "Start converting GraphML file: " << infilename << "\n";
-  }
-
-  reader = xmlNewTextReaderFilename(infilename.c_str());
-  if (reader != NULL) {
-    ret = xmlTextReaderRead(reader);
-
-    // procedure:
-    // read in "key" xml nodes and add them to nodeKeys and edgeKeys
-    // once we reach the first "graph" xml node we parse it using the above keys
-    // once we have parsed the first "graph" xml node we exit
-    while (ret == 1 && !finishedGraph) {
-      xmlChar* name;
-      name = xmlTextReaderName(reader);
-      if (name == NULL) {
-        name = xmlStrdup(BAD_CAST "--");
-      }
-      // if elt is an xml node
-      if (xmlTextReaderNodeType(reader) == 1) {
-        // if elt is a "key" xml node read it in
-        if (xmlStrEqual(name, BAD_CAST "key")) {
-          PropertyKey key = katana::graphml::ProcessKey(reader);
-          if (!key.id.empty() && key.id != std::string("label") &&
-              key.id != std::string("IGNORE")) {
-            if (key.for_node) {
-              builder.AddBuilder(std::move(key));
-            } else if (key.for_edge) {
-              builder.AddBuilder(std::move(key));
-            }
+  // procedure:
+  // read in "key" xml nodes and add them to nodeKeys and edgeKeys
+  // once we reach the first "graph" xml node we parse it using the above keys
+  // once we have parsed the first "graph" xml node we exit
+  while ((ret = xmlTextReaderRead(reader)) == 1 && !finishedGraph) {
+    xmlChar* name = xmlTextReaderName(reader);
+    if (name == NULL) {
+      name = xmlStrdup(BAD_CAST "--");
+    }
+    // if elt is an xml node
+    if (xmlTextReaderNodeType(reader) == 1) {
+      // if elt is a "key" xml node read it in
+      if (xmlStrEqual(name, BAD_CAST "key")) {
+        PropertyKey key = katana::graphml::ProcessKey(reader);
+        if (!key.id.empty() && key.id != std::string("label") &&
+            key.id != std::string("IGNORE")) {
+          if (key.for_node) {
+            builder.AddBuilder(std::move(key));
+          } else if (key.for_edge) {
+            builder.AddBuilder(std::move(key));
           }
-        } else if (xmlStrEqual(name, BAD_CAST "graph")) {
-          if (verbose) {
-            std::cout << "Finished processing property headers\n";
-          }
-          ProcessGraph(reader, &builder, false);
-          finishedGraph = true;
         }
+      } else if (xmlStrEqual(name, BAD_CAST "graph")) {
+        if (verbose) {
+          std::cout << "Finished processing property headers\n";
+        }
+        ProcessGraph(reader, &builder, false);
+        finishedGraph = true;
       }
-
-      xmlFree(name);
-      ret = xmlTextReaderRead(reader);
     }
-    xmlFreeTextReader(reader);
-    if (ret < 0) {
-      return KATANA_ERROR(
-          ErrorCode::InvalidArgument,
-          "Failed to parse {}, incorrect xml format\n"
-          "Please verify there are no illegal characters in the GraphML file\n"
-          "To remove invalid characters use: \"sed -i $'s/[^[:print:]\t]//g' "
-          "{}\", warning this will alter the original file",
-          infilename, infilename);
-    }
-  } else {
-    return KATANA_ERROR(ErrorCode::NotFound, "Unable to open {}", infilename);
+    xmlFree(name);
+  }
+  if (ret < 0) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "failed to parse: incorrect xml format\n"
+        "Please verify there are no illegal characters in the GraphML file\n"
+        "To remove invalid characters use: \"sed -i $'s/[^[:print:]\t]//g' "
+        "<file>\", warning this will alter the original file");
   }
   return builder.Finish(verbose);
 }

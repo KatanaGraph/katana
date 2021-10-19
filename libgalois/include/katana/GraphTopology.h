@@ -1537,7 +1537,7 @@ private:
       const std::vector<std::string>& edge_properties) noexcept;
 };
 
-/// Creates a uniform-random CSR GrpahTopology instance, where each node as
+/// Creates a uniform-random CSR GraphTopology instance, where each node as
 ///'edges_per_node' neighbors, chosen randomly
 /// \p num_nodes number of nodes
 /// \p edges_per_node number of out-going edges of each node

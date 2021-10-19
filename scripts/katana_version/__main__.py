@@ -405,15 +405,12 @@ def get_branch_kind(current_branch, kinds: Iterable[BranchKind]):
 def check_at_branch(branch, config):
     check_remotes(config)
     if git.get_hash(f"{config.open.upstream_remote}/{branch}", config.open) != git.get_hash(git.HEAD, config.open):
-        raise StateError(
-            f"{config.open.dir} HEAD is up NOT to date with {branch}. "
-            "Did you forget to merge the most recent version bump PR in the enterprise repository?"
-        )
+        raise StateError(f"{config.open.dir} HEAD is up to date with {branch}")
 
     if config.has_enterprise and git.get_hash(
         f"{config.enterprise.upstream_remote}/{branch}", config.enterprise
     ) != git.get_hash(git.HEAD, config.enterprise):
-        raise StateError(f"{config.enterprise.dir} HEAD is NOT up to date with {branch}")
+        raise StateError(f"{config.enterprise.dir} HEAD is up to date with {branch}")
 
 
 def bump_subcommand(args):
@@ -444,9 +441,11 @@ def check_branch_not_exist(config: Configuration, branch_name):
 def bump_both_repos(config: Configuration, g: GithubFacade, prev_version, next_version, base):
     check_remotes(config)
     next_version_str = format_version_pep440(next_version)
-    current_branch = git.get_branch_checked_out(config.open)
+    if config.has_enterprise:
+        enterprise_commit = git.get_hash(git.HEAD, config.enterprise, pretend_clean=True)
+    open_commit = git.get_hash(git.HEAD, config.open, pretend_clean=True)
     if config.dry_run:
-        print(next_version_str)
+        print(f"WRITE: {next_version_str} to {config.open.dir / CONFIG_VERSION_PATH}")
     else:
         with open(config.open.dir / CONFIG_VERSION_PATH, "wt", encoding="utf-8") as fi:
             fi.write(next_version_str)
@@ -480,8 +479,10 @@ def bump_both_repos(config: Configuration, g: GithubFacade, prev_version, next_v
             pr_body=f"After: {open_pr.base.repo.full_name}#{open_pr.number}\n\n{main_body}",
         )
 
-    git.switch(current_branch, config.enterprise, dry_run=config.dry_run)
-    git.switch(current_branch, config.open, dry_run=config.dry_run)
+    if config.has_enterprise:
+        git.switch(enterprise_commit, config.enterprise, dry_run=config.dry_run)
+    git.switch(open_commit, config.open, dry_run=config.dry_run)
+    print("WARNING: Your local git repository will be left in a detached head state. Checkout any branch to fix this.")
 
     todos = [f"TODO: Review and merge {open_pr.html_url} as soon as possible."]
     if enterprise_pr:
@@ -673,11 +674,6 @@ def setup_tag_subcommand(subparsers):
     parser.add_argument("version", type=str)
 
     parser.add_argument(
-        "--pretend-upstream",
-        help=argparse.SUPPRESS,  # Pretend the commit is already up stream. (for testing)
-        action="store_true",
-    )
-    parser.add_argument(
         "--require-upstream", help="Fail if the commit to be tagged isn't already upstream.", action="store_true"
     )
 
@@ -707,12 +703,6 @@ def setup_release_subcommand(subparsers):
 
     parser.add_argument("next_version", type=str)
 
-    parser.add_argument(
-        "--pretend-upstream",
-        help=argparse.SUPPRESS,  # Pretend the commit is already up stream. (for testing)
-        action="store_true",
-    )
-
     setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
     setup_global_action_arguments(parser)
@@ -723,17 +713,41 @@ def setup_release_subcommand(subparsers):
 def release_branch_subcommand(args):
     config: Configuration = args.configuration
     check_clean(args, config)
-    current_branch = get_current_branch_from_either_repository(config)
-    get_branch_kind(current_branch, [BranchKind.MASTER])
-    check_at_branch("master", config)
-    if config.has_enterprise:
-        git.switch("master", config.enterprise, config.dry_run)
-    git.switch("master", config.open, config.dry_run)
+    if not args.allow_arbitrary_branch:
+        current_branch = get_current_branch_from_either_repository(config)
+        get_branch_kind(current_branch, [BranchKind.MASTER])
+        check_at_branch("master", config)
+        if config.has_enterprise:
+            git.switch("master", config.enterprise, config.dry_run)
+        else:
+            # Do not switch branches in open if we did so in enterprise. This allows external/katana to lag
+            # at branch time.
+            git.switch("master", config.open, config.dry_run)
+    else:
+        print(
+            "WARNING: Branching from HEAD instead of upstream/master. Be careful! This will create an out of date "
+            "release branch."
+        )
+
+    # Check if HEAD is on the upstream master branch.
+    if (
+        not git.is_ancestor_of(git.HEAD, f"{config.open.upstream_remote}/master", config.open)
+        and not args.pretend_upstream
+    ):
+        raise StateError(f"{config.open.dir} HEAD is not on upstream master")
+
+    if (
+        config.has_enterprise
+        and not git.is_ancestor_of(git.HEAD, f"{config.enterprise.upstream_remote}/master", config.enterprise)
+        and not args.pretend_upstream
+    ):
+        raise StateError(f"{config.enterprise.dir} HEAD is not on upstream master")
 
     prev_version, _ = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
     next_version = version.Version(args.next_version)
     rc_version = version.Version(f"{prev_version}rc1")
 
+    # Always pretend we are on master. We either actually are, or the user has overridden things.
     check_branch_version("master", BranchKind.MASTER, next_version, prev_version)
 
     g = GithubFacade(config)
@@ -775,6 +789,12 @@ def setup_release_branch_subcommand(subparsers):
         help="Create the release branch for an upcoming release and create the versioning commits around it.",
     )
 
+    parser.add_argument(
+        "--allow-arbitrary-branch",
+        help="Allow creating a release branch from any commit instead of just from master. "
+        "This should be used with care.",
+        action="store_true",
+    )
     parser.add_argument("next_version", type=str)
 
     setup_global_log_arguments(parser)
@@ -799,8 +819,15 @@ def setup_global_repo_arguments(parser, *, top_level=False):
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "--pretend-upstream",
+        help="Pretend the commit is already on upstream master. (For testing only!)"
+        if top_level
+        else argparse.SUPPRESS,
+        action="store_true",
+    )
+    parser.add_argument(
         "--pretend-clean",
-        help="Pretend that the working tree is clean." if top_level else argparse.SUPPRESS,
+        help="Pretend that the working tree is clean. (For testing only!)" if top_level else argparse.SUPPRESS,
         dest="clean",
         action="store_true",
     )

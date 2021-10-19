@@ -7,7 +7,7 @@
 #include "katana/Random.h"
 
 void
-katana::GraphTopology::Print() noexcept {
+katana::GraphTopology::Print() const noexcept {
   auto print_array = [](const auto& arr, const auto& name) {
     std::cout << name << ": [ ";
     for (const auto& i : arr) {
@@ -226,6 +226,10 @@ katana::EdgeShuffleTopology::SortEdgesByDestID() noexcept {
                   std::is_same_v<decltype(dst2), GraphTopology::Node>);
               return dst1 < dst2;
             });
+
+        KATANA_LOG_DEBUG_ASSERT(std::is_sorted(
+            Base::GetDests().begin() + e_beg,
+            Base::GetDests().begin() + e_end));
       },
       katana::steal(), katana::no_stats());
   // remember to update sort state
@@ -300,10 +304,11 @@ katana::ShuffleTopology::MakeSortedByDegree(
   auto cmp = [&](const auto& i1, const auto& i2) {
     auto d1 = seed_topo.degree(i1);
     auto d2 = seed_topo.degree(i2);
-    if (d1 == d2) {
-      return d1 < d2;
-    }
-    return d1 < d2;
+    // TODO(amber): Triangle-Counting needs degrees sorted in descending order. I
+    // need to think of a way to specify in the interface whether degrees should be
+    // sorted in ascending or descending order.
+    // return d1 < d2;
+    return d1 > d2;
   };
 
   return MakeNodeSortedTopo(seed_topo, cmp, NodeSortKind::kSortedByDegree);
@@ -754,7 +759,12 @@ katana::PGViewCache::BuildOrGetShuffTopo(
     KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
     return it->get();
   } else {
-    auto e_topo = BuildOrGetEdgeShuffTopo(pg, tpose_kind, edge_sort_todo);
+    // EdgeShuffleTopology e_topo below is going to serve as a seed for
+    // ShuffleTopology, so we only care about transpose state, and not the sort
+    // state. Because, when creating ShuffleTopology, once we shuffle the nodes, we
+    // will need to re-sort the edges even if they were already sorted
+    auto e_topo = BuildOrGetEdgeShuffTopo(
+        pg, tpose_kind, EdgeShuffleTopology::EdgeSortKind::kAny);
     KATANA_LOG_DEBUG_ASSERT(e_topo->has_transpose_state(tpose_kind));
 
     fully_shuff_topos_.emplace_back(ShuffleTopology::MakeFromTopo(

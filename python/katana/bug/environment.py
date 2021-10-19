@@ -61,21 +61,21 @@ def _capture_system(zipout: zipfile.ZipFile):
     )
 
     capture_string(zipout, "env.txt", "\n".join(f"{k}={v}" for k, v in get_filtered_environ().items()))
-
+    conda_exist = "CONDA_EXE" in os.environ
     capture_string(
         zipout,
         "conda.txt",
         f"""
             CONDA_PREFIX: {os.environ.get('CONDA_PREFIX', '')}
 
-            {os.environ.get('CONDA_EXE', 'no CONDA_EXE env var')}:
-            {capture_command(os.environ['CONDA_EXE'], 'info')}
-            {capture_command(os.environ['CONDA_EXE'], 'list')}
+            {os.environ['CONDA_EXE'] if conda_exist else 'no CONDA_EXE env var'}:
+            {capture_command(os.environ['CONDA_EXE'], 'info') if conda_exist else ''}
+            {capture_command(os.environ['CONDA_EXE'], 'list') if conda_exist else ''}
 
             {capture_command('which', 'conda')}:
             {capture_command('conda', 'info')}
             {capture_command('conda', 'list')}
-            """,
+        """,
     )
 
     capture_string(
@@ -116,8 +116,14 @@ def _capture_build(zipout: zipfile.ZipFile):
 def capture_command(*args, **kwargs) -> str:
     # pylint: disable=subprocess-run-check
     # Not using check=True because I want to capture both success and failure the same way.
-    res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)
-    out = res.stdout.decode("utf-8").strip("\n")
+    out = ""
+
+    try:
+        res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)
+        out = res.stdout.decode("utf-8").strip("\n")
+    except OSError as err:
+        out = f"error executing {args}: {err}"
+
     return out
 
 

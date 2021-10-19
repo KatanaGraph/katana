@@ -12,7 +12,12 @@ endfunction()
 
 function(add_test_scale type app)
   set(no_value_options NOT_QUICK NO_VERIFY)
-  set(single_value_options INPUT INPUT_URI)
+  # Some apps such as PageRank and BetweennessCentrality are less numerically stable than the others,
+  # so they need higher tolerances. PageRank is an iterative inexact algorithm that converges to a
+  # certain precision: the more iterations, the lower tolerance can be. However, both PageRank and
+  # BetweennessCentrality accumulate the floating-point error, and because single-precision floating
+  # point is used, the tolerances cannot be very tight.
+  set(single_value_options INPUT INPUT_URI REL_TOL MEAN_TOL)
   set(multi_value_options)
   cmake_parse_arguments(X "${no_value_options}" "${single_value_options}" "${multi_value_options}" ${ARGN})
 
@@ -45,8 +50,14 @@ function(add_test_scale type app)
       add_test(NAME verify${suffix}
         COMMAND ${CMAKE_COMMAND} -E true)
     else()
+      if(NOT X_REL_TOL)
+        set(X_REL_TOL 0.0001)
+      endif()
+      if(NOT X_MEAN_TOL)
+        set(X_MEAN_TOL 0.0001)
+      endif()
       add_test(NAME verify${suffix}
-        COMMAND python3 ${RESULT_CHECKER} -t=0.01 -m=0.001 -sort=1 ${verification_log} ${output_location})
+        COMMAND python3 ${RESULT_CHECKER} -t=${X_REL_TOL} -m=${X_MEAN_TOL} -sort=1 ${verification_log} ${output_location})
     endif()
 
     if(NOT X_NOT_QUICK)

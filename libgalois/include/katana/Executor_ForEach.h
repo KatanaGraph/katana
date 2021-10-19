@@ -437,7 +437,6 @@ struct reiterator<
   typedef typename WLTy::template with_iterator<IterTy>::type type;
 };
 
-// TODO(ddn): Think about folding in range into args too
 template <typename RangeTy, typename FunctionTy, typename ArgsTy>
 void
 for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
@@ -459,9 +458,6 @@ for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
       activeThreads, [&W, &range]() { W.initThread(range); },
       [&barrier] { barrier.Wait(); }, std::ref(W));
 }
-
-// TODO: Need to decide whether user should provide num_run tag or
-// num_run can be provided by loop instance which is guaranteed to be unique
 
 //! Normalize arguments to for_each
 template <typename RangeTy, typename FunctionTy, typename TupleTy>

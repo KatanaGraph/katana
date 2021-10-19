@@ -158,9 +158,8 @@ struct DoAll {
 
 /**
  * Helper functor to invoke std::for_each with the same interface as
- * katana::do_all
+ * DoAll.
  */
-
 struct StdForEach {
   template <typename Range, typename FunctionTy, typename... Args>
   void operator()(
@@ -170,30 +169,15 @@ struct StdForEach {
   }
 };
 
+/**
+ * Helper functor to invoke katana::for_each with the same interface as
+ * DoAll.
+ */
 struct ForEach {
   template <typename Range, typename FunctionTy, typename... Args>
   void operator()(const Range& range, FunctionTy&& fn, Args&&... args) const {
     katana::for_each(
         range, std::forward<FunctionTy>(fn), std::forward<Args>(args)...);
-  }
-};
-
-template <typename Q>
-struct WhileQ {
-  Q m_q;
-
-  WhileQ(Q&& q = Q()) : m_q(std::move(q)) {}
-
-  template <typename Range, typename FunctionTy, typename... Args>
-  void operator()(
-      const Range& range, FunctionTy&& f, [[maybe_unused]] Args&&... args) {
-    m_q.push(range.begin(), range.end());
-
-    while (!m_q.empty()) {
-      auto val = m_q.pop();
-
-      f(val, m_q);
-    }
   }
 };
 

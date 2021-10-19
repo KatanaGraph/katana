@@ -205,15 +205,6 @@ RDGCore::EnsureEdgeTypesLoaded() {
 }
 
 void
-tsuba::RDGCore::InitArrowVectors() {
-  // Create an empty array, accessed by Distribution during loading
-  host_to_owned_global_node_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
-  host_to_owned_global_edge_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
-  local_to_user_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
-  local_to_global_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
-}
-
-void
 RDGCore::InitEmptyProperties() {
   std::vector<std::shared_ptr<arrow::Array>> empty;
   node_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);

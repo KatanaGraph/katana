@@ -17,7 +17,7 @@ const char* kTopologyPathKey = "kg.v1.topology.path";
 const char* kNodePropertyKey = "kg.v1.node_property";
 const char* kEdgePropertyKey = "kg.v1.edge_property";
 const char* kPartPropertyFilesKey = "kg.v1.part_property_files";
-const char* kPartProperyMetaKey = "kg.v1.part_property_meta";
+const char* kPartPropertyMetaKey = "kg.v1.part_property_meta";
 const char* kStorageFormatVersionKey = "kg.v1.storage_format_version";
 // Array file at path maps from Node ID to EntityTypeID of that Node
 const char* kNodeEntityTypeIDArrayPathKey = "kg.v1.node_entity_type_id_array";
@@ -97,11 +97,7 @@ RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
 
 katana::Result<RDGPartHeader>
 RDGPartHeader::Make(const katana::Uri& partition_path) {
-  katana::Result<RDGPartHeader> res = MakeJson(partition_path);
-  if (!res) {
-    return res.error();
-  }
-  return res;
+  return KATANA_CHECKED(MakeJson(partition_path));
 }
 
 katana::Result<void>
@@ -280,7 +276,7 @@ tsuba::to_json(json& j, const tsuba::RDGPartHeader& header) {
       {kNodePropertyKey, header.node_prop_info_list_},
       {kEdgePropertyKey, header.edge_prop_info_list_},
       {kPartPropertyFilesKey, header.part_prop_info_list_},
-      {kPartProperyMetaKey, header.metadata_},
+      {kPartPropertyMetaKey, header.metadata_},
       {kStorageFormatVersionKey, header.storage_format_version_},
       {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
       {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
@@ -297,7 +293,7 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
   j.at(kNodePropertyKey).get_to(header.node_prop_info_list_);
   j.at(kEdgePropertyKey).get_to(header.edge_prop_info_list_);
   j.at(kPartPropertyFilesKey).get_to(header.part_prop_info_list_);
-  j.at(kPartProperyMetaKey).get_to(header.metadata_);
+  j.at(kPartPropertyMetaKey).get_to(header.metadata_);
 
   if (auto it = j.find(kStorageFormatVersionKey); it != j.end()) {
     it->get_to(header.storage_format_version_);

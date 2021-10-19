@@ -181,7 +181,7 @@ struct K_SSSP {
   struct TileRangeFn {
     template <typename T>
     auto operator()(const T& tile) const {
-      return katana::makeIterRange(tile.beg, tile.end);
+      return katana::MakeStandardRange(tile.beg, tile.end);
     }
   };
 

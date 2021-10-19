@@ -10,4 +10,10 @@ add_test(NAME file-view COMMAND file-view-test "${CMAKE_CURRENT_BINARY_DIR}/file
 set_tests_properties(file-view PROPERTIES FIXTURES_REQUIRED file-view-ready LABELS quick)
 add_test(NAME clean-file-view COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_CURRENT_BINARY_DIR}/file-view-test-wd")
 set_tests_properties(clean-file-view PROPERTIES FIXTURES_SETUP file-view-ready LABELS quick)
-set_property(TEST manifest APPEND PROPERTY LABELS quick)
+
+add_executable(parquet-test parquet.cpp)
+target_link_libraries(parquet-test tsuba)
+add_test(NAME parquet COMMAND parquet-test "${CMAKE_CURRENT_BINARY_DIR}/parquet-test-wd")
+set_tests_properties(parquet PROPERTIES FIXTURES_REQUIRED parquet-ready LABELS quick)
+add_test(NAME clean-parquet COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_CURRENT_BINARY_DIR}/parquet-test-wd")
+set_tests_properties(clean-parquet PROPERTIES FIXTURES_SETUP parquet-ready LABELS quick)

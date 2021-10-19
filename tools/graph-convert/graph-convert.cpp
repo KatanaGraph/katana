@@ -2921,7 +2921,31 @@ struct Gr2Kg : public Conversion {
     if (auto res = rdg.SetTopologyFile(top_file_name); !res) {
       return res.error();
     }
-    return rdg.Store(handle, kCommandLine);
+    auto node_types = std::make_unique<tsuba::FileFrame>();
+    KATANA_CHECKED(
+        node_types->Init(header.num_nodes * sizeof(katana::EntityTypeID)));
+    KATANA_CHECKED(
+        node_types->SetCursor(header.num_nodes * sizeof(katana::EntityTypeID)));
+    katana::EntityTypeManager node_type_manager;
+    std::fill_n(
+        KATANA_CHECKED(node_types->ptr<katana::EntityTypeID>()),
+        header.num_nodes,
+        KATANA_CHECKED(node_type_manager.AddAtomicEntityType("vertex")));
+
+    auto edge_types = std::make_unique<tsuba::FileFrame>();
+    KATANA_CHECKED(
+        edge_types->Init(header.num_edges * sizeof(katana::EntityTypeID)));
+    KATANA_CHECKED(
+        edge_types->SetCursor(header.num_edges * sizeof(katana::EntityTypeID)));
+    katana::EntityTypeManager edge_type_manager;
+    std::fill_n(
+        KATANA_CHECKED(edge_types->ptr<katana::EntityTypeID>()),
+        header.num_edges,
+        KATANA_CHECKED(edge_type_manager.AddAtomicEntityType("edge")));
+
+    return rdg.Store(
+        handle, kCommandLine, nullptr, std::move(node_types),
+        std::move(edge_types), node_type_manager, edge_type_manager);
   }
 
   template <typename EdgeTy>

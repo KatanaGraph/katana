@@ -28,19 +28,12 @@ DoLoadProperties(
   std::shared_ptr<arrow::Table> out =
       KATANA_CHECKED(reader->ReadTable(file_path, slice));
 
-  std::shared_ptr<arrow::Schema> schema = out->schema();
-  if (schema->num_fields() != 1) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::InvalidArgument, "expected 1 field found {} instead",
-        schema->num_fields());
+  auto renamed = out->RenameColumns({expected_name});
+  if (!renamed.ok()) {
+    std::shared_ptr<arrow::Schema> schema = out->schema();
+    return KATANA_ERROR(tsuba::ErrorCode::InvalidArgument, "{}", renamed.status().ToString());
   }
-
-  if (schema->field(0)->name() != expected_name) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::InvalidArgument, "expected {} found {} instead",
-        expected_name, schema->field(0)->name());
-  }
-  return out;
+  return renamed.ValueOrDie();
 }
 
 }  // namespace

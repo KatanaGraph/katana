@@ -73,7 +73,13 @@ public:
 
   size_t capacity() const { return capacity_; }
 
-  bool Empty() const { return key_to_value_.empty(); }
+  void clear() {
+    key_to_value_.clear();
+    lru_list_.clear();
+    total_bytes_ = 0;
+  }
+
+  bool empty() const { return key_to_value_.empty(); }
 
   bool Contains(const Key& key) const {
     return key_to_value_.find(key) != key_to_value_.end();
@@ -85,6 +91,11 @@ public:
       lru_list_.push_front(key);
       key_to_value_[key] = {value, lru_list_.begin()};
       if (value_to_bytes_ != nullptr) {
+        auto approx_bytes = value_to_bytes_(value);
+        if (approx_bytes == 0) {
+          KATANA_LOG_WARN(
+              "caching zero sized object with LRUBytes policy is illogical");
+        }
         total_bytes_ += value_to_bytes_(value);
       }
     } else {
@@ -116,7 +127,7 @@ private:
     return mapit->second.value;
   }
 
-  void EvictOne(CallerPointer rdg) {
+  void EvictLastOne(CallerPointer rdg) {
     // evict item from the end of most recently used list
     auto tail = --lru_list_.end();
     KATANA_LOG_ASSERT(tail != lru_list_.end());
@@ -138,7 +149,7 @@ private:
     switch (policy_) {
     case ReplacementPolicy::kLRUSize: {
       while (size() > capacity_) {
-        EvictOne(rdg);
+        EvictLastOne(rdg);
       }
     } break;
     case ReplacementPolicy::kLRUBytes: {
@@ -146,7 +157,7 @@ private:
       // Allow a single entry to exceed our byte capacity.
       // The new entry has already been added to the cache, hence > 1.
       while (size() > capacity_ && key_to_value_.size() > 1) {
-        EvictOne(rdg);
+        EvictLastOne(rdg);
       }
     } break;
     default:

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bitset>
+#include <cstddef>
 #include <optional>
 #include <set>
 #include <string>
@@ -10,6 +11,7 @@
 #include <arrow/array/array_primitive.h>
 #include <arrow/table.h>
 
+#include "katana/DynamicBitsetSlow.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
 
@@ -19,13 +21,19 @@ namespace katana {
 /// EntityTypeID for nodes is distinct from EntityTypeID for edges
 /// This type may either be an atomic type or an intersection of atomic types
 /// EntityTypeID is represented using 8 bits
-using EntityTypeID = uint8_t;
+using EntityTypeID = uint16_t;
 static constexpr EntityTypeID kUnknownEntityType = EntityTypeID{0};
 static constexpr EntityTypeID kInvalidEntityType =
     std::numeric_limits<EntityTypeID>::max();
-/// A set of EntityTypeIDs
-using SetOfEntityTypeIDs =
-    std::bitset<std::numeric_limits<EntityTypeID>::max() + 1>;
+
+/// The minimum size of the dynamically sized SetOfEntityTypeIDs
+static constexpr size_t kDefaultSetOfEntityTypeIDsSize = 256;
+/// The maximum size of the dynamically sized SetOfEntityTypeIDs
+static constexpr size_t kMaxSetOfEntityTypeIDsSize = kInvalidEntityType + 1;
+
+/// A dynamically sized set of EntityTypeIDs
+using SetOfEntityTypeIDs = DynamicBitsetSlow;
+//TODO(emcginnis): use DynamicBitset when it is available to libsupport
 /// A map from EntityTypeID to a set of EntityTypeIDs
 using EntityTypeIDToSetOfEntityTypeIDsMap = std::vector<SetOfEntityTypeIDs>;
 /// A map from the atomic type name to its EntityTypeID
@@ -58,14 +66,28 @@ public:
           type_id_name_pair.second, type_id_name_pair.first);
     }
 
+    // construct the atomic_entity_type_id_to_entity_type_ids map
     size_t num_entity_types = entity_type_id_to_atomic_entity_type_ids_.size();
     atomic_entity_type_id_to_entity_type_ids_.resize(num_entity_types);
+
+    // Max EntityTypeID is 1 less than the number of entity type ids
+    size_t set_size = CalculateSetOfEntityTypeIDsSize(num_entity_types - 1);
+
+    for (size_t i = 0; i < num_entity_types; i++) {
+      atomic_entity_type_id_to_entity_type_ids_.at(i).resize(set_size);
+    }
+
     for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
       for (size_t j = 0, nj = num_entity_types; j < nj; ++j) {
-        if (entity_type_id_to_atomic_entity_type_ids_[i].test(j)) {
-          atomic_entity_type_id_to_entity_type_ids_[j].set(i);
+        if (entity_type_id_to_atomic_entity_type_ids_.at(i).test(j)) {
+          atomic_entity_type_id_to_entity_type_ids_.at(j).set(i);
         }
       }
+    }
+
+    // ensure the passed in sets are the correct size
+    for (size_t i = 0; i < num_entity_types; i++) {
+      entity_type_id_to_atomic_entity_type_ids_.at(i).resize(set_size);
     }
   }
 
@@ -83,7 +105,11 @@ public:
         entity_type_id_to_atomic_entity_type_ids_(
             std::move(entity_type_id_to_atomic_entity_type_ids)),
         atomic_entity_type_id_to_entity_type_ids_(
-            std::move(atomic_entity_type_id_to_entity_type_ids)) {}
+            std::move(atomic_entity_type_id_to_entity_type_ids)) {
+    //Must ensure all sets are at least big enough to fit all EntityTypeIDs
+    size_t num_entity_types = entity_type_id_to_atomic_entity_type_ids_.size();
+    ResizeSetOfEntityTypeIDsMaps(num_entity_types - 1);
+  }
 
   /// This function can be used to convert "old style" graphs (storage format 1,
   /// where types are represented by uint8 properties) and "new style"
@@ -288,14 +314,15 @@ public:
   template <typename Container>
   Result<SetOfEntityTypeIDs> GetEntityTypeIDs(const Container& names) const {
     SetOfEntityTypeIDs res;
+    res.resize(SetOfEntityTypeIDsSize_);
     for (const auto& name : names) {
       if (HasAtomicType(name)) {
         EntityTypeID id = GetEntityTypeID(name);
-        if (res[id]) {
+        if (res.test(id)) {
           return KATANA_ERROR(
               ErrorCode::InvalidArgument, "duplicate name: {}", name);
         }
-        res[id] = true;
+        res.set(id);
       } else {
         return KATANA_ERROR(
             ErrorCode::NotFound, "type {} does not exist", name);
@@ -312,6 +339,8 @@ public:
   template <typename Container>
   Result<SetOfEntityTypeIDs> GetOrAddEntityTypeIDs(const Container& names) {
     SetOfEntityTypeIDs res;
+    res.resize(SetOfEntityTypeIDsSize_);
+
     for (const auto& name : names) {
       auto id_res = GetOrAddEntityTypeID(name);
       // We cannot use KATANA_CHECKED here because nvcc cannot handle it.
@@ -319,12 +348,19 @@ public:
         return id_res.error();
       }
       auto id = id_res.value();
-      if (res[id]) {
+
+      // Ensure our return set has enough room if we did add a new EntityTypeID
+      // if there already is, this is quick
+      res.resize(SetOfEntityTypeIDsSize_);
+
+      if (res.test(id)) {
         return KATANA_ERROR(
-            ErrorCode::InvalidArgument, "duplicate name: {}", name);
+            ErrorCode::InvalidArgument, "duplicate name: {}, id = {}", name,
+            id);
       }
-      res[id] = true;
+      res.set(id);
     }
+
     return MakeResult(std::move(res));
   }
 
@@ -371,7 +407,10 @@ public:
     const auto& super_atomic_types = GetAtomicSubtypes(super_type);
     const auto& sub_atomic_types = GetAtomicSubtypes(sub_type);
     // return true if sub_atomic_types is a subset of super_atomic_types
-    return (sub_atomic_types & super_atomic_types) == sub_atomic_types;
+    SetOfEntityTypeIDs res;
+    res.resize(SetOfEntityTypeIDsSize_);
+    res.bitwise_and(sub_atomic_types, super_atomic_types);
+    return (res == sub_atomic_types);
   }
 
   const EntityTypeIDToSetOfEntityTypeIDsMap&
@@ -384,11 +423,24 @@ public:
     return atomic_entity_type_id_to_type_name_;
   }
 
+  /// Returns the current size of the SetOFEntityTypeIDs bitsets
+  size_t SetOfEntityTypeIDsSize() const { return SetOfEntityTypeIDsSize_; }
+
+  /// Calculate the SetOfEntityTypeIDs size required to fix max_id number of EntityTypeIDs
+  /// Optimally, we would only ever resize to exactly max_id
+  /// but this would be extremely inefficient in cases where we have thousands of EntityTypeIDs
+  /// and are still adding more as we would have to resize every bitset for each new EntityTypeID
+  /// Must keep resizing infrequent and deterministic;
+  static size_t CalculateSetOfEntityTypeIDsSize(EntityTypeID max_id);
+
   /// bool Equals() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   bool Equals(const EntityTypeManager& other) const;
 
   /// std::string ReportDiff() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   std::string ReportDiff(const EntityTypeManager& other) const;
+
+  /// ToString() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
+  std::string ToString() const;
 
   /// std::string PrintTypes() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   std::string PrintEntityTypes() const;
@@ -420,9 +472,17 @@ private:
     static_assert(kUnknownEntityType == 0);
     // add kUnknownEntityType: do not treat it as an atomic type;
     // treat it as an entity type that does not have any atomic subtypes
-    auto id = AddNonAtomicEntityType(SetOfEntityTypeIDs());
+    SetOfEntityTypeIDs empty_type_id_set;
+    empty_type_id_set.resize(kDefaultSetOfEntityTypeIDsSize);
+    auto id = AddNonAtomicEntityType(empty_type_id_set);
     KATANA_LOG_ASSERT(id.value() == kUnknownEntityType);
   }
+
+  /// The current size of the SetEntityTypeIDs bitsets
+  size_t SetOfEntityTypeIDsSize_ = kDefaultSetOfEntityTypeIDsSize;
+
+  /// Resize the SetEntityTypeIDs bitmaps to fit the new_entity_type_id
+  void ResizeSetOfEntityTypeIDsMaps(EntityTypeID new_entity_type_id);
 
   /// A map from the EntityTypeID to its type name if it is an atomic type
   /// (that does not intersect any other atomic type)

@@ -82,7 +82,7 @@ jobs:
       run: .github/workflows/setup_conan_install.sh $HOME/build
 
     - name: Check formating
-      run: CLANG_FORMAT=clang-format-10 scripts/check_cpp_format.sh .
+      run: CLANG_FORMAT=clang-format-12 scripts/check_cpp_format.sh .
 
     - name: Check general text formatting
       run: |

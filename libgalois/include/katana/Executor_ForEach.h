@@ -383,8 +383,8 @@ public:
   ForEachExecutor(FunctionTy f, const ArgsTy& args)
       : ForEachExecutor(
             T1{}, f, args, get_trait_value<wl_tag>(args).args,
-            std::make_index_sequence<std::tuple_size<decltype(
-                get_trait_value<wl_tag>(args).args)>::value>{}) {}
+            std::make_index_sequence<std::tuple_size<
+                decltype(get_trait_value<wl_tag>(args).args)>::value>{}) {}
 
   template <typename RangeTy>
   void init(const RangeTy&) {}
@@ -415,8 +415,8 @@ public:
 
 template <typename WLTy>
 constexpr auto
-has_with_iterator(int) -> decltype(
-    std::declval<typename WLTy::template with_iterator<int*>::type>(), bool()) {
+has_with_iterator(int)
+    -> decltype(std::declval<typename WLTy::template with_iterator<int*>::type>(), bool()) {
   return true;
 }
 

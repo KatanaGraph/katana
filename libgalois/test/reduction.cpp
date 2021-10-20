@@ -18,7 +18,7 @@ struct Move {
 
 void
 test_move() {
-  auto merge_fn = [](Move& a, Move &&) -> Move& { return a; };
+  auto merge_fn = [](Move& a, Move&&) -> Move& { return a; };
 
   auto identity_fn = []() { return Move(); };
 

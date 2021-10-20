@@ -524,8 +524,8 @@ katana::analytics::RandomWalks(PropertyGraph* pg, RandomWalksPlan plan) {
 
 /// \cond DO_NOT_DOCUMENT
 katana::Result<void>
-katana::analytics::RandomWalksAssertValid([
-    [maybe_unused]] katana::PropertyGraph* pg) {
+katana::analytics::RandomWalksAssertValid(
+    [[maybe_unused]] katana::PropertyGraph* pg) {
   // TODO(gill): This should have real checks.
   return katana::ResultSuccess();
 }

@@ -104,6 +104,9 @@ TestLRUBytes(
       byte_size, [](const CacheValue& value) { return BytesInValue(value); },
       [&](const PropertyCacheKey&, [[maybe_unused]] uint64_t approx_bytes,
           void*) { count_evictions++; });
+  KATANA_LOG_VASSERT(
+      cache.capacity() == byte_size, "capacity {} allocated {}",
+      cache.capacity(), byte_size);
 
   PropertyCacheKey key(NodeEdge::kNode, "not gonna happen");
   KATANA_LOG_ASSERT(!cache.Get(key).has_value());
@@ -129,6 +132,7 @@ TestLRUBytes(
   // EDGE keys
   nodeit = --edge_keys.end();
   KATANA_LOG_ASSERT(nodeit != edge_keys.begin());
+  fmt::print(" insert edge key {}\n", nodeit->name);
   cache.Insert(*nodeit--, SizeFiveValue());
   KATANA_LOG_ASSERT(count_evictions == 5);
   KATANA_LOG_ASSERT(cache.size() == 5);
@@ -136,6 +140,13 @@ TestLRUBytes(
   cache.Insert(*nodeit--, SizeOneValue());
   KATANA_LOG_ASSERT(count_evictions == 6);
   KATANA_LOG_ASSERT(cache.size() == 1);
+
+  cache.clear();
+  KATANA_LOG_VASSERT(
+      cache.capacity() == byte_size, "capacity {} allocated {}",
+      cache.capacity(), byte_size);
+  KATANA_LOG_ASSERT(cache.empty());
+  KATANA_LOG_ASSERT(cache.size() == 0);
 }
 
 void
@@ -147,6 +158,9 @@ TestLRUSize(
       lru_size,
       [&](const PropertyCacheKey&, [[maybe_unused]] uint64_t approx_bytes,
           void*) { count_evictions++; });
+  KATANA_LOG_VASSERT(
+      cache.capacity() == lru_size, "capcity {} allocated {}", cache.capacity(),
+      lru_size);
 
   InsertRandom(node_keys, cache);
 
@@ -166,6 +180,13 @@ TestLRUSize(
   KATANA_LOG_ASSERT((lru_size + 1) < edge_keys.size());
 
   AssertLRUElements(edge_keys.end(), lru_size, cache);
+
+  cache.clear();
+  KATANA_LOG_VASSERT(
+      cache.capacity() == lru_size, "size {} allocated {}", cache.size(),
+      lru_size);
+  KATANA_LOG_ASSERT(cache.empty());
+  KATANA_LOG_ASSERT(cache.size() == 0);
 }
 
 int

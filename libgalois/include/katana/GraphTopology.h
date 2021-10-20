@@ -812,6 +812,11 @@ public:
   static std::unique_ptr<ProjectedTopology> CreateEmptyProjectedTopology(
       const katana::PropertyGraph* pg);
 
+  /// this function fills a bitmask depending on the input bitset
+  static void FillBitMask(
+      uint32_t num_bytes, uint32_t num_elements,
+      const katana::DynamicBitset& bitset, katana::NUMAArray<uint8_t>* bitmask);
+
 private:
   ProjectedTopology(
       NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests,

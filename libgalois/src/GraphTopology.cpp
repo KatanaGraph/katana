@@ -634,6 +634,31 @@ katana::ProjectedTopology::CreateEmptyProjectedTopology(
   return CreateEmptyEdgeProjectedTopology(pg, 0);
 }
 
+void
+katana::ProjectedTopology::FillBitMask(
+    uint32_t num_bytes, uint32_t num_elements,
+    const katana::DynamicBitset& bitset, katana::NUMAArray<uint8_t>* bitmask) {
+  // TODO(udit) find another way to do the following
+  katana::do_all(
+      katana::iterate(static_cast<uint32_t>(0), num_bytes),
+      [&](uint32_t i) {
+        auto start = i * 8;
+        auto end = (i + 1) * 8;
+        end = (end > num_elements) ? num_elements : end;
+        uint8_t val{0};
+        while (start != end) {
+          if (bitset.test(start)) {
+            uint8_t bit_offset = static_cast<uint8_t>(1);
+            bit_offset <<= (start % 8);
+            val = val | bit_offset;
+          }
+          start++;
+        }
+        (*bitmask)[i] = val;
+      },
+      katana::chunk_size<1>());
+}
+
 std::unique_ptr<katana::ProjectedTopology>
 katana::ProjectedTopology::MakeTypeProjectedTopology(
     const katana::PropertyGraph* pg, const std::vector<std::string>& node_types,
@@ -727,26 +752,9 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
     }
   });
 
-  // TODO(udit) find another way to do the following
-  katana::do_all(
-      katana::iterate(static_cast<uint32_t>(0), num_nodes_bytes),
-      [&](uint32_t i) {
-        auto node_start = i * 8;
-        auto node_end = (i + 1) * 8;
-        node_end =
-            (node_end > topology.num_nodes()) ? topology.num_nodes() : node_end;
-        uint8_t val{0};
-        while (node_start != node_end) {
-          if (bitset_nodes.test(node_start)) {
-            uint8_t bit_offset = (uint8_t)1;
-            bit_offset <<= (node_start % 8);
-            val = val | bit_offset;
-          }
-          node_start++;
-        }
-        node_bitmask[i] = val;
-      },
-      katana::chunk_size<1>());
+  FillBitMask(
+      num_nodes_bytes, static_cast<uint32_t>(topology.num_nodes()),
+      bitset_nodes, &node_bitmask);
 
   // calculate number of new edges
   katana::DynamicBitset bitset_edges;
@@ -868,27 +876,9 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
 
   uint32_t num_edges_bytes = (topology.num_edges() + 7) / 8;
 
-  // TODO(udit) find another way to do the following
-  katana::do_all(
-      katana::iterate(static_cast<uint32_t>(0), num_edges_bytes),
-      [&](uint32_t i) {
-        auto edge_start = i * 8;
-        auto edge_end = (i + 1) * 8;
-        edge_end =
-            (edge_end > topology.num_edges()) ? topology.num_edges() : edge_end;
-        uint8_t val{0};
-        while (edge_start != edge_end) {
-          if (bitset_edges.test(edge_start)) {
-            uint8_t bit_offset = static_cast<uint8_t>(1);
-            bit_offset <<= (edge_start % 8);
-            val = val | bit_offset;
-          }
-          edge_start++;
-        }
-        edge_bitmask[i] = val;
-      },
-      katana::chunk_size<1>());
-
+  FillBitMask(
+      num_edges_bytes, static_cast<uint32_t>(topology.num_edges()),
+      bitset_edges, &edge_bitmask);
   return std::make_unique<ProjectedTopology>(ProjectedTopology{
       std::move(out_indices), std::move(out_dests),
       std::move(original_to_projected_nodes_mapping),

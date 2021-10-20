@@ -24,7 +24,9 @@ fi
 
 RELEASE_CODENAME="$(lsb_release --codename --short)" # "xenial, focal, hirsute"
 RELEASE_ID="$(lsb_release --id --short | tr 'A-Z' 'a-z')" # should always be "ubuntu"
-VERSION=$(lsb_release --release --short | cut -d . -f 1) # numerical major version, 16, 18, 20, etc
+VERSION=$(lsb_release --release --short | cut -d . -f 1) # numerical major version, 18, 20, etc
+
+# Supported versions: 18, 20, 21
 
 SETUP_TOOLCHAIN_VARIANTS=${SETUP_TOOLCHAIN_VARIANTS:-yes}
 
@@ -67,13 +69,15 @@ fi
 
 add-apt-repository -y $NO_UPDATE ppa:git-core/ppa
 
-# clang-12 isn't present in the repos for any Ubuntu release up to 20.04
-curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE_CODENAME}/ llvm-toolchain-${RELEASE_CODENAME}-12 main"
 
-# Clang isn't present in the xenial repos so we need to add the repo
+if [[ "$VERSION" == "18" || "$VERSION" == "20" ]]; then
+    # clang-12 isn't present in the repos for any Ubuntu release up to 20.04
+    curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+    apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE_CODENAME}/ llvm-toolchain-${RELEASE_CODENAME}-12 main"
+fi
+
 # Clang-10 isn't present in the hirsute repos any more, so we need to add the upstream repo
-if [[ "$VERSION" == "16" ||  "$VERSION" == "21" ]]; then
+if [ "$VERSION" == "21" ]; then
   apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE_CODENAME}/ llvm-toolchain-${RELEASE_CODENAME}-10 main"
 fi
 
@@ -82,7 +86,7 @@ if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
 fi
 
 if [ "$VERSION" == "21" ]; then
-    # no hirsute aka 21.04 release of apache arrow yet, use focal one instead
+    # no hirsute aka 21.04 release of apache arrow:4.0.0.1 use focal one instead
     # we must also get libre2-5 from focal
     curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-focal.deb" \
          --output /tmp/apache-arrow-apt-source-latest.deb

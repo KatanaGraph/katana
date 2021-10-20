@@ -6,7 +6,7 @@
 set -xeuo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
 
-EXPECTED_RELEASES=("21.04" "20.04" "18.04" "16.04")
+EXPECTED_RELEASES=("21.04" "20.04" "18.04")
 RELEASE=$(lsb_release --release --short)
 
 SUPPORTED_RELEASE=false

@@ -461,7 +461,7 @@ public:
   ReportPageAllocGuard() { reportPageAlloc("MeminfoPre"); }
   ~ReportPageAllocGuard() { Report(); }
   ReportPageAllocGuard(const ReportPageAllocGuard&) = delete;
-  ReportPageAllocGuard(ReportPageAllocGuard &&) = delete;
+  ReportPageAllocGuard(ReportPageAllocGuard&&) = delete;
   ReportPageAllocGuard& operator=(const ReportPageAllocGuard&) = delete;
   ReportPageAllocGuard& operator=(ReportPageAllocGuard&&) = delete;
 

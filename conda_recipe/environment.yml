@@ -15,6 +15,7 @@ dependencies:
  - conan
  - conda-build
  - conda-verify
+ - clang-format-12
  - cxx-compiler>=1.1.3
  - cython>=0.29.12
  - doxygen

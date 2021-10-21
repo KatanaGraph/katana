@@ -113,10 +113,10 @@ class [[nodiscard]] TimerGuard {
   T& timer_;
 
 public:
-  TimerGuard(T & timer) : timer_(timer) { timer_.start(); }
+  TimerGuard(T& timer) : timer_(timer) { timer_.start(); }
 
   TimerGuard(const TimerGuard&) = delete;
-  TimerGuard(TimerGuard &&) = delete;
+  TimerGuard(TimerGuard&&) = delete;
   TimerGuard& operator=(const TimerGuard&) = delete;
   TimerGuard& operator=(TimerGuard&&) = delete;
 

@@ -121,7 +121,7 @@ KATANA_EXPORT void AbortApplication [[noreturn]] ();
     if (!(cond)) {                                                             \
       ::katana::LogLine(                                                       \
           ::katana::LogLevel::Error, __FILE__, __LINE__,                       \
-          "assertion not true: {}", #cond);                                    \
+          FMT_STRING("assertion not true: {}"), #cond);                        \
       ::katana::AbortApplication();                                            \
     }                                                                          \
   } while (0)

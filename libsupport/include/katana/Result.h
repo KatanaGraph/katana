@@ -629,17 +629,20 @@ CheckedExpressionToValue(arrow::Status&&) {
     if (::katana::internal::CheckedExpressionFailed(result_name)) {            \
       return ::katana::internal::CheckedExpressionToError(result_name)         \
           .WithContext(__VA_ARGS__)                                            \
-          .WithContext("({}:{})", __FILE__, __LINE__);                         \
+          .WithContext(FMT_STRING("({}:{})"), __FILE__, __LINE__);             \
     }                                                                          \
     std::move(                                                                 \
         ::katana::internal::CheckedExpressionToValue(std::move(result_name))); \
   })
 
-/// KATANA_CHECKED_CONTEXT takes an expression that returns a Result, and
-/// additional error formatting expressions. If the Result has an error, the
-/// function calling KATANA_CHECKED_CONTEXT will return the error with
-/// additional error formatting. Otherwise, KATANA_CHECKED_CONTEXT will return
-/// the value of the Result object to the caller.
+// TODO(amp): "##" below should be replaced with __VA_OPT__, the C++20 standard
+//  way of doing this. "##" is a well supported extension (originally from GCC).
+
+/// KATANA_CHECKED_CONTEXT takes an expression that returns a Result, an error
+/// format string, and additional formatting expressions. If the Result has an
+/// error, the function calling KATANA_CHECKED_CONTEXT will return the error
+/// with additional error formatting. Otherwise, KATANA_CHECKED_CONTEXT will
+/// return the value of the Result object to the caller.
 ///
 /// Because KATANA_CHECKED_CONTEXT is a macro, it will interpret all commas that
 /// are not enclosed in a pair of parentheses as delimiters for its own
@@ -654,10 +657,24 @@ CheckedExpressionToValue(arrow::Status&&) {
 ///     KATANA_CHECKED_CONTEXT((MakeSword<Handle,Blade>()), "second argument")
 ///
 /// will work just fine.
-#define KATANA_CHECKED_CONTEXT(expression, ...)                                \
+#define KATANA_CHECKED_CONTEXT(expression, format_str, ...)                    \
   KATANA_CHECKED_IMPL(                                                         \
       KATANA_CHECKED_NAME(_error_or_value, __COUNTER__), expression,           \
-      __VA_ARGS__)
+      FMT_STRING(format_str), ##__VA_ARGS__)
+
+/// KATANA_CHECKED_ERROR_CODE takes an expression that returns a Result, an
+/// error code, an error format string, and additional formatting expressions.
+/// If the Result has an error, the function calling KATANA_CHECKED_ERROR_CODE
+/// will return the error with the new error code and additional error
+/// formatting. Otherwise, KATANA_CHECKED_ERROR_CODE will return the value of
+/// the Result object to the caller.
+///
+/// KATANA_CHECKED_ERROR_CODE has the same issue with template parameters and
+/// commas as KATANA_CHECKED_CONTEXT.
+#define KATANA_CHECKED_ERROR_CODE(expression, error_code, format_str, ...)     \
+  KATANA_CHECKED_IMPL(                                                         \
+      KATANA_CHECKED_NAME(_error_or_value, __COUNTER__), expression,           \
+      error_code, FMT_STRING(format_str), ##__VA_ARGS__)
 
 /// KATANA_CHECKED takes an expression that returns a Result, and if the Result
 /// has an error, the function calling KATANA_CHECKED will return the error.

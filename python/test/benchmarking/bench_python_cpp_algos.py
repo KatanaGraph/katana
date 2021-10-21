@@ -35,6 +35,15 @@ def time_block(run_name, time_data):
     time_data[run_name] = round(1000 * (timer_algo_end - timer_algo_start))
 
 
+@contextlib.contextmanager
+def busy_wait(enabled):
+    if enabled:
+        katana.set_busy_wait()
+    yield
+    if enabled:
+        katana.set_busy_wait(0)
+
+
 def check_schema(graph: Graph, property_name):
     node_schema: Schema = graph.loaded_node_schema()
     num_node_properties = len(node_schema)
@@ -331,9 +340,12 @@ def tc(graph: Graph, _input_args):
 def run_all_gap(args):
     katana.local.initialize()
     print("Using threads:", katana.set_active_threads(args.threads))
-    if args.thread_spin:
-        katana.set_busy_wait()
 
+    with busy_wait(args.thread_spin):
+        return _run_all_gap(args)
+
+
+def _run_all_gap(args):
     inputs = [
         {
             "name": "GAP-road",
@@ -465,7 +477,6 @@ def run_all_gap(args):
 
 
 def main(parsed_args):
-
     run_all_gap(parsed_args)
 
 

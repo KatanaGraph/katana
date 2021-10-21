@@ -1,3 +1,10 @@
 [undefined]
 src:*/include/c\+\+/*/chrono
 src:*/include/c\+\+/*/experimental/chrono
+
+# How cython generates vtables results in undefined behavior like:
+#
+#     python/katana/local/_graph.cpp:6830:13: runtime error:
+#       call to function [...] through pointer to incorrect function type [...]
+#
+src:*python/katana/local/*.cpp

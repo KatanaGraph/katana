@@ -30,6 +30,7 @@ main() {
   RunTriCount(katana::MakeGrid(2, 2, true), 4);
   RunTriCount(katana::MakeGrid(3, 4, true), 24);
   RunTriCount(katana::MakeGrid(5, 7, true), 96);
+  RunTriCount(katana::MakeGrid(5, 7, false), 0);
 
   // Ferris wheel tests
   RunTriCount(katana::MakeFerrisWheel(5), 4);

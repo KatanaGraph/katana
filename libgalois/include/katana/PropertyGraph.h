@@ -95,10 +95,8 @@ private:
   EntityTypeIDArray edge_entity_type_ids_;
 
   // List of node and edge indexes on this graph.
-  std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
-      node_indexes_;
-  std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
-      edge_indexes_;
+  std::vector<std::unique_ptr<PropertyIndex<Node>>> node_indexes_;
+  std::vector<std::unique_ptr<PropertyIndex<Edge>>> edge_indexes_;
 
   PGViewCache pg_view_cache_;
 

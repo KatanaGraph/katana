@@ -136,7 +136,7 @@ def install_package_list(args, packages, silent=False):
     if args.command:
         command = args.command.split()
     elif args.format == OutputFormat.PIP:
-        command = ["pip", "install"]
+        command = [sys.executable, "-m", "pip", "install"]
     elif args.format == OutputFormat.APT:
         command = ["apt-get", "satisfy"]
     elif args.format == OutputFormat.CONDA:

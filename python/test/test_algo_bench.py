@@ -5,7 +5,6 @@ import test.benchmarking.bench_python_cpp_algos
 from pytest import approx
 
 from katana.example_data import get_input
-from katana.local import Graph
 
 
 def generate_args(
@@ -177,7 +176,7 @@ def run_single_test(arguments):
     args = generate_args(**arguments)
     ground_truth = test.benchmarking.bench_python_cpp_algos.create_empty_statistics(args)
     output_tuple = test.benchmarking.bench_python_cpp_algos.run_all_gap(args)
-    assert output_tuple.write_success, "Writing JSON statistics to disc failed!"
+    assert output_tuple.write_success, "Writing JSON statistics to disk failed!"
     assert_types_match(ground_truth, output_tuple.time_write_data)
     for subroutine in output_tuple.time_write_data["routines"]:
         assert_routine_output(output_tuple.time_write_data["routines"][subroutine])

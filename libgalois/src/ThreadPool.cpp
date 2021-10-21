@@ -41,7 +41,7 @@ thread_local ThreadPool::per_signal ThreadPool::my_box;
 ThreadPool::ThreadPool()
     : mi(getHWTopo().machineTopoInfo),
       reserved(0),
-      masterFastmode(false),
+      masterFastmode(0),
       running(false) {
   signals.resize(mi.maxThreads);
   initThread(0);
@@ -238,7 +238,9 @@ ThreadPool::runInternal(unsigned num) {
   me.wbegin = 1;
   me.wend = num;
 
-  KATANA_LOG_DEBUG_ASSERT(!masterFastmode || masterFastmode == num);
+  KATANA_LOG_VASSERT(
+      !masterFastmode || masterFastmode == num,
+      "fastmode threads {} != num threads {}", masterFastmode, num);
   // launch threads
   cascade(masterFastmode);
   // Do master thread work

@@ -52,9 +52,9 @@ struct ExecuteTupleImpl<tpl, s, 0> {
 namespace katana {
 
 class KATANA_EXPORT ThreadPool {
+private:
   friend class SharedMem;
 
-protected:
   struct shutdown_ty {};  //! type for shutting down thread
   struct fastmode_ty {
     bool mode;
@@ -169,8 +169,6 @@ public:
   void burnPower(unsigned num);
   // experimental: leave busy wait
   void beKind();
-
-  bool isRunning() const { return running; }
 
   //! return the number of non-reserved threads in the pool
   unsigned getMaxUsableThreads() const { return mi.maxThreads - reserved; }

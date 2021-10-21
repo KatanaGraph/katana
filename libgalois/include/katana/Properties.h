@@ -282,7 +282,7 @@ public:
     return PODPropertyView(
         internal::GetMutableValuesWorkAround<T>(array.data(), 1, 0),
         array.data()->template GetValues<uint8_t>(0, 0), array.length(),
-        array.offset());
+        array.offset(), array.null_count());
   }
 
   static Result<PODPropertyView> Make(
@@ -305,13 +305,15 @@ public:
     return PODPropertyView(
         internal::GetMutableValuesWorkAround<T>(array.data(), 1, 0),
         array.data()->template GetValues<uint8_t>(0, 0), array.length(),
-        array.offset());
+        array.offset(), array.null_count());
   }
 
   bool IsValid(size_t i) const {
     KATANA_LOG_DEBUG_ASSERT(i < length_);
-    return null_bitmap_ == nullptr ||
-           arrow::BitUtil::GetBit(null_bitmap_, i + offset_);
+    // if there is no null_bitmap, then we have either all nulls or no nulls
+    return null_bitmap_ == nullptr
+               ? null_count_ == 0
+               : arrow::BitUtil::GetBit(null_bitmap_, i + offset_);
   }
 
   reference GetValue(size_t i) { return values_[i + offset_]; }
@@ -324,15 +326,17 @@ public:
 
 private:
   PODPropertyView(
-      T* values, const uint8_t* null_bitmap, size_t length, size_t offset)
+      T* values, const uint8_t* null_bitmap, size_t length, size_t offset,
+      size_t null_count)
       : values_(values),
         null_bitmap_(null_bitmap),
         length_(length),
-        offset_(offset) {}
+        offset_(offset),
+        null_count_(null_count) {}
 
   T* values_;
   const uint8_t* null_bitmap_;
-  size_t length_, offset_;
+  size_t length_, offset_, null_count_;
 };
 
 /// BooleanPropertyReadOnlyView provides a read-only property view over

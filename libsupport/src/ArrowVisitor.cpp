@@ -152,6 +152,7 @@ struct ToArrayVisitor : public katana::ArrowVisitor {
 
   template <typename ArrowType, typename BuilderType>
   arrow::enable_if_null<ArrowType, ResultType> Call(BuilderType* builder) {
+    KATANA_CHECKED(builder->AppendNulls(scalars.size()));
     return KATANA_CHECKED(builder->Finish());
   }
 

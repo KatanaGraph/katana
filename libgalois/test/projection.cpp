@@ -6,9 +6,9 @@
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
+#include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
-#include "stdio.h"
 #include "tsuba/RDG.h"
 
 namespace cll = llvm::cl;
@@ -24,7 +24,9 @@ static cll::opt<std::string> edgeTypes(
     cll::Positional, cll::desc("<edge types to project>"), cll::Required);
 
 using ProjectedPropertyGraphView = katana::PropertyGraphViews::ProjectedGraph;
-using NodeData = std::tuple<>;
+
+struct TempNodeProp : public katana::PODProperty<uint64_t> {};
+using NodeData = std::tuple<TempNodeProp>;
 using EdgeData = std::tuple<>;
 
 using ProjectedGraphView = katana::TypedPropertyGraphView<
@@ -59,10 +61,7 @@ main(int argc, char** argv) {
   katana::SharedMemSys sys;
   cll::ParseCommandLineOptions(argc, argv);
 
-  katana::PropertyGraph g = LoadGraph(inputFile);
-
-  katana::gPrint("\n Original Num Nodes: ", g.num_nodes());
-  katana::gPrint("\n Original Num Edges: ", g.num_edges());
+  katana::PropertyGraph full_graph = LoadGraph(inputFile);
 
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);
@@ -70,11 +69,45 @@ main(int argc, char** argv) {
   std::vector<std::string> edge_types;
   SplitString(edgeTypes, &edge_types);
 
-  auto graph =
-      ProjectedGraphView::MakeTypeProjectedTopology(&g, node_types, edge_types);
+  auto pg_view =
+      full_graph.BuildView<ProjectedPropertyGraphView>(node_types, edge_types);
 
-  katana::gPrint("\n Num Nodes: ", graph->num_nodes());
-  katana::gPrint("\n Num Edges: ", graph->num_edges());
+  katana::analytics::TemporaryPropertyGuard temp_node_property{
+      full_graph.NodeMutablePropertyView()};
+
+  std::vector<std::string> node_props;
+  node_props.emplace_back(temp_node_property.name());
+  auto res_node_prop = katana::analytics::ConstructNodeProperties<
+      ProjectedPropertyGraphView, NodeData>(pg_view, node_props);
+
+  if (!res_node_prop) {
+    KATANA_LOG_FATAL(
+        "Failed to Construct Properties: {}", res_node_prop.error());
+  }
+  auto res_projected_graph = ProjectedGraphView::Make(pg_view, node_props, {});
+
+  auto projected_graph = res_projected_graph.value();
+
+  uint32_t num_valid_nodes{0};
+
+  auto res_node_get_prop =
+      full_graph.GetNodeProperty(temp_node_property.name());
+  auto node_prop = res_node_get_prop.value();
+
+  num_valid_nodes = full_graph.num_nodes() - node_prop->null_count();
+
+  KATANA_LOG_VASSERT(
+      projected_graph.num_nodes() > 0 &&
+          full_graph.num_nodes() >= projected_graph.num_nodes(),
+      "\n Num Nodes: {}", projected_graph.num_nodes());
+  KATANA_LOG_VASSERT(
+      projected_graph.num_edges() > 0 &&
+          full_graph.num_edges() >= projected_graph.num_edges(),
+      "\n Num Edges: {}", projected_graph.num_edges());
+  KATANA_LOG_VASSERT(
+      projected_graph.num_nodes() == num_valid_nodes,
+      "\n Num Valid Nodes: {} Num Nodes: {}", num_valid_nodes,
+      projected_graph.num_nodes());
 
   return 0;
 }

@@ -249,6 +249,87 @@ AllocateTable(uint64_t num_rows, const std::vector<std::string>& names) {
       std::make_index_sequence<std::tuple_size_v<PropTuple>>());
 }
 
+inline std::shared_ptr<arrow::ChunkedArray>
+ApplyBitMask(
+    const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+    const std::shared_ptr<arrow::Buffer>& bit_mask) {
+  std::shared_ptr<arrow::Array> array = chunked_array->chunk(0);
+  std::shared_ptr<arrow::ArrayData> data = array->data()->Copy();
+
+  data->buffers[0] = bit_mask;
+  data->null_count = arrow::kUnknownNullCount;
+
+  auto array_ptr = arrow::MakeArray(data);
+
+  KATANA_LOG_DEBUG_ASSERT(array_ptr->ValidateFull().ok());
+  std::vector<std::shared_ptr<arrow::Array>> new_chunks;
+  new_chunks.emplace_back(array_ptr);
+
+  auto res_new_chunked_array = arrow::ChunkedArray::Make(new_chunks);
+
+  if (res_new_chunked_array.ok()) {
+    return res_new_chunked_array.ValueOrDie();
+  } else {
+    return nullptr;
+  }
+}
+
+/// This function creates a new table
+/// here the bit_mask is applied to the rows in every column
+template <typename PropTuple, size_t head, size_t... tail>
+Result<std::shared_ptr<arrow::Table>>
+AllocateTable(
+    uint64_t num_rows, const std::vector<std::string>& names,
+    const std::shared_ptr<arrow::Buffer>& bit_mask,
+    std::index_sequence<head, tail...>) {
+  using Prop = std::tuple_element_t<head, PropTuple>;
+
+  auto res = Prop::Allocate(num_rows, names[head]);
+  if (!res) {
+    return res.error();
+  }
+  auto table = std::move(res.value());
+
+  auto rest =
+      AllocateTable<PropTuple>(num_rows, names, std::index_sequence<tail...>());
+  if (!rest) {
+    return rest.error();
+  }
+
+  auto rest_table = std::move(rest.value());
+
+  // TODO(ddn): tail recursion
+  // TODO(ddn): metadata
+  auto fields = table->fields();
+  auto columns = table->columns();
+
+  auto new_col = ApplyBitMask(columns[0], bit_mask);
+  columns[0] = new_col;
+
+  if (rest_table) {
+    for (const auto& field : rest_table->fields()) {
+      fields.emplace_back(field);
+    }
+    for (const auto& col : rest_table->columns()) {
+      KATANA_LOG_ASSERT(col->num_chunks() == 1);
+      auto new_col = ApplyBitMask(col, bit_mask);
+      columns.emplace_back(new_col);
+    }
+  }
+
+  return arrow::Table::Make(arrow::schema(fields), columns);
+}
+
+template <typename PropTuple>
+Result<std::shared_ptr<arrow::Table>>
+AllocateTable(
+    uint64_t num_rows, const std::vector<std::string>& names,
+    const std::shared_ptr<arrow::Buffer>& bit_mask) {
+  return AllocateTable<PropTuple>(
+      num_rows, names, bit_mask,
+      std::make_index_sequence<std::tuple_size_v<PropTuple>>());
+}
+
 /// PODPropertyView provides a property view over arrow::Arrays of elements
 /// with trivial constructors (std::is_trivial) and standard layout
 /// (std::is_standard_layout).

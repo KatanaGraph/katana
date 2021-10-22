@@ -7,6 +7,7 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
+#include "arrow/util/bitmap.h"
 #include "katana/DynamicBitset.h"
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
@@ -45,7 +46,7 @@ struct KATANA_EXPORT GraphTopologyTypes {
 
 class KATANA_EXPORT EdgeShuffleTopology;
 class KATANA_EXPORT EdgeTypeAwareTopology;
-class KATANA_EXPORT ProjectedTypeTopology;
+class KATANA_EXPORT ProjectedTopology;
 
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
@@ -788,6 +789,14 @@ public:
     return original_to_projected_nodes_mapping_[nid];
   }
 
+  const std::shared_ptr<arrow::Buffer>& node_bitmask() const noexcept {
+    return node_bitmask_.buffer();
+  }
+
+  const std::shared_ptr<arrow::Buffer>& edge_bitmask() const noexcept {
+    return edge_bitmask_.buffer();
+  }
+
   /// this function creates a topology by filtering nodes and edges
   /// @param node_types the types that the selected nodes must have
   /// @param edge_types the types that the selected edges must have
@@ -797,11 +806,17 @@ public:
 
   /// this function creates an empty graph with num_new_nodes nodes
   static std::unique_ptr<ProjectedTopology> CreateEmptyEdgeProjectedTopology(
-      const katana::PropertyGraph* pg, uint32_t num_new_nodes);
+      const katana::PropertyGraph* pg, uint32_t num_new_nodes,
+      const katana::DynamicBitset& bitset);
 
   /// this function creates an empty graph
   static std::unique_ptr<ProjectedTopology> CreateEmptyProjectedTopology(
-      const katana::PropertyGraph* pg);
+      const katana::PropertyGraph* pg, const katana::DynamicBitset& bitset);
+
+  /// this function fills a bitmask depending on the input bitset
+  static void FillBitMask(
+      size_t num_elements, const katana::DynamicBitset& bitset,
+      katana::NUMAArray<uint8_t>* bitmask);
 
 private:
   ProjectedTopology(
@@ -809,7 +824,9 @@ private:
       NUMAArray<Node>&& original_to_projected_nodes_mapping,
       NUMAArray<Node>&& projected_to_original_nodes_mapping,
       NUMAArray<Edge>&& original_to_projected_edges_mapping,
-      NUMAArray<Edge>&& projected_to_original_edges_mapping)
+      NUMAArray<Edge>&& projected_to_original_edges_mapping,
+      NUMAArray<uint8_t>&& node_bitmask_data,
+      NUMAArray<uint8_t>&& edge_bitmask_data)
       : adj_indices_(std::move(adj_indices)),
         dests_(std::move(dests)),
         original_to_projected_nodes_mapping_(
@@ -819,7 +836,16 @@ private:
         original_to_projected_edges_mapping_(
             std::move(original_to_projected_edges_mapping)),
         projected_to_original_edges_mapping_(
-            std::move(projected_to_original_edges_mapping)) {}
+            std::move(projected_to_original_edges_mapping)),
+        node_bitmask_data_(std::move(node_bitmask_data)),
+        edge_bitmask_data_(std::move(edge_bitmask_data)),
+        node_bitmask_(
+            static_cast<void*>(node_bitmask_data_.data()), 0,
+            static_cast<int64_t>(original_to_projected_nodes_mapping_.size())),
+        edge_bitmask_(
+            static_cast<void*>(edge_bitmask_data_.data()), 0,
+            static_cast<int64_t>(original_to_projected_edges_mapping_.size())) {
+  }
 
   // TODO(udit) : we can let go of original_to_projected_nodes_mapping_ and original_to_projected_edges_mapping_
   // by doing a binary search on projected_to_original_nodes_mapping_ and projected_to_original_edges_mapping_
@@ -830,13 +856,18 @@ private:
   NUMAArray<Node> projected_to_original_nodes_mapping_;
   NUMAArray<Edge> original_to_projected_edges_mapping_;
   NUMAArray<Edge> projected_to_original_edges_mapping_;
+  NUMAArray<uint8_t> node_bitmask_data_;
+  NUMAArray<uint8_t> edge_bitmask_data_;
+  arrow::internal::Bitmap node_bitmask_;
+  arrow::internal::Bitmap edge_bitmask_;
 };
 
-template <typename Topo>
-class KATANA_EXPORT ProjectedTopologyWrapper : public GraphTopologyTypes {
+class KATANA_EXPORT ProjectedPropGraphViewWrapper : public GraphTopologyTypes {
 public:
-  explicit ProjectedTopologyWrapper(const Topo* t) noexcept : topo_ptr_(t) {
-    KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
+  explicit ProjectedPropGraphViewWrapper(
+      const PropertyGraph* pg, const ProjectedTopology* projected_topo) noexcept
+      : prop_graph_(pg), projected_topo_ptr_(projected_topo) {
+    KATANA_LOG_DEBUG_ASSERT(projected_topo_ptr_);
   }
 
   auto num_nodes() const noexcept { return topo().num_nodes(); }
@@ -899,11 +930,27 @@ public:
     return topo().original_to_projected_edge_id(eid);
   }
 
+  const PropertyGraph& property_graph() const noexcept { return *prop_graph_; }
+
+  const std::shared_ptr<arrow::Buffer>& node_bitmask() const noexcept {
+    return topo().node_bitmask();
+  }
+  const std::shared_ptr<arrow::Buffer>& edge_bitmask() const noexcept {
+    return topo().edge_bitmask();
+  }
+
+  const PropertyGraph* get_property_graph() const noexcept {
+    return prop_graph_;
+  }
+
 protected:
-  const Topo& topo() const noexcept { return *topo_ptr_; }
+  const ProjectedTopology& topo() const noexcept {
+    return *projected_topo_ptr_;
+  }
 
 private:
-  const Topo* topo_ptr_;
+  const PropertyGraph* prop_graph_;
+  const ProjectedTopology* projected_topo_ptr_;
 };
 
 namespace internal {
@@ -1343,7 +1390,7 @@ using PGViewNodesSortedByDegreeEdgesSortedByDestID =
 using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
 using PGViewEdgeTypeAwareBiDir =
     BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
-using PGViewProjectedGraph = BasicPropGraphViewWrapper<ProjectedTopology>;
+using PGViewProjectedGraph = ProjectedPropGraphViewWrapper;
 
 template <typename PGView>
 struct PGViewBuilder {};
@@ -1411,10 +1458,13 @@ template <>
 struct PGViewBuilder<PGViewProjectedGraph> {
   template <typename ViewCache>
   static PGViewProjectedGraph BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
-    auto topo = viewCache.BuildOrGetProjectedGraphTopo(pg);
+      const PropertyGraph* pg, const std::vector<std::string>& node_types,
+      const std::vector<std::string>& edge_types,
+      ViewCache& viewCache) noexcept {
+    auto topo =
+        viewCache.BuildOrGetProjectedGraphTopo(pg, node_types, edge_types);
 
-    return PGViewProjectedGraph{pg, ProjectedTopology{topo}};
+    return PGViewProjectedGraph{pg, topo};
   }
 };
 
@@ -1454,6 +1504,14 @@ public:
   }
 
   katana::Result<std::vector<tsuba::RDGTopology>> ToRDGTopology();
+
+  template <typename PGView>
+  PGView BuildView(
+      const PropertyGraph* pg, const std::vector<std::string>& node_types,
+      const std::vector<std::string>& edge_types) noexcept {
+    return internal::PGViewBuilder<PGView>::BuildView(
+        pg, node_types, edge_types, *this);
+  }
 
 private:
   const GraphTopology* GetOriginalTopology(

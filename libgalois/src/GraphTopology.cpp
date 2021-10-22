@@ -1,5 +1,7 @@
 #include "katana/GraphTopology.h"
 
+#include <math.h>
+
 #include <iostream>
 
 #include "katana/Logging.h"
@@ -584,9 +586,36 @@ katana::EdgeTypeAwareTopology::Make(
       edge_type_index, e_topo, std::move(per_type_adj_indices)});
 }
 
+/// This function converts a bitset to a bitmask
+void
+katana::ProjectedTopology::FillBitMask(
+    size_t num_elements, const katana::DynamicBitset& bitset,
+    katana::NUMAArray<uint8_t>* bitmask) {
+  uint32_t num_bytes = (num_elements + 7) / 8;
+
+  // TODO(udit) find another way to do the following
+  // as it is prone to errors
+  katana::do_all(katana::iterate(uint32_t{0}, num_bytes), [&](uint32_t i) {
+    auto start = i * 8;
+    auto end = (i + 1) * 8;
+    end = (end > num_elements) ? num_elements : end;
+    uint8_t val{0};
+    while (start != end) {
+      if (bitset.test(start)) {
+        uint8_t bit_offset{1};
+        bit_offset <<= (start % 8);
+        val = val | bit_offset;
+      }
+      start++;
+    }
+    (*bitmask)[i] = val;
+  });
+}
+
 std::unique_ptr<katana::ProjectedTopology>
 katana::ProjectedTopology::CreateEmptyEdgeProjectedTopology(
-    const katana::PropertyGraph* pg, uint32_t num_new_nodes) {
+    const katana::PropertyGraph* pg, uint32_t num_new_nodes,
+    const katana::DynamicBitset& bitset) {
   const auto& topology = pg->topology();
 
   katana::NUMAArray<Edge> out_indices;
@@ -611,18 +640,27 @@ katana::ProjectedTopology::CreateEmptyEdgeProjectedTopology(
       original_to_projected_edges_mapping.begin(),
       original_to_projected_edges_mapping.end(), Edge{topology.num_edges()});
 
+  NUMAArray<uint8_t> node_bitmask;
+  node_bitmask.allocateInterleaved((topology.num_nodes() + 7) / 8);
+
+  FillBitMask(topology.num_nodes(), bitset, &node_bitmask);
+
+  NUMAArray<uint8_t> edge_bitmask;
+  edge_bitmask.allocateInterleaved((topology.num_edges() + 7) / 8);
+
   return std::make_unique<katana::ProjectedTopology>(katana::ProjectedTopology{
       std::move(out_indices), std::move(out_dests),
       std::move(original_to_projected_nodes_mapping),
       std::move(projected_to_original_nodes_mapping),
       std::move(original_to_projected_edges_mapping),
-      std::move(projected_to_original_edges_mapping)});
+      std::move(projected_to_original_edges_mapping), std::move(node_bitmask),
+      std::move(edge_bitmask)});
 }
 
 std::unique_ptr<katana::ProjectedTopology>
 katana::ProjectedTopology::CreateEmptyProjectedTopology(
-    const katana::PropertyGraph* pg) {
-  return CreateEmptyEdgeProjectedTopology(pg, 0);
+    const katana::PropertyGraph* pg, const katana::DynamicBitset& bitset) {
+  return CreateEmptyEdgeProjectedTopology(pg, 0, bitset);
 }
 
 std::unique_ptr<katana::ProjectedTopology>
@@ -690,7 +728,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
     if (num_new_nodes == 0) {
       // no nodes selected;
       // return empty graph
-      return CreateEmptyProjectedTopology(pg);
+      return CreateEmptyProjectedTopology(pg, bitset_nodes);
     }
   }
 
@@ -703,6 +741,11 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   NUMAArray<Node> projected_to_original_nodes_mapping;
   projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
 
+  uint32_t num_nodes_bytes = (topology.num_nodes() + 7) / 8;
+
+  NUMAArray<uint8_t> node_bitmask;
+  node_bitmask.allocateInterleaved(num_nodes_bytes);
+
   katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
     if (bitset_nodes.test(src)) {
       original_to_projected_nodes_mapping[src]--;
@@ -712,6 +755,8 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
       original_to_projected_nodes_mapping[src] = topology.num_nodes();
     }
   });
+
+  FillBitMask(topology.num_nodes(), bitset_nodes, &node_bitmask);
 
   // calculate number of new edges
   katana::DynamicBitset bitset_edges;
@@ -774,7 +819,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
     if (num_new_edges == 0) {
       // no edge selected
       // return empty graph with only selected nodes
-      return CreateEmptyEdgeProjectedTopology(pg, num_new_nodes);
+      return CreateEmptyEdgeProjectedTopology(pg, num_new_nodes, bitset_nodes);
     }
   }
 
@@ -796,10 +841,12 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   NUMAArray<Node> out_dests;
   NUMAArray<Edge> original_to_projected_edges_mapping;
   NUMAArray<Edge> projected_to_original_edges_mapping;
+  NUMAArray<uint8_t> edge_bitmask;
 
   out_dests.allocateInterleaved(num_new_edges);
   original_to_projected_edges_mapping.allocateInterleaved(topology.num_edges());
   projected_to_original_edges_mapping.allocateInterleaved(num_new_edges);
+  edge_bitmask.allocateInterleaved((topology.num_edges() + 7) / 8);
 
   // Update out_dests with the new destination ids
   katana::do_all(
@@ -829,12 +876,14 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
     }
   });
 
+  FillBitMask(topology.num_edges(), bitset_edges, &edge_bitmask);
   return std::make_unique<ProjectedTopology>(ProjectedTopology{
       std::move(out_indices), std::move(out_dests),
       std::move(original_to_projected_nodes_mapping),
       std::move(projected_to_original_nodes_mapping),
       std::move(original_to_projected_edges_mapping),
-      std::move(projected_to_original_edges_mapping)});
+      std::move(projected_to_original_edges_mapping), std::move(node_bitmask),
+      std::move(edge_bitmask)});
 }
 const katana::GraphTopology*
 katana::PGViewCache::GetOriginalTopology(

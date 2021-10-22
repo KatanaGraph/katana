@@ -806,16 +806,17 @@ public:
 
   /// this function creates an empty graph with num_new_nodes nodes
   static std::unique_ptr<ProjectedTopology> CreateEmptyEdgeProjectedTopology(
-      const katana::PropertyGraph* pg, uint32_t num_new_nodes);
+      const katana::PropertyGraph* pg, uint32_t num_new_nodes,
+      const katana::DynamicBitset& bitset);
 
   /// this function creates an empty graph
   static std::unique_ptr<ProjectedTopology> CreateEmptyProjectedTopology(
-      const katana::PropertyGraph* pg);
+      const katana::PropertyGraph* pg, const katana::DynamicBitset& bitset);
 
   /// this function fills a bitmask depending on the input bitset
   static void FillBitMask(
-      uint32_t num_bytes, uint32_t num_elements,
-      const katana::DynamicBitset& bitset, katana::NUMAArray<uint8_t>* bitmask);
+      uint32_t num_elements, const katana::DynamicBitset& bitset,
+      katana::NUMAArray<uint8_t>* bitmask);
 
 private:
   ProjectedTopology(
@@ -842,7 +843,7 @@ private:
             static_cast<void*>(node_bitmask_data_.data()), 0,
             static_cast<int64_t>(original_to_projected_nodes_mapping_.size())),
         edge_bitmask_(
-            edge_bitmask_data_.data(), 0,
+            static_cast<void*>(edge_bitmask_data_.data()), 0,
             static_cast<int64_t>(original_to_projected_edges_mapping_.size())) {
   }
 
@@ -861,15 +862,12 @@ private:
   arrow::internal::Bitmap edge_bitmask_;
 };
 
-template <typename Topo>
 class KATANA_EXPORT ProjectedPropGraphViewWrapper : public GraphTopologyTypes {
-  using Base = Topo;
-
 public:
   explicit ProjectedPropGraphViewWrapper(
-      const PropertyGraph* pg, const Topo* t) noexcept
-      : prop_graph_(pg), topo_ptr_(t) {
-    KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
+      const PropertyGraph* pg, const ProjectedTopology* projected_topo) noexcept
+      : prop_graph_(pg), projected_topo_ptr_(projected_topo) {
+    KATANA_LOG_DEBUG_ASSERT(projected_topo_ptr_);
   }
 
   auto num_nodes() const noexcept { return topo().num_nodes(); }
@@ -946,11 +944,13 @@ public:
   }
 
 protected:
-  const Topo& topo() const noexcept { return *topo_ptr_; }
+  const ProjectedTopology& topo() const noexcept {
+    return *projected_topo_ptr_;
+  }
 
 private:
   const PropertyGraph* prop_graph_;
-  const Topo* topo_ptr_;
+  const ProjectedTopology* projected_topo_ptr_;
 };
 
 namespace internal {
@@ -1390,7 +1390,7 @@ using PGViewNodesSortedByDegreeEdgesSortedByDestID =
 using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
 using PGViewEdgeTypeAwareBiDir =
     BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
-using PGViewProjectedGraph = ProjectedPropGraphViewWrapper<ProjectedTopology>;
+using PGViewProjectedGraph = ProjectedPropGraphViewWrapper;
 
 template <typename PGView>
 struct PGViewBuilder {};

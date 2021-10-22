@@ -62,6 +62,8 @@ ConstructNodeProperties(
   return pg->AddNodeProperties(res_table.value());
 }
 
+/// TODO(udit) here pg_view which is a const object
+/// is modified to add properties
 template <typename PGView, typename NodeProps>
 inline katana::Result<void>
 ConstructNodeProperties(

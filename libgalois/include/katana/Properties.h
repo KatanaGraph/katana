@@ -261,13 +261,12 @@ ApplyBitMask(
 
   auto array_ptr = arrow::MakeArray(data);
 
-  auto status = array_ptr->ValidateFull();
-
-  KATANA_LOG_ASSERT(status.ok());
+  KATANA_LOG_DEBUG_ASSERT(array_ptr->ValidateFull().ok());
   std::vector<std::shared_ptr<arrow::Array>> new_chunks;
   new_chunks.emplace_back(array_ptr);
 
   auto res_new_chunked_array = arrow::ChunkedArray::Make(new_chunks);
+
   if (res_new_chunked_array.ok()) {
     return res_new_chunked_array.ValueOrDie();
   } else {
@@ -275,6 +274,8 @@ ApplyBitMask(
   }
 }
 
+/// This function creates a new table
+/// here the bit_mask is applied to the rows in every column
 template <typename PropTuple, size_t head, size_t... tail>
 Result<std::shared_ptr<arrow::Table>>
 AllocateTable(

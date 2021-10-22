@@ -589,21 +589,21 @@ katana::EdgeTypeAwareTopology::Make(
 /// This function converts a bitset to a bitmask
 void
 katana::ProjectedTopology::FillBitMask(
-    uint32_t num_elements, const katana::DynamicBitset& bitset,
+    size_t num_elements, const katana::DynamicBitset& bitset,
     katana::NUMAArray<uint8_t>* bitmask) {
-  uint32_t num_bytes = (num_elements + sizeof(uint8_t) - 1) / sizeof(uint8_t);
+  uint32_t num_bytes = (num_elements + 7) / 8;
 
   // TODO(udit) find another way to do the following
   // as it is prone to errors
   katana::do_all(katana::iterate(uint32_t{0}, num_bytes), [&](uint32_t i) {
-    auto start = i * sizeof(uint8_t);
-    auto end = (i + 1) * sizeof(uint8_t);
+    auto start = i * 8;
+    auto end = (i + 1) * 8;
     end = (end > num_elements) ? num_elements : end;
     uint8_t val{0};
     while (start != end) {
       if (bitset.test(start)) {
         uint8_t bit_offset{1};
-        bit_offset <<= (start % sizeof(uint8_t));
+        bit_offset <<= (start % 8);
         val = val | bit_offset;
       }
       start++;
@@ -641,14 +641,12 @@ katana::ProjectedTopology::CreateEmptyEdgeProjectedTopology(
       original_to_projected_edges_mapping.end(), Edge{topology.num_edges()});
 
   NUMAArray<uint8_t> node_bitmask;
-  node_bitmask.allocateInterleaved(
-      (topology.num_nodes() + sizeof(uint8_t) - 1) / sizeof(uint8_t));
+  node_bitmask.allocateInterleaved((topology.num_nodes() + 7) / 8);
 
   FillBitMask(topology.num_nodes(), bitset, &node_bitmask);
 
   NUMAArray<uint8_t> edge_bitmask;
-  edge_bitmask.allocateInterleaved(
-      (topology.num_edges() + sizeof(uint8_t) - 1) / sizeof(uint8_t));
+  edge_bitmask.allocateInterleaved((topology.num_edges() + 7) / 8);
 
   return std::make_unique<katana::ProjectedTopology>(katana::ProjectedTopology{
       std::move(out_indices), std::move(out_dests),
@@ -758,8 +756,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
     }
   });
 
-  FillBitMask(
-      static_cast<uint32_t>(topology.num_nodes()), bitset_nodes, &node_bitmask);
+  FillBitMask(topology.num_nodes(), bitset_nodes, &node_bitmask);
 
   // calculate number of new edges
   katana::DynamicBitset bitset_edges;

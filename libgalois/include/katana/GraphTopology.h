@@ -815,7 +815,7 @@ public:
 
   /// this function fills a bitmask depending on the input bitset
   static void FillBitMask(
-      uint32_t num_elements, const katana::DynamicBitset& bitset,
+      size_t num_elements, const katana::DynamicBitset& bitset,
       katana::NUMAArray<uint8_t>* bitmask);
 
 private:

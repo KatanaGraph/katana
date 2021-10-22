@@ -17,6 +17,7 @@ function(add_unit_test name)
 endfunction()
 
 add_unit_test(arrow)
+add_unit_test(array-from-scalars)
 add_unit_test(bitmath)
 add_unit_test(cache)
 add_unit_test(env)

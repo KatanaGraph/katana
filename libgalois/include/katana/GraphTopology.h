@@ -666,7 +666,6 @@ public:
   ProjectedTopology(ProjectedTopology&&) = default;
   ProjectedTopology& operator=(ProjectedTopology&&) = default;
 
-  ProjectedTopology(const ProjectedTopology&) = delete;
   ProjectedTopology& operator=(const ProjectedTopology&) = delete;
 
   uint64_t num_nodes() const noexcept { return adj_indices_.size(); }

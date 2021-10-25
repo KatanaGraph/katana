@@ -165,7 +165,7 @@ PYARROW_WITH_PARQUET=1 run_as_original_user pip3 install --no-binary pyarrow 'py
 
 # Maybe install CUDA
 if [ -n "${INSTALL_CUDA}" ]; then
-  curl https://developer.download.nvidia.com/compute/cuda/11.4.2/local_installers/cuda_11.4.2_470.57.02_linux.run \
-    --output /tmp/cuda_11.4.2_470.57.02_linux.run
-  sh /tmp/cuda_11.4.2_470.57.02_linux.run --silent --toolkit
+  curl https://developer.download.nvidia.com/compute/cuda/11.5.0/local_installers/cuda_11.5.0_495.29.05_linux.run \
+    --output /tmp/cuda_11.5.0_495.29.05_linux.run
+  sh /tmp/cuda_11.5.0_495.29.05_linux.run --silent --toolkit
 fi

@@ -1,6 +1,7 @@
 import weakref
 from functools import partial
 
+import numba
 import numpy as np
 import pytest
 from numba import from_dtype
@@ -71,6 +72,7 @@ def test_for_each_conflict_detection_unsupported():
         for_each(range(10), f, disable_conflict_detection=False)
 
 
+@pytest.mark.xfail(numba.config.DISABLE_JIT, reason="Closures are not type checked in non-jit runs.")
 def test_for_each_wrong_closure():
     @do_all_operator()
     def f(out, i):
@@ -81,6 +83,7 @@ def test_for_each_wrong_closure():
         for_each(range(10), f(out))
 
 
+@pytest.mark.xfail(numba.config.DISABLE_JIT, reason="Closures are not type checked in non-jit runs.")
 def test_do_all_wrong_closure():
     @for_each_operator()
     def f(out, i, ctx):
@@ -138,8 +141,9 @@ def test_do_all_specific_type(modes, typ):
     out = np.zeros(1000, dtype=typ)
     do_all(data, f(out), **modes)
     assert np.allclose(out, np.array(range(1000)))
-    # Check that the operator was actually compiled for the correct type
-    assert list(f.inspect_llvm().keys())[0][1][0] == from_dtype(np.dtype(typ))
+    if not numba.config.DISABLE_JIT:
+        # Check that the operator was actually compiled for the correct type
+        assert list(f.inspect_llvm().keys())[0][1][0] == from_dtype(np.dtype(typ))
 
 
 @pytest.mark.parametrize("modes", simple_modes + no_conflicts_modes)

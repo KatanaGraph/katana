@@ -326,7 +326,7 @@ elif isinstance(func, katana.native_interfacing.closure.Closure):
     cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.__function_address__)
     userdata = <void*><unsigned long int>(func.__userdata_address__)
 elif callable(func):
-    _logger.info("PERFORMANCE WARNING: Using Python callable in Galois loop: %s", getattr(func, "__name__", "<unknown function>"))
+    _logger.info("PERFORMANCE WARNING: Using Python callable in Katana loop: %s", getattr(func, "__name__", "<unknown function>"))
     cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}>&wrap_python_callable_{{loop_type}}_operator_{{loop_variable_type}}
     function_and_dtype = FunctionAndDtype(func, dtype)
     userdata = <void*>function_and_dtype

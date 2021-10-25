@@ -1,3 +1,8 @@
+import warnings
+from functools import wraps
+from threading import Lock
+
+import numba
 from numba import types
 from numba.core import cgutils
 from numba.core.typing.arraydecl import get_array_index_type
@@ -11,6 +16,17 @@ def atomic_rmw(context, builder, op, arrayty, val, ptr):
     assert arrayty.aligned  # We probably have to have aligned arrays.
     dataval = context.get_value_as_data(builder, arrayty.dtype, val)
     return builder.atomic_rmw(op, ptr, dataval, "monotonic")
+
+
+# The global lock used to protect atomic operations when called from python code in DISABLE_JIT mode.
+_global_atomics_lock = Lock()
+
+
+if numba.config.DISABLE_JIT:
+    warnings.warn(
+        "Atomic operations are not fully atomic when DISABLE_JIT is set. Only use DISABLE_JIT for testing "
+        "and debugging."
+    )
 
 
 def declare_atomic_array_op(iop, uop, fop):
@@ -70,7 +86,12 @@ def declare_atomic_array_op(iop, uop, fop):
 
         _ = func_impl
 
-        return func
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with _global_atomics_lock:
+                func(*args, **kwargs)
+
+        return wrapper
 
     return decorator
 

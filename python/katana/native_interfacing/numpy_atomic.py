@@ -31,7 +31,12 @@ if numba.config.DISABLE_JIT:
 
 def declare_atomic_array_op(iop, uop, fop):
     def decorator(func):
-        @type_callable(func)
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with _global_atomics_lock:
+                func(*args, **kwargs)
+
+        @type_callable(wrapper)
         def func_type(context):
             def typer(ary, idx, val):
                 out = get_array_index_type(ary, idx)
@@ -45,7 +50,7 @@ def declare_atomic_array_op(iop, uop, fop):
 
         _ = func_type
 
-        @lower_builtin(func, types.Buffer, types.Any, types.Any)
+        @lower_builtin(wrapper, types.Buffer, types.Any, types.Any)
         def func_impl(context, builder, sig, args):
             """
             array[a] = scalar_or_array
@@ -85,11 +90,6 @@ def declare_atomic_array_op(iop, uop, fop):
             return atomic_rmw(context, builder, op, aryty, val, dataptr)
 
         _ = func_impl
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            with _global_atomics_lock:
-                func(*args, **kwargs)
 
         return wrapper
 

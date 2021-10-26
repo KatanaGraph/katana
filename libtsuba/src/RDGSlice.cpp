@@ -3,6 +3,7 @@
 #include "AddProperties.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
+#include "katana/ArrowInterchange.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
@@ -15,6 +16,8 @@ tsuba::RDGSlice::DoMake(
     const std::optional<std::vector<std::string>>& node_props,
     const std::optional<std::vector<std::string>>& edge_props,
     const katana::Uri& metadata_dir, const SliceArg& slice) {
+  slice_arg_ = slice;
+
   ReadGroup grp;
 
   KATANA_CHECKED(core_->MakeTopologyManager(metadata_dir));
@@ -135,23 +138,8 @@ tsuba::RDGSlice::DoMake(
     return grp.Finish();
   }
 
-  // metadata arrays that should be loaded unsliced, in their entirety
-  std::vector<PropStorageInfo*> no_slice;
-  // metadata arrays that should have their slice range adjusted for the fact
-  // that they only have entries for mirror nodes
-  std::vector<PropStorageInfo*> no_masters;
-  uint32_t num_masters = core_->part_header().metadata().num_owned_;
-  std::pair<uint64_t, uint64_t> no_masters_range = {
-      slice.node_range.first >= num_masters
-          ? slice.node_range.first - num_masters
-          : 0,
-      slice.node_range.second >= num_masters
-          ? slice.node_range.second - num_masters
-          : 0};
-  // metadata arrays that should be loaded with the same node slice range as
-  // regular node properties
-  std::vector<PropStorageInfo*> node_slicing;
-  std::pair<uint64_t, uint64_t> node_slicing_range = slice.node_range;
+  // metadata arrays that should be loaded now (as oppposed to on-demand)
+  std::vector<PropStorageInfo*> load_now;
 
   for (PropStorageInfo* prop : part_info) {
     std::string name = prop->name();
@@ -159,29 +147,18 @@ tsuba::RDGSlice::DoMake(
         name == RDGCore::kMirrorNodesPropName ||
         name == RDGCore::kHostToOwnedGlobalNodeIDsPropName ||
         name == RDGCore::kHostToOwnedGlobalEdgeIDsPropName) {
-      no_slice.push_back(prop);
-    } else if (name == RDGCore::kLocalToGlobalIDPropName) {
-      no_masters.push_back(prop);
-    } else if (name == RDGCore::kLocalToUserIDPropName) {
-      node_slicing.push_back(prop);
+      load_now.push_back(prop);
     }
   }
 
-  KATANA_CHECKED(AddProperties(
-      metadata_dir, tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
-      no_slice, &grp, [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddPartitionMetadataArray(props);
-      }));
-  KATANA_CHECKED(AddPropertySlice(
-      metadata_dir, no_masters, no_masters_range, &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddPartitionMetadataArray(props);
-      }));
-  KATANA_CHECKED(AddPropertySlice(
-      metadata_dir, node_slicing, node_slicing_range, &grp,
-      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-        return rdg->core_->AddPartitionMetadataArray(props);
-      }));
+  KATANA_CHECKED_CONTEXT(
+      AddProperties(
+          metadata_dir, tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
+          load_now, &grp,
+          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+            return rdg->core_->AddPartitionMetadataArray(props);
+          }),
+      "populating partition metadata");
   KATANA_CHECKED(grp.Finish());
 
   return katana::ResultSuccess();
@@ -189,16 +166,11 @@ tsuba::RDGSlice::DoMake(
 
 katana::Result<tsuba::RDGSlice>
 tsuba::RDGSlice::Make(
-    RDGHandle handle, const SliceArg& slice,
+    RDGHandle handle, const SliceArg& slice, const uint32_t partition_id,
     const std::optional<std::vector<std::string>>& node_props,
     const std::optional<std::vector<std::string>>& edge_props) {
   const RDGManifest& manifest = handle.impl_->rdg_manifest();
-  if (manifest.num_hosts() != 1) {
-    return KATANA_ERROR(
-        ErrorCode::NotImplemented,
-        "cannot construct RDGSlice for partitioned graph");
-  }
-  katana::Uri partition_path(manifest.PartitionFileName(0));
+  katana::Uri partition_path(manifest.PartitionFileName(partition_id));
 
   auto part_header = KATANA_CHECKED(RDGPartHeader::Make(partition_path));
 
@@ -210,6 +182,71 @@ tsuba::RDGSlice::Make(
   return RDGSlice(std::move(rdg_slice));
 }
 
+katana::Result<std::pair<std::vector<size_t>, std::vector<size_t>>>
+tsuba::RDGSlice::GetPerPartitionCounts(RDGHandle handle) {
+  katana::Uri part_0_part_file =
+      handle.impl_->rdg_manifest().PartitionFileName(0);
+  auto part_0_header = KATANA_CHECKED_CONTEXT(
+      RDGPartHeader::Make(part_0_part_file),
+      "getting part header for partition 0");
+
+  KATANA_LOG_ASSERT(handle.impl_->rdg_manifest().num_hosts());
+  std::vector<size_t> num_nodes_per_host(
+      handle.impl_->rdg_manifest().num_hosts());
+  std::vector<size_t> num_edges_per_host(
+      handle.impl_->rdg_manifest().num_hosts());
+  katana::Uri dir = handle.impl_->rdg_manifest().dir();
+  std::vector<PropStorageInfo*> part_props = KATANA_CHECKED_CONTEXT(
+      part_0_header.SelectPartitionProperties(),
+      "getting partition metadata property storage locations");
+  for (PropStorageInfo* prop : part_props) {
+    if (prop->name() == RDGCore::kHostToOwnedGlobalNodeIDsPropName) {
+      katana::Uri path = dir.Join(prop->path());
+      auto nodes_table = KATANA_CHECKED_CONTEXT(
+          LoadProperties(prop->name(), path),
+          "getting host to owned nodes for per host node count");
+      auto host_to_owned_nodes = KATANA_CHECKED_CONTEXT(
+          katana::UnmarshalVector<uint64_t>(nodes_table->column(0)),
+          "converting host to owned nodes arrow array to vector");
+      if (num_nodes_per_host.size() != host_to_owned_nodes.size()) {
+        return KATANA_ERROR(
+            tsuba::ErrorCode::PropertyNotFound,
+            "host to owned node array on storage had unexpected size: {} "
+            "(expected {})",
+            host_to_owned_nodes.size(), num_nodes_per_host.size());
+      }
+      num_nodes_per_host[0] = host_to_owned_nodes[0];
+      for (size_t i = 1, size = num_nodes_per_host.size(); i < size; ++i) {
+        num_nodes_per_host[i] =
+            host_to_owned_nodes[i] - host_to_owned_nodes[i - 1];
+      }
+    }
+    if (prop->name() == RDGCore::kHostToOwnedGlobalEdgeIDsPropName) {
+      katana::Uri path = dir.Join(prop->path());
+      auto edges_table = KATANA_CHECKED_CONTEXT(
+          LoadProperties(prop->name(), path),
+          "getting host to owned edges for per host edge count");
+      auto host_to_owned_edges = KATANA_CHECKED_CONTEXT(
+          katana::UnmarshalVector<uint64_t>(edges_table->column(0)),
+          "converting host to owned edges arrow array to vector");
+      if (num_edges_per_host.size() != host_to_owned_edges.size()) {
+        return KATANA_ERROR(
+            tsuba::ErrorCode::PropertyNotFound,
+            "host to owned edge array on storage had unexpected size: {} "
+            "(expected {})",
+            host_to_owned_edges.size(), num_edges_per_host.size());
+      }
+      num_edges_per_host[0] = host_to_owned_edges[0];
+      for (size_t i = 1, size = num_edges_per_host.size(); i < size; ++i) {
+        num_edges_per_host[i] =
+            host_to_owned_edges[i] - host_to_owned_edges[i - 1];
+      }
+    }
+  }
+
+  return {num_nodes_per_host, num_edges_per_host};
+}
+
 const katana::Uri&
 tsuba::RDGSlice::rdg_dir() const {
   return core_->rdg_dir();
@@ -218,6 +255,115 @@ tsuba::RDGSlice::rdg_dir() const {
 uint32_t
 tsuba::RDGSlice::partition_id() const {
   return core_->partition_id();
+}
+
+const std::vector<std::shared_ptr<arrow::ChunkedArray>>&
+tsuba::RDGSlice::master_nodes() const {
+  return core_->master_nodes();
+}
+
+const std::vector<std::shared_ptr<arrow::ChunkedArray>>&
+tsuba::RDGSlice::mirror_nodes() const {
+  return core_->mirror_nodes();
+}
+
+const std::shared_ptr<arrow::ChunkedArray>&
+tsuba::RDGSlice::host_to_owned_global_node_ids() const {
+  return core_->host_to_owned_global_node_ids();
+}
+
+const std::shared_ptr<arrow::ChunkedArray>&
+tsuba::RDGSlice::host_to_owned_global_edge_ids() const {
+  return core_->host_to_owned_global_edge_ids();
+}
+
+const std::shared_ptr<arrow::ChunkedArray>&
+tsuba::RDGSlice::local_to_user_id() const {
+  return core_->local_to_user_id();
+}
+
+const std::shared_ptr<arrow::ChunkedArray>&
+tsuba::RDGSlice::local_to_global_id() const {
+  return core_->local_to_global_id();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::load_local_to_global_id() {
+  auto ltg_it = std::find_if(
+      core_->part_header().part_prop_info_list().begin(),
+      core_->part_header().part_prop_info_list().end(),
+      [](PropStorageInfo& psi) {
+        return psi.name() == RDGCore::kLocalToGlobalIDPropName;
+      });
+  if (ltg_it == core_->part_header().part_prop_info_list().end()) {
+    // some RDGs have no local to global array - use the default 0-length array
+    // instead
+    core_->set_local_to_global_id(katana::NullChunkedArray(arrow::uint64(), 0));
+    return katana::ResultSuccess();
+  }
+  std::vector<PropStorageInfo*> local_to_global{&(*ltg_it)};
+  KATANA_CHECKED_CONTEXT(
+      AddProperties(
+          core_->rdg_dir(), tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr,
+          nullptr, local_to_global, nullptr,
+          [slice = this](const std::shared_ptr<arrow::Table>& props) {
+            return slice->core_->AddPartitionMetadataArray(props);
+          }),
+      "populating local to global id");
+  return katana::ResultSuccess();
+}
+katana::Result<void>
+tsuba::RDGSlice::load_local_to_user_id() {
+  auto ltu_it = std::find_if(
+      core_->part_header().part_prop_info_list().begin(),
+      core_->part_header().part_prop_info_list().end(),
+      [](PropStorageInfo& psi) {
+        return psi.name() == RDGCore::kLocalToUserIDPropName;
+      });
+  if (ltu_it == core_->part_header().part_prop_info_list().end()) {
+    // some RDGs have no local to user array - use the default 0-length array
+    // instead
+    core_->set_local_to_user_id(katana::NullChunkedArray(arrow::uint64(), 0));
+    return katana::ResultSuccess();
+  }
+  std::vector<PropStorageInfo*> local_to_user{&(*ltu_it)};
+  KATANA_CHECKED_CONTEXT(
+      AddProperties(
+          core_->rdg_dir(), tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr,
+          nullptr, local_to_user, nullptr,
+          [slice = this](const std::shared_ptr<arrow::Table>& props) {
+            return slice->core_->AddPartitionMetadataArray(props);
+          }),
+      "populating local to global id");
+  return katana::ResultSuccess();
+}
+katana::Result<void>
+tsuba::RDGSlice::remove_local_to_global_id() {
+  auto ltg_it = std::find_if(
+      core_->part_header().part_prop_info_list().begin(),
+      core_->part_header().part_prop_info_list().end(),
+      [](PropStorageInfo& psi) {
+        return psi.name() == RDGCore::kLocalToGlobalIDPropName;
+      });
+  if (ltg_it != core_->part_header().part_prop_info_list().end()) {
+    ltg_it->WasUnloaded();
+  }
+  core_->set_local_to_global_id(katana::NullChunkedArray(arrow::uint64(), 0));
+  return katana::ResultSuccess();
+}
+katana::Result<void>
+tsuba::RDGSlice::remove_local_to_user_id() {
+  auto ltu_it = std::find_if(
+      core_->part_header().part_prop_info_list().begin(),
+      core_->part_header().part_prop_info_list().end(),
+      [](PropStorageInfo& psi) {
+        return psi.name() == RDGCore::kLocalToUserIDPropName;
+      });
+  if (ltu_it != core_->part_header().part_prop_info_list().end()) {
+    ltu_it->WasUnloaded();
+  }
+  core_->set_local_to_user_id(katana::NullChunkedArray(arrow::uint64(), 0));
+  return katana::ResultSuccess();
 }
 
 const std::shared_ptr<arrow::Table>&

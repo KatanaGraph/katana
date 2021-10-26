@@ -1112,12 +1112,14 @@ public:
   /// @param dst destination node of the edge
   /// @returns true iff an edge satisfying func exists
   template <typename TestFunc>
-  bool HasEdgeSatisfyingPredicate(Node src, Node dst, const TestFunc& func) const noexcept {
+  bool HasEdgeSatisfyingPredicate(
+      Node src, Node dst, const TestFunc& func) const noexcept {
     using RetTy = decltype(func(Edge{}));
-    static_assert(std::is_same_v<RetTy, bool>); // ensure that return type is bool.
+    static_assert(
+        std::is_same_v<RetTy, bool>);  // ensure that return type is bool.
 
-    for (const auto& edge_type: GetDistinctEdgeTypes()) {
-      for (auto e: FindAllEdgesWithType(src, dst, edge_type)) {
+    for (const auto& edge_type : GetDistinctEdgeTypes()) {
+      for (auto e : FindAllEdgesWithType(src, dst, edge_type)) {
         if (func(e)) {
           return true;
         }
@@ -1374,8 +1376,9 @@ public:
   /// @param src source node of the edge
   /// @param dst destination node of the edge
   /// @returns true iff the edge exists
-  template<typename TestFunc>
-  bool HasEdgeSatisfyingPredicate(Node src, Node dst, const TestFunc& func) const {
+  template <typename TestFunc>
+  bool HasEdgeSatisfyingPredicate(
+      Node src, Node dst, const TestFunc& func) const {
     return Base::out().HasEdgeSatisfyingPredicate(src, dst, func);
   }
 

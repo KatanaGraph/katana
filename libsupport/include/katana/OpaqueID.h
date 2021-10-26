@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <boost/math/tools/precision.hpp>
+#include <fmt/format.h>
 
 namespace katana {
 
@@ -58,6 +59,7 @@ struct OpaqueID {
   // TODO(amp): We need some check that _IDType is a subtype of
   //  OpaqueID<_IDType, _Value>. There doesn't seem to be any way to do that.
   using ValueType = _Value;
+  using IDType = _IDType;
 
   using Count = typename count_traits<_Value>::Count;
 
@@ -291,3 +293,16 @@ struct OpaqueIDLess : private std::less<opaque_id_value_type<T>> {
 };
 
 }  // namespace katana
+
+template <typename T, typename Char>
+struct fmt::formatter<
+    T, Char,
+    std::enable_if_t<std::is_convertible<
+        T*,
+        katana::OpaqueID<typename T::IDType, typename T::ValueType>*>::value>>
+    : formatter<std::string> {
+  template <typename FormatContext>
+  auto format(const T& id, FormatContext& ctx) {
+    return format_to(ctx.out(), "{}", id.value());
+  }
+};

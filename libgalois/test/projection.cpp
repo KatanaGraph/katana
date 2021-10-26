@@ -21,7 +21,7 @@ static cll::opt<std::string> nodeTypes(
     cll::Positional, cll::desc("<node types to project>"), cll::Required);
 
 static cll::opt<std::string> edgeTypes(
-    cll::Positional, cll::desc("<edge types to project>"), cll::Required);
+    cll::Positional, cll::desc("<edge types to project>"), cll::init(""));
 
 using ProjectedPropertyGraphView = katana::PropertyGraphViews::ProjectedGraph;
 

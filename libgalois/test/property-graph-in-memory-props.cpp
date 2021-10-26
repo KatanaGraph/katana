@@ -7,16 +7,15 @@ using Edge = katana::PropertyGraph::Edge;
 using Node = katana::PropertyGraph::Node;
 using katana::AddEdgeProperties;
 using katana::AddNodeProperties;
-using katana::EdgePropertySetter;
-using katana::NodePropertySetter;
+using katana::PropertyGenerator;
 
 void
 TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
   katana::Result<void> result = AddNodeProperties(
       pg.get(),
-      NodePropertySetter(
+      PropertyGenerator(
           "age", [](Node id) { return static_cast<int32_t>(id * 2); }),
-      NodePropertySetter(
+      PropertyGenerator(
           "name", [](Node id) { return fmt::format("Node {}", id); }));
 
   KATANA_LOG_VASSERT(result, "AddNodeProperties returned an error.");
@@ -35,7 +34,7 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
 
   size_t i = 0;
-  for (Node n : *pg) {
+  for (Node n : pg->all_nodes()) {
     int32_t expected_age = static_cast<int32_t>(n) * 2;
     std::string expected_name = fmt::format("Node {}", n);
 
@@ -53,14 +52,14 @@ void
 TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
   katana::Result<void> result = AddEdgeProperties(
       pg.get(),
-      EdgePropertySetter(
+      PropertyGenerator(
           "average",
           [&pg](Edge id) {
             Node src = pg->topology().edge_source(id);
             Node dst = pg->topology().edge_dest(id);
             return 0.5 * (src + dst);
           }),
-      EdgePropertySetter(
+      PropertyGenerator(
           "edge_name", [](Edge id) { return fmt::format("Edge {}", id); }));
 
   KATANA_LOG_VASSERT(result, "AddEdgeProperties returned an error.");
@@ -82,7 +81,7 @@ TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
 
   size_t i = 0;
-  for (Edge e : pg->topology().all_edges()) {
+  for (Edge e : pg->all_edges()) {
     Node src = pg->topology().edge_source(e);
     Node dst = pg->topology().edge_dest(e);
     std::string expected_name = fmt::format("Edge {}", e);

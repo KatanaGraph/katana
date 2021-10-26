@@ -52,6 +52,7 @@ public:
   // Pass through topology API
   using node_iterator = GraphTopology::node_iterator;
   using edge_iterator = GraphTopology::edge_iterator;
+  using nodes_range = GraphTopology::nodes_range;
   using edges_range = GraphTopology::edges_range;
   using iterator = GraphTopology::iterator;
   using Node = GraphTopology::Node;
@@ -772,6 +773,10 @@ public:
   node_iterator begin() const { return topology().begin(); }
 
   node_iterator end() const { return topology().end(); }
+
+  nodes_range all_nodes() const noexcept { return topology().all_nodes(); }
+
+  edges_range all_edges() const noexcept { return topology().all_edges(); }
 
   /// Return the number of local nodes
   size_t size() const { return topology().size(); }

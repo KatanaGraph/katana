@@ -1105,27 +1105,24 @@ public:
     return std::binary_search(e_range.begin(), e_range.end(), dst, comp);
   }
 
-  /// Search over
+  /// Search over all edges of each type between src and dst until an edge satisfying func is
+  /// found.
   ///
   /// @param src source node of the edge
   /// @param dst destination node of the edge
-  /// @returns true iff the edge exists
-  katana::Result<bool> HasEdgeSatisfyingFunction(Node src, Node dst, std::function<katana::Result<bool>(Edge)> func) const {
+  /// @returns true iff an edge satisfying func exists
+  template <typename TestFunc>
+  bool HasEdgeSatisfyingPredicate(Node src, Node dst, const TestFunc& func) const noexcept {
+    using RetTy = decltype(func(Edge{}));
+    static_assert(std::is_same_v<RetTy, bool>); // ensure that return type is bool.
 
-    for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      auto e_range = edges(src, edge_type);
-
-      internal::EdgeDestComparator<EdgeTypeAwareTopology> comp{this};
-      if (!std::binary_search(e_range.begin(), e_range.end(), dst, comp))
-        continue;
-
-      for (auto it = std::lower_bound(e_range.begin(), e_range.end(), dst, comp); it != e_range.end(); ++it) {
-        if (KATANA_CHECKED(func(*it))) {
+    for (const auto& edge_type: GetDistinctEdgeTypes()) {
+      for (auto e: FindAllEdgesWithType(src, dst, edge_type)) {
+        if (func(e)) {
           return true;
         }
       }
     }
-
     return false;
   }
 
@@ -1350,27 +1347,6 @@ public:
     return Base::out().FindAllEdgesSingleType(src, dst);
   }
 
-  /// Search over
-  ///
-  /// @param src source node of the edge
-  /// @param dst destination node of the edge
-  /// @returns true iff the edge exists
-  katana::Result<bool> HasEdgeSatisfyingFunction(Node src, Node dst, std::function<katana::Result<bool>(Edge)> func) const {
-    const auto d_out = Base::out().degree(src);
-    const auto d_in = Base::in().degree(dst);
-    if (d_out == 0 || d_in == 0) {
-      return false;
-    }
-
-    if (d_out < d_in) {
-      return KATANA_CHECKED(Base::out().HasEdgeSatisfyingFunction(src, dst, func));
-    } else {
-      return KATANA_CHECKED(Base::in().HasEdgeSatisfyingFunction(dst, src, func));
-    }
-
-    return false;
-  }
-
   /// Check if vertex src is connected to vertex dst with the given edge edge_type
   ///
   /// @param src source node of the edge
@@ -1390,6 +1366,17 @@ public:
     } else {
       return Base::in().IsConnectedWithEdgeType(dst, src, edge_type);
     }
+  }
+
+  /// Search over all edges of each type between src and dst until an edge satisfying func is
+  /// found.
+  ///
+  /// @param src source node of the edge
+  /// @param dst destination node of the edge
+  /// @returns true iff the edge exists
+  template<typename TestFunc>
+  bool HasEdgeSatisfyingPredicate(Node src, Node dst, const TestFunc& func) const {
+    return Base::out().HasEdgeSatisfyingPredicate(src, dst, func);
   }
 
   /// Check if vertex src is connected to vertex dst with any edge edge_type

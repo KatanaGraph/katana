@@ -41,34 +41,34 @@ KATANA_EXPORT std::unique_ptr<katana::PropertyGraph> MakeTriangle(
 
 namespace internal {
 
-template <typename Input, typename F>
+template <typename Input, typename ValueFunc>
 class PropertySetter {
   static_assert(
-      std::is_invocable_v<F, Input>,
+      std::is_invocable_v<ValueFunc, Input>,
       "PropertySetter must be constructed with an invokable type.");
 
 public:
-  using ValueType = std::invoke_result_t<F, Input>;
+  using ValueType = std::invoke_result_t<ValueFunc, Input>;
   using ArrowType = typename arrow::CTypeTraits<ValueType>::ArrowType;
   using BuilderType = typename arrow::TypeTraits<ArrowType>::BuilderType;
 
-  PropertySetter(std::string name, F resolve_value)
-      : name(std::move(name)), resolve_value(std::move(resolve_value)) {}
+  PropertySetter(const std::string& name, const ValueFunc& value_func)
+      : name_(name), value_func_(value_func) {}
 
-  std::shared_ptr<arrow::Field> Field() const noexcept {
+  std::shared_ptr<arrow::Field> MakeField() const noexcept {
     std::shared_ptr<arrow::DataType> type = std::make_shared<ArrowType>();
-    return arrow::field(name, type);
+    return arrow::field(name_, type);
   }
 
-  std::shared_ptr<BuilderType> Builder() const noexcept {
+  std::shared_ptr<BuilderType> MakeBuilder() const noexcept {
     return std::make_shared<BuilderType>();
   }
 
-  ValueType operator()(Input id) const { return resolve_value(id); }
+  ValueType operator()(Input id) const { return value_func_(id); }
 
 private:
-  std::string name;
-  F resolve_value;
+  std::string name_;
+  ValueFunc value_func_;
 };
 
 // TMP helpers for compile-time checking of arguments passed to property adding functions.
@@ -99,20 +99,19 @@ AddGraphProperties(katana::PropertyGraph* pg, Args&&... setters) {
 
   auto append_table_components = [&](const auto& setter) -> Result<void> {
     // For schema
-    fields.emplace_back(setter.Field());
+    fields.emplace_back(setter.MakeField());
 
     // For property values
-    auto builder = setter.Builder();
+    auto builder = setter.MakeBuilder();
     if constexpr (is_node) {
-      builder->Reserve(pg->num_nodes());
-      for (auto node_it = pg->begin(); node_it != pg->end(); ++node_it) {
-        KATANA_CHECKED(builder->Append(setter(*node_it)));
+      KATANA_CHECKED(builder->Reserve(pg->num_nodes()));
+      for (PropertyGraph::Node n : *pg) {
+        KATANA_CHECKED(builder->Append(setter(n)));
       }
     } else {
-      builder->Reserve(pg->num_edges());
-      auto edges = pg->topology().all_edges();
-      for (auto edge_it = edges.begin(); edge_it != edges.end(); ++edge_it) {
-        KATANA_CHECKED(builder->Append(setter(*edge_it)));
+      KATANA_CHECKED(builder->Reserve(pg->num_edges()));
+      for (PropertyGraph::Edge e : pg->topology().all_edges()) {
+        KATANA_CHECKED(builder->Append(setter(e)));
       }
     }
 
@@ -146,16 +145,16 @@ AddGraphProperties(katana::PropertyGraph* pg, Args&&... setters) {
 
 }  // namespace internal
 
-template <typename F>
-KATANA_EXPORT internal::PropertySetter<PropertyGraph::Node, F>
-NodePropertySetter(std::string name, F resolve_value) {
-  return {std::move(name), std::move(resolve_value)};
+template <typename ValueFunc>
+KATANA_EXPORT internal::PropertySetter<PropertyGraph::Node, ValueFunc>
+NodePropertySetter(const std::string& name, const ValueFunc& resolve_value) {
+  return {name, resolve_value};
 }
 
-template <typename F>
-KATANA_EXPORT internal::PropertySetter<PropertyGraph::Edge, F>
-EdgePropertySetter(std::string name, F resolve_value) {
-  return {std::move(name), std::move(resolve_value)};
+template <typename ValueFunc>
+KATANA_EXPORT internal::PropertySetter<PropertyGraph::Edge, ValueFunc>
+EdgePropertySetter(const std::string& name, const ValueFunc& resolve_value) {
+  return {name, resolve_value};
 }
 
 template <typename... Args>

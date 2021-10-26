@@ -35,9 +35,9 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
 
   size_t i = 0;
-  for (auto node_it = pg->begin(); node_it != pg->end(); ++node_it, ++i) {
-    int32_t expected_age = static_cast<int32_t>(*node_it) * 2;
-    std::string expected_name = fmt::format("Node {}", *node_it);
+  for (Node n : *pg) {
+    int32_t expected_age = static_cast<int32_t>(n) * 2;
+    std::string expected_name = fmt::format("Node {}", n);
 
     KATANA_LOG_VASSERT(
         ages_array->Value(i) == expected_age, "Incorrect node age value");
@@ -45,6 +45,7 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
     KATANA_LOG_VASSERT(
         names_array->GetString(i) == expected_name,
         "Incorrect node name value");
+    i++;
   }
 }
 
@@ -81,11 +82,10 @@ TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
 
   size_t i = 0;
-  auto edges = pg->topology().all_edges();
-  for (auto edge_it = edges.begin(); edge_it != edges.end(); ++edge_it, ++i) {
-    Node src = pg->topology().edge_source(*edge_it);
-    Node dst = pg->topology().edge_dest(*edge_it);
-    std::string expected_name = fmt::format("Edge {}", *edge_it);
+  for (Edge e : pg->topology().all_edges()) {
+    Node src = pg->topology().edge_source(e);
+    Node dst = pg->topology().edge_dest(e);
+    std::string expected_name = fmt::format("Edge {}", e);
 
     KATANA_LOG_VASSERT(
         avgs_array->Value(i) == 0.5 * (src + dst),
@@ -94,6 +94,7 @@ TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
     KATANA_LOG_VASSERT(
         names_array->GetString(i) == expected_name,
         "Incorrect edge name value");
+    i++;
   }
 }
 

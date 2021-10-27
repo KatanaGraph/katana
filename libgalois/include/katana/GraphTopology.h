@@ -1418,8 +1418,7 @@ public:
   /// @param src source node of the edge
   /// @returns true iff the edge exists
   template <typename TestFunc>
-  bool HasEdgeSatisfyingPredicate(
-      Node src, const TestFunc& func) const {
+  bool HasEdgeSatisfyingPredicate(Node src, const TestFunc& func) const {
     const auto d_out = Base::out().degree(src);
     if (d_out == 0) {
       return false;
@@ -1450,7 +1449,6 @@ public:
     }
     return false;
   }
-
 
   /// Check if vertex src is connected to vertex dst with any edge edge_type
   ///

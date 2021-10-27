@@ -70,6 +70,7 @@ add_test_unit(property-graph-optional-topologies "${BASEINPUT}/propertygraphs/ld
 add_test_unit(property-graph)
 add_test_unit(property-graph-diff)
 add_test_unit(property-graph-bench NOT_QUICK LINK_LIBRARIES benchmark::benchmark)
+add_test_unit(property-graph-in-memory-props)
 add_test_unit(property-graph-topology)
 add_test_unit(property-index)
 add_test_unit(property-view)

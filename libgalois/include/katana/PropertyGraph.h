@@ -52,6 +52,7 @@ public:
   // Pass through topology API
   using node_iterator = GraphTopology::node_iterator;
   using edge_iterator = GraphTopology::edge_iterator;
+  using nodes_range = GraphTopology::nodes_range;
   using edges_range = GraphTopology::edges_range;
   using iterator = GraphTopology::iterator;
   using Node = GraphTopology::Node;
@@ -95,10 +96,8 @@ private:
   EntityTypeIDArray edge_entity_type_ids_;
 
   // List of node and edge indexes on this graph.
-  std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>
-      node_indexes_;
-  std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Edge>>>
-      edge_indexes_;
+  std::vector<std::unique_ptr<PropertyIndex<Node>>> node_indexes_;
+  std::vector<std::unique_ptr<PropertyIndex<Edge>>> edge_indexes_;
 
   PGViewCache pg_view_cache_;
 
@@ -774,6 +773,10 @@ public:
   node_iterator begin() const { return topology().begin(); }
 
   node_iterator end() const { return topology().end(); }
+
+  nodes_range all_nodes() const noexcept { return topology().all_nodes(); }
+
+  edges_range all_edges() const noexcept { return topology().all_edges(); }
 
   /// Return the number of local nodes
   size_t size() const { return topology().size(); }

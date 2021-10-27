@@ -9,8 +9,8 @@ namespace tsuba {
 struct PartitionMetadata {
   uint32_t policy_id_{0};
   bool transposed_{false};
-  bool is_outgoing_edge_cut_{false};
-  bool is_incoming_edge_cut_{false};
+  bool is_outgoing_edge_cut_{false};  // TODO(thunt) deprecated
+  bool is_incoming_edge_cut_{false};  // TODO(thunt) deprecated
   uint64_t num_global_nodes_{0UL};
   uint64_t max_global_node_id_{0UL};
   uint64_t num_global_edges_{0UL};

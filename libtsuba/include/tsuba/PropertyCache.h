@@ -1,6 +1,8 @@
 #ifndef KATANA_LIBTSUBA_TSUBA_PROPERTYCACHE_H_
 #define KATANA_LIBTSUBA_TSUBA_PROPERTYCACHE_H_
 
+#include <arrow/api.h>
+
 #include "katana/Cache.h"
 
 namespace tsuba {

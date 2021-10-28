@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from dataclasses import dataclass, field
 from enum import Enum
 from typing import Collection, Dict, FrozenSet, Generator, Iterator, List, Optional, Union
 
@@ -36,10 +35,16 @@ class Mergeable:
         raise NotImplementedError()
 
 
-@dataclass(unsafe_hash=True, frozen=True)
 class VersionRequirement(Mergeable):
     lower_bound: Version
     upper_bound: Optional[Version]
+
+    def __init__(self, lower_bound, upper_bound):
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
+
+    def __hash__(self):
+        return hash((self.lower_bound, self.upper_bound))
 
     UNKNOWN_UPPER_BOUND_STRINGS = frozenset({"null", r"¯\(ツ)/¯", "", "None"})
 
@@ -69,7 +74,7 @@ class VersionRequirement(Mergeable):
         raise ValueError(format)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "VersionRequirement":
+    def from_dict(cls, data) -> "VersionRequirement":
         return cls(
             Version(data[0]),
             Version(data[1])
@@ -78,13 +83,22 @@ class VersionRequirement(Mergeable):
         )
 
 
-@dataclass(unsafe_hash=True, frozen=True)
 class Package(Mergeable):
     name: str
     version: VersionRequirement
     labels: FrozenSet[str]
-    version_overrides: Dict[str, str] = field(hash=False)
-    name_overrides: Dict[str, str] = field(hash=False)
+    version_overrides: Dict[str, str]
+    name_overrides: Dict[str, str]
+
+    def __init__(self, name, version, labels, version_overrides, name_overrides):
+        self.name = name
+        self.version = version
+        self.labels = labels
+        self.version_overrides = version_overrides
+        self.name_overrides = name_overrides
+
+    def __hash__(self):
+        return hash((self.name, self.version, self.labels))
 
     def name_for(self, format: OutputFormat) -> str:
         packaging_system = format.value
@@ -137,11 +151,15 @@ class Package(Mergeable):
         )
 
 
-@dataclass(unsafe_hash=True, frozen=True)
 class Requirements(Mergeable):
-    labels: Dict[str, str] = field(hash=False)
-    packaging_systems: Dict[str, str] = field(hash=False)
+    labels: Dict[str, str]
+    packaging_systems: Dict[str, str]
     packages: List[Package]
+
+    def __init__(self, labels, packaging_systems, packages):
+        self.labels = labels
+        self.packaging_systems = packaging_systems
+        self.packages = packages
 
     def packages_dict(self, format: OutputFormat = OutputFormat.YAML) -> Dict[str, Package]:
         return {p.name_for(format): p for p in self.packages}

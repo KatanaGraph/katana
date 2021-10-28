@@ -66,3 +66,10 @@ def get_input_as_url(rel_path) -> str:
     """
     path = get_input(rel_path).resolve()
     return f"file://{path}"
+
+def get_csv_input() -> Path:
+    """
+    Return the location of ldbc dir
+    """
+    path = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent / "katana-enterprise/external/csv-datasets"
+    return path

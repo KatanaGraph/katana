@@ -2919,7 +2919,9 @@ struct Gr2Kg : public Conversion {
 
     tsuba::RDG rdg;
     rdg.set_rdg_dir(tsuba::GetRDGDir(handle));
-    if (auto res = rdg.AddCSRTopologyByFile(top_file_name); !res) {
+    if (auto res = rdg.AddCSRTopologyByFile(
+            top_file_name, header.num_nodes, header.num_edges);
+        !res) {
       return res.error();
     }
     auto node_types = std::make_unique<tsuba::FileFrame>();

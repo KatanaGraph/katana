@@ -11,8 +11,15 @@ from pathlib import Path
 __all__ = ["get_input", "get_input_as_url"]
 
 
-def get_inputs_directory(*, invalidate=False) -> Path:
+def get_inputs_directory(*, invalidate=False, rel_path=None) -> Path:
     inputs_dir = None
+    if rel_path == "external/csv-datasets":
+        location = os.environ['HOME']
+        for root, dirs, files in os.walk(location):
+            for d in dirs:
+                if d == "katana-enterprise":
+                    return Path(root) / d
+
     # Use the build paths if they exist.
     if "KATANA_BUILD_DIR" in os.environ:
         # If KATANA_BUILD_DIR environment is set, just use it
@@ -54,7 +61,7 @@ def get_input(rel_path) -> Path:
     >>> from katana.local import Graph
     ... graph = Graph(get_input("propertygraphs/ldbc_003"))
     """
-    path = get_inputs_directory() / rel_path
+    path = get_inputs_directory(rel_path) / rel_path
     if path.exists():
         return path
     return get_inputs_directory(invalidate=True) / rel_path
@@ -65,11 +72,3 @@ def get_input_as_url(rel_path) -> str:
     Similar to get_input, but return the graph as file:// URL.
     """
     path = get_input(rel_path).resolve()
-    return f"file://{path}"
-
-def get_csv_input() -> Path:
-    """
-    Return the location of ldbc dir
-    """
-    path = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent / "katana-enterprise/external/csv-datasets"
-    return path

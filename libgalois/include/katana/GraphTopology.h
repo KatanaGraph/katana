@@ -1112,7 +1112,7 @@ public:
   /// @param dst destination node of the edge
   /// @returns true iff an edge satisfying func exists
   template <typename TestFunc>
-  bool HasOutEdgeSatisfyingPredicate(
+  bool HasEdgeSatisfyingPredicate(
       Node src, Node dst, const TestFunc& func) const noexcept {
     // TODO(john) Update this to use std::is_invocable_v.
     using RetTy = decltype(func(Edge{}));

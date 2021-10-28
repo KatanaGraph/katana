@@ -72,3 +72,4 @@ def get_input_as_url(rel_path) -> str:
     Similar to get_input, but return the graph as file:// URL.
     """
     path = get_input(rel_path).resolve()
+    return f"file://{path}"

@@ -15,6 +15,7 @@ class OutputSeparation(Enum):
     LINE = "line"
     QUOTE = "quote"
     COMMA = "comma"
+    YAML_LIST = "yamllist"
 
     @property
     def prefix(self):
@@ -33,6 +34,7 @@ class OutputSeparation(Enum):
 # construction by name work correctly.
 OUTPUT_SEPARATION_DEFINITIONS = {
     OutputSeparation.LINE: ("", "\n", "\n"),
+    OutputSeparation.YAML_LIST: (" - ", "\n - ", "\n"),
     OutputSeparation.QUOTE: ("'", "' '", "'"),
     OutputSeparation.COMMA: ("", ", ", ""),
 }

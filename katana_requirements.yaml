@@ -82,6 +82,8 @@ coverage:
   labels:
     - conda/dev
 cudatoolkit:
+  name_overrides:
+    conda: cudatoolkit-dev
   version: [ 11, 12 ]
 cxx-compiler:
   version: [ 1.1.3, 2 ]
@@ -293,7 +295,8 @@ python:
   name_overrides:
     conan: null
     apt: python3
-  version: [ 3.7, 4.0 ]
+  # TODO(amp): Unpin this. Currently we only build for python 3.8 so pin to that to reduce confusion.
+  version: [ 3.8, 3.9 ]
   labels:
     - conda
     - apt
@@ -333,27 +336,38 @@ libnuma:
   version: [2, null]
   labels:
     - apt
-    - conda/dev
 ccache:
   version: [3, 4]
   labels:
     - apt/dev
     - conda/apt
+clangxx:
+  name_overrides:
+    apt: clang
+  version: &clang_version [10, null]
+  labels:
+    - apt/dev
+    - conda/dev
 clang-format:
-  version: *llvm_version
+  name_overrides:
+    conda: clang-tools
+  version: *clang_version
   labels:
     - apt/dev
     - conda/dev
 clang-tidy:
-  version: *llvm_version
+  name_overrides:
+    conda: clang-tools
+  version: *clang_version
   labels:
     - apt/dev
     - conda/dev
 clangd:
-  version: *llvm_version
+  name_overrides:
+    conda: clang-tools
+  version: *clang_version
   labels:
     - apt/dev
-    - conda/dev
 graphviz:
   version: [2, null]
   labels:
@@ -436,9 +450,30 @@ pyyaml:
   labels:
     - pip
     - conda
+# CUDA-enabled build in conda fails without gcc, gxx, and the sysroot (error: not finding /lib64/libpthread.so.0)
+gxx:
+  name_overrides:
+    conda: gxx_linux-64
+    apt: g++
+  version: [9.3, null]
+  labels:
+    - conda/dev
+gcc:
+  name_overrides:
+    conda: gcc_linux-64
+    apt: gcc
+  version: [9.3, null]
+  labels:
+    - conda/dev
+sysroot:
+  name_overrides:
+    conda: sysroot_linux-64
+  version: [2.17, 3]
+  labels:
+    - conda/dev
 
 
-# The dependencies for pytest-notebook are incomplete, add them manually
+# The dependencies for pytest-notebook are incomplete, we include then manually here.
 pytest-notebook:
   version: [0.6.1, 1]
   labels:

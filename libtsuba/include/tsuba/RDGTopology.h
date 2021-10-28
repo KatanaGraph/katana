@@ -203,7 +203,8 @@ public:
   /// bool storage_valid: whether this topology should be written out
   /// to a file on Store. Used by graph-convert, where we don't load the
   /// entire topology file into memory.
-  katana::Result<void> MapMetadataExtract(bool storage_valid = false);
+  katana::Result<void> MapMetadataExtract(
+      uint64_t num_nodes, uint64_t num_edges, bool storage_valid = false);
 
   katana::Result<void> DoStore(
       RDGHandle handle, std::unique_ptr<tsuba::WriteGroup>& write_group);
@@ -309,7 +310,7 @@ private:
       TransposeKind transpose_state, EdgeSortKind edge_sort_state,
       NodeSortKind node_sort_state);
 
-  constexpr uint64_t GetGraphSize() const;
+  size_t GetGraphSize() const;
 
   // Topology File Offset Definitions
   static constexpr size_t version_num_offset = 0;

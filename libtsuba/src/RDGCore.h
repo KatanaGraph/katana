@@ -209,7 +209,9 @@ public:
     if (!part_header_.IsMetadataOutsideTopologyFile()) {
       // need to bind & map topology file now to extract the metadata
       KATANA_CHECKED_CONTEXT(
-          topology_manager_.ExtractMetadata(metadata_dir),
+          topology_manager_.ExtractMetadata(
+              metadata_dir, part_header_.metadata().num_nodes_,
+              part_header_.metadata().num_edges_),
           "Extracting metadata from previous format topology file");
     }
 
@@ -235,7 +237,8 @@ public:
   /// Marks the topologies storage as valid, since we are just telling the
   /// RDG about where the topology is located and not actually loading it for use.
   katana::Result<void> RegisterCSRTopologyFile(
-      const std::string& new_topo_path, const katana::Uri& rdg_dir) {
+      const std::string& new_topo_path, const katana::Uri& rdg_dir,
+      uint64_t num_nodes, uint64_t num_edges) {
     // get the topology a metadata entry and add it to our entries set
     part_header_.MakePartitionTopologyMetadataEntry(new_topo_path);
 
@@ -246,7 +249,8 @@ public:
 
     // get the metadata we need from the topology file
     KATANA_CHECKED_CONTEXT(
-        topology_manager_.ExtractMetadata(rdg_dir, /*storage_valid=*/true),
+        topology_manager_.ExtractMetadata(
+            rdg_dir, num_nodes, num_edges, /*storage_valid=*/true),
         "Extracting metadata from previous format topology file");
     return katana::ResultSuccess();
   }

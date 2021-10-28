@@ -254,7 +254,8 @@ public:
       PartitionTopologyMetadataEntry entry =
           topology_metadata()->Entries().at(i);
       if (entry.topology_state_ == tsuba::RDGTopology::TopologyKind::kCSR &&
-          entry.transpose_state_ == tsuba::RDGTopology::TransposeKind::kNo &&
+          (entry.transpose_state_ == tsuba::RDGTopology::TransposeKind::kYes ||
+           entry.transpose_state_ == tsuba::RDGTopology::TransposeKind::kNo) &&
           entry.edge_sort_state_ == tsuba::RDGTopology::EdgeSortKind::kAny &&
           entry.node_sort_state_ == tsuba::RDGTopology::NodeSortKind::kAny) {
         return topology_metadata()->Entries().at(i).path_;

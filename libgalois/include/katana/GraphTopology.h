@@ -1105,6 +1105,53 @@ public:
     return std::binary_search(e_range.begin(), e_range.end(), dst, comp);
   }
 
+  /// Search over all edges of each type between src and dst until an edge satisfying func is
+  /// found.
+  ///
+  /// @param src source node of the edge
+  /// @param dst destination node of the edge
+  /// @returns true iff an edge satisfying func exists
+  template <typename TestFunc>
+  bool HasEdgeSatisfyingPredicate(
+      Node src, Node dst, const TestFunc& func) const noexcept {
+    // TODO(john) Update this to use std::is_invocable_v.
+    using RetTy = decltype(func(Edge{}));
+    static_assert(
+        std::is_same_v<RetTy, bool>);  // ensure that return type is bool.
+
+    for (const auto& edge_type : GetDistinctEdgeTypes()) {
+      for (auto e : FindAllEdgesWithType(src, dst, edge_type)) {
+        if (func(e)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Search over all out edges of src of each type until an edge satisfying func is
+  /// found.
+  ///
+  /// @param src source node of the edge
+  /// @returns true iff an edge satisfying func exists
+  template <typename TestFunc>
+  bool HasOutEdgeSatisfyingPredicate(
+      Node src, const TestFunc& func) const noexcept {
+    // TODO(john) Update this to use std::is_invocable_v.
+    using RetTy = decltype(func(Edge{}));
+    static_assert(
+        std::is_same_v<RetTy, bool>);  // ensure that return type is bool.
+
+    for (const auto& edge_type : GetDistinctEdgeTypes()) {
+      for (auto e : edges(src, edge_type)) {
+        if (func(e)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /// Check if vertex src is connected to vertex dst with any edge edge_type
   ///
   /// @param src source node of the edge
@@ -1345,6 +1392,59 @@ public:
     } else {
       return Base::in().IsConnectedWithEdgeType(dst, src, edge_type);
     }
+  }
+
+  /// Search over all edges of each type between src and dst until an edge satisfying func is
+  /// found.
+  ///
+  /// @param src source node of the edge
+  /// @param dst destination node of the edge
+  /// @returns true iff the edge exists
+  template <typename TestFunc>
+  bool HasEdgeSatisfyingPredicate(
+      Node src, Node dst, const TestFunc& func) const {
+    const auto d_out = Base::out().degree(src);
+    const auto d_in = Base::in().degree(dst);
+    if (d_out == 0 || d_in == 0) {
+      return false;
+    }
+
+    // TODO(john) Figure out why queries were yielding incorrect results when
+    // we add a branch here for d_out < d_in.
+    return Base::out().HasEdgeSatisfyingPredicate(src, dst, func);
+  }
+
+  /// Search over all out edges of src of each type until an edge satisfying func is
+  /// found.
+  ///
+  /// @param src source node of the edge
+  /// @returns true iff the edge exists
+  template <typename TestFunc>
+  bool HasOutEdgeSatisfyingPredicate(Node src, const TestFunc& func) const {
+    return Base::out().HasOutEdgeSatisfyingPredicate(src, func);
+  }
+
+  /// Search over all in edges of dst of each type until an edge satisfying func is
+  /// found.
+  ///
+  /// @param dst destination node of the edge
+  /// @returns true iff an edge satisfying func exists
+  template <typename TestFunc>
+  bool HasInEdgeSatisfyingPredicate(
+      Node dst, const TestFunc& func) const noexcept {
+    // TODO(john) Update this to use std::is_invocable_v.
+    using RetTy = decltype(func(Edge{}));
+    static_assert(
+        std::is_same_v<RetTy, bool>);  // ensure that return type is bool.
+
+    for (const auto& edge_type : GetDistinctEdgeTypes()) {
+      for (auto e : in_edges(dst, edge_type)) {
+        if (func(e)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /// Check if vertex src is connected to vertex dst with any edge edge_type

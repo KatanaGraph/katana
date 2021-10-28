@@ -191,7 +191,10 @@ public:
   /// Marks the topologies storage as valid, since we are just telling the
   /// RDG about where the topology is located and not actually loading it for use.
   /// \param new_top must exist and be in the correct directory for this RDG but it need not be writable
-  katana::Result<void> AddCSRTopologyByFile(const katana::Uri& new_top);
+  /// \param num_nodes is the number of nodes in the topology file, used for validation
+  /// \param num_edges is the number of edges in the topology file, used for validation
+  katana::Result<void> AddCSRTopologyByFile(
+      const katana::Uri& new_top, uint64_t num_nodes, uint64_t num_edges);
 
   /// Ask this RDG if it has a topology matching the fields in shadow
   /// If it does, the RDG returns the topology

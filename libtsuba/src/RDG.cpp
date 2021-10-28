@@ -981,14 +981,16 @@ tsuba::RDG::set_local_to_global_id(
 }
 
 katana::Result<void>
-tsuba::RDG::AddCSRTopologyByFile(const katana::Uri& new_top) {
+tsuba::RDG::AddCSRTopologyByFile(
+    const katana::Uri& new_top, uint64_t num_nodes, uint64_t num_edges) {
   katana::Uri dir = new_top.DirName();
   if (dir != rdg_dir()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
         "new topology file must be in this RDG's directory ({})", rdg_dir());
   }
-  return core_->RegisterCSRTopologyFile(new_top.BaseName(), rdg_dir());
+  return core_->RegisterCSRTopologyFile(
+      new_top.BaseName(), rdg_dir(), num_nodes, num_edges);
 }
 
 katana::Result<tsuba::RDGTopology*>

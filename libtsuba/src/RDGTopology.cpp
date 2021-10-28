@@ -205,11 +205,21 @@ RDGTopology::Map() {
          FileFrame::calculate_padding_bytes(num_nodes_, sizeof(uint64_t)));
   }
 
-  uint64_t expected_size = GetGraphSize();
+  size_t expected_size = GetGraphSize();
   if (file_storage_.size() < expected_size) {
     return KATANA_ERROR(
-        katana::ErrorCode::InvalidArgument, "file_view size: {} expected {}",
-        file_storage_.size(), expected_size);
+        katana::ErrorCode::InvalidArgument,
+        "file_view size: {} expected size: {}., num_nodes = {}, num_edges = "
+        "{}, "
+        "edge_index_to_property_index_map_present_ = {}, "
+        "node_index_to_property_index_map_present_ = {}, "
+        "edge_condensed_type_id_map_present = {}, "
+        "node_condensed_type_id_map_present = {}",
+        file_storage_.size(), expected_size, num_nodes_, num_edges_,
+        metadata_entry_->edge_index_to_property_index_map_present_,
+        metadata_entry_->node_index_to_property_index_map_present_,
+        metadata_entry_->edge_condensed_type_id_map_present_,
+        metadata_entry_->node_condensed_type_id_map_present_);
   }
 
   file_store_mapped_ = true;
@@ -218,7 +228,8 @@ RDGTopology::Map() {
 }
 
 katana::Result<void>
-RDGTopology::MapMetadataExtract(bool storage_valid) {
+RDGTopology::MapMetadataExtract(
+    uint64_t num_nodes, uint64_t num_edges, bool storage_valid) {
   if (file_store_mapped_) {
     KATANA_LOG_WARN(
         "Tried to map metadata of the topology file, but topology file is "
@@ -245,6 +256,16 @@ RDGTopology::MapMetadataExtract(bool storage_valid) {
 
   num_nodes_ = data[2];
   num_edges_ = data[3];
+
+  //TODO(emcginnis): remove the || num_nodes/edges == 0 when the input rdgs are updated
+  KATANA_LOG_VASSERT(
+      num_nodes_ == num_nodes || num_nodes == 0,
+      "Extracted num_nodes = {} does not match the known num_nodes = {}",
+      num_nodes_, num_nodes);
+  KATANA_LOG_VASSERT(
+      num_edges_ == num_edges || num_edges == 0,
+      "Extracted num_edges = {} does not match the known num_edges = {}",
+      num_edges_, num_edges);
 
   topology_state_ = TopologyKind::kCSR;
   transpose_state_ = TransposeKind::kNo;
@@ -654,34 +675,46 @@ tsuba::RDGTopology::Make(PartitionTopologyMetadataEntry* entry) {
   return katana::Result<tsuba::RDGTopology>(std::move(topo));
 }
 
-constexpr uint64_t
+size_t
 tsuba::RDGTopology::GetGraphSize() const {
   /// version, sizeof_edge_data, num_nodes, num_edges
   constexpr int mandatory_fields = 4;
-  int graphsize =
-      (mandatory_fields + num_nodes_ + edge_condensed_type_id_map_size_) *
-          sizeof(uint64_t) +
-      ((num_edges_ + node_condensed_type_id_map_size_) * sizeof(uint32_t));
+  size_t graphsize = (mandatory_fields + num_nodes_) * sizeof(uint64_t) +
+                     (num_edges_ * sizeof(uint32_t));
+
+  KATANA_LOG_DEBUG("Base graph size = {}", graphsize);
 
   if (metadata_entry_->edge_index_to_property_index_map_present_) {
     // 1 is for the magic number
     graphsize += (1 * sizeof(uint64_t)) + (num_edges_ * sizeof(uint64_t));
+    KATANA_LOG_DEBUG(
+        "edge_index_to_property_index_map_present graph size = {}", graphsize);
   }
 
   if (metadata_entry_->node_index_to_property_index_map_present_) {
     // 1 is for the magic number
     graphsize += (1 * sizeof(uint64_t)) + (num_nodes_ * sizeof(uint64_t));
+    KATANA_LOG_DEBUG(
+        "node_index_to_property_index_map_present graph size = {}", graphsize);
   }
 
   if (metadata_entry_->edge_condensed_type_id_map_present_) {
     // 1 is for the magic number
-    graphsize += (1 * sizeof(uint64_t)) + (num_edges_ * sizeof(uint8_t));
+    graphsize +=
+        (1 * sizeof(uint64_t)) + (num_edges_ * sizeof(katana::EntityTypeID));
+    KATANA_LOG_DEBUG(
+        "edge_condensed_type_id_map_present graph size = {}", graphsize);
   }
 
   if (metadata_entry_->node_condensed_type_id_map_present_) {
     // 1 is for the magic number
-    graphsize += (1 * sizeof(uint64_t)) + (num_nodes_ * sizeof(uint8_t));
+    graphsize +=
+        (1 * sizeof(uint64_t)) + (num_nodes_ * sizeof(katana::EntityTypeID));
+    KATANA_LOG_DEBUG(
+        "node_condensed_type_id_map_present graph size = {}", graphsize);
   }
+
+  KATANA_LOG_DEBUG("Total graph size = {}", graphsize);
   return graphsize;
 }
 

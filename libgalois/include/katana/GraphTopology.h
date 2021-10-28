@@ -1112,7 +1112,7 @@ public:
   /// @param dst destination node of the edge
   /// @returns true iff an edge satisfying func exists
   template <typename TestFunc>
-  bool HasEdgeSatisfyingPredicate(
+  bool HasOutEdgeSatisfyingPredicate(
       Node src, Node dst, const TestFunc& func) const noexcept {
     // TODO(john) Update this to use std::is_invocable_v.
     using RetTy = decltype(func(Edge{}));
@@ -1135,7 +1135,7 @@ public:
   /// @param src source node of the edge
   /// @returns true iff an edge satisfying func exists
   template <typename TestFunc>
-  bool HasEdgeSatisfyingPredicate(
+  bool HasOutEdgeSatisfyingPredicate(
       Node src, const TestFunc& func) const noexcept {
     // TODO(john) Update this to use std::is_invocable_v.
     using RetTy = decltype(func(Edge{}));
@@ -1409,6 +1409,8 @@ public:
       return false;
     }
 
+    // TODO(john) Figure out why queries were yielding incorrect results when
+    // we add a branch here for d_out < d_in.
     return Base::out().HasEdgeSatisfyingPredicate(src, dst, func);
   }
 
@@ -1418,13 +1420,8 @@ public:
   /// @param src source node of the edge
   /// @returns true iff the edge exists
   template <typename TestFunc>
-  bool HasEdgeSatisfyingPredicate(Node src, const TestFunc& func) const {
-    const auto d_out = Base::out().degree(src);
-    if (d_out == 0) {
-      return false;
-    }
-
-    return Base::out().HasEdgeSatisfyingPredicate(src, func);
+  bool HasOutEdgeSatisfyingPredicate(Node src, const TestFunc& func) const {
+    return Base::out().HasOutEdgeSatisfyingPredicate(src, func);
   }
 
   /// Search over all in edges of dst of each type until an edge satisfying func is

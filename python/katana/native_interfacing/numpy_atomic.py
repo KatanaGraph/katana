@@ -1,3 +1,8 @@
+import warnings
+from functools import wraps
+from threading import Lock
+
+import numba
 from numba import types
 from numba.core import cgutils
 from numba.core.typing.arraydecl import get_array_index_type
@@ -13,9 +18,25 @@ def atomic_rmw(context, builder, op, arrayty, val, ptr):
     return builder.atomic_rmw(op, ptr, dataval, "monotonic")
 
 
+# The global lock used to protect atomic operations when called from python code in DISABLE_JIT mode.
+_global_atomics_lock = Lock()
+
+
+if numba.config.DISABLE_JIT:
+    warnings.warn(
+        "Atomic operations are not fully atomic when DISABLE_JIT is set. Only use DISABLE_JIT for testing "
+        "and debugging."
+    )
+
+
 def declare_atomic_array_op(iop, uop, fop):
     def decorator(func):
-        @type_callable(func)
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with _global_atomics_lock:
+                func(*args, **kwargs)
+
+        @type_callable(wrapper)
         def func_type(context):
             def typer(ary, idx, val):
                 out = get_array_index_type(ary, idx)
@@ -29,7 +50,7 @@ def declare_atomic_array_op(iop, uop, fop):
 
         _ = func_type
 
-        @lower_builtin(func, types.Buffer, types.Any, types.Any)
+        @lower_builtin(wrapper, types.Buffer, types.Any, types.Any)
         def func_impl(context, builder, sig, args):
             """
             array[a] = scalar_or_array
@@ -70,7 +91,7 @@ def declare_atomic_array_op(iop, uop, fop):
 
         _ = func_impl
 
-        return func
+        return wrapper
 
     return decorator
 

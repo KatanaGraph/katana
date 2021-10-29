@@ -195,7 +195,7 @@ cdef class {{class_name}}:
             else:
                 raise TypeError("Policy must be an AllocationPolicy")
 
-    def __setitem__(self, uint64_t i,  v):
+    def __setitem__(self, uint64_t i, v):
         """
         `self[i] = v`
 
@@ -225,6 +225,12 @@ cdef class {{class_name}}:
         {% else %}
         return v
         {% endif %}
+
+    def get(self, i):
+        return self[i]
+
+    def set(self, i, v):
+        self[i] = v
 
     def __len__(self):
         """
@@ -292,9 +298,11 @@ cdef class {{class_name}}:
 
         Return a numpy array that is a view on self.
         """
-        return np.lib.stride_tricks.as_strided(np.frombuffer(self, dtype=self.dtype),
-                                               shape=(len(self),),
-                                               strides=(sizeof({{inst.element_c_type}}),))
+        return np.rec.array(
+                    np.lib.stride_tricks.as_strided(np.frombuffer(self, dtype=self.dtype),
+                                                    shape=(len(self),),
+                                                    strides=(sizeof({{inst.element_c_type}}),)),
+                    copy=False)
 
     def __getbuffer__(self, Py_buffer *buffer, int flags):
         self._check_allocated()

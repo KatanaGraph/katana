@@ -179,8 +179,6 @@ def test_NUMAArray_numpy(typ):
     arr[1:4] = 1
     assert list(arr) == [10, 1, 1, 1, 10]
     assert list(larr) == [10, 1, 1, 1, 10]
-    # TODO: Ideally one level of .base would get us there, but it doesn't really matter
-    assert arr.base.base.base is larr
     assert arr.shape == (5,)
     with pytest.raises(IndexError):
         arr[10] = 0
@@ -199,6 +197,24 @@ def test_NUMAArray_numpy_parallel(typ):
 
     do_all(range(1000), f(arr.as_numpy()), steal=False)
     assert list(arr) == list(range(1, 1001))
+
+
+def test_NUMAArray_numpy_opaque():
+    dt = np.dtype([("x", np.float32), ("y", np.int16)], align=True)
+    T = NUMAArray[dt]
+    arr = T()
+    arr.allocateInterleaved(1000)
+
+    arr[0].x = -1
+    arr[0].y = -1
+    nparr = arr.as_numpy()
+    assert nparr[0].x == -1
+    assert nparr[0].y == -1
+
+    nparr[0].x = -2
+    nparr[0].y = -2
+    assert arr[0].x == -2
+    assert arr[0].y == -2
 
 
 def test_NUMAArray_numpy_parallel_opaque():

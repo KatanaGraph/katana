@@ -32,7 +32,7 @@ namespace {
 
 // https://stackoverflow.com/questions/440133
 template <typename S, typename T = katana::RandGenerator>
-T
+std::pair<T, katana::Seed>
 MakeRandomGenerator(S& source) {
   auto constexpr seed_bits = T::word_size * T::state_size;
   auto constexpr seq_bits =
@@ -44,14 +44,16 @@ MakeRandomGenerator(S& source) {
   std::generate_n(std::begin(seed), seed_len, std::ref(source));
 
   std::seed_seq seq(std::begin(seed), std::end(seed));
-  return T(seq);
+  std::vector<std::seed_seq::result_type> seed_vec(
+      std::begin(seed), std::end(seed));
+  return std::make_pair(T(seq), std::move(seed_vec));
 }
 
 katana::RandGenerator
 MakeSystemGenerator() {
   std::random_device dev;
   try {
-    return MakeRandomGenerator(dev);
+    return std::get<0>(MakeRandomGenerator(dev));
   } catch (std::exception& e) {
     KATANA_LOG_ERROR(
         "trying alternative random seed method due to error: {}", e.what());
@@ -59,7 +61,8 @@ MakeSystemGenerator() {
 
   auto now = std::chrono::system_clock::now();
   auto dur = now.time_since_epoch();
-  return katana::RandGenerator(dur.count());
+  auto seed = static_cast<katana::RandGenerator::result_type>(dur.count());
+  return katana::RandGenerator(seed);
 }
 
 thread_local std::unique_ptr<katana::RandGenerator> kRNG;
@@ -72,13 +75,24 @@ katana::GetGenerator() {
     return *kRNG;
   }
 
+  auto result = katana::CreateGenerator(std::nullopt);
   static std::mutex lock;
-  static RandGenerator system_gen = MakeSystemGenerator();
   std::lock_guard guard(lock);
-
-  kRNG = std::make_unique<RandGenerator>(MakeRandomGenerator(system_gen));
+  kRNG = std::make_unique<RandGenerator>(std::get<0>(result));
 
   return *kRNG;
+}
+
+std::pair<katana::RandGenerator, katana::Seed>
+katana::CreateGenerator(const std::optional<Seed>& seed_in) {
+  if (seed_in) {
+    std::seed_seq seq(std::begin(*seed_in), std::end(*seed_in));
+    return std::make_pair(katana::RandGenerator(seq), *seed_in);
+  }
+
+  static RandGenerator system_gen = MakeSystemGenerator();
+
+  return MakeRandomGenerator(system_gen);
 }
 
 std::string

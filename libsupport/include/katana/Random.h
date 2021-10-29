@@ -2,6 +2,7 @@
 #define KATANA_LIBSUPPORT_KATANA_RANDOM_H_
 
 #include <algorithm>
+#include <optional>
 #include <random>
 #include <string>
 
@@ -10,6 +11,7 @@
 namespace katana {
 
 using RandGenerator = std::mt19937;
+using Seed = std::vector<std::seed_seq::result_type>;
 
 /// Generate a random alphanumeric string of length \param len using
 /// \param gen if provided. If no generator is specified, use the output of
@@ -17,9 +19,14 @@ using RandGenerator = std::mt19937;
 KATANA_EXPORT std::string RandomAlphanumericString(
     uint64_t len, RandGenerator* gen = nullptr);
 
-/// \returns a random number generator seeded with randomness from the platform.
-/// The generator is local to the calling thread so uses of it are thread safe.
-/// Useful for things like `std::uniform_int_distribution`
+/// \returns a random number generator seeded with a user provided seed, or
+/// randomness from the platform.
+KATANA_EXPORT std::pair<katana::RandGenerator, katana::Seed> CreateGenerator(
+    const std::optional<Seed>& seed_in);
+
+/// \returns a random number generator. The generator is local to the calling
+/// thread so uses of it are thread safe. Useful for things like
+/// `std::uniform_int_distribution`
 KATANA_EXPORT RandGenerator& GetGenerator();
 
 /// Fills the iterator range with  a uniform random sequence of numbers from

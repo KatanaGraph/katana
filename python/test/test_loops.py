@@ -143,6 +143,8 @@ def test_do_all_specific_type(modes, typ):
     assert np.allclose(out, np.array(range(1000)))
     if not numba.config.DISABLE_JIT:
         # Check that the operator was actually compiled for the correct type
+        # [0][1][0] = [first overload][second argument][first possible type]
+        # I'm not sure why the last indexing is used. It always seems to be a 1-tuple, but numba makes it. *shrug*
         assert list(f.inspect_llvm().keys())[0][1][0] == from_dtype(np.dtype(typ))
 
 

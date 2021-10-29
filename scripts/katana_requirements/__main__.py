@@ -104,6 +104,48 @@ def list_subcommand(args, inputs, data):
     print(args.separation.suffix, end="")
 
 
+def print_markdown_table(table: dict):
+    print(
+        """
+Name       | Description
+---------- | -----------------"""
+    )
+    for name, description in sorted(table.items()):
+        description = description.replace("\n", "")
+        print(f"{name:>10} | {description}")
+
+
+def markdown_subcommand(args, inputs, data: Requirements):
+    # pylint: disable=unused-argument
+
+    print("Loaded data from files: " + ", ".join(str(f) for f in inputs))
+    print()
+    print("Packages")
+    print("========")
+    print()
+
+    print("Name | Labels " + "".join(f"| {ps} " for ps in data.packaging_systems.keys()))
+    print("------- | ------- " + "| ------------ " * len(data.packaging_systems))
+
+    for p in sorted(data.select_packages(labels=args.label), key=lambda p: p.name):
+        labels = ", ".join(p.labels)
+        print(
+            f"{p.name} | {labels} "
+            + "".join(f"| {p.format(OutputFormat(ps))} " for ps in data.packaging_systems.keys())
+        )
+
+    print()
+    print("Packaging systems")
+    print("=================")
+    print()
+    print_markdown_table(data.packaging_systems)
+    print()
+    print("Labels")
+    print("======")
+    print()
+    print_markdown_table(data.labels)
+
+
 def setup_install_arguments(parser):
     comma = ", "
 
@@ -274,6 +316,11 @@ def main():
     )
     setup_general_arguments(list_parser)
     list_parser.set_defaults(cmd=list_subcommand)
+
+    # Subcommand: markdown
+    markdown_parser = subparsers.add_parser("markdown", help="Output data in markdown for humans to read.")
+    setup_general_arguments(markdown_parser)
+    markdown_parser.set_defaults(cmd=markdown_subcommand)
 
     # Subcommand: install
     install_parser = subparsers.add_parser(

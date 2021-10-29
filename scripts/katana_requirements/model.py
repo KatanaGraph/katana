@@ -1,3 +1,4 @@
+import itertools
 from abc import abstractmethod
 from enum import Enum
 from typing import Collection, Dict, FrozenSet, Generator, Iterator, List, Optional, Union
@@ -123,6 +124,9 @@ class Package(Mergeable):
         name = self.name_for(format)
         version_str = self.version_for(format)
 
+        if name is None or version_str is None:
+            return None
+
         if format == OutputFormat.YAML:
             labels_str = ", ".join(self.labels)
             return (
@@ -193,12 +197,17 @@ class Requirements(Mergeable):
 
     @classmethod
     def from_dict(cls, data: dict) -> "Requirements":
-        return cls(
-            convert_nulls(data.get("label_descriptions", {})),
-            convert_nulls(data.get("packaging_system_descriptions", {})),
-            list(
-                Package.from_dict(k, d)
-                for k, d in data.items()
-                if k not in ("label_descriptions", "packaging_system_descriptions")
-            ),
-        )
+        labels = convert_nulls(data.get("label_descriptions", {}))
+        packaging_systems = convert_nulls(data.get("packaging_system_descriptions", {}))
+        packages = [
+            Package.from_dict(k, d)
+            for k, d in data.items()
+            if k not in ("label_descriptions", "packaging_system_descriptions")
+        ]
+
+        for p in packages:
+            for l in p.labels:
+                labels.setdefault(l, "")
+            for ps in itertools.chain(p.name_overrides.keys(), p.version_overrides.keys()):
+                packaging_systems.setdefault(ps, "")
+        return cls(labels, packaging_systems, packages)

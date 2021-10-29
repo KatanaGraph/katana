@@ -135,12 +135,28 @@ def setup_install_arguments(parser):
 
 def install_package_list(args, packages, silent=False):
     # TODO(amp): Remove special cases for these throughout the system. This should probably be configurable.
+    if args.format == OutputFormat.APT:
+        # Because APT is unable to handle bounds correctly, we need a special case to install different packages
+        # differently.
+        pinned_package_arguments = []
+        specified_package_arguments = []
+        for p in packages:
+            version = p.version_for(OutputFormat.APT)
+            if version[0] == "=":
+                # This is pinned for APT
+                pinned_package_arguments.append(p.name_for(OutputFormat.APT) + version)
+            else:
+                specified_package_arguments.append(p.format(OutputFormat.APT))
+        install_command = ["apt-get", "install"] + args.argument
+        execute_subprocess(install_command + pinned_package_arguments, silent)
+        satisfy_command = ["apt-get", "satisfy"] + args.argument
+        execute_subprocess(satisfy_command + specified_package_arguments, silent)
+        return
+
     if args.command:
         command = args.command.split()
     elif args.format == OutputFormat.PIP:
         command = [sys.executable, "-m", "pip", "install"]
-    elif args.format == OutputFormat.APT:
-        command = ["apt-get", "satisfy"]
     elif args.format == OutputFormat.CONDA:
         command = ["conda", "install"]
     else:
@@ -148,10 +164,13 @@ def install_package_list(args, packages, silent=False):
 
     command += args.argument
 
-    full_command = command + [p.format(args.format) for p in packages]
-    space = " "
+    execute_subprocess(command + [p.format(args.format) for p in packages], silent)
+
+
+def execute_subprocess(full_command, silent):
     if not silent:
-        print(f"Executing: {space.join(full_command)}")
+        s = " ".join(f"'{v}'" for v in full_command)
+        print(f"Executing: {s}")
     return subprocess.check_call(
         full_command, stdout=subprocess.DEVNULL if silent else None, stderr=subprocess.DEVNULL if silent else None
     )
@@ -168,16 +187,16 @@ def bisect_list_for_working(packages, func):
         try:
             func(packages[:pivot])
             print("Success")
-            if lower_bound == upper_bound:
+            if lower_bound >= upper_bound:
                 print("Done!")
                 return pivot
-            return step(pivot + 1, upper_bound)
+            return step(min(pivot + 1, upper_bound), upper_bound)
         except subprocess.SubprocessError:
             print("Fail")
-            if lower_bound == upper_bound:
+            if lower_bound >= upper_bound or pivot == 0:
                 print("Done!")
-                return pivot - 1
-            return step(lower_bound, pivot - 1)
+                return max(pivot - 1, 0)
+            return step(lower_bound, max(lower_bound, pivot - 1))
 
     return step(0, len(packages))
 
@@ -257,7 +276,11 @@ def main():
     list_parser.set_defaults(cmd=list_subcommand)
 
     # Subcommand: install
-    install_parser = subparsers.add_parser("install", help="Install packages using a known packaging system")
+    install_parser = subparsers.add_parser(
+        "install",
+        help="Install packages using a known packaging system. "
+        "(There are special cases for some packaging systems. Beware.)",
+    )
 
     setup_install_arguments(install_parser)
     install_parser.set_defaults(cmd=install_subcommand)

@@ -10,7 +10,7 @@ label_descriptions:
   conda: Conda package dependencies.
   conda/dev: Packages installed for conda builds that may not be needed in the run environment.
   apt: Packages installed with APT in non-conda builds.
-  deb/pip: Packages installed with pip to build and run Ubuntu deb packages.
+  pip/dev: Packages installed with pip to build and run Ubuntu deb packages.
 
 packaging_system_descriptions:
   conda: |
@@ -25,7 +25,10 @@ packaging_system_descriptions:
     extensions.
   apt: |
     The native packaging system of Ubuntu. Provides a wide range of packages, but tends to be a bit out of date, so
-    external repositories are sometimes needed which can complicate compability.
+    external repositories are sometimes needed which can complicate compability. Due to limitations in how APT solves
+    dependencies, the requirements tool provides a hack: If you provide a pinned version override (e.g., pkg==1.0)
+    the package will be installed with `apt-get install` instead of `apt-get satisfy`. This works around failure to find
+    older versions of packages.
 
 boa:
   version: [0.6, 1]
@@ -68,7 +71,7 @@ cmake:
 conan:
   version: [ 1.40, null ]
   labels:
-    - deb/pip
+    - pip/dev
 conda-build:
   version: [ 3, null ]
   labels:
@@ -92,13 +95,13 @@ cxx-compiler:
 cython:
   labels:
     - conda/dev
-    - deb/pip
+    - pip/dev
   name_overrides:
     pip: Cython
     apt: cython3
   version: [ 0.29.12, 3 ]
 doxygen:
-  version: [ 1.9, ¯\(ツ)/¯ ]
+  version: [ 1.8, ¯\(ツ)/¯ ]
   labels:
     - conda/dev
     - apt
@@ -111,7 +114,7 @@ elfutils:
   labels:
     - conda/dev
     - apt
-  version: [ 0.185, null ]
+  version: [ 0.176, null ]
 fmt:
   version: [ 6.2.1, 9 ]
   labels:
@@ -151,6 +154,8 @@ libarrow-python:
   version: &arrow_version [ 4, 5 ]
   labels:
     - apt
+  version_overrides: &arrow_version_overrides
+    apt: "=4.0.1-1"
 libarrow:
   name_overrides:
     conan: arrow
@@ -161,6 +166,7 @@ libarrow:
   labels:
     - conda
     - apt
+  version_overrides: *arrow_version_overrides
 libcurl:
   version: [ 7.66, null ]
   labels:
@@ -186,8 +192,10 @@ llvmdev:
   labels:
     - conda
     - apt
+  version_overrides: &llvm_version_overrides
+    apt: ">=10.0-50~exp1"
 make:
-  version: [ 4.3, null ]
+  version: [ 4.2, null ]
   labels:
     - conda/dev
     - apt
@@ -200,6 +208,8 @@ nbsphinx:
   labels:
     - conda
 ncurses:
+  name_overrides:
+    apt: libncurses-dev
   version: [ 6.1, 7 ]
   labels:
     - conda
@@ -217,14 +227,16 @@ numba:
   version: [ 0.53.1, 0.54 ]
   labels:
     - conda
-    - deb/pip
+    - pip/dev
 numpy:
   name_overrides:
     apt: python3-numpy
-  version: [ 1.21, 2 ]
+  version: [ 1.17, 2 ]
   labels:
     - conda
     - apt
+  version_overrides:
+    apt: ">=1:1.17,<<1:2"
 openblas:
   version: [ 0.3.12, null ]
   labels:
@@ -249,7 +261,7 @@ pandas:
     - conda
     - pip
 pandoc:
-  version: [ 2, null ]
+  version: [ 2a, null ]
   labels:
     - conda/dev
     - pip/dev
@@ -260,6 +272,8 @@ parquet-cpp:
   labels:
     - conda
     - apt
+  version_overrides:
+    apt: "=4.0.1-1"
 pyarrow:
   name_overrides:
     apt: null
@@ -313,14 +327,20 @@ sphinx:
   labels:
     - conda/dev
 zlib:
+  name_overrides:
+    apt: zlib1g-dev
   version: [ 1.2.11, 2 ]
   labels:
     - conda
     - apt
+  version_overrides:
+    apt: ">=1:1.2.11,<<1:2"
 git:
   version: [ 2, 3 ]
   labels:
     - apt/dev
+  version_overrides:
+    apt: ">=1:2,<<1:3"
 readline:
   name_overrides:
     apt: libreadline-dev
@@ -328,7 +348,6 @@ readline:
   labels:
     - conda
     - apt
-    - conan
 libnuma:
   name_overrides:
     apt: libnuma-dev
@@ -348,6 +367,8 @@ clangxx:
   labels:
     - apt/dev
     - conda/dev
+  version_overrides: &clang_version_overrides
+    apt: ">=10.0-50~exp1"
 clang-format:
   name_overrides:
     conda: clang-tools
@@ -355,6 +376,7 @@ clang-format:
   labels:
     - apt/dev
     - conda/dev
+  version_overrides: *clang_version_overrides
 clang-tidy:
   name_overrides:
     conda: clang-tools
@@ -362,18 +384,16 @@ clang-tidy:
   labels:
     - apt/dev
     - conda/dev
+  version_overrides: *clang_version_overrides
 clangd:
   name_overrides:
     conda: clang-tools
   version: *clang_version
   labels:
     - apt/dev
+  version_overrides: *clang_version_overrides
 graphviz:
   version: [2, null]
-  labels:
-    - apt/dev
-spellcheck:
-  version: [0.7, null]
   labels:
     - apt/dev
 pkg-config:
@@ -394,7 +414,7 @@ pip:
   name_overrides:
     conda: null
     apt: python3-pip
-  version: [21, null]
+  version: [20, null]
   labels:
     - pip
     - apt

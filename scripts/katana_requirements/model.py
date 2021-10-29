@@ -64,7 +64,7 @@ class VersionRequirement(Mergeable):
             upper_bound = f",<{self.upper_bound}a0" if self.upper_bound else ""
             return f""">={self.lower_bound}{upper_bound}"""
         if format == OutputFormat.APT:
-            upper_bound = f", <<{self.upper_bound}" if self.upper_bound else ""
+            upper_bound = f",<<{self.upper_bound}" if self.upper_bound else ""
             return f""">={self.lower_bound}{upper_bound}"""
         if format == OutputFormat.CONAN:
             return f"""{self.lower_bound}"""
@@ -135,7 +135,12 @@ class Package(Mergeable):
             name = name.upper().replace("-", "_")
             return f"""set({name}_VERSION {version_str})"""
         if format == OutputFormat.APT:
-            return f"""{name} ({version_str})"""
+            # The deb version spec language only allows one version restriction per package name. So we list the
+            # package twice, once for the lower-bound, once for the upper-bound.
+            # TODO(amp): Splitting the string here is bad, there should be some way to get the exact parts of the
+            #  version we want.
+            vs = version_str.split(",")
+            return ", ".join(f"{name} ({v})" for v in vs)
         if format in (OutputFormat.PIP, OutputFormat.CONDA):
             return f"""{name}{version_str}"""
         raise ValueError(format)

@@ -107,6 +107,8 @@ apt install -yq /tmp/apache-arrow-apt-source-latest.deb && rm /tmp/apache-arrow-
 #
 
 apt update
+# Install packages required by the requirements tool
+apt install --yes --quiet python3-yaml python3-packaging
 
 # Use the requirements tool to install apt packages with: apt-get satisfy --allow-downgrades --yes --quiet
 "$REPO_ROOT"/scripts/requirements install -a--allow-downgrades -a--yes -a--quiet -l apt -l apt/dev -f apt

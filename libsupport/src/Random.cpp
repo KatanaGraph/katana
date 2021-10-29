@@ -70,12 +70,12 @@ thread_local std::unique_ptr<katana::RandGenerator> kRNG;
 }  // namespace
 
 katana::RandGenerator&
-katana::GetGenerator(const std::optional<katana::Seed>& seed) {
+katana::GetGenerator() {
   if (kRNG) {
     return *kRNG;
   }
 
-  auto result = katana::CreateGenerator(seed);
+  auto result = katana::CreateGenerator(std::nullopt);
   static std::mutex lock;
   std::lock_guard guard(lock);
   kRNG = std::make_unique<RandGenerator>(std::get<0>(result));

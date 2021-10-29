@@ -20,17 +20,14 @@ KATANA_EXPORT std::string RandomAlphanumericString(
     uint64_t len, RandGenerator* gen = nullptr);
 
 /// \returns a random number generator seeded with a user provided seed, or
-/// randomness from the platform. The generator is local to the calling thread
-/// so uses of it are thread safe. Useful for things like
-/// `std::uniform_int_distribution`
+/// randomness from the platform.
 KATANA_EXPORT std::pair<katana::RandGenerator, katana::Seed> CreateGenerator(
     const std::optional<Seed>& seed_in);
 
-/// \returns a random number generator obtained from CreateGenerator. This
-/// method will store the generator in a thread local variable so multiple calls
-/// from the same thread will reuse a previously created generator.
-KATANA_EXPORT RandGenerator& GetGenerator(
-    const std::optional<Seed>& seed = std::nullopt);
+/// \returns a random number generator. The generator is local to the calling
+/// thread so uses of it are thread safe. Useful for things like
+/// `std::uniform_int_distribution`
+KATANA_EXPORT RandGenerator& GetGenerator();
 
 /// Fills the iterator range with  a uniform random sequence of numbers from
 /// interval [min_val, max_val]

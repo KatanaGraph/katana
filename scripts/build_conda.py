@@ -44,7 +44,8 @@ def has_mambabuild():
 @click.option(
     "--repo", type=Path, default=find_default_repo_root(), help="Override the automatically detected repository root."
 )
-def build_conda(force_conda, render, repo, use_pythonpath):
+@click.option("--output-folder", type=Path, default=None, help="Specify output directory for packages.")
+def build_conda(force_conda, render, repo, use_pythonpath, output_folder):
     """Build the conda package for the current source tree."""
     build_subcommand = "mambabuild"
     if force_conda or not has_mambabuild():
@@ -93,6 +94,8 @@ def build_conda(force_conda, render, repo, use_pythonpath):
             variant_file.name,
             repo / "conda_recipe",
         ]
+        if output_folder:
+            build_command_line += ["--output-folder", output_folder]
         os.environ["KATANA_VERSION"] = katana_version.version.format_version_pep440(
             katana_version.version.get_version()
         )

@@ -11,6 +11,7 @@ dependencies:
  - arrow-cpp>=4,<5a0
  - attrs>=19,<21a0
  - backward-cpp>=1.4,<2a0
+ - benchmark>=1.5.3,<2a0
  - black>=19.10a0,<19.11a0
  - boa>=0.6,<1a0
  - boost-cpp>=1.74.0,<2a0

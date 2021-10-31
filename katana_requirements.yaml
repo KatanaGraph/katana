@@ -45,6 +45,7 @@ benchmark:
   version: [ 1.5.3, 2 ]
   labels:
     - conan
+    - conda
 black:
   version: [ 19.10a0, 19.11 ]
   labels:

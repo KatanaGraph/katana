@@ -156,7 +156,7 @@ or source it into your shell,
 PyTorch
 =======
 
-To install PyTorch, follow the commands below. The first 2 lines installs dependencies. The subsequent steps install PyTorch from source.
+To install PyTorch, follow the commands below. The first 2 lines install dependencies. The subsequent steps install PyTorch from source.
 
 .. code-block:: bash
 

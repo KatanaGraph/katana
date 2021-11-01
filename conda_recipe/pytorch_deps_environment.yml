@@ -1,5 +1,5 @@
 # This file may be used to create an environment using:
-# $ conda env create --name <env> --file conda_recipe/environment.yml
+# $ conda env create --name <env> --file conda_recipe/pytorch_deps_environment.yml
 # (This file must be named <something>.yml)
 channels:
  - conda-forge

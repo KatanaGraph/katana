@@ -1,14 +1,15 @@
 import atexit
 import ctypes
-from functools import wraps
+from functools import partial, wraps
 
 import llvmlite.ir
-from numba import njit, typeof, types
+import numba
+from numba import cfunc, njit, typeof, types
 from numba.experimental import jitclass
 from numba.extending import lower_builtin, type_callable
 
 from katana.native_interfacing import exec_in_file
-from katana.native_interfacing.katana_compiler import OperatorCompiler, cfunc
+from katana.native_interfacing.katana_compiler import OperatorCompiler
 from katana.timer import StatTimer
 
 PointerPair = ctypes.c_void_p * 2
@@ -214,7 +215,10 @@ class ClosureBuilder:
         return inst
 
     def bind(self, args, unbound_argument_types):
+        if numba.config.DISABLE_JIT:
+            return partial(self._underlying_function, *args)
         arg_types = tuple(typeof(v) for v in args)
+
         with StatTimer("Compilation", self.__qualname__):
             inst = self._generate(arg_types, unbound_argument_types)
             env = PointerPair()

@@ -62,7 +62,7 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "" CACHE STRING "Semi-colon separated list of D
 set(KATANA_PER_ROUND_STATS OFF CACHE BOOL "Report statistics of each round of execution")
 set(KATANA_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a single machine) for running the tests.")
 set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
-set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: min(number of physical core, 4))")
+set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: min(number of physical cores, 8))")
 set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 
 ###### Configure (users don't need to go beyond here) ######
@@ -76,11 +76,13 @@ cmake_host_system_information(RESULT KATANA_NUM_PHYSICAL_CORES QUERY NUMBER_OF_P
 
 if (NOT KATANA_NUM_TEST_THREADS)
   set(KATANA_NUM_TEST_THREADS ${KATANA_NUM_PHYSICAL_CORES})
-  if (KATANA_NUM_TEST_THREADS GREATER_EQUAL 4)
-    set(KATANA_NUM_TEST_THREADS 4)
+  if (KATANA_NUM_TEST_THREADS GREATER 8)
+    set(KATANA_NUM_TEST_THREADS 8)
   endif ()
 endif ()
-if (KATANA_NUM_TEST_THREADS LESS_EQUAL 0)
+if (KATANA_NUM_TEST_THREADS GREATER ${KATANA_NUM_PHYSICAL_CORES})
+  message(WARNING "KATANA_NUM_TEST_THREADS more than the physical cores; please set it to ${KATANA_NUM_PHYSICAL_CORES} to avoid oversubscription.")
+elseif (KATANA_NUM_TEST_THREADS LESS_EQUAL 0)
   set(KATANA_NUM_TEST_THREADS 1)
 endif ()
 
@@ -183,7 +185,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-copy>")
   endif ()
 
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
   endif ()
 endif ()

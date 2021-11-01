@@ -57,30 +57,3 @@ def constant_function_pointer(context, builder: ir.IRBuilder, ty, pyval):
         return ir.Constant(ir.types.IntType(64), ty.get_pointer(pyval)).inttoptr(ptrty)
     # If we are not in an operator context (as defined by OperatorCompiler use) then call the numba implementation
     return numba.cpython.builtins.constant_function_pointer(context, builder, ty, pyval)
-
-
-# TODO: This is duplicated from numba to allow pipeline_class to be passed through. This should be merged upstream.
-def cfunc(sig, local_vars=None, cache=False, pipeline_class=compiler.Compiler, **options):
-    """
-    This decorator is used to compile a Python function into a C callback
-    usable with foreign C libraries.
-
-    Usage::
-        @cfunc("float64(float64, float64)", nopython=True, cache=True)
-        def add(a, b):
-            return a + b
-
-    """
-    sig = sigutils.normalize_signature(sig)
-    local_vars = local_vars or {}
-
-    def wrapper(func):
-        from numba.core.ccallback import CFunc
-
-        res = CFunc(func, sig, locals=local_vars, options=options, pipeline_class=pipeline_class)
-        if cache:
-            res.enable_caching()
-        res.compile()
-        return res
-
-    return wrapper

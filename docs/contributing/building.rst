@@ -160,7 +160,7 @@ To install PyTorch, follow the commands below. The first 2 lines install depende
 
 .. code-block:: bash
 
-   conda env update --name katana-dev --file $SRC_DIR/external/katana/conda_recipe/pytorch_deps_environment.yml
+   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/pytorch_deps_environment.yml
    conda activate katana-dev
    cd <workspace>
    git clone --recursive --depth 1 --branch v1.10.0 https://github.com/pytorch/pytorch

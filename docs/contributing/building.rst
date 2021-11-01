@@ -156,16 +156,12 @@ or source it into your shell,
 PyTorch
 =======
 
-To install PyTorch, follow the commands below. The first 2 lines install dependencies. The subsequent steps install PyTorch from source.
+To install PyTorch, use the script below from within a conda environment.
 
 .. code-block:: bash
 
-   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/pytorch_deps_environment.yml
    conda activate katana-dev
-   cd <workspace>
-   git clone --recursive --depth 1 --branch v1.10.0 https://github.com/pytorch/pytorch
-   cd pytorch
-   python3 setup.py install
+   $SRC_DIR/scripts/install_pytorch.sh
 
 Resolving Common Build Issues
 =============================

@@ -183,7 +183,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-copy>")
   endif ()
 
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 12)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
   endif ()
 endif ()

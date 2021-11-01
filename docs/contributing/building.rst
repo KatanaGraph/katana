@@ -153,6 +153,22 @@ or source it into your shell,
 
    . $BUILD_DIR/python_env.sh
 
+PyTorch
+=======
+
+To install PyTorch, follow the commands below. The first 2 lines installs dependencies. The subsequent steps install PyTorch from source.
+
+.. code-block:: bash
+
+   mamba install -c conda-forge --override-channels astunparse numpy ninja pyyaml mkl mkl-include setuptools cmake cffi typing_extensions future six requests dataclasses
+   mamba install -c pytorch magma-cuda110
+   git clone --recursive --depth 1 --branch v1.10.0 https://github.com/pytorch/pytorch
+   cd pytorch
+   export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
+   python3 setup.py install
+   cd ..
+   rm -r -f pytorch
+
 Resolving Common Build Issues
 =============================
 

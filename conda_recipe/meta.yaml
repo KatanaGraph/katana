@@ -45,7 +45,7 @@ requirements:
     - fmt {{ fmt }}
     - libcurl {{ libcurl }}
     - libxml2 {{ libxml2 }}
-    - llvm {{ llvm }}
+    - llvmdev {{ llvmdev }}
     - ncurses {{ ncurses }}
     - nlohmann_json {{ nlohmann_json }}
     - openblas {{ openblas }}
@@ -78,7 +78,7 @@ outputs:
         - fmt {{ fmt }}
         - libcurl {{ libcurl }}
         - libxml2 {{ libxml2 }}
-        - llvm {{ llvm }}
+        - llvmdev {{ llvmdev }}
         - ncurses {{ ncurses }}
         - nlohmann_json {{ nlohmann_json }}
         - openblas {{ openblas }}
@@ -170,6 +170,7 @@ outputs:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
+        - llvm
         #- {{ pin_subpackage('katana-python', exact=True) }} <- Add this if any Python scripts are added to bin/
     test:
       commands:

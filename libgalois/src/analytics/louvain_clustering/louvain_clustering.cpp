@@ -496,6 +496,30 @@ public:
 
 template <typename EdgeWeightType>
 static katana::Result<void>
+AddInt64EdgeWeight(
+    katana::PropertyGraph* pg, const std::string& input_edge_weight_property_name,
+        const std::string& edge_weight_property_name) {
+  using EdgeData = std::tuple<katana::PODProperty<EdgeWeightType>, katana::PODProperty<int64_t>>;
+
+  if (auto res = katana::analytics::ConstructEdgeProperties<EdgeData>(
+          pg, {edge_weight_property_name});
+      !res) {
+    return res.error();
+  }
+
+  auto typed_graph =
+      KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
+          pg, {}, {input_edge_weight_property_name, edge_weight_property_name})));
+  katana::do_all(
+      katana::iterate(typed_graph.all_edges()),
+      [&](auto e) { typed_graph.template GetEdgeData<katana::PODProperty<int64_t>>(e) = typed_graph.template GetEdgeData<katana::PODProperty<EdgeWeightType>>(e); },
+      katana::steal(), katana::loopname("CopyEdgeWeight"));
+  return katana::ResultSuccess();
+}
+
+
+template <typename EdgeWeightType>
+static katana::Result<void>
 AddDefaultEdgeWeight(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name) {
   using EdgeData = std::tuple<EdgeWeightType>;
@@ -593,19 +617,40 @@ katana::analytics::LouvainClustering(
         pg, temporary_edge_property.name(), output_property_name, plan);
   }
 
+  TemporaryPropertyGuard temporary_edge_property{
+        pg->EdgeMutablePropertyView()};
+
+  switch(KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+              ->type()
+              ->id()) {
+
+        case arrow::UInt32Type::type_id:
+                KATANA_CHECKED(AddInt64EdgeWeight<uint32_t>(pg, edge_weight_property_name, temporary_edge_property.name()));
+                break;
+        case arrow::Int32Type::type_id:
+                KATANA_CHECKED(AddInt64EdgeWeight<int32_t>(pg, edge_weight_property_name, temporary_edge_property.name()));
+                break;
+        default:
+                break;
+        }
+
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()
               ->id()) {
-  case arrow::UInt32Type::type_id:
-    return LouvainClusteringWithWrap<uint32_t>(
-        pg, edge_weight_property_name, output_property_name, plan);
+              case arrow::UInt32Type::type_id:
+                katana::gPrint("here UINT32\n");
+    return LouvainClusteringWithWrap<int64_t>(
+        pg, temporary_edge_property.name(), output_property_name, plan);
   case arrow::Int32Type::type_id:
-    return LouvainClusteringWithWrap<int32_t>(
-        pg, edge_weight_property_name, output_property_name, plan);
+        katana::gPrint("here INT32\n");
+    return LouvainClusteringWithWrap<int64_t>(
+        pg, temporary_edge_property.name(), output_property_name, plan);
   case arrow::UInt64Type::type_id:
+        katana::gPrint("here UINT64\n");
     return LouvainClusteringWithWrap<uint64_t>(
         pg, edge_weight_property_name, output_property_name, plan);
   case arrow::Int64Type::type_id:
+        katana::gPrint("here INT64\n");
     return LouvainClusteringWithWrap<int64_t>(
         pg, edge_weight_property_name, output_property_name, plan);
   case arrow::FloatType::type_id:

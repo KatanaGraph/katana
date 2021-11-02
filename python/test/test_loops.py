@@ -1,5 +1,6 @@
 import weakref
 from functools import partial
+from threading import Lock
 
 import numba
 import numpy as np
@@ -34,25 +35,32 @@ types = [
 ]
 
 
+@pytest.fixture
+def lock():
+    return Lock()
+
+
 @pytest.mark.parametrize("modes", simple_modes)
-def test_do_all_python(modes):
+def test_do_all_python(modes, lock):
     total = 0
 
     def f(i):
         nonlocal total
-        total += i
+        with lock:
+            total += i
 
     do_all(range(10), f, **modes)
     assert total == 45
 
 
 @pytest.mark.parametrize("modes", simple_modes)
-def test_for_each_python_with_push(modes):
+def test_for_each_python_with_push(modes, lock):
     total = 0
 
     def f(i, ctx):
         nonlocal total
-        total += i
+        with lock:
+            total += i
         if i == 8:
             ctx.push(100)
 
@@ -60,13 +68,14 @@ def test_for_each_python_with_push(modes):
     assert total == 145
 
 
-def test_for_each_conflict_detection_unsupported():
+def test_for_each_conflict_detection_unsupported(lock):
     total = 0
 
     def f(i, ctx):
-        _ = ctx
+        # pylint: disable=unused-argument
         nonlocal total
-        total += i
+        with lock:
+            total += i
 
     with pytest.raises(ValueError):
         for_each(range(10), f, disable_conflict_detection=False)
@@ -87,7 +96,7 @@ def test_for_each_wrong_closure():
 def test_do_all_wrong_closure():
     @for_each_operator()
     def f(out, i, ctx):
-        _ = ctx
+        # pylint: disable=unused-argument
         out[i] = i + 1
 
     out = np.zeros(10, dtype=int)
@@ -152,8 +161,7 @@ def test_do_all_specific_type(modes, typ):
 def test_for_each_no_push(modes):
     @for_each_operator()
     def f(out, i, ctx):
-        _ = i
-        _ = ctx
+        # pylint: disable=unused-argument
         out[i] += i + 1
 
     out = np.zeros(10, dtype=int)
@@ -194,7 +202,7 @@ def test_for_each_opaque(modes):
 
 
 def test_obim_python(threads_1):
-    _ = threads_1
+    # pylint: disable=unused-argument
 
     order = []
 
@@ -217,8 +225,7 @@ def test_obim_python(threads_1):
 
 
 def test_obim(threads_1):
-    _ = threads_1
-
+    # pylint: disable=unused-argument
     order = []
 
     @obim_metric()
@@ -239,8 +246,7 @@ def test_obim(threads_1):
 
 
 def test_per_socket_chunk_fifo(threads_1):
-    _ = threads_1
-
+    # pylint: disable=unused-argument
     order = []
 
     def f(out, i, ctx):
@@ -259,8 +265,8 @@ def test_per_socket_chunk_fifo(threads_1):
 def test_closure_memory_management():
     @do_all_operator()
     def f(x, y):
-        _ = x
-        _ = y
+        # pylint: disable=unused-argument
+        pass
 
     a = np.zeros((100,))
     w = weakref.ref(a)

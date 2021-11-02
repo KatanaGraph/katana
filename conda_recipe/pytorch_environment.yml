@@ -5,6 +5,7 @@ channels:
  - pkgs/main
  - conda-forge
  - pytorch
+ - dglteam
  - katanagraph
 dependencies:
  - openmpi
@@ -30,3 +31,7 @@ dependencies:
  - katanagraph::pytorch-scatter
  - katanagraph::pytorch-cluster
  - katanagraph::pyg
+ - dglteam::dgl
+ - pip
+ - pip:
+    - dgllife

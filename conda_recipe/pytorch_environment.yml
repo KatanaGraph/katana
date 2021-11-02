@@ -1,0 +1,32 @@
+# This file may be used to create an environment using:
+# $ conda env create --name <env> --file conda_recipe/pytorch_environment.yml
+# (This file must be named <something>.yml)
+channels:
+ - pkgs/main
+ - conda-forge
+ - pytorch
+ - katanagraph
+dependencies:
+ - openmpi
+ - mpi4py
+ - astunparse
+ - numpy
+ - ninja
+ - pyyaml
+ - mkl
+ - mkl-include
+ - setuptools
+ - cmake
+ - cffi
+ - typing_extensions
+ - future
+ - six
+ - requests
+ - dataclasses
+ - pytorch::magma-cuda110
+ - katanagraph::pytorch
+ - katanagraph::pytorch-spline-conv
+ - katanagraph::pytorch-sparse
+ - katanagraph::pytorch-scatter
+ - katanagraph::pytorch-cluster
+ - katanagraph::pyg

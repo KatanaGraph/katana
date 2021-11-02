@@ -156,12 +156,11 @@ or source it into your shell,
 PyTorch
 =======
 
-To install PyTorch, use the script below from within a conda environment.
+To install PyTorch and PyG, update your conda environment with the following command.
 
 .. code-block:: bash
 
-   conda activate katana-dev
-   $SRC_DIR/scripts/install_pytorch.sh
+   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/pytorch_environment.yml
 
 Resolving Common Build Issues
 =============================

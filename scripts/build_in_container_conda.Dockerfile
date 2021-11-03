@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN set -eux; \
     ${APT_GET} update; \
-    ${APT_GET} install curl bzip2 ca-certificates git libnuma1 texlive-font-utils; \
+    ${APT_GET} install curl bzip2 ca-certificates git libnuma1 texlive-font-utils wget; \
     ${APT_GET} clean
 
 ENV CONDA_PREFIX=/opt/conda

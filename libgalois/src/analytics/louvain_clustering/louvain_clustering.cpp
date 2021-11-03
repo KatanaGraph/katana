@@ -644,19 +644,15 @@ katana::analytics::LouvainClustering(
               ->type()
               ->id()) {
   case arrow::UInt32Type::type_id:
-    katana::gPrint("here UINT32\n");
     return LouvainClusteringWithWrap<int64_t>(
         pg, temporary_edge_property.name(), output_property_name, plan);
   case arrow::Int32Type::type_id:
-    katana::gPrint("here INT32\n");
     return LouvainClusteringWithWrap<int64_t>(
         pg, temporary_edge_property.name(), output_property_name, plan);
   case arrow::UInt64Type::type_id:
-    katana::gPrint("here UINT64\n");
     return LouvainClusteringWithWrap<uint64_t>(
         pg, edge_weight_property_name, output_property_name, plan);
   case arrow::Int64Type::type_id:
-    katana::gPrint("here INT64\n");
     return LouvainClusteringWithWrap<int64_t>(
         pg, edge_weight_property_name, output_property_name, plan);
   case arrow::FloatType::type_id:

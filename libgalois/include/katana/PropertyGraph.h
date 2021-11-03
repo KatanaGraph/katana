@@ -807,8 +807,14 @@ public:
   // Creates an index over a node property.
   Result<void> MakeNodeIndex(const std::string& column_name);
 
+  // Delete an existing index over a node property.
+  Result<void> DeleteNodeIndex(const std::string& column_name);
+
   // Creates an index over an edge property.
   Result<void> MakeEdgeIndex(const std::string& column_name);
+
+  // Delete an existing index over an edge property.
+  Result<void> DeleteEdgeIndex(const std::string& column_name);
 
   // Returns the list of node indexes.
   const std::vector<std::unique_ptr<PropertyIndex<GraphTopology::Node>>>&

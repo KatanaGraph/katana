@@ -1,6 +1,6 @@
 # Katana package requirements
 #
-# For schema documentation see the scripts/requirements tool. Remember that YAML support user defined aliases. They are
+# For schema documentation see the scripts/requirements tool. Remember that YAML supports user defined aliases. They are
 # used for shared version numbers.
 #
 # The schema for this file is scripts/katana_requirements/schema.json

@@ -888,6 +888,17 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
   return katana::ResultSuccess();
 }
 
+katana::Result<void>
+katana::PropertyGraph::DeleteNodeIndex(const std::string& column_name) {
+  for (auto it = node_indexes_.begin(); it != node_indexes_.end(); it++) {
+    if ((*it)->column_name() == column_name) {
+      node_indexes_.erase(it);
+      return katana::ResultSuccess();
+    }
+  }
+  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+}
+
 // Build an index over edges.
 katana::Result<void>
 katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
@@ -915,6 +926,17 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
   edge_indexes_.push_back(std::move(index));
 
   return katana::ResultSuccess();
+}
+
+katana::Result<void>
+katana::PropertyGraph::DeleteEdgeIndex(const std::string& column_name) {
+  for (auto it = edge_indexes_.begin(); it != edge_indexes_.end(); it++) {
+    if ((*it)->column_name() == column_name) {
+      edge_indexes_.erase(it);
+      return katana::ResultSuccess();
+    }
+  }
+  return KATANA_ERROR(katana::ErrorCode::NotFound, "edge index not found");
 }
 
 katana::Result<std::unique_ptr<katana::NUMAArray<uint64_t>>>

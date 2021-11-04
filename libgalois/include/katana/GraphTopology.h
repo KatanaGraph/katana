@@ -213,6 +213,7 @@ public:
   tsuba::RDGTopology::TransposeKind transpose_state() const noexcept {
     return tpose_state_;
   }
+
   tsuba::RDGTopology::EdgeSortKind edge_sort_state() const noexcept {
     return edge_sort_state_;
   }
@@ -223,10 +224,8 @@ public:
 
   bool has_edges_sorted_by(
       const tsuba::RDGTopology::EdgeSortKind& kind) const noexcept {
-    if (kind == tsuba::RDGTopology::EdgeSortKind::kAny) {
-      return true;
-    }
-    return edge_sort_state_ == kind;
+    return (kind == tsuba::RDGTopology::EdgeSortKind::kAny) ||
+           (kind == edge_sort_state_);
   }
 
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
@@ -502,162 +501,6 @@ private:
   PropIndexVec node_prop_indices_;
 };
 
-class KATANA_EXPORT CondensedTypeIDMap : public GraphTopologyTypes {
-  /// map an integer id to each unique edge edge_type in the graph, such that, the
-  /// integer ids assigned are contiguous, i.e., 0 .. num_unique_types-1
-  using TypeIDToIndexMap = std::unordered_map<EntityTypeID, uint32_t>;
-  /// reverse map that allows looking up edge_type using its integer index
-  using IndexToTypeIDMap = std::vector<EntityTypeID>;
-
-public:
-  using EdgeTypeIDRange =
-      katana::StandardRange<IndexToTypeIDMap::const_iterator>;
-
-  CondensedTypeIDMap() = default;
-  CondensedTypeIDMap(CondensedTypeIDMap&&) = default;
-  CondensedTypeIDMap& operator=(CondensedTypeIDMap&&) = default;
-
-  CondensedTypeIDMap(const CondensedTypeIDMap&) = delete;
-  CondensedTypeIDMap& operator=(const CondensedTypeIDMap&) = delete;
-
-  static std::unique_ptr<CondensedTypeIDMap> MakeFromEdgeTypes(
-      const PropertyGraph* pg) noexcept;
-  // TODO(amber): add MakeFromNodeTypes
-
-  static std::unique_ptr<CondensedTypeIDMap> MakeFromIndexToTypeMap(
-      EntityTypeID* index_to_type_map);
-
-  EntityTypeID GetType(uint32_t index) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(size_t(index) < index_to_type_map_.size());
-    return index_to_type_map_[index];
-  }
-
-  uint32_t GetIndex(const EntityTypeID& edge_type) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(type_to_index_map_.count(edge_type) > 0);
-    return type_to_index_map_.at(edge_type);
-  }
-
-  size_t num_unique_types() const noexcept { return index_to_type_map_.size(); }
-
-  /// @param edge_type: edge_type to check
-  /// @returns true iff there exists some edge in the graph with that edge_type
-  bool has_edge_type_id(const EntityTypeID& edge_type) const noexcept {
-    return (type_to_index_map_.find(edge_type) != type_to_index_map_.cend());
-  }
-
-  /// Wrapper to get the distinct edge types in the graph.
-  ///
-  /// @returns Range of the distinct edge types
-  EdgeTypeIDRange distinct_edge_type_ids() const noexcept {
-    return EdgeTypeIDRange{
-        index_to_type_map_.cbegin(), index_to_type_map_.cend()};
-  }
-
-  bool is_valid() const noexcept { return is_valid_; }
-  void invalidate() noexcept { is_valid_ = false; };
-
-  const EntityTypeID* index_to_type_map_data() const noexcept {
-    return &index_to_type_map_[0];
-  }
-
-  //TODO:(emcginnis) when ArrayView is available, we should use that here
-  bool index_to_type_map_matches(size_t size, const EntityTypeID* other) const {
-    if (size != num_unique_types()) {
-      return false;
-    }
-    for (size_t i = 0; i < num_unique_types(); i++) {
-      if (other[i] != GetType(i)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-private:
-  CondensedTypeIDMap(
-      TypeIDToIndexMap&& type_to_index,
-      IndexToTypeIDMap&& index_to_type) noexcept
-      : type_to_index_map_(std::move(type_to_index)),
-        index_to_type_map_(std::move(index_to_type)),
-        is_valid_(true) {
-    KATANA_LOG_ASSERT(index_to_type_map_.size() == type_to_index_map_.size());
-  }
-
-  TypeIDToIndexMap type_to_index_map_;
-  IndexToTypeIDMap index_to_type_map_;
-  bool is_valid_ = true;
-};
-
-template <typename Topo>
-class KATANA_EXPORT BasicTopologyWrapper : public GraphTopologyTypes {
-public:
-  explicit BasicTopologyWrapper(const Topo* t) noexcept : topo_ptr_(t) {
-    KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
-  }
-
-  auto num_nodes() const noexcept { return topo().num_nodes(); }
-
-  auto num_edges() const noexcept { return topo().num_edges(); }
-
-  /// Gets the edge range of some node.
-  ///
-  /// \param node node to get the edge range of
-  /// \returns iterable edge range for node.
-  auto edges(const Node& N) const noexcept { return topo().edges(N); }
-
-  auto edge_dest(const Edge& eid) const noexcept {
-    return topo().edge_dest(eid);
-  }
-
-  auto edge_source(const Edge& eid) const noexcept {
-    return topo().edge_source(eid);
-  }
-
-  /// @param node node to get degree for
-  /// @returns Degree of node N
-  auto degree(const Node& node) const noexcept { return topo().degree(node); }
-
-  auto nodes(const Node& begin, const Node& end) const noexcept {
-    return topo().nodes(begin, end);
-  }
-
-  auto all_nodes() const noexcept { return topo().all_nodes(); }
-
-  auto all_edges() const noexcept { return topo().all_edges(); }
-
-  // Standard container concepts
-
-  auto begin() const noexcept { return topo().begin(); }
-
-  auto end() const noexcept { return topo().end(); }
-
-  auto size() const noexcept { return topo().size(); }
-
-  auto empty() const noexcept { return topo().empty(); }
-
-  auto edge_property_index(const Edge& e) const noexcept {
-    return topo().edge_property_index(e);
-  }
-
-  auto node_property_index(const Node& nid) const noexcept {
-    return topo().node_property_index(nid);
-  }
-  auto original_node_id(const Node& nid) const noexcept {
-    return topo().original_node_id(nid);
-  }
-
-  auto original_edge_id(const Edge& eid) const noexcept {
-    return topo().original_edge_id(eid);
-  }
-  void Print() const noexcept { topo_ptr_->Print(); }
-
-protected:
-  const Topo& topo() const noexcept { return *topo_ptr_; }
-
-private:
-  const Topo* topo_ptr_;
-};
-
 /// filter nodes and edges
 /// and creates a new projected graph based on the filtered nodes and edges
 /// also maintains mappings from original to projected and projected to original nodes and edges
@@ -863,6 +706,76 @@ private:
   arrow::internal::Bitmap edge_bitmask_;
 };
 
+template <typename Topo>
+class KATANA_EXPORT BasicTopologyWrapper : public GraphTopologyTypes {
+public:
+  explicit BasicTopologyWrapper(const Topo* t) noexcept : topo_ptr_(t) {
+    KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
+  }
+
+  auto num_nodes() const noexcept { return topo().num_nodes(); }
+
+  auto num_edges() const noexcept { return topo().num_edges(); }
+
+  /// Gets the edge range of some node.
+  ///
+  /// \param node node to get the edge range of
+  /// \returns iterable edge range for node.
+  auto edges(const Node& N) const noexcept { return topo().edges(N); }
+
+  auto edge_dest(const Edge& eid) const noexcept {
+    return topo().edge_dest(eid);
+  }
+
+  auto edge_source(const Edge& eid) const noexcept {
+    return topo().edge_source(eid);
+  }
+
+  /// @param node node to get degree for
+  /// @returns Degree of node N
+  auto degree(const Node& node) const noexcept { return topo().degree(node); }
+
+  auto nodes(const Node& begin, const Node& end) const noexcept {
+    return topo().nodes(begin, end);
+  }
+
+  auto all_nodes() const noexcept { return topo().all_nodes(); }
+
+  auto all_edges() const noexcept { return topo().all_edges(); }
+
+  // Standard container concepts
+
+  auto begin() const noexcept { return topo().begin(); }
+
+  auto end() const noexcept { return topo().end(); }
+
+  auto size() const noexcept { return topo().size(); }
+
+  auto empty() const noexcept { return topo().empty(); }
+
+  auto edge_property_index(const Edge& e) const noexcept {
+    return topo().edge_property_index(e);
+  }
+
+  auto node_property_index(const Node& nid) const noexcept {
+    return topo().node_property_index(nid);
+  }
+  auto original_node_id(const Node& nid) const noexcept {
+    return topo().original_node_id(nid);
+  }
+
+  auto original_edge_id(const Edge& eid) const noexcept {
+    return topo().original_edge_id(eid);
+  }
+  void Print() const noexcept { topo_ptr_->Print(); }
+
+protected:
+  const Topo& topo() const noexcept { return *topo_ptr_; }
+
+private:
+  const Topo* topo_ptr_;
+};
+
 class KATANA_EXPORT ProjectedPropGraphViewWrapper : public GraphTopologyTypes {
 public:
   explicit ProjectedPropGraphViewWrapper(
@@ -971,6 +884,92 @@ struct EdgeDestComparator {
   }
 };
 }  // end namespace internal
+
+class KATANA_EXPORT CondensedTypeIDMap : public GraphTopologyTypes {
+  /// map an integer id to each unique edge edge_type in the graph, such that, the
+  /// integer ids assigned are contiguous, i.e., 0 .. num_unique_types-1
+  using TypeIDToIndexMap = std::unordered_map<EntityTypeID, uint32_t>;
+  /// reverse map that allows looking up edge_type using its integer index
+  using IndexToTypeIDMap = std::vector<EntityTypeID>;
+
+public:
+  using EdgeTypeIDRange =
+      katana::StandardRange<IndexToTypeIDMap::const_iterator>;
+
+  CondensedTypeIDMap() = default;
+  CondensedTypeIDMap(CondensedTypeIDMap&&) = default;
+  CondensedTypeIDMap& operator=(CondensedTypeIDMap&&) = default;
+
+  CondensedTypeIDMap(const CondensedTypeIDMap&) = delete;
+  CondensedTypeIDMap& operator=(const CondensedTypeIDMap&) = delete;
+
+  static std::unique_ptr<CondensedTypeIDMap> MakeFromEdgeTypes(
+      const PropertyGraph* pg) noexcept;
+  // TODO(amber): add MakeFromNodeTypes
+
+  static std::unique_ptr<CondensedTypeIDMap> MakeFromIndexToTypeMap(
+      EntityTypeID* index_to_type_map);
+
+  EntityTypeID GetType(uint32_t index) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(size_t(index) < index_to_type_map_.size());
+    return index_to_type_map_[index];
+  }
+
+  uint32_t GetIndex(const EntityTypeID& edge_type) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(type_to_index_map_.count(edge_type) > 0);
+    return type_to_index_map_.at(edge_type);
+  }
+
+  size_t num_unique_types() const noexcept { return index_to_type_map_.size(); }
+
+  /// @param edge_type: edge_type to check
+  /// @returns true iff there exists some edge in the graph with that edge_type
+  bool has_edge_type_id(const EntityTypeID& edge_type) const noexcept {
+    return (type_to_index_map_.find(edge_type) != type_to_index_map_.cend());
+  }
+
+  /// Wrapper to get the distinct edge types in the graph.
+  ///
+  /// @returns Range of the distinct edge types
+  EdgeTypeIDRange distinct_edge_type_ids() const noexcept {
+    return EdgeTypeIDRange{
+        index_to_type_map_.cbegin(), index_to_type_map_.cend()};
+  }
+
+  bool is_valid() const noexcept { return is_valid_; }
+  void invalidate() noexcept { is_valid_ = false; };
+
+  const EntityTypeID* index_to_type_map_data() const noexcept {
+    return &index_to_type_map_[0];
+  }
+
+  //TODO:(emcginnis) when ArrayView is available, we should use that here
+  bool index_to_type_map_matches(size_t size, const EntityTypeID* other) const {
+    if (size != num_unique_types()) {
+      return false;
+    }
+    for (size_t i = 0; i < num_unique_types(); i++) {
+      if (other[i] != GetType(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+private:
+  CondensedTypeIDMap(
+      TypeIDToIndexMap&& type_to_index,
+      IndexToTypeIDMap&& index_to_type) noexcept
+      : type_to_index_map_(std::move(type_to_index)),
+        index_to_type_map_(std::move(index_to_type)),
+        is_valid_(true) {
+    KATANA_LOG_ASSERT(index_to_type_map_.size() == type_to_index_map_.size());
+  }
+
+  TypeIDToIndexMap type_to_index_map_;
+  IndexToTypeIDMap index_to_type_map_;
+  bool is_valid_ = true;
+};
 
 /// store adjacency indices per each node such that they are divided by edge edge_type type.
 /// Requires sorting the graph by edge edge_type type
@@ -1297,7 +1296,7 @@ public:
     return Base::topo().find_edges(src, dst);
   }
 };
-
+using TransposedTopology = BasicTopologyWrapper<EdgeShuffleTopology>;
 using EdgesSortedByDestTopology = SortedTopologyWrapper<EdgeShuffleTopology>;
 
 using NodesSortedByDegreeEdgesSortedByDestIDTopology =
@@ -1484,6 +1483,7 @@ private:
 };
 
 namespace internal {
+using PGViewTransposed = BasicPropGraphViewWrapper<TransposedTopology>;
 using PGViewEdgesSortedByDestID =
     BasicPropGraphViewWrapper<EdgesSortedByDestTopology>;
 using PGViewNodesSortedByDegreeEdgesSortedByDestID =
@@ -1497,9 +1497,22 @@ template <typename PGView>
 struct PGViewBuilder {};
 
 template <>
+struct PGViewBuilder<PGViewTransposed> {
+  template <typename ViewCache>
+  static PGViewTransposed BuildView(
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+    auto transposed_topo = viewCache.BuildOrGetEdgeShuffTopo(
+        pg, tsuba::RDGTopology::TransposeKind::kYes,
+        tsuba::RDGTopology::EdgeSortKind::kAny);
+
+    return PGViewTransposed{pg, TransposedTopology(transposed_topo)};
+  }
+};
+
+template <>
 struct PGViewBuilder<PGViewBiDirectional> {
   template <typename ViewCache>
-  static internal::PGViewBiDirectional BuildView(
+  static PGViewBiDirectional BuildView(
       PropertyGraph* pg, ViewCache& viewCache) noexcept {
     auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
         pg, tsuba::RDGTopology::TransposeKind::kYes,
@@ -1572,6 +1585,7 @@ struct PGViewBuilder<PGViewProjectedGraph> {
 }  // end namespace internal
 
 struct PropertyGraphViews {
+  using Transposed = internal::PGViewTransposed;
   using BiDirectional = internal::PGViewBiDirectional;
   using EdgesSortedByDestID = internal::PGViewEdgesSortedByDestID;
   using EdgeTypeAwareBiDir = internal::PGViewEdgeTypeAwareBiDir;

@@ -1272,6 +1272,150 @@ private:
 using SimpleBiDirTopology =
     BasicBiDirTopoWrapper<GraphTopology, EdgeShuffleTopology>;
 
+template <typename OutTopo, typename InTopo>
+class KATANA_EXPORT UndirectedTopologyImpl: public GraphTopologyTypes {
+
+  // Important:
+  // We assign fake Edge IDs to in_edges to separate them from out edges
+  // fake in-edge-ID == real in-edge-ID + out().num_edges();
+
+public:
+
+  using edge_iterator = katana::DisjointRangesIterator<boost::counting_iterator<Edge>>;
+  using edges_range = StandardRange<edge_iterator>;
+
+  UndirectedTopologyImpl(const OutTopo* out, const InTopo* in) noexcept: 
+    out_topo_(out),
+    in_topo_(in) {}
+
+
+  auto num_nodes() const noexcept { return out().num_nodes(); }
+
+  // TODO(amber): Should it be sum of in and out edges?
+  auto num_edges() const noexcept { return out().num_edges(); }
+
+
+  /// Gets the edge range of some node.
+  ///
+  /// \param node node to get the edge range of
+  /// \returns iterable edge range for node.
+  edges_range edges(Node node) const noexcept {
+
+    return MakeDisjointEdgesRange(
+        out().edges(node), in().edges(node));
+  }
+
+  bool is_in_edge(const Edge& eid) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(out().num_edges() > 0);
+    return eid >= out().num_edges();
+  }
+
+  auto edge_source(const Edge& eid) const noexcept {
+
+    if (is_in_edge(eid)) {
+      return in().edge_dest(real_in_edge_id(eid));
+    }
+    return out().edge_source(eid);
+  }
+
+  Node edge_dest(Edge eid) const noexcept {
+    if (is_in_edge(eid)) {
+      return in().edge_source(real_in_edge_id(eid));
+    }
+    return out().edge_dest(eid);
+  }
+
+  nodes_range nodes(Node begin, Node end) const noexcept {
+    return MakeStandardRange<node_iterator>(begin, end);
+  }
+
+  nodes_range all_nodes() const noexcept {
+    return nodes(Node{0}, static_cast<Node>(num_nodes()));
+  }
+
+  edges_range all_edges() const noexcept {
+
+    return MakeDisjointEdgesRange(
+        out().all_edges(), in().all_edges());
+  }
+  // Standard container concepts
+
+  node_iterator begin() const noexcept { return node_iterator(0); }
+
+  node_iterator end() const noexcept { return node_iterator(num_nodes()); }
+
+  size_t size() const noexcept { return num_nodes(); }
+
+  bool empty() const noexcept { return num_nodes() == 0; }
+
+  ///@param node node to get degree for
+  ///@returns Degree of node N
+  size_t degree(Node node) const noexcept { return edges(node).size(); }
+
+  PropertyIndex edge_property_index(const Edge& eid) const noexcept {
+    if(is_in_edge(eid)) {
+      return in().edge_property_index(real_in_edge_id(eid));
+    }
+    return out().edge_property_index(eid);
+  }
+
+  PropertyIndex node_property_index(const Node& nid) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(out().node_property_index(nid) == in().node_property_index(nid));
+    return out().node_property_index(nid);
+  }
+
+  // TODO(amber): These two methods are a short term fix. The nature of
+  // PropertyIndex is expected to change post grouping of properties.
+  Node original_node_id(const Node& nid) const noexcept {
+    return static_cast<Node>(node_property_index(nid));
+  }
+
+  Edge original_edge_id(const Edge& eid) const noexcept {
+    return edge_property_index(eid);
+  }
+
+protected:
+  const OutTopo& out() const noexcept { return *out_topo_; }
+  const InTopo& in() const noexcept { return *in_topo_; }
+
+private:
+
+  Edge fake_id_offset() const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(out().num_edges() > 0);
+    return out().num_edges();
+  }
+
+  Edge real_in_edge_id(const Edge& id) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(id <= out().num_edges());
+    return id - out().num_edges();
+  }
+
+  template <typename I>
+  static std::pair<I, I> RangeToPair(const StandardRange<I>& r) noexcept {
+    return std::make_pair(r.begin(), r.end());
+  }
+
+  template <typename R>
+  edges_range MakeDisjointEdgesRange(const R& out_range, const R& in_range) const noexcept {
+    auto out_iter_p = RangeToPair(out_range);
+    auto in_iter_p = RangeToPair(in_range);
+
+    in_iter_p.first += fake_id_offset();
+    in_iter_p.second += fake_id_offset();
+
+
+    edge_iterator b = make_disjoint_ranges_begin(out_iter_p, in_iter_p);
+    edge_iterator e = make_disjoint_ranges_end(out_iter_p, in_iter_p);
+
+    return MakeStandardRange(b, e);
+  }
+
+  const OutTopo* out_topo_;
+  const InTopo* in_topo_;
+};
+
+using UndirectedTopology = UndirectedTopologyImpl<GraphTopology, EdgeShuffleTopology>;
+
 template <typename Topo>
 class SortedTopologyWrapper : public BasicTopologyWrapper<Topo> {
   using Base = BasicTopologyWrapper<Topo>;
@@ -1489,6 +1633,7 @@ using PGViewEdgesSortedByDestID =
 using PGViewNodesSortedByDegreeEdgesSortedByDestID =
     BasicPropGraphViewWrapper<NodesSortedByDegreeEdgesSortedByDestIDTopology>;
 using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
+using PGViewUnDirected = BasicPropGraphViewWrapper<UndirectedTopology>;
 using PGViewEdgeTypeAwareBiDir =
     BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
 using PGViewProjectedGraph = ProjectedPropGraphViewWrapper;
@@ -1521,6 +1666,21 @@ struct PGViewBuilder<PGViewBiDirectional> {
         SimpleBiDirTopology{viewCache.GetOriginalTopology(pg), tpose_topo};
 
     return PGViewBiDirectional{pg, bidir_topo};
+  }
+};
+
+template <>
+struct PGViewBuilder<PGViewUnDirected> {
+  template <typename ViewCache>
+  static internal::PGViewUnDirected BuildView(
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+    auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
+        pg, tsuba::RDGTopology::TransposeKind::kYes,
+        tsuba::RDGTopology::EdgeSortKind::kAny);
+    auto undir_topo =
+        UndirectedTopology{viewCache.GetOriginalTopology(pg), tpose_topo};
+
+    return PGViewUnDirected{pg, undir_topo};
   }
 };
 

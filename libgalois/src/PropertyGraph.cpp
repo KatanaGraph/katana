@@ -1118,8 +1118,7 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
   out_indices.allocateInterleaved(topology.num_nodes());
   // Store the out-degree of nodes from original graph
   katana::do_all(katana::iterate(topology.all_nodes()), [&](auto n) {
-    auto edges = topology.edges(n);
-    out_indices[n] = (*edges.end() - *edges.begin());
+    out_indices[n] = topology.edges(n).size();
   });
 
   katana::do_all(
@@ -1173,7 +1172,6 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
             // Add reverse edge
             auto e_new_dst = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
             out_dests[e_new_dst] = src;
-            // TODO(gill) copy edge data to "new" array
           }
         }
       },

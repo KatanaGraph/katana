@@ -1747,6 +1747,7 @@ struct PGViewBuilder<PGViewProjectedGraph> {
 struct PropertyGraphViews {
   using Transposed = internal::PGViewTransposed;
   using BiDirectional = internal::PGViewBiDirectional;
+  using Undirected = internal::PGViewUnDirected;
   using EdgesSortedByDestID = internal::PGViewEdgesSortedByDestID;
   using EdgeTypeAwareBiDir = internal::PGViewEdgeTypeAwareBiDir;
   using NodesSortedByDegreeEdgesSortedByDestID =

@@ -188,6 +188,7 @@ class KATANA_EXPORT DisjointRangesIterator: public boost::iterator_facade<
   typename std::iterator_traits<I>::reference > {
 
   using Base = boost::iterator_facade<
+    DisjointRangesIterator<I>,
     typename std::iterator_traits<I>::value_type,
     typename std::iterator_traits<I>::iterator_category,
     typename std::iterator_traits<I>::reference 

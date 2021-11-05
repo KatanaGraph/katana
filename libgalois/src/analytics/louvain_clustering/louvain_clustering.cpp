@@ -405,11 +405,15 @@ public:
       /*
        * Initialize node cluster id.
        */
-      katana::do_all(
-          katana::iterate(graph_curr), [&](GNode n) { clusters_orig[n] = -1; });
+      katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
+        clusters_orig[n] = Base::UNASSIGNED;
+      });
 
-      auto pg_dup = KATANA_CHECKED(Base::template DuplicateGraph<NodeData>(
-          pg, edge_weight_property_name, temp_edge_property_names[0]));
+      auto pg_dup = KATANA_CHECKED(Base::DuplicateGraphWithSameTopo(*pg));
+      KATANA_CHECKED(Base::CopyEdgeProperty(
+          pg, pg_dup.get(), edge_weight_property_name,
+          temp_edge_property_names[0]));
+      KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg_dup.get()));
 
       pg_mutable = std::move(pg_dup);
     }
@@ -542,7 +546,7 @@ LouvainClusteringWithWrap(
 
   /*
    * To keep track of communities for nodes in the original graph.
-   * Community will be set to -1 for isolated nodes
+   * Community will be set to UNASSINED for isolated nodes
    */
   katana::NUMAArray<uint64_t> clusters_orig;
   clusters_orig.allocateBlocked(pg->num_nodes());

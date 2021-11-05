@@ -14,41 +14,42 @@ requirements:
   build:
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
-    - breathe>=4.30
-    - cmake>=3.17
-    - cython>=0.29.12
-    - doxygen
-    - nbsphinx
-    - make
-    - packaging
-    - pandoc
+    - breathe {{ breathe }}
+    - cmake {{ cmake }}
+    - cython {{ cython }}
+    - doxygen {{ doxygen }}
+    - nbsphinx {{ nbsphinx }}
+    - make {{ make }}
+    - packaging {{ packaging }}
+    - pandoc {{ pandoc }}
     - pyarrow {{ arrow_cpp }}
-    - pydata-sphinx-theme>=0.6.3
-    - pygithub
+    - pydata-sphinx-theme {{ pydata_sphinx_theme }}
+    - pygithub {{ pygithub }}
     - python {{ python }}
-    - sphinx>=3.5.1,<4
-    - sphinx-copybutton
-    - sphinx-tabs>=2.1.0
+    - sphinx {{ sphinx }}
+    - sphinx-copybutton {{ sphinx_copybutton }}
+    - sphinx-tabs {{ sphinx_tabs }}
   host:
-    - jinja2
-    - cython>=0.29.12
+    - jinja2 {{ jinja2 }}
+    - cython {{ cython }}
     - pyarrow {{ arrow_cpp }}
-    - numba=0.53.1
+    - numba {{ numba }}
     - python {{ python }}
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
     - arrow-cpp {{ arrow_cpp }}
-    - backward-cpp=1.4
-    - boost-cpp>=1.74
-    - elfutils
-    - fmt>=6.2.1
-    - libcurl>=7.66
-    - libxml2>=2.9.10
-    - llvm>=8
-    - ncurses>=6.1
-    - nlohmann_json>=3.7.3
-    - openblas>=0.3.12
-    - zlib>=1.2.11
+    - backward-cpp {{ backward_cpp }}
+    - benchmark {{ benchmark }}
+    - boost-cpp {{ boost_cpp }}
+    - elfutils {{ elfutils }}
+    - fmt {{ fmt }}
+    - libcurl {{ libcurl }}
+    - libxml2 {{ libxml2 }}
+    - llvmdev {{ llvmdev }}
+    - ncurses {{ ncurses }}
+    - nlohmann_json {{ nlohmann_json }}
+    - openblas {{ openblas }}
+    - zlib {{ zlib }}
 
 outputs:
   - name: katana-cpp
@@ -66,27 +67,30 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
+        - python {{ python }}
       host:
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - backward-cpp=1.4
-        - boost-cpp>=1.74
-        - elfutils
-        - fmt>=6.2.1
-        - libcurl>=7.66
-        - libxml2>=2.9.10
-        - llvm>=8
-        - ncurses>=6.1
-        - nlohmann_json>=3.7.3
-        - openblas>=0.3.12
-        - zlib>=1.2.11
+        - backward-cpp {{ backward_cpp }}
+        - benchmark {{ benchmark }}
+        - boost-cpp {{ boost_cpp }}
+        - elfutils {{ elfutils }}
+        - fmt {{ fmt }}
+        - libcurl {{ libcurl }}
+        - libxml2 {{ libxml2 }}
+        - llvmdev {{ llvmdev }}
+        - ncurses {{ ncurses }}
+        - nlohmann_json {{ nlohmann_json }}
+        - openblas {{ openblas }}
+        - zlib {{ zlib }}
+        - python {{ python }}
       run:
         - boost-cpp
         - arrow-cpp
         - fmt
         - nlohmann_json
         - libcurl
-        - backward-cpp=1.4
+        - backward-cpp
         - elfutils
         - libxml2
     run_exports:
@@ -94,8 +98,8 @@ outputs:
     test:
       requires:
         - {{ compiler('cxx') }}
-        - cmake>=3.17
-        - make
+        - cmake {{ cmake }}
+        - make {{ make }}
       files:
         - test_app/CMakeLists.txt
         - test_app/test_app.cpp
@@ -109,40 +113,43 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
-        - breathe>=4.30
-        - doxygen
-        - nbsphinx
-        - pandoc
-        - pydata-sphinx-theme>=0.6.3
-        - sphinx>=3.5.1,<4
-        - sphinx-copybutton
-        - sphinx-tabs>=2.1.0
+        - breathe {{ breathe }}
+        - doxygen {{ doxygen }}
+        - nbsphinx {{ nbsphinx }}
+        - pandoc {{ pandoc }}
+        - pydata-sphinx-theme {{ pydata_sphinx_theme }}
+        - sphinx {{ sphinx }}
+        - sphinx-copybutton {{ sphinx_copybutton }}
+        - sphinx-tabs {{ sphinx_tabs }}
+        - python {{ python }}
       host:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
-        - jinja2
-        - cython>=0.29.12
+        - jinja2 {{ jinja2 }}
+        - cython {{ cython }}
         - pyarrow {{ arrow_cpp }}
-        - numba=0.53.1
+        - numba {{ numba }}
+        - numpy {{ numpy }}
         - python {{ python }}
+        - pandas {{ pandas }}
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - numba
         - numpy
         - pyarrow
+        - pandas
     run_exports:
       - {{ pin_subpackage('katana-python', max_pin='x.x.x') }}
     test:
       requires:
-        - jupyter
-        - pytest
-        - pandas
+        - jupyter {{ jupyter }}
+        - pytest {{ pytest }}
 
         # The dependencies for pytest-notebook are incomplete, add them manually
-        - pytest-notebook
-        - jupyter_client<7
-        - attrs<21,>=19
-        - nbconvert<6
-        - pexpect
+        - pytest-notebook {{ pytest_notebook }}
+        - jupyter_client {{ jupyter_client }}
+        - attrs {{ attrs }}
+        - nbconvert {{ nbconvert }}
+        - pexpect {{ pexpect }}
       source_files:
         - tools/graph-convert/test-inputs
         - python/test
@@ -163,6 +170,7 @@ outputs:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
+        - llvm
         #- {{ pin_subpackage('katana-python', exact=True) }} <- Add this if any Python scripts are added to bin/
     test:
       commands:

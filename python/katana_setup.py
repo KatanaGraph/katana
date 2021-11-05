@@ -462,7 +462,7 @@ def setup(*, source_dir, package_name, additional_requires=None, package_data=No
     options = dict(
         version=get_katana_version(),
         name=package_name + "_python",
-        packages=setuptools.find_packages(str(source_dir), exclude=("test",)),
+        packages=setuptools.find_packages(str(source_dir), exclude=("test",), include=(package_name + "*",)),
         package_data={"": [str(f) for f in pxd_files]},
         package_dir={"": str(source_dir)},
         # NOTE: Do not use setup_requires. It doesn't work properly for our needs because it doesn't install the

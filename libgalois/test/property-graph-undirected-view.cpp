@@ -11,8 +11,8 @@ void
 TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   katana::Result<void> res = katana::AddNodeProperties(
       pg.get(),
-      katana::PropertyGenerator("label", [] ([[maybe_unused]] auto node_id) { return uint64_t{1}; }),
-      katana::PropertyGenerator("deg_sum", [] ([[maybe_unused]] auto node_id) { return uint64_t{0}; }));
+      katana::PropertyGenerator("label", [] ([[maybe_unused]] auto node_id) { return uint32_t{1}; }),
+      katana::PropertyGenerator("deg_sum", [] ([[maybe_unused]] auto node_id) { return uint32_t{0}; }));
 
   KATANA_LOG_VASSERT(res, "Failed to add node Properties");
 
@@ -22,10 +22,10 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   using UndirectedView = katana::TypedPropertyGraphView<
     katana::PropertyGraphViews::Undirected, NodeProps, EdgeProps>;
   using Node = UndirectedView::Node;
-  using Edge = UndirectedView::Node;
+  using Edge = UndirectedView::Edge;
 
   auto view_res = UndirectedView::Make(pg.get(), {"label", "deg_sum"}, {});
-  KATANA_LOG_VASSERT(view_res, "Failed to create Undirected View");
+  KATANA_LOG_VASSERT(view_res, "Failed to create Undirected View. Error msg: {}", view_res.error());
 
   auto graph = view_res.value();
 

@@ -1386,7 +1386,7 @@ private:
   }
 
   Edge real_in_edge_id(const Edge& id) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(id <= out().num_edges());
+    KATANA_LOG_DEBUG_ASSERT(id >= out().num_edges());
     return id - out().num_edges();
   }
 

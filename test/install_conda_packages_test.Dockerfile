@@ -37,8 +37,11 @@ FROM base_with_conda AS pre_install
 COPY packages /packages
 
 FROM pre_install AS test_python
+
+ARG CHANNELS
+
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"
-ARG MAMBA_INSTALL="mamba install --quiet --yes --channel katanagraph --channel /packages"
+ARG MAMBA_INSTALL="mamba install --quiet --yes --channel /packages  ${CHANNELS}"
 ARG PYTHON_PACKAGE="katana-python"
 
 RUN set -eu ; . /activate_miniconda.sh; set -x ; \
@@ -49,8 +52,10 @@ RUN set -eu ; . /activate_miniconda.sh; set -x ; \
     python -c "import katana.local.analytics; katana.local.analytics.bfs; print(katana.__version__)"
 
 FROM pre_install AS test_tools
+ARG CHANNELS
+
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"
-ARG MAMBA_INSTALL="mamba install --quiet --yes --channel katanagraph --channel /packages"
+ARG MAMBA_INSTALL="mamba install --quiet --yes --channel /packages ${CHANNELS}"
 ARG TOOLS_PACKAGE="katana-tools"
 ARG TOOLS_TEST_COMMAND="graph-convert --version"
 

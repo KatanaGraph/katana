@@ -14,3 +14,4 @@ Contributing
    documentation
    releases
    tips-tricks
+   how_to_template

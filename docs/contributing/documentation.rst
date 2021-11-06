@@ -59,6 +59,14 @@ included in external facing documentation.
 Whole directories ending in ``-draft/`` or ``-internal/`` will be omitted when
 building external documentation.
 
+Style
+=====
+
+* Keep titles and headings in sentence case (capitalize first letter, proper nouns, first letter of subheading after colon, and no punctuation).
+* Code cells in user guides must be evaluated with results less than 30 lines.
+* Do not number headings of step titles in step by step guide. For substep sequences, using numbered bullet points under a given step title.
+* Write in the second person: "Delete your database."
+
 Restructured Text
 =================
 

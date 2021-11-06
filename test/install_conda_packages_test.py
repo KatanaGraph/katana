@@ -16,7 +16,13 @@ def main():
     parser.add_argument("docker_image", type=str, help="The docker image to use.")
 
     parser.add_argument("--python-package", default="katana-python", help="Name of python conda package to test")
+    parser.add_argument(
+        "--python-package-channels", default="-c katanagraph", help="Channels to use when installing the python package"
+    )
     parser.add_argument("--tools-package", default="katana-tools", help="Name of tools conda package to test")
+    parser.add_argument(
+        "--tools-package-channels", default="-c katanagraph", help="Channels to use when installing the tools package"
+    )
     parser.add_argument(
         "--tools-test-command", default="graph-convert --version", help="Command to use to test tools package"
     )
@@ -26,7 +32,9 @@ def main():
     build_args = [
         f"BASE_IMAGE={args.docker_image}",
         f"PYTHON_PACKAGE={args.python_package}",
+        f"PYTHON_PACKAGE_CHANNELS={args.python_package_channels}",
         f"TOOLS_PACKAGE={args.tools_package}",
+        f"TOOLS_PACKAGE_CHANNELS={args.tools_package_channels}",
         f"TOOLS_TEST_COMMAND={args.tools_test_command}",
     ]
     command = ["docker", "build", "-"]

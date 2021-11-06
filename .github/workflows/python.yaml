@@ -63,7 +63,7 @@ jobs:
     strategy:
       matrix:
         os:
-        - ubuntu-18.04
+        - ubuntu-20.04
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
@@ -123,14 +123,12 @@ jobs:
     - name: Build conda Packages
       run: |
         . .github/workflows/activate_miniconda.sh
-        scripts/conda_build.sh --output-folder $HOME/build/
+        scripts/build_conda.py --output-folder $HOME/build/
 
     - name: Build conda Packages for Katana Metagraph Plugin
       run: |
         . .github/workflows/activate_miniconda.sh
-        REPO_ROOT="$(cd "$(dirname scripts/conda_build.sh)/.."; pwd)"
-        export KATANA_VERSION=$("$REPO_ROOT"/scripts/version show --pep440)
-        echo $KATANA_VERSION
+        export KATANA_VERSION=$(scripts/version show --pep440)
         cd metagraph-plugin/conda_recipe
         conda mambabuild . -c conda-forge -c metagraph -c file://$HOME/build/ --output-folder $HOME/build/
 
@@ -150,7 +148,7 @@ jobs:
 
   test_conda_package_install:
     needs: build_and_test_conda_package
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         image:
@@ -166,7 +164,7 @@ jobs:
       - name: Download conda packages
         uses: actions/download-artifact@v2
         with:
-          name: conda-pkgs-ubuntu-18.04
+          name: conda-pkgs-ubuntu-20.04
           path: pkgs
       - name: Install in docker container
         run: python3 test/install_conda_packages_test.py pkgs ${{matrix.image}}
@@ -191,7 +189,7 @@ jobs:
         id: cache-miniconda
         uses: actions/cache@v2
         with:
-          key: ubuntu-18.04-miniconda-${{hashFiles('.github/workflows/download_miniconda.sh')}}
+          key: ubuntu-20.04-miniconda-${{hashFiles('.github/workflows/download_miniconda.sh')}}
           path: ~/.cache/miniconda
 
       ###
@@ -215,7 +213,7 @@ jobs:
       - name: Download Katana conda packages
         uses: actions/download-artifact@v2
         with:
-          name: conda-pkgs-ubuntu-18.04
+          name: conda-pkgs-ubuntu-20.04
           path: pkgs
 
       - name: Upload Katana conda packages to anaconda with label dev
@@ -230,7 +228,7 @@ jobs:
 
   test_build_in_container_conda:
     needs: do_python_test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -241,7 +239,7 @@ jobs:
 
   test_build_in_container_conda_ninja:
     needs: do_python_test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -256,7 +254,7 @@ jobs:
     strategy:
       matrix:
         os:
-        - ubuntu-18.04
+        - ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -307,7 +305,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-18.04
+          - ubuntu-20.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2

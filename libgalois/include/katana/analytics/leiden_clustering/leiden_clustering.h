@@ -21,7 +21,7 @@ public:
   static const bool kDefaultEnableVF = false;
   static constexpr double kDefaultModularityThresholdPerRound = 0.01;
   static constexpr double kDefaultModularityThresholdTotal = 0.01;
-  static const uint32_t kDefaultMaxIterations = 10;
+  static const uint32_t kDefaultMaxIterations = 1000;
   static const uint32_t kDefaultMinGraphSize = 100;
   static constexpr double kDefaultResolution = 1.0;
   static constexpr double kDefaultRandomness = 0.01;

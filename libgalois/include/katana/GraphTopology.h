@@ -31,17 +31,17 @@ struct KATANA_EXPORT GraphTopologyTypes {
   using Node = uint32_t;
   using Edge = uint64_t;
   using PropertyIndex = uint64_t;
-  using EntityType = uint8_t;
   using node_iterator = boost::counting_iterator<Node>;
   using edge_iterator = boost::counting_iterator<Edge>;
   using nodes_range = StandardRange<node_iterator>;
   using edges_range = StandardRange<edge_iterator>;
   using iterator = node_iterator;
 
+  //TODO(emcginnis): Each of these *Vec types should really be *Array since they are not resizable
   using AdjIndexVec = NUMAArray<Edge>;
   using EdgeDestVec = NUMAArray<Node>;
   using PropIndexVec = NUMAArray<PropertyIndex>;
-  using EntityTypeVec = NUMAArray<EntityType>;
+  using EntityTypeIDVec = NUMAArray<EntityTypeID>;
 };
 
 class KATANA_EXPORT EdgeShuffleTopology;
@@ -505,9 +505,9 @@ private:
 class KATANA_EXPORT CondensedTypeIDMap : public GraphTopologyTypes {
   /// map an integer id to each unique edge edge_type in the graph, such that, the
   /// integer ids assigned are contiguous, i.e., 0 .. num_unique_types-1
-  using TypeIDToIndexMap = std::unordered_map<EntityType, uint32_t>;
+  using TypeIDToIndexMap = std::unordered_map<EntityTypeID, uint32_t>;
   /// reverse map that allows looking up edge_type using its integer index
-  using IndexToTypeIDMap = std::vector<EntityType>;
+  using IndexToTypeIDMap = std::vector<EntityTypeID>;
 
 public:
   using EdgeTypeIDRange =
@@ -525,14 +525,14 @@ public:
   // TODO(amber): add MakeFromNodeTypes
 
   static std::unique_ptr<CondensedTypeIDMap> MakeFromIndexToTypeMap(
-      EntityType* index_to_type_map);
+      EntityTypeID* index_to_type_map);
 
-  EntityType GetType(uint32_t index) const noexcept {
+  EntityTypeID GetType(uint32_t index) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(size_t(index) < index_to_type_map_.size());
     return index_to_type_map_[index];
   }
 
-  uint32_t GetIndex(const EntityType& edge_type) const noexcept {
+  uint32_t GetIndex(const EntityTypeID& edge_type) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(type_to_index_map_.count(edge_type) > 0);
     return type_to_index_map_.at(edge_type);
   }
@@ -541,7 +541,7 @@ public:
 
   /// @param edge_type: edge_type to check
   /// @returns true iff there exists some edge in the graph with that edge_type
-  bool has_edge_type_id(const EntityType& edge_type) const noexcept {
+  bool has_edge_type_id(const EntityTypeID& edge_type) const noexcept {
     return (type_to_index_map_.find(edge_type) != type_to_index_map_.cend());
   }
 
@@ -556,11 +556,12 @@ public:
   bool is_valid() const noexcept { return is_valid_; }
   void invalidate() noexcept { is_valid_ = false; };
 
-  const EntityType* index_to_type_map_data() const noexcept {
+  const EntityTypeID* index_to_type_map_data() const noexcept {
     return &index_to_type_map_[0];
   }
 
-  bool index_to_type_map_matches(size_t size, const EntityType* other) const {
+  //TODO:(emcginnis) when ArrayView is available, we should use that here
+  bool index_to_type_map_matches(size_t size, const EntityTypeID* other) const {
     if (size != num_unique_types()) {
       return false;
     }
@@ -995,7 +996,7 @@ public:
   /// @param N node to get edges for
   /// @param edge_type edge_type to get edges of
   /// @returns Range to edges of node N that have edge type == edge_type
-  edges_range edges(Node N, const EntityType& edge_type) const noexcept {
+  edges_range edges(Node N, const EntityTypeID& edge_type) const noexcept {
     // per_type_adj_indices_ is expanded so that it stores P prefix sums per node, where
     // P == edge_type_index_->num_unique_types()
     // We pick the prefix sum based on the index of the edge_type provided
@@ -1019,7 +1020,7 @@ public:
   /// @param N node to get degree for
   /// @param edge_type edge_type to get degree of
   /// @returns Degree of node N
-  size_t degree(Node N, const EntityType& edge_type) const noexcept {
+  size_t degree(Node N, const EntityTypeID& edge_type) const noexcept {
     return edges(N, edge_type).size();
   }
 
@@ -1030,14 +1031,14 @@ public:
     return edge_type_index_->distinct_edge_type_ids();
   }
 
-  bool DoesEdgeTypeExist(const EntityType& edge_type) const noexcept {
+  bool DoesEdgeTypeExist(const EntityTypeID& edge_type) const noexcept {
     return edge_type_index_->has_edge_type_id(edge_type);
   }
 
   /// Returns all edges from src to dst with some edge_type.  If not found, returns
   /// empty range.
   edges_range FindAllEdgesWithType(
-      Node node, Node key, const EntityType& edge_type) const noexcept {
+      Node node, Node key, const EntityTypeID& edge_type) const noexcept {
     auto e_range = edges(node, edge_type);
     if (e_range.empty()) {
       return e_range;
@@ -1074,7 +1075,7 @@ public:
     }
 
     // loop through all type_ids
-    for (const EntityType& edge_type : GetDistinctEdgeTypes()) {
+    for (const EntityTypeID& edge_type : GetDistinctEdgeTypes()) {
       // always use out edges (we want an id to the out edge returned)
       edges_range r = FindAllEdgesWithType(src, dst, edge_type);
 
@@ -1095,7 +1096,7 @@ public:
   /// @param edge_type edge_type of the edge
   /// @returns true iff the edge exists
   bool IsConnectedWithEdgeType(
-      Node src, Node dst, const EntityType& edge_type) const {
+      Node src, Node dst, const EntityTypeID& edge_type) const {
     auto e_range = edges(src, edge_type);
     if (e_range.empty()) {
       return false;
@@ -1318,29 +1319,29 @@ public:
     return Base::out().GetDistinctEdgeTypes();
   }
 
-  bool DoesEdgeTypeExist(const EntityType& edge_type) const noexcept {
+  bool DoesEdgeTypeExist(const EntityTypeID& edge_type) const noexcept {
     return Base::out().DoesEdgeTypeExist(edge_type);
   }
 
-  auto edges(Node N, const EntityType& edge_type) const noexcept {
+  auto edges(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::out().edges(N, edge_type);
   }
 
   auto edges(Node N) const noexcept { return Base::out().edges(N); }
 
-  auto in_edges(Node N, const EntityType& edge_type) const noexcept {
+  auto in_edges(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::in().edges(N, edge_type);
   }
 
   auto in_edges(Node N) const noexcept { return Base::in().edges(N); }
 
-  auto degree(Node N, const EntityType& edge_type) const noexcept {
+  auto degree(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::out().degree(N, edge_type);
   }
 
   auto degree(Node N) const noexcept { return Base::out().degree(N); }
 
-  auto in_degree(Node N, const EntityType& edge_type) const noexcept {
+  auto in_degree(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::in().degree(N, edge_type);
   }
 
@@ -1348,13 +1349,13 @@ public:
 
   auto FindAllEdgesWithType(
       const Node& src, const Node& dst,
-      const EntityType& edge_type) const noexcept {
+      const EntityTypeID& edge_type) const noexcept {
     return Base::out().FindAllEdgesWithType(src, dst, edge_type);
   }
 
   auto FindAllInEdgesWithType(
       const Node& src, const Node& dst,
-      const EntityType& edge_type) const noexcept {
+      const EntityTypeID& edge_type) const noexcept {
     return Base::in().FindAllEdgesWithType(src, dst, edge_type);
   }
 
@@ -1380,7 +1381,7 @@ public:
   /// @param edge_type edge_type of the edge
   /// @returns true iff the edge exists
   bool IsConnectedWithEdgeType(
-      Node src, Node dst, const EntityType& edge_type) const {
+      Node src, Node dst, const EntityTypeID& edge_type) const {
     const auto d_out = Base::out().degree(src, edge_type);
     const auto d_in = Base::in().degree(dst, edge_type);
     if (d_out == 0 || d_in == 0) {

@@ -151,6 +151,7 @@ public:
       const std::string& file);
 
   bool IsEntityTypeIDsOutsideProperties() const;
+  bool IsUint16tEntityTypeIDs() const;
   bool IsMetadataOutsideTopologyFile() const;
   //
   // Property manipulation
@@ -331,11 +332,13 @@ public:
   void ValidateDictBitset(
       const katana::EntityTypeIDToSetOfEntityTypeIDsMap& manager_map,
       const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict) const {
+    KATANA_LOG_ASSERT(!id_dict.empty());
     for (const auto& pair : id_dict) {
       katana::EntityTypeID cur_id = pair.first;
       tsuba::StorageSetOfEntityTypeIDs cur_id_set = pair.second;
       for (auto& id : cur_id_set) {
-        KATANA_LOG_ASSERT(manager_map[cur_id][id] == true);
+        KATANA_LOG_ASSERT(manager_map.at(cur_id).size() != 0);
+        KATANA_LOG_ASSERT(manager_map.at(cur_id).test(id));
       }
     }
   }
@@ -387,10 +390,18 @@ public:
     manager_name_map = id_name;
 
     // convert id_dict -> EntityTypeID map
-    manager_type_id_map.resize(id_dict.size());
+    size_t num_entity_type_ids = id_dict.size();
+    manager_type_id_map.resize(num_entity_type_ids);
+
+    // Max EntityTypeID is 1 less than the number of entity type ids
+    size_t set_size =
+        katana::EntityTypeManager::CalculateSetOfEntityTypeIDsSize(
+            num_entity_type_ids - 1);
+
     for (const auto& pair : id_dict) {
       cur_entity_type_id = pair.first;
       katana::SetOfEntityTypeIDs cur_set;
+      cur_set.resize(set_size);
       for (const auto& id : pair.second) {
         cur_set.set(id);
       }
@@ -450,6 +461,16 @@ private:
       const katana::EntityTypeManager& manager,
       tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap* id_dict,
       katana::EntityTypeIDToAtomicTypeNameMap* id_name) const {
+    static_assert(
+        katana::kDefaultSetOfEntityTypeIDsSize == 256,
+        "Default SetOfEntityTypeIDslSize has changed. storage_format_version "
+        "must be bumped as newly stored EntityTypeID sets may be incompatible "
+        "with other version of katana");
+
+    // ensure we are passed a sane EntityTypeManager
+    KATANA_LOG_ASSERT(
+        manager.GetNumEntityTypes() <= manager.SetOfEntityTypeIDsSize());
+
     katana::EntityTypeIDToSetOfEntityTypeIDsMap manager_type_id_sets =
         manager.GetEntityTypeIDToAtomicEntityTypeIDs();
 
@@ -461,8 +482,11 @@ private:
     }
     for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
       auto cur_id = katana::EntityTypeID(i);
+      KATANA_LOG_VASSERT(
+          manager_type_id_sets.at(i).size() == manager.SetOfEntityTypeIDsSize(),
+          "All sets to be stored must be the same size");
       for (size_t j = 0, nj = num_entity_types; j < nj; ++j) {
-        if (manager_type_id_sets[i].test(j)) {
+        if (manager_type_id_sets.at(i).test(j)) {
           // if we have seen this EntityTypeID already, add to its set
           id_dict->at(cur_id).emplace_back(katana::EntityTypeID(j));
         }

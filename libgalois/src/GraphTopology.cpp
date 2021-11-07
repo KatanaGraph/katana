@@ -316,8 +316,8 @@ katana::EdgeShuffleTopology::SortEdgesByTypeThenDest(
               static_assert(
                   std::is_same_v<decltype(e2), GraphTopology::PropertyIndex>);
 
-              EntityType data1 = pg->GetTypeOfEdge(e1);
-              EntityType data2 = pg->GetTypeOfEdge(e2);
+              katana::EntityTypeID data1 = pg->GetTypeOfEdge(e1);
+              katana::EntityTypeID data2 = pg->GetTypeOfEdge(e2);
               if (data1 != data2) {
                 return data1 < data2;
               }
@@ -435,20 +435,20 @@ katana::CondensedTypeIDMap::MakeFromEdgeTypes(
   TypeIDToIndexMap edge_type_to_index;
   IndexToTypeIDMap edge_index_to_type;
 
-  katana::PerThreadStorage<katana::gstl::Set<EntityType>> edgeTypes;
+  katana::PerThreadStorage<katana::gstl::Set<katana::EntityTypeID>> edgeTypes;
 
   const auto& topo = pg->topology();
 
   katana::do_all(
       katana::iterate(Edge{0}, topo.num_edges()),
       [&](const Edge& e) {
-        EntityType type = pg->GetTypeOfEdge(e);
+        katana::EntityTypeID type = pg->GetTypeOfEdge(e);
         edgeTypes.getLocal()->insert(type);
       },
       katana::no_stats());
 
   // ordered map
-  std::set<EntityType> mergedSet;
+  std::set<katana::EntityTypeID> mergedSet;
   for (uint32_t i = 0; i < katana::activeThreads; ++i) {
     auto& edgeTypesSet = *edgeTypes.getRemote(i);
     for (auto edgeType : edgeTypesSet) {
@@ -467,7 +467,7 @@ katana::CondensedTypeIDMap::MakeFromEdgeTypes(
   // correctly
   katana::on_each([&](unsigned, unsigned) {
     // free up memory by resetting
-    *edgeTypes.getLocal() = gstl::Set<EntityType>();
+    *edgeTypes.getLocal() = gstl::Set<katana::EntityTypeID>();
   });
 
   return std::make_unique<CondensedTypeIDMap>(CondensedTypeIDMap{

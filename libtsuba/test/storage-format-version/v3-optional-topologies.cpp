@@ -2,6 +2,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include "../test-rdg.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
@@ -9,52 +10,12 @@
 #include "tsuba/RDGManifest.h"
 #include "tsuba/RDGTopology.h"
 
+/*
+ * Tests to validate optional topology storage added in storage_format_version=3
+ * Input can be any rdg with storage_format_version < 3
+ */
+
 namespace fs = boost::filesystem;
-
-katana::Result<std::string>
-Write(tsuba::RDG&& rdg_) {
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
-  KATANA_LOG_ASSERT(uri_res);
-  std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
-  std::string command_line;
-
-  // Store graph. If there is a new storage format then storing it is enough to bump the version up.
-  KATANA_LOG_WARN("writing graph at temp file {}", tmp_rdg_dir);
-
-  if (auto res = tsuba::Create(tmp_rdg_dir); !res) {
-    return res.error();
-  }
-
-  tsuba::RDGManifest manifest =
-      KATANA_CHECKED(tsuba::FindManifest(tmp_rdg_dir));
-  auto open_res = tsuba::Open(std::move(manifest), tsuba::kReadWrite);
-  if (!open_res) {
-    return open_res.error();
-  }
-  auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
-
-  auto res = rdg_.Store(
-      *new_file, command_line,
-      tsuba::RDG::RDGVersioningPolicy::IncrementVersion, nullptr, nullptr,
-      KATANA_CHECKED(rdg_.node_entity_type_manager()),
-      KATANA_CHECKED(rdg_.edge_entity_type_manager()));
-
-  if (!res) {
-    return res.error();
-  }
-  return tmp_rdg_dir;
-}
-
-katana::Result<tsuba::RDG>
-LoadRDG(const std::string& rdg_name) {
-  tsuba::RDGManifest manifest = KATANA_CHECKED(tsuba::FindManifest(rdg_name));
-  tsuba::RDGFile rdg_file{
-      KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite))};
-  tsuba::RDG rdg =
-      KATANA_CHECKED(tsuba::RDG::Make(rdg_file, tsuba::RDGLoadOptions()));
-
-  return tsuba::RDG(std::move(rdg));
-}
 
 katana::Result<tsuba::RDGTopology*>
 GetCSR(tsuba::RDG* rdg) {
@@ -84,7 +45,7 @@ TestGraphBackwardsCompatabilityRoundTrip(const std::string& rdg_name) {
   tsuba::RDGTopology* csr = KATANA_CHECKED(GetCSR(&rdg));
 
   // write out converted rdg
-  std::string rdg_dir1 = KATANA_CHECKED(Write(std::move(rdg)));
+  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load converted rdg
@@ -137,7 +98,7 @@ TestGraphComplexOptionalTopologyRoundTrip(const std::string& rdg_name) {
 
   rdg.AddTopology(std::move(topo));
 
-  std::string rdg_dir1 = KATANA_CHECKED(Write(std::move(rdg)));
+  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load rdg with optional topology and verify it
@@ -207,7 +168,7 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
 
   rdg.AddTopology(std::move(topo));
 
-  std::string rdg_dir1 = KATANA_CHECKED(Write(std::move(rdg)));
+  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load rdg with optional topology and verify it
@@ -240,7 +201,7 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
 
   // write out rdg with optional topology
 
-  std::string rdg_dir2 = KATANA_CHECKED(Write(std::move(rdg1)));
+  std::string rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
   KATANA_LOG_ASSERT(!rdg_dir2.empty());
 
   // load rdg again, and verify the optional topology
@@ -284,7 +245,7 @@ TestGraphBasicRoundTrip(const std::string& rdg_name) {
 
   tsuba::RDG rdg = KATANA_CHECKED(LoadRDG(rdg_name));
   KATANA_CHECKED(GetCSR(&rdg));
-  std::string rdg_dir1 = KATANA_CHECKED(Write(std::move(rdg)));
+  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load converted rdg
@@ -300,7 +261,7 @@ TestGraphBasicRoundTrip(const std::string& rdg_name) {
 
   // write out converted rdg
 
-  std::string rdg_dir2 = KATANA_CHECKED(Write(std::move(rdg1)));
+  std::string rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
   KATANA_LOG_ASSERT(!rdg_dir2.empty());
 
   // load converted rdg

@@ -43,13 +43,21 @@ tsuba::RDGSlice::DoMake(
     // it would be nice if RDGCore could handle this format complication, but
     // the uses are different enough between RDG and RDGSlice that it probably
     // doesn't make sense
+
+    size_t storage_entity_type_id_size = 0;
+    if (core_->part_header().IsUint16tEntityTypeIDs()) {
+      storage_entity_type_id_size = sizeof(katana::EntityTypeID);
+    } else {
+      storage_entity_type_id_size = sizeof(uint8_t);
+    }
+
     KATANA_CHECKED_CONTEXT(
         core_->node_entity_type_id_array_file_storage().Bind(
             node_types_path.string(),
             sizeof(EntityTypeIDArrayHeader) +
-                slice.node_range.first * sizeof(katana::EntityTypeID),
+                slice.node_range.first * storage_entity_type_id_size,
             sizeof(EntityTypeIDArrayHeader) +
-                slice.node_range.second * sizeof(katana::EntityTypeID),
+                slice.node_range.second * storage_entity_type_id_size,
             true),
         "loading node type id array; begin: {}, end: {}",
         slice.node_range.first * sizeof(katana::EntityTypeID),
@@ -58,9 +66,9 @@ tsuba::RDGSlice::DoMake(
         core_->edge_entity_type_id_array_file_storage().Bind(
             edge_types_path.string(),
             sizeof(EntityTypeIDArrayHeader) +
-                slice.edge_range.first * sizeof(katana::EntityTypeID),
+                slice.edge_range.first * storage_entity_type_id_size,
             sizeof(EntityTypeIDArrayHeader) +
-                slice.edge_range.second * sizeof(katana::EntityTypeID),
+                slice.edge_range.second * storage_entity_type_id_size,
             true),
         "loading edge type id array");
   }

@@ -1,8 +1,8 @@
 #include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
 
-int
-main() {
+void
+CreateEntityTypeIDs() {
   std::vector<katana::TypeNameSet> tnss = {
       {"alice"},
       {"baker"},
@@ -32,4 +32,43 @@ main() {
   KATANA_LOG_ASSERT(res.value() >= num_entities);
 
   fmt::print("{}", mgr.PrintEntityTypes());
+}
+
+void
+ValidateConstructor() {
+  std::vector<katana::TypeNameSet> tnss = {
+      {"alice"},
+      {"baker"},
+      {"alice", "baker"},
+      {"charlie"},
+      {"david", "eleanor"}};
+  std::vector<katana::TypeNameSet> check = {
+      {},          {"alice"}, {"baker"},   {"alice", "baker"},
+      {"charlie"}, {"david"}, {"eleanor"}, {"david", "eleanor"}};
+  katana::EntityTypeManager mgr;
+  for (const auto& tns : tnss) {
+    auto res = mgr.GetOrAddNonAtomicEntityTypeFromStrings(tns);
+    KATANA_LOG_ASSERT(res);
+  }
+
+  katana::EntityTypeIDToAtomicTypeNameMap name_map(
+      mgr.GetEntityTypeIDToAtomicTypeNameMap());
+  katana::EntityTypeIDToSetOfEntityTypeIDsMap id_map(
+      mgr.GetEntityTypeIDToAtomicEntityTypeIDs());
+
+  KATANA_LOG_ASSERT(name_map == mgr.GetEntityTypeIDToAtomicTypeNameMap());
+  KATANA_LOG_ASSERT(id_map == mgr.GetEntityTypeIDToAtomicEntityTypeIDs());
+
+  katana::EntityTypeManager mgr_copy(std::move(name_map), std::move(id_map));
+
+  if (!mgr.Equals(mgr_copy)) {
+    KATANA_LOG_WARN("{}", mgr.ReportDiff(mgr_copy));
+    KATANA_LOG_ASSERT(false);
+  }
+}
+
+int
+main() {
+  CreateEntityTypeIDs();
+  ValidateConstructor();
 }

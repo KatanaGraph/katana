@@ -151,6 +151,7 @@ public:
       const std::string& file);
 
   bool IsEntityTypeIDsOutsideProperties() const;
+  bool IsUint16tEntityTypeIDs() const;
   bool IsMetadataOutsideTopologyFile() const;
   //
   // Property manipulation

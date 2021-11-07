@@ -170,6 +170,11 @@ RDGPartHeader::IsEntityTypeIDsOutsideProperties() const {
 }
 
 bool
+RDGPartHeader::IsUint16tEntityTypeIDs() const {
+  return (storage_format_version_ >= kPartitionStorageFormatVersion3);
+}
+
+bool
 RDGPartHeader::IsMetadataOutsideTopologyFile() const {
   return (storage_format_version_ >= kPartitionStorageFormatVersion3);
 }

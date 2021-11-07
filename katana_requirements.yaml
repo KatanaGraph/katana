@@ -61,7 +61,7 @@ boost:
     - conda
     - conan
 breathe:
-  version: [ 4.30, ¯\(ツ)/¯ ]
+  version: [ 4.30, null ]
   labels:
     - conda
 cmake:
@@ -102,7 +102,7 @@ cython:
     apt: cython3
   version: [ 0.29.12, 3 ]
 doxygen:
-  version: [ 1.8, ¯\(ツ)/¯ ]
+  version: [ 1.8, null ]
   labels:
     - conda/dev
     - apt

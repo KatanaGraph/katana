@@ -20,7 +20,7 @@ def load(input_files: Optional[Collection[Union[str, Path]]] = None) -> (Require
     data: Optional[Requirements] = None
     for input in reversed(inputs):
         # Use BaseLoader so everything is loaded as a string.
-        d = Requirements.from_dict(yaml.load(open(input, "r"), Loader=yaml.BaseLoader))
+        d = Requirements.from_dict(yaml.load(open(input, "r", encoding="UTF-8"), Loader=yaml.BaseLoader))
 
         if data:
             data = data.merge(d)

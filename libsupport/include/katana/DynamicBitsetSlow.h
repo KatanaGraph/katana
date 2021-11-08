@@ -352,6 +352,7 @@ public:
     return true;
   }
 
+  //TODO(emcginnis): DynamicBitsetSlow is not actually memory copyable, remove this
   //! this is defined to
   using tt_is_copyable = int;
 };

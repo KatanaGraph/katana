@@ -336,6 +336,17 @@ public:
     for (const auto& pair : id_dict) {
       katana::EntityTypeID cur_id = pair.first;
       tsuba::StorageSetOfEntityTypeIDs cur_id_set = pair.second;
+
+      // Some stored storage_format_version 2 rdgs map kUnknownEntityType
+      // to itself in the entity_type_id_to_atomic_entity_type_ids_
+      // this is incorrect, as kUnknownEntityType should not be considered
+      // an AtomicEntityType. We work around this in GetEntityTypeManager,
+      // so we must also ignore it here.
+      //TODO(emcginnis): remove this workaround when all stored storage_format_version 2
+      // rdgs don't have this defect
+      if (cur_id == katana::kUnknownEntityType) {
+        continue;
+      }
       for (auto& id : cur_id_set) {
         KATANA_LOG_ASSERT(manager_map.at(cur_id).size() != 0);
         KATANA_LOG_ASSERT(manager_map.at(cur_id).test(id));
@@ -389,6 +400,20 @@ public:
     // convert id_name -> EntityTypeID Name map
     manager_name_map = id_name;
 
+    // Some storage_format_version 2 rdgs incorrectly store kUnknownEntityType
+    // as an AtomicEntityType, which caused its name to be stored as well.
+    // Work around that here by removing kUnknownEntityTypes name if found
+    //TODO(emcginnis): remove this workaround when all stored storage_format_version 2
+    // rdgs don't have this defect
+    size_t id_name_size = id_name.size();
+    if (storage_format_version_ == kPartitionStorageFormatVersion2) {
+      if (manager_name_map.find(katana::kUnknownEntityType) !=
+          manager_name_map.end()) {
+        manager_name_map.erase(katana::kUnknownEntityType);
+        id_name_size -= 1;
+      }
+    }
+
     // convert id_dict -> EntityTypeID map
     size_t num_entity_type_ids = id_dict.size();
     manager_type_id_map.resize(num_entity_type_ids);
@@ -402,6 +427,21 @@ public:
       cur_entity_type_id = pair.first;
       katana::SetOfEntityTypeIDs cur_set;
       cur_set.resize(set_size);
+
+      // Some stored storage_format_version 2 rdgs map kUnknownEntityType
+      // to itself in the entity_type_id_to_atomic_entity_type_ids_
+      // this is incorrect, as kUnknownEntityType should not be considered
+      // an AtomicEntityType. Work around it here.
+      //TODO(emcginnis): remove this workaround when all stored storage_format_version 2
+      // rdgs don't have this defect
+      if (cur_entity_type_id == katana::kUnknownEntityType) {
+        manager_type_id_map.at(cur_entity_type_id) = cur_set;
+        KATANA_LOG_WARN(
+            "kUnknownEntityType is incorrectly to itself as an "
+            "AtomicEntityType. Ignoring. Storing the RDG will repair the "
+            "mapping.");
+        continue;
+      }
       for (const auto& id : pair.second) {
         cur_set.set(id);
       }
@@ -409,7 +449,7 @@ public:
     }
 
     KATANA_LOG_ASSERT(manager_type_id_map.size() == id_dict.size());
-    KATANA_LOG_ASSERT(manager_name_map.size() == id_name.size());
+    KATANA_LOG_ASSERT(manager_name_map.size() == id_name_size);
 
     ValidateDictBitset(manager_type_id_map, id_dict);
 
@@ -418,7 +458,7 @@ public:
 
     KATANA_LOG_ASSERT(manager.GetNumEntityTypes() == id_dict.size());
     KATANA_LOG_ASSERT(
-        manager.GetEntityTypeIDToAtomicTypeNameMap().size() == id_name.size());
+        manager.GetEntityTypeIDToAtomicTypeNameMap().size() == id_name_size);
 
     ValidateDictBitset(manager.GetEntityTypeIDToAtomicEntityTypeIDs(), id_dict);
 
@@ -487,6 +527,11 @@ private:
           "All sets to be stored must be the same size");
       for (size_t j = 0, nj = num_entity_types; j < nj; ++j) {
         if (manager_type_id_sets.at(i).test(j)) {
+          KATANA_LOG_VASSERT(
+              cur_id != katana::kUnknownEntityType &&
+                  katana::EntityTypeID(j) != katana::kUnknownEntityType,
+              "kUnknownEntityType cannot map to itself as an "
+              "AtomicEntityTypeID");
           // if we have seen this EntityTypeID already, add to its set
           id_dict->at(cur_id).emplace_back(katana::EntityTypeID(j));
         }

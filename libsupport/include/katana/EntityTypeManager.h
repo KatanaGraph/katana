@@ -61,6 +61,14 @@ public:
             std::move(atomic_entity_type_id_to_type_name)),
         entity_type_id_to_atomic_entity_type_ids_(
             std::move(entity_type_id_to_atomic_entity_type_ids)) {
+    // Ensure kUnknownEntityType is not considered an AtomicEntityType
+    KATANA_LOG_ASSERT(
+        !entity_type_id_to_atomic_entity_type_ids_.at(kUnknownEntityType)
+             .test(kUnknownEntityType));
+    KATANA_LOG_ASSERT(
+        atomic_entity_type_id_to_type_name_.find(kUnknownEntityType) ==
+        atomic_entity_type_id_to_type_name_.end());
+
     for (auto& type_id_name_pair : atomic_entity_type_id_to_type_name_) {
       atomic_type_name_to_entity_type_id_.emplace(
           type_id_name_pair.second, type_id_name_pair.first);
@@ -106,6 +114,14 @@ public:
             std::move(entity_type_id_to_atomic_entity_type_ids)),
         atomic_entity_type_id_to_entity_type_ids_(
             std::move(atomic_entity_type_id_to_entity_type_ids)) {
+    // Ensure kUnknownEntityType is not considered an AtomicEntityType
+    KATANA_LOG_ASSERT(
+        !entity_type_id_to_atomic_entity_type_ids_.at(kUnknownEntityType)
+             .test(kUnknownEntityType));
+    KATANA_LOG_ASSERT(
+        atomic_entity_type_id_to_type_name_.find(kUnknownEntityType) ==
+        atomic_entity_type_id_to_type_name_.end());
+
     //Must ensure all sets are at least big enough to fit all EntityTypeIDs
     size_t num_entity_types = entity_type_id_to_atomic_entity_type_ids_.size();
     ResizeSetOfEntityTypeIDsMaps(num_entity_types - 1);

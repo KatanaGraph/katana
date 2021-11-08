@@ -15,6 +15,12 @@ def main():
     parser.add_argument("package_dir", type=Path, help="The directory containing the conda packages to install.")
     parser.add_argument("docker_image", type=str, help="The docker image to use.")
 
+    parser.add_argument(
+        "--override-channels", help="Do not use default conda channels.", default=False, action="store_true",
+    )
+    parser.add_argument(
+        "--channel", "-c", help="Add a channel to use. Highest-priority first.", default=[], action="append",
+    )
     parser.add_argument("--python-package", default="katana-python", help="Name of python conda package to test")
     parser.add_argument("--tools-package", default="katana-tools", help="Name of tools conda package to test")
     parser.add_argument(
@@ -23,7 +29,17 @@ def main():
 
     args = parser.parse_args()
 
+    channels = ["katanagraph"]
+
+    if args.override_channels:
+        channels = []
+
+    channels = args.channel + channels
+
+    channels_str = " ".join("-c " + s for s in channels)
+
     build_args = [
+        f"CHANNELS={channels_str}",
         f"BASE_IMAGE={args.docker_image}",
         f"PYTHON_PACKAGE={args.python_package}",
         f"TOOLS_PACKAGE={args.tools_package}",
@@ -33,6 +49,8 @@ def main():
     for b in build_args:
         command.append("--build-arg")
         command.append(b)
+
+    print(command)
 
     with Popen(command, stdin=PIPE) as docker_proc, tarfile.open(fileobj=docker_proc.stdin, mode="w:gz") as context_tar:
         context_tar.add(Path(args.package_dir).absolute(), arcname="packages")

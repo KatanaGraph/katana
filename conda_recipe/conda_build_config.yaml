@@ -1,3 +1,11 @@
+# Most version numbers are provided by build_conda.py by extraction from katana_requirements.yaml
+
+# TODO(amp): Build variants could be generated in build_conda.py by looking for available packages which match the
+#  allowed version range.
+
+numpy:
+  - 1.21
+
 python:
   - 3.8.* *_cpython
 
@@ -28,3 +36,5 @@ pin_run_as_build:
     max_pin: x
   pyarrow:
     max_pin: x
+  bliss:
+    max_pin: x.x.x

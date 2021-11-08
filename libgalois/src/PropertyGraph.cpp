@@ -62,7 +62,8 @@ CheckTopology(
 /// of extracting EntityTypeIDs and extraction from properties will be depreciated in
 /// favor of this method.
 katana::Result<katana::PropertyGraph::EntityTypeIDArray>
-MapEntityTypeIDsArray(const tsuba::FileView& file_view) {
+MapEntityTypeIDsArray(
+    const tsuba::FileView& file_view, bool is_uint16_t_entity_type_ids) {
   const auto* data = file_view.ptr<tsuba::EntityTypeIDArrayHeader>();
   const auto header = data[0];
 
@@ -70,18 +71,28 @@ MapEntityTypeIDsArray(const tsuba::FileView& file_view) {
     return katana::ErrorCode::InvalidArgument;
   }
 
-  const katana::EntityTypeID* type_IDs_array =
-      reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
-
-  KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
-
   // allocate type IDs array
   katana::PropertyGraph::EntityTypeIDArray entity_type_id_array;
   entity_type_id_array.allocateInterleaved(header.size);
 
-  katana::ParallelSTL::copy(
-      &type_IDs_array[0], &type_IDs_array[header.size],
-      entity_type_id_array.begin());
+  if (is_uint16_t_entity_type_ids) {
+    const katana::EntityTypeID* type_IDs_array =
+        reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
+
+    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+
+    katana::ParallelSTL::copy(
+        &type_IDs_array[0], &type_IDs_array[header.size],
+        entity_type_id_array.begin());
+  } else {
+    const uint8_t* type_IDs_array = reinterpret_cast<const uint8_t*>(&data[1]);
+
+    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+
+    katana::ParallelSTL::copy(
+        &type_IDs_array[0], &type_IDs_array[header.size],
+        entity_type_id_array.begin());
+  }
 
   return katana::MakeResult(std::move(entity_type_id_array));
 }
@@ -144,11 +155,13 @@ katana::PropertyGraph::Make(
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 
-    EntityTypeIDArray node_type_ids = KATANA_CHECKED(
-        MapEntityTypeIDsArray(rdg.node_entity_type_id_array_file_storage()));
+    EntityTypeIDArray node_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
+        rdg.node_entity_type_id_array_file_storage(),
+        rdg.IsUint16tEntityTypeIDs()));
 
-    EntityTypeIDArray edge_type_ids = KATANA_CHECKED(
-        MapEntityTypeIDsArray(rdg.edge_entity_type_id_array_file_storage()));
+    EntityTypeIDArray edge_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
+        rdg.edge_entity_type_id_array_file_storage(),
+        rdg.IsUint16tEntityTypeIDs()));
 
     KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
     KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
@@ -888,6 +901,17 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
   return katana::ResultSuccess();
 }
 
+katana::Result<void>
+katana::PropertyGraph::DeleteNodeIndex(const std::string& column_name) {
+  for (auto it = node_indexes_.begin(); it != node_indexes_.end(); it++) {
+    if ((*it)->column_name() == column_name) {
+      node_indexes_.erase(it);
+      return katana::ResultSuccess();
+    }
+  }
+  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+}
+
 // Build an index over edges.
 katana::Result<void>
 katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
@@ -915,6 +939,17 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
   edge_indexes_.push_back(std::move(index));
 
   return katana::ResultSuccess();
+}
+
+katana::Result<void>
+katana::PropertyGraph::DeleteEdgeIndex(const std::string& column_name) {
+  for (auto it = edge_indexes_.begin(); it != edge_indexes_.end(); it++) {
+    if ((*it)->column_name() == column_name) {
+      edge_indexes_.erase(it);
+      return katana::ResultSuccess();
+    }
+  }
+  return KATANA_ERROR(katana::ErrorCode::NotFound, "edge index not found");
 }
 
 katana::Result<std::unique_ptr<katana::NUMAArray<uint64_t>>>

@@ -1,4 +1,5 @@
 #!/bin/bash
+# TODO(amp):REQUIREMENTS: Versions should be taken from katana_requirements or a lock file.
 
 set -eu
 

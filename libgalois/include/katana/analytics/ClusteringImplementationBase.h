@@ -450,15 +450,14 @@ struct ClusteringImplementationBase {
 
   /**
  * Creates a duplicate of the graph by copying the
- * graph (pfg_from) topology as well as edge property
+ * graph (pfg_from) topology
  * (read from the underlying RDG) to the in-memory
  * temporary graph (pfg_to).
+ * TODO(gill) replace with ephemeral graph
  */
-  template <typename NodeData>
-  static katana::Result<std::unique_ptr<katana::PropertyGraph>> DuplicateGraph(
-      katana::PropertyGraph* pfg_from, const std::string& edge_property_name,
-      const std::string& new_edge_property_name) {
-    const katana::GraphTopology& topology_from = pfg_from->topology();
+  static katana::Result<std::unique_ptr<katana::PropertyGraph>>
+  DuplicateGraphWithSameTopo(const katana::PropertyGraph& pfg_from) {
+    const katana::GraphTopology& topology_from = pfg_from.topology();
 
     katana::GraphTopology topo_copy = GraphTopology::Copy(topology_from);
 
@@ -466,10 +465,18 @@ struct ClusteringImplementationBase {
     if (!pfg_to_res) {
       return pfg_to_res.error();
     }
+    return std::unique_ptr<katana::PropertyGraph>(
+        std::move(pfg_to_res.value()));
+  }
 
-    std::unique_ptr<katana::PropertyGraph> pfg_to =
-        std::move(pfg_to_res.value());
-
+  /**
+ * Copy edge property from
+ * property graph, pg_from to pg_to.
+ */
+  static katana::Result<void> CopyEdgeProperty(
+      katana::PropertyGraph* pfg_from, katana::PropertyGraph* pfg_to,
+      const std::string& edge_property_name,
+      const std::string& new_edge_property_name) {
     // Remove the existing edge property
     if (pfg_to->HasEdgeProperty(new_edge_property_name)) {
       if (auto r = pfg_to->RemoveEdgeProperty(new_edge_property_name); !r) {
@@ -493,13 +500,7 @@ struct ClusteringImplementationBase {
     if (auto r = pfg_to->AddEdgeProperties(edge_data_table); !r) {
       return r.error();
     }
-
-    if (auto result = ConstructNodeProperties<NodeData>(pfg_to.get());
-        !result) {
-      return result.error();
-    }
-
-    return std::unique_ptr<katana::PropertyGraph>(std::move(pfg_to));
+    return katana::ResultSuccess();
   }
 
   /**

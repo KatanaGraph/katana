@@ -561,6 +561,11 @@ tsuba::RDG::IsEntityTypeIDsOutsideProperties() const {
   return core_->part_header().IsEntityTypeIDsOutsideProperties();
 }
 
+bool
+tsuba::RDG::IsUint16tEntityTypeIDs() const {
+  return core_->part_header().IsUint16tEntityTypeIDs();
+}
+
 katana::Result<void>
 tsuba::RDG::Validate() const {
   if (auto res = core_->part_header().Validate(); !res) {

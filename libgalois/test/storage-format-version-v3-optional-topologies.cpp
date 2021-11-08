@@ -10,41 +10,19 @@
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "stdio.h"
+#include "storage-format-version.h"
 #include "tsuba/RDG.h"
 
 namespace cll = llvm::cl;
 namespace fs = boost::filesystem;
 
+/*
+ * Tests to validate optional topology storage added in storage_format_version=3
+ * Input can be any rdg with storage_format_version < 3
+ */
+
 static cll::opt<std::string> ldbc_003InputFile(
     cll::Positional, cll::desc("<ldbc_003 input file>"), cll::Required);
-
-katana::PropertyGraph
-LoadGraph(const std::string& rdg_file) {
-  KATANA_LOG_ASSERT(!rdg_file.empty());
-  auto g_res = katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
-
-  if (!g_res) {
-    KATANA_LOG_FATAL("making result: {}", g_res.error());
-  }
-  katana::PropertyGraph g = std::move(*g_res.value());
-  return g;
-}
-
-std::string
-StoreGraph(katana::PropertyGraph* g) {
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
-  KATANA_LOG_ASSERT(uri_res);
-  std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
-  std::string command_line;
-
-  // Store graph. If there is a new storage format then storing it is enough to bump the version up.
-  KATANA_LOG_WARN("writing graph at temp file {}", tmp_rdg_dir);
-  auto write_result = g->Write(tmp_rdg_dir, command_line);
-  if (!write_result) {
-    KATANA_LOG_FATAL("writing result failed: {}", write_result.error());
-  }
-  return tmp_rdg_dir;
-}
 
 template <typename View>
 void

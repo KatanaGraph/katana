@@ -26,7 +26,7 @@ using namespace katana::analytics;
 
 const int ConnectedComponentsPlan::kChunkSize = 1;
 
-using PropertyGraphView = katana::PropertyGraphViews::BiDirectional;
+using UndirectedView = katana::PropertyGraphViews::Undirected;
 
 namespace {
 
@@ -56,7 +56,7 @@ struct ConnectedComponentsSerialAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
 
@@ -102,7 +102,7 @@ struct ConnectedComponentsLabelPropAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
 
@@ -155,7 +155,7 @@ struct ConnectedComponentsSynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
 
@@ -268,7 +268,7 @@ struct ConnectedComponentsAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
 
@@ -331,7 +331,7 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
@@ -406,7 +406,7 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
@@ -503,7 +503,7 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
 
   typedef typename Graph::Node GNode;
@@ -700,7 +700,7 @@ struct ConnectedComponentsAfforestAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
 
@@ -849,7 +849,7 @@ struct ConnectedComponentsEdgeAfforestAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
 
@@ -996,7 +996,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
 
@@ -1200,7 +1200,7 @@ katana::analytics::ConnectedComponentsAssertValid(
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropertyGraphView, NodeData, EdgeData>
+  typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
 

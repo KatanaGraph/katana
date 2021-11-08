@@ -1,25 +1,9 @@
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>
-#include <boost/filesystem.hpp>
+#ifndef KATANA_LIBGALOIS_STORAGEFORMATVERSIONENTITYTYPEIDS_H_
+#define KATANA_LIBGALOIS_STORAGEFORMATVERSIONENTITYTYPEIDS_H_
 
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
-#include "katana/SharedMemSys.h"
-#include "katana/analytics/Utils.h"
-#include "llvm/Support/CommandLine.h"
-#include "stdio.h"
 #include "storage-format-version.h"
-#include "tsuba/RDG.h"
-
-namespace cll = llvm::cl;
-namespace fs = boost::filesystem;
-
-/*
- * Tests to validate EntityTypeID storage added in storage_format_version = 2
- * Input can be any rdg with storage_format_version < 2
- */
-
-static cll::opt<std::string> ldbc_003InputFile(
-    cll::Positional, cll::desc("<ldbc_003 input file>"), cll::Required);
 
 /*LDBC_003 Known EntityType Values*/
 
@@ -69,16 +53,29 @@ ValidateLDBC003EntityTypeManagers(
     katana::EntityTypeManager node_manager,
     katana::EntityTypeManager edge_manager) {
   // Validate Size
-  KATANA_LOG_ASSERT(
-      edge_manager.GetNumEntityTypes() == LDBC_003_EDGE_ENTITY_TYPE_COUNT);
-  KATANA_LOG_ASSERT(
-      node_manager.GetNumEntityTypes() == LDBC_003_NODE_ENTITY_TYPE_COUNT);
-  KATANA_LOG_ASSERT(
+  KATANA_LOG_VASSERT(
+      edge_manager.GetNumEntityTypes() == LDBC_003_EDGE_ENTITY_TYPE_COUNT,
+      "edge_manager.GetNumEntityTypes() != LDBC_003_EDGE_ENTITY_TYPE_COUNT, {} "
+      "!= {}",
+      edge_manager.GetNumEntityTypes(), LDBC_003_EDGE_ENTITY_TYPE_COUNT);
+  KATANA_LOG_VASSERT(
+      node_manager.GetNumEntityTypes() == LDBC_003_NODE_ENTITY_TYPE_COUNT,
+      "node_manager.GetNumEntityTypes() != LDBC_003_NODE_ENTITY_TYPE_COUNT, {} "
+      "!= {}",
+      node_manager.GetNumEntityTypes(), LDBC_003_NODE_ENTITY_TYPE_COUNT);
+
+  KATANA_LOG_VASSERT(
       edge_manager.GetNumAtomicTypes() ==
-      LDBC_003_EDGE_ATOMIC_ENTITY_TYPE_COUNT);
-  KATANA_LOG_ASSERT(
+          LDBC_003_EDGE_ATOMIC_ENTITY_TYPE_COUNT,
+      "edge_manager.GetNumAtomicTypes() != "
+      "LDBC_003_EDGE_ATOMIC_ENTITY_TYPE_COUNT, {} != {} ",
+      edge_manager.GetNumAtomicTypes(), LDBC_003_EDGE_ATOMIC_ENTITY_TYPE_COUNT);
+  KATANA_LOG_VASSERT(
       node_manager.GetNumAtomicTypes() ==
-      LDBC_003_NODE_ATOMIC_ENTITY_TYPE_COUNT);
+          LDBC_003_NODE_ATOMIC_ENTITY_TYPE_COUNT,
+      "node_manager.GetNumAtomicTypes() != "
+      "LDBC_003_NODE_ATOMIC_ENTITY_TYPE_COUNT, {} != {}",
+      node_manager.GetNumAtomicTypes(), LDBC_003_NODE_ATOMIC_ENTITY_TYPE_COUNT);
 
   // Validate Names
   // Atomic EntityTypeIDs start at id = 1, id = 0 is invalid/unknown
@@ -132,7 +129,7 @@ ValidateLDBC003EntityTypeManagers(
 }
 
 void
-TestConvertGraphStorageFormat() {
+TestConvertGraphStorageFormat(std::string& input_rdg) {
   // Load existing "old" graph, which converts all uint8/bool properties into types
   // store it as a new file
   // load the new file
@@ -140,7 +137,7 @@ TestConvertGraphStorageFormat() {
 
   KATANA_LOG_WARN("***** TestConvertGraphStorageFormat *****");
 
-  katana::PropertyGraph g = LoadGraph(ldbc_003InputFile);
+  katana::PropertyGraph g = LoadGraph(input_rdg);
   ValidateLDBC003EntityTypeManagers(
       g.GetNodeTypeManager(), g.GetEdgeTypeManager());
 
@@ -157,7 +154,7 @@ TestConvertGraphStorageFormat() {
 }
 
 void
-TestRoundTripNewStorageFormat() {
+TestRoundTripNewStorageFormat(std::string& input_rdg) {
   // Test store/load cycle of a graph with the new storage format
   // To do this, we first must first convert an old graph.
   // Steps:
@@ -172,7 +169,7 @@ TestRoundTripNewStorageFormat() {
   KATANA_LOG_WARN("***** TestRoundTripNewStorageFormat *****");
 
   // first cycle converts old->new
-  katana::PropertyGraph g = LoadGraph(ldbc_003InputFile);
+  katana::PropertyGraph g = LoadGraph(input_rdg);
   ValidateLDBC003EntityTypeManagers(
       g.GetNodeTypeManager(), g.GetEdgeTypeManager());
 
@@ -193,13 +190,4 @@ TestRoundTripNewStorageFormat() {
   KATANA_LOG_ASSERT(g.Equals(&g3));
 }
 
-int
-main(int argc, char** argv) {
-  katana::SharedMemSys sys;
-  cll::ParseCommandLineOptions(argc, argv);
-
-  TestConvertGraphStorageFormat();
-  TestRoundTripNewStorageFormat();
-
-  return 0;
-}
+#endif

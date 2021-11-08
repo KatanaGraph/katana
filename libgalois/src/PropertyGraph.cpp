@@ -85,6 +85,7 @@ MapEntityTypeIDsArray(
         &type_IDs_array[0], &type_IDs_array[header.size],
         entity_type_id_array.begin());
   } else {
+    // On disk format is still uint8_t EntityTypeIDs
     const uint8_t* type_IDs_array = reinterpret_cast<const uint8_t*>(&data[1]);
 
     KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
@@ -401,7 +402,8 @@ katana::PropertyGraph::DoWrite(
   }
 
   std::unique_ptr<tsuba::FileFrame> node_entity_type_id_array_res =
-      !rdg_.node_entity_type_id_array_file_storage().Valid()
+      !rdg_.node_entity_type_id_array_file_storage().Valid() ||
+              !rdg_.IsUint16tEntityTypeIDs()
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(node_entity_type_ids_))
           : nullptr;
 
@@ -410,7 +412,8 @@ katana::PropertyGraph::DoWrite(
   }
 
   std::unique_ptr<tsuba::FileFrame> edge_entity_type_id_array_res =
-      !rdg_.edge_entity_type_id_array_file_storage().Valid()
+      !rdg_.edge_entity_type_id_array_file_storage().Valid() ||
+              !rdg_.IsUint16tEntityTypeIDs()
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(edge_entity_type_ids_))
           : nullptr;
 

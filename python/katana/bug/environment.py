@@ -5,6 +5,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import warnings
 import zipfile
 from pathlib import Path
 from typing import Any, Iterable, Optional, Union
@@ -242,6 +243,15 @@ def capture_environment(filename: Optional[Union[str, Path, Any]] = None):
 
             if get_ipython():
                 # If IPython is importable and actually loaded, display the link.
+                try:
+                    # Path.readlink doesn't exist before Python 3.9, so that cannot be used quite yet.
+                    ipython_root_directory = os.readlink(f"/proc/{os.environ['JPY_PARENT_PID']}/cwd")
+                except OSError:
+                    warnings.warn(
+                        "Could not determine Jupyter root path. Guessing that it is the current working "
+                        "directory. The download link may be incorrect."
+                    )
+                    ipython_root_directory = Path.cwd()
 
                 environment_information_directory = Path.cwd() / "environment_information"
                 environment_information_directory.mkdir(parents=True, exist_ok=True)
@@ -250,12 +260,11 @@ def capture_environment(filename: Optional[Union[str, Path, Any]] = None):
                 download_path.symlink_to(path)
 
                 # IPython.display.FileLink cannot be used since it creates a link that tries to open the file as text.
-
                 display(
                     HTML(
                         f"""
                     Environment information file download link:
-                    <a href="/files/{download_path.relative_to(Path.cwd())}" target="_blank">
+                    <a href="/files/{download_path.relative_to(ipython_root_directory)}" target="_blank">
                         {download_path.name}
                     </a>
                     """

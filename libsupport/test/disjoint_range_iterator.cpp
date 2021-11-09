@@ -1,13 +1,13 @@
 #include <iostream>
 #include <numeric>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
 
-int main() {
-
+int
+main() {
   size_t VEC_SIZE = 7ull;
   size_t VAL_A = 10ull;
   size_t VAL_B = 20ull;
@@ -23,7 +23,9 @@ int main() {
 
   size_t sum = std::accumulate(beg, end, 0);
 
-  KATANA_LOG_VASSERT(sum == vec_a.size() * VAL_A + vec_b.size() * VAL_B, "incorrect sum produced");
+  KATANA_LOG_VASSERT(
+      sum == vec_a.size() * VAL_A + vec_b.size() * VAL_B,
+      "incorrect sum produced");
 
   return 0;
 }

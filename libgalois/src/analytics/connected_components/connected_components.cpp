@@ -198,8 +198,8 @@ struct ConnectedComponentsSynchronousAlgo {
     next_bag = &wls[1];
 
     katana::do_all(katana::iterate(*graph), [&](const GNode& src) {
-      for (auto ii : graph->edges(src)) {
-        auto dest = graph->edge_dest(ii);
+      for (auto e : graph->edges(src)) {
+        auto dest = graph->edge_dest(e);
         if (src >= dest)
           continue;
         auto& ddata = graph->GetData<NodeComponent>(dest);
@@ -334,7 +334,8 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
   typedef katana::TypedPropertyGraphView<UndirectedView, NodeData, EdgeData>
       Graph;
   typedef typename Graph::Node GNode;
-  using Edge = std::pair<GNode, typename Graph::edge_iterator>;
+  // TODO(amber): 2nd element was Graph::edge_iterator
+  using Edge = std::pair<GNode, typename Graph::Edge>;
 
   ConnectedComponentsPlan& plan_;
   ConnectedComponentsEdgeAsynchronousAlgo(ConnectedComponentsPlan& plan)
@@ -375,7 +376,7 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
         katana::iterate(works),
         [&](Edge& e) {
           auto& sdata = graph->GetData<NodeComponent>(e.first);
-          auto dest = graph->edge_dest(*e.second);
+          auto dest = graph->edge_dest(e.second);
           auto& ddata = graph->GetData<NodeComponent>(dest);
 
           if (e.first > dest)

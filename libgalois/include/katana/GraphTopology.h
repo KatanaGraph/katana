@@ -125,6 +125,11 @@ public:
   }
 
   Node edge_dest(Edge edge_id) const noexcept {
+    if (edge_id >= dests_.size()) {
+      KATANA_LOG_DEBUG_VASSERT(
+          edge_id < dests_.size(), "edge_id={}, dest_ size = {}", edge_id,
+          dests_.size());
+    }
     KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
     return dests_[edge_id];
   }
@@ -1273,54 +1278,47 @@ using SimpleBiDirTopology =
     BasicBiDirTopoWrapper<GraphTopology, EdgeShuffleTopology>;
 
 template <typename OutTopo, typename InTopo>
-class KATANA_EXPORT UndirectedTopologyImpl: public GraphTopologyTypes {
-
+class KATANA_EXPORT UndirectedTopologyImpl : public GraphTopologyTypes {
   // Important:
   // We assign fake Edge IDs to in_edges to separate them from out edges
   // fake in-edge-ID == real in-edge-ID + out().num_edges();
 
 public:
-
-  using edge_iterator = katana::DisjointRangesIterator<boost::counting_iterator<Edge>>;
+  using edge_iterator =
+      katana::DisjointRangesIterator<boost::counting_iterator<Edge>>;
   using edges_range = StandardRange<edge_iterator>;
 
-  UndirectedTopologyImpl(const OutTopo* out, const InTopo* in) noexcept: 
-    out_topo_(out),
-    in_topo_(in) {}
-
+  UndirectedTopologyImpl(const OutTopo* out, const InTopo* in) noexcept
+      : out_topo_(out), in_topo_(in) {}
 
   auto num_nodes() const noexcept { return out().num_nodes(); }
 
   // TODO(amber): Should it be sum of in and out edges?
   auto num_edges() const noexcept { return out().num_edges(); }
 
-
   /// Gets the edge range of some node.
   ///
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
   edges_range edges(Node node) const noexcept {
-
-    return MakeDisjointEdgesRange(
-        out().edges(node), in().edges(node));
+    return MakeDisjointEdgesRange(out().edges(node), in().edges(node));
   }
 
   bool is_in_edge(const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(out().num_edges() > 0);
-    return eid >= out().num_edges();
+    return eid >= fake_id_offset();
   }
 
   auto edge_source(const Edge& eid) const noexcept {
-
     if (is_in_edge(eid)) {
-      return in().edge_dest(real_in_edge_id(eid));
+      return in().edge_source(real_in_edge_id(eid));
     }
     return out().edge_source(eid);
   }
 
   Node edge_dest(Edge eid) const noexcept {
     if (is_in_edge(eid)) {
-      return in().edge_source(real_in_edge_id(eid));
+      return in().edge_dest(real_in_edge_id(eid));
     }
     return out().edge_dest(eid);
   }
@@ -1334,9 +1332,7 @@ public:
   }
 
   edges_range all_edges() const noexcept {
-
-    return MakeDisjointEdgesRange(
-        out().all_edges(), in().all_edges());
+    return MakeDisjointEdgesRange(out().all_edges(), in().all_edges());
   }
   // Standard container concepts
 
@@ -1353,14 +1349,15 @@ public:
   size_t degree(Node node) const noexcept { return edges(node).size(); }
 
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
-    if(is_in_edge(eid)) {
+    if (is_in_edge(eid)) {
       return in().edge_property_index(real_in_edge_id(eid));
     }
     return out().edge_property_index(eid);
   }
 
   PropertyIndex node_property_index(const Node& nid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(out().node_property_index(nid) == in().node_property_index(nid));
+    KATANA_LOG_DEBUG_ASSERT(
+        out().node_property_index(nid) == in().node_property_index(nid));
     return out().node_property_index(nid);
   }
 
@@ -1379,15 +1376,15 @@ protected:
   const InTopo& in() const noexcept { return *in_topo_; }
 
 private:
-
   Edge fake_id_offset() const noexcept {
     KATANA_LOG_DEBUG_ASSERT(out().num_edges() > 0);
-    return out().num_edges();
+    return out().num_edges() +
+           1;  // +1 so that last edge iterator of out() is different from first edge of in()
   }
 
   Edge real_in_edge_id(const Edge& id) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(id >= out().num_edges());
-    return id - out().num_edges();
+    return id - fake_id_offset();
   }
 
   template <typename I>
@@ -1396,13 +1393,13 @@ private:
   }
 
   template <typename R>
-  edges_range MakeDisjointEdgesRange(const R& out_range, const R& in_range) const noexcept {
+  edges_range MakeDisjointEdgesRange(
+      const R& out_range, const R& in_range) const noexcept {
     auto out_iter_p = RangeToPair(out_range);
     auto in_iter_p = RangeToPair(in_range);
 
     in_iter_p.first += fake_id_offset();
     in_iter_p.second += fake_id_offset();
-
 
     edge_iterator b = make_disjoint_ranges_begin(out_iter_p, in_iter_p);
     edge_iterator e = make_disjoint_ranges_end(out_iter_p, in_iter_p);
@@ -1414,7 +1411,8 @@ private:
   const InTopo* in_topo_;
 };
 
-using UndirectedTopology = UndirectedTopologyImpl<GraphTopology, EdgeShuffleTopology>;
+using UndirectedTopology =
+    UndirectedTopologyImpl<GraphTopology, EdgeShuffleTopology>;
 
 template <typename Topo>
 class SortedTopologyWrapper : public BasicTopologyWrapper<Topo> {

@@ -11,8 +11,11 @@ void
 TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   katana::Result<void> res = katana::AddNodeProperties(
       pg.get(),
-      katana::PropertyGenerator("label", [] ([[maybe_unused]] auto node_id) { return uint32_t{1}; }),
-      katana::PropertyGenerator("deg_sum", [] ([[maybe_unused]] auto node_id) { return uint32_t{0}; }));
+      katana::PropertyGenerator(
+          "label", []([[maybe_unused]] auto node_id) { return uint32_t{1}; }),
+      katana::PropertyGenerator("deg_sum", []([[maybe_unused]] auto node_id) {
+        return uint32_t{0};
+      }));
 
   KATANA_LOG_VASSERT(res, "Failed to add node Properties");
 
@@ -20,19 +23,20 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   using EdgeProps = std::tuple<>;
 
   using UndirectedView = katana::TypedPropertyGraphView<
-    katana::PropertyGraphViews::Undirected, NodeProps, EdgeProps>;
+      katana::PropertyGraphViews::Undirected, NodeProps, EdgeProps>;
   using Node = UndirectedView::Node;
   using Edge = UndirectedView::Edge;
 
   auto view_res = UndirectedView::Make(pg.get(), {"label", "deg_sum"}, {});
-  KATANA_LOG_VASSERT(view_res, "Failed to create Undirected View. Error msg: {}", view_res.error());
+  KATANA_LOG_VASSERT(
+      view_res, "Failed to create Undirected View. Error msg: {}",
+      view_res.error());
 
   auto graph = view_res.value();
 
-
-  for (Node src: graph.all_nodes()) {
+  for (Node src : graph.all_nodes()) {
     uint32_t deg_sum = 0u;
-    for (Edge e: graph.edges(src)) {
+    for (Edge e : graph.edges(src)) {
       Node dst = graph.edge_dest(e);
       deg_sum += graph.GetData<NodeLabel>(dst);
     }
@@ -43,14 +47,16 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
 
   uint32_t tot_deg_sum = 0u;
 
-  for (Node n: graph.all_nodes()) {
+  for (Node n : graph.all_nodes()) {
     tot_deg_sum += graph.GetData<DegreeSum>(n);
   }
 
-  KATANA_LOG_VASSERT(tot_deg_sum == graph.all_edges().size(), "Total Degree Sum Mismatched");
+  KATANA_LOG_VASSERT(
+      tot_deg_sum == graph.all_edges().size(), "Total Degree Sum Mismatched");
 }
 
-int main() {
+int
+main() {
   katana::SharedMemSys S;
 
   TestDegreeSum(katana::MakeGrid(3, 4, true));

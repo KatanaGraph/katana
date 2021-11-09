@@ -669,9 +669,9 @@ struct ClusteringImplementationBase {
       auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-      for (auto ii = graph->edge_begin(n); ii != graph->edge_end(n); ++ii) {
+      for (auto e : graph->edges(n)) {
         total_weight +=
-            graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
+            graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
       n_degree_wt = total_weight;
     });
@@ -811,10 +811,11 @@ struct ClusteringImplementationBase {
       int64_t max_idx = num_unique_clusters + 1;
       while (min_idx < max_idx - 1) {
         int64_t mid_idx = (min_idx + max_idx) / 2;
-        if (cum_transformed_quality_value_increment_per_cluster[mid_idx] >= r)
+        if (cum_transformed_quality_value_increment_per_cluster[mid_idx] >= r) {
           max_idx = mid_idx;
-        else
+        } else {
           min_idx = mid_idx;
+        }
       }
       return neighboring_cluster_ids[max_idx];
     } else {
@@ -924,7 +925,7 @@ struct ClusteringImplementationBase {
          * update the clustering statistics.
          */
           katana::atomicAdd(subcomm_info[new_subcomm_ass].node_wt, n_node_wt);
-          katana::atomicAdd(subcomm_info[new_subcomm_ass].size, (uint64_t)1);
+          katana::atomicAdd(subcomm_info[new_subcomm_ass].size, uint64_t{1});
           katana::atomicAdd(
               subcomm_info[new_subcomm_ass].degree_wt, n_degree_wt);
 

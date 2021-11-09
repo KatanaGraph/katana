@@ -75,7 +75,6 @@ struct LouvainClusteringImplementation
     CommunityArray c_update;  // Used for updating community
 
     /* Variables needed for Modularity calculation */
-    double constant_for_second_term;
     double prev_mod = lower;
     double curr_mod = -1;
     uint32_t num_iter = iter;
@@ -94,7 +93,7 @@ struct LouvainClusteringImplementation
     Base::template SumVertexDegreeWeight<EdgeWeightType>(&graph, c_info);
 
     /* Compute the total weight (2m) and 1/2m terms */
-    constant_for_second_term =
+    const double constant_for_second_term =
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
 
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
@@ -160,6 +159,10 @@ struct LouvainClusteringImplementation
 
       curr_mod = Base::template CalModularity<EdgeWeightType>(
           graph, c_info, e_xx, a2_x, constant_for_second_term);
+
+      if (std::isnan(curr_mod)) {
+        KATANA_LOG_DEBUG("Modulary is NaN. num_iter = {}\n", num_iter);
+      }
 
       if ((curr_mod - prev_mod) < modularity_threshold_per_round) {
         prev_mod = curr_mod;

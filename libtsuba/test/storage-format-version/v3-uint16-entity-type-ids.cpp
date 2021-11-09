@@ -27,13 +27,17 @@ namespace fs = boost::filesystem;
 
 // Ensure that uint16_t EntityTypeIDs survive the store/load cycle
 katana::Result<void>
-TestBasicEntityTypeIDConversion(const std::string& rdg_name) {
+TestEntityTypeManagerRoundTrip(const std::string& rdg_name) {
   KATANA_LOG_DEBUG("***** TestBasicEntityTypeIDConversion *****");
 
   KATANA_LOG_ASSERT(!rdg_name.empty());
 
-  // conversion of properties from uint8_t -> uint16_t in memory happens in load
   tsuba::RDG rdg_orig = KATANA_CHECKED(LoadRDG(rdg_name));
+
+  // Ensure we are working on a graph that already has EntityTypeIDs
+  // libgalois is required to generate EntityTypeIDs, so tests for generation/storage
+  // can be found there
+  KATANA_LOG_ASSERT(rdg_orig.IsUint16tEntityTypeIDs());
 
   katana::EntityTypeManager edge_manager_orig =
       KATANA_CHECKED(rdg_orig.edge_entity_type_manager());
@@ -67,7 +71,6 @@ TestBasicEntityTypeIDConversion(const std::string& rdg_name) {
 }
 
 // Ensure rdg with maximum EntityTypeIDs, aka max(uint16_t) survive the store/load cycle
-// This test takes roughly 4 minutes since we have to generate 2^16 EntityType names
 katana::Result<void>
 TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
   KATANA_LOG_DEBUG("***** TestMaxNumberEntityTypeIDs *****");
@@ -76,6 +79,11 @@ TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
 
   // conversion of properties from uint8_t -> uint16_t in memory happens in load
   tsuba::RDG rdg_orig = KATANA_CHECKED(LoadRDG(rdg_name));
+
+  // Ensure we are working on a graph that already has EntityTypeIDs
+  // libgalois is required to generate EntityTypeIDs, so tests for generation/storage
+  // can be found there
+  KATANA_LOG_ASSERT(rdg_orig.IsUint16tEntityTypeIDs());
 
   katana::EntityTypeManager edge_manager_orig =
       KATANA_CHECKED(rdg_orig.edge_entity_type_manager());
@@ -207,7 +215,7 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("missing rdg file directory");
   }
 
-  auto res = TestBasicEntityTypeIDConversion(argv[1]);
+  auto res = TestEntityTypeManagerRoundTrip(argv[1]);
   if (!res) {
     KATANA_LOG_FATAL("test failed: {}", res.error());
   }

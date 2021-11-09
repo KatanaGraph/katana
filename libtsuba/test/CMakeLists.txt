@@ -22,23 +22,23 @@ set_tests_properties(clean-parquet PROPERTIES FIXTURES_SETUP parquet-ready LABEL
 ## Storage Format Version backwards compatibility tests ##
 
 ## storage format version 2
-
-## We can't do v1-v2 tests here in libtsuba because we depend on PropertyGraph to fill the EntityTypeID arrays
-## see libgalois/test/storage-format-version*
+## storage format version 2 is not supported
 
 ## storage format version 3
+## We can't do v1-v3 tests here in libtsuba because we depends on PropertyGraph to extract EntityTypeIDs from properties
+## see libgalois/test/storage-format-version*
 
-## We can't do v1-v3 tests here in libtsuba because we depend on PropertyGraph to do the v1-v2 step
+# Test optional topologies loading/storing cycle on v3 input
+add_executable(storage-format-version-v3-v3-optional-topologies-test storage-format-version/v3-optional-topologies.cpp)
+target_link_libraries(storage-format-version-v3-v3-optional-topologies-test tsuba)
+target_include_directories(storage-format-version-v3-v3-optional-topologies-test PRIVATE ../src)
+add_test(NAME storage-format-version-v3-v3-optional-topologies COMMAND storage-format-version-v3-v3-optional-topologies-test ${BASEINPUT}/propertygraphs/ldbc_003_storage_format_version_3)
+set_property(TEST storage-format-version-v3-v3-optional-topologies APPEND PROPERTY LABELS quick)
+set_tests_properties(storage-format-version-v3-v3-optional-topologies PROPERTIES LABELS quick)
 
-add_executable(storage-format-version-v2-v3-optional-topologies-test storage-format-version/v3-optional-topologies.cpp)
-target_link_libraries(storage-format-version-v2-v3-optional-topologies-test tsuba)
-target_include_directories(storage-format-version-v2-v3-optional-topologies-test PRIVATE ../src)
-add_test(NAME storage-format-version-v2-v3-optional-topologies COMMAND storage-format-version-v2-v3-optional-topologies-test ${BASEINPUT}/propertygraphs/ldbc_003_storage_format_version_2)
-set_property(TEST storage-format-version-v2-v3-optional-topologies APPEND PROPERTY LABELS quick)
-set_tests_properties(storage-format-version-v2-v3-optional-topologies PROPERTIES LABELS quick)
 
-
-add_executable(storage-format-version-v2-v3-uint16-entity-type-ids-test storage-format-version/v3-uint16-entity-type-ids.cpp)
-target_link_libraries(storage-format-version-v2-v3-uint16-entity-type-ids-test tsuba)
-target_include_directories(storage-format-version-v2-v3-uint16-entity-type-ids-test PRIVATE ../src)
-add_test(NAME storage-format-version-v2-v3-uint16-entity-type-ids COMMAND storage-format-version-v2-v3-uint16-entity-type-ids-test ${BASEINPUT}/propertygraphs/ldbc_003_storage_format_version_2)
+# Test entity type id loading/storing cycle on v3 input
+add_executable(storage-format-version-v3-v3-uint16-entity-type-ids-test storage-format-version/v3-uint16-entity-type-ids.cpp)
+target_link_libraries(storage-format-version-v3-v3-uint16-entity-type-ids-test tsuba)
+target_include_directories(storage-format-version-v3-v3-uint16-entity-type-ids-test PRIVATE ../src)
+add_test(NAME storage-format-version-v3-v3-uint16-entity-type-ids COMMAND storage-format-version-v3-v3-uint16-entity-type-ids-test ${BASEINPUT}/propertygraphs/ldbc_003_storage_format_version_3)

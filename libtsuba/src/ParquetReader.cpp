@@ -361,15 +361,15 @@ private:
 
 Result<std::unique_ptr<tsuba::ParquetReader>>
 tsuba::ParquetReader::Make(ReadOpts opts) {
-  return std::unique_ptr<ParquetReader>(
-      new ParquetReader(opts.slice, opts.make_cannonical));
+  return std::unique_ptr<ParquetReader>(new ParquetReader(opts.make_canonical));
 }
 
 Result<std::shared_ptr<arrow::Table>>
-tsuba::ParquetReader::ReadTable(const katana::Uri& uri) {
+tsuba::ParquetReader::ReadTable(
+    const katana::Uri& uri, std::optional<tsuba::ParquetReader::Slice> slice) {
   bool preload = true;
-  if (slice_) {
-    if (slice_->offset < 0 || slice_->length < 0) {
+  if (slice) {
+    if (slice->offset < 0 || slice->length < 0) {
       return KATANA_ERROR(
           ErrorCode::InvalidArgument,
           "slice offset and length must be non-negative");
@@ -378,7 +378,7 @@ tsuba::ParquetReader::ReadTable(const katana::Uri& uri) {
   }
 
   auto bpr = KATANA_CHECKED(BlockedParquetReader::Make(uri, preload));
-  return FixTable(KATANA_CHECKED(bpr->ReadTable(slice_)));
+  return FixTable(KATANA_CHECKED(bpr->ReadTable(slice)));
 }
 
 katana::Result<std::shared_ptr<arrow::Schema>>
@@ -395,9 +395,10 @@ tsuba::ParquetReader::ReadColumn(const katana::Uri& uri, int32_t column_idx) {
 
 Result<std::shared_ptr<arrow::Table>>
 tsuba::ParquetReader::ReadTable(
-    const katana::Uri& uri, const std::vector<int32_t>& column_indexes) {
+    const katana::Uri& uri, const std::vector<int32_t>& column_indexes,
+    std::optional<tsuba::ParquetReader::Slice> slice) {
   auto bpr = KATANA_CHECKED(BlockedParquetReader::Make(uri, false));
-  return FixTable(KATANA_CHECKED(bpr->ReadTable(column_indexes)));
+  return FixTable(KATANA_CHECKED(bpr->ReadTable(column_indexes, slice)));
 }
 
 Result<int32_t>
@@ -417,7 +418,7 @@ tsuba::ParquetReader::GetFiles(const katana::Uri& uri) {
 
 Result<std::shared_ptr<arrow::Schema>>
 tsuba::ParquetReader::FixSchema(const std::shared_ptr<arrow::Schema>& schema) {
-  if (!make_cannonical_) {
+  if (!make_canonical_) {
     return schema;
   }
 
@@ -434,7 +435,7 @@ tsuba::ParquetReader::FixTable(std::shared_ptr<arrow::Table>&& _table) {
 
   KATANA_CHECKED(table->Validate());
 
-  if (!make_cannonical_) {
+  if (!make_canonical_) {
     return table;
   }
   std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;

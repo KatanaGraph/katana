@@ -1,28 +1,9 @@
-#include <boost/filesystem.hpp>
+#ifndef KATANA_LIBGALOIS_STORAGEFORMATVERSIONOPTIONALTOPOLOGIES_H_
+#define KATANA_LIBGALOIS_STORAGEFORMATVERSIONOPTIONALTOPOLOGIES_H_
 
-#include "TestTypedPropertyGraph.h"
-#include "katana/GraphTopology.h"
-#include "katana/Iterators.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
-#include "katana/Result.h"
-#include "katana/SharedMemSys.h"
-#include "katana/analytics/Utils.h"
-#include "llvm/Support/CommandLine.h"
-#include "stdio.h"
 #include "storage-format-version.h"
-#include "tsuba/RDG.h"
-
-namespace cll = llvm::cl;
-namespace fs = boost::filesystem;
-
-/*
- * Tests to validate optional topology storage added in storage_format_version=3
- * Input can be any rdg with storage_format_version < 3
- */
-
-static cll::opt<std::string> ldbc_003InputFile(
-    cll::Positional, cll::desc("<ldbc_003 input file>"), cll::Required);
 
 template <typename View>
 void
@@ -50,10 +31,10 @@ verify_view(View generated_view, View loaded_view) {
 }
 
 void
-TestOptionalTopologyStorageEdgeShuffleTopology() {
+TestOptionalTopologyStorageEdgeShuffleTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeShuffleTopology *****");
 
-  katana::PropertyGraph pg = LoadGraph(ldbc_003InputFile);
+  katana::PropertyGraph pg = LoadGraph(inputFile);
 
   // Build a EdgeSortedByDestID view, which uses GraphTopology EdgeShuffleTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
@@ -73,10 +54,10 @@ TestOptionalTopologyStorageEdgeShuffleTopology() {
 }
 
 void
-TestOptionalTopologyStorageShuffleTopology() {
+TestOptionalTopologyStorageShuffleTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing ShuffleTopology *****");
 
-  katana::PropertyGraph pg = LoadGraph(ldbc_003InputFile);
+  katana::PropertyGraph pg = LoadGraph(inputFile);
 
   // Build a NodesSortedByDegreeEdgesSortedByDestID view, which uses GraphTopology ShuffleTopology in the background
   using SortedGraphView =
@@ -97,10 +78,10 @@ TestOptionalTopologyStorageShuffleTopology() {
 }
 
 void
-TestOptionalTopologyStorageEdgeTypeAwareTopology() {
+TestOptionalTopologyStorageEdgeTypeAwareTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeTypeAware Topology *****");
 
-  katana::PropertyGraph pg = LoadGraph(ldbc_003InputFile);
+  katana::PropertyGraph pg = LoadGraph(inputFile);
 
   // Build a EdgeTypeAwareBiDir view, which uses GraphTopology EdgeTypeAwareTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgeTypeAwareBiDir;
@@ -118,13 +99,4 @@ TestOptionalTopologyStorageEdgeTypeAwareTopology() {
   verify_view(generated_sorted_view, loaded_sorted_view);
 }
 
-int
-main(int argc, char** argv) {
-  katana::SharedMemSys sys;
-  cll::ParseCommandLineOptions(argc, argv);
-
-  TestOptionalTopologyStorageEdgeShuffleTopology();
-  TestOptionalTopologyStorageShuffleTopology();
-  TestOptionalTopologyStorageEdgeTypeAwareTopology();
-  return 0;
-}
+#endif

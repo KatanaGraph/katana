@@ -314,6 +314,15 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
         RDGPartHeader::kPartitionStorageFormatVersion1;
   }
 
+  // Version 2 was found to be buggy,
+  KATANA_LOG_VASSERT(
+      header.storage_format_version_ !=
+          RDGPartHeader::kPartitionStorageFormatVersion2,
+      "Loaded graph is RDG storage_format_version 2 (aka RDG v2), which is not "
+      "supported. "
+      "Please re-import this graph to get an RDG with the most recent "
+      "storage_format_version");
+
   // Version 2 added entity type id files
   if (header.storage_format_version_ >=
       RDGPartHeader::kPartitionStorageFormatVersion2) {

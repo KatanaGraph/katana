@@ -85,9 +85,10 @@ struct ClusteringImplementationBase {
    */
   template <typename EdgeWeightType>
   static void FindNeighboringClusters(
-      const Graph& graph, GNode& n,
+      const Graph& graph, const GNode& n,
       std::map<uint64_t, uint64_t>& cluster_local_map,
       std::vector<EdgeTy>& counter, EdgeTy& self_loop_wt) {
+
     uint64_t num_unique_clusters = 0;
 
     // Add the node's current cluster to be considered
@@ -99,11 +100,12 @@ struct ClusteringImplementationBase {
     num_unique_clusters++;
 
     // Assuming we have grabbed lock on all the neighbors
-    for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-      auto dst = graph.GetEdgeDest(ii);
-      auto edge_wt = graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(
-          ii);  // Self loop weights is recorded
-      if (*dst == n) {
+    for (auto e : graph.edges(n)) {
+      auto dst = graph.edge_dest(e);
+      // Self loop weights is recorded
+      auto edge_wt = 
+        graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
+      if (dst == n) {
         self_loop_wt += edge_wt;  // Self loop weights is recorded
       }
       auto stored_already =
@@ -127,7 +129,6 @@ struct ClusteringImplementationBase {
    * algorithm begins.
    */
   static uint64_t VertexFollowing(Graph* graph) {
-    using GNode = typename Graph::Node;
     // Initialize each node to its own cluster
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
       graph->template GetData<CurrentCommunityID>(n) = n;
@@ -138,17 +139,16 @@ struct ClusteringImplementationBase {
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
       auto& n_data_curr_comm_id =
           graph->template GetData<CurrentCommunityID>(n);
-      uint64_t degree = std::distance(graph->edge_begin(n), graph->edge_end(n));
+      uint64_t degree = graph->degree(n);
       if (degree == 0) {
         isolated_nodes += 1;
         n_data_curr_comm_id = UNASSIGNED;
       } else {
         if (degree == 1) {
           // Check if the destination has degree greater than one
-          auto dst = graph->GetEdgeDest(graph->edge_end(n) - 1);
-          uint64_t dst_degree =
-              std::distance(graph->edge_begin(*dst), graph->edge_end(*dst));
-          if ((dst_degree > 1 || (n > *dst))) {
+          auto dst = graph->edge_dest(*graph->edges(n).begin());
+          uint64_t dst_degree = graph->degree(dst);
+          if ((dst_degree > 1 || (n > dst))) {
             isolated_nodes += 1;
             n_data_curr_comm_id =
                 graph->template GetData<CurrentCommunityID>(dst);
@@ -170,15 +170,14 @@ struct ClusteringImplementationBase {
       EdgeTy total_weight = 0;
       auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
-      for (auto ii = graph->edge_begin(n); ii != graph->edge_end(n); ++ii) {
+      for (auto e : graph->edges(n)) {
         total_weight +=
-            graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
+            graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
       n_degree_wt = total_weight;
       c_info[n].degree_wt = total_weight;
       c_info[n].size = 1;
     });
-    return;
   }
 
   /**
@@ -270,53 +269,58 @@ struct ClusteringImplementationBase {
     return max_index;
   }
 
-  /**
-   * Computes the modularity gain of the current cluster assignment.
-   */
-  template <typename EdgeWeightType>
-  static double CalModularity(
-      const Graph& graph, CommunityArray& c_info, double& e_xx, double& a2_x,
-      double& constant_for_second_term) {
-    /* Variables needed for Modularity calculation */
-    double mod = -1;
+
+  template <typename EdgeWeightType, typename CommunityIDType, typename NodeWeightFunc>
+  static double ModularityImpl(
+      const Graph& graph, const NodeWeightFunc& node_wt_func, double& e_xx, double& a2_x,
+      const double constant_for_second_term) {
+
 
     katana::NUMAArray<EdgeTy> cluster_wt_internal;
-
-    /*** Initialization ***/
     cluster_wt_internal.allocateBlocked(graph.num_nodes());
+    katana::ParallelSTL::fill(cluster_wt_internal.begin(), cluster_wt_internal.end(), 0);
 
     /* Calculate the overall modularity */
     katana::GAccumulator<double> acc_e_xx;
     katana::GAccumulator<double> acc_a2_x;
 
-    katana::do_all(
-        katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
-
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      auto n_data_current_comm_id =
-          graph.template GetData<CurrentCommunityID>(n);
-      for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-        if (graph.template GetData<CurrentCommunityID>(graph.GetEdgeDest(ii)) ==
-            n_data_current_comm_id) {
+      auto n_data_current_comm = graph.template GetData<CommunityIDType>(n);
+      for (auto e : graph.edges(n)) {
+        if (graph.template GetData<CommunityIDType>(graph.edge_dest(e)) ==
+            n_data_current_comm) {
           cluster_wt_internal[n] +=
-              graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
+              graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
         }
       }
     });
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       acc_e_xx += cluster_wt_internal[n];
-      acc_a2_x +=
-          (double)(c_info[n].degree_wt) *
-          ((double)(c_info[n].degree_wt) * (double)constant_for_second_term);
+      double degree_wt = node_wt_func(n);
+      acc_a2_x += degree_wt * degree_wt * constant_for_second_term;
     });
 
     e_xx = acc_e_xx.reduce();
     a2_x = acc_a2_x.reduce();
 
-    mod = e_xx * (double)constant_for_second_term -
-          a2_x * (double)constant_for_second_term;
-    return mod;
+    return (e_xx - a2_x)  * constant_for_second_term;
+
+
+  }
+
+  /**
+   * Computes the modularity gain of the current cluster assignment.
+   */
+  template <typename EdgeWeightType, typename CommunityIDType=CurrentCommunityID>
+  static double CalModularity(
+      const Graph& graph, CommunityArray& c_info, double& e_xx, double& a2_x,
+      const double constant_for_second_term) {
+
+    auto node_wt_func = [&] (GNode n) { return static_cast<double>(c_info[n].degree_wt); };
+    return ModularityImpl<EdgeWeightType, CommunityIDType>(
+        graph, node_wt_func, e_xx, a2_x, constant_for_second_term);
+
   }
 
   template <typename EdgeWeightType, typename NodePropType>
@@ -327,9 +331,9 @@ struct ClusteringImplementationBase {
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       EdgeTy total_weight = 0;
-      for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
+      for (auto e: graph.edges(n)) {
         total_weight +=
-            graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
+            graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
       degree_weight_array[n] = total_weight;
       c_info[n].degree_wt = 0;
@@ -350,18 +354,9 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType, typename CommunityIDType>
   static double CalModularityFinal(Graph& graph) {
     CommunityArray c_info;    // Community info
-    CommunityArray c_update;  // Used for updating community
-
-    /* Variables needed for Modularity calculation */
-    double constant_for_second_term;
-    double mod = -1;
-
-    katana::NUMAArray<EdgeTy> cluster_wt_internal;
 
     /*** Initialization ***/
     c_info.allocateBlocked(graph.num_nodes());
-    c_update.allocateBlocked(graph.num_nodes());
-    cluster_wt_internal.allocateBlocked(graph.num_nodes());
 
     katana::NUMAArray<EdgeWeightType> degree_weight_array;
     degree_weight_array.allocateBlocked(graph.num_nodes());
@@ -371,42 +366,15 @@ struct ClusteringImplementationBase {
         graph, c_info, degree_weight_array);
 
     /* Compute the total weight (2m) and 1/2m terms */
-    constant_for_second_term =
+    const double constant_for_second_term =
         CalConstantForSecondTerm<EdgeWeightType>(graph, degree_weight_array);
 
-    /* Calculate the overall modularity */
-    double e_xx = 0;
-    katana::GAccumulator<double> acc_e_xx;
-    double a2_x = 0;
-    katana::GAccumulator<double> acc_a2_x;
+    double e_xx = 0.0;
+    double a2_x = 0.0;
 
-    katana::do_all(
-        katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
+    return CalModularity<EdgeWeightType, CommunityIDType>(
+        graph, c_info, e_xx, a2_x, constant_for_second_term);
 
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      auto n_data_current_comm = graph.template GetData<CommunityIDType>(n);
-      for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-        if (graph.template GetData<CommunityIDType>(graph.GetEdgeDest(ii)) ==
-            n_data_current_comm) {
-          cluster_wt_internal[n] +=
-              graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
-        }
-      }
-    });
-
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      acc_e_xx += cluster_wt_internal[n];
-      acc_a2_x +=
-          (double)(c_info[n].degree_wt) *
-          ((double)(c_info[n].degree_wt) * (double)constant_for_second_term);
-    });
-
-    e_xx = acc_e_xx.reduce();
-    a2_x = acc_a2_x.reduce();
-
-    mod = e_xx * (double)constant_for_second_term -
-          a2_x * (double)constant_for_second_term;
-    return mod;
   }
 
   /**
@@ -418,7 +386,8 @@ struct ClusteringImplementationBase {
     std::map<uint64_t, uint64_t> cluster_local_map;
     uint64_t num_unique_clusters = 0;
 
-    for (GNode n = 0; n < graph->num_nodes(); ++n) {
+    // TODO(amber): parallelize
+    for (GNode n : graph->all_nodes()) {
       auto& n_data_curr_comm_id = graph->template GetData<CommunityIDType>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         KATANA_LOG_DEBUG_ASSERT(n_data_curr_comm_id < graph->num_nodes());
@@ -672,12 +641,12 @@ struct ClusteringImplementationBase {
     if (!graph_result) {
       return graph_result.error();
     }
-    Graph graph_curr = graph_result.value();
+    Graph graph_next = graph_result.value();
     // TODO(amber): figure out a better way to add/update the edge property
     katana::do_all(
-        katana::iterate(Edge{0}, num_edges_next),
+        katana::iterate(graph_next.all_edges()),
         [&](Edge e) {
-          graph_curr.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e) =
+          graph_next.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e) =
               edge_data_next[e];
         },
         katana::no_stats());
@@ -707,7 +676,6 @@ struct ClusteringImplementationBase {
       }
       n_degree_wt = total_weight;
     });
-    return;
   }
 
   template <typename ValTy>
@@ -736,6 +704,8 @@ struct ClusteringImplementationBase {
     subcomm_info[n_current_subcomm_id].node_wt = 0;
     subcomm_info[n_current_subcomm_id].internal_edge_wt = 0;
 
+    // TODO(amber): this method is called from a parallel loop. Use iteration
+    // local allocator for the following STL containers
     /*
    * Map each neighbor's subcommunity to local number: Subcommunity --> Index
    */
@@ -765,17 +735,17 @@ struct ClusteringImplementationBase {
 
     EdgeTy self_loop_wt = 0;
 
-    for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-      auto dst = graph.GetEdgeDest(ii);
+    for (auto e : graph.edges(n)) {
+      auto dst = graph.edge_dest(e);
+      // Self loop weights is recorded
       EdgeWeightType edge_wt =
-          graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(
-              ii);  // Self loop weights is recorded
+          graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       auto& n_current_comm = graph.template GetData<CurrentCommunityID>(dst);
       auto& n_current_subcomm =
           graph.template GetData<CurrentSubCommunityID>(dst);
 
       if (n_current_comm == comm_id) {
-        if (*dst == n) {
+        if (dst == n) {
           self_loop_wt += edge_wt;  // Self loop weights is recorded
         }
         auto stored_already = cluster_local_map.find(
@@ -800,16 +770,19 @@ struct ClusteringImplementationBase {
     auto& n_node_wt = graph.template GetData<NodeWeight>(n);
     for (auto pair : cluster_local_map) {
       auto subcomm = pair.first;
-      if (n_current_subcomm_id == subcomm)
+      if (n_current_subcomm_id == subcomm) {
         continue;
+      }
 
-      uint64_t subcomm_node_wt = subcomm_info[subcomm].node_wt;
-      uint64_t subcomm_degree_wt = subcomm_info[subcomm].degree_wt;
+      double subcomm_node_wt = subcomm_info[subcomm].node_wt;
+      double subcomm_degree_wt = subcomm_info[subcomm].degree_wt;
 
+      
       // check if subcommunity is well connected
-      if (subcomm_info[subcomm].internal_edge_wt >=
-          constant_for_second_term * (double)subcomm_degree_wt *
-              ((double)total_degree_wt - (double)subcomm_degree_wt)) {
+      if (double tmp = constant_for_second_term * subcomm_degree_wt *
+          (static_cast<double>(total_degree_wt) - subcomm_degree_wt);
+          subcomm_info[subcomm].internal_edge_wt >= tmp) {
+
         quality_value_increment =
             counter[pair.second] - n_node_wt * subcomm_node_wt * resolution;
 
@@ -818,9 +791,10 @@ struct ClusteringImplementationBase {
           max_quality_value_increment = quality_value_increment;
         }
 
-        if (quality_value_increment >= 0)
+        if (quality_value_increment >= 0) {
           total_transformed_quality_value_increment +=
               std::exp(quality_value_increment / randomness);
+        }
       }
       cum_transformed_quality_value_increment_per_cluster[pair.second] =
           total_transformed_quality_value_increment;
@@ -831,26 +805,22 @@ struct ClusteringImplementationBase {
    * Determine the neighboring cluster to which the currently
    * selected node will be moved.
    */
-    int64_t min_idx, max_idx, mid_idx;
-    uint64_t chosen_cluster;
-    double r;
     if (total_transformed_quality_value_increment < INFINITY_DOUBLE) {
-      r = total_transformed_quality_value_increment *
+      double r = total_transformed_quality_value_increment *
           GenerateRandonNumber(0.0, 1.0);
-      min_idx = -1;
-      max_idx = num_unique_clusters + 1;
+      int64_t min_idx = -1;
+      int64_t max_idx = num_unique_clusters + 1;
       while (min_idx < max_idx - 1) {
-        mid_idx = (min_idx + max_idx) / 2;
+        int64_t mid_idx = (min_idx + max_idx) / 2;
         if (cum_transformed_quality_value_increment_per_cluster[mid_idx] >= r)
           max_idx = mid_idx;
         else
           min_idx = mid_idx;
       }
-      chosen_cluster = neighboring_cluster_ids[max_idx];
+      return neighboring_cluster_ids[max_idx];
     } else {
-      chosen_cluster = best_cluster;
+      return best_cluster;
     }
-    return chosen_cluster;
   }
 
   /**
@@ -895,15 +865,15 @@ struct ClusteringImplementationBase {
      * Initialize with singleton sub-communities
      */
       EdgeWeightType node_edge_weight_within_cluster = 0;
-      for (auto ii = graph->edge_begin(n); ii != graph->edge_end(n); ++ii) {
-        auto dst = graph->GetEdgeDest(ii);
+      for (auto e: graph->edges(n)) {
+        auto dst = graph->edge_dest(e);
         EdgeWeightType edge_wt =
-            graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
+            graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
         /*
        * Must include the edge weight of all neighbors excluding self loops
        * belonging to the community comm_id
        */
-        if (*dst != n &&
+        if (dst != n &&
             graph->template GetData<CurrentCommunityID>(dst) == comm_id) {
           node_edge_weight_within_cluster += edge_wt;
         }
@@ -917,10 +887,13 @@ struct ClusteringImplementationBase {
      * (externalEdgeWeightPerCluster[j] >= clusterWeights[j] * (totalNodeWeight
      * - clusterWeights[j]) * resolution
      */
-      if (node_edge_weight_within_cluster >=
-          constant_for_second_term * (double)degree_wt *
-              ((double)total_degree_wt - (double)degree_wt))
+      
+      if (double tmp  = constant_for_second_term * static_cast<double>(degree_wt) *
+          static_cast<double>(total_degree_wt - degree_wt);
+          node_edge_weight_within_cluster >= tmp) {
+
         cluster_nodes_to_move.push_back(n);
+      }
 
       subcomm_info[n].node_wt = node_wt;
       subcomm_info[n].internal_edge_wt = node_edge_weight_within_cluster;
@@ -942,7 +915,7 @@ struct ClusteringImplementationBase {
             *graph, n, subcomm_info, total_degree_wt, comm_id,
             constant_for_second_term, resolution, randomness);
 
-        if ((int64_t)new_subcomm_ass != -1 &&
+        if (static_cast<int64_t>(new_subcomm_ass) != -1 &&
             new_subcomm_ass !=
                 graph->template GetData<CurrentSubCommunityID>(n)) {
           n_current_subcomm_id = new_subcomm_ass;
@@ -956,11 +929,11 @@ struct ClusteringImplementationBase {
           katana::atomicAdd(
               subcomm_info[new_subcomm_ass].degree_wt, n_degree_wt);
 
-          for (auto ii = graph->edge_begin(n); ii != graph->edge_end(n); ++ii) {
-            auto dst = graph->GetEdgeDest(ii);
+          for (auto e : graph->edges(n)) {
+            auto dst = graph->GetEdgeDest(e);
             auto edge_wt =
-                graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
-            if (*dst != n &&
+                graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
+            if (dst != n &&
                 graph->template GetData<CurrentCommunityID>(dst) == comm_id) {
               if (graph->template GetData<CurrentSubCommunityID>(dst) ==
                   new_subcomm_ass) {
@@ -997,10 +970,10 @@ struct ClusteringImplementationBase {
     comm_info.allocateBlocked(2 * graph->size() + 1);
 
     katana::do_all(
-        katana::iterate((uint32_t)0, (uint32_t)(2 * graph->size() + 1)),
-        [&](uint32_t n) {
-          comm_info[n].node_wt = (uint64_t)0;
-          comm_info[n].degree_wt = (uint64_t)0;
+        katana::iterate(size_t{0}, (2 * graph->size() + 1)),
+        [&](size_t n) {
+          comm_info[n].node_wt = 0ull;
+          comm_info[n].degree_wt = 0ull;
         },
         katana::steal());
 
@@ -1023,7 +996,7 @@ struct ClusteringImplementationBase {
 
     // call MergeNodesSubset for each community in parallel
     katana::do_all(
-        katana::iterate((uint64_t)0, (uint64_t)graph->size()), [&](uint64_t c) {
+        katana::iterate(size_t{0}, graph->size()), [&](size_t c) {
           /*
                     * Only nodes belonging to singleton clusters can be moved to
                     * a different cluster. This guarantees that clusters will
@@ -1051,7 +1024,7 @@ struct ClusteringImplementationBase {
     double max_gain = 0;
     double eix = counter[0] - self_loop_wt;
     double eiy = 0;
-    double size_x = (double)(c_info[sc].node_wt - node_wt);
+    auto size_x = static_cast<double>(c_info[sc].node_wt - node_wt);
     double size_y = 0;
 
     auto stored_already = cluster_local_map.begin();
@@ -1061,8 +1034,8 @@ struct ClusteringImplementationBase {
                           ->second];  // Total edges incident on cluster y
         size_y = c_info[stored_already->first].node_wt;
 
-        cur_gain = 2.0f * (double)(eiy - eix) -
-                   resolution * node_wt * (double)(size_y - size_x);
+        cur_gain = 2.0 * (eiy - eix) -
+                   resolution * static_cast<double>(node_wt) * (size_y - size_x);
         if ((cur_gain > max_gain) ||
             ((cur_gain == max_gain) && (cur_gain != 0) &&
              (stored_already->first < max_index))) {
@@ -1085,45 +1058,11 @@ struct ClusteringImplementationBase {
   double CalCPMQuality(
       Graph& graph, CommunityArray& c_info, double& e_xx, double& a2_x,
       double& constant_for_second_term, double resolution) {
-    /* Variables needed for Modularity calculation */
-    double mod = -1;
 
-    katana::NUMAArray<EdgeWeightType> cluster_wt_internal;
+    auto node_wt_func = [&] (GNode n) { return static_cast<double>(c_info[n].node_wt) * resolution; };
+    return ModularityImpl<EdgeWeightType, CurrentSubCommunityID>(
+        graph, node_wt_func, e_xx, a2_x, constant_for_second_term);
 
-    /*** Initialization ***/
-    cluster_wt_internal.allocateBlocked(graph.size());
-
-    /* Calculate the overall modularity */
-    katana::GAccumulator<double> acc_e_xx;
-    katana::GAccumulator<double> acc_a2_x;
-
-    katana::do_all(
-        katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
-
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      auto& n_data_curr_comm = graph.template GetData<CurrentSubCommunityID>(n);
-      for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-        if (graph.template GetData<CurrentSubCommunityID>(
-                graph.GetEdgeDest(ii)) == n_data_curr_comm) {
-          cluster_wt_internal[n] +=
-              graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
-        }
-      }
-    });
-
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      acc_e_xx += cluster_wt_internal[n];
-      // acc_a2_x +=
-      //     (double)(c_info[n].node_wt) * ((double)(c_info[n].node_wt - 1) * 0.5f);
-      acc_a2_x += (double)(c_info[n].node_wt) *
-                  ((double)(c_info[n].node_wt) * resolution);
-    });
-
-    e_xx = acc_e_xx.reduce();
-    a2_x = acc_a2_x.reduce();
-    mod = (e_xx - a2_x) * (double)constant_for_second_term;
-
-    return mod;
   }
 };
 }  // namespace katana::analytics

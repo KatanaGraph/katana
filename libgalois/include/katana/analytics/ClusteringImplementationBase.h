@@ -521,9 +521,8 @@ struct ClusteringImplementationBase {
                 graph.template GetData<CommunityIDType>(node) ==
                 c);  // All nodes in this bag must have same cluster id
 
-            for (auto ii = graph.edge_begin(node); ii != graph.edge_end(node);
-                 ++ii) {
-              auto dst = graph.GetEdgeDest(ii);
+            for (auto e : graph.edges(node)) {
+              auto dst = graph.edge_dest(e);
               auto dst_data_curr_comm_id =
                   graph.template GetData<CommunityIDType>(dst);
               KATANA_LOG_DEBUG_ASSERT(dst_data_curr_comm_id != UNASSIGNED);
@@ -531,12 +530,12 @@ struct ClusteringImplementationBase {
                   dst_data_curr_comm_id);  // Check if it already exists
               if (stored_already != cluster_local_map.end()) {
                 edges_data[c][stored_already->second] +=
-                    graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
+                    graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
               } else {
                 cluster_local_map[dst_data_curr_comm_id] = num_unique_clusters;
                 edges_id[c].push_back(dst_data_curr_comm_id);
                 edges_data[c].push_back(
-                    graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii));
+                    graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e));
                 num_unique_clusters++;
               }
             }  // End edge loop
@@ -930,7 +929,7 @@ struct ClusteringImplementationBase {
               subcomm_info[new_subcomm_ass].degree_wt, n_degree_wt);
 
           for (auto e : graph->edges(n)) {
-            auto dst = graph->GetEdgeDest(e);
+            auto dst = graph->edge_dest(e);
             auto edge_wt =
                 graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
             if (dst != n &&

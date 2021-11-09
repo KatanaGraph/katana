@@ -1618,7 +1618,7 @@ public:
       PropertyGraph* pg, const Topo& topo) noexcept
       : Base(topo), prop_graph_(pg) {}
 
-  const PropertyGraph& property_graph() const noexcept { return *prop_graph_; }
+  const PropertyGraph* property_graph() const noexcept { return prop_graph_; }
 
 private:
   PropertyGraph* prop_graph_;

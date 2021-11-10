@@ -1331,8 +1331,11 @@ public:
     return nodes(Node{0}, static_cast<Node>(num_nodes()));
   }
 
-  edges_range all_edges() const noexcept {
-    return MakeDisjointEdgesRange(out().all_edges(), in().all_edges());
+  auto all_edges() const noexcept {
+    // return MakeDisjointEdgesRange(out().all_edges(), in().all_edges());
+    // Note: We return edges from  outgoing topology, which is all the edges. 
+    // Commented line above will returns 2x the Edges.
+    return out().all_edges();
   }
   // Standard container concepts
 

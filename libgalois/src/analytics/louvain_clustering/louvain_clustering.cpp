@@ -19,6 +19,7 @@
 
 #include "katana/analytics/louvain_clustering/louvain_clustering.h"
 
+#include <cmath>
 #include <deque>
 #include <type_traits>
 
@@ -96,6 +97,10 @@ struct LouvainClusteringImplementation
     const double constant_for_second_term =
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
 
+    if (std::isinf(constant_for_second_term)) {
+      KATANA_LOG_FATAL("constant_for_second_term is INFINITY\n");
+    }
+
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
     TimerClusteringWhile.start();
     while (true) {
@@ -142,10 +147,10 @@ struct LouvainClusteringImplementation
                 local_target != Base::UNASSIGNED) {
               katana::atomicAdd(
                   c_info[local_target].degree_wt, n_data_degree_wt);
-              katana::atomicAdd(c_info[local_target].size, (uint64_t)1);
+              katana::atomicAdd(c_info[local_target].size, uint64_t{1});
               katana::atomicSub(
                   c_info[n_data_curr_comm_id].degree_wt, n_data_degree_wt);
-              katana::atomicSub(c_info[n_data_curr_comm_id].size, (uint64_t)1);
+              katana::atomicSub(c_info[n_data_curr_comm_id].size, uint64_t{1});
 
               /* Set the new cluster id */
               n_data_curr_comm_id = local_target;
@@ -161,7 +166,7 @@ struct LouvainClusteringImplementation
           graph, c_info, e_xx, a2_x, constant_for_second_term);
 
       if (std::isnan(curr_mod)) {
-        KATANA_LOG_DEBUG("Modulary is NaN. num_iter = {}\n", num_iter);
+        KATANA_LOG_FATAL("Modulary is NaN. num_iter = {}\n", num_iter);
       }
 
       if ((curr_mod - prev_mod) < modularity_threshold_per_round) {

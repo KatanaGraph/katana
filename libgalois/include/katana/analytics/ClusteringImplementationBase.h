@@ -120,7 +120,6 @@ struct ClusteringImplementationBase {
         num_unique_clusters++;
       }
     }  // End edge loop
-    return;
   }
 
   /**
@@ -858,9 +857,9 @@ struct ClusteringImplementationBase {
     std::vector<GNode> cluster_nodes_to_move;
     for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
       GNode n = cluster_nodes[i];
-      auto& n_degree_wt =
+      const auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
-      auto& n_node_wt = graph->template GetData<NodeWeight>(n);
+      const auto& n_node_wt = graph->template GetData<NodeWeight>(n);
       /*
      * Initialize with singleton sub-communities
      */
@@ -902,9 +901,9 @@ struct ClusteringImplementationBase {
     }
 
     for (GNode n : cluster_nodes_to_move) {
-      auto& n_degree_wt =
+      const auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
-      auto& n_node_wt = graph->template GetData<NodeWeight>(n);
+      const auto& n_node_wt = graph->template GetData<NodeWeight>(n);
       auto& n_current_subcomm_id =
           graph->template GetData<CurrentSubCommunityID>(n);
       /*
@@ -978,9 +977,9 @@ struct ClusteringImplementationBase {
         katana::steal());
 
     for (GNode n : *graph) {
-      auto& n_current_comm = graph->template GetData<CurrentCommunityID>(n);
-      auto& n_node_wt = graph->template GetData<NodeWeight>(n);
-      auto& n_degree_wt =
+      const auto& n_current_comm = graph->template GetData<CurrentCommunityID>(n);
+      const auto& n_node_wt = graph->template GetData<NodeWeight>(n);
+      const auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
       if (n_current_comm != UNASSIGNED) {
         cluster_bags[n_current_comm].push_back(n);

@@ -7,8 +7,8 @@ namespace tsuba {
 
 class KATANA_EXPORT TxnContext {
 public:
-  TxnContext();
-  ~TxnContext();
+  TxnContext(){};
+  ~TxnContext() = default;
 
   void InsertNodePropertyRead(std::string name) {
     node_properties_read.push_back(name);

@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import subprocess
 import sys
 import textwrap
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from katana_requirements.data import KATANA_REQUIREMENTS_FILE_NAME, load
 from katana_requirements.model import OutputFormat, Requirements
+from packaging.version import Version
 
 
 class OutputSeparation(Enum):
@@ -175,6 +177,14 @@ def setup_install_arguments(parser):
     setup_general_arguments(parser)
 
 
+def get_apt_version():
+    version_information_str = str(subprocess.check_output(["apt-get", "-v"], stderr=subprocess.DEVNULL), "UTF-8")
+    version_match = re.match(r"apt ([0-9.]+) \(.*\)", version_information_str)
+    if not version_match:
+        raise RuntimeError(f"apt-get returned unexpected version information:\n{version_information_str}")
+    return Version(version_match.group(1))
+
+
 def install_package_list(args, packages, silent=False):
     # TODO(amp): Remove special cases for these throughout the system. This should probably be configurable.
     if args.format == OutputFormat.APT:
@@ -182,6 +192,8 @@ def install_package_list(args, packages, silent=False):
         # differently.
         pinned_package_arguments = []
         specified_package_arguments = []
+        # The same packages as specified_package_arguments, but without versions (used for old APT)
+        unpinned_package_arguments = []
         for p in packages:
             version = p.version_for(OutputFormat.APT)
             if version[0] == "=":
@@ -189,10 +201,21 @@ def install_package_list(args, packages, silent=False):
                 pinned_package_arguments.append(p.name_for(OutputFormat.APT) + version)
             else:
                 specified_package_arguments.append(p.format(OutputFormat.APT))
+                unpinned_package_arguments.append(p.name_for(OutputFormat.APT))
         install_command = ["apt-get", "install"] + args.argument
-        execute_subprocess(install_command + pinned_package_arguments, silent)
         satisfy_command = ["apt-get", "satisfy"] + args.argument
-        execute_subprocess(satisfy_command + specified_package_arguments, silent)
+        if get_apt_version() >= Version("2.0.0"):
+            execute_subprocess(install_command + pinned_package_arguments, silent)
+            execute_subprocess(satisfy_command + specified_package_arguments, silent)
+        else:
+            warning_msg = (
+                "WARNING: You are using apt < 2.0. This means package versions will not be specified "
+                "correctly due to lack of support for the satisfy subcommand. If you have any problems, "
+                "manually check the installed package versions."
+            )
+            print(warning_msg, file=sys.stderr)
+            execute_subprocess(install_command + pinned_package_arguments + unpinned_package_arguments, silent)
+            print(warning_msg, file=sys.stderr)
         return
 
     if args.command:
@@ -210,12 +233,17 @@ def install_package_list(args, packages, silent=False):
 
 
 def execute_subprocess(full_command, silent):
+    command_str = " ".join(f"'{v}'" for v in full_command)
     if not silent:
-        s = " ".join(f"'{v}'" for v in full_command)
-        print(f"Executing: {s}")
-    return subprocess.check_call(
-        full_command, stdout=subprocess.DEVNULL if silent else None, stderr=subprocess.DEVNULL if silent else None
-    )
+        print(f"Executing: {command_str}")
+    try:
+        return subprocess.check_call(
+            full_command, stdout=subprocess.DEVNULL if silent else None, stderr=subprocess.DEVNULL if silent else None
+        )
+    except subprocess.SubprocessError:
+        print(f"Failed to execute:\n{command_str}")
+        print("You might be able to modify the command and run it yourself to make it work.")
+        raise
 
 
 def bisect_list_for_working(packages, func):

@@ -265,7 +265,8 @@ pandoc:
   version: [ 2a, null ]
   labels:
     - conda/dev
-    - pip/dev
+    # TODO(amp): Reinstate this once we don't need to have any support for 18.04 in the setup scripts.
+#    - pip/dev
 parquet-cpp:
   name_overrides:
     apt: libparquet-dev
@@ -391,7 +392,8 @@ clangd:
     conda: clang-tools
   version: *clang_version
   labels:
-    - apt/dev
+    # TODO(amp): Reinstate this once we don't need to have any support for 18.04 in the setup scripts.
+    #- apt/dev
   version_overrides: *clang_version_overrides
 graphviz:
   version: [2, null]

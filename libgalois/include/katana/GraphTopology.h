@@ -125,11 +125,6 @@ public:
   }
 
   Node edge_dest(Edge edge_id) const noexcept {
-    if (edge_id >= dests_.size()) {
-      KATANA_LOG_DEBUG_VASSERT(
-          edge_id < dests_.size(), "edge_id={}, dest_ size = {}", edge_id,
-          dests_.size());
-    }
     KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
     return dests_[edge_id];
   }
@@ -1441,6 +1436,8 @@ public:
     return Base::topo().find_edges(src, dst);
   }
 };
+
+using DefaultPGTopology = BasicTopologyWrapper<GraphTopology>;
 using TransposedTopology = BasicTopologyWrapper<EdgeShuffleTopology>;
 using EdgesSortedByDestTopology = SortedTopologyWrapper<EdgeShuffleTopology>;
 
@@ -1628,6 +1625,7 @@ private:
 };
 
 namespace internal {
+using PGViewDefault = BasicPropGraphViewWrapper<DefaultPGTopology>;
 using PGViewTransposed = BasicPropGraphViewWrapper<TransposedTopology>;
 using PGViewEdgesSortedByDestID =
     BasicPropGraphViewWrapper<EdgesSortedByDestTopology>;
@@ -1641,6 +1639,17 @@ using PGViewProjectedGraph = ProjectedPropGraphViewWrapper;
 
 template <typename PGView>
 struct PGViewBuilder {};
+
+template <>
+struct PGViewBuilder<PGViewDefault> {
+  template <typename ViewCache>
+  static PGViewDefault BuildView(
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+
+    const auto* topo = viewCache.GetOriginalTopology(pg);
+    return PGViewDefault{pg, DefaultPGTopology{topo}};
+  }
+};
 
 template <>
 struct PGViewBuilder<PGViewTransposed> {
@@ -1746,6 +1755,7 @@ struct PGViewBuilder<PGViewProjectedGraph> {
 }  // end namespace internal
 
 struct PropertyGraphViews {
+  using Default = internal::PGViewDefault;
   using Transposed = internal::PGViewTransposed;
   using BiDirectional = internal::PGViewBiDirectional;
   using Undirected = internal::PGViewUnDirected;

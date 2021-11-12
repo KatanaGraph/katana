@@ -18,8 +18,8 @@ main() {
   auto iter_pair_a = std::make_pair(vec_a.begin(), vec_a.end());
   auto iter_pair_b = std::make_pair(vec_b.begin(), vec_b.end());
 
-  auto beg = katana::make_disjoint_ranges_begin(iter_pair_a, iter_pair_b);
-  auto end = katana::make_disjoint_ranges_end(iter_pair_a, iter_pair_b);
+  auto beg = katana::MakeDisjointRangesBegin(iter_pair_a, iter_pair_b);
+  auto end = katana::MakeDisjointRangesEnd(iter_pair_a, iter_pair_b);
 
   size_t sum = std::accumulate(beg, end, 0);
 

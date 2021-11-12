@@ -301,7 +301,7 @@ private:
 
 template <typename I>
 KATANA_EXPORT DisjointRangesIterator<I>
-make_disjoint_ranges_begin(
+MakeDisjointRangesBegin(
     const std::pair<I, I>& range_one, const std::pair<I, I>& range_two) {
   if (range_one.first ==
       range_one.second) {  // first range empty, set to beginning of second
@@ -316,7 +316,7 @@ make_disjoint_ranges_begin(
 
 template <typename I>
 KATANA_EXPORT DisjointRangesIterator<I>
-make_disjoint_ranges_end(
+MakeDisjointRangesEnd(
     const std::pair<I, I>& range_one, const std::pair<I, I>& range_two) {
   return DisjointRangesIterator<I>(
       range_one, range_two, range_two.second,

@@ -1399,8 +1399,8 @@ private:
     in_iter_p.first += fake_id_offset();
     in_iter_p.second += fake_id_offset();
 
-    edge_iterator b = make_disjoint_ranges_begin(out_iter_p, in_iter_p);
-    edge_iterator e = make_disjoint_ranges_end(out_iter_p, in_iter_p);
+    edge_iterator b = MakeDisjointRangesBegin(out_iter_p, in_iter_p);
+    edge_iterator e = MakeDisjointRangesEnd(out_iter_p, in_iter_p);
 
     return MakeStandardRange(b, e);
   }

@@ -844,17 +844,13 @@ public:
     return topo().original_to_projected_edge_id(eid);
   }
 
-  const PropertyGraph& property_graph() const noexcept { return *prop_graph_; }
+  const PropertyGraph* property_graph() const noexcept { return prop_graph_; }
 
   const std::shared_ptr<arrow::Buffer>& node_bitmask() const noexcept {
     return topo().node_bitmask();
   }
   const std::shared_ptr<arrow::Buffer>& edge_bitmask() const noexcept {
     return topo().edge_bitmask();
-  }
-
-  const PropertyGraph* get_property_graph() const noexcept {
-    return prop_graph_;
   }
 
 protected:

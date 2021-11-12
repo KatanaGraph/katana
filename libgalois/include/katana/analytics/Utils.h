@@ -69,7 +69,7 @@ inline katana::Result<void>
 ConstructNodeProperties(
     const PGView& pg_view,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
-  auto pg = const_cast<PropertyGraph*>(pg_view.get_property_graph());
+  auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
   auto bit_mask = pg_view.node_bitmask();
   auto res_table =
       katana::AllocateTable<NodeProps>(pg->num_nodes(), names, bit_mask);
@@ -98,7 +98,7 @@ inline katana::Result<void>
 ConstructEdgeProperties(
     const PGView& pg_view,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
-  auto pg = const_cast<PropertyGraph*>(pg_view.get_property_graph());
+  auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
   auto bit_mask = pg_view.edge_bitmask();
   auto res_table =
       katana::AllocateTable<EdgeProps>(pg->num_edges(), names, bit_mask);

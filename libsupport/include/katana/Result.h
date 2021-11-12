@@ -629,7 +629,7 @@ CheckedExpressionToValue(arrow::Status&&) {
     if (::katana::internal::CheckedExpressionFailed(result_name)) {            \
       return ::katana::internal::CheckedExpressionToError(result_name)         \
           .WithContext(__VA_ARGS__)                                            \
-          .WithContext(FMT_STRING("({}:{})"), __FILE__, __LINE__);             \
+          .WithContext(FMT_STRING("\n({}:{})"), __FILE__, __LINE__);           \
     }                                                                          \
     std::move(                                                                 \
         ::katana::internal::CheckedExpressionToValue(std::move(result_name))); \

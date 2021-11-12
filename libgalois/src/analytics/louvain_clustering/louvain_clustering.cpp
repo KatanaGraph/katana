@@ -31,24 +31,20 @@ namespace {
 
 template <typename EdgeWeightType>
 struct GraphTypes {
-using NodeData = std::tuple<PreviousCommunityID, CurrentCommunityID,
-                  DegreeWeight<EdgeWeightType>>;
+  using NodeData = std::tuple<
+      PreviousCommunityID, CurrentCommunityID, DegreeWeight<EdgeWeightType>>;
 
-using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
+  using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
 
-using Graph = katana::TypedPropertyGraphView<
-                katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
-
-    
+  using Graph = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 };
-                
 
 template <typename EdgeWeightType>
 struct LouvainClusteringImplementation
     : public katana::analytics::ClusteringImplementationBase<
-      typename GraphTypes<EdgeWeightType>::Graph,
-          EdgeWeightType, CommunityType<EdgeWeightType>> {
-
+          typename GraphTypes<EdgeWeightType>::Graph, EdgeWeightType,
+          CommunityType<EdgeWeightType>> {
   using CommTy = CommunityType<EdgeWeightType>;
   using CommunityArray = katana::NUMAArray<CommTy>;
 
@@ -676,7 +672,8 @@ CalModularityWrap(
   using CommTy = CommunityType<EdgeWeightType>;
   using NodeData = std::tuple<PreviousCommunityID>;
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
-  using Graph = katana::TypedPropertyGraphView<katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
   using ClusterBase = katana::analytics::ClusteringImplementationBase<
       Graph, EdgeWeightType, CommTy>;
   auto graph_result =

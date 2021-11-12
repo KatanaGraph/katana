@@ -1328,7 +1328,7 @@ public:
 
   auto all_edges() const noexcept {
     // return MakeDisjointEdgesRange(out().all_edges(), in().all_edges());
-    // Note: We return edges from  outgoing topology, which is all the edges. 
+    // Note: We return edges from  outgoing topology, which is all the edges.
     // Commented line above will returns 2x the Edges.
     return out().all_edges();
   }
@@ -1645,7 +1645,6 @@ struct PGViewBuilder<PGViewDefault> {
   template <typename ViewCache>
   static PGViewDefault BuildView(
       PropertyGraph* pg, ViewCache& viewCache) noexcept {
-
     const auto* topo = viewCache.GetOriginalTopology(pg);
     return PGViewDefault{pg, DefaultPGTopology{topo}};
   }

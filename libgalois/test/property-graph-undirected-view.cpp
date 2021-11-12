@@ -52,7 +52,8 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   }
 
   KATANA_LOG_VASSERT(
-      tot_deg_sum == 2 * graph.all_edges().size(), "Total Degree Sum Mismatched");
+      tot_deg_sum == 2 * graph.all_edges().size(),
+      "Total Degree Sum Mismatched");
 }
 
 int

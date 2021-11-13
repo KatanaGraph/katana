@@ -330,8 +330,10 @@ fi
   endforeach()
 
   string(APPEND ENV_SCRIPT_STR "
-echo PYTHONPATH=\$PYTHONPATH
-\"$@\"
+if [ \"$#\" -eq 0 ]; then
+  echo PYTHONPATH=\$PYTHONPATH 1>&2
+fi
+exec \"$@\"
 ")
   file(GENERATE OUTPUT ${PYTHON_ENV_SCRIPT}.tmp CONTENT "${ENV_SCRIPT_STR}")
 

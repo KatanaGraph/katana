@@ -7,6 +7,7 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
+#include "Logging.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -110,7 +111,7 @@ class KATANA_EXPORT ZipIterator
           ZipRefTuple<typename std::iterator_traits<Iterators>::reference...> >
 
 {
-  friend boost::iterator_core_access;
+  friend class boost::iterator_core_access;
 
   using IterTuple = std::tuple<Iterators...>;
   using RefTuple =
@@ -177,6 +178,149 @@ template <typename... Iterators>
 auto
 make_zip_iterator(const Iterators&... iterators) noexcept {
   return ZipIterator<Iterators...>(iterators...);
+}
+
+template <typename I>
+class KATANA_EXPORT DisjointRangesIterator
+    : public boost::iterator_facade<
+          DisjointRangesIterator<I>,
+          typename std::iterator_traits<I>::value_type,
+          typename std::iterator_traits<I>::iterator_category,
+          typename std::iterator_traits<I>::reference> {
+  using Base = boost::iterator_facade<
+      DisjointRangesIterator<I>, typename std::iterator_traits<I>::value_type,
+      typename std::iterator_traits<I>::iterator_category,
+      typename std::iterator_traits<I>::reference>;
+
+  friend class boost::iterator_core_access;
+
+public:
+  using IteratorPair = std::pair<I, I>;
+
+  enum class RangeKind : int { kFirst = 0, kSecond };
+
+  DisjointRangesIterator(
+      const IteratorPair& range_one, const IteratorPair& range_two,
+      const I& pos, const RangeKind& pos_range) noexcept
+      : range_one_(range_one),
+        range_two_(range_two),
+        iter_(pos),
+        curr_range_(pos_range) {}
+
+  bool equal(const DisjointRangesIterator& that) const noexcept {
+    return iter_ == that.iter_;
+  }
+
+  const typename Base::reference dereference() const noexcept { return *iter_; }
+
+  typename Base::reference dereference() noexcept { return *iter_; }
+
+  void increment() noexcept {
+    ++iter_;
+    if (curr_range_ == RangeKind::kFirst && iter_ >= range_one_.second) {
+      // Reached end of first range hop to next range;
+      iter_ = range_two_.first;
+      curr_range_ = RangeKind::kSecond;
+    }
+  }
+
+  void decrement() noexcept {
+    if (curr_range_ == RangeKind::kSecond && iter_ <= range_two_.first) {
+      // Reached beginning of second range, hop to end of first
+      iter_ = range_one_.second;
+      curr_range_ = RangeKind::kFirst;
+    }
+    --iter_;
+  }
+
+  void advance(std::ptrdiff_t n) noexcept {
+    if (n >= 0) {
+      auto rem = n;
+
+      if (curr_range_ == RangeKind::kFirst &&
+          rem >= std::distance(iter_, range_one_.second)) {
+        rem -= std::distance(iter_, range_one_.second);
+        iter_ = range_two_.first;
+        curr_range_ = RangeKind::kSecond;
+      }
+
+      std::advance(iter_, rem);
+
+    } else {  // n is negative
+
+      auto rem = -n;
+      if (curr_range_ == RangeKind::kSecond &&
+          rem >= std::distance(range_two_.first, iter_)) {
+        rem -= std::distance(range_two_.first, iter_);
+        iter_ = range_one_.second;
+        // move back one to the last valid position in range_one_;
+        --iter_;
+        // decrement rem accordingly
+        --rem;
+
+        curr_range_ = RangeKind::kFirst;
+      }
+
+      std::advance(iter_, -rem);
+    }
+  }
+
+  std::ptrdiff_t distance_to(
+      const DisjointRangesIterator& that) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(SameRanges(that));
+
+    if (this->curr_range_ == that.curr_range_) {
+      return std::distance(this->iter_, that.iter_);
+    }
+
+    // else this and that are in different ranges
+
+    if (this->curr_range_ == RangeKind::kFirst) {
+      KATANA_LOG_DEBUG_ASSERT(that.curr_range_ == RangeKind::kSecond);
+      return std::distance(this->iter_, this->range_one_.second) +
+             std::distance(this->range_two_.first, that.iter_);
+    }
+    // else
+    KATANA_LOG_DEBUG_ASSERT(this->curr_range_ == RangeKind::kSecond);
+    KATANA_LOG_DEBUG_ASSERT(that.curr_range_ == RangeKind::kFirst);
+
+    return -std::distance(this->range_two_.first, this->iter_) -
+           std::distance(that.iter_, this->range_one_.second);
+  }
+
+private:
+  bool SameRanges(const DisjointRangesIterator& that) const noexcept {
+    return range_one_ == that.range_one_ && range_two_ == that.range_two_;
+  }
+
+  IteratorPair range_one_;
+  IteratorPair range_two_;
+  I iter_;
+  RangeKind curr_range_;
+};
+
+template <typename I>
+KATANA_EXPORT DisjointRangesIterator<I>
+MakeDisjointRangesBegin(
+    const std::pair<I, I>& range_one, const std::pair<I, I>& range_two) {
+  if (range_one.first ==
+      range_one.second) {  // first range empty, set to beginning of second
+    return DisjointRangesIterator<I>(
+        range_one, range_two, range_two.first,
+        DisjointRangesIterator<I>::RangeKind::kSecond);
+  }
+  return DisjointRangesIterator<I>(
+      range_one, range_two, range_one.first,
+      DisjointRangesIterator<I>::RangeKind::kFirst);
+}
+
+template <typename I>
+KATANA_EXPORT DisjointRangesIterator<I>
+MakeDisjointRangesEnd(
+    const std::pair<I, I>& range_one, const std::pair<I, I>& range_two) {
+  return DisjointRangesIterator<I>(
+      range_one, range_two, range_two.second,
+      DisjointRangesIterator<I>::RangeKind::kSecond);
 }
 
 }  // end namespace katana

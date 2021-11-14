@@ -19,6 +19,7 @@
 
 #include "katana/analytics/louvain_clustering/louvain_clustering.h"
 
+#include <cmath>
 #include <deque>
 #include <type_traits>
 
@@ -29,21 +30,27 @@ using namespace katana::analytics;
 namespace {
 
 template <typename EdgeWeightType>
-struct LouvainClusteringImplementation
-    : public katana::analytics::ClusteringImplementationBase<
-          katana::TypedPropertyGraph<
-              std::tuple<
-                  PreviousCommunityID, CurrentCommunityID,
-                  DegreeWeight<EdgeWeightType>>,
-              std::tuple<EdgeWeight<EdgeWeightType>>>,
-          EdgeWeightType, CommunityType<EdgeWeightType>> {
+struct GraphTypes {
   using NodeData = std::tuple<
       PreviousCommunityID, CurrentCommunityID, DegreeWeight<EdgeWeightType>>;
+
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
+
+  using Graph = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
+};
+
+template <typename EdgeWeightType>
+struct LouvainClusteringImplementation
+    : public katana::analytics::ClusteringImplementationBase<
+          typename GraphTypes<EdgeWeightType>::Graph, EdgeWeightType,
+          CommunityType<EdgeWeightType>> {
   using CommTy = CommunityType<EdgeWeightType>;
   using CommunityArray = katana::NUMAArray<CommTy>;
 
-  using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
+  using Graph = typename GraphTypes<EdgeWeightType>::Graph;
+  using NodeData = typename GraphTypes<EdgeWeightType>::NodeData;
+  using EdgeData = typename GraphTypes<EdgeWeightType>::EdgeData;
   using GNode = typename Graph::Node;
 
   using Base = katana::analytics::ClusteringImplementationBase<
@@ -65,7 +72,6 @@ struct LouvainClusteringImplementation
     CommunityArray c_update;  // Used for updating community
 
     /* Variables needed for Modularity calculation */
-    double constant_for_second_term;
     double prev_mod = lower;
     double curr_mod = -1;
     uint32_t num_iter = iter;
@@ -84,8 +90,12 @@ struct LouvainClusteringImplementation
     Base::template SumVertexDegreeWeight<EdgeWeightType>(&graph, c_info);
 
     /* Compute the total weight (2m) and 1/2m terms */
-    constant_for_second_term =
+    const double constant_for_second_term =
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
+
+    if (std::isinf(constant_for_second_term)) {
+      KATANA_LOG_FATAL("constant_for_second_term is INFINITY\n");
+    }
 
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
     TimerClusteringWhile.start();
@@ -105,9 +115,9 @@ struct LouvainClusteringImplementation
             auto& n_data_degree_wt =
                 graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-            uint64_t degree =
-                std::distance(graph.edge_begin(n), graph.edge_end(n));
+            uint64_t degree = graph.degree(n);
             uint64_t local_target = Base::UNASSIGNED;
+            // TODO(amber): use scalable allocator with these containers
             std::map<uint64_t, uint64_t>
                 cluster_local_map;  // Map each neighbor's cluster to local number:
                                     // Community --> Index
@@ -133,10 +143,10 @@ struct LouvainClusteringImplementation
                 local_target != Base::UNASSIGNED) {
               katana::atomicAdd(
                   c_info[local_target].degree_wt, n_data_degree_wt);
-              katana::atomicAdd(c_info[local_target].size, (uint64_t)1);
+              katana::atomicAdd(c_info[local_target].size, uint64_t{1});
               katana::atomicSub(
                   c_info[n_data_curr_comm_id].degree_wt, n_data_degree_wt);
-              katana::atomicSub(c_info[n_data_curr_comm_id].size, (uint64_t)1);
+              katana::atomicSub(c_info[n_data_curr_comm_id].size, uint64_t{1});
 
               /* Set the new cluster id */
               n_data_curr_comm_id = local_target;
@@ -150,6 +160,10 @@ struct LouvainClusteringImplementation
 
       curr_mod = Base::template CalModularity<EdgeWeightType>(
           graph, c_info, e_xx, a2_x, constant_for_second_term);
+
+      if (std::isnan(curr_mod)) {
+        KATANA_LOG_FATAL("Modulary is NaN. num_iter = {}\n", num_iter);
+      }
 
       if ((curr_mod - prev_mod) < modularity_threshold_per_round) {
         prev_mod = curr_mod;
@@ -257,9 +271,9 @@ struct LouvainClusteringImplementation
               auto& n_data_degree_wt =
                   graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-              uint64_t degree =
-                  std::distance(graph.edge_begin(n), graph.edge_end(n));
+              uint64_t degree = graph.degree(n);
 
+              // TODO(amber): use scalable allocators
               std::map<uint64_t, uint64_t>
                   cluster_local_map;  // Map each neighbor's cluster to local number:
                                       // Community --> Index
@@ -658,7 +672,8 @@ CalModularityWrap(
   using CommTy = CommunityType<EdgeWeightType>;
   using NodeData = std::tuple<PreviousCommunityID>;
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
-  using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
   using ClusterBase = katana::analytics::ClusteringImplementationBase<
       Graph, EdgeWeightType, CommTy>;
   auto graph_result =

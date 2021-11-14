@@ -113,7 +113,7 @@ apt install --yes --quiet python3-yaml python3-packaging
 # Use the requirements tool to install apt packages with: apt-get satisfy --allow-downgrades --yes --quiet
 "$REPO_ROOT"/scripts/requirements install -a--allow-downgrades -a--yes -a--quiet -l apt -l apt/dev -f apt
 # Use the requirements tool to install pip packages with: python3 -m pip --upgrade
-run_as_original_user "$REPO_ROOT"/scripts/requirements install -a--upgrade -l pip -l pip/dev -f pip
+run_as_original_user "$REPO_ROOT"/scripts/requirements install -l pip -l pip/dev -f pip
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then

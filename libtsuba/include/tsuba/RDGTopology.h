@@ -3,6 +3,7 @@
 
 #include <array>
 
+#include "katana/EntityTypeManager.h"
 #include "katana/ErrorCode.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
@@ -115,11 +116,11 @@ public:
     return edge_index_to_property_index_map_;
   }
 
-  const uint8_t* edge_condensed_type_id_map() const {
+  const katana::EntityTypeID* edge_condensed_type_id_map() const {
     return edge_condensed_type_id_map_;
   }
 
-  const uint8_t* node_condensed_type_id_map() const {
+  const katana::EntityTypeID* node_condensed_type_id_map() const {
     return node_condensed_type_id_map_;
   }
 
@@ -187,9 +188,9 @@ public:
   ///   uint64_t magic_number: sum of num_edges + num_nodes
   ///   uint64_t[num_nodes] node_index_to_property_index_map: translation map for this topologys node_indices to the property_index array
   ///   uint64_t magic_number: sum of num_edges + num_nodes
-  ///   uint8_t edge_condensed_type_id_map: condensed map of the edges EntityTypeIDs
+  ///   katana::EntityTypeID edge_condensed_type_id_map: condensed map of the edges EntityTypeIDs
   ///   uint64_t magic_number: sum of num_edges + num_nodes
-  ///   uint8_t node_condensed_type_id_map: condensed map of the nodes EntityTypeIDs
+  ///   katana::EntityTypeID node_condensed_type_id_map: condensed map of the nodes EntityTypeIDs
   ///
   /// Since property graphs store their edge data separately, we
   /// ignore the size_of_edge_data (data[1]) and the
@@ -240,7 +241,7 @@ public:
       TransposeKind transpose_state, EdgeSortKind edge_sort_state,
       const uint64_t* edge_index_to_property_index_map,
       uint64_t edge_condensed_type_id_map_size,
-      const uint8_t* edge_condensed_type_id_map_);
+      const katana::EntityTypeID* edge_condensed_type_id_map_);
 
   /// Make an RDGTopology for a Shuffle related Topology from in memory structures
   static katana::Result<tsuba::RDGTopology> Make(
@@ -260,9 +261,9 @@ public:
       const uint64_t* edge_index_to_property_index_map,
       const uint64_t* node_index_to_property_index_map,
       uint64_t edge_condensed_type_id_map_size,
-      const uint8_t* edge_condensed_type_id_map_,
+      const katana::EntityTypeID* edge_condensed_type_id_map_,
       uint64_t node_condensed_type_id_map_size,
-      const uint8_t* node_condensed_type_id_map_);
+      const katana::EntityTypeID* node_condensed_type_id_map_);
 
   // Make an RDGTopology from on storage metadata
   static katana::Result<tsuba::RDGTopology> Make(
@@ -299,8 +300,8 @@ private:
   const uint32_t* dests_{nullptr};
   const uint64_t* edge_index_to_property_index_map_{nullptr};
   const uint64_t* node_index_to_property_index_map_{nullptr};
-  const uint8_t* edge_condensed_type_id_map_{nullptr};
-  const uint8_t* node_condensed_type_id_map_{nullptr};
+  const katana::EntityTypeID* edge_condensed_type_id_map_{nullptr};
+  const katana::EntityTypeID* node_condensed_type_id_map_{nullptr};
 
   FileView file_storage_;
 

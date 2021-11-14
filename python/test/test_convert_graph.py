@@ -13,6 +13,7 @@ from katana.local.import_data import (
     from_edge_list_dataframe,
     from_edge_list_matrix,
     from_graphml,
+    from_sorted_edge_list_arrays,
 )
 
 
@@ -23,8 +24,8 @@ def test_adjacency_matrix():
     assert list(g.get_edge_property("weight").to_numpy()) == [1, 2, 3]
 
 
-def test_trivial_arrays():
-    g = from_edge_list_arrays(np.array([0, 1, 10]), np.array([1, 2, 0]))
+def test_trivial_arrays_unsorted():
+    g = from_edge_list_arrays(np.array([0, 10, 1]), np.array([1, 0, 2]))
     assert [g.edges(n) for n in g] == [
         range(0, 1),
         range(1, 2),
@@ -41,23 +42,32 @@ def test_trivial_arrays():
     assert [g.get_edge_dest(i) for i in range(g.num_edges())] == [1, 2, 0]
 
 
-def test_properties_arrays():
-    g = from_edge_list_arrays(np.array([0, 1, 10]), np.array([1, 2, 0]), prop=np.array([1, 2, 3]))
+def test_trivial_arrays_sorted():
+    g = from_sorted_edge_list_arrays(np.array([0, 1, 1, 10]), np.array([1, 2, 1, 0]))
     assert [g.edges(n) for n in g] == [
         range(0, 1),
-        range(1, 2),
-        range(2, 2),
-        range(2, 2),
-        range(2, 2),
-        range(2, 2),
-        range(2, 2),
-        range(2, 2),
-        range(2, 2),
-        range(2, 2),
-        range(2, 3),
+        range(1, 3),
+        range(3, 3),
+        range(3, 3),
+        range(3, 3),
+        range(3, 3),
+        range(3, 3),
+        range(3, 3),
+        range(3, 3),
+        range(3, 3),
+        range(3, 4),
     ]
-    assert [g.get_edge_dest(i) for i in range(g.num_edges())] == [1, 2, 0]
-    assert list(g.get_edge_property("prop").to_numpy()) == [1, 2, 3]
+    assert [g.get_edge_dest(i) for i in range(g.num_edges())] == [1, 2, 1, 0]
+
+
+def test_properties_arrays_unsorted():
+    g = from_edge_list_arrays(np.array([0, 1, 10, 1]), np.array([1, 2, 0, 2]), prop=np.array([1, 2, 3, 2]))
+    assert list(g.get_edge_property("prop").to_numpy()) == [1, 2, 2, 3]
+
+
+def test_properties_arrays_sorted():
+    g = from_sorted_edge_list_arrays(np.array([0, 1, 1, 10]), np.array([1, 2, 1, 0]), prop=np.array([1, 2, 3, 4]))
+    assert list(g.get_edge_property("prop").to_numpy()) == [1, 2, 3, 4]
 
 
 def test_trivial_matrix():

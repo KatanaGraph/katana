@@ -397,6 +397,8 @@ public:
                : arrow::BitUtil::GetBit(null_bitmap_, i + offset_);
   }
 
+  size_t size() const { return length_; }
+
   reference GetValue(size_t i) { return values_[i + offset_]; }
 
   const_reference GetValue(size_t i) const { return values_[i + offset_]; }

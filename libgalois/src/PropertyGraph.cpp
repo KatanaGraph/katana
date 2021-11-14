@@ -62,7 +62,8 @@ CheckTopology(
 /// of extracting EntityTypeIDs and extraction from properties will be depreciated in
 /// favor of this method.
 katana::Result<katana::PropertyGraph::EntityTypeIDArray>
-MapEntityTypeIDsArray(const tsuba::FileView& file_view) {
+MapEntityTypeIDsArray(
+    const tsuba::FileView& file_view, bool is_uint16_t_entity_type_ids) {
   const auto* data = file_view.ptr<tsuba::EntityTypeIDArrayHeader>();
   const auto header = data[0];
 
@@ -70,18 +71,29 @@ MapEntityTypeIDsArray(const tsuba::FileView& file_view) {
     return katana::ErrorCode::InvalidArgument;
   }
 
-  const katana::EntityTypeID* type_IDs_array =
-      reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
-
-  KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
-
   // allocate type IDs array
   katana::PropertyGraph::EntityTypeIDArray entity_type_id_array;
   entity_type_id_array.allocateInterleaved(header.size);
 
-  katana::ParallelSTL::copy(
-      &type_IDs_array[0], &type_IDs_array[header.size],
-      entity_type_id_array.begin());
+  if (is_uint16_t_entity_type_ids) {
+    const katana::EntityTypeID* type_IDs_array =
+        reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
+
+    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+
+    katana::ParallelSTL::copy(
+        &type_IDs_array[0], &type_IDs_array[header.size],
+        entity_type_id_array.begin());
+  } else {
+    // On disk format is still uint8_t EntityTypeIDs
+    const uint8_t* type_IDs_array = reinterpret_cast<const uint8_t*>(&data[1]);
+
+    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+
+    katana::ParallelSTL::copy(
+        &type_IDs_array[0], &type_IDs_array[header.size],
+        entity_type_id_array.begin());
+  }
 
   return katana::MakeResult(std::move(entity_type_id_array));
 }
@@ -144,11 +156,13 @@ katana::PropertyGraph::Make(
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 
-    EntityTypeIDArray node_type_ids = KATANA_CHECKED(
-        MapEntityTypeIDsArray(rdg.node_entity_type_id_array_file_storage()));
+    EntityTypeIDArray node_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
+        rdg.node_entity_type_id_array_file_storage(),
+        rdg.IsUint16tEntityTypeIDs()));
 
-    EntityTypeIDArray edge_type_ids = KATANA_CHECKED(
-        MapEntityTypeIDsArray(rdg.edge_entity_type_id_array_file_storage()));
+    EntityTypeIDArray edge_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
+        rdg.edge_entity_type_id_array_file_storage(),
+        rdg.IsUint16tEntityTypeIDs()));
 
     KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
     KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
@@ -388,7 +402,8 @@ katana::PropertyGraph::DoWrite(
   }
 
   std::unique_ptr<tsuba::FileFrame> node_entity_type_id_array_res =
-      !rdg_.node_entity_type_id_array_file_storage().Valid()
+      !rdg_.node_entity_type_id_array_file_storage().Valid() ||
+              !rdg_.IsUint16tEntityTypeIDs()
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(node_entity_type_ids_))
           : nullptr;
 
@@ -397,7 +412,8 @@ katana::PropertyGraph::DoWrite(
   }
 
   std::unique_ptr<tsuba::FileFrame> edge_entity_type_id_array_res =
-      !rdg_.edge_entity_type_id_array_file_storage().Valid()
+      !rdg_.edge_entity_type_id_array_file_storage().Valid() ||
+              !rdg_.IsUint16tEntityTypeIDs()
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(edge_entity_type_ids_))
           : nullptr;
 
@@ -1102,8 +1118,7 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
   out_indices.allocateInterleaved(topology.num_nodes());
   // Store the out-degree of nodes from original graph
   katana::do_all(katana::iterate(topology.all_nodes()), [&](auto n) {
-    auto edges = topology.edges(n);
-    out_indices[n] = (*edges.end() - *edges.begin());
+    out_indices[n] = topology.edges(n).size();
   });
 
   katana::do_all(
@@ -1157,7 +1172,6 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
             // Add reverse edge
             auto e_new_dst = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
             out_dests[e_new_dst] = src;
-            // TODO(gill) copy edge data to "new" array
           }
         }
       },

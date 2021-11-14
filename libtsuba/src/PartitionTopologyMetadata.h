@@ -93,20 +93,6 @@ public:
   void set_invalid() { invalid_ = true; }
 };
 
-// then the file would look something like this:
-/* struct topology_file { */
-/*   uint64_t magic{num_edges + num_nodes}; //index0 */
-/*   uint64_t adj_indices[num_nodes]; // index 1 */
-/*   uint64_t dest[num_edges]; // index (1 + num_edges) */
-/*   // below are optional */
-/*   uint64_t magic{num_edges + num_nodes}; */
-/*   uint64_t edge_index_to_property_index_map[num_edges]; */
-/*   uint64_t node_index_to_property_index_map[num_nodes]; */
-/*   uint64_t magic{num_edges + num_nodes}; */
-/*   uint64_t edge_index_to_type[num_edges]; */
-/*   uint64_t node_index_to_type[num_nodes]; */
-/* }; */
-
 // set of PartitionTopologyMetadataEntry objects
 using PartitionTopologyMetadataEntries =
     std::array<PartitionTopologyMetadataEntry, tsuba::kMaxNumTopologies>;

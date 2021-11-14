@@ -1,30 +1,5 @@
-/*
- * This file belongs to the Galois project, a C++ library for exploiting
- * parallelism. The code is being released under the terms of the 3-Clause BSD
- * License (a copy is located in LICENSE.txt at the top-level directory).
- *
- * Copyright (C) 2019, The University of Texas at Austin. All rights reserved.
- * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
- * SOFTWARE AND DOCUMENTATION, INCLUDING ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR ANY PARTICULAR PURPOSE, NON-INFRINGEMENT AND WARRANTIES OF
- * PERFORMANCE, AND ANY WARRANTY THAT MIGHT OTHERWISE ARISE FROM COURSE OF
- * DEALING OR USAGE OF TRADE.  NO WARRANTY IS EITHER EXPRESS OR IMPLIED WITH
- * RESPECT TO THE USE OF THE SOFTWARE OR DOCUMENTATION. Under no circumstances
- * shall University be liable for incidental, special, indirect, direct or
- * consequential damages or loss of profits, interruption of business, or
- * related expenses which may arise from use of Software or Documentation,
- * including but not limited to those resulting from defects in Software and/or
- * Documentation, or loss or inaccuracy of data of any kind.
- */
-
-/**
- * @file katana/DynamicBitset.h
- *
- * Contains the DynamicBitset class and most of its implementation.
- */
-
-#ifndef KATANA_LIBGALOIS_KATANA_DYNAMICBITSET_H_
-#define KATANA_LIBGALOIS_KATANA_DYNAMICBITSET_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_DYNAMICBITSETSLOW_H_
+#define KATANA_LIBSUPPORT_KATANA_DYNAMICBITSETSLOW_H_
 
 #include <cassert>
 #include <climits>
@@ -34,35 +9,52 @@
 #include <boost/mpl/has_xxx.hpp>
 
 #include "katana/AtomicWrapper.h"
-#include "katana/Galois.h"
 #include "katana/PODVector.h"
 #include "katana/config.h"
 
 namespace katana {
+
+//TODO(emcginnis): Remove this class entirely when DynamicBitset is available to libsupport
 /**
- * Concurrent dynamically allocated bitset
+ * Concurrent, thread safe, serial implementation of a dynamically allocated bitset
+ * To be replaced with DynamicBitset once it is ripped out of libgalois
  **/
-class KATANA_EXPORT DynamicBitset {
+class KATANA_EXPORT DynamicBitsetSlow {
   katana::PODVector<katana::CopyableAtomic<uint64_t>> bitvec_;
   size_t num_bits_{0};
 
 public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
-  explicit DynamicBitset(
+  explicit DynamicBitsetSlow(
       const HostAllocator<katana::CopyableAtomic<uint64_t>>& host_alloc = {})
       : bitvec_(host_alloc){};
 
-  DynamicBitset(DynamicBitset&& bitset)
+  DynamicBitsetSlow(DynamicBitsetSlow&& bitset)
       : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {
     bitset.num_bits_ = 0;
   }
 
-  DynamicBitset& operator=(DynamicBitset&& bitset) {
+  DynamicBitsetSlow(const DynamicBitsetSlow& bitset)
+      : num_bits_(bitset.num_bits_) {
+    bitvec_.resize(bitset.bitvec_.size());
+    std::copy(bitset.bitvec_.begin(), bitset.bitvec_.end(), bitvec_.begin());
+  }
+
+  DynamicBitsetSlow& operator=(DynamicBitsetSlow&& bitset) {
     if (this != &bitset) {
       bitvec_ = std::move(bitset.bitvec_);
       num_bits_ = bitset.num_bits_;
       bitset.num_bits_ = 0;
+    }
+    return *this;
+  }
+
+  DynamicBitsetSlow& operator=(const DynamicBitsetSlow& bitset) {
+    if (this != &bitset) {
+      num_bits_ = bitset.num_bits_;
+      bitvec_.resize(bitset.bitvec_.size());
+      std::copy(bitset.bitvec_.begin(), bitset.bitvec_.end(), bitvec_.begin());
     }
     return *this;
   }
@@ -247,6 +239,12 @@ public:
     return (old_val & bit_offset);
   }
 
+  void set() {
+    for (size_t i = 0; i < size(); i++) {
+      set(i);
+    }
+  }
+
   /**
    * Reset a bit in the bitset.
    *
@@ -269,7 +267,17 @@ public:
   }
 
   // assumes bit_vector is not updated (set) in parallel
-  void bitwise_or(const DynamicBitset& other);
+  void bitwise_or(const DynamicBitsetSlow& other);
+
+  /**
+   * Does an IN-PLACE bitwise or of 2 passed in bitsets and saves to this
+   * bitset
+   *
+   * @param other1 Bitset to and with other 2
+   * @param other2 Bitset to and with other 1
+   */
+  void bitwise_or(
+      const DynamicBitsetSlow& other1, const DynamicBitsetSlow& other2);
 
   // assumes bit_vector is not updated (set) in parallel
   void bitwise_not();
@@ -281,7 +289,7 @@ public:
    *
    * @param other Other bitset to do bitwise and with
    */
-  void bitwise_and(const DynamicBitset& other);
+  void bitwise_and(const DynamicBitsetSlow& other);
 
   /**
    * Does an IN-PLACE bitwise and of 2 passed in bitsets and saves to this
@@ -290,14 +298,15 @@ public:
    * @param other1 Bitset to and with other 2
    * @param other2 Bitset to and with other 1
    */
-  void bitwise_and(const DynamicBitset& other1, const DynamicBitset& other2);
+  void bitwise_and(
+      const DynamicBitsetSlow& other1, const DynamicBitsetSlow& other2);
 
   /**
    * Does an IN-PLACE bitwise xor of this bitset and another bitset
    *
    * @param other Other bitset to do bitwise xor with
    */
-  void bitwise_xor(const DynamicBitset& other);
+  void bitwise_xor(const DynamicBitsetSlow& other);
 
   /**
    * Does an IN-PLACE bitwise and of 2 passed in bitsets and saves to this
@@ -306,63 +315,47 @@ public:
    * @param other1 Bitset to xor with other 2
    * @param other2 Bitset to xor with other 1
    */
-  void bitwise_xor(const DynamicBitset& other1, const DynamicBitset& other2);
+  void bitwise_xor(
+      const DynamicBitsetSlow& other1, const DynamicBitsetSlow& other2);
 
-  /**
-   * Count how many bits are set in the bitset
-   *
-   * @returns number of set bits in the bitset
-   */
-  size_t count() const;
+  bool all();
 
-  /**
-   * Returns a vector containing the set bits in this bitset in order
-   * from left to right.
-   * Do NOT call in a parallel region as it uses katana::on_each.
-   *
-   * @returns vector with offsets into set bits
-   */
-  template <typename integer>
-  std::vector<integer> GetOffsets() const;
+  DynamicBitsetSlow& operator|=(const DynamicBitsetSlow& other) {
+    KATANA_LOG_ASSERT(size() == other.size());
+    bitwise_or(other);
+    return *this;
+  }
 
-  /**
-   * Given a vector, appends the set bits in this bitset in order
-   * from left to right into the vector.
-   * Do NOT call in a parallel region as it uses katana::on_each.
-   */
-  template <typename integer>
-  void AppendOffsets(std::vector<integer>* vec) const;
+  DynamicBitsetSlow& operator&=(const DynamicBitsetSlow& other) {
+    KATANA_LOG_ASSERT(size() == other.size());
+    bitwise_and(other);
+    return *this;
+  }
 
-  //TODO(emcginnis): DynamicBitset is not actually memory copyable, remove this
+  bool operator==(const DynamicBitsetSlow& other) const {
+    return Equals(other);
+  }
+
+  bool operator!=(const DynamicBitsetSlow& other) const {
+    return !Equals(other);
+  }
+
+  bool Equals(const DynamicBitsetSlow& other) const {
+    if (size() != other.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < size(); i++) {
+      if (test(i) != other.test(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  //TODO(emcginnis): DynamicBitsetSlow is not actually memory copyable, remove this
   //! this is defined to
   using tt_is_copyable = int;
 };
 
-template <>
-std::vector<uint32_t> DynamicBitset::GetOffsets() const;
-
-template <>
-std::vector<uint64_t> DynamicBitset::GetOffsets() const;
-
-template <>
-void DynamicBitset::AppendOffsets(std::vector<uint32_t>* offsets) const;
-
-template <>
-void DynamicBitset::AppendOffsets(std::vector<uint64_t>* offsets) const;
-
-//! An empty bitset object; used mainly by InvalidBitsetFn
-extern katana::DynamicBitset EmptyBitset;
-
-//! A structure representing an empty bitset.
-struct KATANA_EXPORT InvalidBitsetFn {
-  //! Returns false as this is an empty bitset (invalid)
-  static constexpr bool is_valid() { return false; }
-
-  //! Returns the empty bitset
-  static katana::DynamicBitset& get() { return EmptyBitset; }
-
-  //! No-op since it's an empty bitset
-  static void reset_range(size_t, size_t) {}
-};
 }  // namespace katana
 #endif

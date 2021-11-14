@@ -1371,7 +1371,6 @@ protected:
 
 private:
   Edge fake_id_offset() const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(out().num_edges() > 0);
     return out().num_edges() +
            1;  // +1 so that last edge iterator of out() is different from first edge of in()
   }

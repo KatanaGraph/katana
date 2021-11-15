@@ -68,8 +68,7 @@ struct ClusteringImplementationBase {
   using EdgeTy = _EdgeType;
   using CommunityType = _CommunityType;
 
-  constexpr static const uint64_t UNASSIGNED =
-      std::numeric_limits<uint64_t>::max();
+  constexpr static const GNode UNASSIGNED = std::numeric_limits<GNode>::max();
   constexpr static const double INFINITY_DOUBLE =
       std::numeric_limits<double>::max() / 4;
 
@@ -385,7 +384,6 @@ struct ClusteringImplementationBase {
     for (GNode n : graph->all_nodes()) {
       auto& n_data_curr_comm_id = graph->template GetData<CommunityIDType>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
-        KATANA_LOG_DEBUG_ASSERT(n_data_curr_comm_id < graph->num_nodes());
         auto stored_already = cluster_local_map.find(n_data_curr_comm_id);
         if (stored_already != cluster_local_map.end()) {
           n_data_curr_comm_id = stored_already->second;
@@ -652,7 +650,6 @@ struct ClusteringImplementationBase {
   /**
  * Functions specific to Leiden clustering
  */
-
   /**
    * Sums up the degree weight for all
    * the unique clusters.
@@ -673,7 +670,7 @@ struct ClusteringImplementationBase {
   }
 
   template <typename ValTy>
-  static uint64_t GenerateRandonNumber(ValTy min, ValTy max) {
+  static double GenerateRandonNumber(ValTy min, ValTy max) {
     std::random_device
         rd;  // Will be used to obtain a seed for the random number engine
     std::mt19937 gen(
@@ -798,20 +795,29 @@ struct ClusteringImplementationBase {
    * Determine the neighboring cluster to which the currently
    * selected node will be moved.
    */
+    int64_t min_idx, max_idx, mid_idx;
+    double r;
     if (total_transformed_quality_value_increment < INFINITY_DOUBLE) {
-      double r = total_transformed_quality_value_increment *
-                 GenerateRandonNumber(0.0, 1.0);
-      int64_t min_idx = -1;
-      int64_t max_idx = num_unique_clusters + 1;
-      while (min_idx < max_idx - 1) {
-        int64_t mid_idx = (min_idx + max_idx) / 2;
+      r = total_transformed_quality_value_increment *
+          GenerateRandonNumber(0.0, 1.0);
+      min_idx = -1;
+      max_idx = num_unique_clusters;
+      while (min_idx < max_idx) {
+        mid_idx = (min_idx + max_idx) / 2;
         if (cum_transformed_quality_value_increment_per_cluster[mid_idx] >= r) {
+          if (max_idx == mid_idx) {
+            break;
+          }
           max_idx = mid_idx;
         } else {
+          if (min_idx == mid_idx) {
+            break;
+          }
           min_idx = mid_idx;
         }
       }
-      return neighboring_cluster_ids[max_idx];
+      return (max_idx == 0) ? neighboring_cluster_ids[max_idx]
+                            : neighboring_cluster_ids[max_idx - 1];
     } else {
       return best_cluster;
     }
@@ -908,12 +914,9 @@ struct ClusteringImplementationBase {
         uint64_t new_subcomm_ass = GetRandomSubcommunity<EdgeWeightType>(
             *graph, n, subcomm_info, total_degree_wt, comm_id,
             constant_for_second_term, resolution, randomness);
-
-        if (static_cast<int64_t>(new_subcomm_ass) != -1 &&
-            new_subcomm_ass !=
-                graph->template GetData<CurrentSubCommunityID>(n)) {
+        if (new_subcomm_ass != UNASSIGNED &&
+            new_subcomm_ass != n_current_subcomm_id) {
           n_current_subcomm_id = new_subcomm_ass;
-
           /*
          * Move the currently selected node to its new cluster and
          * update the clustering statistics.
@@ -952,25 +955,23 @@ struct ClusteringImplementationBase {
     double constant_for_second_term =
         CalConstantForSecondTerm<EdgeWeightType>(*graph);
     // set singleton subcommunities
-    katana::do_all(
-        katana::iterate(*graph),
-        [&](GNode n) { graph->template GetData<CurrentSubCommunityID>(n) = n; },
-        katana::steal());
+    katana::do_all(katana::iterate(*graph), [&](GNode n) {
+      graph->template GetData<CurrentSubCommunityID>(n) = n;
+    });
 
     // populate nodes into communities
-    std::vector<std::vector<GNode>> cluster_bags(2 * graph->size() + 1);
+    std::vector<std::vector<GNode>> cluster_bags(graph->size());
     CommunityArray comm_info;
 
-    comm_info.allocateBlocked(2 * graph->size() + 1);
+    // comm_info.allocateBlocked(2 * graph->size() + 1);
+    comm_info.allocateBlocked(graph->size());
 
-    katana::do_all(
-        katana::iterate(size_t{0}, (2 * graph->size() + 1)),
-        [&](size_t n) {
-          comm_info[n].node_wt = 0ull;
-          comm_info[n].degree_wt = 0ull;
-        },
-        katana::steal());
+    katana::do_all(katana::iterate(size_t{0}, (graph->size())), [&](size_t n) {
+      comm_info[n].node_wt = 0ull;
+      comm_info[n].degree_wt = 0ull;
+    });
 
+    //TODO (gill): Can be parallelized using do_all.
     for (GNode n : *graph) {
       const auto& n_current_comm =
           graph->template GetData<CurrentCommunityID>(n);
@@ -984,10 +985,15 @@ struct ClusteringImplementationBase {
         katana::atomicAdd(comm_info[n_current_comm].degree_wt, n_degree_wt);
       }
     }
+    uint64_t total = 0;
+    for (size_t n = 0; n < graph->size(); ++n) {
+      total += cluster_bags[n].size();
+    }
 
     CommunityArray subcomm_info;
 
-    subcomm_info.allocateBlocked(graph->size() + 1);
+    // subcomm_info.allocateBlocked(graph->size() + 1);
+    subcomm_info.allocateBlocked(graph->size());
 
     // call MergeNodesSubset for each community in parallel
     katana::do_all(katana::iterate(size_t{0}, graph->size()), [&](size_t c) {
@@ -1001,8 +1007,6 @@ struct ClusteringImplementationBase {
         MergeNodesSubset<EdgeWeightType>(
             graph, cluster_bags[c], c, comm_info[c].degree_wt, subcomm_info,
             constant_for_second_term, resolution, randomness);
-      } else {
-        comm_info[c].num_sub_communities = 0;
       }
     });
   }
@@ -1056,7 +1060,7 @@ struct ClusteringImplementationBase {
     auto node_wt_func = [&](GNode n) {
       return static_cast<double>(c_info[n].node_wt) * resolution;
     };
-    return ModularityImpl<EdgeWeightType, CurrentSubCommunityID>(
+    return ModularityImpl<EdgeWeightType, CurrentCommunityID>(
         graph, node_wt_func, e_xx, a2_x, constant_for_second_term);
   }
 };

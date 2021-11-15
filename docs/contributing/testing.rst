@@ -88,6 +88,13 @@ also possible to run Python tests directly with ``pytest``:
    # against functions, classes, or even files
    $BUILD_DIR/python_env.sh pytest -k 'my_test and not YourClass' python/test
 
+To run Python tests on katana cluster deployed in GCP:
+
+.. code-block:: bash
+
+   # Run tests on katana cluster deployed in GCP
+   $BUILD_DIR/python_env.sh pytest python/test --datasource gcp
+
 
 Notebooks
 ---------

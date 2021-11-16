@@ -252,6 +252,7 @@ def test_simple_algorithm(graph):
     assert oprop[4].as_py() == 0
     assert oprop[-1].as_py() == 0
 
+
 def test_edge_iterator(graph):
     edges = graph.edge_iterator()
     for i, edge in enumerate(edges):

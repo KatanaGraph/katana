@@ -22,9 +22,10 @@ from libcpp.vector cimport vector
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
 from .entity_type cimport EntityType
-from .edge_iterator import EdgeIterator
 
 from abc import abstractmethod
+
+from .edge_iterator import EdgeIterator
 
 __all__ = ["GraphBase", "Graph"]
 

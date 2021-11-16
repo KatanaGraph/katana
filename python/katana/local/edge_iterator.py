@@ -1,4 +1,4 @@
-class EdgeIterator():
+class EdgeIterator:
     """
     An iterator over the edges of a graph
     """

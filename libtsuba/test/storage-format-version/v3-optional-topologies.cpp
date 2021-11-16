@@ -17,17 +17,41 @@
 
 namespace fs = boost::filesystem;
 
+// number of nodes/edges in the default csr topology for the expected input rdg
+// if the input changes, these must be changed
+static constexpr size_t csr_num_nodes = 29946;
+static constexpr size_t csr_num_edges = 43072;
+
+void
+ValidateBaseTopologyData(tsuba::RDGTopology* topo) {
+  // Validate number of  nodes/edges matches the default number in the csr
+  KATANA_LOG_ASSERT(topo->num_nodes() == csr_num_nodes);
+  KATANA_LOG_ASSERT(topo->num_edges() == csr_num_edges);
+}
+
 katana::Result<tsuba::RDGTopology*>
 GetCSR(tsuba::RDG* rdg) {
   tsuba::RDGTopology shadow_csr = tsuba::RDGTopology::MakeShadowCSR();
   tsuba::RDGTopology* csr = KATANA_CHECKED_CONTEXT(
       rdg->GetTopology(shadow_csr),
       "unable to find csr topology, must have csr topology");
-
-  KATANA_LOG_ASSERT(csr->num_nodes() == 29946);
-  KATANA_LOG_ASSERT(csr->num_edges() == 43072);
-
+  ValidateBaseTopologyData(csr);
   return csr;
+}
+
+katana::Result<void>
+CSRPresent(tsuba::RDG* rdg) {
+  tsuba::RDGTopology* csr = KATANA_CHECKED(GetCSR(rdg));
+  KATANA_CHECKED(csr->unbind_file_storage());
+  return katana::ResultSuccess();
+}
+
+void
+CleanupRDGDirs(std::vector<std::string> dirs) {
+  for (auto rdg_dir : dirs) {
+    KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir);
+    fs::remove_all(rdg_dir);
+  }
 }
 
 /// Load a graph that was stored without optional topology support
@@ -42,7 +66,7 @@ TestGraphBackwardsCompatabilityRoundTrip(const std::string& rdg_name) {
   tsuba::RDG rdg = KATANA_CHECKED(LoadRDG(rdg_name));
 
   // load old csr topology
-  tsuba::RDGTopology* csr = KATANA_CHECKED(GetCSR(&rdg));
+  KATANA_CHECKED(CSRPresent(&rdg));
 
   // write out converted rdg
   std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
@@ -52,11 +76,7 @@ TestGraphBackwardsCompatabilityRoundTrip(const std::string& rdg_name) {
   tsuba::RDG rdg1 = KATANA_CHECKED(LoadRDG(rdg_dir1));
 
   // ensure we can still find the csr
-
-  tsuba::RDGTopology* csr1 = KATANA_CHECKED(GetCSR(&rdg1));
-
-  KATANA_LOG_ASSERT(csr1->num_edges() == csr->num_edges());
-  KATANA_LOG_ASSERT(csr1->num_nodes() == csr->num_nodes());
+  KATANA_CHECKED(CSRPresent(&rdg));
 
   return katana::ResultSuccess();
 }
@@ -88,8 +108,19 @@ TestGraphComplexOptionalTopologyRoundTrip(const std::string& rdg_name) {
       dummy_node_property_index, csr->num_nodes(),
       dummy_node_property_index_value);
 
+  // make copies of the csr data since we unbind all topologies before calling store
+  uint64_t adj_indices_copy[csr_num_nodes];
+  for (size_t i = 0; i < csr_num_nodes; i++) {
+    adj_indices_copy[i] = csr->adj_indices()[i];
+  }
+
+  uint32_t dests_copy[csr_num_edges];
+  for (size_t i = 0; i < csr_num_nodes; i++) {
+    dests_copy[i] = csr->dests()[i];
+  }
+
   tsuba::RDGTopology topo = KATANA_CHECKED(tsuba::RDGTopology::Make(
-      csr->adj_indices(), csr->num_nodes(), csr->dests(), csr->num_edges(),
+      &adj_indices_copy[0], csr->num_nodes(), &dests_copy[0], csr->num_edges(),
       tsuba::RDGTopology::TopologyKind::kShuffleTopology,
       tsuba::RDGTopology::TransposeKind::kNo,
       tsuba::RDGTopology::EdgeSortKind::kSortedByDestID,
@@ -98,13 +129,18 @@ TestGraphComplexOptionalTopologyRoundTrip(const std::string& rdg_name) {
 
   rdg.AddTopology(std::move(topo));
 
+  // now that we are done with the csr, unbind it since we expect all
+  // topology file stores to be unbound before calling RDG::Store
+  KATANA_CHECKED(csr->unbind_file_storage());
+  csr = nullptr;
+
   std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load rdg with optional topology and verify it
   tsuba::RDG rdg1 = KATANA_CHECKED(LoadRDG(rdg_dir1));
 
-  KATANA_CHECKED(GetCSR(&rdg1));
+  KATANA_CHECKED(CSRPresent(&rdg1));
 
   tsuba::RDGTopology shadow_optional_topology = tsuba::RDGTopology::MakeShadow(
       tsuba::RDGTopology::TopologyKind::kShuffleTopology,
@@ -116,13 +152,10 @@ TestGraphComplexOptionalTopologyRoundTrip(const std::string& rdg_name) {
       rdg1.GetTopology(shadow_optional_topology),
       "unable to find optional topology we just added");
 
-  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir1);
-  fs::remove_all(rdg_dir1);
-  rdg_dir1 = "";
+  // since we built our optional topology from the default csr, validate the base data
+  ValidateBaseTopologyData(optional_topology);
 
-  KATANA_LOG_ASSERT(csr->num_nodes() == optional_topology->num_nodes());
-  KATANA_LOG_ASSERT(csr->num_edges() == optional_topology->num_edges());
-
+  // validate the optional data
   for (size_t i = 0; i < optional_topology->num_edges(); i++) {
     KATANA_LOG_ASSERT(
         optional_topology->edge_index_to_property_index_map()[i] ==
@@ -134,6 +167,8 @@ TestGraphComplexOptionalTopologyRoundTrip(const std::string& rdg_name) {
         optional_topology->node_index_to_property_index_map()[i] ==
         dummy_node_property_index_value);
   }
+
+  CleanupRDGDirs({rdg_dir1});
 
   return katana::ResultSuccess();
 }
@@ -159,8 +194,19 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
       dummy_edge_property_index, csr->num_edges(),
       dummy_edge_property_index_value);
 
+  // make copies of the csr data since we unbind all topologies before calling store
+  uint64_t adj_indices_copy[csr_num_nodes];
+  for (size_t i = 0; i < csr_num_nodes; i++) {
+    adj_indices_copy[i] = csr->adj_indices()[i];
+  }
+
+  uint32_t dests_copy[csr_num_edges];
+  for (size_t i = 0; i < csr_num_nodes; i++) {
+    dests_copy[i] = csr->dests()[i];
+  }
+
   tsuba::RDGTopology topo = KATANA_CHECKED(tsuba::RDGTopology::Make(
-      csr->adj_indices(), csr->num_nodes(), csr->dests(), csr->num_edges(),
+      &adj_indices_copy[0], csr->num_nodes(), &dests_copy[0], csr->num_edges(),
       tsuba::RDGTopology::TopologyKind::kEdgeShuffleTopology,
       tsuba::RDGTopology::TransposeKind::kYes,
       tsuba::RDGTopology::EdgeSortKind::kSortedByDestID,
@@ -168,13 +214,18 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
 
   rdg.AddTopology(std::move(topo));
 
+  // now that we are done with the csr, unbind it since we expect all
+  // topology file stores to be unbound before calling RDG::Store
+  KATANA_CHECKED(csr->unbind_file_storage());
+  csr = nullptr;
+
   std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load rdg with optional topology and verify it
   tsuba::RDG rdg1 = KATANA_CHECKED(LoadRDG(rdg_dir1));
 
-  KATANA_CHECKED(GetCSR(&rdg1));
+  KATANA_CHECKED(CSRPresent(&rdg1));
 
   tsuba::RDGTopology shadow_optional_topology = tsuba::RDGTopology::MakeShadow(
       tsuba::RDGTopology::TopologyKind::kEdgeShuffleTopology,
@@ -186,27 +237,28 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
       rdg1.GetTopology(shadow_optional_topology),
       "unable to find optional topology we just added");
 
-  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir1);
-  fs::remove_all(rdg_dir1);
-  rdg_dir1 = "";
+  // since we built our optional topology from the default csr, validate the base data
+  ValidateBaseTopologyData(optional_topology);
 
-  KATANA_LOG_ASSERT(csr->num_nodes() == optional_topology->num_nodes());
-  KATANA_LOG_ASSERT(csr->num_edges() == optional_topology->num_edges());
-
+  // validate the optional data
   for (size_t i = 0; i < optional_topology->num_edges(); i++) {
     KATANA_LOG_ASSERT(
         optional_topology->edge_index_to_property_index_map()[i] ==
         dummy_edge_property_index_value);
   }
 
-  // write out rdg with optional topology
+  // now that we are done with the topology, unbind it since we expect all
+  // topology file stores to be unbound before calling RDG::Store
+  KATANA_CHECKED(optional_topology->unbind_file_storage());
+  optional_topology = nullptr;
 
+  // write out rdg with optional topology
   std::string rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
   KATANA_LOG_ASSERT(!rdg_dir2.empty());
 
   // load rdg again, and verify the optional topology
   tsuba::RDG rdg2 = KATANA_CHECKED(LoadRDG(rdg_dir2));
-  KATANA_CHECKED(GetCSR(&rdg2));
+  KATANA_CHECKED(CSRPresent(&rdg2));
 
   shadow_optional_topology = tsuba::RDGTopology::MakeShadow(
       tsuba::RDGTopology::TopologyKind::kEdgeShuffleTopology,
@@ -218,18 +270,17 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
       rdg2.GetTopology(shadow_optional_topology),
       "unable to find optional topology we just added");
 
-  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir2);
-  fs::remove_all(rdg_dir2);
-  rdg_dir2 = "";
+  // since we built our optional topology from the default csr, validate the base data
+  ValidateBaseTopologyData(optional_topology);
 
-  KATANA_LOG_ASSERT(csr->num_nodes() == optional_topology->num_nodes());
-  KATANA_LOG_ASSERT(csr->num_edges() == optional_topology->num_edges());
-
+  // validate the optional data
   for (size_t i = 0; i < optional_topology->num_edges(); i++) {
     KATANA_LOG_ASSERT(
         optional_topology->edge_index_to_property_index_map()[i] ==
         dummy_edge_property_index_value);
   }
+
+  CleanupRDGDirs({rdg_dir1, rdg_dir2});
 
   return katana::ResultSuccess();
 }
@@ -244,20 +295,15 @@ TestGraphBasicRoundTrip(const std::string& rdg_name) {
   KATANA_LOG_ASSERT(!rdg_name.empty());
 
   tsuba::RDG rdg = KATANA_CHECKED(LoadRDG(rdg_name));
-  KATANA_CHECKED(GetCSR(&rdg));
+  KATANA_CHECKED(CSRPresent(&rdg));
   std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load converted rdg
   tsuba::RDG rdg1 = KATANA_CHECKED(LoadRDG(rdg_dir1));
-  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir1);
 
   // ensure we can still find the csr
-  KATANA_CHECKED(GetCSR(&rdg1));
-
-  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir1);
-  fs::remove_all(rdg_dir1);
-  rdg_dir1 = "";
+  KATANA_CHECKED(CSRPresent(&rdg1));
 
   // write out converted rdg
 
@@ -266,14 +312,11 @@ TestGraphBasicRoundTrip(const std::string& rdg_name) {
 
   // load converted rdg
   tsuba::RDG rdg2 = KATANA_CHECKED(LoadRDG(rdg_dir2));
-  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir2);
 
   // ensure we can still find the csr
-  KATANA_CHECKED(GetCSR(&rdg2));
+  KATANA_CHECKED(CSRPresent(&rdg2));
 
-  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir2);
-  fs::remove_all(rdg_dir2);
-  rdg_dir2 = "";
+  CleanupRDGDirs({rdg_dir1, rdg_dir2});
 
   return katana::ResultSuccess();
 }

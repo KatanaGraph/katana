@@ -7,6 +7,7 @@
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/Random.h"
+#include "katana/Result.h"
 #include "tsuba/RDGTopology.h"
 
 void
@@ -163,6 +164,11 @@ katana::EdgeShuffleTopology::Make(tsuba::RDGTopology* rdg_topo) {
       &(rdg_topo->edge_index_to_property_index_map()[0]),
       &(rdg_topo->edge_index_to_property_index_map()[rdg_topo->num_edges()]),
       edge_prop_indices.begin());
+
+  // Since we copy the data we need out of the RDGTopology into our own arrays,
+  // unbind the RDGTopologys file store to save memory.
+  auto res = rdg_topo->unbind_file_storage();
+  KATANA_LOG_ASSERT(res);
 
   std::unique_ptr<EdgeShuffleTopology> shuffle =
       std::make_unique<EdgeShuffleTopology>(EdgeShuffleTopology{
@@ -409,6 +415,11 @@ katana::ShuffleTopology::Make(tsuba::RDGTopology* rdg_topo) {
       &(rdg_topo->node_index_to_property_index_map()[rdg_topo->num_nodes()]),
       node_prop_indices_copy.begin());
 
+  // Since we copy the data we need out of the RDGTopology into our own arrays,
+  // unbind the RDGTopologys file store to save memory.
+  auto res = rdg_topo->unbind_file_storage();
+  KATANA_LOG_ASSERT(res);
+
   std::unique_ptr<ShuffleTopology> shuffle =
       std::make_unique<ShuffleTopology>(ShuffleTopology{
           rdg_topo->transpose_state(), rdg_topo->node_sort_state(),
@@ -581,6 +592,11 @@ katana::EdgeTypeAwareTopology::Make(
       &(rdg_topo->adj_indices()
             [rdg_topo->num_nodes() * edge_type_index->num_unique_types()]),
       per_type_adj_indices.begin());
+
+  // Since we copy the data we need out of the RDGTopology into our own arrays,
+  // unbind the RDGTopologys file store to save memory.
+  auto res = rdg_topo->unbind_file_storage();
+  KATANA_LOG_ASSERT(res);
 
   return std::make_unique<EdgeTypeAwareTopology>(EdgeTypeAwareTopology{
       edge_type_index, e_topo, std::move(per_type_adj_indices)});

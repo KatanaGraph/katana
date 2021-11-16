@@ -412,16 +412,12 @@ tsuba::RDG::DoMake(
   // populating topologies
   KATANA_CHECKED(core_->MakeTopologyManager(metadata_dir));
 
-  // find & bind the default csr topology
+  // ensure we can find the default csr topology
   RDGTopology shadow_csr = RDGTopology::MakeShadowCSR();
-  RDGTopology* csr =
-      KATANA_CHECKED(core_->topology_manager().GetTopology(shadow_csr));
-
+  RDGTopology* csr = KATANA_CHECKED_CONTEXT(
+      core_->topology_manager().GetTopology(shadow_csr),
+      "unable to find csr topology, must have csr topology");
   KATANA_LOG_VASSERT(csr != nullptr, "csr topology is null");
-  //TODO: emcginnis is there any reason we should be binding the csr topology here?
-  // getting it makes sense, to make sure it is present, but I don't think we need to bind it
-  // binding csr topology
-  KATANA_CHECKED(csr->Bind(metadata_dir));
 
   if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
     katana::Uri node_entity_type_id_array_path = metadata_dir.Join(
@@ -584,7 +580,7 @@ tsuba::RDG::Store(
   // All write buffers must outlive desc
   std::unique_ptr<WriteGroup> desc = KATANA_CHECKED(WriteGroup::Make());
 
-  KATANA_CHECKED(core_->topology_manager().DoStore(handle, desc));
+  KATANA_CHECKED(core_->topology_manager().DoStore(handle, rdg_dir(), desc));
 
   KATANA_CHECKED(DoStoreNodeEntityTypeIDArray(
       handle, std::move(node_entity_type_id_array_ff), desc));

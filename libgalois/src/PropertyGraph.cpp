@@ -153,6 +153,10 @@ katana::PropertyGraph::Make(
   katana::GraphTopology topo = katana::GraphTopology(
       csr->adj_indices(), csr->num_nodes(), csr->dests(), csr->num_edges());
 
+  // The GraphTopology constructor copies all of the required topology data.
+  // Clean up the RDGTopologies memory
+  KATANA_CHECKED(csr->unbind_file_storage());
+
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 

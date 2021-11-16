@@ -64,6 +64,8 @@ public:
   /// Determine if the EntityTypeIDs are stored in properties, or outside
   /// in their own dedicated structures
   bool IsEntityTypeIDsOutsideProperties() const;
+  /// What size are EntityTypeIDs on storage
+  bool IsUint16tEntityTypeIDs() const;
 
   /// Perform some checks on assumed invariants
   katana::Result<void> Validate() const;

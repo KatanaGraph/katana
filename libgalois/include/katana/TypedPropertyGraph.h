@@ -50,6 +50,7 @@ public:
   using node_iterator = GraphTopology::node_iterator;
   using edge_iterator = GraphTopology::edge_iterator;
   using edges_range = GraphTopology::edges_range;
+  using nodes_range = GraphTopology::nodes_range;
   using iterator = GraphTopology::iterator;
   using Node = GraphTopology::Node;
   using Edge = GraphTopology::Edge;
@@ -134,6 +135,11 @@ public:
     return pg_->GetEdgeDest(edge);
   }
 
+  // TODO(amber): remove edge_dest or GetEdgeDest
+  Node edge_dest(Edge e) const noexcept { return pg_->topology().edge_dest(e); }
+
+  size_t degree(Node n) const noexcept { return pg_->topology().degree(n); }
+
   uint64_t num_nodes() const { return pg_->num_nodes(); }
   uint64_t num_edges() const { return pg_->num_edges(); }
 
@@ -173,6 +179,7 @@ public:
   edge_iterator edge_end(Node node) const { return pg_->edges(node).end(); }
   // TODO(amp): [[deprecated("use edges(node)")]]
 
+  nodes_range all_nodes() const noexcept { return pg_->topology().all_nodes(); }
   edges_range all_edges() const noexcept { return pg_->topology().all_edges(); }
   /**
    * Accessor for the underlying PropertyGraph.
@@ -363,7 +370,7 @@ Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
 TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
     const PGView& pg_view, const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
-  auto pg = pg_view.get_property_graph();
+  const auto* pg = pg_view.property_graph();
   auto node_view_result =
       internal::MakeNodePropertyViews<NodeProps>(pg, node_properties);
   if (!node_view_result) {

@@ -1,0 +1,519 @@
+# Katana package requirements
+#
+# For schema documentation see the scripts/requirements tool. Remember that YAML supports user defined aliases. They are
+# used for shared version numbers.
+#
+# The schema for this file is scripts/katana_requirements/schema.json
+
+label_descriptions:
+  conan: Packages installed using conan in conan builds and in deb packaging.
+  conda: Conda package dependencies.
+  conda/dev: Packages installed for conda builds that may not be needed in the run environment.
+  apt: Packages installed with APT in non-conda builds.
+  pip/dev: Packages installed with pip to build and run Ubuntu deb packages.
+
+packaging_system_descriptions:
+  conda: |
+    A Python-oriented, but universal, packaging system. Packages are installed in user-local directories. Python, C++
+    and tool packages are all available. Some packages are not built with all the features we need, or have bugs.
+  conan: |
+    The Conan C++ packaging system. Provides C++ library packages, but is not good for building packages for
+    distribution because the binaries it generates are generally not ABI compatible with binaries from any other
+    packaging system. Does not provide Python or tool packages.
+  pip: |
+    The Python pip packaging system. Provides Python packages only, and has very poor support for packages with native
+    extensions.
+  apt: |
+    The native packaging system of Ubuntu. Provides a wide range of packages, but tends to be a bit out of date, so
+    external repositories are sometimes needed which can complicate compability. Due to limitations in how APT solves
+    dependencies, the requirements tool provides a hack: If you provide a pinned version override (e.g., pkg==1.0)
+    the package will be installed with `apt-get install` instead of `apt-get satisfy`. This works around failure to find
+    older versions of packages.
+
+boa:
+  version: [0.6, 1]
+  labels:
+    - conda/dev
+backward-cpp:
+  version: [ 1.4, 2 ]
+  labels:
+    - conan
+    - conda
+  version_overrides:
+    conan: 1.5
+benchmark:
+  version: [ 1.5.3, 2 ]
+  labels:
+    - conan
+    - conda
+black:
+  version: [ 19.10a0, 19.11 ]
+  labels:
+    - conda/dev
+    - pip/dev
+boost:
+  version: [ 1.74.0, 2 ]
+  name_overrides:
+    conda: boost-cpp
+    pip: null
+    apt: libboost-all-dev
+  labels:
+    - conda
+    - conan
+breathe:
+  version: [ 4.30, null ]
+  labels:
+    - conda
+cmake:
+  version: [ 3.17, 4 ]
+  labels:
+    - apt
+    - conda
+conan:
+  version: [ 1.40, null ]
+  labels:
+    - pip/dev
+conda-build:
+  version: [ 3, null ]
+  labels:
+    - conda/dev
+conda-verify:
+  version: [ 3, null ]
+  labels:
+    - conda/dev
+coverage:
+  version: [ 5.5, null ]
+  labels:
+    - conda/dev
+cudatoolkit:
+  name_overrides:
+    conda: cudatoolkit-dev
+  version: [ 11, 12 ]
+cxx-compiler:
+  version: [ 1.1.3, 2 ]
+  labels:
+    - conda/dev
+cython:
+  labels:
+    - conda/dev
+    - pip/dev
+  name_overrides:
+    pip: Cython
+    apt: cython3
+  version: [ 0.29.12, 3 ]
+doxygen:
+  version: [ 1.8, null ]
+  labels:
+    - conda/dev
+    - apt
+eigen:
+  version: [ 3.3.7, 4 ]
+  labels:
+    - conan
+    - conda
+elfutils:
+  labels:
+    - conda/dev
+    - apt
+  version: [ 0.176, null ]
+fmt:
+  version: [ 6.2.1, 9 ]
+  labels:
+    - conan
+    - conda
+isort:
+  version: [ 5.9.3, 5.10 ]
+  labels:
+    - conda/dev
+jemalloc:
+  version: [ 5.2.1, null ]
+  labels:
+    - conan
+    - conda
+jinja2:
+  version: [ 2.11, null ]
+  labels:
+    - conda/dev
+jupyter:
+  version: [ 1, null ]
+  labels:
+    - conda
+jupyter_core:
+  version: [ 4.7, null ]
+  labels:
+    - conda
+jupyterlab:
+  version: [ 3.1, null ]
+  labels:
+    - conda
+libarrow-python:
+  name_overrides:
+    conan: null
+    conda: null
+    pip: null
+    apt: libarrow-python-dev
+  version: &arrow_version [ 4, 5 ]
+  labels:
+    - apt
+  version_overrides: &arrow_version_overrides
+    apt: "=4.0.1-1"
+libarrow:
+  name_overrides:
+    conan: arrow
+    conda: arrow-cpp
+    pip: null
+    apt: libarrow-dev
+  version: *arrow_version
+  labels:
+    - conda
+    - apt
+  version_overrides: *arrow_version_overrides
+libcurl:
+  version: [ 7.66, null ]
+  labels:
+    - conda
+    - conan
+  version_overrides:
+    conan: 7.74.0
+libxml2:
+  name_overrides:
+    apt: libxml2-dev
+  version: [ 2.9.10, 3 ]
+  labels:
+    - conda
+    - apt
+llvm:
+  version: &llvm_version [ 8, null ]
+  labels:
+    - conda/dev
+llvmdev:
+  name_overrides:
+    apt: llvm-dev
+  version: *llvm_version
+  labels:
+    - conda
+    - apt
+  version_overrides: &llvm_version_overrides
+    apt: ">=10.0-50~exp1"
+make:
+  version: [ 4.2, null ]
+  labels:
+    - conda/dev
+    - apt
+metagraph:
+  version: [ 0.2.6, null ]
+  labels:
+    - conda
+nbsphinx:
+  version: [ 0.8, null ]
+  labels:
+    - conda
+ncurses:
+  name_overrides:
+    apt: libncurses-dev
+  version: [ 6.1, 7 ]
+  labels:
+    - conda
+    - apt
+ninja:
+  version: [ 1.10, null ]
+  labels:
+    - conda
+nlohmann_json:
+  version: [ 3.7.3, 4 ]
+  labels:
+    - conda
+    - conan
+numba:
+  version: [ 0.53.1, 0.54 ]
+  labels:
+    - conda
+    - pip/dev
+numpy:
+  name_overrides:
+    apt: python3-numpy
+  version: [ 1.17, 2 ]
+  labels:
+    - conda
+    - apt
+  version_overrides:
+    apt: ">=1:1.17,<<1:2"
+openblas:
+  version: [ 0.3.12, null ]
+  labels:
+    - conda
+openssl:
+  # Due to version ordering 1.1.1h is *before* 1.1.1 in some systems. So we use 1.1.0 as the lower bound and provide
+  # overrides below in cases where it might matter.
+  version: [ 1.1.0, null ]
+  labels:
+    - conda
+    - conan
+  version_overrides:
+    conan: "1.1.1h"
+packaging:
+  version: [ 1.6, null ]
+  labels:
+    - conda
+    - pip/dev
+pandas:
+  version: [ 1.1, 2 ]
+  labels:
+    - conda
+    - pip
+pandoc:
+  version: [ 2a, null ]
+  labels:
+    - conda/dev
+    # TODO(amp): Reinstate this once we don't need to have any support for 18.04 in the setup scripts.
+#    - pip/dev
+parquet-cpp:
+  name_overrides:
+    apt: libparquet-dev
+  version: [ 1.5, 2 ]
+  labels:
+    - conda
+    - apt
+  version_overrides:
+    apt: "=4.0.1-1"
+pyarrow:
+  name_overrides:
+    apt: null
+  version: *arrow_version
+  labels:
+    - conda
+    - deb/pip-no-binary
+pydata-sphinx-theme:
+  name_overrides:
+    pip: "git+https://github.com/pydata/pydata-sphinx-theme.git"
+  version: [ 0.6.3, null ]
+  version_overrides:
+    pip: "@v0.6.3"
+  labels:
+    - pip
+    - conda/dev
+pygithub:
+  name_overrides:
+    pip: PyGithub
+  version: [ 1.54, 2 ]
+  labels:
+    - conda/dev
+    - pip/dev
+pylint:
+  version: [ 2.8.3, 2.9 ]
+  labels:
+    - conda/dev
+pytest:
+  version: [ 6.2, null ]
+  labels:
+    - conda/dev
+python:
+  name_overrides:
+    conan: null
+    apt: python3
+  # TODO(amp): Unpin this. Currently we only build for python 3.8 so pin to that to reduce confusion.
+  version: [ 3.8, 3.9 ]
+  labels:
+    - conda
+    - apt
+sphinx-copybutton:
+  version: [ 0.4, null ]
+  labels:
+    - conda/dev
+sphinx-tabs:
+  version: [ 2.1.0, null ]
+  labels:
+    - conda/dev
+sphinx:
+  version: [ 3.5.1, null ]
+  labels:
+    - conda/dev
+zlib:
+  name_overrides:
+    apt: zlib1g-dev
+  version: [ 1.2.11, 2 ]
+  labels:
+    - conda
+    - apt
+  version_overrides:
+    apt: ">=1:1.2.11,<<1:2"
+git:
+  version: [ 2, 3 ]
+  labels:
+    - apt/dev
+  version_overrides:
+    apt: ">=1:2,<<1:3"
+readline:
+  name_overrides:
+    apt: libreadline-dev
+  version: [ 8, null ]
+  labels:
+    - conda
+    - apt
+libnuma:
+  name_overrides:
+    apt: libnuma-dev
+    conda: numactl-devel-cos6-x86_64
+  version: [2, null]
+  labels:
+    - apt
+ccache:
+  version: [3, 4]
+  labels:
+    - apt/dev
+    - conda/apt
+clangxx:
+  name_overrides:
+    apt: clang
+  version: &clang_version [10, null]
+  labels:
+    - apt/dev
+    - conda/dev
+  version_overrides: &clang_version_overrides
+    apt: ">=10.0-50~exp1"
+clang-format:
+  name_overrides:
+    conda: clang-tools
+  version: *clang_version
+  labels:
+    - apt/dev
+    - conda/dev
+  version_overrides: *clang_version_overrides
+clang-tidy:
+  name_overrides:
+    conda: clang-tools
+  version: *clang_version
+  labels:
+    - apt/dev
+    - conda/dev
+  version_overrides: *clang_version_overrides
+clangd:
+  name_overrides:
+    conda: clang-tools
+  version: *clang_version
+  labels:
+    # TODO(amp): Reinstate this once we don't need to have any support for 18.04 in the setup scripts.
+    #- apt/dev
+  version_overrides: *clang_version_overrides
+graphviz:
+  version: [2, null]
+  labels:
+    - apt/dev
+pkg-config:
+  version: [0.29, null]
+  labels:
+    - apt/dev
+    - conda/dev
+testresources:
+  version: [2, 3]
+  labels:
+    - pip
+nbconvert:
+  version: [5.6, 6]
+  labels:
+    - pip/dev
+    - conda/dev
+pip:
+  name_overrides:
+    conda: null
+    apt: python3-pip
+  version: [20, null]
+  labels:
+    - pip
+    - apt
+setuptools:
+  version: [50, null]
+  labels:
+    - pip/dev
+    - conda/dev
+scipy:
+  version: [1, 2]
+sphinxcontrib-applehelp:
+  version: [1.0.2, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-devhelp:
+  version: [1.0.2, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-htmlhelp:
+  version: [1.0.3, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-jsmath:
+  version: [1.0.1, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-qthelp:
+  version: [1.0.3, null]
+  labels:
+    - pip/dev
+    - conda/dev
+sphinxcontrib-serializinghtml:
+  version: [1.1.4, null]
+  labels:
+    - pip/dev
+    - conda/dev
+pytest-asyncio:
+  version: [0.15, 1]
+  labels:
+    - pip/dev
+    - conda/dev
+pytest-timeout:
+  version: [1.4.2, 2]
+  labels:
+    - pip/dev
+    - conda/dev
+pyyaml:
+  version: [5.4.1, 6]
+  labels:
+    - pip
+    - conda
+# CUDA-enabled build in conda fails without gcc, gxx, and the sysroot (error: not finding /lib64/libpthread.so.0)
+gxx:
+  name_overrides:
+    conda: gxx_linux-64
+    apt: g++
+  version: [9.3, null]
+  labels:
+    - conda/dev
+gcc:
+  name_overrides:
+    conda: gcc_linux-64
+    apt: gcc
+  version: [9.3, null]
+  labels:
+    - conda/dev
+sysroot:
+  name_overrides:
+    conda: sysroot_linux-64
+  version: [2.17, 3]
+  labels:
+    - conda/dev
+
+
+# The dependencies for pytest-notebook are incomplete, we include then manually here.
+pytest-notebook:
+  version: [0.6.1, 1]
+  labels:
+    - pip
+    - conda
+jupyter_client:
+  version: [6, 7]
+  labels:
+    - pip
+    - conda
+attrs:
+  version: [19, 21]
+  labels:
+    - pip
+    - conda
+pexpect:
+  version: [4.8, 5]
+  labels:
+    - pip
+    - conda

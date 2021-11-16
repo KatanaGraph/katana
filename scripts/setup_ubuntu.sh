@@ -2,6 +2,8 @@
 
 set -xeuo pipefail
 
+REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
+
 # Check the options
 INSTALL_CUDA=
 if [ "${1-}" == "--with-cuda" ]; then
@@ -86,6 +88,7 @@ if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
 fi
 
 if [ "$VERSION" == "21" ]; then
+    # TODO(amp):REQUIREMENTS: Versions should be taken from katana_requirements or a lock file.
     # no hirsute aka 21.04 release of apache arrow:4.0.0.1 use focal one instead
     # we must also get libre2-5 from focal
     curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-focal.deb" \
@@ -104,67 +107,26 @@ apt install -yq /tmp/apache-arrow-apt-source-latest.deb && rm /tmp/apache-arrow-
 #
 
 apt update
+# Install packages required by the requirements tool
+apt install --yes --quiet python3-yaml python3-packaging
 
-# Install pip3
-apt install -yq --allow-downgrades  python3-pip
-
-# TODO(amp): Drop 3.6 support, this will require constant updates as other packages drop 3.6.
-# Check Python version
-if python3 -c 'import sys; sys.exit(not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6))'; then
-  PIP_VERSION=""
-  SETUPTOOLS_VERSION=""
-else
-  # If we have Python < 3.6 limit versions. Support for pre-3.6 was dropped in these packages.
-  PIP_VERSION="<=20.3.4"
-  SETUPTOOLS_VERSION="<=50.3.2"
-fi
-
-run_as_original_user pip3 install --upgrade "pip$PIP_VERSION" "setuptools$SETUPTOOLS_VERSION"
-run_as_original_user pip3 install testresources conan==1.40.3 PyGithub packaging
-
-# Developer tools
-#
-# pkg-config is required to build pyarrow correctly (seems to be a bug)
-DEVELOPER_TOOLS="clang-format-12 clang-format-10 clang-tidy-12 doxygen graphviz ccache cmake shellcheck pkg-config clangd-12"
-# github actions require a more recent git
-GIT=git
-# Library dependencies
-#
-# Install llvm via apt instead of as a conan package because existing
-# conan packages do yet enable RTTI, which is required for boost
-# serialization.
-LIBRARIES="libxml2-dev
-  llvm-10-dev
-  llvm-12-dev
-  libarrow-dev=4.0.1-1
-  libarrow-python-dev=4.0.1-1
-  libparquet-dev=4.0.1-1
-  libnuma-dev
-  libreadline-dev
-  python3-numpy"
-
-apt install -yq --allow-downgrades \
-  $DEVELOPER_TOOLS \
-  $GIT \
-  $LIBRARIES
+# Use the requirements tool to install apt packages with: apt-get satisfy --allow-downgrades --yes --quiet
+"$REPO_ROOT"/scripts/requirements install -a--allow-downgrades -a--yes -a--quiet -l apt -l apt/dev -f apt
+# Use the requirements tool to install pip packages with: python3 -m pip --upgrade
+run_as_original_user "$REPO_ROOT"/scripts/requirements install -l pip -l pip/dev -f pip
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
   apt install -yq gcc-9 g++-9 clang-10 clang-12
-  # in newer versions of ubuntu clang++-NN is installed as a part of clang-NN
-  if [[ "$VERSION" == "16" ]]; then
-    apt install clang++-10 clang++-12
-  fi
 fi
-
-# Install pip libraries that depend on debian packages
 
 # --no-binary is required to cause the pip package to use the debian package's native binaries.
 # https://lists.apache.org/thread.html/r4d2e768c330b6545649e066a1d9d1846ca7a3ea1d97e265205211166%40%3Cdev.arrow.apache.org%3E
-PYARROW_WITH_PARQUET=1 run_as_original_user pip3 install --no-binary pyarrow 'pyarrow>=4.0,<5.0.0a0'
+PYARROW_WITH_PARQUET=1 run_as_original_user "$REPO_ROOT"/scripts/requirements install -a--upgrade -a--no-binary -a:all:  -l deb/pip-no-binary -f pip
 
 # Maybe install CUDA
 if [ -n "${INSTALL_CUDA}" ]; then
+  # TODO(amp):REQUIREMENTS: Versions should be taken from katana_requirements or a lock file.
   curl https://developer.download.nvidia.com/compute/cuda/11.5.0/local_installers/cuda_11.5.0_495.29.05_linux.run \
     --output /tmp/cuda_11.5.0_495.29.05_linux.run
   sh /tmp/cuda_11.5.0_495.29.05_linux.run --silent --toolkit

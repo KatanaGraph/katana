@@ -333,6 +333,7 @@ public:
   template <typename integer>
   void AppendOffsets(std::vector<integer>* vec) const;
 
+  //TODO(emcginnis): DynamicBitset is not actually memory copyable, remove this
   //! this is defined to
   using tt_is_copyable = int;
 };

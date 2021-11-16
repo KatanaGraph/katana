@@ -50,18 +50,50 @@ def from_edge_list_matrix(edges: np.ndarray) -> Graph:
 @numba.njit()
 def _fill_indices(sort_order: np.ndarray, sources: np.ndarray, indices: np.ndarray):
     last_source = 0
-    for source_index, edge_index in enumerate(sort_order):
-        source = sources[source_index]
-        if source != last_source:
-            for j in range(last_source, source):
-                indices[j] = edge_index
-            last_source = source
+    # Code is duplicated because numba cannot perform type based cloning within a function and cannot pass ranges
+    # into a function.
+    if sort_order is None:
+        for edge_index, source in enumerate(sources):
+            if source != last_source:
+                for j in range(last_source, source):
+                    indices[j] = edge_index
+                last_source = source
+    else:
+        for edge_index, source_index in enumerate(sort_order):
+            source = sources[source_index]
+            if source != last_source:
+                for j in range(last_source, source):
+                    indices[j] = edge_index
+                last_source = source
     for j in range(last_source, len(indices)):
         indices[j] = len(sources)
 
 
 def from_edge_list_arrays(
     sources: np.ndarray, destinations: np.ndarray, property_dict: Dict[str, np.ndarray] = None, **properties: np.ndarray
+) -> Graph:
+    """
+    Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.
+
+    This preserves node IDs, but **not** edge IDs.
+    """
+    return _from_edge_list_arrays_impl(sources, destinations, property_dict, edges_sorted=False, properties=properties)
+
+
+def from_sorted_edge_list_arrays(
+    sources: np.ndarray, destinations: np.ndarray, property_dict: Dict[str, np.ndarray] = None, **properties: np.ndarray
+) -> Graph:
+    """
+    Convert an **sorted** edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`. The
+    ``sources`` array must be sorted or the resulting graph will be incorrect.
+
+    This preserves node IDs and edge IDs.
+    """
+    return _from_edge_list_arrays_impl(sources, destinations, property_dict, edges_sorted=True, properties=properties)
+
+
+def _from_edge_list_arrays_impl(
+    sources: np.ndarray, destinations: np.ndarray, property_dict: Dict[str, np.ndarray], edges_sorted: bool, properties,
 ) -> Graph:
     """
     Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.
@@ -93,15 +125,19 @@ def from_edge_list_arrays(
 
     n_nodes = max(np.max(sources), np.max(destinations)) + 1
 
-    sort_order = sources.argsort()
+    if not edges_sorted:
+        sort_order = sources.argsort()
+        csr_destinations = destinations[sort_order]
+    else:
+        sort_order = None
+        csr_destinations = destinations
 
-    csr_destinations = destinations[sort_order]
     csr_indices = np.empty(n_nodes, dtype=np.uint64)
     _fill_indices(sort_order, sources, csr_indices)
 
     graph = from_csr(csr_indices, csr_destinations)
     if properties:
-        graph.add_edge_property(properties)
+        graph.add_edge_property(properties if edges_sorted else {n: p[sort_order] for n, p in properties.items()})
     return graph
 
 

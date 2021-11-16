@@ -10,6 +10,7 @@
 
 #include "PartitionTopologyMetadata.h"
 #include "RDGPartHeader.h"
+#include "katana/EntityTypeManager.h"
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
@@ -187,7 +188,8 @@ RDGTopology::Map() {
         *cursor);
 
     cursor += 1;
-    edge_condensed_type_id_map_ = reinterpret_cast<const uint8_t*>(cursor);
+    edge_condensed_type_id_map_ =
+        reinterpret_cast<const katana::EntityTypeID*>(cursor);
     cursor +=
         ((num_edges_ / sizeof(uint64_t)) +
          FileFrame::calculate_padding_bytes(num_edges_, sizeof(uint64_t)));
@@ -199,7 +201,8 @@ RDGTopology::Map() {
         *cursor);
 
     cursor += 1;
-    node_condensed_type_id_map_ = reinterpret_cast<const uint8_t*>(cursor);
+    node_condensed_type_id_map_ =
+        reinterpret_cast<const katana::EntityTypeID*>(cursor);
     cursor +=
         ((num_nodes_ / sizeof(uint64_t)) +
          FileFrame::calculate_padding_bytes(num_nodes_, sizeof(uint64_t)));
@@ -414,7 +417,8 @@ tsuba::RDGTopology::DoStore(
 
       // node property index map is uint64_t map[num_nodes]
       const auto* raw = edge_condensed_type_id_map_;
-      static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint8_t>);
+      static_assert(
+          std::is_same_v<std::decay_t<decltype(*raw)>, katana::EntityTypeID>);
       auto buf = arrow::Buffer::Wrap(raw, edge_condensed_type_id_map_size_);
       // pad to nearest uint64_t aka 8 byte boundry
       KATANA_CHECKED_CONTEXT(
@@ -437,7 +441,8 @@ tsuba::RDGTopology::DoStore(
 
       // node property index map is uint64_t map[num_nodes]
       const auto* raw = node_condensed_type_id_map_;
-      static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint8_t>);
+      static_assert(
+          std::is_same_v<std::decay_t<decltype(*raw)>, katana::EntityTypeID>);
       auto buf = arrow::Buffer::Wrap(raw, node_condensed_type_id_map_size_);
       // pad to nearest uint64_t aka 8 byte boundry
       KATANA_CHECKED_CONTEXT(
@@ -589,7 +594,7 @@ tsuba::RDGTopology::Make(
     TransposeKind transpose_state, EdgeSortKind edge_sort_state,
     const uint64_t* edge_index_to_property_index_map,
     uint64_t edge_condensed_type_id_map_size,
-    const uint8_t* edge_condensed_type_id_map) {
+    const katana::EntityTypeID* edge_condensed_type_id_map) {
   RDGTopology topo = RDGTopology();
   topo.edge_index_to_property_index_map_ =
       std::move(edge_index_to_property_index_map);
@@ -634,9 +639,9 @@ tsuba::RDGTopology::Make(
     const uint64_t* edge_index_to_property_index_map,
     const uint64_t* node_index_to_property_index_map,
     uint64_t edge_condensed_type_id_map_size,
-    const uint8_t* edge_condensed_type_id_map,
+    const katana::EntityTypeID* edge_condensed_type_id_map,
     uint64_t node_condensed_type_id_map_size,
-    const uint8_t* node_condensed_type_id_map) {
+    const katana::EntityTypeID* node_condensed_type_id_map) {
   RDGTopology topo = RDGTopology();
   topo.edge_index_to_property_index_map_ =
       std::move(edge_index_to_property_index_map);

@@ -6,6 +6,8 @@
 set -xeuo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
 
+lsb_release 2> /dev/null > /dev/null || sudo apt install -yq lsb-release
+
 EXPECTED_RELEASES=("21.04" "20.04" "18.04")
 RELEASE=$(lsb_release --release --short)
 

@@ -15,6 +15,7 @@ set(sources
         src/ArrowVisitor.cpp
         src/Backtrace.cpp
         src/CommBackend.cpp
+        src/DynamicBitsetSlow.cpp
         src/EntityTypeManager.cpp
         src/Env.cpp
         src/ErrorCode.cpp

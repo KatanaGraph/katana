@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
-#define KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_PODVECTOR_H_
+#define KATANA_LIBSUPPORT_KATANA_PODVECTOR_H_
 
 #include <algorithm>
 #include <cassert>

@@ -26,11 +26,7 @@ public:
   struct ReadOpts {
     /// if true (default) make sure canonical types are used and table columns
     /// are not chunked
-    bool make_cannonical{true};
-
-    /// if provided, slice the resulting table so that it only contains
-    /// Slice.length rows starting from Slice.offset
-    std::optional<Slice> slice{std::nullopt};
+    bool make_canonical{true};
 
     static ReadOpts Defaults() { return ReadOpts{}; }
   };
@@ -45,16 +41,16 @@ public:
   /// read table from storage
   ///   \param uri an identifier for a parquet file
   katana::Result<std::shared_ptr<arrow::Table>> ReadTable(
-      const katana::Uri& uri);
+      const katana::Uri& uri, std::optional<Slice> slice = std::nullopt);
 
   /// read part of a table from storage
-  /// n.b. support for the `slice` read option is missing here
   ///   \param uri an identifier for a parquet file
   ///   \param column_bitmap must have the same length as the number of columns
   ///      in the table in the parquet file. The loaded table will only contain
   ///      columns at indexes that are true in the bitmap
   katana::Result<std::shared_ptr<arrow::Table>> ReadTable(
-      const katana::Uri& uri, const std::vector<int32_t>& column_bitmap);
+      const katana::Uri& uri, const std::vector<int32_t>& column_bitmap,
+      std::optional<Slice> slice = std::nullopt);
 
   /// read only the schema from a parquet file in storage
   katana::Result<std::shared_ptr<arrow::Schema>> GetSchema(
@@ -81,8 +77,7 @@ public:
   katana::Result<std::vector<std::string>> GetFiles(const katana::Uri& uri);
 
 private:
-  ParquetReader(std::optional<Slice> slice, bool make_cannonical)
-      : slice_(slice), make_cannonical_{make_cannonical} {}
+  ParquetReader(bool make_canonical) : make_canonical_{make_canonical} {}
 
   katana::Result<std::shared_ptr<arrow::Table>> ReadFromUriSliced(
       const katana::Uri& uri);
@@ -93,8 +88,7 @@ private:
   katana::Result<std::shared_ptr<arrow::Schema>> FixSchema(
       const std::shared_ptr<arrow::Schema>& schema);
 
-  std::optional<Slice> slice_;
-  bool make_cannonical_;
+  bool make_canonical_;
 };
 
 }  // namespace tsuba

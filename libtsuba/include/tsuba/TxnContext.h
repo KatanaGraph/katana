@@ -1,8 +1,6 @@
 #ifndef KATANA_LIBTSUBA_TSUBA_TXNCONTEXT_H_
 #define KATANA_LIBTSUBA_TSUBA_TXNCONTEXT_H_
 
-#include <string>
-
 namespace tsuba {
 
 class KATANA_EXPORT TxnContext {
@@ -54,11 +52,35 @@ public:
 
   void SetTopologyWrite() { topology_write = true; }
 
+  const std::vector<std::string>& GetNodePropertyRead() const {
+    return node_properties_read;
+  }
+
+  const std::vector<std::string>& GetNodePropertyWrite() const {
+    return node_properties_write;
+  }
+
+  const std::vector<std::string>& GetEdgePropertyRead() const {
+    return edge_properties_read;
+  }
+
+  const std::vector<std::string>& GetEdgePropertyWrite() const {
+    return edge_properties_write;
+  }
+
+  bool GetAllPropertiesRead() const { return all_properties_read; }
+
+  bool GetAllPropertiesWrite() const { return all_properties_write; }
+
+  bool GetTopologyRead() const { return topology_read; }
+
+  bool GetTopologyWrite() const { return all_properties_write; }
+
 private:
-  std::vector<std::string> node_properties_read{};
-  std::vector<std::string> node_properties_write{};
-  std::vector<std::string> edge_properties_read{};
-  std::vector<std::string> edge_properties_write{};
+  std::vector<std::string> node_properties_read;
+  std::vector<std::string> node_properties_write;
+  std::vector<std::string> edge_properties_read;
+  std::vector<std::string> edge_properties_write;
   bool all_properties_read{false};
   bool all_properties_write{false};
   bool topology_read{false};

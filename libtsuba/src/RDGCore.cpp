@@ -60,11 +60,13 @@ UpsertProperties(
         next = arrow::Table::Make(arrow::schema({field}), {props->column(i)});
       } else {
         next = KATANA_CHECKED_CONTEXT(
-            next->AddColumn(last++, field, props->column(i)), "insert");
+            next->AddColumn(last++, field, props->column(i)),
+            "insert; column {}", i);
       }
     } else {
       next = KATANA_CHECKED_CONTEXT(
-          next->SetColumn(current_col, field, props->column(i)), "update");
+          next->SetColumn(current_col, field, props->column(i)),
+          "update; column {}", i);
     }
     prop_info_it->WasModified(field->type());
   }

@@ -112,7 +112,7 @@ katana::Result<void>
 RDGPartHeader::Write(
     RDGHandle handle, WriteGroup* writes,
     RDG::RDGVersioningPolicy retain_version) const {
-  auto serialized = KATANA_CHECKED(katana::JsonDump(*this));
+  std::string serialized = KATANA_CHECKED(katana::JsonDump(*this));
 
   // POSIX files end with newlines
   serialized = serialized + "\n";

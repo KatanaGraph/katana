@@ -20,11 +20,11 @@ katana::Result<std::shared_ptr<arrow::Table>>
 DoLoadProperties(
     const std::string& expected_name, const katana::Uri& file_path,
     std::optional<tsuba::ParquetReader::Slice> slice = std::nullopt) {
-  auto reader =
-      KATANA_CHECKED_CONTEXT(tsuba::ParquetReader::Make(), "loading property");
+  std::unique_ptr<tsuba::ParquetReader> reader =
+      KATANA_CHECKED(tsuba::ParquetReader::Make());
 
-  auto out = KATANA_CHECKED_CONTEXT(
-      reader->ReadTable(file_path, slice), "loading property");
+  std::shared_ptr<arrow::Table> out =
+      KATANA_CHECKED(reader->ReadTable(file_path, slice));
 
   std::shared_ptr<arrow::Schema> schema = out->schema();
   if (schema->num_fields() != 1) {
@@ -179,9 +179,10 @@ tsuba::AddPropertySlice(
             std::launch::async,
             [path, prop, begin,
              size]() -> katana::CopyableResult<std::shared_ptr<arrow::Table>> {
-              auto load_result = KATANA_CHECKED_CONTEXT(
-                  LoadPropertySlice(prop->name(), path, begin, size),
-                  "error loading {}", path);
+              std::shared_ptr<arrow::Table> load_result =
+                  KATANA_CHECKED_CONTEXT(
+                      LoadPropertySlice(prop->name(), path, begin, size),
+                      "error loading {}", path);
               return load_result;
             });
     auto on_complete = [add_fn,
@@ -202,8 +203,8 @@ tsuba::AddPropertySlice(
           std::move(future), path.string(), on_complete);
       continue;
     }
-    auto read_fut = KATANA_CHECKED(future.get());
-    KATANA_CHECKED(on_complete(read_fut));
+    std::shared_ptr<arrow::Table> props = KATANA_CHECKED(future.get());
+    KATANA_CHECKED(on_complete(props));
   }
 
   return katana::ResultSuccess();

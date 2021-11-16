@@ -28,7 +28,7 @@ FileList(const std::string& dir) {
 katana::Result<katana::Uri>
 FindAnyManifestForLatestVersion(const katana::Uri& name) {
   KATANA_LOG_DEBUG_ASSERT(!tsuba::RDGManifest::IsManifestUri(name));
-  auto file_list = KATANA_CHECKED(FileList(name.string()));
+  std::vector<std::string> file_list = KATANA_CHECKED(FileList(name.string()));
 
   uint64_t version = 0;
   std::string found_manifest;
@@ -90,7 +90,7 @@ tsuba::Close(RDGHandle handle) {
 
 katana::Result<void>
 tsuba::Create(const std::string& name) {
-  auto uri = KATANA_CHECKED(katana::Uri::Make(name));
+  katana::Uri uri = KATANA_CHECKED(katana::Uri::Make(name));
 
   KATANA_LOG_DEBUG_ASSERT(!RDGManifest::IsManifestUri(uri));
   // the default construction is the empty RDG
@@ -165,7 +165,8 @@ tsuba::ListViewsOfVersion(
 
     katana::Uri manifest_path = rdg_uri.Join(file);
 
-    const auto& manifest = KATANA_CHECKED(RDGManifest::Make(manifest_path));
+    const RDGManifest& manifest =
+        KATANA_CHECKED(RDGManifest::Make(manifest_path));
 
     if (manifest.num_hosts() == 0) {
       // empty sentinal; not a valid view

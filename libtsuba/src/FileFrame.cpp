@@ -38,7 +38,7 @@ FileFrame::Init(uint64_t reserved_size) {
   if (ptr == MAP_FAILED) {
     return KATANA_ERROR(katana::ResultErrno(), "mapping buffer");
   }
-  KATANA_CHECKED_CONTEXT(Destroy(), "Destroy");
+  KATANA_CHECKED(Destroy());
 
   path_ = "";
   map_size_ = map_size;

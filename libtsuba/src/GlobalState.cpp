@@ -52,7 +52,8 @@ tsuba::GlobalState::Init(katana::CommBackend* comm) {
       });
 
   for (FileStorage* fs : global_state->file_stores_) {
-    KATANA_CHECKED_CONTEXT(fs->Init(), "initializing backends");
+    KATANA_CHECKED_CONTEXT(
+        fs->Init(), "initializing backend ({})", fs->uri_scheme());
   }
 
   ref_ = std::move(global_state);

@@ -75,9 +75,7 @@ RDGTopology::Bind(const katana::Uri& metadata_dir, bool resolve) {
   katana::Uri t_path = metadata_dir.Join(path());
   KATANA_LOG_DEBUG(
       "binding to entire topology file at path {}", t_path.string());
-  if (auto res = file_storage_.Bind(t_path.string(), resolve); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(file_storage_.Bind(t_path.string(), resolve));
 
   file_store_bound_ = true;
   storage_valid_ = true;
@@ -93,10 +91,7 @@ RDGTopology::Bind(
   KATANA_LOG_DEBUG(
       "binding from {} to {} with topology file at path {}", begin, end,
       t_path.string());
-  if (auto res = file_storage_.Bind(t_path.string(), begin, end, resolve);
-      !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(file_storage_.Bind(t_path.string(), begin, end, resolve));
 
   file_store_bound_ = true;
   storage_valid_ = true;
@@ -312,9 +307,8 @@ tsuba::RDGTopology::DoStore(
         topology_state_, transpose_state_, edge_sort_state_, node_sort_state_);
 
     auto ff = std::make_unique<tsuba::FileFrame>();
-    if (auto res = ff->Init(); !res) {
-      return res.error();
-    }
+    KATANA_CHECKED(ff->Init());
+
     uint64_t data[4] = {1, 0, num_nodes_, num_edges_};
     arrow::Status aro_sts = ff->Write(&data, 4 * sizeof(uint64_t));
     if (!aro_sts.ok()) {

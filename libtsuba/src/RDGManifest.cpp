@@ -54,9 +54,7 @@ Result<tsuba::RDGManifest>
 RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   tsuba::FileView fv;
 
-  if (auto res = fv.Bind(uri.string(), true); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(fv.Bind(uri.string(), true));
 
   tsuba::RDGManifest manifest(uri.DirName());
   auto manifest_res = katana::JsonParse<tsuba::RDGManifest>(fv, &manifest);

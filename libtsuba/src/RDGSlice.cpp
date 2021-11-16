@@ -213,11 +213,8 @@ tsuba::RDGSlice::Make(
 
   RDGSlice rdg_slice(std::make_unique<RDGCore>(std::move(part_header)));
 
-  if (auto res =
-          rdg_slice.DoMake(node_props, edge_props, manifest.dir(), slice);
-      !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(
+      rdg_slice.DoMake(node_props, edge_props, manifest.dir(), slice));
 
   return RDGSlice(std::move(rdg_slice));
 }

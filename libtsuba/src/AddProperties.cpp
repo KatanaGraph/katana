@@ -20,18 +20,11 @@ katana::Result<std::shared_ptr<arrow::Table>>
 DoLoadProperties(
     const std::string& expected_name, const katana::Uri& file_path,
     std::optional<tsuba::ParquetReader::Slice> slice = std::nullopt) {
-  auto reader_res = tsuba::ParquetReader::Make();
-  if (!reader_res) {
-    return reader_res.error().WithContext("loading property");
-  }
-  std::unique_ptr<tsuba::ParquetReader> reader = std::move(reader_res.value());
+  auto reader =
+      KATANA_CHECKED_CONTEXT(tsuba::ParquetReader::Make(), "loading property");
 
-  auto out_res = reader->ReadTable(file_path, slice);
-  if (!out_res) {
-    return out_res.error().WithContext("loading property");
-  }
-
-  std::shared_ptr<arrow::Table> out = std::move(out_res.value());
+  auto out = KATANA_CHECKED_CONTEXT(
+      reader->ReadTable(file_path, slice), "loading property");
 
   std::shared_ptr<arrow::Schema> schema = out->schema();
   if (schema->num_fields() != 1) {
@@ -186,22 +179,16 @@ tsuba::AddPropertySlice(
             std::launch::async,
             [path, prop, begin,
              size]() -> katana::CopyableResult<std::shared_ptr<arrow::Table>> {
-              auto load_result =
-                  LoadPropertySlice(prop->name(), path, begin, size);
-              if (!load_result) {
-                return load_result.error().WithContext(
-                    "error loading {}", path);
-              }
-              return load_result.value();
+              auto load_result = KATANA_CHECKED_CONTEXT(
+                  LoadPropertySlice(prop->name(), path, begin, size),
+                  "error loading {}", path);
+              return load_result;
             });
     auto on_complete = [add_fn,
                         prop](const std::shared_ptr<arrow::Table>& props)
         -> katana::CopyableResult<void> {
-      auto add_result = add_fn(props);
-      if (!add_result) {
-        return add_result.error().WithContext(
-            "adding {}", std::quoted(prop->name()));
-      }
+      KATANA_CHECKED_CONTEXT(
+          add_fn(props), "adding: {}", std::quoted(prop->name()));
       prop->WasLoaded(props->field(0)->type());
 
       // since this property is going to be sliced it has no on disk form, so
@@ -215,14 +202,8 @@ tsuba::AddPropertySlice(
           std::move(future), path.string(), on_complete);
       continue;
     }
-    auto read_res = future.get();
-    if (!read_res) {
-      return read_res.error();
-    }
-    auto on_complete_res = on_complete(read_res.value());
-    if (!on_complete_res) {
-      return on_complete_res.error();
-    }
+    auto read_fut = KATANA_CHECKED(future.get());
+    KATANA_CHECKED(on_complete(read_fut));
   }
 
   return katana::ResultSuccess();

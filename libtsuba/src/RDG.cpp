@@ -50,16 +50,12 @@ katana::Result<std::string>
 StoreArrowArrayAtName(
     const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
     const std::string& name, tsuba::WriteGroup* desc) {
-  auto writer_res = tsuba::ParquetWriter::Make(array, name);
-  if (!writer_res) {
-    return writer_res.error().WithContext("making property writer");
-  }
+  auto writer = KATANA_CHECKED_CONTEXT(
+      tsuba::ParquetWriter::Make(array, name), "making property writer");
 
   katana::Uri new_path = dir.RandFile(name);
-  auto res = writer_res.value()->WriteToUri(new_path, desc);
-  if (!res) {
-    return res.error().WithContext("writing property writer");
-  }
+  KATANA_CHECKED_CONTEXT(
+      writer->WriteToUri(new_path, desc), "writing property writer");
   return new_path.BaseName();
 }
 
@@ -101,9 +97,8 @@ CommitRDG(
 
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-  if (auto res = desc->Finish(); !res) {
-    return res.error().WithContext("at least one async write failed");
-  }
+  KATANA_CHECKED_CONTEXT(desc->Finish(), "at least one async write failed");
+
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
 
@@ -112,19 +107,14 @@ CommitRDG(
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
     std::string curr_s = new_manifest.ToJsonString();
-    auto res = tsuba::FileStore(
-        tsuba::RDGManifest::FileName(
-            handle.impl_->rdg_manifest().dir(),
-            handle.impl_->rdg_manifest().viewtype(), new_manifest.version())
-            .string(),
-        reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size());
-    if (!res) {
-      return res.error().WithContext(
-          "CommitRDG future failed {}",
-          tsuba::RDGManifest::FileName(
-              handle.impl_->rdg_manifest().dir(),
-              handle.impl_->rdg_manifest().viewtype(), new_manifest.version()));
-    }
+    auto manifest_file = tsuba::RDGManifest::FileName(
+        handle.impl_->rdg_manifest().dir(),
+        handle.impl_->rdg_manifest().viewtype(), new_manifest.version());
+    KATANA_CHECKED_CONTEXT(
+        tsuba::FileStore(
+            manifest_file.string(),
+            reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size()),
+        "CommitRDG future failed {}", manifest_file);
     return katana::ResultSuccess();
   });
   if (ret) {
@@ -359,21 +349,18 @@ tsuba::RDG::DoStore(
     handle.impl_->set_viewtype(view_type_);
   }
 
-  if (auto write_result = core_->part_header().Write(
-          handle, write_group.get(), versioning_action);
-      !write_result) {
-    return write_result.error().WithContext("failed to write metadata");
-  }
+  KATANA_CHECKED_CONTEXT(
+      core_->part_header().Write(handle, write_group.get(), versioning_action),
+      "failed to write metadata");
 
   // Update lineage and commit
   core_->AddCommandLine(command_line);
-  if (auto res = CommitRDG(
+  KATANA_CHECKED_CONTEXT(
+      CommitRDG(
           handle, core_->part_header().metadata().policy_id_,
           core_->part_header().metadata().transposed_, versioning_action,
-          core_->lineage(), std::move(write_group));
-      !res) {
-    return res.error().WithContext("failed to finalize RDG");
-  }
+          core_->lineage(), std::move(write_group)),
+      "failed to finalize RDG");
   return katana::ResultSuccess();
 }
 
@@ -447,19 +434,13 @@ tsuba::RDG::DoMake(
   if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
     katana::Uri node_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().node_entity_type_id_array_path());
-    if (auto res = core_->node_entity_type_id_array_file_storage().Bind(
-            node_entity_type_id_array_path.string(), true);
-        !res) {
-      return res.error();
-    }
+    KATANA_CHECKED(core_->node_entity_type_id_array_file_storage().Bind(
+        node_entity_type_id_array_path.string(), true));
 
     katana::Uri edge_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().edge_entity_type_id_array_path());
-    if (auto res = core_->edge_entity_type_id_array_file_storage().Bind(
-            edge_entity_type_id_array_path.string(), true);
-        !res) {
-      return res.error();
-    }
+    KATANA_CHECKED(core_->edge_entity_type_id_array_file_storage().Bind(
+        edge_entity_type_id_array_path.string(), true));
   }
   core_->set_rdg_dir(metadata_dir);
 
@@ -534,13 +515,11 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
 
   katana::Uri partition_path = manifest.PartitionFileName(partition_id_to_load);
 
-  auto part_header_res = RDGPartHeader::Make(partition_path);
-  if (!part_header_res) {
-    return part_header_res.error().WithContext(
-        "failed to read path {}", partition_path);
-  }
+  auto part_header = KATANA_CHECKED_CONTEXT(
+      RDGPartHeader::Make(partition_path), "failed to read path {}",
+      partition_path);
 
-  RDG rdg(std::make_unique<RDGCore>(std::move(part_header_res.value())));
+  RDG rdg(std::make_unique<RDGCore>(std::move(part_header)));
   rdg.prop_cache_ = opts.prop_cache;
 
   std::vector<PropStorageInfo*> node_props = KATANA_CHECKED(
@@ -568,9 +547,7 @@ tsuba::RDG::IsUint16tEntityTypeIDs() const {
 
 katana::Result<void>
 tsuba::RDG::Validate() const {
-  if (auto res = core_->part_header().Validate(); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(core_->part_header().Validate());
   return katana::ResultSuccess();
 }
 
@@ -613,29 +590,16 @@ tsuba::RDG::Store(
         rdg_dir(), handle.impl_->rdg_manifest().dir()));
   }
 
-  auto desc_res = WriteGroup::Make();
-  if (!desc_res) {
-    return desc_res.error();
-  }
   // All write buffers must outlive desc
-  std::unique_ptr<WriteGroup> desc = std::move(desc_res.value());
+  auto desc = KATANA_CHECKED(WriteGroup::Make());
 
-  auto res = core_->topology_manager().DoStore(handle, desc);
-  if (!res) {
-    return res.error();
-  }
+  KATANA_CHECKED(core_->topology_manager().DoStore(handle, desc));
 
-  res = DoStoreNodeEntityTypeIDArray(
-      handle, std::move(node_entity_type_id_array_ff), desc);
-  if (!res) {
-    return res.error();
-  }
+  KATANA_CHECKED(DoStoreNodeEntityTypeIDArray(
+      handle, std::move(node_entity_type_id_array_ff), desc));
 
-  res = DoStoreEdgeEntityTypeIDArray(
-      handle, std::move(edge_entity_type_id_array_ff), desc);
-  if (!res) {
-    return res.error();
-  }
+  KATANA_CHECKED(DoStoreEdgeEntityTypeIDArray(
+      handle, std::move(edge_entity_type_id_array_ff), desc));
 
   core_->part_header().StoreNodeEntityTypeManager(node_entity_type_manager);
   core_->part_header().StoreEdgeEntityTypeManager(edge_entity_type_manager);
@@ -645,19 +609,13 @@ tsuba::RDG::Store(
 
 katana::Result<void>
 tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
-  if (auto res = core_->AddNodeProperties(props); !res) {
-    return res.error();
-  }
-
+  KATANA_CHECKED(core_->AddNodeProperties(props));
   return katana::ResultSuccess();
 }
 
 katana::Result<void>
 tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
-  if (auto res = core_->AddEdgeProperties(props); !res) {
-    return res.error();
-  }
-
+  KATANA_CHECKED(core_->AddEdgeProperties(props));
   return katana::ResultSuccess();
 }
 

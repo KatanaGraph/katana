@@ -5,7 +5,7 @@ from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.vector cimport vector
 from pyarrow.lib cimport CTable, Schema
 
-from katana.cpp.libgalois.graphs.Graph cimport GraphTopology, _PropertyGraph, TxnContext
+from katana.cpp.libgalois.graphs.Graph cimport GraphTopology, TxnContext, _PropertyGraph
 from katana.cpp.libsupport.result cimport Result
 
 from .entity_type cimport EntityType

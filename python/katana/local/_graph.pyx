@@ -22,6 +22,7 @@ from libcpp.vector cimport vector
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
 from .entity_type cimport EntityType
+from .edge_iterator import EdgeIterator
 
 from abc import abstractmethod
 
@@ -143,6 +144,12 @@ cdef class GraphBase:
         Can be called from numba compiled code with the name `self.nodes()`.
         """
         return iter(range(self.num_nodes()))
+
+    def edge_iterator(self):
+        """
+        Returns an iterator over the edges of this graph.
+        """
+        return EdgeIterator(self)
 
     def edges(self, uint64_t n):
         """

@@ -13,6 +13,7 @@
 #include "katana/config.h"
 #include "tsuba/FileView.h"
 #include "tsuba/RDGTopology.h"
+#include "tsuba/TxnContext.h"
 
 namespace tsuba {
 
@@ -33,10 +34,10 @@ public:
       const std::shared_ptr<arrow::Table>& props);
 
   katana::Result<void> UpsertNodeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx);
 
   katana::Result<void> UpsertEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx);
 
   katana::Result<void> RemoveNodeProperty(int i);
 

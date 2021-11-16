@@ -9,11 +9,12 @@
 
 namespace {
 
-katana::Result<void>
+katana::Result<std::vector<std::string>>
 UpsertProperties(
     const std::shared_ptr<arrow::Table>& props,
     std::shared_ptr<arrow::Table>* to_update,
     std::vector<tsuba::PropStorageInfo>* prop_state) {
+  std::vector<std::string> written_prop_names;
   if (!props->schema()->HasDistinctFieldNames()) {
     return KATANA_ERROR(
         tsuba::ErrorCode::Exists, "column names must be distinct: {}",
@@ -26,7 +27,7 @@ UpsertProperties(
       prop_state->emplace_back(field->name(), field->type());
     }
     *to_update = props;
-    return katana::ResultSuccess();
+    return written_prop_names;
   }
 
   std::shared_ptr<arrow::Table> next = *to_update;
@@ -67,6 +68,7 @@ UpsertProperties(
           next->SetColumn(current_col, field, props->column(i)), "update");
     }
     prop_info_it->WasModified(field->type());
+    written_prop_names.push_back(field->name());
   }
 
   if (!next->schema()->HasDistinctFieldNames()) {
@@ -77,7 +79,7 @@ UpsertProperties(
 
   *to_update = next;
 
-  return katana::ResultSuccess();
+  return written_prop_names;
 }
 
 katana::Result<void>
@@ -98,7 +100,11 @@ AddProperties(
           tsuba::ErrorCode::Exists, "column names are not distinct");
     }
   }
-  return UpsertProperties(props, to_update, prop_state);
+  auto written_prop_names =
+      KATANA_CHECKED(UpsertProperties(props, to_update, prop_state));
+
+  // TODO (yige): return write set to TxnContext
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>
@@ -164,15 +170,25 @@ RDGCore::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
 }
 
 katana::Result<void>
-RDGCore::UpsertNodeProperties(const std::shared_ptr<arrow::Table>& props) {
-  return UpsertProperties(
-      props, &node_properties_, &part_header_.node_prop_info_list());
+RDGCore::UpsertNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx) {
+  auto written_prop_names = KATANA_CHECKED(UpsertProperties(
+      props, &node_properties_, &part_header_.node_prop_info_list()));
+  // store write properties into transaction context
+  ctx.InsertNodePropertyWrite(std::move(written_prop_names));
+
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>
-RDGCore::UpsertEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
-  return UpsertProperties(
-      props, &edge_properties_, &part_header_.edge_prop_info_list());
+RDGCore::UpsertEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx) {
+  auto written_prop_names = KATANA_CHECKED(UpsertProperties(
+      props, &edge_properties_, &part_header_.edge_prop_info_list()));
+  // store write properties into transaction context
+  ctx.InsertEdgePropertyWrite(std::move(written_prop_names));
+
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>

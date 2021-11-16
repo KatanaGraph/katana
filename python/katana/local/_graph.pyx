@@ -25,7 +25,7 @@ from .entity_type cimport EntityType
 
 from abc import abstractmethod
 
-__all__ = ["GraphBase", "Graph"]
+__all__ = ["GraphBase", "Graph", "PyTxnContext"]
 
 
 cdef _convert_string_list(l):
@@ -229,15 +229,16 @@ cdef class GraphBase:
         """
         handle_result_void(self.underlying_property_graph().AddNodeProperties(GraphBase._convert_table(table, kwargs)))
 
-    def upsert_node_property(self, table=None, **kwargs):
+    def upsert_node_property(self, PyTxnContext ctx, table=None, **kwargs):
         """
         Update or insert node properties into this graph.
 
+        :param ctx: The tranaction context for passing read write sets.
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_nodes()``. (Optional)
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_nodes()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().UpsertNodeProperties(GraphBase._convert_table(table, kwargs)))
+        handle_result_void(self.underlying_property_graph().UpsertNodeProperties(GraphBase._convert_table(table, kwargs), ctx._txn_ctx))
 
     def add_edge_property(self, table=None, **kwargs):
         """
@@ -249,15 +250,16 @@ cdef class GraphBase:
         """
         handle_result_void(self.underlying_property_graph().AddEdgeProperties(GraphBase._convert_table(table, kwargs)))
 
-    def upsert_edge_property(self, table=None, **kwargs):
+    def upsert_edge_property(self, PyTxnContext ctx, table=None, **kwargs):
         """
         Update or insert edge properties into this graph.
 
+        :param ctx: The tranaction context for passing read write sets.
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_edges()``. (Optional)
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_edges()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(GraphBase._convert_table(table, kwargs)))
+        handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(GraphBase._convert_table(table, kwargs), ctx._txn_ctx))
 
     def remove_node_property(self, prop):
         """

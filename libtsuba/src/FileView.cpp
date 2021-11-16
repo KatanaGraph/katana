@@ -6,8 +6,11 @@
 #include <cassert>
 #include <cstdio>
 #include <string>
+#include <thread>
+#include <chrono>
 
 #include "katana/Logging.h"
+#include "katana/ProgressTracer.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
@@ -82,6 +85,7 @@ FileView::Bind(
         begin, end, buf.size);
   }
 
+  KATANA_LOG_WARN("buf.size: {}", buf.size);
   // SCB 2020-07-23: Given that page_shift_ is treated as a compile-time
   // constant, it seems silly to have it be a member of this class. But I can
   // imagine one day wanting to set it dynamically based on file type, file
@@ -89,7 +93,8 @@ FileView::Bind(
   // here.
   page_shift_ = 20; /* 1M */
   void* tmp = nullptr;
-
+  auto& tracer = katana::GetTracer();
+  auto mmap_scope = tracer.StartActiveSpan("mmap call");
   // Map enough virtual memory to hold entire file, but do not populate it
   if (buf.size > 0) {
     tmp =
@@ -99,7 +104,7 @@ FileView::Bind(
           katana::ResultErrno(), "reserving contiguous range {}", buf.size);
     }
   }
-
+  mmap_scope.Close();
   if (auto res = Unbind(); !res) {
     return res.error().WithContext("resetting for new content");
   }
@@ -109,11 +114,12 @@ FileView::Bind(
   filling_.clear();
   filling_.resize(page_number(buf.size) / 64 + 1, 0);
   file_size_ = buf.size;
+  auto fill_scope = tracer.StartActiveSpan("filling range");
   fetches_ = std::make_unique<std::vector<FillingRange>>();
   if (auto res = Fill(begin, in_end, resolve); !res) {
     return res.error().WithContext("reading content");
   }
-
+  fill_scope.Close();
   cursor_ = 0;
   bound_ = true;
   return katana::ResultSuccess();
@@ -126,6 +132,7 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
   uint64_t first_page = 0;
   uint64_t last_page = 0;
   bool found_empty = false;
+  auto& tracer = katana::GetTracer();
 
   // We would check !bound_ but we want to call this in Bind before we have
   // set bound_. fetches_ should be default constructed to
@@ -135,37 +142,49 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
   }
   // Gracefully handle the fill zero case here to simplify Bind
   if (in_end != in_begin) {
+    auto must_fill_scope = tracer.StartActiveSpan("must fill");
     if (auto opt =
             MustFill(&filling_[0], page_number(in_begin), page_number(in_end));
         opt.has_value()) {
       std::tie(first_page, last_page) = opt.value();
       found_empty = true;
     }
+    must_fill_scope.Close();
 
     uint64_t file_off = first_page * (1UL << page_shift_);
     uint64_t map_size = std::min(
         (last_page + 1) * (1UL << page_shift_) - file_off,
         file_size_ - file_off);
+    KATANA_LOG_WARN("file_off: {}, map_size: {}", file_off, map_size);
     if (found_empty) {
       // Get physical pages for the region we are about to write
+      auto mprotect_scope = tracer.StartActiveSpan("mprotect");
       int err =
           mprotect(map_start_ + file_off, map_size, PROT_READ | PROT_WRITE);
       if (err == -1) {
         return KATANA_ERROR(katana::ResultErrno(), "mprotecting buffer");
       }
+      mprotect_scope.Close();
 
+      auto peek_fut_scope = tracer.StartActiveSpan("file get async, creating fetch");
       auto peek_fut =
           FileGetAsync(filename_, map_start_ + file_off, file_off, map_size);
       KATANA_LOG_ASSERT(peek_fut.valid());
       FillingRange fetch = {first_page, last_page, std::move(peek_fut)};
       fetches_->push_back(std::move(fetch));
+      peek_fut_scope.Close();
+
+      auto mark_filled_scope = tracer.StartActiveSpan("mark filled");
       if (auto res = MarkFilled(&filling_[0], first_page, last_page); !res) {
         return res.error().WithContext("updating bookkeeping data");
       }
+      mark_filled_scope.Close();
       if (resolve) {
+        auto resolve_scope = tracer.StartActiveSpan("resolve");
         if (auto res = Resolve(file_off, map_size); !res) {
           return res.error().WithContext("resolving fill");
         }
+        resolve_scope.Close();
       }
       int64_t signed_begin = static_cast<int64_t>(in_begin);
       if (mem_start_ < 0 || signed_begin < mem_start_) {

@@ -29,6 +29,7 @@
 #include "katana/ArrowInterchange.h"
 #include "katana/ErrorCode.h"
 #include "katana/JSON.h"
+#include "katana/ProgressTracer.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
@@ -383,7 +384,8 @@ tsuba::RDG::DoMake(
     const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
     const katana::Uri& metadata_dir) {
   ReadGroup grp;
-
+  auto& tracer = katana::GetTracer();
+  auto addnodeproperties_scope = tracer.StartActiveSpan("adding node properties");
   KATANA_CHECKED_CONTEXT(
       AddProperties(
           metadata_dir, tsuba::NodeEdge::kNode, prop_cache_, this,
@@ -406,7 +408,9 @@ tsuba::RDG::DoMake(
             return katana::ResultSuccess();
           }),
       "populating node properties");
+  addnodeproperties_scope.Close();
 
+  auto addedgeproperties_scope = tracer.StartActiveSpan("adding edge properties");
   KATANA_CHECKED_CONTEXT(
       AddProperties(
           metadata_dir, tsuba::NodeEdge::kEdge, prop_cache_, this,
@@ -429,10 +433,12 @@ tsuba::RDG::DoMake(
             return katana::ResultSuccess();
           }),
       "populating edge properties");
+  addedgeproperties_scope.Close();
 
   KATANA_CHECKED_CONTEXT(
       core_->MakeTopologyManager(metadata_dir), "populating topologies");
 
+  auto topo_scope = tracer.StartActiveSpan("binding topology (again?)");
   // find & bind the default csr topology
   RDGTopology shadow_csr = RDGTopology::MakeShadowCSR();
   RDGTopology* csr = KATANA_CHECKED_CONTEXT(
@@ -443,8 +449,12 @@ tsuba::RDG::DoMake(
   //TODO: emcginnis is there any reason we should be binding the csr topology here?
   // getting it makes sense, to make sure it is present, but I don't think we need to bind it
   KATANA_CHECKED_CONTEXT(csr->Bind(metadata_dir), "binding csr topology");
+  topo_scope.Close();
 
+  auto entity_type_id_scope = tracer.StartActiveSpan("binding entity type IDs");
   if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
+
+    auto node_entity_type_id_scope = tracer.StartActiveSpan("binding node entity type IDs");
     katana::Uri node_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().node_entity_type_id_array_path());
     if (auto res = core_->node_entity_type_id_array_file_storage().Bind(
@@ -452,7 +462,9 @@ tsuba::RDG::DoMake(
         !res) {
       return res.error();
     }
+    node_entity_type_id_scope.Close();
 
+    auto edge_entity_type_id_scope = tracer.StartActiveSpan("binding edge entity type IDs");
     katana::Uri edge_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().edge_entity_type_id_array_path());
     if (auto res = core_->edge_entity_type_id_array_file_storage().Bind(
@@ -460,8 +472,11 @@ tsuba::RDG::DoMake(
         !res) {
       return res.error();
     }
+    edge_entity_type_id_scope.Close();
   }
   core_->set_rdg_dir(metadata_dir);
+
+  entity_type_id_scope.Close();
 
   std::vector<PropStorageInfo*> part_info =
       KATANA_CHECKED(core_->part_header().SelectPartitionProperties());
@@ -474,6 +489,7 @@ tsuba::RDG::DoMake(
     return grp.Finish();
   }
 
+  auto part_meta_scope = tracer.StartActiveSpan("adding part metadata");
   KATANA_CHECKED_CONTEXT(
       AddProperties(
           metadata_dir, tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
@@ -483,7 +499,9 @@ tsuba::RDG::DoMake(
           }),
       "populating partition metadata");
   KATANA_CHECKED(grp.Finish());
-
+  part_meta_scope.Close();
+  
+  auto mapping_scope = tracer.StartActiveSpan("setting local to user id mappings, etc.");
   if (local_to_user_id()->length() == 0) {
     // for backward compatibility
     if (local_to_global_id()->length() !=
@@ -523,7 +541,7 @@ tsuba::RDG::DoMake(
           : host_to_owned_global_edge_ids()->length(),
       local_to_user_id() == nullptr ? 0 : local_to_user_id()->length(),
       local_to_global_id() == nullptr ? 0 : local_to_global_id()->length());
-
+  mapping_scope.Close();
   return katana::ResultSuccess();
 }
 
@@ -533,24 +551,34 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
       opts.partition_id_to_load.value_or(Comm()->Rank);
 
   katana::Uri partition_path = manifest.PartitionFileName(partition_id_to_load);
+  auto& tracer = katana::GetTracer();
+  auto part_header_scope = tracer.StartActiveSpan("make part header");
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
   if (!part_header_res) {
     return part_header_res.error().WithContext(
         "failed to read path {}", partition_path);
   }
-
+  part_header_scope.Close();
+  
+  auto rdg_obj_core_scope = tracer.StartActiveSpan("make RDG object with RDGCore");
   RDG rdg(std::make_unique<RDGCore>(std::move(part_header_res.value())));
   rdg.prop_cache_ = opts.prop_cache;
+  rdg_obj_core_scope.Close();
 
+  auto node_props_scope = tracer.StartActiveSpan("make node_props");
   std::vector<PropStorageInfo*> node_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectNodeProperties(opts.node_properties));
+  node_props_scope.Close();
 
+  auto edge_props_scope = tracer.StartActiveSpan("make edge_props");
   std::vector<PropStorageInfo*> edge_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectEdgeProperties(opts.edge_properties));
+  edge_props_scope.Close();
 
+  auto domake_scope = tracer.StartActiveSpan("make rdg.DoMake");
   KATANA_CHECKED(rdg.DoMake(node_props, edge_props, manifest.dir()));
-
+  domake_scope.Close();
   rdg.core_->set_partition_id(partition_id_to_load);
 
   return RDG(std::move(rdg));

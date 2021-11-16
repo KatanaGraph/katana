@@ -142,27 +142,36 @@ katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
   // find & map the default csr topology
+  auto& tracer = katana::GetTracer();
+  auto csr_scope = tracer.StartActiveSpan("make csr");
   tsuba::RDGTopology shadow_csr = tsuba::RDGTopology::MakeShadowCSR();
   tsuba::RDGTopology* csr = KATANA_CHECKED_CONTEXT(
       rdg.GetTopology(shadow_csr),
       "unable to find csr topology, must have csr topology to Make a "
       "PropertyGraph");
-
+  csr_scope.Close();
   KATANA_LOG_DEBUG_ASSERT(CheckTopology(
       csr->adj_indices(), csr->num_nodes(), csr->dests(), csr->num_edges()));
+
+  auto topo_scope = tracer.StartActiveSpan("make topology");
   katana::GraphTopology topo = katana::GraphTopology(
       csr->adj_indices(), csr->num_nodes(), csr->dests(), csr->num_edges());
+  topo_scope.Close();
 
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 
+    auto node_type_ids_scope = tracer.StartActiveSpan("make node_type_ids");
     EntityTypeIDArray node_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
         rdg.node_entity_type_id_array_file_storage(),
         rdg.IsUint16tEntityTypeIDs()));
+    node_type_ids_scope.Close();
 
+    auto edge_type_ids_scope = tracer.StartActiveSpan("make edge_type_ids");
     EntityTypeIDArray edge_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
         rdg.edge_entity_type_id_array_file_storage(),
         rdg.IsUint16tEntityTypeIDs()));
+    edge_type_ids_scope.Close();
 
     KATANA_ASSERT(topo.num_nodes() == node_type_ids.size());
     KATANA_ASSERT(topo.num_edges() == edge_type_ids.size());
@@ -194,11 +203,20 @@ katana::PropertyGraph::Make(
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
+  auto& tracer = katana::GetTracer();
+  auto manifest_scope = tracer.StartActiveSpan("make manifest");
   tsuba::RDGManifest manifest = KATANA_CHECKED(tsuba::FindManifest(rdg_name));
+  manifest_scope.Close();
+
+  auto rdg_file_scope = tracer.StartActiveSpan("make rdg file scope");
   tsuba::RDGFile rdg_file{
       KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite))};
-  tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
+  rdg_file_scope.Close();
 
+  auto rdg_scope = tracer.StartActiveSpan("make rdg");
+  tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
+  rdg_scope.Close();
+  
   return katana::PropertyGraph::Make(
       std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg));
 }

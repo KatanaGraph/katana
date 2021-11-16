@@ -38,9 +38,8 @@ FileFrame::Init(uint64_t reserved_size) {
   if (ptr == MAP_FAILED) {
     return KATANA_ERROR(katana::ResultErrno(), "mapping buffer");
   }
-  if (auto res = Destroy(); !res) {
-    KATANA_LOG_ERROR("Destroy: {}", res.error());
-  }
+  KATANA_CHECKED(Destroy());
+
   path_ = "";
   map_size_ = map_size;
   map_start_ = static_cast<uint8_t*>(ptr);
@@ -114,9 +113,8 @@ FileFrame::Persist() {
   if (path_.empty()) {
     return KATANA_ERROR(tsuba::ErrorCode::InvalidArgument, "no path provided");
   }
-  if (auto res = tsuba::FileStore(path_, map_start_, cursor_); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(tsuba::FileStore(path_, map_start_, cursor_));
+
   return katana::ResultSuccess();
 }
 

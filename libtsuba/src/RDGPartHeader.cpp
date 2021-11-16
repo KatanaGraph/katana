@@ -91,18 +91,15 @@ const int kPartitionMatchHostIndex = 3;
 katana::Result<RDGPartHeader>
 RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
   tsuba::FileView fv;
-  if (auto res = fv.Bind(partition_path.string(), true); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(fv.Bind(partition_path.string(), true));
+
   if (fv.size() == 0) {
     return tsuba::RDGPartHeader();
   }
 
   tsuba::RDGPartHeader header;
-  auto json_res = katana::JsonParse<tsuba::RDGPartHeader>(fv, &header);
-  if (!json_res) {
-    return json_res.error();
-  }
+  KATANA_CHECKED(katana::JsonParse<tsuba::RDGPartHeader>(fv, &header));
+
   return header;
 }
 
@@ -115,21 +112,14 @@ katana::Result<void>
 RDGPartHeader::Write(
     RDGHandle handle, WriteGroup* writes,
     RDG::RDGVersioningPolicy retain_version) const {
-  auto serialized_res = katana::JsonDump(*this);
-  if (!serialized_res) {
-    return serialized_res.error();
-  }
-
-  std::string serialized = std::move(serialized_res.value());
+  std::string serialized = KATANA_CHECKED(katana::JsonDump(*this));
 
   // POSIX files end with newlines
   serialized = serialized + "\n";
 
   TSUBA_PTP(internal::FaultSensitivity::Normal);
   auto ff = std::make_unique<FileFrame>();
-  if (auto res = ff->Init(serialized.size()); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(ff->Init(serialized.size()));
   if (auto res = ff->Write(serialized.data(), serialized.size()); !res.ok()) {
     return KATANA_ERROR(ArrowToTsuba(res.code()), "arrow error: {}", res);
   }

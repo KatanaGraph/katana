@@ -52,9 +52,8 @@ tsuba::GlobalState::Init(katana::CommBackend* comm) {
       });
 
   for (FileStorage* fs : global_state->file_stores_) {
-    if (auto res = fs->Init(); !res) {
-      return res.error().WithContext("initializing backends");
-    }
+    KATANA_CHECKED_CONTEXT(
+        fs->Init(), "initializing backend ({})", fs->uri_scheme());
   }
 
   ref_ = std::move(global_state);
@@ -64,10 +63,8 @@ tsuba::GlobalState::Init(katana::CommBackend* comm) {
 katana::Result<void>
 tsuba::GlobalState::Fini() {
   for (FileStorage* fs : ref_->file_stores_) {
-    if (auto res = fs->Fini(); !res) {
-      return res.error().WithContext(
-          "file storage shutdown ({})", fs->uri_scheme());
-    }
+    KATANA_CHECKED_CONTEXT(
+        fs->Fini(), "file storage shutdown ({})", fs->uri_scheme());
   }
   ref_.reset(nullptr);
   return katana::ResultSuccess();

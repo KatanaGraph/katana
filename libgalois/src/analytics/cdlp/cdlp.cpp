@@ -295,7 +295,7 @@ katana::analytics::CdlpAssertValid(
 		KATANA_LOG_DEBUG(
             "{} (community: {}) must be in the most frequent community in its immediate neighborhood (community: "
             "{})",
-            *node, ndata, ndata_current);
+            *node, ndata, ndata_correct);
         return true;
     }
     return false;

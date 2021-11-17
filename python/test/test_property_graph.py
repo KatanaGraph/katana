@@ -1,5 +1,3 @@
-import os
-from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import numpy as np
@@ -50,6 +48,71 @@ def test_commit(graph):
 def test_get_edge_dest(graph):
     assert graph.get_edge_dest(0) == 8014
     assert graph.get_edge_dest(1) == 8014
+
+
+def test_edge_data_frame(graph):
+    edges = graph.edges()
+    assert len(edges.columns) == 18 + 3
+    assert len(edges) == 43072
+    assert edges.at[0, "dest"] == 8014
+    assert edges["dest"][1] == 8014
+    assert edges["source"][0] == 0
+    assert edges["source"][1] == 1
+    assert edges["source"][19993] == 20000
+
+
+def test_edge_data_frame_1_node(graph):
+    edges = graph.edges(0)
+    assert len(edges.columns) == 18 + 3
+    assert len(edges) == 1
+    assert edges.at[0, "dest"] == 8014
+    assert edges["dest"][0] == 8014
+    assert edges["source"][0] == 0
+
+
+def test_edge_data_frame_selected_nodes(graph):
+    edges = graph.edges([20000, 5000], properties={"classYear"})
+    assert len(edges.columns) == 1 + 3
+    assert len(edges) == len(graph.edge_ids(20000)) + len(graph.edge_ids(5000))
+    assert edges.at[0, "id"] == 19993
+    assert edges.at[1, "id"] == 5000
+    assert edges.at[0, "dest"] == 9475
+    assert edges.at[1, "dest"] == 9167
+    assert edges["dest"][0] == 9475
+    assert edges["dest"][1] == 9167
+    assert edges["source"][0] == 20000
+    assert edges["source"][1] == 5000
+
+
+def test_edge_data_frame_simple_slice(graph):
+    edges = graph.edges(slice(110, 112))
+    assert len(edges) == 2
+    assert edges.at[0, "dest"] == 8019
+    assert edges.at[1, "dest"] == 8019
+    assert edges["dest"][0] == 8019
+    assert edges["dest"][1] == 8019
+    assert edges["source"][0] == 110
+    assert edges["source"][1] == 111
+
+
+def test_edge_data_frame_complex_slice(graph):
+    edges = graph.edges(slice(1010, 1020, 2))
+    assert len(edges) == 5
+    assert edges.at[0, "dest"] == 7993
+    assert edges.at[1, "dest"] == 7993
+    assert edges["dest"][0] == 7993
+    assert edges["dest"][1] == 7993
+    assert edges["source"][0] == 1010
+    assert edges["source"][1] == 1012
+
+
+def test_edge_data_frame_to_pandas(graph):
+    edges = graph.edges().to_pandas()
+    assert len(edges.columns) == 18 + 3
+    assert len(edges) == 43072
+    assert edges.at[0, "dest"] == 8014
+    assert edges["dest"][1] == 8014
+    assert edges["source"][0] == 0
 
 
 def test_reachable_from_10(graph):

@@ -532,6 +532,7 @@ struct KATANA_EXPORT fmt::formatter<katana::TypeNameSet>
     : formatter<std::string> {
   template <typename FormatContext>
   auto format(const katana::TypeNameSet& tns, FormatContext& ctx) {
-    return format_to(ctx.out(), "{}", fmt::join(tns, ", "));
+    // Use Cypher syntax
+    return format_to(ctx.out(), "{}", fmt::join(tns, ":"));
   }
 };

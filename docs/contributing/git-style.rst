@@ -59,8 +59,8 @@ the pull request title as a comma separated list in brackets. Example PR title::
 
 Jira issue key(s) referenced in the body of the pull request do not get picked
 up by the Jira-GitHub integration, but do get automatically converted into a
-link through a GitHub's Jira bot. This is helpful for reviewers to quickly
-navigate to the related Jira issue.
+link by GitHub's Jira bot. This is helpful for reviewers to quickly navigate to
+the related Jira issue.
 
 Commit/Pull Request Message Style
 =================================

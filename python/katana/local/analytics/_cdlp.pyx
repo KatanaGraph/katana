@@ -8,7 +8,7 @@ Community Detection using Label Propagation (CDLP)
     :undoc-members:
 
 .. [Raghavan] U. N. Raghavan, R. Albert and S. Kumara, "Near linear time algorithm
-            to detect community structures in large-scale networks,"  In: Physical 
+            to detect community structures in large-scale networks,"  In: Physical
             Review E 76.3 (2007), p. 036106.
 
 .. autoclass:: katana.local.analytics._cdlp._CdlpPlanAlgorithm
@@ -107,18 +107,18 @@ cdef class CdlpPlan(Plan):
         Initially, all nodes are in their own community IDs (same as their
         node IDs). Then, the community IDs are iteratively set to the most
         frequent community ID in their immediate neighborhood. It continues
-        untill the community ID of all nodes in graph become the same as 
+        untill the community ID of all nodes in graph become the same as
         the most frequent ID in their immediate neighborhood.
-        
-        Synchronous community detection algorithm. This algorithm is based on 
-        Graphalytics benchmark that has two key differences from the original algorithm 
+
+        Synchronous community detection algorithm. This algorithm is based on
+        Graphalytics benchmark that has two key differences from the original algorithm
         proposed in [1]. First, it is deterministic: if there are multiple
-        labels with their frequency equalling the maximum, it selects the smallest 
+        labels with their frequency equalling the maximum, it selects the smallest
         one while the original algorithm selects randomly. Second, it is synchronous,
         i.e., each iteration is computed based on the labels obtained as a result of
-        the previous iteration. 
+        the previous iteration.
 
-        FIXME: As remarked in [1], this can cause the oscillation 
+        FIXME: As remarked in [1], this can cause the oscillation
         of labels in bipartite or nearly bipartite subgraphs. This is especially true
         in cases where communities take the form of a star graph
         """
@@ -141,13 +141,13 @@ cdef class CdlpPlan(Plan):
         [1] aggregates multiple solutions to get most useful information.
 
         FIXME: When the algorithm terminates it is possible that two or more disconnected
-        groups of nodes have the same label (the groups are connected in the network via 
-        other nodes of different labels). This happens when two or more neighborsof a 
+        groups of nodes have the same label (the groups are connected in the network via
+        other nodes of different labels). This happens when two or more neighborsof a
         node receive its label and pass the labels in different directions, which ultimately
-        leads to different communities adopting the same label. In such cases, after the 
+        leads to different communities adopting the same label. In such cases, after the
         algorithm terminates one can run a simple breadth-first search on the sub-networks
         of each individual groups to separate the disconnected communities. This requires
-        an overall time of O(m + n). When aggregating solutions however, we rarely find 
+        an overall time of O(m + n). When aggregating solutions however, we rarely find
         disconnected groups within communities [1].
 
         The stop Criterion is: If every node has a label that the maximum number of

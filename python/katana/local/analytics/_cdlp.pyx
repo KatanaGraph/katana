@@ -1,6 +1,6 @@
 """
 Community Detection using Label Propagation (CDLP)
---------------------
+--------------------------------------------------
 
 .. autoclass:: katana.local.analytics.CdlpPlan
     :members:

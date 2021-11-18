@@ -62,12 +62,7 @@ from katana.local.analytics._betweenness_centrality import (
     betweenness_centrality,
 )
 from katana.local.analytics._bfs import BfsPlan, BfsStatistics, bfs, bfs_assert_valid
-from katana.local.analytics._cdlp import (
-    CdlpPlan,
-    CdlpStatistics,
-    cdlp,
-    cdlp_assert_valid,
-)
+from katana.local.analytics._cdlp import CdlpPlan, CdlpStatistics, cdlp, cdlp_assert_valid
 from katana.local.analytics._connected_components import (
     ConnectedComponentsPlan,
     ConnectedComponentsStatistics,

@@ -159,11 +159,8 @@ RDGTopology::Map() {
   // EdgeTypeAwareTopologies have a larger adj_indices array than usual topologies
   if (topology_state_ ==
       tsuba::RDGTopology::TopologyKind::kEdgeTypeAwareTopology) {
-    KATANA_LOG_VASSERT(
-        edge_condensed_type_id_map_size_,
-        "mapping an EdgeTypeAwareTopology with a zero sized "
-        "condensed_type_id_map");
-    adj_indices_size = num_nodes_ * edge_condensed_type_id_map_size_;
+    adj_indices_size =
+        std::max(num_nodes_, num_nodes_ * edge_condensed_type_id_map_size_);
   }
 
   cursor += adj_indices_size;

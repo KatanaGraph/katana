@@ -81,8 +81,7 @@ public:
   /// disconnected groups within communities [1].
   ///
   /// The stop Criterion is: If every node has a label that the maximum number of
-  /// their neighbors have, then stop the algorithm (TODO: maybe we can use the same stop
-  /// criterion for the Synchronous algorithm as well.)
+  /// their neighbors have, then stop the algorithm
 
   static CdlpPlan Asynchronous() { return {kCPU, kAsynchronous}; }
 };
@@ -91,7 +90,6 @@ public:
 /// directed or undirected based our my discussion with Amber,
 /// I can use undirected view which is going to be commited soon.
 /// in this stage I am using the bidrectview
-/// TODO: not sure about symmetric graphs?
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Cdlp(

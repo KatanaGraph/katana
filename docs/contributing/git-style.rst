@@ -52,12 +52,12 @@ It is also possible to ask GitHub to squash your commits for you. This is the
 Pull Request Style
 ==================
 
-Include the Jira issue key(s) that are being addressed at the end of
-the pull request title as a comma separated list in brackets. Example PR title::
+Include the Jira issue keys that are being addressed at the end of the pull
+request title as a comma separated list in brackets. Example PR title::
 
   Reduce memory usage of Foo [KAT-1000, KAT-1001]
 
-Jira issue key(s) referenced in the body of the pull request do not get picked
+Jira issue keys referenced in the body of the pull request do not get picked
 up by the Jira-GitHub integration, but do get automatically converted into a
 link by GitHub's Jira bot. This is helpful for reviewers to quickly navigate to
 the related Jira issue.

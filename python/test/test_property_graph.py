@@ -126,7 +126,8 @@ def test_add_node_property_dataframe(graph):
 def test_upsert_node_property(graph):
     prop = graph.loaded_node_schema().names[0]
     t = pyarrow.table({prop: range(graph.num_nodes())})
-    graph.upsert_node_property(t)
+    ctx = TxnContext()
+    graph.upsert_node_property(ctx, t)
     assert len(graph.loaded_node_schema()) == 31
     assert graph.get_node_property_chunked(prop) == pyarrow.chunked_array([range(graph.num_nodes())])
     assert graph.get_node_property(prop) == pyarrow.array(range(graph.num_nodes()))
@@ -173,14 +174,16 @@ def test_add_edge_property(graph):
 def test_upsert_edge_property(graph):
     prop = graph.loaded_edge_schema().names[0]
     t = pyarrow.table({prop: range(graph.num_edges())})
-    graph.upsert_edge_property(t)
+    ctx = TxnContext()
+    graph.upsert_edge_property(ctx, t)
     assert len(graph.loaded_edge_schema()) == 18
     assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
 
 
 def test_upsert_edge_property_dict(graph):
     prop = graph.loaded_edge_schema().names[0]
-    graph.upsert_edge_property({prop: range(graph.num_edges())})
+    ctx = TxnContext()
+    graph.upsert_edge_property(ctx, {prop: range(graph.num_edges())})
     assert len(graph.loaded_edge_schema()) == 18
     assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
 

@@ -28,7 +28,8 @@ public:
   void Upsert(RDGTopology topo) {
     auto res = GetTopology(topo);
     if (res) {
-      // we already have a topology matching this one
+      // we already have a topology matching this one. Mark the existing topology as invalid so it is not stored,
+      // and add the new topology to the manager.
       RDGTopology* existing_topo = res.value();
       existing_topo->set_invalid();
     }
@@ -53,7 +54,8 @@ public:
   }
 
   katana::Result<void> DoStore(
-      RDGHandle handle, std::unique_ptr<tsuba::WriteGroup>& write_group);
+      RDGHandle handle, const katana::Uri& current_rdg_dir,
+      std::unique_ptr<tsuba::WriteGroup>& write_group);
 
   /// Extract metadata from an previous storage format topology
   /// Only should be used when transitioning from a previous storage format topology

@@ -31,7 +31,7 @@ namespace cll = llvm::cl;
 /// in Synchronous algorithm. We dont need to limit it in Asynchronous algorithm.
 /// Set to 10 same as Graphalytics benchmark.
 /// FIXME: duplicated from cdlp.cpp; needs to defnied in one place. maybe in cdlp.hpp.
-const unsigned int kMaxIterations = 10;	
+const unsigned int kMaxIterations = 10;
 
 const char* name = "CDLP";
 const char* desc = "Detects the communities of a graph using label propagation";
@@ -87,7 +87,7 @@ main(int argc, char** argv) {
   totalTime.start();
 
   //FIXME: I am not sure if it only requiers a symmetric graph
-/*  if (!symmetricGraph) {
+  /*  if (!symmetricGraph) {
     KATANA_LOG_FATAL(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
@@ -127,16 +127,13 @@ main(int argc, char** argv) {
 
   auto pg_result = Cdlp(pg.get(), "community", maxIterations, plan);
   if (!pg_result) {
-    KATANA_LOG_FATAL(
-        "Failed to run Cdlp: {}", pg_result.error());
+    KATANA_LOG_FATAL("Failed to run Cdlp: {}", pg_result.error());
   }
 
-  auto stats_result =
-      CdlpStatistics::Compute(pg.get(), "community");
+  auto stats_result = CdlpStatistics::Compute(pg.get(), "community");
   if (!stats_result) {
     KATANA_LOG_FATAL(
-        "Failed to compute Cdlp statistics: {}",
-        stats_result.error());
+        "Failed to compute Cdlp statistics: {}", stats_result.error());
   }
   auto stats = stats_result.value();
   stats.Print();

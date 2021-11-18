@@ -17,8 +17,9 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include <boost/unordered_map.hpp>
 #include "katana/analytics/cdlp/cdlp.h"
+
+#include <boost/unordered_map.hpp>
 
 #include "katana/ArrowRandomAccessBuilder.h"
 #include "katana/TypedPropertyGraph.h"
@@ -31,109 +32,109 @@ const unsigned int kInfinity = std::numeric_limits<unsigned int>::max();
 /// Limited number of iterations to limit the oscillation of the label
 /// in Synchronous algorithm. We dont need to limit it in Asynchronous algorithm.
 /// Set to 10 same as Graphalytics benchmark.
-const unsigned int kMaxIterations = 10;	
+const unsigned int kMaxIterations = 10;
 
 struct CdlpSynchronousAlgo {
   using CommunityType = uint64_t;
   struct NodeCommunity : public katana::PODProperty<CommunityType> {};
-
 
   using NodeData = std::tuple<NodeCommunity>;
   using EdgeData = std::tuple<>;
   typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using BiDirGraphView = katana::TypedPropertyGraphView<
-    katana::PropertyGraphViews::BiDirectional, NodeData,
-    EdgeData>;
+      katana::PropertyGraphViews::BiDirectional, NodeData, EdgeData>;
 
   CdlpPlan& plan_;
-  CdlpSynchronousAlgo(CdlpPlan& plan)
-      : plan_(plan) {}
+  CdlpSynchronousAlgo(CdlpPlan& plan) : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto &ndata = graph->GetData<NodeCommunity>(node);
-	  ndata = node;
+      auto& ndata = graph->GetData<NodeCommunity>(node);
+      ndata = node;
     });
   }
 
   void Deallocate(Graph*) {}
 
-  void operator()(Graph* graph, const BiDirGraphView& bidir_view,
-		          size_t max_iterations = kMaxIterations) {
-	if (max_iterations==0) return;  
-	
-	struct NodeDataPair {
-		GNode node;
-		CommunityType data;
-        NodeDataPair(GNode node, CommunityType data)
-            : node(node), data(data) {}
-	};
+  void operator()(
+      Graph* graph, const BiDirGraphView& bidir_view,
+      size_t max_iterations = kMaxIterations) {
+    if (max_iterations == 0)
+      return;
 
-	size_t iterations = 0;
+    struct NodeDataPair {
+      GNode node;
+      CommunityType data;
+      NodeDataPair(GNode node, CommunityType data) : node(node), data(data) {}
+    };
+
+    size_t iterations = 0;
     katana::InsertBag<NodeDataPair> applyBag;
-	
 
-	/// FIXME: in this implementation, in each iteration, all the nodes are active
-	/// for gather phase. If InsertBag does not accept duplicate items then this
-	/// can be improved to have only the affected nodes to be active in next iteration 
-	while (iterations < max_iterations){
-		// Gather Phase
-	    katana::do_all(
-		    katana::iterate(*graph),
-		    [&](const GNode& node) {
-		        const auto ndata_current_comm = graph->GetData<NodeCommunity>(node);
-			    typedef boost::unordered_map<CommunityType, size_t> Histogram_type;
-			    Histogram_type histogram;
-				// Incoming edges
-			    for (auto e : bidir_view.in_edges(node)){
-			        auto src = bidir_view.in_edge_dest(e);
-			        const auto sdata = graph->GetData<NodeCommunity>(src);
-					histogram[sdata]++;
-			    }
+    /// FIXME: in this implementation, in each iteration, all the nodes are active
+    /// for gather phase. If InsertBag does not accept duplicate items then this
+    /// can be improved to have only the affected nodes to be active in next iteration
+    while (iterations < max_iterations) {
+      // Gather Phase
+      katana::do_all(
+          katana::iterate(*graph),
+          [&](const GNode& node) {
+            const auto ndata_current_comm = graph->GetData<NodeCommunity>(node);
+            typedef boost::unordered_map<CommunityType, size_t> Histogram_type;
+            Histogram_type histogram;
+            // Incoming edges
+            for (auto e : bidir_view.in_edges(node)) {
+              auto src = bidir_view.in_edge_dest(e);
+              const auto sdata = graph->GetData<NodeCommunity>(src);
+              histogram[sdata]++;
+            }
 
-				// Outgoing edges
-			    for (auto e : bidir_view.edges(node)){
-			        auto dest = bidir_view.edge_dest(e);
-			        const auto ddata = graph->GetData<NodeCommunity>(dest);
-					histogram[ddata]++;
-			    }
+            // Outgoing edges
+            for (auto e : bidir_view.edges(node)) {
+              auto dest = bidir_view.edge_dest(e);
+              const auto ddata = graph->GetData<NodeCommunity>(dest);
+              histogram[ddata]++;
+            }
 
-				// Pick the most frequent communtiy as the new community for node
-				// pick the smallest one if more than one max frequent exist.
-				auto ndata_new_comm = ndata_current_comm;
-				size_t best_freq = 0;
-				for (Histogram_type::const_iterator it = histogram.begin(); it != histogram.end(); it++) {
-				    const auto comm  = it->first;
-					size_t freq = it->second;
+            // Pick the most frequent communtiy as the new community for node
+            // pick the smallest one if more than one max frequent exist.
+            auto ndata_new_comm = ndata_current_comm;
+            size_t best_freq = 0;
+            for (Histogram_type::const_iterator it = histogram.begin();
+                 it != histogram.end(); it++) {
+              const auto comm = it->first;
+              size_t freq = it->second;
 
-					if (freq > best_freq || (freq == best_freq && comm < ndata_new_comm)) {
-						ndata_new_comm = comm;
-						best_freq = freq;
-					}
-				}
-			
-				if (ndata_new_comm != ndata_current_comm)
-				    applyBag.push(NodeDataPair(node, (CommunityType) ndata_new_comm));
-		    },
-		    katana::loopname("CDLP_Gather"));
-        
-		// No change! break!
-		if (applyBag.empty()) break;
+              if (freq > best_freq ||
+                  (freq == best_freq && comm < ndata_new_comm)) {
+                ndata_new_comm = comm;
+                best_freq = freq;
+              }
+            }
 
-		// Apply Phase
-		katana::do_all(
-			katana::iterate(applyBag),
-			[&](const NodeDataPair nodeData){
-			   GNode node = nodeData.node;
-			   auto &ndata = graph->GetData<NodeCommunity>(node);
-			   ndata = nodeData.data;
-			},
-			katana::loopname("CDLP_Apply"));
+            if (ndata_new_comm != ndata_current_comm)
+              applyBag.push(NodeDataPair(node, (CommunityType)ndata_new_comm));
+          },
+          katana::loopname("CDLP_Gather"));
 
-		applyBag.clear();
-        iterations += 1;
-	}
+      // No change! break!
+      if (applyBag.empty())
+        break;
+
+      // Apply Phase
+      katana::do_all(
+          katana::iterate(applyBag),
+          [&](const NodeDataPair nodeData) {
+            GNode node = nodeData.node;
+            auto& ndata = graph->GetData<NodeCommunity>(node);
+            ndata = nodeData.data;
+          },
+          katana::loopname("CDLP_Apply"));
+
+      applyBag.clear();
+      iterations += 1;
+    }
     katana::ReportStatSingle("CDLP_Synchronous", "iterations", iterations);
   }
 };
@@ -147,24 +148,21 @@ struct CdlpAsynchronousAlgo {
   typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using BiDirGraphView = katana::TypedPropertyGraphView<
-    katana::PropertyGraphViews::BiDirectional, NodeData,
-    EdgeData>;
+      katana::PropertyGraphViews::BiDirectional, NodeData, EdgeData>;
 
   CdlpPlan& plan_;
-  CdlpAsynchronousAlgo(CdlpPlan& plan)
-      : plan_(plan) {}
+  CdlpAsynchronousAlgo(CdlpPlan& plan) : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto &ndata = graph->GetData<NodeCommunity>(node);
-	  ndata = node;
+      auto& ndata = graph->GetData<NodeCommunity>(node);
+      ndata = node;
     });
   }
 
   void Deallocate(Graph*) {}
 
-  void operator()(Graph*, const BiDirGraphView&,
-		          size_t) {}
+  void operator()(Graph*, const BiDirGraphView&, size_t) {}
 };
 
 }  //namespace
@@ -172,8 +170,8 @@ struct CdlpAsynchronousAlgo {
 template <typename Algorithm>
 static katana::Result<void>
 CdlpWithWrap(
-    katana::PropertyGraph* pg, std::string output_property_name,
-    CdlpPlan plan, size_t max_iterations) {
+    katana::PropertyGraph* pg, std::string output_property_name, CdlpPlan plan,
+    size_t max_iterations) {
   katana::EnsurePreallocated(
       2,
       pg->topology().num_nodes() * sizeof(typename Algorithm::NodeCommunity));
@@ -192,8 +190,8 @@ CdlpWithWrap(
   auto graph = pg_result.value();
 
   using BiDirGraphView = katana::TypedPropertyGraphView<
-    katana::PropertyGraphViews::BiDirectional, typename Algorithm::NodeData,
-    typename Algorithm::EdgeData>;
+      katana::PropertyGraphViews::BiDirectional, typename Algorithm::NodeData,
+      typename Algorithm::EdgeData>;
 
   auto bidir_view =
       KATANA_CHECKED(BiDirGraphView::Make(pg, {output_property_name}, {}));
@@ -251,52 +249,53 @@ katana::analytics::CdlpAssertValid(
   auto graph = pg_result.value();
 
   using BiDirGraphView = katana::TypedPropertyGraphView<
-    katana::PropertyGraphViews::BiDirectional, NodeData,
-    EdgeData>;
+      katana::PropertyGraphViews::BiDirectional, NodeData, EdgeData>;
 
   auto bidir_view =
       KATANA_CHECKED(BiDirGraphView::Make(pg, {property_name}, {}));
 
   auto is_bad = [&graph, &bidir_view](const GNode& node) {
     const auto ndata = graph.template GetData<NodeCommunity>(node);
-	typedef boost::unordered_map<CommunityType, size_t> Histogram_type;
-	Histogram_type histogram;
-	// Incoming edges
+    typedef boost::unordered_map<CommunityType, size_t> Histogram_type;
+    Histogram_type histogram;
+    // Incoming edges
     for (auto e : bidir_view.in_edges(node)) {
       auto src = bidir_view.in_edge_dest(e);
       const auto sdata = graph.template GetData<NodeCommunity>(src);
-	  histogram[sdata]++;
-	}
+      histogram[sdata]++;
+    }
 
-	// Outgoing edges
-	for (auto e : bidir_view.edges(node)){
-		auto dest = bidir_view.edge_dest(e);
-		const auto ddata = graph.template GetData<NodeCommunity>(dest);
-		histogram[ddata]++;
-	}
+    // Outgoing edges
+    for (auto e : bidir_view.edges(node)) {
+      auto dest = bidir_view.edge_dest(e);
+      const auto ddata = graph.template GetData<NodeCommunity>(dest);
+      histogram[ddata]++;
+    }
 
-	/// Pick the most frequent communtiy for node
-	/// Pick the smallest one if more than one max frequent exist.
-	/// TODO: This needs to be fix for the oscillation of the label cases
-	/// It returns Failed for those cases.
-	auto ndata_correct = kInfinity;
-	size_t best_freq = 0;
-	for (Histogram_type::const_iterator it = histogram.begin(); it != histogram.end(); it++) {
-		const auto comm  = it->first;
-		size_t freq = it->second;
+    /// Pick the most frequent communtiy for node
+    /// Pick the smallest one if more than one max frequent exist.
+    /// TODO: This needs to be fix for the oscillation of the label cases
+    /// It returns Failed for those cases.
+    auto ndata_correct = kInfinity;
+    size_t best_freq = 0;
+    for (Histogram_type::const_iterator it = histogram.begin();
+         it != histogram.end(); it++) {
+      const auto comm = it->first;
+      size_t freq = it->second;
 
-		if (freq > best_freq || (freq == best_freq && comm < ndata_correct)) {
-			ndata_correct = comm;
-			best_freq = freq;
-		}
-	}
-			
-	if (ndata_correct != ndata){
-		KATANA_LOG_DEBUG(
-            "{} (community: {}) must be in the most frequent community in its immediate neighborhood (community: "
-            "{})",
-            node, ndata, ndata_correct);
-        return true;
+      if (freq > best_freq || (freq == best_freq && comm < ndata_correct)) {
+        ndata_correct = comm;
+        best_freq = freq;
+      }
+    }
+
+    if (ndata_correct != ndata) {
+      KATANA_LOG_DEBUG(
+          "{} (community: {}) must be in the most frequent community in its "
+          "immediate neighborhood (community: "
+          "{})",
+          node, ndata, ndata_correct);
+      return true;
     }
     return false;
   };
@@ -392,8 +391,7 @@ katana::analytics::CdlpStatistics::Compute(
 }
 
 void
-katana::analytics::CdlpStatistics::Print(
-    std::ostream& os) const {
+katana::analytics::CdlpStatistics::Print(std::ostream& os) const {
   os << "Total number of communities = " << total_communities << std::endl;
   os << "Total number of non trivial communities = "
      << total_non_trivial_communities << std::endl;

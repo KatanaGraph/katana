@@ -8,7 +8,7 @@ import pyarrow
 import pytest
 
 from katana import TsubaError, do_all, do_all_operator
-from katana.local import Graph
+from katana.local import Graph, TxnContext
 from katana.local.import_data import from_csr
 
 

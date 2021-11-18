@@ -53,9 +53,9 @@ Pull Request Title Style
 ========================
 
 Include the Jira issue key(s) that are being addressed at the end of
-the pull request title as a comma separated list in brackets. Example PR title:
+the pull request title as a comma separated list in brackets. Example PR title::
 
-`Reduce memory usage of Foo [KAT-1000, KAT-1001]`
+  Reduce memory usage of Foo [KAT-1000, KAT-1001]
 
 Commit/Pull Request Message Style
 =================================

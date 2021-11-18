@@ -49,8 +49,16 @@ features or plugins to streamline this process (e.g.,
 It is also possible to ask GitHub to squash your commits for you. This is the
 "squash and merge" option when merging your PR.
 
-Commit/PR Message Style
-=======================
+Pull Request Title Style
+========================
+
+Include the Jira issue key(s) that are being addressed at the end of
+the pull request title as a comma separated list in brackets. Example PR title:
+
+`Reduce memory usage of Foo [KAT-1000, KAT-1001]`
+
+Commit/Pull Request Message Style
+=================================
 
 Since changes are committed as a pull request, it is important that information
 is primarily included as part of the body in the pull request. Since commits may
@@ -147,11 +155,3 @@ An example of a typical commit message:
    the dispose API are on less frequently executed recovery paths.
 
    After this change, typical memory usage reduces to a few KB.
-
-Pull Request Title Style
-========================
-
-Include the Jira issue key(s) that are being addressed at the end of
-the pull request title as a comma separated list in brackets. Example PR title:
-
-`Reduce memory usage of Foo [KAT-1000, KAT-1001]`

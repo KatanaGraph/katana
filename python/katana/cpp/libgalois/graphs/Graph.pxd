@@ -172,8 +172,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
         Result[void] AddNodeProperties(shared_ptr[CTable])
         Result[void] AddEdgeProperties(shared_ptr[CTable])
-        Result[void] UpsertNodeProperties(shared_ptr[CTable], TxnContext&)
-        Result[void] UpsertEdgeProperties(shared_ptr[CTable], TxnContext&)
+        Result[void] UpsertNodeProperties(shared_ptr[CTable], TxnContext*)
+        Result[void] UpsertEdgeProperties(shared_ptr[CTable], TxnContext*)
 
         Result[void] RemoveNodeProperty(int)
         Result[void] RemoveNodeProperty(const string&)

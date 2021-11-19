@@ -170,7 +170,7 @@ public:
     Result<void> (PropertyGraph::*add_properties_fn)(
         const std::shared_ptr<arrow::Table>& props);
     Result<void> (PropertyGraph::*upsert_properties_fn)(
-        const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx);
+        const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx);
     Result<void> (PropertyGraph::*remove_property_int)(int i);
     Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
     Result<void> (PropertyGraph::*ensure_loaded_property_fn)(
@@ -204,7 +204,7 @@ public:
 
     Result<void> UpsertProperties(
         const std::shared_ptr<arrow::Table>& props,
-        tsuba::TxnContext& ctx) const {
+        tsuba::TxnContext* ctx) const {
       return (g->*upsert_properties_fn)(props, ctx);
     }
 
@@ -666,10 +666,10 @@ public:
   Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& props);
   /// If property name exists, replace it, otherwise insert it
   Result<void> UpsertNodeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx);
   /// If property name exists, replace it, otherwise insert it
   Result<void> UpsertEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx);
 
   Result<void> RemoveNodeProperty(int i);
   Result<void> RemoveNodeProperty(const std::string& prop_name);

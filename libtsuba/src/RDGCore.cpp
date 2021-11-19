@@ -171,22 +171,22 @@ RDGCore::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
 
 katana::Result<void>
 RDGCore::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
   // store write properties into transaction context
-  ctx.InsertNodePropertyWrite(std::move(written_prop_names));
+  ctx->InsertNodePropertyWrite(std::move(written_prop_names));
 
   return katana::ResultSuccess();
 }
 
 katana::Result<void>
 RDGCore::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
   // store write properties into transaction context
-  ctx.InsertEdgePropertyWrite(std::move(written_prop_names));
+  ctx->InsertEdgePropertyWrite(std::move(written_prop_names));
 
   return katana::ResultSuccess();
 }

@@ -238,7 +238,7 @@ cdef class GraphBase:
             length ``self.num_nodes()``. (Optional)
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_nodes()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().UpsertNodeProperties(GraphBase._convert_table(table, kwargs), ctx._txn_ctx))
+        handle_result_void(self.underlying_property_graph().UpsertNodeProperties(GraphBase._convert_table(table, kwargs), &ctx._txn_ctx))
 
     def add_edge_property(self, table=None, **kwargs):
         """
@@ -259,7 +259,7 @@ cdef class GraphBase:
             length ``self.num_edges()``. (Optional)
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_edges()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(GraphBase._convert_table(table, kwargs), ctx._txn_ctx))
+        handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(GraphBase._convert_table(table, kwargs), &ctx._txn_ctx))
 
     def remove_node_property(self, prop):
         """

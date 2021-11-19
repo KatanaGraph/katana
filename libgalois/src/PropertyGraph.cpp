@@ -753,7 +753,7 @@ katana::PropertyGraph::AddNodeProperties(
 
 katana::Result<void>
 katana::PropertyGraph::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("upsert empty node prop table");
     return ResultSuccess();
@@ -827,7 +827,7 @@ katana::PropertyGraph::AddEdgeProperties(
 
 katana::Result<void>
 katana::PropertyGraph::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext& ctx) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("upsert empty edge prop table");
     return ResultSuccess();

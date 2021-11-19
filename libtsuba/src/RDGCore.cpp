@@ -172,6 +172,7 @@ RDGCore::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
 katana::Result<void>
 RDGCore::UpsertNodeProperties(
     const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
+  KATANA_LOG_DEBUG_ASSERT(ctx != nullptr);
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
   // store write properties into transaction context
@@ -183,6 +184,7 @@ RDGCore::UpsertNodeProperties(
 katana::Result<void>
 RDGCore::UpsertEdgeProperties(
     const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
+  KATANA_LOG_DEBUG_ASSERT(ctx != nullptr);
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
   // store write properties into transaction context

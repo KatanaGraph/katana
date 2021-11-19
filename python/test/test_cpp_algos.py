@@ -297,8 +297,8 @@ def test_connected_components():
 
     assert stats.total_components == 69
     assert stats.total_non_trivial_components == 1
-    assert stats.largest_component_size == 957
-    assert stats.largest_component_ratio == approx(0.93457)
+    assert stats.largest_component_size == 956
+    assert stats.largest_component_ratio == approx(0.933594)
 
     connected_components_assert_valid(graph, "output")
 

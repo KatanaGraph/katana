@@ -229,7 +229,7 @@ cdef class GraphBase:
         """
         handle_result_void(self.underlying_property_graph().AddNodeProperties(GraphBase._convert_table(table, kwargs)))
 
-    def upsert_node_property(self, TxnContext ctx, table=None, **kwargs):
+    def upsert_node_property(self, TxnContext ctx=TxnContext(), table=None, **kwargs):
         """
         Update or insert node properties into this graph.
 
@@ -250,7 +250,7 @@ cdef class GraphBase:
         """
         handle_result_void(self.underlying_property_graph().AddEdgeProperties(GraphBase._convert_table(table, kwargs)))
 
-    def upsert_edge_property(self, TxnContext ctx, table=None, **kwargs):
+    def upsert_edge_property(self, TxnContext ctx=TxnContext(), table=None, **kwargs):
         """
         Update or insert edge properties into this graph.
 

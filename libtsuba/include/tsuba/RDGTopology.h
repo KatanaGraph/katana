@@ -143,20 +143,26 @@ public:
   /// Optional field, may not be present depending on the kind of topology this is
   /// Requires backing FileView to be mapped & bound, or the RDGTopology to be filled from memory
   const katana::EntityTypeID* edge_condensed_type_id_map() const {
-    KATANA_LOG_VASSERT(
-        edge_condensed_type_id_map_ != nullptr,
-        "Either this optional field is not present, or the RDGTopology must be "
-        "either bound & mapped, or filled from memory.");
+    if (edge_condensed_type_id_map_size() > 0) {
+      KATANA_LOG_VASSERT(
+          edge_condensed_type_id_map_ != nullptr,
+          "Either this optional field is not present, or the RDGTopology must "
+          "be "
+          "either bound & mapped, or filled from memory.");
+    }
     return edge_condensed_type_id_map_;
   }
 
   /// Optional field, may not be present depending on the kind of topology this is
   /// Requires backing FileView to be mapped & bound, or the RDGTopology to be filled from memory
   const katana::EntityTypeID* node_condensed_type_id_map() const {
-    KATANA_LOG_VASSERT(
-        node_condensed_type_id_map_ != nullptr,
-        "Either this optional field is not present, or the RDGTopology must be "
-        "either bound & mapped, or filled from memory.");
+    if (node_condensed_type_id_map_size() > 0) {
+      KATANA_LOG_VASSERT(
+          node_condensed_type_id_map_ != nullptr,
+          "Either this optional field is not present, or the RDGTopology must "
+          "be "
+          "either bound & mapped, or filled from memory.");
+    }
     return node_condensed_type_id_map_;
   }
 

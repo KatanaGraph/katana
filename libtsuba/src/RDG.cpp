@@ -663,14 +663,14 @@ tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
 
 katana::Result<void>
 tsuba::RDG::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
-  return core_->UpsertNodeProperties(props, ctx);
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->UpsertNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
 tsuba::RDG::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
-  return core_->UpsertEdgeProperties(props, ctx);
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->UpsertEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>

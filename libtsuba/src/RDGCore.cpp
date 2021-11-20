@@ -9,12 +9,12 @@
 
 namespace {
 
-katana::Result<std::vector<std::string>>
+katana::Result<std::unordered_set<std::string>>
 UpsertProperties(
     const std::shared_ptr<arrow::Table>& props,
     std::shared_ptr<arrow::Table>* to_update,
     std::vector<tsuba::PropStorageInfo>* prop_state) {
-  std::vector<std::string> written_prop_names;
+  std::unordered_set<std::string> written_prop_names;
   if (!props->schema()->HasDistinctFieldNames()) {
     return KATANA_ERROR(
         tsuba::ErrorCode::Exists, "column names must be distinct: {}",
@@ -25,6 +25,7 @@ UpsertProperties(
     KATANA_LOG_ASSERT((*to_update)->num_columns() == 0);
     for (const auto& field : props->fields()) {
       prop_state->emplace_back(field->name(), field->type());
+      written_prop_names.insert(field->name());
     }
     *to_update = props;
     return written_prop_names;
@@ -68,7 +69,7 @@ UpsertProperties(
           next->SetColumn(current_col, field, props->column(i)), "update");
     }
     prop_info_it->WasModified(field->type());
-    written_prop_names.push_back(field->name());
+    written_prop_names.insert(field->name());
   }
 
   if (!next->schema()->HasDistinctFieldNames()) {
@@ -171,24 +172,24 @@ RDGCore::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
 
 katana::Result<void>
 RDGCore::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
-  KATANA_LOG_DEBUG_ASSERT(ctx != nullptr);
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  KATANA_LOG_DEBUG_ASSERT(txn_ctx != nullptr);
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
   // store write properties into transaction context
-  ctx->InsertNodePropertyWrite(std::move(written_prop_names));
+  txn_ctx->InsertNodePropertyWrite(std::move(written_prop_names));
 
   return katana::ResultSuccess();
 }
 
 katana::Result<void>
 RDGCore::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* ctx) {
-  KATANA_LOG_DEBUG_ASSERT(ctx != nullptr);
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  KATANA_LOG_DEBUG_ASSERT(txn_ctx != nullptr);
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
   // store write properties into transaction context
-  ctx->InsertEdgePropertyWrite(std::move(written_prop_names));
+  txn_ctx->InsertEdgePropertyWrite(std::move(written_prop_names));
 
   return katana::ResultSuccess();
 }

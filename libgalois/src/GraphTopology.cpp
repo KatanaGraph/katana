@@ -152,18 +152,22 @@ katana::EdgeShuffleTopology::Make(tsuba::RDGTopology* rdg_topo) {
   PropIndexVec edge_prop_indices;
   edge_prop_indices.allocateInterleaved(rdg_topo->num_edges());
 
-  katana::ParallelSTL::copy(
-      &(rdg_topo->adj_indices()[0]),
-      &(rdg_topo->adj_indices()[rdg_topo->num_nodes()]),
-      adj_indices_copy.begin());
-  katana::ParallelSTL::copy(
-      &(rdg_topo->dests()[0]), &(rdg_topo->dests()[rdg_topo->num_edges()]),
-      dests_copy.begin());
+  if (rdg_topo->num_nodes() > 0) {
+    katana::ParallelSTL::copy(
+        &(rdg_topo->adj_indices()[0]),
+        &(rdg_topo->adj_indices()[rdg_topo->num_nodes()]),
+        adj_indices_copy.begin());
+  }
+  if (rdg_topo->num_edges() > 0) {
+    katana::ParallelSTL::copy(
+        &(rdg_topo->dests()[0]), &(rdg_topo->dests()[rdg_topo->num_edges()]),
+        dests_copy.begin());
 
-  katana::ParallelSTL::copy(
-      &(rdg_topo->edge_index_to_property_index_map()[0]),
-      &(rdg_topo->edge_index_to_property_index_map()[rdg_topo->num_edges()]),
-      edge_prop_indices.begin());
+    katana::ParallelSTL::copy(
+        &(rdg_topo->edge_index_to_property_index_map()[0]),
+        &(rdg_topo->edge_index_to_property_index_map()[rdg_topo->num_edges()]),
+        edge_prop_indices.begin());
+  }
 
   // Since we copy the data we need out of the RDGTopology into our own arrays,
   // unbind the RDGTopologys file store to save memory.

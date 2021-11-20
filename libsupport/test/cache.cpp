@@ -12,8 +12,11 @@ enum class NodeEdge { kNode, kEdge };
 // This code is replicated from libtsuba::PropertyCache.h to allow testing of
 // libsupport::Cache.h (libtsuba depends on libsupport, not the other way around)
 struct KATANA_EXPORT PropertyCacheKey {
-  NodeEdge node_edge;
-  std::string name;
+  bool is_node() const { return node_edge == NodeEdge::kNode; }
+  bool is_edge() const { return node_edge == NodeEdge::kEdge; }
+  std::string prop_name() const { return name; }
+  std::string rdg_prefix() const { return ""; }
+
   PropertyCacheKey(NodeEdge _node_edge, const std::string& _name = "")
       : node_edge(_node_edge), name(_name) {}
   bool operator==(const PropertyCacheKey& o) const {
@@ -32,6 +35,9 @@ struct KATANA_EXPORT PropertyCacheKey {
       return seed;
     }
   };
+  // Data
+  NodeEdge node_edge;
+  std::string name;
 };
 
 struct CacheValue {
@@ -81,6 +87,7 @@ InsertRandom(
     katana::Cache<PropertyCacheKey, CacheValue>& cache) {
   for (const auto& key : keys) {
     cache.Insert(key, RandomValue());
+    KATANA_LOG_ASSERT(cache.LRUPosition(key) == 0);
   }
 }
 
@@ -90,8 +97,13 @@ AssertLRUElements(
     katana::Cache<PropertyCacheKey, CacheValue>& cache) {
   for (auto it = endit - num; it < endit; ++it) {
     KATANA_LOG_ASSERT(cache.Get(*it).has_value());
+    KATANA_LOG_VASSERT(
+        cache.LRUPosition(*it) == 0, "{} LRUPosition {}", it->prop_name(),
+        cache.LRUPosition(*it));
   }
-  KATANA_LOG_ASSERT(!cache.Get(*(endit - num - 1)).has_value());
+  auto outofboundsit = endit - num - 1;
+  KATANA_LOG_ASSERT(!cache.Get(*outofboundsit).has_value());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*outofboundsit) == -1L);
 }
 
 void
@@ -110,15 +122,20 @@ TestLRUBytes(
 
   PropertyCacheKey key(NodeEdge::kNode, "not gonna happen");
   KATANA_LOG_ASSERT(!cache.Get(key).has_value());
+  KATANA_LOG_ASSERT(cache.LRUPosition(key) == -1L);
   auto nodeit = --node_keys.end();
   KATANA_LOG_ASSERT(nodeit != node_keys.begin());
   cache.Insert(*nodeit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
   KATANA_LOG_ASSERT(nodeit != node_keys.begin());
   cache.Insert(*nodeit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
   KATANA_LOG_ASSERT(nodeit != node_keys.begin());
   cache.Insert(*nodeit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
   KATANA_LOG_ASSERT(nodeit != node_keys.begin());
   cache.Insert(*nodeit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
 
   KATANA_LOG_ASSERT((byte_size + 1) < node_keys.size());
   AssertLRUElements(node_keys.end(), byte_size, cache);
@@ -138,6 +155,7 @@ TestLRUBytes(
   KATANA_LOG_ASSERT(cache.size() == 5);
 
   cache.Insert(*nodeit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
   KATANA_LOG_ASSERT(count_evictions == 6);
   KATANA_LOG_ASSERT(cache.size() == 1);
 

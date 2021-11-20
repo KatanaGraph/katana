@@ -175,7 +175,9 @@ public:
   katana::Result<void> LoadEdgeProperty(const std::string& name, int i = -1);
 
   std::vector<std::string> ListNodeProperties() const;
+  std::vector<std::string> ListLoadedNodeProperties() const;
   std::vector<std::string> ListEdgeProperties() const;
+  std::vector<std::string> ListLoadedEdgeProperties() const;
 
   /// Explain to graph how it is derived from previous version
   void AddLineage(const std::string& command_line);

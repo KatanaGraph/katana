@@ -807,16 +807,6 @@ katana::PropertyGraph::EnsureNodePropertyLoaded(const std::string& name) {
   return LoadNodeProperty(name);
 }
 
-std::vector<std::string>
-katana::PropertyGraph::ListNodeProperties() const {
-  return rdg_.ListNodeProperties();
-}
-
-std::vector<std::string>
-katana::PropertyGraph::ListEdgeProperties() const {
-  return rdg_.ListEdgeProperties();
-}
-
 katana::Result<void>
 katana::PropertyGraph::UnloadNodeProperty(const std::string& prop_name) {
   return rdg_.UnloadNodeProperty(prop_name);

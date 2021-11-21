@@ -757,7 +757,7 @@ katana::PropertyGraph::AddNodeProperties(
 
 katana::Result<void>
 katana::PropertyGraph::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("upsert empty node prop table");
     return ResultSuccess();
@@ -767,7 +767,7 @@ katana::PropertyGraph::UpsertNodeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().num_nodes(), props->num_rows());
   }
-  return rdg_.UpsertNodeProperties(props);
+  return rdg_.UpsertNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
@@ -831,7 +831,7 @@ katana::PropertyGraph::AddEdgeProperties(
 
 katana::Result<void>
 katana::PropertyGraph::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("upsert empty edge prop table");
     return ResultSuccess();
@@ -841,7 +841,7 @@ katana::PropertyGraph::UpsertEdgeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().num_edges(), props->num_rows());
   }
-  return rdg_.UpsertEdgeProperties(props);
+  return rdg_.UpsertEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>

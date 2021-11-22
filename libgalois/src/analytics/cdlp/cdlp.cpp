@@ -79,7 +79,7 @@ struct CdlpSynchronousAlgo {
           katana::iterate(*graph),
           [&](const GNode& node) {
             const auto ndata_current_comm = graph->GetData<NodeCommunity>(node);
-            typedef boost::unordered_map<CommunityType, size_t> Histogram_type;
+            using Histogram_type = boost::unordered_map<CommunityType, size_t>;
             Histogram_type histogram;
             // Incoming edges
             for (auto e : bidir_view.in_edges(node)) {
@@ -99,11 +99,7 @@ struct CdlpSynchronousAlgo {
             // pick the smallest one if more than one max frequent exist.
             auto ndata_new_comm = ndata_current_comm;
             size_t best_freq = 0;
-            for (Histogram_type::const_iterator it = histogram.begin();
-                 it != histogram.end(); it++) {
-              const auto comm = it->first;
-              size_t freq = it->second;
-
+            for (const auto& [comm, freq] : histogram) {
               if (freq > best_freq ||
                   (freq == best_freq && comm < ndata_new_comm)) {
                 ndata_new_comm = comm;

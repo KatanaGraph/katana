@@ -27,8 +27,6 @@
 using namespace katana::analytics;
 
 namespace {
-const unsigned int kInfinity = std::numeric_limits<unsigned int>::max();
-
 /// Limited number of iterations to limit the oscillation of the label
 /// in Synchronous algorithm. We dont need to limit it in Asynchronous algorithm.
 /// Set to 10 same as Graphalytics benchmark.

@@ -326,9 +326,11 @@ tsuba::RDGTopology::DoStore(
     }
 
     if (num_nodes_) {
-      KATANA_LOG_VASSERT(
-          adj_indices_ != nullptr,
-          "Cannot store an RDGTopology with null adj_indices");
+      if (edge_condensed_type_id_map_size_ > 0) {
+        KATANA_LOG_VASSERT(
+            adj_indices_ != nullptr,
+            "Cannot store an RDGTopology with edges and null adj_indices");
+      }
       const auto* raw = adj_indices_;
       static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint64_t>);
       uint64_t adj_indices_size = num_nodes_;
@@ -343,10 +345,12 @@ tsuba::RDGTopology::DoStore(
           "Storing RDGTopology to file. Writing adj_indices, size = {}",
           adj_indices_size);
 
-      auto buf = arrow::Buffer::Wrap(raw, adj_indices_size);
-      aro_sts = ff->Write(buf);
-      if (!aro_sts.ok()) {
-        return tsuba::ArrowToTsuba(aro_sts.code());
+      if (adj_indices_size > 0) {
+        auto buf = arrow::Buffer::Wrap(raw, adj_indices_size);
+        aro_sts = ff->Write(buf);
+        if (!aro_sts.ok()) {
+          return tsuba::ArrowToTsuba(aro_sts.code());
+        }
       }
     }
 

@@ -54,7 +54,7 @@ def test_get_edge_dest(graph):
 
 def test_reachable_from_10(graph):
     reachable = []
-    for eid in graph.edges(10):
+    for eid in graph.edge_ids(10):
         reachable.append(graph.get_edge_dest(eid))
     assert reachable == [8015]
 
@@ -62,7 +62,7 @@ def test_reachable_from_10(graph):
 def test_nodes_count_edges(graph):
     total = 0
     for nid in graph:
-        total += len(graph.edges(nid))
+        total += len(graph.edge_ids(nid))
     assert graph.num_edges() == total
 
 
@@ -189,7 +189,7 @@ def test_from_csr():
     pg = from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
     assert pg.num_nodes() == 2
     assert pg.num_edges() == 1
-    assert list(pg.edges(0)) == [0]
+    assert list(pg.edge_ids(0)) == [0]
     assert pg.get_edge_dest(0) == 1
 
 
@@ -197,7 +197,7 @@ def test_from_csr_int16():
     pg = from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
     assert pg.num_nodes() == 2
     assert pg.num_edges() == 1
-    assert list(pg.edges(0)) == [0]
+    assert list(pg.edge_ids(0)) == [0]
     assert pg.get_edge_dest(0) == 1
 
 
@@ -205,7 +205,7 @@ def test_from_csr_k3():
     pg = from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
     assert pg.num_nodes() == 3
     assert pg.num_edges() == 6
-    assert list(pg.edges(2)) == [4, 5]
+    assert list(pg.edge_ids(2)) == [4, 5]
     assert pg.get_edge_dest(4) == 0
     assert pg.get_edge_dest(5) == 1
 
@@ -232,7 +232,7 @@ def test_simple_algorithm(graph):
     @do_all_operator()
     def func_operator(g, prop, out, nid):
         t = 0
-        for eid in g.edges(nid):
+        for eid in g.edge_ids(nid):
             nid2 = g.get_edge_dest(eid)
             if prop.is_valid(nid2):
                 t += prop[nid2]

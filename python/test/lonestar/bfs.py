@@ -61,7 +61,7 @@ def verify_bfs(graph: Graph, _source_i: int, property_id: int):
 def bfs_sync_operator_pg(
     graph: Graph, next_level: InsertBag[np.uint64], next_level_number: int, distance: np.ndarray, nid,
 ):
-    for ii in graph.edges(nid):
+    for ii in graph.edge_ids(nid):
         dst = graph.get_edge_dest(ii)
         if distance[dst] == distance_infinity:
             distance[dst] = next_level_number

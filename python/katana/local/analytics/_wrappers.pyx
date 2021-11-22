@@ -76,7 +76,7 @@ def find_edge_sorted_by_dest(Graph pg, uint32_t node, uint32_t node_to_find):
     """
     with nogil:
         res = FindEdgeSortedByDest(pg.underlying_property_graph(), node, node_to_find)
-    if res == pg.edges(node)[-1] + 1:
+    if res == pg.edge_ids(node)[-1] + 1:
         return None
     return res
 

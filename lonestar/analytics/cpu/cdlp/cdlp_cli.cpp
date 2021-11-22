@@ -39,9 +39,6 @@ static const char* url = "cdlp";
 
 static cll::opt<std::string> inputFile(
     cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<unsigned int> reportNode(
-    "reportNode", cll::desc("Node to report distance to(default value 1)"),
-    cll::init(1));
 
 static cll::opt<size_t> maxIterations(
     "maxIterations", cll::desc("Maximum number of running iterations"),
@@ -93,11 +90,6 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
             << pg->topology().num_edges() << " edges\n";
 
-  if (reportNode >= pg->topology().num_nodes()) {
-    std::cerr << "failed to set report: " << reportNode << "\n";
-    abort();
-  }
-
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
   CdlpPlan plan = CdlpPlan();
@@ -129,14 +121,6 @@ main(int argc, char** argv) {
   }
   auto stats = stats_result.value();
   stats.Print();
-
-  if (!skipVerify) {
-    if (CdlpAssertValid(pg.get(), "community")) {
-      std::cout << "Verification successful.\n";
-    } else {
-      KATANA_LOG_FATAL("verification failed");
-    }
-  }
 
   if (output) {
     auto r = pg->GetNodePropertyTyped<uint64_t>("community");

@@ -96,9 +96,6 @@ KATANA_EXPORT Result<void> Cdlp(
     PropertyGraph* pg, const std::string& output_property_name,
     size_t max_iterations, CdlpPlan plan = CdlpPlan());
 
-KATANA_EXPORT Result<void> CdlpAssertValid(
-    PropertyGraph* pg, const std::string& property_name);
-
 struct KATANA_EXPORT CdlpStatistics {
   /// Total number of unique communities in the graph.
   uint64_t total_communities;

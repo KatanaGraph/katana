@@ -57,8 +57,6 @@ cdef extern from "katana/analytics/cdlp/cdlp.h" namespace "katana::analytics" no
     Result[void] Cdlp(_PropertyGraph*pg, string output_property_name, int max_iteration,
                                      _CdlpPlan plan)
 
-    Result[void] CdlpAssertValid(_PropertyGraph*pg, string output_property_name)
-
     cppclass _CdlpStatistics "katana::analytics::CdlpStatistics":
         uint64_t total_communities
         uint64_t total_non_trivial_communities
@@ -157,17 +155,6 @@ def cdlp(Graph pg, str output_property_name,
     with nogil:
         v = handle_result_void(Cdlp(pg.underlying_property_graph(), output_property_name_str, max_iteration, plan.underlying_))
     return v
-
-def cdlp_assert_valid(Graph pg, str output_property_name):
-    """
-    Raise an exception if the Community Detection results in `pg` with the given parameters appear to be incorrect.
-    This is not an exhaustive check, just a sanity check.
-
-    :raises: AssertionError
-    """
-    cdef string output_property_name_str = output_property_name.encode("utf-8")
-    with nogil:
-        handle_result_assert(CdlpAssertValid(pg.underlying_property_graph(), output_property_name_str))
 
 cdef _CdlpStatistics handle_result_CdlpStatistics(
         Result[_CdlpStatistics] res) nogil except *:

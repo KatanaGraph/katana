@@ -144,7 +144,7 @@ cdef class GraphBase:
         """
         return iter(range(self.num_nodes()))
 
-    def edges(self, uint64_t n):
+    def edge_ids(self, uint64_t n):
         """
         Return a collection of edge IDs which are the outgoing edges of the node `n`.
 
@@ -371,7 +371,7 @@ cdef class Graph(GraphBase):
         return <uint64_t>self.underlying_property_graph()
 
     def global_out_degree(self, uint64_t node):
-        return len(self.edges(node))
+        return len(self.edge_ids(node))
 
     def global_in_degree(self, uint64_t node):
         # TODO(loc) needs shared-memory bi-directional view

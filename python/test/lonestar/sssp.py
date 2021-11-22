@@ -43,7 +43,7 @@ def dtype_of_pyarrow_array(a):
 def sssp_operator(g: Graph, dists: np.ndarray, edge_weights, item, ctx: UserContext):
     if dists[item.src] < item.dist:
         return
-    for ii in g.edges(item.src):
+    for ii in g.edge_ids(item.src):
         dst = g.get_edge_dest(ii)
         edge_length = edge_weights[ii]
         new_distance = edge_length + dists[item.src]

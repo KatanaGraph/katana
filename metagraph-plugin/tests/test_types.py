@@ -13,7 +13,7 @@ def test_num_nodes(katanagraph_rmat15_cleaned_di):
 def test_num_edges(katanagraph_rmat15_cleaned_di):
     cnt = 0
     for nid in katanagraph_rmat15_cleaned_di.value:
-        cnt += len(katanagraph_rmat15_cleaned_di.value.edges(nid))
+        cnt += len(katanagraph_rmat15_cleaned_di.value.edge_ids(nid))
     assert katanagraph_rmat15_cleaned_di.value.num_edges() == 363194
     assert katanagraph_rmat15_cleaned_di.value.num_edges() == cnt
 
@@ -32,40 +32,34 @@ def test_edge_schema(katanagraph_rmat15_cleaned_di):
 
 def test_edge_property(katanagraph_rmat15_cleaned_di):
     assert katanagraph_rmat15_cleaned_di.value.loaded_edge_schema()[0].name == "value"
-    assert katanagraph_rmat15_cleaned_di.value.get_edge_property(0) == katanagraph_rmat15_cleaned_di.value.get_edge_property("value")
+    assert katanagraph_rmat15_cleaned_di.value.get_edge_property(
+        0
+    ) == katanagraph_rmat15_cleaned_di.value.get_edge_property("value")
     assert katanagraph_rmat15_cleaned_di.value.get_edge_property("value").to_pandas()[0] == 339302416426
 
 
 def test_topology(katanagraph_rmat15_cleaned_di):
-    assert katanagraph_rmat15_cleaned_di.value.edges(0) == range(0, 20767)
-    assert [katanagraph_rmat15_cleaned_di.value.get_edge_dest(i) for i in katanagraph_rmat15_cleaned_di.value.edges(0)][0:5] == [
-        1,
-        2,
-        3,
-        4,
-        5,
-    ]
-    assert katanagraph_rmat15_cleaned_di.value.edges(8) == range(36475, 41133)
-    assert [katanagraph_rmat15_cleaned_di.value.get_edge_dest(i) for i in katanagraph_rmat15_cleaned_di.value.edges(8)][0:5] == [
-        0,
-        9,
-        10,
-        11,
-        12,
-    ]
+    assert katanagraph_rmat15_cleaned_di.value.edge_ids(0) == range(0, 20767)
+    assert [
+        katanagraph_rmat15_cleaned_di.value.get_edge_dest(i) for i in katanagraph_rmat15_cleaned_di.value.edge_ids(0)
+    ][0:5] == [1, 2, 3, 4, 5,]
+    assert katanagraph_rmat15_cleaned_di.value.edge_ids(8) == range(36475, 41133)
+    assert [
+        katanagraph_rmat15_cleaned_di.value.get_edge_dest(i) for i in katanagraph_rmat15_cleaned_di.value.edge_ids(8)
+    ][0:5] == [0, 9, 10, 11, 12,]
 
 
-def test_num_nodes(networkx_weighted_undirected_8_12, networkx_weighted_directed_8_12):
+def test_num_nodes_networkx(networkx_weighted_undirected_8_12, networkx_weighted_directed_8_12):
     assert len(list(networkx_weighted_undirected_8_12.value.nodes(data=True))) == 8
     assert len(list(networkx_weighted_directed_8_12.value.nodes(data=True))) == 8
 
 
-def test_num_nodes(networkx_weighted_undirected_8_12, networkx_weighted_directed_8_12):
+def test_num_edges_networkx(networkx_weighted_undirected_8_12, networkx_weighted_directed_8_12):
     assert len(list(networkx_weighted_undirected_8_12.value.edges(data=True))) == 12
     assert len(list(networkx_weighted_directed_8_12.value.edges(data=True))) == 12
 
 
-def test_topology(networkx_weighted_undirected_8_12, networkx_weighted_directed_8_12):
+def test_topology_networkx(networkx_weighted_undirected_8_12, networkx_weighted_directed_8_12):
     assert list(networkx_weighted_undirected_8_12.value.nodes(data=True)) == list(
         networkx_weighted_directed_8_12.value.nodes(data=True)
     )

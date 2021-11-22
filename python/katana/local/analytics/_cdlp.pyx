@@ -11,6 +11,9 @@ Community Detection using Label Propagation (CDLP)
             to detect community structures in large-scale networks,"  In: Physical
             Review E 76.3 (2007), p. 036106.
 
+.. [Graphalytics] A. Iosup , A. Musaafir, A. Uta et al., "The LDBC Graphalytics
+                  Benchmark," arXiv preprint arXiv:2011.15028 (2020).
+
 .. autoclass:: katana.local.analytics._cdlp._CdlpPlanAlgorithm
     :members:
     :undoc-members:
@@ -104,56 +107,19 @@ cdef class CdlpPlan(Plan):
     @staticmethod
     def synchronous() -> CdlpPlan:
         """
-        Initially, all nodes are in their own community IDs (same as their
-        node IDs). Then, the community IDs are iteratively set to the most
-        frequent community ID in their immediate neighborhood. It continues
-        untill the community ID of all nodes in graph become the same as
-        the most frequent ID in their immediate neighborhood.
-
-        Synchronous community detection algorithm. This algorithm is based on
-        Graphalytics benchmark that has two key differences from the original algorithm
-        proposed in [1]. First, it is deterministic: if there are multiple
-        labels with their frequency equalling the maximum, it selects the smallest
-        one while the original algorithm selects randomly. Second, it is synchronous,
-        i.e., each iteration is computed based on the labels obtained as a result of
-        the previous iteration.
-
-        FIXME: As remarked in [1], this can cause the oscillation
-        of labels in bipartite or nearly bipartite subgraphs. This is especially true
-        in cases where communities take the form of a star graph
+        Synchronous community detection algorithm. A deterministic synchronous algorithm
+        [Graphalytics]_ based on the algorithm introduced in [Raghavan]_.
         """
         return CdlpPlan.make(_CdlpPlan.Synchronous())
 
     #@staticmethod
     #def asynchronous() -> CdlpPlan:
-        """
-        Unlike Synchronous algorithm, Asynchronous can use the current iteration
-        updated community IDs for some of the neighbors that have been already
-        updated in the current iteration and use the old values for the other neighbors
-
-        TODO: The order in which all the n nodes in the network are updated
-        at each iteration is chosen randomly vs in order.
-        if there are multiple labels with their frequency equalling the maximum, it
-        selects one randomly.
-
-        TODO: the output is not deterministic so it is impossible to test;
-
-        [1] aggregates multiple solutions to get most useful information.
-
-        FIXME: When the algorithm terminates it is possible that two or more disconnected
-        groups of nodes have the same label (the groups are connected in the network via
-        other nodes of different labels). This happens when two or more neighborsof a
-        node receive its label and pass the labels in different directions, which ultimately
-        leads to different communities adopting the same label. In such cases, after the
-        algorithm terminates one can run a simple breadth-first search on the sub-networks
-        of each individual groups to separate the disconnected communities. This requires
-        an overall time of O(m + n). When aggregating solutions however, we rarely find
-        disconnected groups within communities [1].
-
-        The stop Criterion is: If every node has a label that the maximum number of
-        their neighbors have, then stop the algorithm (TODO: maybe we can use the same stop
-        criterion for the Synchronous algorithm as well.)
-        """
+        #"""
+        #Unlike Synchronous algorithm, Asynchronous can use the current iteration
+        #updated community IDs for some of the neighbors that have been already
+        #updated in the current iteration and use the old values for the other neighbors
+        #based on [Raghavan]_.
+        #"""
         #return CdlpPlan.make(_CdlpPlan.Asynchronous())
 
 def cdlp(Graph pg, str output_property_name,
@@ -237,7 +203,7 @@ cdef class CdlpStatistics:
     @property
     def largest_community_ratio(self) -> double:
         """
-        The faction of the entire graph that is part of the largest community.
+        The fraction of the entire graph that is part of the largest community.
         """
         return self.underlying.largest_community_ratio
 

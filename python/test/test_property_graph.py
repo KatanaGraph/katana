@@ -15,8 +15,8 @@ from katana.local.import_data import from_csr
 def test_load(graph):
     assert graph.num_nodes() == 29946
     assert graph.num_edges() == 43072
-    assert len(graph.loaded_node_schema()) == 31
-    assert len(graph.loaded_edge_schema()) == 18
+    assert len(graph.loaded_node_schema()) == 17
+    assert len(graph.loaded_edge_schema()) == 3
 
 
 def test_write(graph):
@@ -27,8 +27,8 @@ def test_write(graph):
         graph = Graph(tmpdir)
     assert graph.num_nodes() == 29946
     assert graph.num_edges() == 43072
-    assert len(graph.loaded_node_schema()) == 31
-    assert len(graph.loaded_edge_schema()) == 18
+    assert len(graph.loaded_node_schema()) == 17
+    assert len(graph.loaded_edge_schema()) == 3
 
     assert graph == old_graph
 
@@ -43,8 +43,8 @@ def test_commit(graph):
         graph = Graph(tmpdir)
     assert graph.num_nodes() == 29092
     assert graph.num_edges() == 39283
-    assert len(graph.loaded_node_schema()) == 31
-    assert len(graph.loaded_edge_schema()) == 19
+    assert len(graph.loaded_node_schema()) == 17
+    assert len(graph.loaded_edge_schema()) == 3
 
 
 def test_get_edge_dest(graph):
@@ -94,9 +94,9 @@ def test_get_node_property_chunked(graph):
 
 def test_remove_node_property(graph):
     graph.remove_node_property(10)
-    assert len(graph.loaded_node_schema()) == 30
+    assert len(graph.loaded_node_schema()) == 16
     graph.remove_node_property("length")
-    assert len(graph.loaded_node_schema()) == 29
+    assert len(graph.loaded_node_schema()) == 15
     assert graph.loaded_node_schema()[4].name == "email"
 
 
@@ -127,33 +127,33 @@ def test_upsert_node_property(graph):
     prop = graph.loaded_node_schema().names[0]
     t = pyarrow.table({prop: range(graph.num_nodes())})
     graph.upsert_node_property(t)
-    assert len(graph.loaded_node_schema()) == 31
+    assert len(graph.loaded_node_schema()) == 17
     assert graph.get_node_property_chunked(prop) == pyarrow.chunked_array([range(graph.num_nodes())])
     assert graph.get_node_property(prop) == pyarrow.array(range(graph.num_nodes()))
 
 
 def test_get_edge_property(graph):
-    prop1 = graph.get_edge_property(15)
+    prop1 = graph.get_edge_property(2)
     assert not prop1[10].as_py()
     # TODO re-enable this test
-    # prop2 = graph.get_edge_property("IS_SUBCLASS_OF")
+    # prop2 = graph.get_edge_property("creationDate")
     # assert prop1 == prop2
 
 
 def test_get_edge_property_chunked(graph):
-    prop1 = graph.get_edge_property(5)
+    prop1 = graph.get_edge_property(2)
     assert isinstance(prop1, pyarrow.Array)
-    prop2 = graph.get_edge_property_chunked(5)
+    prop2 = graph.get_edge_property_chunked(2)
     assert isinstance(prop2, pyarrow.ChunkedArray)
     assert prop1 == prop2.chunk(0)
 
 
 def test_remove_edge_property(graph):
-    graph.remove_edge_property(7)
-    assert len(graph.loaded_edge_schema()) == 17
+    graph.remove_edge_property(2)
+    assert len(graph.loaded_edge_schema()) == 2
     graph.remove_edge_property("classYear")
-    assert len(graph.loaded_edge_schema()) == 16
-    assert graph.loaded_edge_schema()[3].name == "HAS_CREATOR"
+    assert len(graph.loaded_edge_schema()) == 1
+    assert graph.loaded_edge_schema()[0].name == "creationDate"
 
 
 def test_add_edge_property_exception(graph):
@@ -166,7 +166,7 @@ def test_add_edge_property_exception(graph):
 def test_add_edge_property(graph):
     t = pyarrow.table(dict(new_prop=range(graph.num_edges())))
     graph.add_edge_property(t)
-    assert len(graph.loaded_edge_schema()) == 19
+    assert len(graph.loaded_edge_schema()) == 4
     assert graph.get_edge_property("new_prop") == pyarrow.array(range(graph.num_edges()))
 
 
@@ -174,14 +174,14 @@ def test_upsert_edge_property(graph):
     prop = graph.loaded_edge_schema().names[0]
     t = pyarrow.table({prop: range(graph.num_edges())})
     graph.upsert_edge_property(t)
-    assert len(graph.loaded_edge_schema()) == 18
+    assert len(graph.loaded_edge_schema()) == 3
     assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
 
 
 def test_upsert_edge_property_dict(graph):
     prop = graph.loaded_edge_schema().names[0]
     graph.upsert_edge_property({prop: range(graph.num_edges())})
-    assert len(graph.loaded_edge_schema()) == 18
+    assert len(graph.loaded_edge_schema()) == 3
     assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
 
 

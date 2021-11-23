@@ -347,9 +347,13 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
   node_entity_type_manager_ = EntityTypeManager{};
   node_entity_type_ids_ = EntityTypeIDArray{};
   node_entity_type_ids_.allocateInterleaved(num_nodes());
-  KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
-      num_nodes(), rdg_.node_properties(), &node_entity_type_manager_,
-      &node_entity_type_ids_));
+  auto node_props_to_remove =
+      KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
+          num_nodes(), rdg_.node_properties(), &node_entity_type_manager_,
+          &node_entity_type_ids_));
+  for (const auto& node_prop : node_props_to_remove) {
+    KATANA_CHECKED(RemoveNodeProperty(node_prop));
+  }
 
   int64_t total_num_edge_props = full_edge_schema()->num_fields();
   for (int64_t i = 0; i < total_num_edge_props; ++i) {
@@ -363,9 +367,13 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
   edge_entity_type_manager_ = EntityTypeManager{};
   edge_entity_type_ids_ = EntityTypeIDArray{};
   edge_entity_type_ids_.allocateInterleaved(num_edges());
-  KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
-      num_edges(), rdg_.edge_properties(), &edge_entity_type_manager_,
-      &edge_entity_type_ids_));
+  auto edge_props_to_remove =
+      KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
+          num_edges(), rdg_.edge_properties(), &edge_entity_type_manager_,
+          &edge_entity_type_ids_));
+  for (const auto& edge_prop : edge_props_to_remove) {
+    KATANA_CHECKED(RemoveEdgeProperty(edge_prop));
+  }
 
   return katana::ResultSuccess();
 }

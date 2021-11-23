@@ -234,22 +234,16 @@ divideNodesBinarySearch(
       edgePrefixSum, edgeOffset, nodeOffset);
 
   // get the edges bounds using node lower/upper bounds
-  uint64_t edgesLower = numEdges;
-  uint64_t edgesUpper = numEdges;
-
-  if (nodesLower != nodesUpper) {
-    if ((nodesLower + nodeOffset) != 0) {
-      edgesLower = internal::getEdgePrefixSum(
-                       edgePrefixSum, nodesLower - 1 + nodeOffset) -
-                   edgeOffset;
-    } else {
-      edgesLower = 0;
-    }
-
-    edgesUpper =
-        internal::getEdgePrefixSum(edgePrefixSum, nodesUpper - 1 + nodeOffset) -
-        edgeOffset;
-  }
+  uint64_t edgesLower = (nodesLower + nodeOffset == 0)
+                            ? 0
+                            : internal::getEdgePrefixSum(
+                                  edgePrefixSum, nodesLower - 1 + nodeOffset) -
+                                  edgeOffset;
+  uint64_t edgesUpper = (nodesUpper + nodeOffset == 0)
+                            ? 0
+                            : internal::getEdgePrefixSum(
+                                  edgePrefixSum, nodesUpper - 1 + nodeOffset) -
+                                  edgeOffset;
 
   // katana::gDebug("Unit ", id, " nodes ", nodesLower, " to ",
   //               nodesUpper, " edges ", edgesLower, " ",

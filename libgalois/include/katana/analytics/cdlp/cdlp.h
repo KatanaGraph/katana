@@ -52,25 +52,28 @@ public:
   /// i.e., each iteration is computed based on the labels obtained as a result of
   /// the previous iteration.
   ///
-  /// FIXME: As remarked in [1], this can cause the oscillation
-  /// of labels in bipartite or nearly bipartite subgraphs. This is especially true
-  /// in cases where communities take the form of a star graph
+  /// As remarked in [1], this can cause the oscillation of labels in bipartite or
+  /// nearly bipartite subgraphs. This is especially true in cases where communities
+  /// take the form of a star graph. This limits the maximum number of iteration.
 
   static CdlpPlan Synchronous() { return {kCPU, kSynchronous}; }
 
+  /// TODO (Yasin): implementing the asynchronous algorithm.
   /// Unlike Synchronous algorithm, Asynchronous can use the current iteration
   /// updated community IDs for some of the neighbors that have been already
   /// updated in the current iteration and use the old values for the other neighbors
 
-  /// TODO: The order in which all the n nodes in the network are updated
+  /// Notes and challenges:
+  /// I. The order in which all the n nodes in the network are updated
   /// at each iteration is chosen randomly vs in order.
   /// if there are multiple labels with their frequency equalling the maximum, it
   /// selects one randomly.
-  /// TODO: the output is not deterministic so it is impossible to test;
   ///
-  /// [1] aggregates multiple solutions to get most useful information.
+  /// II. The output is not deterministic. it is not propoer for end to end test.
   ///
-  /// FIXME: When the algorithm terminates it is possible that two or more disconnected
+  /// III. [1] aggregates multiple solutions to get most useful information.
+  ///
+  /// IV. When the algorithm terminates it is possible that two or more disconnected
   /// groups of nodes have the same label (the groups are connected in the network via
   /// other nodes of different labels). This happens when two or more neighborsof a
   /// node receive its label and pass the labels in different directions, which ultimately
@@ -80,7 +83,7 @@ public:
   /// an overall time of O(m + n). When aggregating solutions however, we rarely find
   /// disconnected groups within communities [1].
   ///
-  /// The stop Criterion is: If every node has a label that the maximum number of
+  /// V. The stop Criterion is: If every node has a label that the maximum number of
   /// their neighbors have, then stop the algorithm
 
   static CdlpPlan Asynchronous() { return {kCPU, kAsynchronous}; }

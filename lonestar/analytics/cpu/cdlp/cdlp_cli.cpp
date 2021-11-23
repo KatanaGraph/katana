@@ -30,7 +30,7 @@ namespace cll = llvm::cl;
 /// Limited number of iterations to limit the oscillation of the label
 /// in Synchronous algorithm. We dont need to limit it in Asynchronous algorithm.
 /// Set to 10 same as Graphalytics benchmark.
-/// FIXME: duplicated from cdlp.cpp; needs to defnied in one place. maybe in cdlp.hpp.
+/// TODO (Yasin): duplicated from cdlp.cpp; needs to defnied in one place. maybe in cdlp.hpp.
 const unsigned int kMaxIterations = 10;
 
 const char* name = "CDLP";
@@ -51,7 +51,7 @@ static cll::opt<CdlpPlan::Algorithm> algo(
             CdlpPlan::kSynchronous, "Synchronous",
             "Synchronous algorithm")/*,
 
-		/// TODO: Asynchronous Algorithm will be implemented later after Synchronous
+		/// TODO (Yasin): Asynchronous Algorithm will be implemented later after Synchronous
 		/// is done for both shared and distributed versions.
 		
         clEnumValN(
@@ -64,7 +64,7 @@ AlgorithmName(CdlpPlan::Algorithm algorithm) {
   switch (algorithm) {
   case CdlpPlan::kSynchronous:
     return "Synchronous";
-  /// TODO: Asynchronous Algorithm will be implemented later after Synchronous
+  /// TODO (Yasin): Asynchronous Algorithm will be implemented later after Synchronous
   /// is done for both shared and distributed versions.
   /*
   case CdlpPlan::kAsynchronous:
@@ -97,7 +97,7 @@ main(int argc, char** argv) {
   case CdlpPlan::kSynchronous:
     plan = CdlpPlan::Synchronous();
     break;
-  /// TODO: Asynchronous Algorithm will be implemented later after Synchronous
+  /// TODO (Yasin): Asynchronous Algorithm will be implemented later after Synchronous
   /// is done for both shared and distributed versions.
   /*
   case CdlpPlan::kAsynchronous:

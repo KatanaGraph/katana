@@ -47,12 +47,9 @@ struct CdlpSynchronousAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& ndata = graph->GetData<NodeCommunity>(node);
-      ndata = node;
+      graph->GetData<NodeCommunity>(node) = node;
     });
   }
-
-  void Deallocate(Graph*) {}
 
   void operator()(Graph* graph, size_t max_iterations = kMaxIterations) {
     if (max_iterations == 0)
@@ -65,9 +62,9 @@ struct CdlpSynchronousAlgo {
     };
 
     size_t iterations = 0;
-    katana::InsertBag<NodeDataPair> applyBag;
+    katana::InsertBag<NodeDataPair> apply_bag;
 
-    /// FIXME: in this implementation, in each iteration, all the nodes are active
+    /// TODO (Yasin): in this implementation, in each iteration, all the nodes are active
     /// for gather phase. If InsertBag does not accept duplicate items then this
     /// can be improved to have only the affected nodes to be active in next iteration
     while (iterations < max_iterations) {
@@ -78,9 +75,8 @@ struct CdlpSynchronousAlgo {
             const auto ndata_current_comm = graph->GetData<NodeCommunity>(node);
             using Histogram_type = boost::unordered_map<CommunityType, size_t>;
             Histogram_type histogram;
-            // Iterate over all edges (this is undirected view)
+            // Iterate over all neighbors (this is undirected view)
             for (auto e : graph->edges(node)) {
-              //auto neighbor = graph->is_in_edge(e) ? graph->edge_source(e) : graph->edge_dest(e);
               auto neighbor = graph->edge_dest(e);
               const auto neighbor_data =
                   graph->GetData<NodeCommunity>(neighbor);
@@ -100,25 +96,24 @@ struct CdlpSynchronousAlgo {
             }
 
             if (ndata_new_comm != ndata_current_comm)
-              applyBag.push(NodeDataPair(node, (CommunityType)ndata_new_comm));
+              apply_bag.push(NodeDataPair(node, (CommunityType)ndata_new_comm));
           },
           katana::loopname("CDLP_Gather"));
 
       // No change! break!
-      if (applyBag.empty())
+      if (apply_bag.empty())
         break;
 
       // Apply Phase
       katana::do_all(
-          katana::iterate(applyBag),
-          [&](const NodeDataPair nodeData) {
-            GNode node = nodeData.node;
-            auto& ndata = graph->GetData<NodeCommunity>(node);
-            ndata = nodeData.data;
+          katana::iterate(apply_bag),
+          [&](const NodeDataPair node_data) {
+            GNode node = node_data.node;
+            graph->GetData<NodeCommunity>(node) = node_data.data;
           },
           katana::loopname("CDLP_Apply"));
 
-      applyBag.clear();
+      apply_bag.clear();
       iterations += 1;
     }
     katana::ReportStatSingle("CDLP_Synchronous", "iterations", iterations);
@@ -140,12 +135,9 @@ struct CdlpAsynchronousAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& ndata = graph->GetData<NodeCommunity>(node);
-      ndata = node;
+      graph->GetData<NodeCommunity>(node) = node;
     });
   }
-
-  void Deallocate(Graph*) {}
 
   void operator()(Graph*, size_t) {}
 };
@@ -184,7 +176,6 @@ CdlpWithWrap(
   algo(&graph, max_iterations);
   execTime.stop();
 
-  algo.Deallocate(&graph);
   return katana::ResultSuccess();
 }
 
@@ -196,7 +187,7 @@ katana::analytics::Cdlp(
   case CdlpPlan::kSynchronous:
     return CdlpWithWrap<CdlpSynchronousAlgo>(
         pg, output_property_name, plan, max_iterations);
-  /// TODO: Asynchronous Algorithm will be implemented later after Synchronous
+  /// TODO (Yasin): Asynchronous Algorithm will be implemented later after Synchronous
   /// is done for both shared and distributed versions.
   /*
   case CdlpPlan::kAsynchronous:

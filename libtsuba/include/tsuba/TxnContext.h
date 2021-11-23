@@ -9,8 +9,8 @@ public:
     node_properties_read_.insert(name);
   }
 
-  template <typename Container>
-  void InsertNodePropertyRead(const Container& names) {
+  template <template <class> class Container>
+  void InsertNodePropertyRead(Container<std::string>& names) {
     node_properties_read_.insert(names.begin(), names.end());
   }
 
@@ -18,8 +18,8 @@ public:
     node_properties_write_.insert(name);
   }
 
-  template <typename Container>
-  void InsertNodePropertyWrite(const Container& names) {
+  template <template <class> class Container>
+  void InsertNodePropertyWrite(Container<std::string>& names) {
     node_properties_write_.insert(names.begin(), names.end());
   }
 
@@ -27,8 +27,8 @@ public:
     edge_properties_read_.insert(name);
   }
 
-  template <typename Container>
-  void InsertEdgePropertyRead(const Container& names) {
+  template <template <class> class Container>
+  void InsertEdgePropertyRead(Container<std::string>& names) {
     edge_properties_read_.insert(names.begin(), names.end());
   }
 
@@ -36,8 +36,8 @@ public:
     edge_properties_write_.insert(name);
   }
 
-  template <typename Container>
-  void InsertEdgePropertyWrite(const Container& names) {
+  template <template <class> class Container>
+  void InsertEdgePropertyWrite(Container<std::string>& names) {
     edge_properties_write_.insert(names.begin(), names.end());
   }
 

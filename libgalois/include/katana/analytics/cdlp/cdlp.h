@@ -86,10 +86,7 @@ public:
   static CdlpPlan Asynchronous() { return {kCPU, kAsynchronous}; }
 };
 
-/// Compute the Community Detection for pg. The pg can be both
-/// directed or undirected based our my discussion with Amber,
-/// I can use undirected view which is going to be commited soon.
-/// in this stage I am using the bidrectview
+/// Compute the Community Detection for pg. The pg can be either directed or undirected
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Cdlp(

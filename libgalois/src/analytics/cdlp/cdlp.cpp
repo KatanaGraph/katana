@@ -38,10 +38,9 @@ struct CdlpSynchronousAlgo {
 
   using NodeData = std::tuple<NodeCommunity>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-  typedef typename Graph::Node GNode;
-  using BiDirGraphView = katana::TypedPropertyGraphView<
-      katana::PropertyGraphViews::BiDirectional, NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
+  using GNode = typename Graph::Node;
 
   CdlpPlan& plan_;
   CdlpSynchronousAlgo(CdlpPlan& plan) : plan_(plan) {}
@@ -55,9 +54,7 @@ struct CdlpSynchronousAlgo {
 
   void Deallocate(Graph*) {}
 
-  void operator()(
-      Graph* graph, const BiDirGraphView& bidir_view,
-      size_t max_iterations = kMaxIterations) {
+  void operator()(Graph* graph, size_t max_iterations = kMaxIterations) {
     if (max_iterations == 0)
       return;
 
@@ -81,18 +78,13 @@ struct CdlpSynchronousAlgo {
             const auto ndata_current_comm = graph->GetData<NodeCommunity>(node);
             using Histogram_type = boost::unordered_map<CommunityType, size_t>;
             Histogram_type histogram;
-            // Incoming edges
-            for (auto e : bidir_view.in_edges(node)) {
-              auto src = bidir_view.in_edge_dest(e);
-              const auto sdata = graph->GetData<NodeCommunity>(src);
-              histogram[sdata]++;
-            }
-
-            // Outgoing edges
-            for (auto e : bidir_view.edges(node)) {
-              auto dest = bidir_view.edge_dest(e);
-              const auto ddata = graph->GetData<NodeCommunity>(dest);
-              histogram[ddata]++;
+            // Iterate over all edges (this is undirected view)
+            for (auto e : graph->edges(node)) {
+              //auto neighbor = graph->is_in_edge(e) ? graph->edge_source(e) : graph->edge_dest(e);
+              auto neighbor = graph->edge_dest(e);
+              const auto neighbor_data =
+                  graph->GetData<NodeCommunity>(neighbor);
+              histogram[neighbor_data]++;
             }
 
             // Pick the most frequent communtiy as the new community for node
@@ -139,10 +131,9 @@ struct CdlpAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeCommunity>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-  typedef typename Graph::Node GNode;
-  using BiDirGraphView = katana::TypedPropertyGraphView<
-      katana::PropertyGraphViews::BiDirectional, NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
+  using GNode = typename Graph::Node;
 
   CdlpPlan& plan_;
   CdlpAsynchronousAlgo(CdlpPlan& plan) : plan_(plan) {}
@@ -156,7 +147,7 @@ struct CdlpAsynchronousAlgo {
 
   void Deallocate(Graph*) {}
 
-  void operator()(Graph*, const BiDirGraphView&, size_t) {}
+  void operator()(Graph*, size_t) {}
 };
 
 }  //namespace
@@ -183,13 +174,6 @@ CdlpWithWrap(
   }
   auto graph = pg_result.value();
 
-  using BiDirGraphView = katana::TypedPropertyGraphView<
-      katana::PropertyGraphViews::BiDirectional, typename Algorithm::NodeData,
-      typename Algorithm::EdgeData>;
-
-  auto bidir_view =
-      KATANA_CHECKED(BiDirGraphView::Make(pg, {output_property_name}, {}));
-
   Algorithm algo(plan);
 
   algo.Initialize(&graph);
@@ -197,7 +181,7 @@ CdlpWithWrap(
   katana::StatTimer execTime("CDLP");
 
   execTime.start();
-  algo(&graph, bidir_view, max_iterations);
+  algo(&graph, max_iterations);
   execTime.stop();
 
   algo.Deallocate(&graph);
@@ -232,8 +216,8 @@ katana::analytics::CdlpStatistics::Compute(
 
   using NodeData = std::tuple<NodeCommunity>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-  typedef typename Graph::Node GNode;
+  using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
+  using GNode = typename Graph::Node;
 
   auto pg_result = Graph::Make(pg, {property_name}, {});
   if (!pg_result) {

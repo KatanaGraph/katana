@@ -11,7 +11,7 @@ cdef extern from "katana/ThreadPool.h" namespace "katana" nogil:
     ThreadPool& GetThreadPool()
 
 
-cdef extern from "katana/Galois.h" namespace "katana" nogil:
+cdef extern from "katana/SharedMemSys.h" namespace "katana" nogil:
     unsigned int setActiveThreads(unsigned int)
     unsigned int getActiveThreads()
 

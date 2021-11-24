@@ -17,51 +17,37 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "katana/Graph.h"
-#include "katana/LCGraph.h"
+#ifndef KATANA_LIBGALOIS_KATANA_GALOISRT_H_
+#define KATANA_LIBGALOIS_KATANA_GALOISRT_H_
 
-struct Node1;
-typedef katana::MorphGraph<Node1, void, true> Graph1;
-struct Node1 {
-  Graph1::edge_iterator edge;
-  Graph1::GraphNode gnode;
+#include <memory>
+
+#include "katana/config.h"
+
+namespace katana {
+
+/// A GaloisRT represents global initialization required for the shared
+/// memory subsystem, i.e., thread pools and barriers. As a side-effect of
+/// construction, this class sets global internal state.
+///
+/// Data structures that require per-thread allocation typically ask for the
+/// thread pool. If their construction is not guaranteed to happen after the
+/// construction of a GaloisRT, initialization races can occur.
+class KATANA_EXPORT GaloisRT {
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+
+public:
+  GaloisRT();
+  ~GaloisRT();
+
+  GaloisRT(const GaloisRT&) = delete;
+  GaloisRT& operator=(const GaloisRT&) = delete;
+
+  GaloisRT(GaloisRT&&) = delete;
+  GaloisRT& operator=(GaloisRT&&) = delete;
 };
 
-struct Node2;
-typedef katana::LC_CSR_Graph<Node2, void> Graph2;
-struct Node2 {
-  Graph2::edge_iterator edge;
-  Graph2::GraphNode gnode;
-};
+}  // namespace katana
 
-struct Node3;
-typedef katana::LC_InlineEdge_Graph<Node3, void> Graph3;
-struct Node3 {
-  Graph3::edge_iterator edge;
-  Graph3::GraphNode gnode;
-};
-
-struct Node4;
-typedef katana::LC_Linear_Graph<Node4, void> Graph4;
-struct Node4 {
-  Graph4::edge_iterator edge;
-  Graph4::GraphNode gnode;
-};
-
-struct Node5;
-typedef katana::LC_Morph_Graph<Node5, void> Graph5;
-struct Node5 {
-  Graph5::edge_iterator edge;
-  Graph5::GraphNode gnode;
-};
-
-int
-main() {
-  katana::SharedMemSys Katana_runtime;
-  Graph1 g1;
-  Graph2 g2;
-  Graph3 g3;
-  Graph4 g4;
-  Graph5 g5;
-  return 0;
-}
+#endif

@@ -27,7 +27,7 @@
 
 int
 main(int argc, char** argv) {
-  katana::SharedMemSys Katana_runtime;
+  katana::GaloisRT Katana_runtime;
   typedef katana::FixedSizeHeap Heap;
   typedef std::unique_ptr<Heap> HeapPtr;
   typedef katana::PerThreadStorage<HeapPtr> Heaps;

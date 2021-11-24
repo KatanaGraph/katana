@@ -20,9 +20,9 @@
 #include <iostream>
 #include <string>
 
-#include "katana/Galois.h"
 #include "katana/Graph.h"
 #include "katana/Profile.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Timer.h"
 #include "katana/TypeTraits.h"
 

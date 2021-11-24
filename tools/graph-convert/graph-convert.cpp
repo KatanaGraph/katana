@@ -37,6 +37,7 @@
 #include "katana/FileGraph.h"
 #include "katana/Galois.h"
 #include "katana/NUMAArray.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Strings.h"
 #include "tsuba/CSRTopology.h"
 #include "tsuba/Errors.h"

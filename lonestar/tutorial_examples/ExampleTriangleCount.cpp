@@ -25,6 +25,7 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "katana/Profile.h"
+#include "katana/SharedMemSys.h"
 #include "katana/TypedPropertyGraph.h"
 
 const char* name = "Triangles";

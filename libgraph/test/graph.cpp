@@ -21,6 +21,8 @@
 
 #include <string>
 
+#include "katana/SharedMemSys.h"
+
 int
 useGraph(std::string inputfile) {
   //! [Using a graph]

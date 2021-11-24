@@ -20,6 +20,7 @@
 #include <iostream>
 
 #include "katana/Graph.h"
+#include "katana/SharedMemSys.h"
 
 struct NoDefault {
   int x;

@@ -36,7 +36,7 @@ struct function_object {
 
 int
 main() {
-  katana::SharedMemSys Katana_runtime;
+  katana::GaloisRT Katana_runtime;
   std::vector<int> v(10);
   katana::InsertBag<int> b;
 

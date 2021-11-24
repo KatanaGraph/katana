@@ -158,7 +158,7 @@ timeTests(std::string prefix, const std::vector<int>& keys) {
 
 int
 main(int argc, char** argv) {
-  katana::SharedMemSys Katana_runtime;
+  katana::GaloisRT Katana_runtime;
   testMap<std::map<int, element>>();
   testMap<katana::flat_map<int, element>>();
   katana::setActiveThreads(8);

@@ -116,7 +116,7 @@ struct F2 {
 
 int
 main(int argc, char** argv) {
-  katana::SharedMemSys Katana_runtime;
+  katana::GaloisRT Katana_runtime;
   unsigned M = katana::GetThreadPool().getMaxThreads() / 2;
   size_t mega = 1;
   if (argc > 1)

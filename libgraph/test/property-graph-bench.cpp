@@ -3,6 +3,7 @@
 #include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
+#include "katana/SharedMemSys.h"
 #include "katana/TypedPropertyGraph.h"
 
 using DataType = int64_t;

@@ -6,6 +6,7 @@
 #include "katana/Logging.h"
 #include "katana/Properties.h"
 #include "katana/PropertyIndex.h"
+#include "katana/SharedMemSys.h"
 
 template <typename node_or_edge>
 struct NodeOrEdge {

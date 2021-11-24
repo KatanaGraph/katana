@@ -17,37 +17,41 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef KATANA_LIBGALOIS_KATANA_SHAREDMEM_H_
-#define KATANA_LIBGALOIS_KATANA_SHAREDMEM_H_
+#include "katana/SharedMemSys.h"
 
-#include <memory>
+#include "katana/CommBackend.h"
+#include "katana/GaloisRT.h"
+#include "katana/Galois.h"
+#include "katana/Logging.h"
+#include "katana/Plugin.h"
+#include "katana/TextTracer.h"
+#include "tsuba/FileStorage.h"
+#include "tsuba/tsuba.h"
 
-#include "katana/config.h"
+namespace {
 
-namespace katana {
+katana::NullCommBackend comm_backend;
 
-/// A SharedMem represents global initialization required for the shared
-/// memory subsystem, i.e., thread pools and barriers. As a side-effect of
-/// construction, this class sets global internal state.
-///
-/// Data structures that require per-thread allocation typically ask for the
-/// thread pool. If their construction is not guaranteed to happen after the
-/// construction of a SharedMem, initialization races can occur.
-class KATANA_EXPORT SharedMem {
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
+}  // namespace
 
-public:
-  SharedMem();
-  ~SharedMem();
-
-  SharedMem(const SharedMem&) = delete;
-  SharedMem& operator=(const SharedMem&) = delete;
-
-  SharedMem(SharedMem&&) = delete;
-  SharedMem& operator=(SharedMem&&) = delete;
+struct katana::SharedMemSys::Impl {
+  katana::GaloisRT galois_rt;
 };
 
-}  // namespace katana
+katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
+    : impl_(std::make_unique<Impl>()) {
+  LoadPlugins();
+  if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
+    KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  }
+  katana::ProgressTracer::Set(std::move(tracer));
+}
 
-#endif
+katana::SharedMemSys::~SharedMemSys() {
+  if (auto fini_good = tsuba::Fini(); !fini_good) {
+    KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
+  }
+  katana::GetTracer().Finish();
+  // This will finalize plugins irreversibly, reinitialization may not work.
+  FinalizePlugins();
+}

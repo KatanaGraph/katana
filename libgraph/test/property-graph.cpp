@@ -5,6 +5,7 @@
 #include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
 #include "katana/Properties.h"
+#include "katana/SharedMemSys.h"
 
 using DataType = int64_t;
 

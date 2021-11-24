@@ -53,7 +53,7 @@ namespace katana {
 
 class KATANA_EXPORT ThreadPool {
 private:
-  friend class SharedMem;
+  friend class GaloisRT;
 
   struct shutdown_ty {};  //! type for shutting down thread
   struct fastmode_ty {

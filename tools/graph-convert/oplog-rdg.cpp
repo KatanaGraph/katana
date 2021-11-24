@@ -1,4 +1,5 @@
 #include "katana/BuildGraph.h"
+#include "katana/SharedMemSys.h"
 
 constexpr uint64_t kNumNodes = 100;
 

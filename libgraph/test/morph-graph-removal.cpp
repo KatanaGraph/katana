@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "katana/MorphGraph.h"
+#include "katana/SharedMemSys.h"
 
 static unsigned int numNodes = 10;
 static bool verbose = false;

@@ -206,7 +206,7 @@ struct element {
 
 int
 main(int argc, char** argv) {
-  katana::SharedMemSys Katana_runtime;
+  katana::GaloisRT Katana_runtime;
   testBasic("katana::gslist", katana::gslist<int>(), 32 * 32);
   testNormal("katana::gdeque", katana::gdeque<int>(), 32 * 32);
   // testSort("katana::gdeque", katana::gdeque<int>(), 32 * 32);

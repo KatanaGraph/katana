@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "katana/Galois.h"
 #include "katana/TextTracer.h"
 #include "katana/config.h"
 

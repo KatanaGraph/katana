@@ -17,47 +17,52 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include "katana/Graph.h"
+#include "katana/LCGraph.h"
 #include "katana/SharedMemSys.h"
 
-#include "katana/CommBackend.h"
-#include "katana/Logging.h"
-#include "katana/Plugin.h"
-#include "katana/SharedMem.h"
-#include "katana/Statistics.h"
-#include "katana/TextTracer.h"
-#include "tsuba/FileStorage.h"
-#include "tsuba/tsuba.h"
-
-namespace {
-
-katana::NullCommBackend comm_backend;
-
-}  // namespace
-
-struct katana::SharedMemSys::Impl {
-  katana::SharedMem shared_mem;
-  katana::StatManager stat_manager;
+struct Node1;
+typedef katana::MorphGraph<Node1, void, true> Graph1;
+struct Node1 {
+  Graph1::edge_iterator edge;
+  Graph1::GraphNode gnode;
 };
 
-katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
-    : impl_(std::make_unique<Impl>()) {
-  LoadPlugins();
-  if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
-    KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
-  }
-  katana::ProgressTracer::Set(std::move(tracer));
+struct Node2;
+typedef katana::LC_CSR_Graph<Node2, void> Graph2;
+struct Node2 {
+  Graph2::edge_iterator edge;
+  Graph2::GraphNode gnode;
+};
 
-  katana::internal::setSysStatManager(&impl_->stat_manager);
-}
+struct Node3;
+typedef katana::LC_InlineEdge_Graph<Node3, void> Graph3;
+struct Node3 {
+  Graph3::edge_iterator edge;
+  Graph3::GraphNode gnode;
+};
 
-katana::SharedMemSys::~SharedMemSys() {
-  katana::PrintStats();
-  katana::internal::setSysStatManager(nullptr);
+struct Node4;
+typedef katana::LC_Linear_Graph<Node4, void> Graph4;
+struct Node4 {
+  Graph4::edge_iterator edge;
+  Graph4::GraphNode gnode;
+};
 
-  if (auto fini_good = tsuba::Fini(); !fini_good) {
-    KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
-  }
-  katana::GetTracer().Finish();
-  // This will finalize plugins irreversibly, reinitialization may not work.
-  FinalizePlugins();
+struct Node5;
+typedef katana::LC_Morph_Graph<Node5, void> Graph5;
+struct Node5 {
+  Graph5::edge_iterator edge;
+  Graph5::GraphNode gnode;
+};
+
+int
+main() {
+  katana::SharedMemSys Katana_runtime;
+  Graph1 g1;
+  Graph2 g2;
+  Graph3 g3;
+  Graph4 g4;
+  Graph5 g5;
+  return 0;
 }

@@ -62,7 +62,7 @@ struct checker {
 
 int
 main(int argc, char** argv) {
-  katana::SharedMemSys Katana_runtime;
+  katana::GaloisRT Katana_runtime;
   if (argc > 1)
     run = atoi(argv[1]);
 

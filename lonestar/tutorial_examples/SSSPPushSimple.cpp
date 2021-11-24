@@ -25,8 +25,8 @@
 #include <iostream>
 #include <string>
 
-#include "katana/Galois.h"
 #include "katana/LCGraph.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Timer.h"
 
 using Graph = katana::LC_Linear_Graph<unsigned int, unsigned int>;

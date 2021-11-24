@@ -17,12 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "katana/SharedMem.h"
+#include "katana/GaloisRT.h"
 
 #include <memory>
 
 #include "katana/Barrier.h"
 #include "katana/PagePool.h"
+#include "katana/Statistics.h"
 #include "katana/TerminationDetection.h"
 #include "katana/ThreadPool.h"
 
@@ -204,18 +205,19 @@ public:
 
 }  // namespace
 
-struct katana::SharedMem::Impl {
+struct katana::GaloisRT::Impl {
   struct Dependents {
     LocalTerminationDetection term;
     std::unique_ptr<Barrier> barrier;
     internal::PageAllocState<> page_pool;
+    katana::StatManager stat_manager;
   };
 
   ThreadPool thread_pool;
   std::unique_ptr<Dependents> deps;
 };
 
-katana::SharedMem::SharedMem() : impl_(std::make_unique<Impl>()) {
+katana::GaloisRT::GaloisRT() : impl_(std::make_unique<Impl>()) {
   internal::SetThreadPool(&impl_->thread_pool);
 
   // The thread pool must be initialized first because other substrate classes
@@ -227,9 +229,12 @@ katana::SharedMem::SharedMem() : impl_(std::make_unique<Impl>()) {
   internal::SetBarrier(impl_->deps->barrier.get());
   internal::SetTerminationDetection(&impl_->deps->term);
   internal::setPagePoolState(&impl_->deps->page_pool);
+  katana::internal::setSysStatManager(&impl_->deps->stat_manager);
 }
 
-katana::SharedMem::~SharedMem() {
+katana::GaloisRT::~GaloisRT() {
+  katana::PrintStats();
+  katana::internal::setSysStatManager(nullptr);
   internal::setPagePoolState(nullptr);
   internal::SetTerminationDetection(nullptr);
   internal::SetBarrier(nullptr);

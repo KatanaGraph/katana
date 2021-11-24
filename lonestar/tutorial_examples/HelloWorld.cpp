@@ -21,7 +21,7 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "katana/Galois.h"
+#include "katana/SharedMemSys.h"
 
 //! [do_all example]
 struct HelloWorld {

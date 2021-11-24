@@ -16,7 +16,8 @@ class RDGManifest;
 /// partitioning decisions
 class KATANA_EXPORT RDGPrefix {
 public:
-  static katana::Result<RDGPrefix> Make(RDGHandle handle);
+  static katana::Result<RDGPrefix> Make(
+      RDGHandle handle, uint32_t partition_id = 0);
 
   uint64_t num_nodes() const { return prefix_->header.num_nodes; }
   uint64_t num_edges() const { return prefix_->header.num_edges; }
@@ -49,7 +50,8 @@ private:
   uint64_t view_offset_;
   const CSRTopologyPrefix* prefix_{nullptr};
 
-  static katana::Result<RDGPrefix> DoMakePrefix(const RDGManifest& manifest);
+  static katana::Result<RDGPrefix> DoMakePrefix(
+      const RDGManifest& manifest, uint32_t partition_id);
 };
 
 /// EntityTypeIDArrayHeader describes the header in the on disk representation

@@ -1891,7 +1891,7 @@ katana::WritePropertyGraph(
         "edge prop: ({}) {}", field->type()->ToString(), field->name());
   }
 
-  auto result = prop_graph.Write(dir, "libkatana_galois");
+  auto result = prop_graph.Write(dir, "libkatana_graph");
   if (!result) {
     return result.error().WithContext("writing to fs");
   }

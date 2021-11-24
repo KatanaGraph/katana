@@ -59,6 +59,7 @@ outputs:
       - include/katana/**
       - include/tsuba/**
       - lib/libkatana_galois.so*
+      - lib/libkatana_graph.so*
       - lib/libkatana_support.so*
       - lib/libtsuba.so*
       - lib/cmake/Katana/**

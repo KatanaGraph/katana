@@ -18,7 +18,7 @@ include(CMakeFindDependencyMacro)
 set_and_check(Katana_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
 set_and_check(Katana_LIBRARY_DIRS "@PACKAGE_CMAKE_INSTALL_LIBDIR@")
 set_and_check(Katana_BIN_DIRS "@PACKAGE_CMAKE_INSTALL_BINDIR@")
-set(Katana_LIBRARIES katana_galois)
+set(Katana_LIBRARIES katana_galois katana_graph)
 
 get_filename_component(KATANA_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 

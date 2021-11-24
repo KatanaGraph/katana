@@ -65,7 +65,7 @@ add_subdirectory(libgpu)
 
 if(KATANA_LANG_BINDINGS_PYTHON)
   add_python_setuptools_target(katana_python
-                               DEPENDS Katana::support arrow::arrow Katana::galois
+                               DEPENDS Katana::support arrow::arrow Katana::graph
                                COMPONENT python)
   if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
     add_python_setuptools_tests(katana_python PATH python/test)

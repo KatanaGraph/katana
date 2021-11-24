@@ -33,6 +33,7 @@ namespace cll = llvm::cl;
 /// TODO (Yasin): duplicated from cdlp.cpp; needs to defnied in one place. maybe in cdlp.hpp.
 const unsigned int kMaxIterations = 10;
 
+const std::string property_name = "community";
 const char* name = "CDLP";
 const char* desc = "Detects the communities of a graph using label propagation";
 static const char* url = "cdlp";
@@ -109,12 +110,12 @@ main(int argc, char** argv) {
     abort();
   }
 
-  auto pg_result = Cdlp(pg.get(), "community", maxIterations, plan);
+  auto pg_result = Cdlp(pg.get(), property_name, maxIterations, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run Cdlp: {}", pg_result.error());
   }
 
-  auto stats_result = CdlpStatistics::Compute(pg.get(), "community");
+  auto stats_result = CdlpStatistics::Compute(pg.get(), property_name);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute Cdlp statistics: {}", stats_result.error());
@@ -123,7 +124,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (output) {
-    auto r = pg->GetNodePropertyTyped<uint64_t>("community");
+    auto r = pg->GetNodePropertyTyped<uint64_t>(property_name);
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }

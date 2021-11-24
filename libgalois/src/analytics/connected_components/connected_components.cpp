@@ -29,7 +29,7 @@ const int ConnectedComponentsPlan::kChunkSize = 1;
 namespace {
 
 // TODO(amber): Switch to Undirected View after comparing performance changes
-using PropGraphView = katana::PropertyGraphViews::Default;
+using PropGraphView = katana::PropertyGraphViews::Undirected;
 
 const unsigned int kInfinity = std::numeric_limits<unsigned int>::max();
 struct ConnectedComponentsNode

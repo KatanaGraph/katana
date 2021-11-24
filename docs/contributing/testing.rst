@@ -9,9 +9,9 @@ You can get them with ``make input``.
 
 If you need to update the inputs, they are referenced as
 https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-vN.tar.gz
-in ``.github/workflows``, ``inputs/CMakeLists.txt`` and
-``python/katana/exmaple_data.py``.  ``vN`` is a monotonically increasing
-version number. You can use a command ``inputs/update_inputs.sh`` to create
+in ``inputs/CMakeLists.txt`` and ``python/katana/exmaple_data.py``.
+``vN`` is a monotonically increasing version number.
+You can use a command ``inputs/update_inputs.sh`` to create
 create a new input collection. After creating the tar file, you will need to
 upload the file to the S3 bucket.
 

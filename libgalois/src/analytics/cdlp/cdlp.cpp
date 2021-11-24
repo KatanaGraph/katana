@@ -32,7 +32,7 @@ namespace {
 /// Set to 10 same as Graphalytics benchmark.
 const unsigned int kMaxIterations = 10;
 
-struct CdlpSynchronousAlgo {
+struct CdlpAlgo {
   using CommunityType = uint64_t;
   struct NodeCommunity : public katana::PODProperty<CommunityType> {};
 
@@ -42,15 +42,15 @@ struct CdlpSynchronousAlgo {
       katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
   using GNode = typename Graph::Node;
 
-  CdlpPlan& plan_;
-  CdlpSynchronousAlgo(CdlpPlan& plan) : plan_(plan) {}
-
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeCommunity>(node) = node;
     });
   }
+  virtual void operator()(Graph* graph, size_t max_iterations) = 0;
+};
 
+struct CdlpSynchronousAlgo : CdlpAlgo {
   void operator()(Graph* graph, size_t max_iterations = kMaxIterations) {
     if (max_iterations == 0)
       return;
@@ -120,25 +120,7 @@ struct CdlpSynchronousAlgo {
   }
 };
 
-struct CdlpAsynchronousAlgo {
-  using CommunityType = uint64_t;
-  struct NodeCommunity : public katana::PODProperty<CommunityType> {};
-
-  using NodeData = std::tuple<NodeCommunity>;
-  using EdgeData = std::tuple<>;
-  using Graph = katana::TypedPropertyGraphView<
-      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
-  using GNode = typename Graph::Node;
-
-  CdlpPlan& plan_;
-  CdlpAsynchronousAlgo(CdlpPlan& plan) : plan_(plan) {}
-
-  void Initialize(Graph* graph) {
-    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeCommunity>(node) = node;
-    });
-  }
-
+struct CdlpAsynchronousAlgo : CdlpAlgo {
   void operator()(Graph*, size_t) {}
 };
 
@@ -147,7 +129,7 @@ struct CdlpAsynchronousAlgo {
 template <typename Algorithm>
 static katana::Result<void>
 CdlpWithWrap(
-    katana::PropertyGraph* pg, std::string output_property_name, CdlpPlan plan,
+    katana::PropertyGraph* pg, std::string output_property_name,
     size_t max_iterations) {
   katana::EnsurePreallocated(
       2,
@@ -166,7 +148,7 @@ CdlpWithWrap(
   }
   auto graph = pg_result.value();
 
-  Algorithm algo(plan);
+  Algorithm algo;
 
   algo.Initialize(&graph);
 
@@ -186,13 +168,13 @@ katana::analytics::Cdlp(
   switch (plan.algorithm()) {
   case CdlpPlan::kSynchronous:
     return CdlpWithWrap<CdlpSynchronousAlgo>(
-        pg, output_property_name, plan, max_iterations);
+        pg, output_property_name, max_iterations);
   /// TODO (Yasin): Asynchronous Algorithm will be implemented later after Synchronous
   /// is done for both shared and distributed versions.
   /*
   case CdlpPlan::kAsynchronous:
     return CdlpWithWrap<CdlpAsynchronousAlgo>(
-        pg, output_property_name, plan, max_iterations);
+        pg, output_property_name, max_iterations);
   */
   default:
     return ErrorCode::InvalidArgument;

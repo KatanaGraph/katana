@@ -33,7 +33,31 @@ static_assert(
 static_assert(
     std::is_same_v<decltype(TestLongOrdered::sentinel()), TestLongOrdered>);
 
+struct IntID : public katana::OpaqueIDLinear<IntID, int> {
+  using OpaqueIDLinear::OpaqueIDLinear;
+};
+
+void
+TestPrint() {
+  int value = 1;
+  IntID id(value);
+
+  std::stringstream expected;
+  expected << value;
+
+  fmt::memory_buffer fmt_buf;
+  fmt::format_to(std::back_inserter(fmt_buf), "{}", id);
+
+  std::stringstream stl_buf;
+  stl_buf << id;
+
+  KATANA_LOG_ASSERT(to_string(fmt_buf) == expected.str());
+  KATANA_LOG_ASSERT(stl_buf.str() == expected.str());
+}
+
 int
 main() {
+  TestPrint();
+
   return 0;
 }

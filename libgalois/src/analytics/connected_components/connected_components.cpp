@@ -1310,8 +1310,7 @@ katana::analytics::ConnectedComponentsStatistics::Compute(
 
   ComponentSizePair largest = maxComp.reduce();
 
-  // Compensate for dropping representative node of components
-  size_t largest_component_size = largest.second + 1;
+  size_t largest_component_size = largest.second;
   double largest_component_ratio = 0;
   if (!graph.empty()) {
     largest_component_ratio = double(largest_component_size) / graph.size();

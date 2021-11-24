@@ -45,7 +45,7 @@ FileView::Unbind() {
     // about to unmap
     KATANA_CHECKED(Resolve(0, file_size_));
 
-    if (map_start_ != nullptr) {
+    if (map_start_ != nullptr && file_size_ > 0) {
       if (int err = munmap(map_start_, file_size_); err) {
         return KATANA_ERROR(katana::ResultErrno(), "unmapping buffer");
       }

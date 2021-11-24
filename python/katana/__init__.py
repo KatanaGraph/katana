@@ -24,6 +24,7 @@ import warnings
 from typing import Dict, Type
 
 import katana.plugin
+from katana.dataframe import DataFrame
 from katana.plugin import installed_plugins
 
 try:
@@ -59,6 +60,7 @@ __all__ = [
     "get_active_threads",
     "set_active_threads",
     "set_busy_wait",
+    "DataFrame",
 ]
 
 

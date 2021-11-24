@@ -49,8 +49,33 @@ features or plugins to streamline this process (e.g.,
 It is also possible to ask GitHub to squash your commits for you. This is the
 "squash and merge" option when merging your PR.
 
+Pull Request Style
+==================
+
+Include the Jira issue keys that are being addressed at the end of the pull
+request title as a comma separated list in brackets.
+
+Example PR title::
+
+  Reduce memory usage of Foo [KAT-1000, KAT-1001]
+
+If you squash and merge your PR, by default, the PR description and title are
+turned into the commit message for your squashed PR, so apply the
+recommendations about commit message style below to your PR description instead.
+
+Jira issue keys referenced in the description of the PR do not get picked up by
+the Jira-GitHub integration, but do get automatically converted into a link by
+GitHub's Jira bot. This is helpful for reviewers to quickly navigate to the
+related Jira issue.
+
 Commit Message Style
 ====================
+
+If you intend to rebase and merge, please still include Jira issue keys as described in
+pull request style above.
+
+If you intend to squash and merge, apply the recommendations in this section to your
+pull request message instead of your commit message.
 
 There are three main things we accomplish with commit messages:
 
@@ -142,6 +167,3 @@ An example of a typical commit message:
    the dispose API are on less frequently executed recovery paths.
 
    After this change, typical memory usage reduces to a few KB.
-
-   JIRA: KAT-1000
-   GitHub: #2222

@@ -407,6 +407,8 @@ def cythonize(module_list, *, source_root, **kwargs):
     test_extension_options.setdefault("extra_link_args", [])
     if not any(s.endswith("/libkatana_graph.so") for s in test_extension_options["extra_link_args"]):
         test_extension_options["extra_link_args"].append("-lkatana_graph")
+    if not any(s.endswith("/libkatana_galois.so") for s in test_extension_options["extra_link_args"]):
+        test_extension_options["extra_link_args"].append("-lkatana_galois")
     check_cython_module(
         "libkatana_graph",
         """

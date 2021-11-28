@@ -11,10 +11,11 @@ cdef extern from "katana/ThreadPool.h" namespace "katana" nogil:
     ThreadPool& GetThreadPool()
 
 
-cdef extern from "katana/SharedMemSys.h" namespace "katana" nogil:
+cdef extern from "katana/Threads.h" namespace "katana" nogil:
     unsigned int setActiveThreads(unsigned int)
     unsigned int getActiveThreads()
 
+cdef extern from "katana/Galois.h" namespace "katana" nogil:
     cppclass UserContext[T]:
         void push(...)
         void push_back(...)
@@ -29,9 +30,6 @@ cdef extern from "katana/SharedMemSys.h" namespace "katana" nogil:
     CPPAuto iterate[T](const T &, const T &)
     CPPAuto iterate[T](T &)
 
-    cppclass SharedMemSys:
-        SharedMemSys()
-
     cppclass loopname:
         loopname(char *name)
 
@@ -43,6 +41,10 @@ cdef extern from "katana/SharedMemSys.h" namespace "katana" nogil:
 
     cppclass disable_conflict_detection:
         disable_conflict_detection()
+
+cdef extern from "katana/SharedMemSys.h" namespace "katana" nogil:
+    cppclass SharedMemSys:
+        SharedMemSys()
 
 
 cdef extern from "katana/MethodFlags.h" namespace "katana" nogil:

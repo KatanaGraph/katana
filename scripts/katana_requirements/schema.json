@@ -5,24 +5,68 @@
   "description": "The requirements of a project in a generic form.",
   "type": "object",
   "properties": {
-      "label_descriptions": {
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
         "type": "object",
-        "items": {
-          "type" : "object",
-          "additionalProperties": {
-            "type": ["string", "null"]
+        "properties": {
+          "inherits": {
+            "description": "A list of other labels this system should inherit packages from. Any package in the inherited labels will also appear in this one.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
           }
-        }
-      },
-      "packaging_system_descriptions": {
-        "type": "object",
-        "items": {
-          "type" : "object",
-          "additionalProperties": {
-            "type": ["string", "null"]
-          }
-        }
+        },
+        "required": [
+          "description"
+        ]
       }
+    },
+    "packaging_systems": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "inherits": {
+            "description": "A list of other packaging systems this system should inherit information from. Those systems are use if this system does not have a specific peice of data.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "format": {
+            "description": "The version format to use for this system.",
+            "type": "string",
+            "enum": [
+              "apt",
+              "pip",
+              "conda",
+              "conan",
+              "cmake",
+              "yaml"
+            ]
+          },
+          "channels": {
+            "description": "A list of channels required to install the packages. This is generally a list of URLs or identifiers, but may have more structure for some packaging systems.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "description",
+          "format"
+        ]
+      }
+    }
   },
   "additionalProperties": {
     "type": "object",
@@ -73,7 +117,10 @@
         "type": "object",
         "description": "Version requirement overrides for specific packaging systems. System specific versions can include anything supported by that system. Specifying null for a system means the package is not available in that system. (These will often need to be quoted due to YAML special characters)",
         "additionalProperties": {
-          "type": ["string", "number"],
+          "type": [
+            "string",
+            "number"
+          ],
           "description": "The packaging system specific version requirement string for this package."
         }
       },

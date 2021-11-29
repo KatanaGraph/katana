@@ -110,10 +110,15 @@ apt update
 # Install packages required by the requirements tool
 apt install --yes --quiet python3-yaml python3-packaging
 
+if [ "$VERSION" == "18" ]; then
+  APT_PKG_SYS="apt-18.04"
+else
+  APT_PKG_SYS="apt"
+fi
 # Use the requirements tool to install apt packages with: apt-get satisfy --allow-downgrades --yes --quiet
-"$REPO_ROOT"/scripts/requirements install -a--allow-downgrades -a--yes -a--quiet -l apt -l apt/dev -f apt
+"$REPO_ROOT"/scripts/requirements install -a--allow-downgrades -a--yes -a--quiet -l apt -l apt/dev -p "$APT_PKG_SYS"
 # Use the requirements tool to install pip packages with: python3 -m pip --upgrade
-run_as_original_user "$REPO_ROOT"/scripts/requirements install -l pip -l pip/dev -f pip
+run_as_original_user "$REPO_ROOT"/scripts/requirements install -l pip -l pip/dev -p pip
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
@@ -122,7 +127,7 @@ fi
 
 # --no-binary is required to cause the pip package to use the debian package's native binaries.
 # https://lists.apache.org/thread.html/r4d2e768c330b6545649e066a1d9d1846ca7a3ea1d97e265205211166%40%3Cdev.arrow.apache.org%3E
-PYARROW_WITH_PARQUET=1 run_as_original_user "$REPO_ROOT"/scripts/requirements install -a--upgrade -a--no-binary -a:all:  -l deb/pip-no-binary -f pip
+PYARROW_WITH_PARQUET=1 run_as_original_user "$REPO_ROOT"/scripts/requirements install -a--upgrade -a--no-binary -apyarrow  -l deb/pip-no-binary -p pip
 
 # Maybe install CUDA
 if [ -n "${INSTALL_CUDA}" ]; then

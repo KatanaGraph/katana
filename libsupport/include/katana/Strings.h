@@ -10,21 +10,28 @@
 
 #include "katana/config.h"
 
-/// @file Strings.h
-///
 /// Basic string manipulation functions for situations where you can tolerate
 /// some string copies in exchange for a clear API.
 ///
-/// C++20 will have string.starts_with and string.ends_with.
+/// Some of these functions can eventually be replaced with updated libraries:
+///
+/// - katana::HasPrefix and katana::HasSuffix can be replaced with (C++20)
+///   std::string.starts_with and std::string.ends_with.
+/// - katana::Join can be replaced with (fmt>=8) fmt::join
+///
+/// \file Strings.h
 
 namespace katana {
 
 /// FromBase64 converts from base64 string into a binary encoded string
+///
 /// \param input base64 encoded input string
 KATANA_EXPORT std::string FromBase64(const std::string& input);
 
 /// ToBase64 encodes message string into a Base64 string.
-/// \param url_safe forces URL-safe encoding of result base64 result (replacing +/ with -_)
+///
+/// \param url_safe forces URL-safe encoding of result base64 result (replacing
+///   +/ with -_)
 /// \param message binary string input
 KATANA_EXPORT std::string ToBase64(
     const std::string& message, bool url_safe = false);

@@ -47,15 +47,15 @@ main() {
       std::vector<std::string_view>({"split", "the", "right", "amount"}));
 
   KATANA_LOG_ASSERT(
-      katana::Join(" ", {"list", "of", "strings"}) == "list of strings");
+      katana::Join({"list", "of", "strings"}, " ") == "list of strings");
   KATANA_LOG_ASSERT(
-      katana::Join("", {"list", "of", "strings"}) == "listofstrings");
-  KATANA_LOG_ASSERT(katana::Join(" ", {"string"}) == "string");
-  KATANA_LOG_ASSERT(katana::Join(" ", std::vector<std::string>{}).empty());
+      katana::Join({"list", "of", "strings"}, "") == "listofstrings");
+  KATANA_LOG_ASSERT(katana::Join({"string"}, " ") == "string");
+  KATANA_LOG_ASSERT(katana::Join(std::vector<std::string>{}, " ").empty());
   KATANA_LOG_ASSERT(
-      katana::Join(" ", {"list", "of", "", "strings"}) == "list of  strings");
+      katana::Join({"list", "of", "", "strings"}, " ") == "list of  strings");
 
-  KATANA_LOG_ASSERT(katana::Join(" ", std::list<int>{1, 2, 3}) == "1 2 3");
+  KATANA_LOG_ASSERT(katana::Join(std::list<int>{1, 2, 3}, " ") == "1 2 3");
 
   KATANA_LOG_ASSERT(katana::ToBase64("") == "");
   KATANA_LOG_ASSERT(katana::ToBase64("uchigatana") == "dWNoaWdhdGFuYQ==");

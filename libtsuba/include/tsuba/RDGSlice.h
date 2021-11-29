@@ -94,6 +94,10 @@ public:
   /// The semantics of these two functions are about memory use. So they set
   /// their respective arrays to empty, removing them from memory without
   /// semantically removing them from the object.
+  katana::Result<void> unload_local_to_user_id();
+  katana::Result<void> unload_local_to_global_id();
+  /// deprecated duplicates of the unload_* functions for
+  /// backwards-compatibility
   katana::Result<void> remove_local_to_user_id();
   katana::Result<void> remove_local_to_global_id();
 

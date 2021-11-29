@@ -83,7 +83,7 @@ private:
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
 
-  GraphTopology topology_;
+  std::shared_ptr<katana::GraphTopology> topology_;
 
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;
@@ -235,7 +235,7 @@ public:
       EntityTypeManager&& edge_type_manager) noexcept
       : rdg_(std::move(rdg)),
         file_(std::move(rdg_file)),
-        topology_(std::move(topo)),
+        topology_(std::make_shared<GraphTopology>(std::move(topo))),
         node_entity_type_manager_(std::move(node_type_manager)),
         edge_entity_type_manager_(std::move(edge_type_manager)),
         node_entity_type_ids_(std::move(node_entity_type_ids)),
@@ -650,7 +650,7 @@ public:
     return MakeResult(std::move(array));
   }
 
-  const GraphTopology& topology() const noexcept { return topology_; }
+  const GraphTopology& topology() const noexcept { return *topology_; }
 
   const EntityTypeManager& node_entity_type_manager() const noexcept {
     return node_entity_type_manager_;

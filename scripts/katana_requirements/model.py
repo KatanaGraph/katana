@@ -1,20 +1,7 @@
 import itertools
 from abc import abstractmethod
 from enum import Enum
-from typing import (
-    Collection,
-    Container,
-    Dict,
-    FrozenSet,
-    Generator,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Sized,
-    Union,
-)
+from typing import Collection, Dict, FrozenSet, Iterator, List, Optional, Union
 
 from packaging.version import Version
 
@@ -263,15 +250,6 @@ class Requirements(Mergeable):
 
     def packages_dict(self, ps: Optional[PackagingSystem] = None) -> Dict[str, Package]:
         return {p.name_for(ps): p for p in self.select_packages(packaging_system=ps)}
-
-    # def _is_inherited(self, super, sub, name_map):
-    #     if super == sub:
-    #         return True
-    #     for u_name in sub.inherits:
-    #         u = name_map[u_name]
-    #         if self._is_inherited(super, u, name_map):
-    #             return True
-    #     return False
 
     def _all_supers(self, sub, name_map):
         ret = [sub]

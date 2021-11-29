@@ -16,20 +16,6 @@ def run_docker_test(image, script):
     assert r == 0
 
 
-# @pytest.mark.parametrize("image", ["ubuntu:20.04", "ubuntu:18.04"])
-# @pytest.mark.xfail
-# def test_fail(image):
-#     run_docker_test(image, """
-#     false
-#     """)
-
-
-# @pytest.mark.parametrize("image", ["ubuntu:20.04", "ubuntu:18.04"])
-# def test_success(image):
-#     run_docker_test(image, """
-#     true
-#     """)
-
 # @pytest.mark.skip("Slow and tested as a side effect of other tests.")
 @pytest.mark.parametrize("image", ["ubuntu:20.04", "ubuntu:18.04"])
 def test_setup_ubuntu(image):

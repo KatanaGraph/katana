@@ -96,6 +96,10 @@ KATANA_EXPORT Result<void> Cdlp(
     PropertyGraph* pg, const std::string& output_property_name,
     size_t max_iterations, CdlpPlan plan = CdlpPlan());
 
+/// TODO (Yasin): This Struct (Compute function) is now being used by louvain,
+/// cc, and cdlp, basically everything which is calculating communities. Explore
+/// possiblity of moving it to some common .h file in libgalois/include/analytics
+/// to avoid code duplication.
 struct KATANA_EXPORT CdlpStatistics {
   /// Total number of unique communities in the graph.
   uint64_t total_communities;

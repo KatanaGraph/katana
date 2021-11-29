@@ -181,6 +181,10 @@ katana::analytics::Cdlp(
   }
 }
 
+/// TODO (Yasin): This function is now being used by louvain,
+/// cc, and cdlp, basically everything which is calculating communities. Explore
+/// possiblity of moving it to some common .h file in libgalois/include/analytics
+/// to avoid code duplication.
 katana::Result<CdlpStatistics>
 katana::analytics::CdlpStatistics::Compute(
     katana::PropertyGraph* pg, const std::string& property_name) {

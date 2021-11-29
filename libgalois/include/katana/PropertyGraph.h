@@ -83,7 +83,11 @@ private:
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
 
-  std::shared_ptr<katana::GraphTopology> topology_;
+  // Users of PropertyGraph rely on the topology to always be present
+  // even if it is empty. This is a temporary solution, since this variable
+  // is going away.
+  std::shared_ptr<katana::GraphTopology> topology_ =
+      std::make_shared<katana::GraphTopology>();
 
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;

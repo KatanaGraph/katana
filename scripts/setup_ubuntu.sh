@@ -111,14 +111,14 @@ apt update
 apt install --yes --quiet python3-yaml python3-packaging
 
 if [ "$VERSION" == "18" ]; then
-  APT_PKG_SYS="apt-18.04"
+  PKG_SYS_SUFFIX="-18.04"
 else
-  APT_PKG_SYS="apt"
+  PKG_SYS_SUFFIX=""
 fi
 # Use the requirements tool to install apt packages with: apt-get satisfy --allow-downgrades --yes --quiet
-"$REPO_ROOT"/scripts/requirements install -a--allow-downgrades -a--yes -a--quiet -l apt -l apt/dev -p "$APT_PKG_SYS"
+"$REPO_ROOT"/scripts/requirements install -a--allow-downgrades -a--yes -a--quiet -l apt -l apt/dev -p "apt$PKG_SYS_SUFFIX"
 # Use the requirements tool to install pip packages with: python3 -m pip --upgrade
-run_as_original_user "$REPO_ROOT"/scripts/requirements install -l pip -l pip/dev -p pip
+run_as_original_user "$REPO_ROOT"/scripts/requirements install -l pip -l pip/dev -p "pip$PKG_SYS_SUFFIX"
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
@@ -135,4 +135,8 @@ if [ -n "${INSTALL_CUDA}" ]; then
   curl https://developer.download.nvidia.com/compute/cuda/11.5.0/local_installers/cuda_11.5.0_495.29.05_linux.run \
     --output /tmp/cuda_11.5.0_495.29.05_linux.run
   sh /tmp/cuda_11.5.0_495.29.05_linux.run --silent --toolkit
+fi
+
+if [ "$VERSION" == "18" ]; then
+  echo "WARNING: Katana Python bindings will not to work fully due to an incorrect installation of numba. You may be able to get it to install manually."
 fi

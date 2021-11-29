@@ -47,6 +47,11 @@ packaging_systems:
       The Python pip packaging system. Provides Python packages only, and has very poor support for packages with native
       extensions.
     format: pip
+  pip-18.04:
+    inherits:
+      - pip
+    description: pip packages for Ubuntu 18.04 specifically.
+    format: pip
   cmake:
     description: |
       CMake package version checking.
@@ -221,12 +226,14 @@ libxml2:
     - conda
     - apt
 llvm:
+  name_overrides:
+    apt: llvm-10
   version: &llvm_version [ 8, null ]
   labels:
     - conda/dev
 llvmdev:
   name_overrides:
-    apt: llvm-dev
+    apt: llvm-10-dev
   version: *llvm_version
   labels:
     - conda
@@ -263,6 +270,9 @@ nlohmann_json:
     - conda
     - conan
 numba:
+  name_overrides:
+    apt-18.04: null
+    pip-18.04: null
   version: [ 0.53.1, 0.54 ]
   labels:
     - conda

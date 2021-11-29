@@ -239,15 +239,15 @@ public:
     return edge_property_index(eid);
   }
 
-  static std::unique_ptr<EdgeShuffleTopology> MakeTransposeCopy(
+  static std::shared_ptr<EdgeShuffleTopology> MakeTransposeCopy(
       const PropertyGraph* pg);
-  static std::unique_ptr<EdgeShuffleTopology> MakeOriginalCopy(
+  static std::shared_ptr<EdgeShuffleTopology> MakeOriginalCopy(
       const PropertyGraph* pg);
 
-  static std::unique_ptr<EdgeShuffleTopology> Make(
+  static std::shared_ptr<EdgeShuffleTopology> Make(
       PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_todo,
       const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo) noexcept {
-    std::unique_ptr<EdgeShuffleTopology> ret;
+    std::shared_ptr<EdgeShuffleTopology> ret;
 
     if (tpose_todo == tsuba::RDGTopology::TransposeKind::kYes) {
       ret = MakeTransposeCopy(pg);
@@ -263,7 +263,7 @@ public:
     return ret;
   }
 
-  static std::unique_ptr<EdgeShuffleTopology> Make(
+  static std::shared_ptr<EdgeShuffleTopology> Make(
       tsuba::RDGTopology* rdg_topo);
 
   katana::Result<tsuba::RDGTopology> ToRDGTopology() const;
@@ -363,20 +363,20 @@ public:
     return node_sort_state_;
   }
 
-  static std::unique_ptr<ShuffleTopology> MakeFrom(
+  static std::shared_ptr<ShuffleTopology> MakeFrom(
       const PropertyGraph* pg, const EdgeShuffleTopology& seed_topo) noexcept;
 
-  static std::unique_ptr<ShuffleTopology> MakeSortedByDegree(
+  static std::shared_ptr<ShuffleTopology> MakeSortedByDegree(
       const PropertyGraph* pg, const EdgeShuffleTopology& seed_topo) noexcept;
 
-  static std::unique_ptr<ShuffleTopology> MakeSortedByNodeType(
+  static std::shared_ptr<ShuffleTopology> MakeSortedByNodeType(
       const PropertyGraph* pg, const EdgeShuffleTopology& seed_topo) noexcept;
 
-  static std::unique_ptr<ShuffleTopology> MakeFromTopo(
+  static std::shared_ptr<ShuffleTopology> MakeFromTopo(
       const PropertyGraph* pg, const EdgeShuffleTopology& seed_topo,
       const tsuba::RDGTopology::NodeSortKind& node_sort_todo,
       const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo) noexcept {
-    std::unique_ptr<ShuffleTopology> ret;
+    std::shared_ptr<ShuffleTopology> ret;
 
     switch (node_sort_todo) {
     case tsuba::RDGTopology::NodeSortKind::kAny:
@@ -397,13 +397,13 @@ public:
     return ret;
   }
 
-  static std::unique_ptr<ShuffleTopology> Make(tsuba::RDGTopology* rdg_topo);
+  static std::shared_ptr<ShuffleTopology> Make(tsuba::RDGTopology* rdg_topo);
 
   katana::Result<tsuba::RDGTopology> ToRDGTopology() const;
 
 private:
   template <typename CmpFunc>
-  static std::unique_ptr<ShuffleTopology> MakeNodeSortedTopo(
+  static std::shared_ptr<ShuffleTopology> MakeNodeSortedTopo(
       const EdgeShuffleTopology& seed_topo, const CmpFunc& cmp,
       const tsuba::RDGTopology::NodeSortKind& node_sort_todo) {
     GraphTopology::PropIndexVec node_prop_indices;
@@ -468,7 +468,7 @@ private:
         },
         katana::steal(), katana::no_stats());
 
-    return std::make_unique<ShuffleTopology>(ShuffleTopology{
+    return std::make_shared<ShuffleTopology>(ShuffleTopology{
         seed_topo.transpose_state(), node_sort_todo,
         seed_topo.edge_sort_state(), std::move(degrees),
         std::move(node_prop_indices), std::move(new_dest_vec),
@@ -644,17 +644,17 @@ public:
   /// this function creates a topology by filtering nodes and edges
   /// @param node_types the types that the selected nodes must have
   /// @param edge_types the types that the selected edges must have
-  static std::unique_ptr<ProjectedTopology> MakeTypeProjectedTopology(
+  static std::shared_ptr<ProjectedTopology> MakeTypeProjectedTopology(
       const PropertyGraph* pg, const std::vector<std::string>& node_types,
       const std::vector<std::string>& edge_types);
 
   /// this function creates an empty graph with num_new_nodes nodes
-  static std::unique_ptr<ProjectedTopology> CreateEmptyEdgeProjectedTopology(
+  static std::shared_ptr<ProjectedTopology> CreateEmptyEdgeProjectedTopology(
       const katana::PropertyGraph* pg, uint32_t num_new_nodes,
       const katana::DynamicBitset& bitset);
 
   /// this function creates an empty graph
-  static std::unique_ptr<ProjectedTopology> CreateEmptyProjectedTopology(
+  static std::shared_ptr<ProjectedTopology> CreateEmptyProjectedTopology(
       const katana::PropertyGraph* pg, const katana::DynamicBitset& bitset);
 
   /// this function fills a bitmask depending on the input bitset
@@ -709,7 +709,8 @@ private:
 template <typename Topo>
 class KATANA_EXPORT BasicTopologyWrapper : public GraphTopologyTypes {
 public:
-  explicit BasicTopologyWrapper(const Topo* t) noexcept : topo_ptr_(t) {
+  explicit BasicTopologyWrapper(std::shared_ptr<const Topo> t) noexcept
+      : topo_ptr_(std::move(t)) {
     KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
   }
 
@@ -770,17 +771,18 @@ public:
   void Print() const noexcept { topo_ptr_->Print(); }
 
 protected:
-  const Topo& topo() const noexcept { return *topo_ptr_; }
+  const Topo& topo() const noexcept { return *topo_ptr_.get(); }
 
 private:
-  const Topo* topo_ptr_;
+  std::shared_ptr<const Topo> topo_ptr_;
 };
 
 class KATANA_EXPORT ProjectedPropGraphViewWrapper : public GraphTopologyTypes {
 public:
   explicit ProjectedPropGraphViewWrapper(
-      const PropertyGraph* pg, const ProjectedTopology* projected_topo) noexcept
-      : prop_graph_(pg), projected_topo_ptr_(projected_topo) {
+      const PropertyGraph* pg,
+      std::shared_ptr<const ProjectedTopology> projected_topo) noexcept
+      : prop_graph_(pg), projected_topo_ptr_(std::move(projected_topo)) {
     KATANA_LOG_DEBUG_ASSERT(projected_topo_ptr_);
   }
 
@@ -860,7 +862,7 @@ protected:
 
 private:
   const PropertyGraph* prop_graph_;
-  const ProjectedTopology* projected_topo_ptr_;
+  std::shared_ptr<const ProjectedTopology> projected_topo_ptr_;
 };
 
 namespace internal {
@@ -899,11 +901,11 @@ public:
   CondensedTypeIDMap(const CondensedTypeIDMap&) = delete;
   CondensedTypeIDMap& operator=(const CondensedTypeIDMap&) = delete;
 
-  static std::unique_ptr<CondensedTypeIDMap> MakeFromEdgeTypes(
+  static std::shared_ptr<CondensedTypeIDMap> MakeFromEdgeTypes(
       const PropertyGraph* pg) noexcept;
   // TODO(amber): add MakeFromNodeTypes
 
-  static std::unique_ptr<CondensedTypeIDMap> MakeFromIndexToTypeMap(
+  static std::shared_ptr<CondensedTypeIDMap> MakeFromIndexToTypeMap(
       EntityTypeID* index_to_type_map);
 
   EntityTypeID GetType(uint32_t index) const noexcept {
@@ -980,13 +982,15 @@ public:
   EdgeTypeAwareTopology(const EdgeTypeAwareTopology&) = delete;
   EdgeTypeAwareTopology& operator=(const EdgeTypeAwareTopology&) = delete;
 
-  static std::unique_ptr<EdgeTypeAwareTopology> MakeFrom(
-      const PropertyGraph* pg, const CondensedTypeIDMap* edge_type_index,
-      const EdgeShuffleTopology* e_topo) noexcept;
+  static std::shared_ptr<EdgeTypeAwareTopology> MakeFrom(
+      const PropertyGraph* pg,
+      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
+      std::shared_ptr<const EdgeShuffleTopology> e_topo) noexcept;
 
-  static std::unique_ptr<EdgeTypeAwareTopology> Make(
-      tsuba::RDGTopology* rdg_topo, const CondensedTypeIDMap* edge_type_index,
-      const EdgeShuffleTopology* e_topo);
+  static std::shared_ptr<EdgeTypeAwareTopology> Make(
+      tsuba::RDGTopology* rdg_topo,
+      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
+      std::shared_ptr<const EdgeShuffleTopology> e_topo);
 
   /// @param N node to get edges for
   /// @param edge_type edge_type to get edges of
@@ -1187,7 +1191,9 @@ public:
   bool is_valid() const noexcept { return edge_shuff_topo_->is_valid(); }
 
   void invalidate() noexcept {
-    const_cast<EdgeShuffleTopology*>(edge_shuff_topo_)->invalidate();
+    // TODO(yan): Get rid of this const_cast if possible.
+    std::const_pointer_cast<EdgeShuffleTopology>(edge_shuff_topo_)
+        ->invalidate();
   }
 
   katana::Result<tsuba::RDGTopology> ToRDGTopology() const;
@@ -1197,25 +1203,25 @@ private:
   // calling this function
   static AdjIndexVec CreatePerEdgeTypeAdjacencyIndex(
       const PropertyGraph* pg, const CondensedTypeIDMap* edge_type_index,
-      const EdgeShuffleTopology* topo) noexcept;
+      const EdgeShuffleTopology* e_topo) noexcept;
 
   EdgeTypeAwareTopology(
-      const CondensedTypeIDMap* edge_type_index,
-      const EdgeShuffleTopology* e_topo,
+      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
+      std::shared_ptr<const EdgeShuffleTopology> e_topo,
       AdjIndexVec&& per_type_adj_indices) noexcept
       : Base(e_topo),
-        edge_type_index_(edge_type_index),
-        edge_shuff_topo_(e_topo),
+        edge_type_index_(std::move(edge_type_index)),
+        edge_shuff_topo_(std::move(e_topo)),
         per_type_adj_indices_(std::move(per_type_adj_indices)) {
-    KATANA_LOG_DEBUG_ASSERT(edge_type_index);
+    KATANA_LOG_DEBUG_ASSERT(edge_type_index_);
 
     KATANA_LOG_DEBUG_ASSERT(
         per_type_adj_indices_.size() ==
         edge_shuff_topo_->num_nodes() * edge_type_index_->num_unique_types());
   }
 
-  const CondensedTypeIDMap* edge_type_index_;
-  const EdgeShuffleTopology* edge_shuff_topo_;
+  std::shared_ptr<const CondensedTypeIDMap> edge_type_index_;
+  std::shared_ptr<const EdgeShuffleTopology> edge_shuff_topo_;
   AdjIndexVec per_type_adj_indices_;
 };
 
@@ -1225,15 +1231,16 @@ class KATANA_EXPORT BasicBiDirTopoWrapper
   using Base = BasicTopologyWrapper<OutTopo>;
 
 public:
-  BasicBiDirTopoWrapper(const OutTopo* out_topo, const InTopo* in_topo) noexcept
-      : Base(out_topo), in_topo_(in_topo) {
-    KATANA_LOG_DEBUG_ASSERT(out_topo);
+  BasicBiDirTopoWrapper(
+      std::shared_ptr<const OutTopo> out_topo,
+      std::shared_ptr<const InTopo> in_topo) noexcept
+      : Base(std::move(out_topo)), in_topo_(std::move(in_topo)) {
     KATANA_LOG_DEBUG_ASSERT(in_topo_);
 
     KATANA_LOG_DEBUG_ASSERT(in_topo_->is_transposed());
 
-    KATANA_LOG_DEBUG_ASSERT(out_topo->num_nodes() == in_topo_->num_nodes());
-    KATANA_LOG_DEBUG_ASSERT(out_topo->num_edges() == in_topo_->num_edges());
+    KATANA_LOG_DEBUG_ASSERT(out().num_nodes() == in_topo_->num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(out().num_edges() == in_topo_->num_edges());
   }
 
   auto in_edges(const GraphTopologyTypes::Node& node) const noexcept {
@@ -1259,10 +1266,10 @@ public:
 
 protected:
   const OutTopo& out() const noexcept { return Base::topo(); }
-  const InTopo& in() const noexcept { return *in_topo_; }
+  const InTopo& in() const noexcept { return *in_topo_.get(); }
 
 private:
-  const InTopo* in_topo_;
+  std::shared_ptr<const InTopo> in_topo_;
 };
 
 using SimpleBiDirTopology =
@@ -1279,8 +1286,10 @@ public:
       katana::DisjointRangesIterator<boost::counting_iterator<Edge>>;
   using edges_range = StandardRange<edge_iterator>;
 
-  UndirectedTopologyImpl(const OutTopo* out, const InTopo* in) noexcept
-      : out_topo_(out), in_topo_(in) {}
+  UndirectedTopologyImpl(
+      std::shared_ptr<const OutTopo> out,
+      std::shared_ptr<const InTopo> in) noexcept
+      : out_topo_(std::move(out)), in_topo_(std::move(in)) {}
 
   auto num_nodes() const noexcept { return out().num_nodes(); }
 
@@ -1400,8 +1409,8 @@ private:
     return MakeStandardRange(b, e);
   }
 
-  const OutTopo* out_topo_;
-  const InTopo* in_topo_;
+  std::shared_ptr<const OutTopo> out_topo_;
+  std::shared_ptr<const InTopo> in_topo_;
 };
 
 using UndirectedTopology =
@@ -1414,7 +1423,8 @@ class SortedTopologyWrapper : public BasicTopologyWrapper<Topo> {
 public:
   using typename Base::Node;
 
-  explicit SortedTopologyWrapper(const Topo* t) noexcept : Base(t) {
+  explicit SortedTopologyWrapper(std::shared_ptr<const Topo> t) noexcept
+      : Base(std::move(t)) {
     KATANA_LOG_DEBUG_ASSERT(Base::topo().has_edges_sorted_by(
         tsuba::RDGTopology::EdgeSortKind::kSortedByDestID));
   }
@@ -1447,9 +1457,9 @@ class KATANA_EXPORT EdgeTypeAwareBiDirTopology
 
 public:
   explicit EdgeTypeAwareBiDirTopology(
-      const EdgeTypeAwareTopology* out_topo,
-      const EdgeTypeAwareTopology* in_topo) noexcept
-      : Base(out_topo, in_topo) {}
+      std::shared_ptr<const EdgeTypeAwareTopology> out_topo,
+      std::shared_ptr<const EdgeTypeAwareTopology> in_topo) noexcept
+      : Base(std::move(out_topo), std::move(in_topo)) {}
 
   auto GetDistinctEdgeTypes() const noexcept {
     return Base::out().GetDistinctEdgeTypes();
@@ -1640,7 +1650,7 @@ struct PGViewBuilder<PGViewDefault> {
   template <typename ViewCache>
   static PGViewDefault BuildView(
       PropertyGraph* pg, ViewCache& viewCache) noexcept {
-    const auto* topo = viewCache.GetOriginalTopology(pg);
+    auto topo = viewCache.GetOriginalTopology(pg);
     return PGViewDefault{pg, DefaultPGTopology{topo}};
   }
 };
@@ -1761,12 +1771,12 @@ struct PropertyGraphViews {
 };
 
 class KATANA_EXPORT PGViewCache {
-  std::vector<std::unique_ptr<EdgeShuffleTopology>> edge_shuff_topos_;
-  std::vector<std::unique_ptr<ShuffleTopology>> fully_shuff_topos_;
-  std::vector<std::unique_ptr<EdgeTypeAwareTopology>> edge_type_aware_topos_;
-  std::unique_ptr<CondensedTypeIDMap> edge_type_id_map_;
+  std::vector<std::shared_ptr<EdgeShuffleTopology>> edge_shuff_topos_;
+  std::vector<std::shared_ptr<ShuffleTopology>> fully_shuff_topos_;
+  std::vector<std::shared_ptr<EdgeTypeAwareTopology>> edge_type_aware_topos_;
+  std::shared_ptr<CondensedTypeIDMap> edge_type_id_map_;
   // TODO(amber): define a node_type_id_map_;
-  std::unique_ptr<ProjectedTopology> projected_topos_;
+  std::shared_ptr<ProjectedTopology> projected_topos_;
 
   template <typename>
   friend struct internal::PGViewBuilder;
@@ -1795,25 +1805,26 @@ public:
   }
 
 private:
-  const GraphTopology* GetOriginalTopology(
+  std::shared_ptr<GraphTopology> GetOriginalTopology(
       const PropertyGraph* pg) const noexcept;
 
-  CondensedTypeIDMap* BuildOrGetEdgeTypeIndex(const PropertyGraph* pg) noexcept;
+  std::shared_ptr<CondensedTypeIDMap> BuildOrGetEdgeTypeIndex(
+      const PropertyGraph* pg) noexcept;
 
-  EdgeShuffleTopology* BuildOrGetEdgeShuffTopo(
+  std::shared_ptr<EdgeShuffleTopology> BuildOrGetEdgeShuffTopo(
       PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_kind,
       const tsuba::RDGTopology::EdgeSortKind& sort_kind) noexcept;
 
-  ShuffleTopology* BuildOrGetShuffTopo(
+  std::shared_ptr<ShuffleTopology> BuildOrGetShuffTopo(
       PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_kind,
       const tsuba::RDGTopology::NodeSortKind& node_sort_todo,
       const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo) noexcept;
 
-  EdgeTypeAwareTopology* BuildOrGetEdgeTypeAwareTopo(
+  std::shared_ptr<EdgeTypeAwareTopology> BuildOrGetEdgeTypeAwareTopo(
       PropertyGraph* pg,
       const tsuba::RDGTopology::TransposeKind& tpose_kind) noexcept;
 
-  ProjectedTopology* BuildOrGetProjectedGraphTopo(
+  std::shared_ptr<ProjectedTopology> BuildOrGetProjectedGraphTopo(
       const PropertyGraph* pg, const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties) noexcept;
 };

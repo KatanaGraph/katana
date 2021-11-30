@@ -5,30 +5,71 @@
 #
 # The schema for this file is scripts/katana_requirements/schema.json
 
-label_descriptions:
-  conan: Packages installed using conan in conan builds and in deb packaging.
-  conda: Conda package dependencies.
-  conda/dev: Packages installed for conda builds that may not be needed in the run environment.
-  apt: Packages installed with APT in non-conda builds.
-  pip/dev: Packages installed with pip to build and run Ubuntu deb packages.
+labels:
+  conan:
+    description: Packages installed using conan in conan builds and in deb packaging.
+  conda:
+    description: Conda package dependencies.
+  conda/dev:
+    inherits:
+      - conda
+    description: Packages installed for conda builds that may not be needed in the run environment.
+  apt:
+    description: Packages installed with APT in non-conda builds.
+  pip:
+    description: Packages installed with pip to run Ubuntu deb packages.
+  pip/dev:
+    inherits:
+      - pip
+    description: Packages installed with pip to build Ubuntu deb packages.
 
-packaging_system_descriptions:
-  conda: |
-    A Python-oriented, but universal, packaging system. Packages are installed in user-local directories. Python, C++
-    and tool packages are all available. Some packages are not built with all the features we need, or have bugs.
-  conan: |
-    The Conan C++ packaging system. Provides C++ library packages, but is not good for building packages for
-    distribution because the binaries it generates are generally not ABI compatible with binaries from any other
-    packaging system. Does not provide Python or tool packages.
-  pip: |
-    The Python pip packaging system. Provides Python packages only, and has very poor support for packages with native
-    extensions.
-  apt: |
-    The native packaging system of Ubuntu. Provides a wide range of packages, but tends to be a bit out of date, so
-    external repositories are sometimes needed which can complicate compability. Due to limitations in how APT solves
-    dependencies, the requirements tool provides a hack: If you provide a pinned version override (e.g., pkg==1.0)
-    the package will be installed with `apt-get install` instead of `apt-get satisfy`. This works around failure to find
-    older versions of packages.
+packaging_systems:
+  conda:
+    channels:
+      - conda-forge
+      - katanagraph
+      - metagraph
+      - defaults
+    description: |
+      A Python-oriented, but universal, packaging system. Packages are installed in user-local directories. Python, C++
+      and tool packages are all available. Some packages are not built with all the features we need, or have bugs.
+    format: conda
+  conan:
+    channels:
+      - katana https://katanagraph.jfrog.io/artifactory/api/conan/katana-conan
+    description: |
+      The Conan C++ packaging system. Provides C++ library packages, but is not good for building packages for
+      distribution because the binaries it generates are generally not ABI compatible with binaries from any other
+      packaging system. Does not provide Python or tool packages.
+    format: conan
+  pip:
+    description: |
+      The Python pip packaging system. Provides Python packages only, and has very poor support for packages with native
+      extensions.
+    format: pip
+  pip-18.04:
+    inherits:
+      - pip
+    description: pip packages for Ubuntu 18.04 specifically.
+    format: pip
+  cmake:
+    description: |
+      CMake package version checking.
+    format: cmake
+  apt:
+    description: |
+      The native packaging system of Ubuntu. Provides a wide range of packages, but tends to be a bit out of date, so
+      external repositories are sometimes needed which can complicate compability. Due to limitations in how APT solves
+      dependencies, the requirements tool provides a hack: If you provide a pinned version override (e.g., pkg==1.0)
+      the package will be installed with `apt-get install` instead of `apt-get satisfy`. This works around failure to find
+      older versions of packages.
+    format: apt
+  apt-18.04:
+    inherits:
+      - apt
+    description: |
+      APT packages for Ubuntu 18.04.
+    format: apt
 
 boa:
   version: [0.6, 1]
@@ -63,12 +104,12 @@ boost:
 breathe:
   version: [ 4.30, null ]
   labels:
-    - conda
+    - conda/dev
 cmake:
   version: [ 3.17, 4 ]
   labels:
     - apt
-    - conda
+    - conda/dev
 conan:
   version: [ 1.40, null ]
   labels:
@@ -138,6 +179,7 @@ jupyter:
   version: [ 1, null ]
   labels:
     - conda
+    - pip
 jupyter_core:
   version: [ 4.7, null ]
   labels:
@@ -146,6 +188,7 @@ jupyterlab:
   version: [ 3.1, null ]
   labels:
     - conda
+    - pip
 libarrow-python:
   name_overrides:
     conan: null
@@ -183,12 +226,14 @@ libxml2:
     - conda
     - apt
 llvm:
+  name_overrides:
+    apt: llvm-10
   version: &llvm_version [ 8, null ]
   labels:
     - conda/dev
 llvmdev:
   name_overrides:
-    apt: llvm-dev
+    apt: llvm-10-dev
   version: *llvm_version
   labels:
     - conda
@@ -207,7 +252,7 @@ metagraph:
 nbsphinx:
   version: [ 0.8, null ]
   labels:
-    - conda
+    - conda/dev
 ncurses:
   name_overrides:
     apt: libncurses-dev
@@ -225,10 +270,13 @@ nlohmann_json:
     - conda
     - conan
 numba:
+  name_overrides:
+    apt-18.04: null
+    pip-18.04: null
   version: [ 0.53.1, 0.54 ]
   labels:
     - conda
-    - pip/dev
+    - pip
 numpy:
   name_overrides:
     apt: python3-numpy
@@ -290,7 +338,7 @@ pydata-sphinx-theme:
   version_overrides:
     pip: "@v0.6.3"
   labels:
-    - pip
+    - pip/dev
     - conda/dev
 pygithub:
   name_overrides:
@@ -390,10 +438,10 @@ clang-tidy:
 clangd:
   name_overrides:
     conda: clang-tools
+    apt-18.04: clangd-10
   version: *clang_version
   labels:
-    # TODO(amp): Reinstate this once we don't need to have any support for 18.04 in the setup scripts.
-    #- apt/dev
+    - apt/dev
   version_overrides: *clang_version_overrides
 graphviz:
   version: [2, null]
@@ -500,20 +548,20 @@ sysroot:
 pytest-notebook:
   version: [0.6.1, 1]
   labels:
-    - pip
-    - conda
+    - pip/dev
+    - conda/dev
 jupyter_client:
   version: [6, 7]
   labels:
-    - pip
-    - conda
+    - pip/dev
+    - conda/dev
 attrs:
   version: [19, 21]
   labels:
-    - pip
-    - conda
+    - pip/dev
+    - conda/dev
 pexpect:
   version: [4.8, 5]
   labels:
-    - pip
-    - conda
+    - pip/dev
+    - conda/dev

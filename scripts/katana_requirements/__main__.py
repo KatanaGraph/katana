@@ -65,7 +65,8 @@ def setup_general_arguments(parser):
     parser.add_argument(
         "--packaging-system",
         "-p",
-        help="The packaging system to use. Only print packages which support this system.",
+        help="The packaging system to use. Only print packages which support this system and use defaults appropriate "
+        "for this system. To list the available packaging systems, run `requirements packaging-systems`.",
         type=str,
     )
     parser.add_argument(
@@ -318,13 +319,16 @@ def bisect_install_subcommand(args, inputs, data: Requirements):
 
 
 def get_format(args, data) -> (OutputFormat, Sequence[PackagingSystem]):
+    if not args.packaging_system:
+        raise ValueError("--packaging-system/-p is required.")
+
     ps = data.packaging_systems[args.packaging_system]
     return args.format or ps.format, ps
 
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="katana_requirements",
+        prog="scripts/requirements",
         description="""
         A tool to extract and format information from katana requirements YAML files.
         """,
@@ -392,9 +396,6 @@ def main():
     bisect_install_parser.set_defaults(cmd=bisect_install_subcommand)
 
     args = parser.parse_args()
-
-    if not args.packaging_system:
-        raise ValueError("--packaging-system/-p is required.")
 
     data, inputs = load(args.input)
 

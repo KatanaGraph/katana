@@ -45,6 +45,6 @@ def test_requirements_install_conda(image):
         image,
         """
     conda install --quiet --yes pyyaml packaging
-    scripts/requirements install -a--yes -a--quiet -l conda/dev -p conda
+    scripts/requirements install --arg=--yes --arg=--quiet -l conda/dev -p conda
     """,
     )

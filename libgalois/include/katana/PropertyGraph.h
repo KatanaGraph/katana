@@ -707,14 +707,14 @@ public:
   /// the table do nothing otherwise
   Result<void> EnsureEdgePropertyLoaded(const std::string& name);
 
-  std::vector<std::string> ListNodeProperties() const {
-    return rdg_.ListNodeProperties();
+  std::vector<std::string> ListFullNodeProperties() const {
+    return rdg_.ListFullNodeProperties();
   }
   std::vector<std::string> ListLoadedNodeProperties() const {
     return rdg_.ListLoadedNodeProperties();
   }
-  std::vector<std::string> ListEdgeProperties() const {
-    return rdg_.ListEdgeProperties();
+  std::vector<std::string> ListFullEdgeProperties() const {
+    return rdg_.ListFullEdgeProperties();
   }
   std::vector<std::string> ListLoadedEdgeProperties() const {
     return rdg_.ListLoadedEdgeProperties();

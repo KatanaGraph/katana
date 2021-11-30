@@ -785,7 +785,7 @@ tsuba::RDG::LoadEdgeProperty(const std::string& name, int i) {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListNodeProperties() const {
+tsuba::RDG::ListFullNodeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().node_prop_info_list()) {
     result.emplace_back(prop.name());
@@ -805,7 +805,7 @@ tsuba::RDG::ListLoadedNodeProperties() const {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListEdgeProperties() const {
+tsuba::RDG::ListFullEdgeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().edge_prop_info_list()) {
     result.emplace_back(prop.name());

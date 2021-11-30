@@ -511,9 +511,9 @@ FileGraph::findIndex(
 auto
 FileGraph::divideByNode(
     size_t nodeSize, size_t edgeSize, size_t id, size_t total) -> GraphRange {
-  std::vector<unsigned> dummy_scale_factor;  // dummy passed in to function call
+  std::vector<size_t> dummy_scale_factor;  // dummy passed in to function call
 
-  return katana::divideNodesBinarySearch(
+  return katana::DivideNodesBinarySearch(
       numNodes, numEdges, nodeSize, edgeSize, id, total, outIdx,
       dummy_scale_factor, edgeOffset);
 }

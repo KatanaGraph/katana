@@ -329,9 +329,8 @@ public:
    */
   auto divideByNode(
       size_t nodeWeight, size_t edgeWeight, size_t id, size_t total,
-      std::vector<unsigned> scaleFactor = std::vector<unsigned>())
-      -> GraphRange {
-    return katana::divideNodesBinarySearch<OfflineGraph>(
+      std::vector<size_t> scaleFactor = std::vector<size_t>()) -> GraphRange {
+    return katana::DivideNodesBinarySearch<OfflineGraph>(
         numNodes, numEdges, nodeWeight, edgeWeight, id, total, *this,
         scaleFactor);
   }

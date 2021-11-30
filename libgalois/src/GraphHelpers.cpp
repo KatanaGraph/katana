@@ -23,17 +23,17 @@ namespace katana {
 
 namespace internal {
 
-uint32_t
+size_t
 determine_block_division(
-    uint32_t numDivisions, std::vector<unsigned>& scaleFactor) {
-  uint32_t numBlocks = 0;
+    size_t numDivisions, std::vector<size_t>& scaleFactor) {
+  size_t numBlocks = 0;
 
   if (scaleFactor.empty()) {
     // if scale factor isn't specified, everyone gets the same amount
     numBlocks = numDivisions;
 
     // scale factor holds a prefix sum of the scale factor
-    for (uint32_t i = 0; i < numDivisions; i++) {
+    for (size_t i = 0; i < numDivisions; i++) {
       scaleFactor.push_back(i + 1);
     }
   } else {
@@ -42,7 +42,7 @@ determine_block_division(
 
     // get numDivisions number of blocks we need + save a prefix sum of the
     // scale factor vector to scaleFactor
-    for (uint32_t i = 0; i < numDivisions; i++) {
+    for (size_t i = 0; i < numDivisions; i++) {
       numBlocks += scaleFactor[i];
       scaleFactor[i] = numBlocks;
     }

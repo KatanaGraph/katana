@@ -130,8 +130,8 @@ findIndexPrefixSum(
  *
  * @returns The total number of blocks to split among all divisions
  */
-KATANA_EXPORT uint32_t determine_block_division(
-    uint32_t numDivisions, std::vector<unsigned>& scaleFactor);
+KATANA_EXPORT size_t
+determine_block_division(size_t numDivisions, std::vector<size_t>& scaleFactor);
 
 }  // end namespace internal
 
@@ -169,10 +169,10 @@ KATANA_EXPORT uint32_t determine_block_division(
  */
 template <typename PrefixSumType, typename NodeType = uint64_t>
 auto
-divideNodesBinarySearch(
+DivideNodesBinarySearch(
     NodeType numNodes, uint64_t numEdges, size_t nodeWeight, size_t edgeWeight,
     size_t id, size_t total, PrefixSumType& edgePrefixSum,
-    std::vector<unsigned> scaleFactor = std::vector<unsigned>(),
+    std::vector<size_t> scaleFactor = std::vector<size_t>(),
     uint64_t edgeOffset = 0, uint64_t nodeOffset = 0) {
   typedef boost::counting_iterator<NodeType> iterator;
   typedef boost::counting_iterator<uint64_t> edge_iterator;
@@ -195,28 +195,23 @@ divideNodesBinarySearch(
   uint64_t weight = numNodes * nodeWeight + (numEdges + 1) * edgeWeight;
   // determine the number of blocks to divide among total divisions + setup the
   // scale factor vector if necessary
-  uint32_t numBlocks = internal::determine_block_division(total, scaleFactor);
+  size_t numBlocks = internal::determine_block_division(total, scaleFactor);
   // weight of a block (one block for each division by default; if scale
   // factor specifies something different, then use that instead)
   uint64_t blockWeight = (weight + numBlocks - 1) / numBlocks;
-  // katana::gDebug("weight ", weight, " numblock ", numBlocks, " blockwegith ",
-  //               blockWeight);
 
   // lower and upper blocks that this division should use determined
   // using scaleFactor
-  uint32_t blockLower;
+  size_t blockLower;
   if (id != 0) {
     blockLower = scaleFactor[id - 1];
   } else {
     blockLower = 0;
   }
 
-  uint32_t blockUpper = scaleFactor[id];
+  size_t blockUpper = scaleFactor[id];
 
   KATANA_LOG_DEBUG_ASSERT(blockLower <= blockUpper);
-  // katana::gDebug("Unit ", id, " block ", blockLower, " to ",
-  //               blockUpper, "; ", blockLower * blockWeight, " ",
-  //               blockUpper * blockWeight);
 
   uint64_t nodesLower;
   // use prefix sum to find node bounds
@@ -245,13 +240,23 @@ divideNodesBinarySearch(
                                   edgePrefixSum, nodesUpper - 1 + nodeOffset) -
                                   edgeOffset;
 
-  // katana::gDebug("Unit ", id, " nodes ", nodesLower, " to ",
-  //               nodesUpper, " edges ", edgesLower, " ",
-  //               edgesUpper);
-
   return GraphRange(
       NodeRange(iterator(nodesLower), iterator(nodesUpper)),
       EdgeRange(edge_iterator(edgesLower), edge_iterator(edgesUpper)));
+}
+
+// temporary overload for backwards-compatibility until all callers have been
+// moved to the size_t version
+template <typename PrefixSumType, typename NodeType = uint64_t>
+auto
+divideNodesBinarySearch(
+    NodeType numNodes, uint64_t numEdges, size_t nodeWeight, size_t edgeWeight,
+    size_t id, size_t total, PrefixSumType& edgePrefixSum,
+    std::vector<unsigned> scaleFactor) {
+  std::vector<size_t> sizeScaleFactor(scaleFactor.begin(), scaleFactor.end());
+  return DivideNodesBinarySearch(
+      numNodes, numEdges, nodeWeight, edgeWeight, id, total, edgePrefixSum,
+      sizeScaleFactor);
 }
 
 // second internal namespace
@@ -304,12 +309,12 @@ determineUnitRangesLoopGraph(
   uint64_t edgeOffset = *edge_begin(graph, beginNode);
 
   returnRanges[0] = beginNode;
-  std::vector<unsigned int> dummyScaleFactor;
+  std::vector<size_t> dummyScaleFactor;
 
   for (uint32_t i = 0; i < unitsToSplit; i++) {
     // determine division for unit i
     auto nodeSplits =
-        divideNodesBinarySearch<GraphTy, uint32_t>(
+        DivideNodesBinarySearch<GraphTy, uint32_t>(
             numNodesInRange, numEdgesInRange, nodeAlpha, 1, i, unitsToSplit,
             graph, dummyScaleFactor, edgeOffset, beginNode)
             .first;
@@ -367,12 +372,12 @@ determineUnitRangesLoopPrefixSum(
   }
 
   returnRanges[0] = beginNode;
-  std::vector<unsigned int> dummyScaleFactor;
+  std::vector<size_t> dummyScaleFactor;
 
   for (uint32_t i = 0; i < unitsToSplit; i++) {
     // determine division for unit i
     auto nodeSplits =
-        divideNodesBinarySearch<VectorTy, uint32_t>(
+        DivideNodesBinarySearch<VectorTy, uint32_t>(
             numNodesInRange, numEdgesInRange, nodeAlpha, 1, i, unitsToSplit,
             prefixSum, dummyScaleFactor, edgeOffset, beginNode)
             .first;
@@ -535,7 +540,7 @@ determineUnitRangesFromPrefixSum(
 
   for (uint32_t i = 0; i < unitsToSplit; i++) {
     auto nodeSplits =
-        divideNodesBinarySearch<VectorTy, uint32_t>(
+        DivideNodesBinarySearch<VectorTy, uint32_t>(
             numNodes, numEdges, nodeAlpha, 1, i, unitsToSplit, edgePrefixSum)
             .first;
 

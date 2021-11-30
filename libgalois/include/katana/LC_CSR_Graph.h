@@ -714,7 +714,7 @@ public:
   }
 
   auto divideByNode(size_t nodeSize, size_t edgeSize, size_t id, size_t total) {
-    return katana::divideNodesBinarySearch(
+    return katana::DivideNodesBinarySearch(
         numNodes, numEdges, nodeSize, edgeSize, id, total, edgeIndData);
   }
 

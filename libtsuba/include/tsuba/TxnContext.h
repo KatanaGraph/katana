@@ -9,11 +9,8 @@ public:
     node_properties_read_.insert(name);
   }
 
-  void InsertNodePropertyRead(std::unordered_set<std::string> names) {
-    node_properties_read_.insert(names.begin(), names.end());
-  }
-
-  void InsertNodePropertyRead(std::vector<std::string> names) {
+  template <typename Container>
+  void InsertNodePropertyRead(const Container& names) {
     node_properties_read_.insert(names.begin(), names.end());
   }
 
@@ -21,11 +18,8 @@ public:
     node_properties_write_.insert(name);
   }
 
-  void InsertNodePropertyWrite(std::unordered_set<std::string> names) {
-    node_properties_write_.insert(names.begin(), names.end());
-  }
-
-  void InsertNodePropertyWrite(std::vector<std::string> names) {
+  template <typename Container>
+  void InsertNodePropertyWrite(const Container& names) {
     node_properties_write_.insert(names.begin(), names.end());
   }
 
@@ -33,11 +27,8 @@ public:
     edge_properties_read_.insert(name);
   }
 
-  void InsertEdgePropertyRead(std::unordered_set<std::string> names) {
-    edge_properties_read_.insert(names.begin(), names.end());
-  }
-
-  void InsertEdgePropertyRead(std::vector<std::string> names) {
+  template <typename Container>
+  void InsertEdgePropertyRead(const Container& names) {
     edge_properties_read_.insert(names.begin(), names.end());
   }
 
@@ -45,11 +36,8 @@ public:
     edge_properties_write_.insert(name);
   }
 
-  void InsertEdgePropertyWrite(std::unordered_set<std::string> names) {
-    edge_properties_write_.insert(names.begin(), names.end());
-  }
-
-  void InsertEdgePropertyWrite(std::vector<std::string> names) {
+  template <typename Container>
+  void InsertEdgePropertyWrite(const Container& names) {
     edge_properties_write_.insert(names.begin(), names.end());
   }
 

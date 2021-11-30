@@ -52,7 +52,7 @@ def test_get_edge_dest(graph):
 
 def test_edge_data_frame(graph):
     edges = graph.edges()
-    assert len(edges.columns) == 18 + 3
+    assert len(edges.columns) == 6
     assert len(edges) == 43072
     assert edges.at[0, "dest"] == 8014
     assert edges["dest"][1] == 8014
@@ -63,7 +63,7 @@ def test_edge_data_frame(graph):
 
 def test_edge_data_frame_1_node(graph):
     edges = graph.edges(0)
-    assert len(edges.columns) == 18 + 3
+    assert len(edges.columns) == 6
     assert len(edges) == 1
     assert edges.at[0, "dest"] == 8014
     assert edges["dest"][0] == 8014
@@ -108,7 +108,7 @@ def test_edge_data_frame_complex_slice(graph):
 
 def test_edge_data_frame_to_pandas(graph):
     edges = graph.edges().to_pandas()
-    assert len(edges.columns) == 18 + 3
+    assert len(edges.columns) == 6
     assert len(edges) == 43072
     assert edges.at[0, "dest"] == 8014
     assert edges["dest"][1] == 8014

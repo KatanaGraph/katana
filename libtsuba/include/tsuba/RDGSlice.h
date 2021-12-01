@@ -46,7 +46,7 @@ public:
   };
 
   static katana::Result<RDGSlice> Make(
-      RDGHandle handle, const SliceArg& slice, const uint32_t partition_id = 0,
+      RDGHandle handle, const SliceArg& slice, uint32_t partition_id = 0,
       const std::optional<std::vector<std::string>>& node_props = std::nullopt,
       const std::optional<std::vector<std::string>>& edge_props = std::nullopt);
 
@@ -73,6 +73,30 @@ public:
   std::shared_ptr<arrow::Schema> full_edge_schema() const;
   const std::shared_ptr<arrow::Table>& node_properties() const;
   const std::shared_ptr<arrow::Table>& edge_properties() const;
+
+  // NB: The following interface differs from the one provided by RDG for
+  // property loading/unloading. You can't remove a property by its
+  // index in the loaded property table and you can't specify an index for a
+  // loaded property in that table. These differences are because RDGSlice has
+  // many fewer users than RDG and those users require a less rich interface.
+  // There is also no upsert call because RDGSlice is read-only.
+
+  /// load the specified node property and append it to the Table returned by
+  /// node_properties()
+  /// @param name the name of the property in full_node_schema()
+  katana::Result<void> load_node_property(const std::string& name);
+  /// remove the specified node property from the Table returned by
+  /// node_properties()
+  /// @param name the name of the property in full_node_schema()
+  katana::Result<void> unload_node_property(const std::string& name);
+  /// load the specified edge property and append it to the Table returned by
+  /// edge_properties()
+  /// @param name the name of the property in full_edge_schema()
+  katana::Result<void> load_edge_property(const std::string& name);
+  /// remove the specified edge property from the Table returned by
+  /// edge_properties()
+  /// @param name the name of the property in full_edge_schema()
+  katana::Result<void> unload_edge_property(const std::string& name);
 
   // topology and friends
   const FileView& topology_file_storage() const;

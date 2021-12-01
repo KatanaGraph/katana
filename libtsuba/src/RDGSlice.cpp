@@ -69,6 +69,85 @@ unload_metadata_array(
   return katana::ResultSuccess();
 }
 
+katana::Result<void>
+load_property(
+    const std::string& name, const tsuba::RDGSlice::SliceArg& slice_arg,
+    tsuba::NodeEdge node_edge, tsuba::RDGCore* core) {
+  if (node_edge == tsuba::NodeEdge::kNeitherNodeNorEdge) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "cannot load property that is attached to neither nodes nor edges");
+  }
+
+  auto prop_info = KATANA_CHECKED(
+      node_edge == tsuba::NodeEdge::kNode ? core->find_node_prop_info(name)
+                                          : core->find_edge_prop_info(name));
+  std::vector<tsuba::PropStorageInfo*> property{&prop_info};
+  KATANA_CHECKED(AddPropertySlice(
+      core->rdg_dir(), property,
+      node_edge == tsuba::NodeEdge::kNode ? slice_arg.node_range
+                                          : slice_arg.edge_range,
+      nullptr,
+      [&](const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
+        std::shared_ptr<arrow::Table> prop_table =
+            node_edge == tsuba::NodeEdge::kNode ? core->node_properties()
+                                                : core->edge_properties();
+
+        if (prop_table && prop_table->num_columns() > 0) {
+          prop_table = KATANA_CHECKED(prop_table->AddColumn(
+              prop_table->num_columns(), props->field(0), props->column(0)));
+        } else {
+          prop_table = props;
+        }
+        node_edge == tsuba::NodeEdge::kNode
+            ? core->set_node_properties(std::move(prop_table))
+            : core->set_edge_properties(std::move(prop_table));
+        return katana::ResultSuccess();
+      }));
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+unload_property(
+    const std::string& name, tsuba::NodeEdge node_edge, tsuba::RDGCore* core) {
+  if (node_edge == tsuba::NodeEdge::kNeitherNodeNorEdge) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "cannot unload property that is attached to neither nodes nor edges");
+  }
+
+  auto prop_info = KATANA_CHECKED(
+      node_edge == tsuba::NodeEdge::kNode ? core->find_node_prop_info(name)
+                                          : core->find_edge_prop_info(name));
+  // RDGSlice is read-only
+  KATANA_LOG_ASSERT(!prop_info.IsDirty());
+
+  if (prop_info.IsAbsent()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "cannot unload property that is not loaded");
+  }
+
+  std::shared_ptr<arrow::Table> table = node_edge == tsuba::NodeEdge::kNode
+                                            ? core->node_properties()
+                                            : core->edge_properties();
+
+  // invariant: property names are unique
+  int table_index = table->schema()->GetFieldIndex(name);
+
+  std::shared_ptr<arrow::Table> new_table =
+      KATANA_CHECKED(table->RemoveColumn(table_index));
+
+  prop_info.WasUnloaded();
+
+  node_edge == tsuba::NodeEdge::kNode
+      ? core->set_node_properties(std::move(new_table))
+      : core->set_edge_properties(std::move(new_table));
+
+  return katana::ResultSuccess();
+}
+
 }  // namespace
 
 katana::Result<void>
@@ -404,6 +483,32 @@ tsuba::RDGSlice::unload_local_to_user_id() {
 katana::Result<void>
 tsuba::RDGSlice::remove_local_to_user_id() {
   return unload_local_to_user_id();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::load_node_property(const std::string& name) {
+  KATANA_CHECKED(
+      load_property(name, slice_arg_, tsuba::NodeEdge::kNode, core_.get()));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::unload_node_property(const std::string& name) {
+  KATANA_CHECKED(unload_property(name, tsuba::NodeEdge::kNode, core_.get()));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::load_edge_property(const std::string& name) {
+  KATANA_CHECKED(
+      load_property(name, slice_arg_, tsuba::NodeEdge::kEdge, core_.get()));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::unload_edge_property(const std::string& name) {
+  KATANA_CHECKED(unload_property(name, tsuba::NodeEdge::kEdge, core_.get()));
+  return katana::ResultSuccess();
 }
 
 const std::shared_ptr<arrow::Table>&

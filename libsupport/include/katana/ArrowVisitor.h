@@ -318,6 +318,14 @@ using AcceptAllArrowTypes = std::tuple<
     arrow::LargeStringType, arrow::StructType, arrow::ListType,
     arrow::LargeListType, arrow::NullType>;
 
+using AcceptAllFlatTypes = std::tuple<
+    arrow::Int8Type, arrow::UInt8Type, arrow::Int16Type, arrow::UInt16Type,
+    arrow::Int32Type, arrow::UInt32Type, arrow::Int64Type, arrow::UInt64Type,
+    arrow::FloatType, arrow::DoubleType, arrow::FloatType, arrow::DoubleType,
+    arrow::BooleanType, arrow::Date32Type, arrow::Date64Type, arrow::Time32Type,
+    arrow::Time64Type, arrow::TimestampType, arrow::StringType,
+    arrow::LargeStringType, arrow::NullType>;
+
 template <typename... Args>
 using tuple_cat_t = decltype(std::tuple_cat(std::declval<Args>()...));
 

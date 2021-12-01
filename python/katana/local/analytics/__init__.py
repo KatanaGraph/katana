@@ -26,6 +26,8 @@ Algorithms
 
 .. automodule:: katana.local.analytics._bfs
 
+.. automodule:: katana.local.analytics._cdlp
+
 .. automodule:: katana.local.analytics._connected_components
 
 .. automodule:: katana.local.analytics._independent_set
@@ -60,6 +62,7 @@ from katana.local.analytics._betweenness_centrality import (
     betweenness_centrality,
 )
 from katana.local.analytics._bfs import BfsPlan, BfsStatistics, bfs, bfs_assert_valid
+from katana.local.analytics._cdlp import CdlpPlan, CdlpStatistics, cdlp
 from katana.local.analytics._connected_components import (
     ConnectedComponentsPlan,
     ConnectedComponentsStatistics,

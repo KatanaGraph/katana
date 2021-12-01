@@ -124,6 +124,16 @@ public:
     pg_->rdg_.set_local_to_global_id(std::move(a));
   }
 
+  const tsuba::PropertyCache* prop_cache() const {
+    return pg_->rdg_.prop_cache();
+  }
+
+  tsuba::PropertyCache* prop_cache() { return pg_->rdg_.prop_cache(); }
+
+  void set_prop_cache(tsuba::PropertyCache* prop_cache) {
+    pg_->rdg_.set_prop_cache(prop_cache);
+  }
+
   /// Deallocate and forget about all topology information associated with the
   /// managed PropertyGraph
   Result<void> DropTopologies();

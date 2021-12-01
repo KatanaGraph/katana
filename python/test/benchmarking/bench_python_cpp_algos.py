@@ -423,8 +423,8 @@ def _run_all_gap(args):
         "sssp": RoutinePaths(PathExt("", input["name"]), False),
         "jaccard": RoutinePaths(PathExt("", input["name"]), False),
         "bc": RoutinePaths(PathExt("", input["name"]), False),
-        "louvain": RoutinePaths(PathExt("Symmetric", input["symmetric_input"]), False),
-        "pagerank": RoutinePaths(PathExt("Symmetric", input["transpose_input"]), False),
+        "louvain": RoutinePaths(PathExt("Symmetric", input["name"]), False),
+        "pagerank": RoutinePaths(PathExt("", input["transpose_input"]), False),
     }
     start_time = time.time()
     main_warn = "Graph doesn't exist:"

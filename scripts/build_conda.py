@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -73,7 +72,9 @@ def build_conda(force_conda, render, repo, use_pythonpath, output_folder):
 
     variant_config = {}
     for p in requirements_data.select_packages(["conda", "conda/dev"], OutputFormat.CONDA):
-        variant_config[p.name_for(OutputFormat.CONDA).replace("-", "_")] = [p.version_for(OutputFormat.CONDA)]
+        variant_config[p.name_for(requirements_data.packaging_systems["conda"]).replace("-", "_")] = [
+            p.version_for(requirements_data.packaging_systems["conda"])
+        ]
 
     # Several variant variables have special handling. Remove them. They are set manually as needed.
     for k in ("python", "numpy", "cxx_compiler"):

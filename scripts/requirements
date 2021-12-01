@@ -3,6 +3,11 @@ set -eu
 REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
 
 export PYTHONPATH="$REPO_ROOT/external/katana/scripts:$REPO_ROOT/scripts:${PYTHONPATH:+:${PYTHONPATH}}"
-python3 -m katana_requirements "$@" || \
-  echo "HINT: If there are ImportErrors make sure you have the yaml and packaging python packages" \
-        "installed. (Apt packages: python3-yaml, python3-packaging)"
+
+if python3 -V > /dev/null; then
+  python3 -m katana_requirements "$@"
+else
+  echo "ERROR: requirements requires Python 3.6 or greater. "
+  echo "To install it (and required packages) in conda: conda install python=3 pyyaml packaging"
+  echo "To install it (and required packages) on Ubuntu: apt install python3-yaml python3-packaging"
+fi

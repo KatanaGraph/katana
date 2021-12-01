@@ -110,10 +110,15 @@ apt update
 # Install packages required by the requirements tool
 apt install --yes --quiet python3-yaml python3-packaging
 
+if [ "$VERSION" == "18" ]; then
+  PKG_SYS_SUFFIX="-18.04"
+else
+  PKG_SYS_SUFFIX=""
+fi
 # Use the requirements tool to install apt packages with: apt-get satisfy --allow-downgrades --yes --quiet
-"$REPO_ROOT"/scripts/requirements install -a--allow-downgrades -a--yes -a--quiet -l apt -l apt/dev -f apt
+"$REPO_ROOT"/scripts/requirements install --arg=--allow-downgrades --arg=--yes --arg=--quiet --label apt --label apt/dev --packaging-system "apt$PKG_SYS_SUFFIX"
 # Use the requirements tool to install pip packages with: python3 -m pip --upgrade
-run_as_original_user "$REPO_ROOT"/scripts/requirements install -l pip -l pip/dev -f pip
+run_as_original_user "$REPO_ROOT"/scripts/requirements install --label pip --label pip/dev --packaging-system "pip$PKG_SYS_SUFFIX"
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
@@ -122,7 +127,7 @@ fi
 
 # --no-binary is required to cause the pip package to use the debian package's native binaries.
 # https://lists.apache.org/thread.html/r4d2e768c330b6545649e066a1d9d1846ca7a3ea1d97e265205211166%40%3Cdev.arrow.apache.org%3E
-PYARROW_WITH_PARQUET=1 run_as_original_user "$REPO_ROOT"/scripts/requirements install -a--upgrade -a--no-binary -a:all:  -l deb/pip-no-binary -f pip
+PYARROW_WITH_PARQUET=1 run_as_original_user "$REPO_ROOT"/scripts/requirements install --arg=--upgrade --arg=--no-binary -apyarrow  --label deb/pip-no-binary --packaging-system pip
 
 # Maybe install CUDA
 if [ -n "${INSTALL_CUDA}" ]; then
@@ -130,4 +135,8 @@ if [ -n "${INSTALL_CUDA}" ]; then
   curl https://developer.download.nvidia.com/compute/cuda/11.5.0/local_installers/cuda_11.5.0_495.29.05_linux.run \
     --output /tmp/cuda_11.5.0_495.29.05_linux.run
   sh /tmp/cuda_11.5.0_495.29.05_linux.run --silent --toolkit
+fi
+
+if [ "$VERSION" == "18" ]; then
+  echo "WARNING: Katana Python bindings will not to work fully due to an incorrect installation of numba. You may be able to get it to install manually."
 fi

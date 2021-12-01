@@ -285,6 +285,13 @@ public:
 
   void set_view_name(const std::string& v) { view_type_ = v; }
 
+  const tsuba::PropertyCache* prop_cache() const { return prop_cache_; }
+  tsuba::PropertyCache* prop_cache() { return prop_cache_; }
+
+  void set_prop_cache(tsuba::PropertyCache* prop_cache) {
+    prop_cache_ = prop_cache;
+  }
+
 private:
   std::string view_type_;
   RDG(std::unique_ptr<RDGCore>&& core);

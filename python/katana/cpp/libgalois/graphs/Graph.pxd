@@ -20,6 +20,10 @@ cdef extern from "tsuba/RDG.h" namespace "tsuba" nogil:
         optional[vector[string]] node_properties
         optional[vector[string]] edge_properties
 
+cdef extern from "tsuba/TxnContext.h" namespace "tsuba" nogil:
+    cdef cppclass TxnContext:
+        TxnContext()
+
 
 # Omit the exception specifications here to
 # allow returning lvalues.
@@ -168,8 +172,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
         Result[void] AddNodeProperties(shared_ptr[CTable])
         Result[void] AddEdgeProperties(shared_ptr[CTable])
-        Result[void] UpsertNodeProperties(shared_ptr[CTable])
-        Result[void] UpsertEdgeProperties(shared_ptr[CTable])
+        Result[void] UpsertNodeProperties(shared_ptr[CTable], TxnContext*)
+        Result[void] UpsertEdgeProperties(shared_ptr[CTable], TxnContext*)
 
         Result[void] RemoveNodeProperty(int)
         Result[void] RemoveNodeProperty(const string&)

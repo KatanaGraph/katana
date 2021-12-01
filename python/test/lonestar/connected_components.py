@@ -19,7 +19,7 @@ def initialize_cc_pull_operator(comp_current: np.ndarray, nid):
 
 @do_all_operator()
 def cc_pull_topo_operator(graph: Graph, changed, comp_current: np.ndarray, nid):
-    for ii in graph.edges(nid):
+    for ii in graph.edge_ids(nid):
         dst = graph.get_edge_dest(ii)
         # Pull the minimum component from your neighbors
         if comp_current[nid] > comp_current[dst]:
@@ -73,7 +73,7 @@ def cc_push_topo_operator(graph: Graph, changed, comp_current: np.ndarray, comp_
         comp_old[nid] = comp_current[nid]
         # Indicates that update happened
         changed.update(True)
-        for ii in graph.edges(nid):
+        for ii in graph.edge_ids(nid):
             dst = graph.get_edge_dest(ii)
             new_comp = comp_current[nid]
             # Push the minimum component to your neighbors

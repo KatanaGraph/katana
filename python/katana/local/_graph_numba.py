@@ -27,7 +27,7 @@ def overload_Graph_nodes(self):
     return impl
 
 
-@overload_method(Graph_numba_wrapper.Type, "edges")
+@overload_method(Graph_numba_wrapper.Type, "edge_ids")
 def overload_Graph_edges(self, n):
     if isinstance(n, types.Integer) and not n.signed:
         _ = self

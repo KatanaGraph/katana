@@ -307,6 +307,9 @@ public:
   const std::vector<PropStorageInfo>& part_prop_info_list() const {
     return part_prop_info_list_;
   }
+  std::vector<PropStorageInfo>& part_prop_info_list() {
+    return part_prop_info_list_;
+  }
   void set_part_properties(std::vector<PropStorageInfo>&& part_prop_info_list) {
     part_prop_info_list_ = std::move(part_prop_info_list);
   }

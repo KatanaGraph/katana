@@ -10,9 +10,10 @@
 namespace tsuba {
 
 katana::Result<tsuba::RDGPrefix>
-RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
-  auto part_header =
-      KATANA_CHECKED(RDGPartHeader::Make(manifest.PartitionFileName(0)));
+RDGPrefix::DoMakePrefix(
+    const tsuba::RDGManifest& manifest, uint32_t partition_id) {
+  auto part_header = KATANA_CHECKED(
+      RDGPartHeader::Make(manifest.PartitionFileName(partition_id)));
 
   if (part_header.csr_topology_path().empty()) {
     return RDGPrefix{};
@@ -36,14 +37,8 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
 }
 
 katana::Result<tsuba::RDGPrefix>
-RDGPrefix::Make(RDGHandle handle) {
-  if (handle.impl_->rdg_manifest().num_hosts() != 1) {
-    return KATANA_ERROR(
-        ErrorCode::NotImplemented,
-        "cannot construct RDGPrefix for partitioned graph");
-  }
-
-  return DoMakePrefix(handle.impl_->rdg_manifest());
+RDGPrefix::Make(RDGHandle handle, uint32_t partition_id) {
+  return DoMakePrefix(handle.impl_->rdg_manifest(), partition_id);
 }
 
 }  // namespace tsuba

@@ -44,7 +44,7 @@ def get_inputs_directory(*, invalidate=False, rel_path=None) -> Path:
             inputs_dir.unlink()
     inputs_dir.mkdir(parents=True, exist_ok=True)
     fn, _headers = urllib.request.urlretrieve(
-        "https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-v28.tar.gz"
+        "https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-v30.tar.gz"
     )
     try:
         with tarfile.open(fn) as tar:

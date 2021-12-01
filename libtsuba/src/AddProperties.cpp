@@ -4,8 +4,10 @@
 #include <optional>
 
 #include <arrow/chunked_array.h>
+#include <arrow/type_fwd.h>
 
 #include "katana/ArrowInterchange.h"
+#include "katana/Logging.h"
 #include "katana/ProgressTracer.h"
 #include "katana/Result.h"
 #include "katana/Time.h"
@@ -123,6 +125,10 @@ tsuba::AddProperties(
           KATANA_WARN_ONCE(
               "deprecated graph format; type is uint8: {}",
               props->field(0)->name());
+          KATANA_LOG_VASSERT(
+              !rdg->IsEntityTypeIDsOutsideProperties(),
+              "storage_format_version >= 2 RDG may not have uint8 type "
+              "properties");
         } else {
           tracer.GetActiveSpan().Log(
               "property inserted into cache",
@@ -142,6 +148,12 @@ tsuba::AddProperties(
       KATANA_CHECKED_CONTEXT(
           add_fn(props), "adding {}", std::quoted(prop->name()));
       prop->WasLoaded(props->field(0)->type());
+      if (prop->type()->Equals(arrow::uint8())) {
+        KATANA_LOG_VASSERT(
+            !rdg->IsEntityTypeIDsOutsideProperties(),
+            "storage_format_version >= 2 RDG may not have uint8 type "
+            "properties");
+      }
       return katana::CopyableResultSuccess();
     };
     if (grp) {

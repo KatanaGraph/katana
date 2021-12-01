@@ -83,7 +83,11 @@ private:
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
 
-  GraphTopology topology_;
+  // Users of PropertyGraph rely on the topology to always be present
+  // even if it is empty. This is a temporary solution, since this variable
+  // is going away.
+  std::shared_ptr<katana::GraphTopology> topology_ =
+      std::make_shared<katana::GraphTopology>();
 
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;
@@ -170,7 +174,7 @@ public:
     Result<void> (PropertyGraph::*add_properties_fn)(
         const std::shared_ptr<arrow::Table>& props);
     Result<void> (PropertyGraph::*upsert_properties_fn)(
-        const std::shared_ptr<arrow::Table>& props);
+        const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*remove_property_int)(int i);
     Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
     Result<void> (PropertyGraph::*ensure_loaded_property_fn)(
@@ -203,8 +207,9 @@ public:
     }
 
     Result<void> UpsertProperties(
-        const std::shared_ptr<arrow::Table>& props) const {
-      return (g->*upsert_properties_fn)(props);
+        const std::shared_ptr<arrow::Table>& props,
+        tsuba::TxnContext* txn_ctx) const {
+      return (g->*upsert_properties_fn)(props, txn_ctx);
     }
 
     Result<void> RemoveProperty(int i) const {
@@ -234,7 +239,7 @@ public:
       EntityTypeManager&& edge_type_manager) noexcept
       : rdg_(std::move(rdg)),
         file_(std::move(rdg_file)),
-        topology_(std::move(topo)),
+        topology_(std::make_shared<GraphTopology>(std::move(topo))),
         node_entity_type_manager_(std::move(node_type_manager)),
         edge_entity_type_manager_(std::move(edge_type_manager)),
         node_entity_type_ids_(std::move(node_entity_type_ids)),
@@ -649,7 +654,7 @@ public:
     return MakeResult(std::move(array));
   }
 
-  const GraphTopology& topology() const noexcept { return topology_; }
+  const GraphTopology& topology() const noexcept { return *topology_; }
 
   const EntityTypeManager& node_entity_type_manager() const noexcept {
     return node_entity_type_manager_;
@@ -664,9 +669,11 @@ public:
   /// Add Edge properties that do not exist in the current graph
   Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& props);
   /// If property name exists, replace it, otherwise insert it
-  Result<void> UpsertNodeProperties(const std::shared_ptr<arrow::Table>& props);
+  Result<void> UpsertNodeProperties(
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
   /// If property name exists, replace it, otherwise insert it
-  Result<void> UpsertEdgeProperties(const std::shared_ptr<arrow::Table>& props);
+  Result<void> UpsertEdgeProperties(
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   Result<void> RemoveNodeProperty(int i);
   Result<void> RemoveNodeProperty(const std::string& prop_name);

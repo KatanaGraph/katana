@@ -153,6 +153,10 @@ katana::PropertyGraph::Make(
   katana::GraphTopology topo = katana::GraphTopology(
       csr->adj_indices(), csr->num_nodes(), csr->dests(), csr->num_edges());
 
+  // The GraphTopology constructor copies all of the required topology data.
+  // Clean up the RDGTopologies memory
+  KATANA_CHECKED(csr->unbind_file_storage());
+
   if (rdg.IsEntityTypeIDsOutsideProperties()) {
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 
@@ -343,9 +347,13 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
   node_entity_type_manager_ = EntityTypeManager{};
   node_entity_type_ids_ = EntityTypeIDArray{};
   node_entity_type_ids_.allocateInterleaved(num_nodes());
-  KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
-      num_nodes(), rdg_.node_properties(), &node_entity_type_manager_,
-      &node_entity_type_ids_));
+  auto node_props_to_remove =
+      KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
+          num_nodes(), rdg_.node_properties(), &node_entity_type_manager_,
+          &node_entity_type_ids_));
+  for (const auto& node_prop : node_props_to_remove) {
+    KATANA_CHECKED(RemoveNodeProperty(node_prop));
+  }
 
   int64_t total_num_edge_props = full_edge_schema()->num_fields();
   for (int64_t i = 0; i < total_num_edge_props; ++i) {
@@ -359,9 +367,13 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
   edge_entity_type_manager_ = EntityTypeManager{};
   edge_entity_type_ids_ = EntityTypeIDArray{};
   edge_entity_type_ids_.allocateInterleaved(num_edges());
-  KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
-      num_edges(), rdg_.edge_properties(), &edge_entity_type_manager_,
-      &edge_entity_type_ids_));
+  auto edge_props_to_remove =
+      KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
+          num_edges(), rdg_.edge_properties(), &edge_entity_type_manager_,
+          &edge_entity_type_ids_));
+  for (const auto& edge_prop : edge_props_to_remove) {
+    KATANA_CHECKED(RemoveEdgeProperty(edge_prop));
+  }
 
   return katana::ResultSuccess();
 }
@@ -753,7 +765,7 @@ katana::PropertyGraph::AddNodeProperties(
 
 katana::Result<void>
 katana::PropertyGraph::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("upsert empty node prop table");
     return ResultSuccess();
@@ -763,7 +775,7 @@ katana::PropertyGraph::UpsertNodeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().num_nodes(), props->num_rows());
   }
-  return rdg_.UpsertNodeProperties(props);
+  return rdg_.UpsertNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
@@ -827,7 +839,7 @@ katana::PropertyGraph::AddEdgeProperties(
 
 katana::Result<void>
 katana::PropertyGraph::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("upsert empty edge prop table");
     return ResultSuccess();
@@ -837,7 +849,7 @@ katana::PropertyGraph::UpsertEdgeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().num_edges(), props->num_rows());
   }
-  return rdg_.UpsertEdgeProperties(props);
+  return rdg_.UpsertEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>

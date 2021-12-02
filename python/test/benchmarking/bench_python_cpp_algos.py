@@ -174,8 +174,8 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
     time_data = {}
     func_arg_mapping = {
         "cdlp": Routine(
-            RoutineFunc(None, analytics.cdlp, analytics.CdlpStatistics,),
-            RoutineArgs(None, cdlp_args, cdlp_args, cdlp_args),
+            RoutineFunc(None, analytics.cdlp, None, analytics.CdlpStatistics,),
+            RoutineArgs(None, cdlp_args, None, cdlp_args),
         ),
         "cc": Routine(
             RoutineFunc(

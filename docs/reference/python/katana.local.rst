@@ -19,4 +19,3 @@ as part of a real data science pipeline that does not require scale out.
    katana.local.import_data
    katana.local.atomic
    katana.local.datastructures
-   katana.local.timer

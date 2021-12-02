@@ -20,8 +20,8 @@
 #include "katana/SharedMemSys.h"
 
 #include "katana/CommBackend.h"
-#include "katana/GaloisRuntime.h"
 #include "katana/Galois.h"
+#include "katana/GaloisRuntime.h"
 #include "katana/Logging.h"
 #include "katana/Plugin.h"
 #include "katana/TextTracer.h"

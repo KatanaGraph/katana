@@ -2,8 +2,7 @@
 Performance Timers
 ==================
 
-This page lists all of the available performance timers available in the Katana
-module.
+This page lists all of the performance timers available in the Katana module.
 
 .. automodule:: katana.timer
    :members:

@@ -163,6 +163,7 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
     alpha = 0.85
     k = 10
 
+    cdlp_args = [graph, property_name]
     cc_bc_args = [graph, property_name]
     k_args = [graph, k, property_name]
     jaccard_args = [graph, compare_node, property_name]

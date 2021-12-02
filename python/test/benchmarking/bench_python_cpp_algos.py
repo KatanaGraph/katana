@@ -24,7 +24,7 @@ RoutineArgs = namedtuple("RoutineArgs", ["plan", "routine", "validation", "stats
 Routine = namedtuple("Routine", ["func", "args"])
 OutputTuple = namedtuple("OutputTuple", ["write_success", "time_write_data", "analytics_write_data"])
 
-APPS = ["bfs", "sssp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain", "all"]
+APPS = ["bfs", "sssp", "cdlp", "cc", "bc", "pagerank", "tc", "jaccard", "kcore", "louvain", "all"]
 GRAPHS = ["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand", "rmat15"]
 
 
@@ -172,6 +172,14 @@ def default_run(name, graph, input_args, num_sources=None, source_node_file=""):
     pagerank_args = [graph, property_name]
     time_data = {}
     func_arg_mapping = {
+        "cdlp": Routine(
+            RoutineFunc(
+                None,
+                analytics.cdlp,
+                analytics.CdlpStatistics,
+            ),
+            RoutineArgs(None, cdlp_args, cdlp_args, cdlp_args),
+        ),
         "cc": Routine(
             RoutineFunc(
                 None,
@@ -419,6 +427,7 @@ def _run_all_gap(args):
     # For a minor optimization group the routines by their edge_load True or False
     routine_name_args_mappings = {
         "tc": RoutinePaths(PathExt("Symmetric clean", input["symmetric_clean_input"]), True),
+        "cdlp": RoutinePaths(PathExt("", input["name"]), True),
         "cc": RoutinePaths(PathExt("Symmetric", input["symmetric_input"]), True),
         "kcore": RoutinePaths(PathExt("Symmetric", input["name"]), True),
         "bfs": RoutinePaths(PathExt("", input["name"]), False),

@@ -27,6 +27,7 @@ from katana.local.analytics import (
     betweenness_centrality,
     bfs,
     bfs_assert_valid,
+    cdlp,
     connected_components,
     connected_components_assert_valid,
     find_edge_sorted_by_dest,
@@ -286,6 +287,19 @@ def test_independent_set():
     IndependentSetStatistics(graph, "output2")
 
     independent_set_assert_valid(graph, "output2")
+
+
+def test_cdlp():
+    graph = Graph(get_input("propertygraphs/rmat10"))
+
+    connected_components(graph, "output")
+
+    stats = ConnectedComponentsStatistics(graph, "output")
+
+    assert stats.total_communities == 69
+    assert stats.total_non_trivial_communities == 1
+    assert stats.largest_community_size == 956
+    assert stats.largest_community_ratio == approx(0.933594)
 
 
 def test_connected_components():

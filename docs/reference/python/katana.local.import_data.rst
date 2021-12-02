@@ -1,5 +1,5 @@
 ====================
-Importing Graph Data
+Import Data
 ====================
 
 .. automodule:: katana.local.import_data

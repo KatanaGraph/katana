@@ -20,7 +20,7 @@
 #include "katana/SharedMemSys.h"
 
 #include "katana/CommBackend.h"
-#include "katana/GaloisRT.h"
+#include "katana/GaloisRuntime.h"
 #include "katana/Galois.h"
 #include "katana/Logging.h"
 #include "katana/Plugin.h"
@@ -35,7 +35,7 @@ katana::NullCommBackend comm_backend;
 }  // namespace
 
 struct katana::SharedMemSys::Impl {
-  katana::GaloisRT galois_rt;
+  katana::GaloisRuntime galois_rt;
 };
 
 katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)

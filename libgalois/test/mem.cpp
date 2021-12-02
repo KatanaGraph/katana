@@ -33,7 +33,7 @@ struct element {
 
 int
 main() {
-  katana::GaloisRT Katana_runtime;
+  katana::GaloisRuntime Katana_runtime;
   unsigned baseAllocSize = SystemHeap::AllocSize;
 
   FixedSizeAllocator<element> falloc;

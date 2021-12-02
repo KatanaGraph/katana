@@ -20,7 +20,7 @@
 #ifndef KATANA_LIBGALOIS_KATANA_GALOIS_H_
 #define KATANA_LIBGALOIS_KATANA_GALOIS_H_
 
-#include "katana/GaloisRT.h"
+#include "katana/GaloisRuntime.h"
 #include "katana/Loops.h"
 #include "katana/Mem.h"
 #include "katana/config.h"

@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "katana/GaloisRT.h"
+#include "katana/GaloisRuntime.h"
 
 #include <memory>
 
@@ -205,7 +205,7 @@ public:
 
 }  // namespace
 
-struct katana::GaloisRT::Impl {
+struct katana::GaloisRuntime::Impl {
   struct Dependents {
     LocalTerminationDetection term;
     std::unique_ptr<Barrier> barrier;
@@ -217,7 +217,7 @@ struct katana::GaloisRT::Impl {
   std::unique_ptr<Dependents> deps;
 };
 
-katana::GaloisRT::GaloisRT() : impl_(std::make_unique<Impl>()) {
+katana::GaloisRuntime::GaloisRuntime() : impl_(std::make_unique<Impl>()) {
   internal::SetThreadPool(&impl_->thread_pool);
 
   // The thread pool must be initialized first because other substrate classes
@@ -232,7 +232,7 @@ katana::GaloisRT::GaloisRT() : impl_(std::make_unique<Impl>()) {
   katana::internal::setSysStatManager(&impl_->deps->stat_manager);
 }
 
-katana::GaloisRT::~GaloisRT() {
+katana::GaloisRuntime::~GaloisRuntime() {
   katana::PrintStats();
   katana::internal::setSysStatManager(nullptr);
   internal::setPagePoolState(nullptr);

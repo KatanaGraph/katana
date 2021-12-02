@@ -26,26 +26,26 @@
 
 namespace katana {
 
-/// A GaloisRT represents global initialization required for the shared
+/// A GaloisRuntime represents global initialization required for the shared
 /// memory subsystem, i.e., thread pools and barriers. As a side-effect of
 /// construction, this class sets global internal state.
 ///
 /// Data structures that require per-thread allocation typically ask for the
 /// thread pool. If their construction is not guaranteed to happen after the
-/// construction of a GaloisRT, initialization races can occur.
-class KATANA_EXPORT GaloisRT {
+/// construction of a GaloisRuntime, initialization races can occur.
+class KATANA_EXPORT GaloisRuntime {
   struct Impl;
   std::unique_ptr<Impl> impl_;
 
 public:
-  GaloisRT();
-  ~GaloisRT();
+  GaloisRuntime();
+  ~GaloisRuntime();
 
-  GaloisRT(const GaloisRT&) = delete;
-  GaloisRT& operator=(const GaloisRT&) = delete;
+  GaloisRuntime(const GaloisRuntime&) = delete;
+  GaloisRuntime& operator=(const GaloisRuntime&) = delete;
 
-  GaloisRT(GaloisRT&&) = delete;
-  GaloisRT& operator=(GaloisRT&&) = delete;
+  GaloisRuntime(GaloisRuntime&&) = delete;
+  GaloisRuntime& operator=(GaloisRuntime&&) = delete;
 };
 
 }  // namespace katana

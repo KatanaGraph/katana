@@ -73,7 +73,7 @@ vecSumParallel(V& vec) {
 
 int
 main(int argc, char* argv[]) {
-  katana::GaloisRT G;
+  katana::GaloisRuntime G;
 
   unsigned long long numThreads;
   if (argc == 1) {

@@ -88,7 +88,7 @@ test_accum() {
 
 int
 main() {
-  katana::GaloisRT sys;
+  katana::GaloisRuntime sys;
   katana::setActiveThreads(2);
 
   static_assert(

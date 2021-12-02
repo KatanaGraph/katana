@@ -77,7 +77,7 @@ test(std::unique_ptr<katana::Barrier> b) {
 
 int
 main(int argc, char** argv) {
-  katana::GaloisRT Katana_runtime;
+  katana::GaloisRuntime Katana_runtime;
   if (argc > 1)
     iter = atoi(argv[1]);
   else

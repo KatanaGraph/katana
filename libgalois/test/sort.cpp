@@ -166,7 +166,7 @@ do_accumulate() {
 
 int
 main(int argc, char** argv) {
-  katana::GaloisRT Katana_runtime;
+  katana::GaloisRuntime Katana_runtime;
   if (argc > 1)
     vectorSize = atoi(argv[1]);
   if (vectorSize <= 0)

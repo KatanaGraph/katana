@@ -16,7 +16,7 @@ set(sources
         src/Context.cpp
         src/Deterministic.cpp
         src/DynamicBitset.cpp
-        src/GaloisRT.cpp
+        src/GaloisRuntime.cpp
         src/gIO.cpp
         src/HWTopo.cpp
         src/Mem.cpp

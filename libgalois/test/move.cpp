@@ -91,7 +91,7 @@ testContainerC(T&& x, U&& y) {
 
 int
 main() {
-  katana::GaloisRT Katana_runtime;
+  katana::GaloisRuntime Katana_runtime;
   // test(katana::FixedSizeBag<MoveOnly>());
   // test(katana::ConcurrentFixedSizeBag<MoveOnly>());
   // test(katana::FixedSizeRing<MoveOnly>());

@@ -12,6 +12,7 @@ from katana.local.analytics import (
     BetweennessCentralityPlan,
     BetweennessCentralityStatistics,
     BfsStatistics,
+    CdlpStatistics,
     ConnectedComponentsStatistics,
     IndependentSetPlan,
     IndependentSetStatistics,

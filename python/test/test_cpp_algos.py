@@ -292,9 +292,9 @@ def test_independent_set():
 def test_cdlp():
     graph = Graph(get_input("propertygraphs/rmat10"))
 
-    connected_components(graph, "output")
+    cdlp(graph, "output")
 
-    stats = ConnectedComponentsStatistics(graph, "output")
+    stats = CdlpStatistics(graph, "output")
 
     assert stats.total_communities == 69
     assert stats.total_non_trivial_communities == 1

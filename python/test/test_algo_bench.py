@@ -155,6 +155,7 @@ def test_cdlp():
     assert stats.largest_community_size == 29352
     assert stats.largest_community_ratio == approx(0.895752)
 
+
 def test_connected_components():
     arguments = get_default_args()
     arguments["app"] = "cc"

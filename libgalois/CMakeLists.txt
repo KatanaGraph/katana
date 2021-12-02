@@ -55,6 +55,7 @@ set(sources
         src/analytics/betweenness_centrality/level.cpp
         src/analytics/betweenness_centrality/outer.cpp
         src/analytics/bfs/bfs.cpp
+        src/analytics/cdlp/cdlp.cpp
         src/analytics/connected_components/connected_components.cpp
         src/analytics/independent_set/independent_set.cpp
         src/analytics/jaccard/jaccard.cpp

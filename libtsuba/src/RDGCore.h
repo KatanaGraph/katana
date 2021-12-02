@@ -198,6 +198,13 @@ public:
     part_header_ = std::move(part_header);
   }
 
+  katana::Result<PropStorageInfo> find_node_prop_info(
+      const std::string& name) const;
+  katana::Result<PropStorageInfo> find_edge_prop_info(
+      const std::string& name) const;
+  katana::Result<PropStorageInfo> find_part_prop_info(
+      const std::string& name) const;
+
   const RDGTopologyManager& topology_manager() const {
     return topology_manager_;
   }

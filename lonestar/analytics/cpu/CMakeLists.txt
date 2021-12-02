@@ -1,5 +1,6 @@
 add_subdirectory(betweennesscentrality)
 add_subdirectory(bfs)
+add_subdirectory(cdlp)
 add_subdirectory(bipart)
 add_subdirectory(spanningtree)
 add_subdirectory(louvain_clustering)

@@ -122,6 +122,21 @@ EnsureTypeLoaded(const katana::Uri& rdg_dir, tsuba::PropStorageInfo* psi) {
   return katana::ResultSuccess();
 }
 
+katana::Result<tsuba::PropStorageInfo>
+find_prop_info(
+    const std::string& name,
+    const std::vector<tsuba::PropStorageInfo>& prop_infos) {
+  auto it = std::find_if(
+      prop_infos.begin(), prop_infos.end(),
+      [&name](const tsuba::PropStorageInfo& psi) {
+        return psi.name() == name;
+      });
+  if (it == prop_infos.end()) {
+    return tsuba::ErrorCode::PropertyNotFound;
+  }
+
+  return *it;
+}
 }  // namespace
 
 namespace tsuba {
@@ -258,6 +273,19 @@ RDGCore::RemoveEdgeProperty(int i) {
   edge_properties_ = KATANA_CHECKED(edge_properties_->RemoveColumn(i));
 
   return part_header_.RemoveEdgeProperty(field->name());
+}
+
+katana::Result<PropStorageInfo>
+RDGCore::find_node_prop_info(const std::string& name) const {
+  return find_prop_info(name, part_header().node_prop_info_list());
+}
+katana::Result<PropStorageInfo>
+RDGCore::find_edge_prop_info(const std::string& name) const {
+  return find_prop_info(name, part_header().edge_prop_info_list());
+}
+katana::Result<PropStorageInfo>
+RDGCore::find_part_prop_info(const std::string& name) const {
+  return find_prop_info(name, part_header().part_prop_info_list());
 }
 
 }  // namespace tsuba

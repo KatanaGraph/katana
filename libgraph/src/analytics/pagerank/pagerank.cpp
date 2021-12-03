@@ -22,17 +22,18 @@
 
 katana::Result<void>
 katana::analytics::Pagerank(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
   switch (plan.algorithm()) {
   case PagerankPlan::kPullResidual:
-    return PagerankPullResidual(pg, output_property_name, plan);
+    return PagerankPullResidual(txn_ctx, pg, output_property_name, plan);
   case PagerankPlan::kPullTopological:
-    return PagerankPullTopological(pg, output_property_name, plan);
+    return PagerankPullTopological(txn_ctx, pg, output_property_name, plan);
   case PagerankPlan::kPushAsynchronous:
-    return PagerankPushAsynchronous(pg, output_property_name, plan);
+    return PagerankPushAsynchronous(txn_ctx, pg, output_property_name, plan);
   case PagerankPlan::kPushSynchronous:
-    return PagerankPushSynchronous(pg, output_property_name, plan);
+    return PagerankPushSynchronous(txn_ctx, pg, output_property_name, plan);
   default:
     return katana::ErrorCode::InvalidArgument;
   }

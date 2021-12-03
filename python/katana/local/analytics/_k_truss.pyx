@@ -24,10 +24,11 @@ The k-Truss is a maximal connected subgraph in which all edges are part of at le
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -51,7 +52,7 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
         @staticmethod
         _KTrussPlan BspCoreThenTruss()
 
-    Result[void] KTruss(_PropertyGraph* pg, uint32_t k_truss_number,string output_property_name, _KTrussPlan plan)
+    Result[void] KTruss(CTxnContext* txn_ctx, _PropertyGraph* pg, uint32_t k_truss_number, string output_property_name, _KTrussPlan plan)
 
     Result[void] KTrussAssertValid(_PropertyGraph* pg, uint32_t k_truss_number,
                                    string output_property_name)
@@ -121,7 +122,7 @@ cdef class KTrussPlan(Plan):
         return KTrussPlan.make(_KTrussPlan.BspCoreThenTruss())
 
 
-def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan()) -> int:
+def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan(), TxnContext txn_ctx=None) -> int:
     """
     Compute the k-truss for pg. `pg` must be symmetric.
 
@@ -133,6 +134,7 @@ def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussP
         This property must not already exist.
     :type plan: KTrussPlan
     :param plan: The execution plan to use.
+    :param txn_ctx: The tranaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -150,8 +152,9 @@ def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussP
 
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
+    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
     with nogil:
-        v = handle_result_void(KTruss(pg.underlying_property_graph(),k_truss_number,output_property_name_str, plan.underlying_))
+        v = handle_result_void(KTruss(&txn_ctx._txn_ctx, pg.underlying_property_graph(),k_truss_number,output_property_name_str, plan.underlying_))
     return v
 
 

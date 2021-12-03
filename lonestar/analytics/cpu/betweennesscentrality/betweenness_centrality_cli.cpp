@@ -145,8 +145,9 @@ main(int argc, char** argv) {
 
   std::cout << "Running betweenness-centrality on " << num_sources
             << " sources\n";
+  tsuba::TxnContext txn_ctx;
   if (auto r = BetweennessCentrality(
-          pg.get(), "betweenness_centrality", sources, plan);
+          &txn_ctx, pg.get(), "betweenness_centrality", sources, plan);
       !r) {
     KATANA_LOG_FATAL("Couldn't run algorithm: {}", r.error());
   }

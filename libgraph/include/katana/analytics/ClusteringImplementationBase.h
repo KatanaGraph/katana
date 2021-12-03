@@ -436,8 +436,8 @@ struct ClusteringImplementationBase {
  * property graph, pg_from to pg_to.
  */
   static katana::Result<void> CopyEdgeProperty(
-      katana::PropertyGraph* pfg_from, katana::PropertyGraph* pfg_to,
-      const std::string& edge_property_name,
+      tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pfg_from,
+      katana::PropertyGraph* pfg_to, const std::string& edge_property_name,
       const std::string& new_edge_property_name) {
     // Remove the existing edge property
     if (pfg_to->HasEdgeProperty(new_edge_property_name)) {
@@ -459,7 +459,7 @@ struct ClusteringImplementationBase {
         arrow::field((new_edge_property_name), std::make_shared<ArrowType>()));
     columns.emplace_back(edge_property);
     auto edge_data_table = arrow::Table::Make(arrow::schema(fields), columns);
-    if (auto r = pfg_to->AddEdgeProperties(edge_data_table); !r) {
+    if (auto r = pfg_to->AddEdgeProperties(edge_data_table, txn_ctx); !r) {
       return r.error();
     }
     return katana::ResultSuccess();
@@ -481,7 +481,8 @@ struct ClusteringImplementationBase {
       const Graph& graph, katana::PropertyGraph* pfg_mutable,
       uint64_t num_unique_clusters,
       const std::vector<std::string>& temp_node_property_names,
-      const std::vector<std::string>& temp_edge_property_names) {
+      const std::vector<std::string>& temp_edge_property_names,
+      tsuba::TxnContext* txn_ctx) {
     using GNode = typename Graph::Node;
 
     katana::StatTimer TimerGraphBuild("Timer_Graph_build");
@@ -618,13 +619,13 @@ struct ClusteringImplementationBase {
         std::move(pfg_next_res.value());
 
     if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-            pfg_next.get(), temp_node_property_names);
+            txn_ctx, pfg_next.get(), temp_node_property_names);
         !result) {
       return result.error();
     }
 
     if (auto result = katana::analytics::ConstructEdgeProperties<EdgeData>(
-            pfg_next.get(), temp_edge_property_names);
+            txn_ctx, pfg_next.get(), temp_edge_property_names);
         !result) {
       return result.error();
     }

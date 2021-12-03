@@ -48,7 +48,7 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> KCore(
-    PropertyGraph* pg, uint32_t k_core_number,
+    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, uint32_t k_core_number,
     const std::string& output_property_name, KCorePlan plan = KCorePlan());
 
 KATANA_EXPORT Result<void> KCoreAssertValid(

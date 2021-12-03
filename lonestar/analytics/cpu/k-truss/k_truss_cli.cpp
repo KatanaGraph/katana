@@ -110,7 +110,9 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm");
   }
 
-  if (auto r = KTruss(pg.get(), kTrussNumber, "edge-alive", plan); !r) {
+  tsuba::TxnContext txn_ctx;
+  if (auto r = KTruss(&txn_ctx, pg.get(), kTrussNumber, "edge-alive", plan);
+      !r) {
     KATANA_LOG_FATAL("Failed to compute k-truss: {}", r.error());
   }
 

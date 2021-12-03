@@ -22,10 +22,11 @@ from libc.stdint cimport uint32_t
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -53,7 +54,7 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
 
     BetweennessCentralitySources kBetweennessCentralityAllNodes;
 
-    Result[void] BetweennessCentrality(_PropertyGraph* pg, string output_property_name, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
+    Result[void] BetweennessCentrality(CTxnContext* txn_ctx, _PropertyGraph* pg, string output_property_name, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
 
     # std_result[void] BetweennessCentralityAssertValid(Graph* pg, string output_property_name)
 
@@ -129,7 +130,8 @@ cdef class BetweennessCentralityPlan(Plan):
 
 
 def betweenness_centrality(Graph pg, str output_property_name, sources = None,
-             BetweennessCentralityPlan plan = BetweennessCentralityPlan()):
+             BetweennessCentralityPlan plan = BetweennessCentralityPlan(),
+             TxnContext txn_ctx=None):
     """
     Betweenness centrality measures the extent to which a vertex lies on paths between other vertices.
     Vertices with high betweenness may have considerable influence within a network by virtue of their control over information passing between others.
@@ -142,6 +144,7 @@ def betweenness_centrality(Graph pg, str output_property_name, sources = None,
     :param sources: Only process some sources, producing an approximate betweenness centrality. If this is a list of node IDs process those source nodes; if this is an int process that number of source nodes.
     :type plan: BetweennessCentralityPlan
     :param plan: The execution plan to use.
+    :param txn_ctx: The tranaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -163,6 +166,7 @@ def betweenness_centrality(Graph pg, str output_property_name, sources = None,
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
+    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
     if sources is None:
         c_sources = kBetweennessCentralityAllNodes
     elif isinstance(sources, list) or isinstance(sources, set) or \
@@ -171,8 +175,7 @@ def betweenness_centrality(Graph pg, str output_property_name, sources = None,
     else:
         c_sources = BetweennessCentralitySources_from_int(int(sources))
     with nogil:
-        handle_result_void(BetweennessCentrality(pg.underlying_property_graph(), output_property_name_cstr,
-                                                 c_sources, plan.underlying_))
+        handle_result_void(BetweennessCentrality(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_cstr, c_sources, plan.underlying_))
 
 
 cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatistics(Result[_BetweennessCentralityStatistics] res) nogil except *:

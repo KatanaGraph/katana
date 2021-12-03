@@ -16,9 +16,10 @@ Local Clustering Coefficient
 from libcpp cimport bool
 from libcpp.string cimport string
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_void
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -57,7 +58,7 @@ cdef extern from "katana/analytics/local_clustering_coefficient/local_clustering
     _LocalClusteringCoefficientPlan.Relabeling kDefaultRelabeling "katana::analytics::LocalClusteringCoefficientPlan::kDefaultRelabeling"
     bool kDefaultEdgesSorted "katana::analytics::LocalClusteringCoefficientPlan::kDefaultEdgesSorted"
 
-    Result[void] LocalClusteringCoefficient(_PropertyGraph* pfg, const string& output_property_name, _LocalClusteringCoefficientPlan plan)
+    Result[void] LocalClusteringCoefficient(CTxnContext* txn_ctx, _PropertyGraph* pfg, const string& output_property_name, _LocalClusteringCoefficientPlan plan)
 
 
 class _LocalClusteringCoefficientPlanAlgorithm(Enum):
@@ -152,7 +153,8 @@ cdef class LocalClusteringCoefficientPlan(Plan):
              edges_sorted, _relabeling_from_python(relabeling)))
 
 
-def local_clustering_coefficient(Graph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan()):
+def local_clustering_coefficient(Graph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan(), TxnContext txn_ctx=None):
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
+    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
     with nogil:
-        handle_result_void(LocalClusteringCoefficient(pg.underlying_property_graph(), output_property_name_str, plan.underlying_))
+        handle_result_void(LocalClusteringCoefficient(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_str, plan.underlying_))

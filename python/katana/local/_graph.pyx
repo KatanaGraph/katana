@@ -387,45 +387,49 @@ cdef class GraphBase:
 
         return pyarrow_unwrap_table(arrow_table)
 
-    def add_node_property(self, table=None, **kwargs):
+    def add_node_property(self, table=None, TxnContext txn_ctx=None, **kwargs):
         """
         Insert new node properties into this graph.
 
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_nodes()``. (Optional)
+        :param txn_ctx: The tranaction context for passing read write sets.
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_nodes()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().AddNodeProperties(GraphBase._convert_table(table, kwargs)))
+        txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+        handle_result_void(self.underlying_property_graph().AddNodeProperties(GraphBase._convert_table(table, kwargs), &txn_ctx._txn_ctx))
 
     def upsert_node_property(self, table=None, TxnContext txn_ctx=None, **kwargs):
         """
         Update or insert node properties into this graph.
 
-        :param txn_ctx: The tranaction context for passing read write sets.
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_nodes()``. (Optional)
+        :param txn_ctx: The tranaction context for passing read write sets.
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_nodes()``. (Optional)
         """
         txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
         handle_result_void(self.underlying_property_graph().UpsertNodeProperties(GraphBase._convert_table(table, kwargs), &txn_ctx._txn_ctx))
 
-    def add_edge_property(self, table=None, **kwargs):
+    def add_edge_property(self, table=None, TxnContext txn_ctx=None, **kwargs):
         """
         Insert new edge properties into this graph.
 
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_edges()``. (Optional)
+        :param txn_ctx: The tranaction context for passing read write sets.
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_edges()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().AddEdgeProperties(GraphBase._convert_table(table, kwargs)))
+        txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+        handle_result_void(self.underlying_property_graph().AddEdgeProperties(GraphBase._convert_table(table, kwargs), &txn_ctx._txn_ctx))
 
     def upsert_edge_property(self, table=None, TxnContext txn_ctx=None, **kwargs):
         """
         Update or insert edge properties into this graph.
 
-        :param txn_ctx: The tranaction context for passing read write sets.
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_edges()``. (Optional)
+        :param txn_ctx: The tranaction context for passing read write sets.
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_edges()``. (Optional)
         """
         txn_ctx = TxnContext() if txn_ctx is None else txn_ctx

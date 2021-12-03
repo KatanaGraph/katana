@@ -1832,7 +1832,8 @@ ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
-katana::ConvertToPropertyGraph(katana::GraphComponents&& graph_comps) {
+katana::ConvertToPropertyGraph(
+    katana::GraphComponents&& graph_comps, tsuba::TxnContext* txn_ctx) {
   auto pg_result = katana::PropertyGraph::Make(std::move(graph_comps.topology));
   if (!pg_result) {
     return pg_result.error().WithContext("adding topology");
@@ -1840,25 +1841,27 @@ katana::ConvertToPropertyGraph(katana::GraphComponents&& graph_comps) {
   std::unique_ptr<katana::PropertyGraph> graph = std::move(pg_result.value());
 
   if (graph_comps.nodes.properties->num_columns() > 0) {
-    auto result = graph->AddNodeProperties(graph_comps.nodes.properties);
+    auto result =
+        graph->AddNodeProperties(graph_comps.nodes.properties, txn_ctx);
     if (!result) {
       return result.error().WithContext("adding node properties");
     }
   }
   if (graph_comps.nodes.labels->num_columns() > 0) {
-    auto result = graph->AddNodeProperties(graph_comps.nodes.labels);
+    auto result = graph->AddNodeProperties(graph_comps.nodes.labels, txn_ctx);
     if (!result) {
       return result.error().WithContext("adding node labels");
     }
   }
   if (graph_comps.edges.properties->num_columns() > 0) {
-    auto result = graph->AddEdgeProperties(graph_comps.edges.properties);
+    auto result =
+        graph->AddEdgeProperties(graph_comps.edges.properties, txn_ctx);
     if (!result) {
       return result.error().WithContext("adding edge properties");
     }
   }
   if (graph_comps.edges.labels->num_columns() > 0) {
-    auto result = graph->AddEdgeProperties(graph_comps.edges.labels);
+    auto result = graph->AddEdgeProperties(graph_comps.edges.labels, txn_ctx);
     if (!result) {
       return result.error().WithContext("adding edge labels");
     }
@@ -1870,8 +1873,9 @@ katana::ConvertToPropertyGraph(katana::GraphComponents&& graph_comps) {
 /// to the directory \param dir
 katana::Result<void>
 katana::WritePropertyGraph(
-    katana::GraphComponents&& graph_comps, const std::string& dir) {
-  auto graph_ptr = ConvertToPropertyGraph(std::move(graph_comps));
+    katana::GraphComponents&& graph_comps, const std::string& dir,
+    tsuba::TxnContext* txn_ctx) {
+  auto graph_ptr = ConvertToPropertyGraph(std::move(graph_comps), txn_ctx);
   if (!graph_ptr) {
     return graph_ptr.error();
   }

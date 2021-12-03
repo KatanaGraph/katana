@@ -514,11 +514,11 @@ Sssp(
 template <typename Weight>
 static katana::Result<void>
 SSSPWithWrap(
-    katana::PropertyGraph* pg, size_t start_node,
+    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan) {
   if (auto r = ConstructNodeProperties<std::tuple<SsspNodeDistance<Weight>>>(
-          pg, {output_property_name});
+          txn_ctx, pg, {output_property_name});
       !r) {
     return r.error();
   }
@@ -544,7 +544,7 @@ SSSPWithWrap(
 
 katana::Result<void>
 katana::analytics::Sssp(
-    PropertyGraph* pg, size_t start_node,
+    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan) {
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
@@ -552,22 +552,28 @@ katana::analytics::Sssp(
               ->id()) {
   case arrow::UInt32Type::type_id:
     return SSSPWithWrap<uint32_t>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan);
+        txn_ctx, pg, start_node, edge_weight_property_name,
+        output_property_name, plan);
   case arrow::Int32Type::type_id:
     return SSSPWithWrap<int32_t>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan);
+        txn_ctx, pg, start_node, edge_weight_property_name,
+        output_property_name, plan);
   case arrow::UInt64Type::type_id:
     return SSSPWithWrap<uint64_t>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan);
+        txn_ctx, pg, start_node, edge_weight_property_name,
+        output_property_name, plan);
   case arrow::Int64Type::type_id:
     return SSSPWithWrap<int64_t>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan);
+        txn_ctx, pg, start_node, edge_weight_property_name,
+        output_property_name, plan);
   case arrow::FloatType::type_id:
     return SSSPWithWrap<float>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan);
+        txn_ctx, pg, start_node, edge_weight_property_name,
+        output_property_name, plan);
   case arrow::DoubleType::type_id:
     return SSSPWithWrap<double>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan);
+        txn_ctx, pg, start_node, edge_weight_property_name,
+        output_property_name, plan);
   default:
     return KATANA_ERROR(
         katana::ErrorCode::TypeError, "Unsupported type: {}",

@@ -87,7 +87,8 @@ main(int argc, char** argv) {
 
   PagerankPlan plan{kCPU, algo, tolerance, maxIterations, kAlpha};
 
-  if (auto r = Pagerank(pg.get(), "rank", plan); !r) {
+  tsuba::TxnContext txn_ctx;
+  if (auto r = Pagerank(&txn_ctx, pg.get(), "rank", plan); !r) {
     KATANA_LOG_FATAL("Failed to run Pagerank {}", r.error());
   }
 

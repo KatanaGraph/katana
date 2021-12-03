@@ -27,7 +27,8 @@ const BetweennessCentralitySources
 
 katana::Result<void>
 katana::analytics::BetweennessCentrality(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    const std::string& output_property_name,
     const BetweennessCentralitySources& sources,
     BetweennessCentralityPlan plan) {
   switch (plan.algorithm()) {
@@ -38,9 +39,11 @@ katana::analytics::BetweennessCentrality(
     //     doAsyncBC();
     //     break;
   case BetweennessCentralityPlan::kLevel:
-    return BetweennessCentralityLevel(pg, sources, output_property_name, plan);
+    return BetweennessCentralityLevel(
+        txn_ctx, pg, sources, output_property_name, plan);
   case BetweennessCentralityPlan::kOuter:
-    return BetweennessCentralityOuter(pg, sources, output_property_name, plan);
+    return BetweennessCentralityOuter(
+        txn_ctx, pg, sources, output_property_name, plan);
   default:
     return katana::ErrorCode::InvalidArgument;
   }

@@ -271,10 +271,11 @@ ComputePRTopological(
 katana::Result<void>
 ExtractValueFromTopoGraph(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    const katana::NUMAArray<PagerankValueAndOutDegreeTy>& node_data) {
+    const katana::NUMAArray<PagerankValueAndOutDegreeTy>& node_data,
+    tsuba::TxnContext* txn_ctx) {
   if (auto result =
           katana::analytics::ConstructNodeProperties<std::tuple<NodeValue>>(
-              pg, {output_property_name});
+              txn_ctx, pg, {output_property_name});
       !result) {
     return result.error();
   }
@@ -299,7 +300,8 @@ ExtractValueFromTopoGraph(
 
 katana::Result<void>
 PagerankPullTopological(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
   katana::EnsurePreallocated(2, 3 * pg->num_nodes() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
@@ -316,18 +318,20 @@ PagerankPullTopological(
   ComputePRTopological(*pg, plan, &node_data);
   exec_time.stop();
 
-  return ExtractValueFromTopoGraph(pg, output_property_name, node_data);
+  return ExtractValueFromTopoGraph(
+      pg, output_property_name, node_data, txn_ctx);
 }
 
 katana::Result<void>
 PagerankPullResidual(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
   katana::EnsurePreallocated(2, 3 * pg->num_nodes() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pg, {output_property_name});
+          txn_ctx, pg, {output_property_name});
       !result) {
     return result.error();
   }

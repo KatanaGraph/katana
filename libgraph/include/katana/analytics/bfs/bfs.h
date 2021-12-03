@@ -76,7 +76,7 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Bfs(
-    PropertyGraph* pg, uint32_t start_node,
+    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, uint32_t start_node,
     const std::string& output_property_name, BfsPlan algo = {});
 
 /// Do a quick validation of the results of a BFS computation where the results

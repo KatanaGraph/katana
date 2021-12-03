@@ -153,7 +153,8 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("invalid algorithm");
   }
 
-  if (auto r = MatrixCompletion(pg.get(), plan); !r) {
+  tsuba::TxnContext txn_ctx;
+  if (auto r = MatrixCompletion(&txn_ctx, pg.get(), plan); !r) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", r.error());
   }
 

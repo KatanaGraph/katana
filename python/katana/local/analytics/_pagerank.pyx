@@ -25,10 +25,11 @@ Page Rank
 """
 from libcpp.string cimport string
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -65,7 +66,7 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
     int kDefaultMaxIterations "katana::analytics::PagerankPlan::kDefaultMaxIterations"
     double kDefaultAlpha "katana::analytics::PagerankPlan::kDefaultAlpha"
 
-    Result[void] Pagerank(_PropertyGraph* pg, string output_property_name, _PagerankPlan plan)
+    Result[void] Pagerank(CTxnContext* txn_ctx, _PropertyGraph* pg, string output_property_name, _PagerankPlan plan)
 
     Result[void] PagerankAssertValid(_PropertyGraph* pg, string output_property_name)
 
@@ -167,7 +168,7 @@ cdef class PagerankPlan(Plan):
         return PagerankPlan.make(_PagerankPlan.PushSynchronous(tolerance, max_iterations, alpha))
 
 
-def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPlan()):
+def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPlan(), TxnContext txn_ctx=None):
     """
     Compute the Page Rank of each node in the graph.
 
@@ -177,6 +178,7 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
     :param output_property_name: The output property to store the rank. This property must not already exist.
     :type plan: PagerankPlan
     :param plan: The execution plan to use.
+    :param txn_ctx: The tranaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -199,8 +201,9 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
+    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
     with nogil:
-        handle_result_void(Pagerank(pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
+        handle_result_void(Pagerank(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
 
 
 def pagerank_assert_valid(Graph pg, str output_property_name):

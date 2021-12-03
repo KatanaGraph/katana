@@ -238,14 +238,16 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm selected");
   }
 
+  tsuba::TxnContext txn_ctx;
   for (auto startNode : startNodes) {
     if (startNode >= pg->topology().num_nodes()) {
       KATANA_LOG_FATAL("failed to set source: {}", startNode);
     }
 
     std::string node_distance_prop = "distance-" + std::to_string(startNode);
-    auto pg_result =
-        Sssp(pg.get(), startNode, edge_property_name, node_distance_prop, plan);
+    auto pg_result = Sssp(
+        &txn_ctx, pg.get(), startNode, edge_property_name, node_distance_prop,
+        plan);
     if (!pg_result) {
       KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
     }

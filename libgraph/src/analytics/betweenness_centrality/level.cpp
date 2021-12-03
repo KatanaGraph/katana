@@ -218,11 +218,11 @@ katana::Result<void>
 ExtractBC(
     katana::PropertyGraph* pg, const LevelGraph& array_of_struct_graph,
     const katana::NUMAArray<BCLevelNodeDataTy>& graph_data,
-    const std::string& output_property_name) {
+    const std::string& output_property_name, tsuba::TxnContext* txn_ctx) {
   // construct the new property
   if (auto result =
           katana::analytics::ConstructNodeProperties<std::tuple<NodeBC>>(
-              pg, {output_property_name});
+              txn_ctx, pg, {output_property_name});
       !result) {
     return result.error();
   }
@@ -249,7 +249,7 @@ ExtractBC(
 
 katana::Result<void>
 BetweennessCentralityLevel(
-    katana::PropertyGraph* pg,
+    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
     katana::analytics::BetweennessCentralityPlan plan [[maybe_unused]]) {
@@ -328,5 +328,5 @@ BetweennessCentralityLevel(
   }
 
   // Get the BC proporty into the property graph by extracting from AoS
-  return ExtractBC(pg, graph, graph_data, output_property_name);
+  return ExtractBC(pg, graph, graph_data, output_property_name, txn_ctx);
 }

@@ -140,10 +140,10 @@ JaccardImpl(
 
 katana::Result<void>
 katana::analytics::Jaccard(
-    PropertyGraph* pg, uint32_t compare_node,
+    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, uint32_t compare_node,
     const std::string& output_property_name, JaccardPlan plan) {
-  if (auto result =
-          ConstructNodeProperties<NodeData>(pg, {output_property_name});
+  if (auto result = ConstructNodeProperties<NodeData>(
+          txn_ctx, pg, {output_property_name});
       !result) {
     return result.error();
   }

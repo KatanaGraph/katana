@@ -452,10 +452,10 @@ BfsImpl(
 
 katana::Result<void>
 katana::analytics::Bfs(
-    PropertyGraph* pg, GNode start_node,
+    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, GNode start_node,
     const std::string& output_property_name, BfsPlan algo) {
   if (auto result = ConstructNodeProperties<std::tuple<BfsNodeParent>>(
-          pg, {output_property_name});
+          txn_ctx, pg, {output_property_name});
       !result) {
     return result.error();
   }

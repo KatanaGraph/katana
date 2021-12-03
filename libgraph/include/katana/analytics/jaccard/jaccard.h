@@ -58,7 +58,7 @@ using JaccardSimilarity = katana::PODProperty<double>;
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Jaccard(
-    PropertyGraph* pg, uint32_t compare_node,
+    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, uint32_t compare_node,
     const std::string& output_property_name, JaccardPlan plan = {});
 
 KATANA_EXPORT Result<void> JaccardAssertValid(

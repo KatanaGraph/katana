@@ -82,7 +82,8 @@ struct ConvertDateTime : public ColumnTransformer {
 
 void ApplyTransforms(
     katana::PropertyGraph* graph,
-    const std::vector<std::unique_ptr<ColumnTransformer>>& transformers);
+    const std::vector<std::unique_ptr<ColumnTransformer>>& transformers,
+    tsuba::TxnContext* txn_ctx);
 
 }  // namespace katana
 

@@ -82,7 +82,8 @@ public:
  * @warning This algorithm will reorder nodes and edges in the graph.
  */
 KATANA_EXPORT Result<void> LocalClusteringCoefficient(
-    PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx, PropertyGraph* pg,
+    const std::string& output_property_name,
     LocalClusteringCoefficientPlan plan = {});
 
 }  // namespace katana::analytics

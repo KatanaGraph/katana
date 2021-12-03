@@ -2833,7 +2833,8 @@ struct Gr2Neo4j : public Conversion {
 template <typename EdgeTy>
 katana::Result<void>
 AppendEdgeData(
-    katana::PropertyGraph* pg, const katana::NUMAArray<EdgeTy>& edge_data) {
+    katana::PropertyGraph* pg, const katana::NUMAArray<EdgeTy>& edge_data,
+    tsuba::TxnContext* txn_ctx) {
   using Builder = typename arrow::CTypeTraits<EdgeTy>::BuilderType;
   using ArrowType = typename arrow::CTypeTraits<EdgeTy>::ArrowType;
   Builder builder;
@@ -2853,7 +2854,7 @@ AppendEdgeData(
   fields.emplace_back(arrow::field(("value"), std::make_shared<ArrowType>()));
   columns.emplace_back(ret);
   auto edge_data_table = arrow::Table::Make(arrow::schema(fields), columns);
-  if (auto r = pg->AddEdgeProperties(edge_data_table); !r) {
+  if (auto r = pg->AddEdgeProperties(edge_data_table, txn_ctx); !r) {
     KATANA_LOG_DEBUG("could not add edge property: {}", r.error());
     return r;
   }
@@ -2862,7 +2863,9 @@ AppendEdgeData(
 
 template <>
 katana::Result<void>
-AppendEdgeData<void>(katana::PropertyGraph*, const katana::NUMAArray<void>&) {
+AppendEdgeData<void>(
+    katana::PropertyGraph*, const katana::NUMAArray<void>&,
+    tsuba::TxnContext*) {
   return katana::ResultSuccess();
 }
 
@@ -3024,7 +3027,9 @@ struct Gr2Kg : public Conversion {
     std::unique_ptr<katana::PropertyGraph> pg = std::move(pg_res.value());
 
     if (EdgeData::has_value) {
-      if (auto r = AppendEdgeData<EdgeTy>(pg.get(), out_dests_data); !r) {
+      tsuba::TxnContext txn_ctx;
+      if (auto r = AppendEdgeData<EdgeTy>(pg.get(), out_dests_data, &txn_ctx);
+          !r) {
         KATANA_LOG_FATAL("could not add edge property: {}", r.error());
       }
     }

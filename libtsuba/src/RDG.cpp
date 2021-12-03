@@ -337,7 +337,7 @@ tsuba::RDG::DoStore(
       handle.impl_->rdg_manifest().dir(), write_group.get()));
 
   // writing partition metadata
-  core_->part_header().set_part_properties(KATANA_CHECKED(
+  core_->part_header().set_part_prop_info_list(KATANA_CHECKED(
       WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get())));
 
   //If a view type has been set, use it otherwise pass in the default view type

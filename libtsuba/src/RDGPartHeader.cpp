@@ -64,6 +64,18 @@ CopyProperty(
   return tsuba::FileStore(new_path.string(), fv.ptr<uint8_t>(), fv.size());
 }
 
+tsuba::PropStorageInfo*
+find_prop_info(
+    const std::string& name, std::vector<tsuba::PropStorageInfo>* prop_infos) {
+  auto it = std::find_if(
+      prop_infos->begin(), prop_infos->end(),
+      [&name](tsuba::PropStorageInfo& psi) { return psi.name() == name; });
+  if (it == prop_infos->end()) {
+    return nullptr;
+  }
+
+  return &(*it);
+}
 }  // namespace
 
 // TODO(vkarthik): repetitive code from RDGManifest, try to unify
@@ -260,6 +272,19 @@ RDGPartHeader::ChangeStorageLocation(
   topology_metadata_.ChangeStorageLocation();
 
   return katana::ResultSuccess();
+}
+
+PropStorageInfo*
+RDGPartHeader::find_node_prop_info(const std::string& name) {
+  return find_prop_info(name, &node_prop_info_list());
+}
+PropStorageInfo*
+RDGPartHeader::find_edge_prop_info(const std::string& name) {
+  return find_prop_info(name, &edge_prop_info_list());
+}
+PropStorageInfo*
+RDGPartHeader::find_part_prop_info(const std::string& name) {
+  return find_prop_info(name, &part_prop_info_list());
 }
 
 }  // namespace tsuba

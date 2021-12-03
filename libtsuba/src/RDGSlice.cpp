@@ -25,7 +25,8 @@ katana::Result<void>
 load_metadata_array(
     const std::string& array_name, const std::function<void()>& empty,
     tsuba::RDGCore* core) {
-  tsuba::PropStorageInfo* prop_info = core->find_part_prop_info(array_name);
+  tsuba::PropStorageInfo* prop_info =
+      core->part_header().find_part_prop_info(array_name);
   if (!prop_info) {
     empty();
     return katana::ResultSuccess();
@@ -51,7 +52,8 @@ katana::Result<void>
 unload_metadata_array(
     const std::string& array_name, const std::function<void()>& empty,
     tsuba::RDGCore* core) {
-  tsuba::PropStorageInfo* prop_info = core->find_part_prop_info(array_name);
+  tsuba::PropStorageInfo* prop_info =
+      core->part_header().find_part_prop_info(array_name);
   if (prop_info) {
     prop_info->WasUnloaded();
   }
@@ -70,9 +72,10 @@ load_property(
         "cannot load property that is attached to neither nodes nor edges");
   }
 
-  tsuba::PropStorageInfo* prop_info = node_edge == tsuba::NodeEdge::kNode
-                                          ? core->find_node_prop_info(name)
-                                          : core->find_edge_prop_info(name);
+  tsuba::PropStorageInfo* prop_info =
+      node_edge == tsuba::NodeEdge::kNode
+          ? core->part_header().find_node_prop_info(name)
+          : core->part_header().find_edge_prop_info(name);
   if (!prop_info) {
     return tsuba::ErrorCode::PropertyNotFound;
   }
@@ -112,9 +115,10 @@ unload_property(
         "cannot unload property that is attached to neither nodes nor edges");
   }
 
-  tsuba::PropStorageInfo* prop_info = node_edge == tsuba::NodeEdge::kNode
-                                          ? core->find_node_prop_info(name)
-                                          : core->find_edge_prop_info(name);
+  tsuba::PropStorageInfo* prop_info =
+      node_edge == tsuba::NodeEdge::kNode
+          ? core->part_header().find_node_prop_info(name)
+          : core->part_header().find_edge_prop_info(name);
   if (!prop_info) {
     return tsuba::ErrorCode::PropertyNotFound;
   }

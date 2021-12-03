@@ -198,10 +198,6 @@ public:
     part_header_ = std::move(part_header);
   }
 
-  PropStorageInfo* find_node_prop_info(const std::string& name);
-  PropStorageInfo* find_edge_prop_info(const std::string& name);
-  PropStorageInfo* find_part_prop_info(const std::string& name);
-
   const RDGTopologyManager& topology_manager() const {
     return topology_manager_;
   }

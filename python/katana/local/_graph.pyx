@@ -465,11 +465,11 @@ cdef class GraphBase:
         types = [EntityType.make(manager, type_id) for type_id in type_ids]
         return types
 
-    #def get_node_type_manager(self):
+    def get_node_type_manager(self):
         """
         :return the node type manager
         """
-    #    return EntityTypeManager.make(&self.underlying_property_graph().GetNodeTypeManager())
+        return EntityTypeManager.make(&self.underlying_property_graph().GetNodeTypeManager())
 
     def get_type_of_node(self, uint64_t n):
         """
@@ -501,11 +501,11 @@ cdef class GraphBase:
         types = manager.GetAtomicEntityTypeIDs()
         return [EntityType.make(manager, typeid) for typeid in types]
 
-    #def get_edge_type_manager(self):
+    def get_edge_type_manager(self):
         """
         :return the edge type manager
         """
-    #    return EntityTypeManager.make(&self.underlying_property_graph().GetEdgeTypeManager())
+        return EntityTypeManager.make(&self.underlying_property_graph().GetEdgeTypeManager())
 
     def get_type_of_edge(self, uint64_t e):
         """

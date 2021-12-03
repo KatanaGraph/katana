@@ -314,3 +314,19 @@ def test_simple_algorithm(graph):
     assert oprop[0].as_py() == 0
     assert oprop[4].as_py() == 0
     assert oprop[-1].as_py() == 0
+
+def test_types(graph):
+    node_type_set = set()
+    edge_type_set = set()
+    for nid in range(0, graph.num_nodes()):
+        node_type_set.add(graph.get_type_of_node(nid))
+        for eid in graph.edge_ids(nid):
+            edge_type_set.add(graph.get_type_of_edge(eid))
+
+    assert len(node_type_set) == 11
+    assert len(edge_type_set) == 15
+    assert len(graph.get_node_type_manager().get_atomic_entity_type_ids()) == 14
+    assert len(graph.get_edge_type_manager().get_atomic_entity_type_ids()) == 15
+
+    assert graph.does_node_have_type(0, 17)
+    assert graph.does_edge_have_type(0, 8)

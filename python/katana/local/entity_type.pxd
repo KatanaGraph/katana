@@ -1,7 +1,7 @@
 from libc.stdint cimport uint8_t
 from libcpp.string cimport string
 
-from katana.cpp.libsupport.entity_type_manager cimport EntityTypeManager
+from katana.cpp.libsupport.EntityTypeManager cimport EntityTypeManager
 
 
 cdef class EntityType:

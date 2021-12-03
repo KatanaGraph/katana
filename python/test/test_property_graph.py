@@ -315,6 +315,7 @@ def test_simple_algorithm(graph):
     assert oprop[4].as_py() == 0
     assert oprop[-1].as_py() == 0
 
+
 def test_types(graph):
     node_type_set = set()
     edge_type_set = set()

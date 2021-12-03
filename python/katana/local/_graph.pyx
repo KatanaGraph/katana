@@ -475,7 +475,7 @@ cdef class GraphBase:
         """
         Return the type id of a node
 
-        :param n: node id 
+        :param n: node id
         :return the type id of the node
         """
         return self.underlying_property_graph().GetTypeOfNode(n)
@@ -511,7 +511,7 @@ cdef class GraphBase:
         """
         Return the type id of an edge
 
-        :param e: edge id 
+        :param e: edge id
         :return the type id of the edge
         """
         return self.underlying_property_graph().GetTypeOfEdge(e)

@@ -1,8 +1,8 @@
 from libc.stdint cimport uint16_t, uint32_t, uint64_t
+from libcpp cimport bool
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-from libcpp cimport bool
 from pyarrow.lib cimport CArray, CChunkedArray, CSchema, CTable, CUInt32Array, CUInt64Array
 
 from katana.cpp.boost cimport counting_iterator

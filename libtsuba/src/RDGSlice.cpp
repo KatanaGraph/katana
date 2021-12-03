@@ -3,6 +3,7 @@
 #include "AddProperties.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
+#include "RDGPartHeader.h"
 #include "katana/ArrowInterchange.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
@@ -24,18 +25,13 @@ katana::Result<void>
 load_metadata_array(
     const std::string& array_name, const std::function<void()>& empty,
     tsuba::RDGCore* core) {
-  auto search_res = core->find_part_prop_info(array_name);
-  if (!search_res) {
-    if (search_res.error() == tsuba::ErrorCode::NotFound) {
-      empty();
-      return katana::ResultSuccess();
-    } else {
-      return search_res.error().WithContext(
-          "searching for array name in prop info list");
-    }
+  tsuba::PropStorageInfo* prop_info = core->find_part_prop_info(array_name);
+  if (!prop_info) {
+    empty();
+    return katana::ResultSuccess();
   }
 
-  std::vector<tsuba::PropStorageInfo*> prop_infos{&search_res.value()};
+  std::vector<tsuba::PropStorageInfo*> prop_infos{prop_info};
   KATANA_CHECKED(AddProperties(
       core->rdg_dir(), tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
       prop_infos, nullptr, [&core](const std::shared_ptr<arrow::Table>& props) {
@@ -55,14 +51,9 @@ katana::Result<void>
 unload_metadata_array(
     const std::string& array_name, const std::function<void()>& empty,
     tsuba::RDGCore* core) {
-  auto search_res = core->find_part_prop_info(array_name);
-  if (!search_res) {
-    if (search_res.error() != tsuba::ErrorCode::NotFound) {
-      return search_res.error().WithContext(
-          "searching for array name in prop info list");
-    }
-  } else {
-    search_res.value().WasUnloaded();
+  tsuba::PropStorageInfo* prop_info = core->find_part_prop_info(array_name);
+  if (prop_info) {
+    prop_info->WasUnloaded();
   }
 
   empty();
@@ -79,10 +70,14 @@ load_property(
         "cannot load property that is attached to neither nodes nor edges");
   }
 
-  auto prop_info = KATANA_CHECKED(
-      node_edge == tsuba::NodeEdge::kNode ? core->find_node_prop_info(name)
-                                          : core->find_edge_prop_info(name));
-  std::vector<tsuba::PropStorageInfo*> property{&prop_info};
+  tsuba::PropStorageInfo* prop_info = node_edge == tsuba::NodeEdge::kNode
+                                          ? core->find_node_prop_info(name)
+                                          : core->find_edge_prop_info(name);
+  if (!prop_info) {
+    return tsuba::ErrorCode::PropertyNotFound;
+  }
+
+  std::vector<tsuba::PropStorageInfo*> property{prop_info};
   KATANA_CHECKED(AddPropertySlice(
       core->rdg_dir(), property,
       node_edge == tsuba::NodeEdge::kNode ? slice_arg.node_range
@@ -117,13 +112,16 @@ unload_property(
         "cannot unload property that is attached to neither nodes nor edges");
   }
 
-  auto prop_info = KATANA_CHECKED(
-      node_edge == tsuba::NodeEdge::kNode ? core->find_node_prop_info(name)
-                                          : core->find_edge_prop_info(name));
+  tsuba::PropStorageInfo* prop_info = node_edge == tsuba::NodeEdge::kNode
+                                          ? core->find_node_prop_info(name)
+                                          : core->find_edge_prop_info(name);
+  if (!prop_info) {
+    return tsuba::ErrorCode::PropertyNotFound;
+  }
   // RDGSlice is read-only
-  KATANA_LOG_ASSERT(!prop_info.IsDirty());
+  KATANA_LOG_ASSERT(!prop_info->IsDirty());
 
-  if (prop_info.IsAbsent()) {
+  if (prop_info->IsAbsent()) {
     return KATANA_ERROR(
         tsuba::ErrorCode::InvalidArgument,
         "cannot unload property that is not loaded");
@@ -139,7 +137,7 @@ unload_property(
   std::shared_ptr<arrow::Table> new_table =
       KATANA_CHECKED(table->RemoveColumn(table_index));
 
-  prop_info.WasUnloaded();
+  prop_info->WasUnloaded();
 
   node_edge == tsuba::NodeEdge::kNode
       ? core->set_node_properties(std::move(new_table))

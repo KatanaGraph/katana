@@ -25,6 +25,10 @@ MakeTypedIndex(
     index = std::make_unique<PrimitivePropertyIndex<node_or_edge, int64_t>>(
         column_name, num_entities, property);
     break;
+  case arrow::Type::UINT64:
+    index = std::make_unique<PrimitivePropertyIndex<node_or_edge, uint64_t>>(
+        column_name, num_entities, property);
+    break;
   case arrow::Type::DOUBLE:
     index = std::make_unique<PrimitivePropertyIndex<node_or_edge, double_t>>(
         column_name, num_entities, property);
@@ -86,8 +90,12 @@ StringPropertyIndex<node_or_edge>::BuildFromProperty() {
 // Forward declare template types to allow implementation in .cpp.
 template class PrimitivePropertyIndex<GraphTopology::Node, bool>;
 template class PrimitivePropertyIndex<GraphTopology::Edge, bool>;
+template class PrimitivePropertyIndex<GraphTopology::Node, uint8_t>;
+template class PrimitivePropertyIndex<GraphTopology::Edge, uint8_t>;
 template class PrimitivePropertyIndex<GraphTopology::Node, int64_t>;
 template class PrimitivePropertyIndex<GraphTopology::Edge, int64_t>;
+template class PrimitivePropertyIndex<GraphTopology::Node, uint64_t>;
+template class PrimitivePropertyIndex<GraphTopology::Edge, uint64_t>;
 template class PrimitivePropertyIndex<GraphTopology::Node, double_t>;
 template class PrimitivePropertyIndex<GraphTopology::Edge, double_t>;
 

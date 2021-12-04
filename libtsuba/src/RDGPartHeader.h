@@ -174,18 +174,20 @@ public:
   void UpsertNodePropStorageInfo(PropStorageInfo&& pmd) {
     PropStorageInfo* found = find_node_prop_info(pmd.name());
     if (!found) {
+      pmd.WasModified(pmd.type());
       node_prop_info_list_.emplace_back(std::move(pmd));
     } else {
-      found->IsDirty();
+      found->WasModified(pmd.type());
     }
   }
 
   void UpsertEdgePropStorageInfo(PropStorageInfo&& pmd) {
     PropStorageInfo* found = find_edge_prop_info(pmd.name());
     if (!found) {
+      pmd.WasModified(pmd.type());
       edge_prop_info_list_.emplace_back(std::move(pmd));
     } else {
-      found->IsDirty();
+      found->WasModified(pmd.type());
     }
   }
 

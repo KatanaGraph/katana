@@ -17,7 +17,8 @@ JsonParse(U& obj) {
     auto j = nlohmann::json::parse(obj.begin(), obj.end());
     return j.template get<T>();
   } catch (const std::exception& exp) {
-    KATANA_LOG_DEBUG("nlohmann::json::parse exception: {}", exp.what());
+    return KATANA_ERROR(
+        katana::ErrorCode::JSONParseFailed, "parsing json: {}", exp.what());
   }
   return katana::ErrorCode::JSONParseFailed;
 }
@@ -30,7 +31,8 @@ JsonParse(U& obj, T* val) {
     j.get_to(*val);
     return katana::ResultSuccess();
   } catch (const std::exception& exp) {
-    KATANA_LOG_DEBUG("nlohmann::json::parse exception: {}", exp.what());
+    return KATANA_ERROR(
+        katana::ErrorCode::JSONParseFailed, "parsing json: {}", exp.what());
   }
   return katana::Result<void>(katana::ErrorCode::JSONParseFailed);
 }

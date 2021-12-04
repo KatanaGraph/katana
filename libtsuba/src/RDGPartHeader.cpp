@@ -304,14 +304,14 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
         RDGPartHeader::kPartitionStorageFormatVersion1;
   }
 
-  // Version 2 was found to be buggy,
-  KATANA_LOG_VASSERT(
-      header.storage_format_version_ !=
-          RDGPartHeader::kPartitionStorageFormatVersion2,
-      "Loaded graph is RDG storage_format_version 2 (aka RDG v2), which is not "
-      "supported. "
-      "Please re-import this graph to get an RDG with the most recent "
-      "storage_format_version");
+  if (header.storage_format_version_ ==
+      RDGPartHeader::kPartitionStorageFormatVersion2) {
+    // Version 2 was found to be buggy,
+    throw std::runtime_error(
+        "Loaded graph is RDG storage_format_version 2 (aka RDG v2), which is "
+        "not supported. Please re-import this graph to get an RDG with the "
+        "most recent storage_format_version");
+  }
 
   // Version 2 added entity type id files
   if (header.storage_format_version_ >=
@@ -389,7 +389,7 @@ tsuba::from_json(const json& j, tsuba::PartitionMetadata& pmd) {
 
   if (magic != kPartitionMagicNo) {
     // nlohmann::json reports errors using exceptions
-    throw std::runtime_error("Partition magic number mismatch");
+    throw std::runtime_error("partition magic number mismatch");
   }
 }
 
@@ -409,7 +409,10 @@ void
 tsuba::from_json(
     const nlohmann::json& j, tsuba::PartitionTopologyMetadataEntry& topo) {
   j.at("path").get_to(topo.path_);
-  KATANA_LOG_VASSERT(!topo.path_.empty(), "loaded topology with empty path");
+  if (topo.path_.empty()) {
+    throw std::runtime_error("loaded topology with empty path");
+  }
+
   j.at("num_nodes").get_to(topo.num_nodes_);
   j.at("num_edges").get_to(topo.num_edges_);
   j.at("edge_index_to_property_index_map_present")
@@ -492,7 +495,9 @@ tsuba::from_json(
   j.at(kPartitionTopologyMetadataEntriesSizeKey).get_to(tmp_num);
   topomd.set_num_entries(tmp_num);
   j.at(kPartitionTopologyMetadataEntriesKey).get_to(entries_vec);
-  KATANA_LOG_ASSERT(size(entries_vec) == topomd.num_entries());
+  if (size(entries_vec) != topomd.num_entries()) {
+    throw std::runtime_error("invalid file");
+  }
 
   // move the vector contents into our entries array
   std::copy_n(

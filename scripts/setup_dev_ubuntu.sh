@@ -31,8 +31,8 @@ sudo bash -x "${REPO_ROOT}/scripts/setup_ubuntu.sh" --no-setup-toolchain-variant
 "${REPO_ROOT}/scripts/setup_conan.sh"
 
 # make clang-{tidy,format}-12 the default
-sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-12 90
-sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 90
+sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-12 100
+sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 100
 
 
 cat <<EOF

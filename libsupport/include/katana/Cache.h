@@ -22,6 +22,36 @@
 
 namespace katana {
 
+struct CacheStats {
+  float get_hit_percentage() const {
+    if (get_count == 0ULL) {
+      return 0.0;
+    }
+    return 100.0 * static_cast<float>(get_hit_count) / get_count;
+  }
+  float insert_hit_percentage() const {
+    if (insert_count == 0ULL) {
+      return 0.0;
+    }
+    return 100.0 * static_cast<float>(insert_hit_count) / insert_count;
+  }
+  float total_hit_percentage() const {
+    if (total_count() == 0ULL) {
+      return 0.0;
+    }
+    return 100.0 *
+           (static_cast<float>(get_hit_count) +
+            static_cast<float>(insert_hit_count)) /
+           total_count();
+  }
+  uint64_t total_count() const { return insert_count + get_count; }
+
+  uint64_t get_count{0ULL};
+  uint64_t get_hit_count{0ULL};
+  uint64_t insert_count{0ULL};
+  uint64_t insert_hit_count{0ULL};
+};
+
 template <typename Key, typename Value, typename CallerPointer = void*>
 class KATANA_EXPORT Cache {
   using ListType = std::list<Key>;
@@ -85,7 +115,36 @@ public:
     return key_to_value_.find(key) != key_to_value_.end();
   }
 
+  // Return a vector of node properties present in the cache, in LRU order
+  std::vector<std::string> GetNodeProperties() const {
+    std::vector<std::string> node_props;
+    for (const auto& elt : lru_list_) {
+      if (elt.is_node()) {
+        node_props.emplace_back(elt.prop_name());
+      }
+    }
+    // We should never cache the same name twice
+    std::set<std::string> node_set(node_props.begin(), node_props.end());
+    KATANA_LOG_ASSERT(node_set.size() == node_props.size());
+    return node_props;
+  }
+
+  // Return a vector of edge properties present in the cache, in LRU order
+  std::vector<std::string> GetEdgeProperties() const {
+    std::vector<std::string> edge_props;
+    for (const auto& elt : lru_list_) {
+      if (elt.is_edge()) {
+        edge_props.emplace_back(elt.prop_name());
+      }
+    }
+    // We should never cache the same name twice
+    std::set<std::string> edge_set(edge_props.begin(), edge_props.end());
+    KATANA_LOG_ASSERT(edge_set.size() == edge_props.size());
+    return edge_props;
+  }
+
   void Insert(const Key& key, const Value& value, CallerPointer rdg = nullptr) {
+    cache_stats_.insert_count++;
     auto mapit = key_to_value_.find(key);
     if (mapit == key_to_value_.end()) {
       lru_list_.push_front(key);
@@ -99,30 +158,47 @@ public:
         total_bytes_ += value_to_bytes_(value);
       }
     } else {
+      cache_stats_.insert_hit_count++;
       mapit->second.value = value;
       UpdateLRU(mapit);
     }
     EvictIfNecessary(rdg);
+    // An inserted entry should be accessible
+    KATANA_LOG_DEBUG_ASSERT(Get(key));
   }
 
   std::optional<Value> Get(const Key& key) {
     // lookup value in the cache
+    cache_stats_.get_count++;
     std::optional<Value> ret;
     auto it = key_to_value_.find(key);
     if (it != key_to_value_.end()) {
       ret = UpdateLRU(it);
+      cache_stats_.get_hit_count++;
     }
     return ret;
+  }
+
+  CacheStats GetStats() const { return cache_stats_; }
+
+  // This is mostly a debugging function.  It also explains the cache data structures
+  int64_t LRUPosition(const Key& key) {
+    auto it = key_to_value_.find(key);
+    if (it != key_to_value_.end()) {
+      auto& lru_it = it->second.lru_it;
+      return std::distance(lru_list_.begin(), lru_it);
+    }
+    return -1L;
   }
 
 private:
   Value UpdateLRU(typename MapType::iterator mapit) {
     auto lru_it = mapit->second.lru_it;
-    auto lru_head = lru_list_.begin();
-    if (lru_it != lru_head) {
+    if (lru_it != lru_list_.begin()) {
       // move item to the front of the most recently used list
-      lru_list_.splice(lru_head, lru_list_, lru_it);
-      mapit->second.lru_it = lru_head;
+      lru_list_.erase(lru_it);
+      lru_list_.push_front(mapit->first);
+      mapit->second.lru_it = lru_list_.begin();
     }
     return mapit->second.value;
   }
@@ -174,6 +250,8 @@ private:
   // for kLRUSize number of entries kLRUBytes it is byte total
   size_t capacity_{0};
   size_t total_bytes_{0};
+  // Hit statistics for gets and inserts
+  CacheStats cache_stats_;
 
   std::function<size_t(const Value& value)> value_to_bytes_;
   std::function<void(const Key& key, uint64_t approx_bytes, CallerPointer rdg)>

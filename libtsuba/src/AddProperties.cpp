@@ -83,18 +83,23 @@ tsuba::AddProperties(
           ErrorCode::Exists, "property {} must be absent to be added",
           std::quoted(prop->name()));
     }
+    // If we have a cache, check it.
     if (cache != nullptr) {
+      auto& tracer = katana::GetTracer();
       tsuba::PropertyCacheKey cache_key(
           node_edge, rdg->rdg_dir().string(), prop->name());
-      auto column_table = cache->Get(cache_key);
-      if (column_table) {
-        auto props = column_table.value();
+      std::optional<std::shared_ptr<arrow::Table>> column_table =
+          cache->Get(cache_key);
+      KATANA_LOG_ASSERT(!rdg->rdg_dir().empty());
+      if (column_table.has_value()) {
+        std::shared_ptr<arrow::Table> props = column_table.value();
+        KATANA_LOG_ASSERT(props != nullptr);
         KATANA_CHECKED_CONTEXT(
             add_fn(props), "adding {}", std::quoted(prop->name()));
         prop->WasLoaded(props->field(0)->type());
         auto& tracer = katana::GetTracer();
         tracer.GetActiveSpan().Log(
-            "property loaded from cache",
+            "addproperties property cache hit",
             {{"type", cache_key.TypeAsConstChar()},
              {"name", prop->name()},
              {"approx_size", katana::ApproxTableMemUse(props)},
@@ -102,6 +107,13 @@ tsuba::AddProperties(
               katana::BytesToStr(
                   "{:.2f}{}", katana::ApproxTableMemUse(props))}});
         return katana::ResultSuccess();
+      } else {
+        tracer.GetActiveSpan().Log(
+            "addproperties property cache miss",
+            {
+                {"type", cache_key.TypeAsConstChar()},
+                {"name", prop->name()},
+            });
       }
     }
     const katana::Uri& path = uri.Join(prop->path());
@@ -130,19 +142,32 @@ tsuba::AddProperties(
               "storage_format_version >= 2 RDG may not have uint8 type "
               "properties");
         } else {
-          tracer.GetActiveSpan().Log(
-              "property inserted into cache",
-              {{"type",
-                (node_edge == tsuba::NodeEdge::kNode) ? "node" : "edge"},
-               {"name", prop->name()},
-               {"approx_size", katana::ApproxTableMemUse(props)},
-               {"approx_size_human",
-                katana::BytesToStr(
-                    "{:.2f}{}", katana::ApproxTableMemUse(props))}});
+          auto cache_stats = cache->GetStats();
           // Only match properties from the same RDG prefix
           tsuba::PropertyCacheKey cache_key(
               node_edge, rdg->rdg_dir().string(), prop->name());
           cache->Insert(cache_key, props, rdg);
+          tracer.GetActiveSpan().Log(
+              "addproperties property cache insert",
+              {
+                  {"type",
+                   (node_edge == tsuba::NodeEdge::kNode) ? "node" : "edge"},
+                  {"name", prop->name()},
+                  {"approx_size", katana::ApproxTableMemUse(props)},
+                  {"approx_size_human",
+                   katana::BytesToStr(
+                       "{:.2f}{}", katana::ApproxTableMemUse(props))},
+                  {"load_factor_percent",
+                   fmt::format(
+                       "{:.1f}%", 100.0 * static_cast<float>(cache->size()) /
+                                      cache->capacity())},
+                  {"hit_rate",
+                   fmt::format(
+                       "total: {:.1f}% get: {:.1f}% insert: {:.1f}%",
+                       cache_stats.total_hit_percentage(),
+                       cache_stats.get_hit_percentage(),
+                       cache_stats.insert_hit_percentage())},
+              });
         }
       }
       KATANA_CHECKED_CONTEXT(

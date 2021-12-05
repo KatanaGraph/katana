@@ -547,11 +547,13 @@ public:
 
   // Return type dictated by arrow
   /// Returns the number of node properties
+  /// Does not include types managed by the EntityTypeManager
   int32_t GetNumNodeProperties() const {
     return loaded_node_schema()->num_fields();
   }
 
   /// Returns the number of edge properties
+  /// Does not include types managed by the EntityTypeManager
   int32_t GetNumEdgeProperties() const {
     return loaded_edge_schema()->num_fields();
   }
@@ -705,8 +707,18 @@ public:
   /// the table do nothing otherwise
   Result<void> EnsureEdgePropertyLoaded(const std::string& name);
 
-  std::vector<std::string> ListNodeProperties() const;
-  std::vector<std::string> ListEdgeProperties() const;
+  std::vector<std::string> ListFullNodeProperties() const {
+    return rdg_.ListFullNodeProperties();
+  }
+  std::vector<std::string> ListLoadedNodeProperties() const {
+    return rdg_.ListLoadedNodeProperties();
+  }
+  std::vector<std::string> ListFullEdgeProperties() const {
+    return rdg_.ListFullEdgeProperties();
+  }
+  std::vector<std::string> ListLoadedEdgeProperties() const {
+    return rdg_.ListLoadedEdgeProperties();
+  }
 
   /// Remove all node properties
   void DropNodeProperties() { rdg_.DropNodeProperties(); }

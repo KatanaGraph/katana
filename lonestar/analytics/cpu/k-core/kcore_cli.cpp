@@ -78,13 +78,6 @@ main(int argc, char** argv) {
   katana::StatTimer total_timer("TimerTotal");
   total_timer.start();
 
-  if (!symmetricGraph) {
-    KATANA_LOG_FATAL(
-        "This application requires a symmetric graph input;"
-        " please use the -symmetricGraph flag "
-        " to indicate the input is a symmetric graph.");
-  }
-
   std::cout << "Reading from file: " << inputFile << "\n";
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
@@ -106,7 +99,9 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm");
   }
 
-  if (auto r = KCore(pg.get(), kCoreNumber, "node-in-core", plan); !r) {
+  if (auto r =
+          KCore(pg.get(), kCoreNumber, "node-in-core", plan, symmetricGraph);
+      !r) {
     KATANA_LOG_FATAL("Failed to compute k-core: {}", r.error());
   }
 

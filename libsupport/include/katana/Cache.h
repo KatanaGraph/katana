@@ -19,6 +19,7 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "katana/Logging.h"
+#include "katana/Strings.h"
 
 namespace katana {
 
@@ -116,30 +117,26 @@ public:
   }
 
   // Return a vector of node properties present in the cache, in LRU order
-  std::vector<std::string> GetNodeProperties() const {
+  std::vector<std::string> GetNodeProperties(
+      const std::string& rdg_prefix) const {
     std::vector<std::string> node_props;
     for (const auto& elt : lru_list_) {
-      if (elt.is_node()) {
+      if (elt.is_node() && elt.rdg_prefix() == rdg_prefix) {
         node_props.emplace_back(elt.prop_name());
       }
     }
-    // We should never cache the same name twice
-    std::set<std::string> node_set(node_props.begin(), node_props.end());
-    KATANA_LOG_ASSERT(node_set.size() == node_props.size());
     return node_props;
   }
 
   // Return a vector of edge properties present in the cache, in LRU order
-  std::vector<std::string> GetEdgeProperties() const {
+  std::vector<std::string> GetEdgeProperties(
+      const std::string& rdg_prefix) const {
     std::vector<std::string> edge_props;
     for (const auto& elt : lru_list_) {
-      if (elt.is_edge()) {
+      if (elt.is_edge() && elt.rdg_prefix() == rdg_prefix) {
         edge_props.emplace_back(elt.prop_name());
       }
     }
-    // We should never cache the same name twice
-    std::set<std::string> edge_set(edge_props.begin(), edge_props.end());
-    KATANA_LOG_ASSERT(edge_set.size() == edge_props.size());
     return edge_props;
   }
 

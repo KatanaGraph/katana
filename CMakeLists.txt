@@ -43,6 +43,7 @@ add_subdirectory(libsupport)
 add_subdirectory(libtsuba)
 add_subdirectory(libgalois)
 add_subdirectory(libgraph)
+add_subdirectory(libkatana-python)
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(lonestar)

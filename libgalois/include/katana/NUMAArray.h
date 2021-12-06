@@ -47,13 +47,31 @@ namespace katana {
  */
 template <typename T>
 class NUMAArray {
-  enum class AllocType { Blocked, Local, Interleaved, Floating };
-
   LAptr real_data_;
   T* data_{};
   size_t size_{};
 
-  void Allocate(size_t n, AllocType t) {
+public:
+  typedef T raw_value_type;
+  typedef T value_type;
+  typedef size_t size_type;
+  typedef ptrdiff_t difference_type;
+  typedef value_type& reference;
+  typedef const value_type& const_reference;
+  typedef value_type* pointer;
+  typedef const value_type* const_pointer;
+  typedef pointer iterator;
+  typedef const_pointer const_iterator;
+  const static bool has_value = true;
+
+  // Extra indirection to support incomplete T's
+  struct size_of {
+    const static size_t value = sizeof(T);
+  };
+
+  enum class AllocType { Blocked, Local, Interleaved, Floating };
+
+  void Allocate(size_type n, AllocType t) {
     KATANA_LOG_DEBUG_ASSERT(!data_);
     size_ = n;
     switch (t) {
@@ -75,24 +93,6 @@ class NUMAArray {
 
     data_ = reinterpret_cast<T*>(real_data_.get());
   }
-
-public:
-  typedef T raw_value_type;
-  typedef T value_type;
-  typedef size_t size_type;
-  typedef ptrdiff_t difference_type;
-  typedef value_type& reference;
-  typedef const value_type& const_reference;
-  typedef value_type* pointer;
-  typedef const value_type* const_pointer;
-  typedef pointer iterator;
-  typedef const_pointer const_iterator;
-  const static bool has_value = true;
-
-  // Extra indirection to support incomplete T's
-  struct size_of {
-    const static size_t value = sizeof(T);
-  };
 
   /**
    * Wraps existing buffer in NUMAArray interface.

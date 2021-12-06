@@ -473,7 +473,7 @@ cdef class GraphBase:
 
     def get_type_of_node(self, uint64_t n):
         """
-        Return the type id of a node
+        Return the type ID of the most specific type of a node `n`
 
         :param n: node id
         :return the type id of the node
@@ -501,6 +501,7 @@ cdef class GraphBase:
         types = manager.GetAtomicEntityTypeIDs()
         return [EntityType.make(manager, typeid) for typeid in types]
 
+    #TODO(bowu): use the edge dataframe for the following three functions
     def get_edge_type_manager(self):
         """
         :return the edge type manager
@@ -509,7 +510,7 @@ cdef class GraphBase:
 
     def get_type_of_edge(self, uint64_t e):
         """
-        Return the type id of an edge
+        Return the type ID of the most specific type of an edge `e`
 
         :param e: edge id
         :return the type id of the edge

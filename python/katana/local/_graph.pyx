@@ -456,17 +456,6 @@ cdef class GraphBase:
     @property
     def node_types(self):
         """
-        The types of atomic node types in the graph.
-
-        :rtype: list[EntityType]
-        """
-        cdef const CEntityTypeManager* manager = &self.underlying_property_graph().GetNodeTypeManager()
-        type_ids = manager.GetAtomicEntityTypeIDs()
-        types = [EntityType.make(manager, type_id) for type_id in type_ids]
-        return types
-
-    def get_node_type_manager(self):
-        """
         :return the node type manager
         """
         return EntityTypeManager.make(&self.underlying_property_graph().GetNodeTypeManager())
@@ -492,17 +481,6 @@ cdef class GraphBase:
 
     @property
     def edge_types(self):
-        """
-        The types of atomic edge types in the graph.
-
-        :rtype: list
-        """
-        cdef const CEntityTypeManager* manager = &self.underlying_property_graph().GetEdgeTypeManager()
-        types = manager.GetAtomicEntityTypeIDs()
-        return [EntityType.make(manager, typeid) for typeid in types]
-
-    #TODO(bowu): use the edge dataframe for the following three functions
-    def get_edge_type_manager(self):
         """
         :return the edge type manager
         """

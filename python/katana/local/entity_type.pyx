@@ -1,4 +1,4 @@
-from libc.stdint cimport uint8_t
+from libc.stdint cimport uint16_t
 from libcpp.string cimport string
 
 from katana.cpp.libsupport.EntityTypeManager cimport EntityTypeManager
@@ -21,7 +21,7 @@ cdef class EntityType:
         return typename_option.value().decode("utf-8")
 
     @staticmethod
-    cdef EntityType make(const EntityTypeManager *manager, uint8_t type_id):
+    cdef EntityType make(const EntityTypeManager *manager, uint16_t type_id):
         t = EntityType()
         t._type_manager = manager
         t._type_id = type_id

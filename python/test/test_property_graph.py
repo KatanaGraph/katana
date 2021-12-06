@@ -330,11 +330,10 @@ def test_types(graph):
     assert graph.does_node_have_type(0, 17)
     assert graph.does_edge_have_type(0, 8)
 
-    node_type_manager = graph.get_node_type_manager()
-    assert node_type_manager.get_num_atomic_types() == 14
-    assert node_type_manager.get_num_entity_types() == 22
-    assert node_type_manager.has_atomic_type("Person") is True
-    assert node_type_manager.list_atomic_types() == [
+    assert graph.node_types.get_num_atomic_types() == 14
+    assert graph.node_types.get_num_entity_types() == 22
+    assert graph.node_types.has_atomic_type("Person") is True
+    assert graph.node_types.list_atomic_types() == [
         b"Tag",
         b"Organisation",
         b"City",
@@ -350,12 +349,13 @@ def test_types(graph):
         b"Message",
         b"Post",
     ]
-    assert node_type_manager.has_entity_type(0) is True
-    assert node_type_manager.get_entity_type_id("Person") == 9
-    assert node_type_manager.get_atomic_type_name(9) == b"Person"
-    assert node_type_manager.get_atomic_entity_type_ids() == [12, 8, 1, 2, 14, 6, 3, 4, 5, 10, 13, 9, 7, 11]
-    assert node_type_manager.is_subtype_of(0, 1) is True
-    assert node_type_manager.get_entity_type_id_to_atomic_type_name_map() == {
+    assert graph.node_types.has_entity_type(0) is True
+    assert graph.node_types.entity_type_to_type_name_set(1) == {b"City"}
+    assert graph.node_types.get_entity_type_id("Person") == 9
+    assert graph.node_types.get_atomic_type_name(9) == b"Person"
+    assert graph.node_types.get_atomic_entity_type_ids() == [12, 8, 1, 2, 14, 6, 3, 4, 5, 10, 13, 9, 7, 11]
+    assert graph.node_types.is_subtype_of(0, 1) is True
+    assert graph.node_types.get_entity_type_id_to_atomic_type_name_map() == {
         13: b"TagClass",
         14: b"University",
         1: b"City",
@@ -371,13 +371,28 @@ def test_types(graph):
         11: b"Post",
         12: b"Tag",
     }
-    assert node_type_manager.set_of_entity_type_ids_size() == 256
+    atomic_node_type_names = [str(atomic_entity_type) for atomic_entity_type in graph.node_types.all_atomic_types()]
+    assert atomic_node_type_names == [
+        "Tag",
+        "Organisation",
+        "City",
+        "Comment",
+        "University",
+        "Forum",
+        "Company",
+        "Continent",
+        "Country",
+        "Place",
+        "TagClass",
+        "Person",
+        "Message",
+        "Post",
+    ]
 
-    edge_type_manager = graph.get_edge_type_manager()
-    assert edge_type_manager.get_num_atomic_types() == 15
-    assert edge_type_manager.get_num_entity_types() == 16
-    assert edge_type_manager.has_atomic_type("KNOWS") is True
-    assert edge_type_manager.list_atomic_types() == [
+    assert graph.edge_types.get_num_atomic_types() == 15
+    assert graph.edge_types.get_num_entity_types() == 16
+    assert graph.edge_types.has_atomic_type("KNOWS") is True
+    assert graph.edge_types.list_atomic_types() == [
         b"KNOWS",
         b"IS_SUBCLASS_OF",
         b"REPLY_OF",
@@ -394,12 +409,13 @@ def test_types(graph):
         b"HAS_MODERATOR",
         b"IS_PART_OF",
     ]
-    assert edge_type_manager.has_entity_type(0) is True
-    assert edge_type_manager.get_entity_type_id("REPLY_OF") == 13
-    assert edge_type_manager.get_atomic_type_name(9) == b"IS_PART_OF"
-    assert edge_type_manager.get_atomic_entity_type_ids() == [11, 10, 13, 12, 1, 15, 7, 2, 14, 8, 3, 6, 4, 5, 9]
-    assert edge_type_manager.is_subtype_of(0, 1) is True
-    assert edge_type_manager.get_entity_type_id_to_atomic_type_name_map() == {
+    assert graph.edge_types.has_entity_type(0) is True
+    assert graph.edge_types.entity_type_to_type_name_set(1) == {b"CONTAINER_OF"}
+    assert graph.edge_types.get_entity_type_id("REPLY_OF") == 13
+    assert graph.edge_types.get_atomic_type_name(9) == b"IS_PART_OF"
+    assert graph.edge_types.get_atomic_entity_type_ids() == [11, 10, 13, 12, 1, 15, 7, 2, 14, 8, 3, 6, 4, 5, 9]
+    assert graph.edge_types.is_subtype_of(0, 1) is True
+    assert graph.edge_types.get_entity_type_id_to_atomic_type_name_map() == {
         13: b"REPLY_OF",
         12: b"LIKES",
         15: b"WORK_AT",
@@ -416,4 +432,21 @@ def test_types(graph):
         10: b"IS_SUBCLASS_OF",
         11: b"KNOWS",
     }
-    assert edge_type_manager.set_of_entity_type_ids_size() == 256
+    atomic_edge_type_names = [str(atomic_entity_type) for atomic_entity_type in graph.edge_types.all_atomic_types()]
+    assert atomic_edge_type_names == [
+        "KNOWS",
+        "IS_SUBCLASS_OF",
+        "REPLY_OF",
+        "LIKES",
+        "CONTAINER_OF",
+        "WORK_AT",
+        "HAS_TYPE",
+        "HAS_CREATOR",
+        "STUDY_AT",
+        "IS_LOCATED_IN",
+        "HAS_INTEREST",
+        "HAS_TAG",
+        "HAS_MEMBER",
+        "HAS_MODERATOR",
+        "IS_PART_OF",
+    ]

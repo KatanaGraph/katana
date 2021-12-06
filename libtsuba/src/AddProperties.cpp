@@ -38,7 +38,8 @@ DoLoadProperties(
   auto renamed = out->RenameColumns({expected_name});
   if (!renamed.ok()) {
     std::shared_ptr<arrow::Schema> schema = out->schema();
-    return KATANA_ERROR(tsuba::ErrorCode::InvalidArgument, "{}", renamed.status().ToString());
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument, "{}", renamed.status().ToString());
   }
   return renamed.ValueOrDie();
 }

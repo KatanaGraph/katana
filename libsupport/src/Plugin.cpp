@@ -26,7 +26,7 @@ public:
     if (!handle) {
       KATANA_LOG_WARN(
           "skipping plugin {}: failed to dynamically link plugin: {}", path,
-          dlerror());
+          dlerror() );
       return;
     }
     const auto KatanaPluginInit =

@@ -149,6 +149,7 @@ outputs:
         - jupyter_client {{ jupyter_client }}
         - attrs {{ attrs }}
         - nbconvert {{ nbconvert }}
+        - mistune {{ mistune }}
         - pexpect {{ pexpect }}
       source_files:
         - tools/graph-convert/test-inputs

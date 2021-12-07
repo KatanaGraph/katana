@@ -198,6 +198,11 @@ struct ArrowDispatcher {
     }
   }
 
+  // Dispatch resolves the template type of its arguments
+  // It uses a switch over the arrow::Type::type enum, but expressed using macros
+  // Filtering out arrow types that a Visitor does not handle happens elsewhere
+  // No further changes will be necessary to enable new types through arrow 6.0
+  // The only change required to bump arrow versions is NUM_TYPES
   template <typename... ArrowTypes, typename Visitor, typename... Args>
   static typename std::decay_t<Visitor>::ResultType Dispatch(
       Visitor&& visitor, Args&&... args) {

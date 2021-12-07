@@ -6,6 +6,7 @@
 #include <arrow/api.h>
 #include <arrow/type.h>
 #include <arrow/vendored/datetime/date.h>
+#include <boost/preprocessor/repetition/repeat.hpp>
 
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
@@ -204,6 +205,8 @@ struct ArrowDispatcher {
     auto type_id =
         GetArrowTypeID(std::get<index>(std::forward_as_tuple(args...)));
 
+    // switch over the universe of Arrow types
+    // filtering the universe is handled by CouldAccept
     switch (type_id) {
 #define TYPE_CASE(EnumType)                                                    \
   case arrow::Type::EnumType: {                                                \
@@ -212,32 +215,52 @@ struct ArrowDispatcher {
     return Call<ArrowTypes..., ArrowType>(                                     \
         std::forward<Visitor>(visitor), std::forward<Args>(args)...);          \
   }
-      TYPE_CASE(INT8)
+      TYPE_CASE(NA)
+      TYPE_CASE(BOOL)
       TYPE_CASE(UINT8)
-      TYPE_CASE(INT16)
+      TYPE_CASE(INT8)
       TYPE_CASE(UINT16)
-      TYPE_CASE(INT32)
+      TYPE_CASE(INT16)
       TYPE_CASE(UINT32)
-      TYPE_CASE(INT64)
+      TYPE_CASE(INT32)
       TYPE_CASE(UINT64)
+      TYPE_CASE(INT64)
+      TYPE_CASE(HALF_FLOAT)
       TYPE_CASE(FLOAT)
       TYPE_CASE(DOUBLE)
-      TYPE_CASE(BOOL)
-      TYPE_CASE(DATE32)     // since UNIX epoch in days
-      TYPE_CASE(DATE64)     // since UNIX epoch in millis
-      TYPE_CASE(TIME32)     // since midnight in seconds or millis
-      TYPE_CASE(TIME64)     // since midnight in micros or nanos
-      TYPE_CASE(TIMESTAMP)  // since UNIX epoch in seconds or smaller
-      TYPE_CASE(STRING)     // TODO(daniel) DEPRECATED
-      TYPE_CASE(LARGE_STRING)
+      TYPE_CASE(STRING)
+      TYPE_CASE(BINARY)
+      TYPE_CASE(FIXED_SIZE_BINARY)
+      TYPE_CASE(DATE32)
+      TYPE_CASE(DATE64)
+      TYPE_CASE(TIMESTAMP)
+      TYPE_CASE(TIME32)
+      TYPE_CASE(TIME64)
+      TYPE_CASE(INTERVAL_MONTHS)
+      TYPE_CASE(INTERVAL_DAY_TIME)
+      TYPE_CASE(DECIMAL128)
+      TYPE_CASE(DECIMAL256)
+      TYPE_CASE(LIST)
       TYPE_CASE(STRUCT)
-      TYPE_CASE(LIST)  // TODO(daniel) DEPRECATED
+      TYPE_CASE(SPARSE_UNION)
+      TYPE_CASE(DENSE_UNION)
+      TYPE_CASE(DICTIONARY)
+      TYPE_CASE(MAP)
+      TYPE_CASE(EXTENSION)
+      TYPE_CASE(FIXED_SIZE_LIST)
+      TYPE_CASE(DURATION)
+      TYPE_CASE(LARGE_STRING)
+      TYPE_CASE(LARGE_BINARY)
       TYPE_CASE(LARGE_LIST)
-      TYPE_CASE(NA)
+      TYPE_CASE(INTERVAL_MONTH_DAY_NANO)
 #undef TYPE_CASE
     default:
       return visitor.AcceptFailed(std::forward<Args>(args)...);
     }
+
+    // leaving this here to draw attention to the switch above upon changing arrow versions
+    // arrow 6.0 has 38 types
+    static_assert(arrow::Type::MAX_ID == 38);
   }
 };
 

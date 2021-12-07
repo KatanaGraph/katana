@@ -475,7 +475,7 @@ cdef class GraphBase:
 
         :param n: node id
         :param type_id: type id
-        :return True if node n has the given type and False otherwise
+        :return True iff node n has the given type
         """
         return self.underlying_property_graph().DoesNodeHaveType(n, type_id)
 
@@ -501,7 +501,7 @@ cdef class GraphBase:
 
         :param e: edge id
         :param type_id: type id
-        :return True if edge e has the given type and False otherwise
+        :return True iff edge e has the given type
         """
         return self.underlying_property_graph().DoesEdgeHaveType(e, type_id)
 

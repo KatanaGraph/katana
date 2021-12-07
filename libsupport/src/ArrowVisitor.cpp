@@ -251,12 +251,17 @@ katana::AppendToBuilder(
 
 katana::Result<std::shared_ptr<arrow::Array>>
 katana::ArrayFromScalars(
-    const std::vector<std::shared_ptr<arrow::Scalar>>& scalars,
+    const arrow::ScalarVector& scalars,
     const std::shared_ptr<arrow::DataType>& type) {
   std::unique_ptr<arrow::ArrayBuilder> builder;
   KATANA_CHECKED(
       arrow::MakeBuilder(arrow::default_memory_pool(), type, &builder));
-  ToArrayVisitor visitor(scalars);
-
-  return katana::VisitArrow(visitor, builder.get());
+  for (size_t i = 0, n = scalars.size(); i < n; ++i) {
+    if (scalars[i] && scalars[i]->is_valid) {
+      KATANA_CHECKED(builder->AppendScalar(*scalars[i]));
+    } else {
+      KATANA_CHECKED(builder->AppendNull());
+    }
+  }
+  return KATANA_CHECKED(builder->Finish());
 }

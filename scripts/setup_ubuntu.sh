@@ -122,7 +122,9 @@ run_as_original_user "$REPO_ROOT"/scripts/requirements install --label pip --lab
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
-  apt install -yq gcc-9 g++-9 clang-10 clang-12
+  apt install -yq gcc-9 g++-9 clang-12
+  # Needed for setup_dev_ubuntu.sh
+  apt install -yq clang-tidy-12 clang-format-12
 fi
 
 # --no-binary is required to cause the pip package to use the debian package's native binaries.

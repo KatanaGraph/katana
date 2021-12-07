@@ -20,7 +20,7 @@ public:
     /// 2.0. In Arrow to Parquet version 1.0, nanosecond timestamps will get
     /// truncated to milliseconds.
     parquet::ParquetVersion::type parquet_version{
-        parquet::ParquetVersion::PARQUET_2_0};
+        parquet::ParquetVersion::PARQUET_2_6};
     parquet::ParquetDataPageVersion data_page_version{
         parquet::ParquetDataPageVersion::V2};
 

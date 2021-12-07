@@ -58,7 +58,7 @@ At the minimum, Katana depends on the following software:
 - libllvm (>= 7.0 with RTTI support)
 - libfmt (>= 4.0)
 - libxml2 (>=  2.9.1)
-- libarrow (>= 4.0)
+- libarrow (>= 6.0)
 - libuuid (>= 2.31.1)
 - [nlohmann/json](https://github.com/nlohmann/json) (>= 3.7.3)
 

@@ -352,7 +352,7 @@ def cythonize(module_list, *, source_root, **kwargs):
     require_python_module("numpy", "1.10")
     try:
         require_python_module("Cython", "0.29.12")
-        require_python_module("pyarrow", "4.0", "5.0.dev")
+        require_python_module("pyarrow", "6.0")
         build_extensions = True
     except RequirementError:
         print(

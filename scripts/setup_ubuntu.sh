@@ -89,10 +89,7 @@ fi
 
 if [ "$VERSION" == "21" ]; then
     # TODO(amp):REQUIREMENTS: Versions should be taken from katana_requirements or a lock file.
-    # no hirsute aka 21.04 release of apache arrow:4.0.0.1 use focal one instead
-    # we must also get libre2-5 from focal
-    curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-focal.deb" \
-         --output /tmp/apache-arrow-apt-source-latest.deb
+    # no hirsute aka 21.04 release of libre2-5 use focal one instead
     curl "http://archive.ubuntu.com/ubuntu/pool/main/r/re2/libre2-5_20200101+dfsg-1build1_amd64.deb" \
          --output /tmp/libre2-5.deb
     apt install -yq /tmp/libre2-5.deb && rm /tmp/libre2-5.deb

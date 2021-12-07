@@ -195,11 +195,11 @@ libarrow-python:
     conda: null
     pip: null
     apt: libarrow-python-dev
-  version: &arrow_version [ 4, 5 ]
+  version: &arrow_version [ 6, 7 ]
   labels:
     - apt
   version_overrides: &arrow_version_overrides
-    apt: "=4.0.1-1"
+    apt: "=6.0.1-1"
 libarrow:
   name_overrides:
     conan: arrow
@@ -323,7 +323,7 @@ parquet-cpp:
     - conda
     - apt
   version_overrides:
-    apt: "=4.0.1-1"
+    apt: "=6.0.1-1"
 pyarrow:
   name_overrides:
     apt: null

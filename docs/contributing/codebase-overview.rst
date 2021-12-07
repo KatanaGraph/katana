@@ -1,6 +1,6 @@
-========================
+==============================
 Quick Overview of the Codebase
-========================
+==============================
 
 The code is organized as several C++ and Python libraries. Important C++ libraries
 are as follows: 

@@ -875,28 +875,12 @@ tsuba::RDG::DropAllTopologies() {
 
 std::shared_ptr<arrow::Schema>
 tsuba::RDG::full_node_schema() const {
-  std::vector<std::shared_ptr<arrow::Field>> fields;
-  for (const auto& prop : core_->part_header().node_prop_info_list()) {
-    KATANA_LOG_VASSERT(
-        prop.type(), "should be impossible for type of {} to be null here",
-        prop.name());
-    fields.emplace_back(
-        std::make_shared<arrow::Field>(prop.name(), prop.type()));
-  }
-  return arrow::schema(fields);
+  return core_->full_node_schema();
 }
 
 std::shared_ptr<arrow::Schema>
 tsuba::RDG::full_edge_schema() const {
-  std::vector<std::shared_ptr<arrow::Field>> fields;
-  for (const auto& prop : core_->part_header().edge_prop_info_list()) {
-    KATANA_LOG_VASSERT(
-        prop.type(), "should be impossible for type of {} to be null here",
-        prop.name());
-    fields.emplace_back(
-        std::make_shared<arrow::Field>(prop.name(), prop.type()));
-  }
-  return arrow::schema(fields);
+  return core_->full_edge_schema();
 }
 
 const std::vector<std::shared_ptr<arrow::ChunkedArray>>&

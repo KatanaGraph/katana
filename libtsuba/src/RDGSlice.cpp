@@ -245,10 +245,6 @@ tsuba::RDGSlice::DoMake(
   std::vector<PropStorageInfo*> edge_properties =
       KATANA_CHECKED(core_->part_header().SelectEdgeProperties(edge_props));
 
-  KATANA_LOG_DEBUG(
-      "edge props size: {}, edge properties size: {}",
-      edge_props ? edge_props.value().size() : -1, edge_properties.size());
-
   KATANA_CHECKED(AddPropertySlice(
       metadata_dir, edge_properties, slice.edge_range, &grp,
       [rdg = this](

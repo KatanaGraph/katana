@@ -227,11 +227,12 @@ tsuba::AddPropertySlice(
         -> katana::CopyableResult<void> {
       KATANA_CHECKED_CONTEXT(
           add_fn(props), "adding: {}", std::quoted(prop->name()));
+      // NB: Sliced properties don't fit super cleanly into the PropStorageInfo
+      // model. This property is dirty in the sense that there is no file on
+      // storage that exactly matches it but it is clean in the sense that it
+      // has not been modified. Leave it as clean to simplify loading/unloading
+      // logic in RDGSlice.
       prop->WasLoaded(props->field(0)->type());
-
-      // since this property is going to be sliced it has no on disk form, so
-      // immediately mark it dirty
-      prop->WasModified(props->field(0)->type());
 
       return katana::CopyableResultSuccess();
     };

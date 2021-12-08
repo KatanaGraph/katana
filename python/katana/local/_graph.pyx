@@ -26,7 +26,6 @@ from libcpp.vector cimport vector
 from katana.dataframe import DataFrame, LazyDataAccessor, LazyDataFrame
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
-from .entity_type cimport EntityType
 from .entity_type_manager cimport EntityTypeManager
 
 from abc import abstractmethod
@@ -456,7 +455,7 @@ cdef class GraphBase:
     @property
     def node_types(self):
         """
-        :return the node type manager
+        :return: the node type manager
         """
         return EntityTypeManager.make(&self.underlying_property_graph().GetNodeTypeManager())
 
@@ -465,7 +464,7 @@ cdef class GraphBase:
         Return the type ID of the most specific type of a node `n`
 
         :param n: node id
-        :return the type id of the node
+        :return: the type id of the node
         """
         return self.underlying_property_graph().GetTypeOfNode(n)
 
@@ -475,14 +474,14 @@ cdef class GraphBase:
 
         :param n: node id
         :param type_id: type id
-        :return True iff node n has the given type
+        :return: True iff node n has the given type
         """
         return self.underlying_property_graph().DoesNodeHaveType(n, type_id)
 
     @property
     def edge_types(self):
         """
-        :return the edge type manager
+        :return: the edge type manager
         """
         return EntityTypeManager.make(&self.underlying_property_graph().GetEdgeTypeManager())
 
@@ -491,7 +490,7 @@ cdef class GraphBase:
         Return the type ID of the most specific type of an edge `e`
 
         :param e: edge id
-        :return the type id of the edge
+        :return: the type id of the edge
         """
         return self.underlying_property_graph().GetTypeOfEdge(e)
 
@@ -501,7 +500,7 @@ cdef class GraphBase:
 
         :param e: edge id
         :param type_id: type id
-        :return True iff edge e has the given type
+        :return: True iff edge e has the given type
         """
         return self.underlying_property_graph().DoesEdgeHaveType(e, type_id)
 

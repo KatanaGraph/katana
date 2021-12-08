@@ -330,123 +330,44 @@ def test_types(graph):
     assert graph.does_node_have_type(0, 17)
     assert graph.does_edge_have_type(0, 8)
 
-    assert graph.node_types.get_num_atomic_types() == 14
-    assert graph.node_types.get_num_entity_types() == 22
-    assert graph.node_types.has_atomic_type("Person") is True
-    assert graph.node_types.list_atomic_types() == [
-        b"Tag",
-        b"Organisation",
-        b"City",
-        b"Comment",
-        b"University",
-        b"Forum",
-        b"Company",
-        b"Continent",
-        b"Country",
-        b"Place",
-        b"TagClass",
-        b"Person",
-        b"Message",
-        b"Post",
-    ]
-    assert graph.node_types.has_entity_type(0) is True
+    node_atomic_types = graph.node_types.atomic_types
+    node_name_to_id_map = {name: node_atomic_types[name].type_id for name in node_atomic_types}
+    assert node_name_to_id_map == {
+        b"Tag": 12,
+        b"Organisation": 8,
+        b"City": 1,
+        b"Comment": 2,
+        b"University": 14,
+        b"Forum": 6,
+        b"Company": 3,
+        b"Continent": 4,
+        b"Country": 5,
+        b"Place": 10,
+        b"TagClass": 13,
+        b"Person": 9,
+        b"Message": 7,
+        b"Post": 11,
+    }
     assert graph.node_types.entity_type_to_type_name_set(1) == {b"City"}
-    assert graph.node_types.get_entity_type_id("Person") == 9
-    assert graph.node_types.get_atomic_type_name(9) == b"Person"
-    assert graph.node_types.get_atomic_entity_type_ids() == [12, 8, 1, 2, 14, 6, 3, 4, 5, 10, 13, 9, 7, 11]
     assert graph.node_types.is_subtype_of(0, 1) is True
-    assert graph.node_types.get_entity_type_id_to_atomic_type_name_map() == {
-        13: b"TagClass",
-        14: b"University",
-        1: b"City",
-        2: b"Comment",
-        3: b"Company",
-        4: b"Continent",
-        5: b"Country",
-        6: b"Forum",
-        7: b"Message",
-        8: b"Organisation",
-        9: b"Person",
-        10: b"Place",
-        11: b"Post",
-        12: b"Tag",
-    }
-    atomic_node_type_names = [str(atomic_entity_type) for atomic_entity_type in graph.node_types.all_atomic_types()]
-    assert atomic_node_type_names == [
-        "Tag",
-        "Organisation",
-        "City",
-        "Comment",
-        "University",
-        "Forum",
-        "Company",
-        "Continent",
-        "Country",
-        "Place",
-        "TagClass",
-        "Person",
-        "Message",
-        "Post",
-    ]
 
-    assert graph.edge_types.get_num_atomic_types() == 15
-    assert graph.edge_types.get_num_entity_types() == 16
-    assert graph.edge_types.has_atomic_type("KNOWS") is True
-    assert graph.edge_types.list_atomic_types() == [
-        b"KNOWS",
-        b"IS_SUBCLASS_OF",
-        b"REPLY_OF",
-        b"LIKES",
-        b"CONTAINER_OF",
-        b"WORK_AT",
-        b"HAS_TYPE",
-        b"HAS_CREATOR",
-        b"STUDY_AT",
-        b"IS_LOCATED_IN",
-        b"HAS_INTEREST",
-        b"HAS_TAG",
-        b"HAS_MEMBER",
-        b"HAS_MODERATOR",
-        b"IS_PART_OF",
-    ]
-    assert graph.edge_types.has_entity_type(0) is True
-    assert graph.edge_types.entity_type_to_type_name_set(1) == {b"CONTAINER_OF"}
-    assert graph.edge_types.get_entity_type_id("REPLY_OF") == 13
-    assert graph.edge_types.get_atomic_type_name(9) == b"IS_PART_OF"
-    assert graph.edge_types.get_atomic_entity_type_ids() == [11, 10, 13, 12, 1, 15, 7, 2, 14, 8, 3, 6, 4, 5, 9]
-    assert graph.edge_types.is_subtype_of(0, 1) is True
-    assert graph.edge_types.get_entity_type_id_to_atomic_type_name_map() == {
-        13: b"REPLY_OF",
-        12: b"LIKES",
-        15: b"WORK_AT",
-        2: b"HAS_CREATOR",
-        14: b"STUDY_AT",
-        1: b"CONTAINER_OF",
-        3: b"HAS_INTEREST",
-        4: b"HAS_MEMBER",
-        5: b"HAS_MODERATOR",
-        6: b"HAS_TAG",
-        7: b"HAS_TYPE",
-        8: b"IS_LOCATED_IN",
-        9: b"IS_PART_OF",
-        10: b"IS_SUBCLASS_OF",
-        11: b"KNOWS",
+    edge_atomic_types = graph.edge_types.atomic_types
+    edge_name_to_id_map = {name: edge_atomic_types[name].type_id for name in edge_atomic_types}
+    assert edge_name_to_id_map == {
+        b"KNOWS": 11,
+        b"IS_SUBCLASS_OF": 10,
+        b"REPLY_OF": 13,
+        b"LIKES": 12,
+        b"CONTAINER_OF": 1,
+        b"WORK_AT": 15,
+        b"HAS_TYPE": 7,
+        b"HAS_CREATOR": 2,
+        b"STUDY_AT": 14,
+        b"IS_LOCATED_IN": 8,
+        b"HAS_INTEREST": 3,
+        b"HAS_TAG": 6,
+        b"HAS_MEMBER": 4,
+        b"HAS_MODERATOR": 5,
+        b"IS_PART_OF": 9,
     }
-    atomic_edge_type_names = [str(atomic_entity_type) for atomic_entity_type in graph.edge_types.all_atomic_types()]
-    assert atomic_edge_type_names == [
-        "KNOWS",
-        "IS_SUBCLASS_OF",
-        "REPLY_OF",
-        "LIKES",
-        "CONTAINER_OF",
-        "WORK_AT",
-        "HAS_TYPE",
-        "HAS_CREATOR",
-        "STUDY_AT",
-        "IS_LOCATED_IN",
-        "HAS_INTEREST",
-        "HAS_TAG",
-        "HAS_MEMBER",
-        "HAS_MODERATOR",
-        "IS_PART_OF",
-    ]
+    assert graph.edge_types.is_subtype_of(0, 1) is True

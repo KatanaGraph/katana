@@ -18,7 +18,7 @@ function(add_test_unit name)
   target_link_libraries(${test_name} katana_galois)
   # TODO(amber): this is a bit of an ugly hack. tests should specify which of
   # katana_galois and katana_graph they want to link to
-  if (TARGET katana_graph) 
+  if (TARGET katana_graph)
     target_link_libraries(${test_name} katana_graph)
   endif()
   if(X_LINK_LIBRARIES)

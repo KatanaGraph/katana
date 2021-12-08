@@ -73,7 +73,7 @@ cdef class EntityTypeManager:
 
     def entity_type_to_type_name_set(self, entity_type):
         """
-        :param entity_type: Can be a positive integer or an EntityType object 
+        :param entity_type: Can be a positive integer or an EntityType object
         :return: a set of strings representing the names of the types for the entity type
         """
         if isinstance(entity_type, int):

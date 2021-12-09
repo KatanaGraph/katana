@@ -9,7 +9,7 @@ from . import datastructures
 
 from katana.cpp.libgalois.graphs cimport Graph as CGraph
 from katana.cpp.libsupport.result cimport Result, raise_error_code
-from katana.local._graph cimport Graph, handle_result_PropertyGraph, TxnContext
+from katana.local._graph cimport Graph, TxnContext, handle_result_PropertyGraph
 
 
 cdef CGraph.GraphComponents handle_result_GraphComponents(Result[CGraph.GraphComponents] res) nogil except *:

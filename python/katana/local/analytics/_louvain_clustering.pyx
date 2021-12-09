@@ -242,7 +242,7 @@ cdef class LouvainClusteringStatistics:
         txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
         with nogil:
             self.underlying = handle_result_LouvainClusteringStatistics(_LouvainClusteringStatistics.Compute(
-                &txn_ctx._txn_ctx, 
+                &txn_ctx._txn_ctx,
                 pg.underlying_property_graph(),
                 edge_weight_property_name_str,
                 output_property_name_str

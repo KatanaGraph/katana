@@ -67,7 +67,7 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
     uint32_t kDefaultAlpha "katana::analytics::BfsPlan::kDefaultAlpha"
     uint32_t kDefaultBeta "katana::analytics::BfsPlan::kDefaultBeta"
 
-    Result[void] Bfs(CTxnContext* txn_ctx, 
+    Result[void] Bfs(CTxnContext* txn_ctx,
                      _PropertyGraph * pg,
                      uint32_t start_node,
                      string output_property_name,

@@ -28,8 +28,9 @@ using namespace katana::analytics;
 using NodeData = std::tuple<JaccardSimilarity>;
 using EdgeData = std::tuple<>;
 
-typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-typedef typename Graph::Node GNode;
+using Graph = katana::TypedPropertyGraphView<
+    katana::PropertyGraphViews::Default, NodeData, EdgeData>;
+using GNode = typename Graph::Node;
 
 namespace {
 
@@ -46,13 +47,13 @@ public:
     uint32_t intersection_size = 0;
     // Iterate over the edges of both n2 and base in sync, based on the
     // assumption that edges lists are sorted.
-    auto edges_n2_iter = graph_.edge_begin(n2);
-    auto edges_n2_end = graph_.edge_end(n2);
-    auto edges_base_iter = graph_.edge_begin(base_);
-    auto edges_base_end = graph_.edge_end(base_);
+    auto edges_n2_iter = graph_.edges(n2).begin();
+    auto edges_n2_end = graph_.edges(n2).end();
+    auto edges_base_iter = graph_.edges(base_).begin();
+    auto edges_base_end = graph_.edges(base_).end();
     while (edges_n2_iter != edges_n2_end && edges_base_iter != edges_base_end) {
-      auto edge_n2_dst = graph_.GetEdgeDest(*edges_n2_iter);
-      auto edge_base_dst = graph_.GetEdgeDest(*edges_base_iter);
+      auto edge_n2_dst = graph_.edge_dest(*edges_n2_iter);
+      auto edge_base_dst = graph_.edge_dest(*edges_base_iter);
       if (edge_n2_dst == edge_base_dst) {
         intersection_size++;
         edges_n2_iter++;
@@ -77,16 +78,16 @@ public:
       : graph_(graph) {
     // Collect all the neighbors of the base node into a hash set.
     for (const auto& e : graph.edges(base)) {
-      auto dest = graph.GetEdgeDest(e);
-      base_neighbors.emplace(*dest);
+      auto dest = graph.edge_dest(e);
+      base_neighbors.emplace(dest);
     }
   }
 
   uint32_t operator()(GNode n2) {
     uint32_t intersection_size = 0;
     for (const auto& e : graph_.edges(n2)) {
-      auto neighbor = graph_.GetEdgeDest(e);
-      if (base_neighbors.count(*neighbor) > 0)
+      auto neighbor = graph_.edge_dest(e);
+      if (base_neighbors.count(neighbor) > 0)
         intersection_size++;
     }
     return intersection_size;
@@ -95,10 +96,7 @@ public:
 
 template <typename IntersectAlgorithm>
 katana::Result<void>
-JaccardImpl(
-    katana::TypedPropertyGraph<std::tuple<JaccardSimilarity>, std::tuple<>>&
-        graph,
-    size_t compare_node, JaccardPlan /*plan*/) {
+JaccardImpl(Graph& graph, size_t compare_node, JaccardPlan /*plan*/) {
   if (compare_node >= graph.size()) {
     return katana::ErrorCode::InvalidArgument;
   }
@@ -149,10 +147,7 @@ katana::analytics::Jaccard(
     return result.error();
   }
 
-  auto pg_result = Graph::Make(pg, {output_property_name}, {});
-  if (!pg_result) {
-    return pg_result.error();
-  }
+  Graph graph = KATANA_CHECKED(Graph::Make(pg, {output_property_name}, {}));
 
   katana::Result<void> r = katana::ResultSuccess();
   switch (plan.edge_sorting()) {
@@ -160,12 +155,10 @@ katana::analytics::Jaccard(
     // TODO(amp): It would be possible to start with the sorted case and then
     //  fail to the unsorted case if unsorted nodes are detected.
   case JaccardPlan::kUnsorted:
-    r = JaccardImpl<IntersectWithUnsortedEdgeList>(
-        pg_result.value(), compare_node, plan);
+    r = JaccardImpl<IntersectWithUnsortedEdgeList>(graph, compare_node, plan);
     break;
   case JaccardPlan::kSorted:
-    r = JaccardImpl<IntersectWithSortedEdgeList>(
-        pg_result.value(), compare_node, plan);
+    r = JaccardImpl<IntersectWithSortedEdgeList>(graph, compare_node, plan);
     break;
   }
 
@@ -178,12 +171,8 @@ katana::Result<void>
 katana::analytics::JaccardAssertValid(
     katana::PropertyGraph* pg, uint32_t compare_node,
     const std::string& property_name) {
-  auto pg_result = katana::TypedPropertyGraph<NodeData, EdgeData>::Make(
-      pg, {property_name}, {});
-  if (!pg_result) {
-    return pg_result.error();
-  }
-  Graph graph = pg_result.value();
+  Graph graph = KATANA_CHECKED(Graph::Make(pg, {property_name}, {}));
+  ;
 
   if (abs(graph.GetData<JaccardSimilarity>(compare_node) - 1.0) > EPSILON) {
     return katana::ErrorCode::AssertionFailed;
@@ -209,12 +198,8 @@ katana::Result<JaccardStatistics>
 katana::analytics::JaccardStatistics::Compute(
     katana::PropertyGraph* pg, uint32_t compare_node,
     const std::string& property_name) {
-  auto pg_result = katana::TypedPropertyGraph<NodeData, EdgeData>::Make(
-      pg, {property_name}, {});
-  if (!pg_result) {
-    return pg_result.error();
-  }
-  Graph graph = pg_result.value();
+  Graph graph = KATANA_CHECKED(Graph::Make(pg, {property_name}, {}));
+  ;
 
   katana::GReduceMax<double> max_similarity;
   katana::GReduceMin<double> min_similarity;

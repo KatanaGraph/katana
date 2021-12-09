@@ -122,7 +122,7 @@ cdef class KTrussPlan(Plan):
         return KTrussPlan.make(_KTrussPlan.BspCoreThenTruss())
 
 
-def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan(), TxnContext txn_ctx=None) -> int:
+def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan(), *, TxnContext txn_ctx = None) -> int:
     """
     Compute the k-truss for pg. `pg` must be symmetric.
 
@@ -152,7 +152,7 @@ def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussP
 
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         v = handle_result_void(KTruss(&txn_ctx._txn_ctx, pg.underlying_property_graph(),k_truss_number,output_property_name_str, plan.underlying_))
     return v

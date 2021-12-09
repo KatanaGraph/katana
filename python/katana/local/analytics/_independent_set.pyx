@@ -123,7 +123,7 @@ cdef class IndependentSetPlan(Plan):
 
 
 def independent_set(Graph pg, str output_property_name,
-             IndependentSetPlan plan = IndependentSetPlan(), TxnContext txn_ctx=None):
+             IndependentSetPlan plan = IndependentSetPlan(), *, TxnContext txn_ctx = None):
     """
     Find a maximal (not the maximum) independent set in the graph and create an indicator property that is true for
     elements of the independent set. The graph must be symmetric. The property named output_property_name is created by
@@ -153,7 +153,7 @@ def independent_set(Graph pg, str output_property_name,
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(IndependentSet(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
 

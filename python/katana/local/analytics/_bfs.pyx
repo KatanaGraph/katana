@@ -161,7 +161,7 @@ cdef class BfsPlan(Plan):
         return BfsPlan.make(_BfsPlan.SynchronousDirectOpt(alpha, beta))
 
 
-def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan(), TxnContext txn_ctx=None):
+def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Breadth-First Search parents on `pg` using `start_node` as the source. The computed parents are
     written to the property `output_property_name`.
@@ -194,7 +194,7 @@ def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = 
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(Bfs(&txn_ctx._txn_ctx, pg.underlying_property_graph(), start_node, output_property_name_cstr, plan.underlying_))
 

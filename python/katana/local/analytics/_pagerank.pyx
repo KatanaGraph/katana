@@ -168,7 +168,7 @@ cdef class PagerankPlan(Plan):
         return PagerankPlan.make(_PagerankPlan.PushSynchronous(tolerance, max_iterations, alpha))
 
 
-def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPlan(), TxnContext txn_ctx=None):
+def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Page Rank of each node in the graph.
 
@@ -201,7 +201,7 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(Pagerank(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
 

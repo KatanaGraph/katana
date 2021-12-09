@@ -246,7 +246,7 @@ cdef class ConnectedComponentsPlan(Plan):
 
 
 def connected_components(Graph pg, str output_property_name,
-                         ConnectedComponentsPlan plan = ConnectedComponentsPlan(), TxnContext txn_ctx=None) -> int:
+                         ConnectedComponentsPlan plan = ConnectedComponentsPlan(), *, TxnContext txn_ctx = None) -> int:
     """
     Compute the Connected-components for `pg`. `pg` must be symmetric.
 
@@ -278,7 +278,7 @@ def connected_components(Graph pg, str output_property_name,
 
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         v = handle_result_void(ConnectedComponents(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_str, plan.underlying_))
     return v

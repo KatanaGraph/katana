@@ -131,7 +131,7 @@ cdef class BetweennessCentralityPlan(Plan):
 
 def betweenness_centrality(Graph pg, str output_property_name, sources = None,
              BetweennessCentralityPlan plan = BetweennessCentralityPlan(),
-             TxnContext txn_ctx=None):
+             *, TxnContext txn_ctx = None):
     """
     Betweenness centrality measures the extent to which a vertex lies on paths between other vertices.
     Vertices with high betweenness may have considerable influence within a network by virtue of their control over information passing between others.
@@ -166,7 +166,7 @@ def betweenness_centrality(Graph pg, str output_property_name, sources = None,
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     if sources is None:
         c_sources = kBetweennessCentralityAllNodes
     elif isinstance(sources, list) or isinstance(sources, set) or \

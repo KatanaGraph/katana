@@ -134,7 +134,7 @@ cdef class JaccardPlan(Plan):
 
 
 def jaccard(Graph pg, size_t compare_node, str output_property_name,
-            JaccardPlan plan = JaccardPlan(), TxnContext txn_ctx=None):
+            JaccardPlan plan = JaccardPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Jaccard Similarity between `compare_node` and all nodes in the graph.
 
@@ -170,7 +170,7 @@ def jaccard(Graph pg, size_t compare_node, str output_property_name,
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(Jaccard(&txn_ctx._txn_ctx, pg.underlying_property_graph(), compare_node, output_property_name_cstr, plan.underlying_))
 

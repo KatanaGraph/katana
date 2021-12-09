@@ -107,7 +107,7 @@ cdef class KCorePlan(Plan):
         return KCorePlan.make(_KCorePlan.Asynchronous())
 
 
-def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan(), TxnContext txn_ctx=None) -> int:
+def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan(), *, TxnContext txn_ctx = None) -> int:
     """
     Compute nodes which are in the k-core of pg. The pg must be symmetric.
 
@@ -137,7 +137,7 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
 
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         v = handle_result_void(KCore(&txn_ctx._txn_ctx, pg.underlying_property_graph(), k_core_number, output_property_name_str, plan.underlying_))
     return v

@@ -189,7 +189,7 @@ cdef class LeidenClusteringPlan(Plan):
             min_graph_size, resolution, randomness))
 
 
-def leiden_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LeidenClusteringPlan plan = LeidenClusteringPlan(), TxnContext txn_ctx=None):
+def leiden_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LeidenClusteringPlan plan = LeidenClusteringPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Leiden Clustering for pg.
     The edge weights are taken from the property named
@@ -225,7 +225,7 @@ def leiden_clustering(Graph pg, str edge_weight_property_name, str output_proper
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(LeidenClustering(&txn_ctx._txn_ctx, pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
 
@@ -253,11 +253,11 @@ cdef class LeidenClusteringStatistics:
     def __init__(self, Graph pg,
             str edge_weight_property_name,
             str output_property_name,
-            TxnContext txn_ctx=None
+            *, TxnContext txn_ctx = None
             ):
         cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
         cdef string output_property_name_str = bytes(output_property_name, "utf-8")
-        txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+        txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_LeidenClusteringStatistics(_LeidenClusteringStatistics.Compute(
                 &txn_ctx._txn_ctx,

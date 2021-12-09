@@ -245,7 +245,7 @@ cdef class SsspPlan(Plan):
 
 
 def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
-         SsspPlan plan = SsspPlan(), TxnContext txn_ctx=None):
+         SsspPlan plan = SsspPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Single-Source Shortest Path on `pg` using `start_node` as the source. The computed path lengths are
     written to the property `output_property_name`.
@@ -281,7 +281,7 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(Sssp(&txn_ctx._txn_ctx, pg.underlying_property_graph(), start_node, edge_weight_property_name_str,
                                 output_property_name_str, plan.underlying_))

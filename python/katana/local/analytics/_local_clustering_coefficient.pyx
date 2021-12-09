@@ -153,8 +153,8 @@ cdef class LocalClusteringCoefficientPlan(Plan):
              edges_sorted, _relabeling_from_python(relabeling)))
 
 
-def local_clustering_coefficient(Graph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan(), TxnContext txn_ctx=None):
+def local_clustering_coefficient(Graph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan(), *, TxnContext txn_ctx = None):
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(LocalClusteringCoefficient(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_str, plan.underlying_))

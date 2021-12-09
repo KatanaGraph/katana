@@ -48,7 +48,7 @@ def from_csr(edge_indices, edge_destinations):
     return Graph.make(pg)
 
 
-def from_graphml(path, uint64_t chunk_size=25000, TxnContext txn_ctx=None):
+def from_graphml(path, uint64_t chunk_size=25000, *, TxnContext txn_ctx=None):
     """
     Load a GraphML file into Katana form.
 
@@ -61,7 +61,7 @@ def from_graphml(path, uint64_t chunk_size=25000, TxnContext txn_ctx=None):
     :returns: the new :py:class:`~katana.local.Graph`
     """
     path_str = <string>bytes(str(path), "utf-8")
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         pg = handle_result_PropertyGraph(
             CGraph.ConvertToPropertyGraph(

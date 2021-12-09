@@ -123,7 +123,7 @@ cdef class CdlpPlan(Plan):
 
 def cdlp(Graph pg, str output_property_name,
                          int max_iteration = 10 ,CdlpPlan plan = CdlpPlan(),
-                         TxnContext txn_ctx=None) -> int:
+                         *, TxnContext txn_ctx = None) -> int:
     """
     Compute the CDLP for `pg`.
 
@@ -155,7 +155,7 @@ def cdlp(Graph pg, str output_property_name,
 
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
-    txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         v = handle_result_void(Cdlp(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_str, max_iteration, plan.underlying_))
     return v

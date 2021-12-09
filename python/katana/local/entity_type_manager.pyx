@@ -33,7 +33,7 @@ cdef class AtomicEntityType(EntityType):
     """
     @property
     def name(self):
-        return self._name
+        return self._name.decode("utf-8")
 
     def __str__(self):
         """:rtype str: Name of the corresponding atomic type"""
@@ -70,21 +70,6 @@ cdef class EntityTypeManager:
         """
         atomic_type_names = self.underlying_entity_type_manager.ListAtomicTypes()
         return {name: self._make_atomic_entity_type(name) for name in atomic_type_names}
-
-    def entity_type_to_type_name_set(self, entity_type):
-        """
-        :param entity_type: Can be a positive integer or an EntityType object
-        :return: a set of strings representing the names of the types for the entity type
-        """
-        if isinstance(entity_type, int):
-            entity_type_id = entity_type
-        elif isinstance(entity_type, EntityType):
-            entity_type_id = entity_type.type_id
-        else:
-            raise ValueError(f"{entity_type}'s type is not supported")
-        if not self.underlying_entity_type_manager.HasEntityType(entity_type_id):
-            raise LookupError(f"{entity_type_id} does not represent a type")
-        return handle_result_TypeNameSet(self.underlying_entity_type_manager.EntityTypeToTypeNameSet(entity_type_id))
 
     def is_subtype_of(self, sub_type, super_type):
         """

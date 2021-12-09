@@ -8,6 +8,7 @@
 #include "katana/GraphML.h"
 #include "katana/GraphMLSchema.h"
 #include "katana/Logging.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Timer.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"

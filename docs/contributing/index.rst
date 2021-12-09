@@ -6,6 +6,7 @@ Contributing
 
 .. toctree::
    history
+   codebase-overview
    building
    git-style
    code-style

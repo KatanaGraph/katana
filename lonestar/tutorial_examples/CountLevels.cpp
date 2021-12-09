@@ -20,9 +20,9 @@
 #include <iostream>
 
 #include "Lonestar/BoilerPlate.h"
-#include "katana/Galois.h"
 #include "katana/LCGraph.h"
 #include "katana/Reduction.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Statistics.h"
 #include "katana/Timer.h"
 

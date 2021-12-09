@@ -13,34 +13,20 @@ set(sources
         src/Barrier_MCS.cpp
         src/Barrier_Simple.cpp
         src/Barrier_Topo.cpp
-        src/BuildGraph.cpp
         src/Context.cpp
         src/Deterministic.cpp
         src/DynamicBitset.cpp
-        src/FileGraph.cpp
-        src/FileGraphParallel.cpp
+        src/GaloisRuntime.cpp
         src/gIO.cpp
-        src/GraphHelpers.cpp
-        src/GraphML.cpp
-        src/GraphMLSchema.cpp
-        src/GraphTopology.cpp
         src/HWTopo.cpp
         src/Mem.cpp
         src/NumaMem.cpp
-        src/OCFileGraph.cpp
         src/PageAlloc.cpp
         src/PagePool.cpp
         src/ParaMeter.cpp
         src/PerThreadStorage.cpp
         src/Profile.cpp
-        src/Properties.cpp
-        src/PropertyGraph.cpp
-        src/PropertyGraphRetractor.cpp
-        src/PropertyIndex.cpp
-        src/PropertyViews.cpp
         src/PtrLock.cpp
-        src/SharedMem.cpp
-        src/SharedMemSys.cpp
         src/SimpleLock.cpp
         src/Statistics.cpp
         src/Support.cpp
@@ -49,32 +35,7 @@ set(sources
         src/ThreadTimer.cpp
         src/Threads.cpp
         src/Timer.cpp
-        src/TopologyGeneration.cpp
-        src/analytics/Utils.cpp
-        src/analytics/betweenness_centrality/betweenness_centrality.cpp
-        src/analytics/betweenness_centrality/level.cpp
-        src/analytics/betweenness_centrality/outer.cpp
-        src/analytics/bfs/bfs.cpp
-        src/analytics/cdlp/cdlp.cpp
-        src/analytics/connected_components/connected_components.cpp
-        src/analytics/independent_set/independent_set.cpp
-        src/analytics/jaccard/jaccard.cpp
-        src/analytics/k_core/k_core.cpp
-        src/analytics/k_truss/k_truss.cpp
-        src/analytics/pagerank/pagerank-pull.cpp
-        src/analytics/pagerank/pagerank-push.cpp
-        src/analytics/pagerank/pagerank.cpp
-        src/analytics/sssp/sssp.cpp
-        src/analytics/triangle_count/triangle_count.cpp
-        src/analytics/louvain_clustering/louvain_clustering.cpp
-        src/analytics/random_walks/random_walks.cpp
-        src/analytics/local_clustering_coefficient/local_clustering_coefficient.cpp
-        src/analytics/subgraph_extraction/subgraph_extraction.cpp
-        src/analytics/leiden_clustering/leiden_clustering.cpp
-        src/analytics/matrix_completion/matrix_completion.cpp
     )
-
-find_package(LibXml2 2.9.1 REQUIRED)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND sources src/HWTopoDarwin.cpp)
@@ -95,10 +56,8 @@ target_include_directories(katana_galois PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(katana_galois PUBLIC tsuba)
 target_link_libraries(katana_galois PRIVATE Threads::Threads)
 target_link_libraries(katana_galois PUBLIC katana_support)
-target_link_libraries(katana_galois PUBLIC LibXml2::LibXml2)
 
 set_common_katana_library_options(katana_galois)
 

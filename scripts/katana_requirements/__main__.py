@@ -203,6 +203,14 @@ def get_apt_version():
     return Version(version_match.group(1))
 
 
+def has_mamba():
+    try:
+        subprocess.check_call(["mamba", "-V"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+
 def install_package_list(args, packages: List[Package], data: Requirements, silent=False):
     format, ps = get_format(args, data)
     if format == OutputFormat.APT:
@@ -241,7 +249,10 @@ def install_package_list(args, packages: List[Package], data: Requirements, sile
     elif format == OutputFormat.PIP:
         command = [sys.executable, "-m", "pip", "install"]
     elif format == OutputFormat.CONDA:
-        command = ["conda", "install"] + [v for c in ps.channels for v in ["-c", c]]
+        mamba_or_conda = "conda"
+        if has_mamba():
+            mamba_or_conda = "mamba"
+        command = [mamba_or_conda, "install", "--override-channels"] + [v for c in ps.channels for v in ["-c", c]]
     else:
         raise ValueError(f"{format.value} installation not supported from this command.")
 

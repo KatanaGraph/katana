@@ -18,8 +18,8 @@
  */
 
 #include "Lonestar/BoilerPlate.h"
-#include "katana/Galois.h"
 #include "katana/LCGraph.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Timer.h"
 #include "llvm/Support/CommandLine.h"
 

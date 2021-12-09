@@ -565,3 +565,8 @@ pexpect:
   labels:
     - pip/dev
     - conda/dev
+mistune:
+  version: [0.8, 2]
+  labels:
+    - pip/dev
+    - conda/dev

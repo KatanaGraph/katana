@@ -29,8 +29,8 @@
 // detection
 #include <iostream>
 
-#include "katana/Galois.h"
 #include "katana/LCGraph.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Timer.h"
 
 using Graph = katana::LC_CSR_Graph<int, int>;

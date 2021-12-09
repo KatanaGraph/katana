@@ -27,8 +27,8 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "katana/Galois.h"
 #include "katana/NUMAArray.h"
+#include "katana/SharedMemSys.h"
 
 template <typename T>
 class Torus2D {

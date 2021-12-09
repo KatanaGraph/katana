@@ -19,7 +19,7 @@
 
 #include "katana/BufferedGraph.h"
 #include "katana/FileGraph.h"
-#include "katana/Galois.h"
+#include "katana/SharedMemSys.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;

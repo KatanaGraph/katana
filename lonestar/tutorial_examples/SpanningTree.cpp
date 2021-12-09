@@ -23,10 +23,10 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "katana/Bag.h"
-#include "katana/Galois.h"
 #include "katana/LCGraph.h"
 #include "katana/ParallelSTL.h"
 #include "katana/Reduction.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Timer.h"
 #include "katana/UnionFind.h"
 #include "llvm/Support/CommandLine.h"

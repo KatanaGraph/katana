@@ -37,6 +37,7 @@
 #include "katana/FileGraph.h"
 #include "katana/Galois.h"
 #include "katana/NUMAArray.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Strings.h"
 #include "tsuba/CSRTopology.h"
 #include "tsuba/Errors.h"
@@ -3293,7 +3294,7 @@ struct Svmlight2Gr : public HasNoVoidSpecialization {
 
 int
 main(int argc, char** argv) {
-  kCommandLine = katana::Join(" ", argv, argv + argc);
+  kCommandLine = katana::Join(argv, argv + argc, " ");
   katana::SharedMemSys G;
   llvm::cl::ParseCommandLineOptions(
       argc, argv,

@@ -64,6 +64,18 @@ CopyProperty(
   return tsuba::FileStore(new_path.string(), fv.ptr<uint8_t>(), fv.size());
 }
 
+tsuba::PropStorageInfo*
+find_prop_info(
+    const std::string& name, std::vector<tsuba::PropStorageInfo>* prop_infos) {
+  auto it = std::find_if(
+      prop_infos->begin(), prop_infos->end(),
+      [&name](tsuba::PropStorageInfo& psi) { return psi.name() == name; });
+  if (it == prop_infos->end()) {
+    return nullptr;
+  }
+
+  return &(*it);
+}
 }  // namespace
 
 // TODO(vkarthik): repetitive code from RDGManifest, try to unify
@@ -262,6 +274,19 @@ RDGPartHeader::ChangeStorageLocation(
   return katana::ResultSuccess();
 }
 
+PropStorageInfo*
+RDGPartHeader::find_node_prop_info(const std::string& name) {
+  return find_prop_info(name, &node_prop_info_list());
+}
+PropStorageInfo*
+RDGPartHeader::find_edge_prop_info(const std::string& name) {
+  return find_prop_info(name, &edge_prop_info_list());
+}
+PropStorageInfo*
+RDGPartHeader::find_part_prop_info(const std::string& name) {
+  return find_prop_info(name, &part_prop_info_list());
+}
+
 }  // namespace tsuba
 
 // specialized PropStorageInfo vec transformation to avoid nulls in the output
@@ -304,14 +329,14 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
         RDGPartHeader::kPartitionStorageFormatVersion1;
   }
 
-  // Version 2 was found to be buggy,
-  KATANA_LOG_VASSERT(
-      header.storage_format_version_ !=
-          RDGPartHeader::kPartitionStorageFormatVersion2,
-      "Loaded graph is RDG storage_format_version 2 (aka RDG v2), which is not "
-      "supported. "
-      "Please re-import this graph to get an RDG with the most recent "
-      "storage_format_version");
+  if (header.storage_format_version_ ==
+      RDGPartHeader::kPartitionStorageFormatVersion2) {
+    // Version 2 was found to be buggy,
+    throw std::runtime_error(
+        "Loaded graph is RDG storage_format_version 2 (aka RDG v2), which is "
+        "not supported. Please re-import this graph to get an RDG with the "
+        "most recent storage_format_version");
+  }
 
   // Version 2 added entity type id files
   if (header.storage_format_version_ >=
@@ -389,7 +414,7 @@ tsuba::from_json(const json& j, tsuba::PartitionMetadata& pmd) {
 
   if (magic != kPartitionMagicNo) {
     // nlohmann::json reports errors using exceptions
-    throw std::runtime_error("Partition magic number mismatch");
+    throw std::runtime_error("partition magic number mismatch");
   }
 }
 
@@ -409,7 +434,10 @@ void
 tsuba::from_json(
     const nlohmann::json& j, tsuba::PartitionTopologyMetadataEntry& topo) {
   j.at("path").get_to(topo.path_);
-  KATANA_LOG_VASSERT(!topo.path_.empty(), "loaded topology with empty path");
+  if (topo.path_.empty()) {
+    throw std::runtime_error("loaded topology with empty path");
+  }
+
   j.at("num_nodes").get_to(topo.num_nodes_);
   j.at("num_edges").get_to(topo.num_edges_);
   j.at("edge_index_to_property_index_map_present")
@@ -492,7 +520,9 @@ tsuba::from_json(
   j.at(kPartitionTopologyMetadataEntriesSizeKey).get_to(tmp_num);
   topomd.set_num_entries(tmp_num);
   j.at(kPartitionTopologyMetadataEntriesKey).get_to(entries_vec);
-  KATANA_LOG_ASSERT(size(entries_vec) == topomd.num_entries());
+  if (size(entries_vec) != topomd.num_entries()) {
+    throw std::runtime_error("invalid file");
+  }
 
   // move the vector contents into our entries array
   std::copy_n(

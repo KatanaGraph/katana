@@ -121,7 +121,6 @@ EnsureTypeLoaded(const katana::Uri& rdg_dir, tsuba::PropStorageInfo* psi) {
   }
   return katana::ResultSuccess();
 }
-
 }  // namespace
 
 namespace tsuba {

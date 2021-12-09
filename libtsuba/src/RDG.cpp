@@ -337,7 +337,7 @@ tsuba::RDG::DoStore(
       handle.impl_->rdg_manifest().dir(), write_group.get()));
 
   // writing partition metadata
-  core_->part_header().set_part_properties(KATANA_CHECKED(
+  core_->part_header().set_part_prop_info_list(KATANA_CHECKED(
       WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get())));
 
   //If a view type has been set, use it otherwise pass in the default view type
@@ -507,7 +507,10 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
       partition_path);
 
   RDG rdg(std::make_unique<RDGCore>(std::move(part_header)));
+  // rdg.DoMake will try to lookup in the property cache, and it
+  // needs a valid rdg_dir
   rdg.prop_cache_ = opts.prop_cache;
+  rdg.set_rdg_dir(manifest.dir());
 
   std::vector<PropStorageInfo*> node_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectNodeProperties(opts.node_properties));
@@ -782,7 +785,7 @@ tsuba::RDG::LoadEdgeProperty(const std::string& name, int i) {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListNodeProperties() const {
+tsuba::RDG::ListFullNodeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().node_prop_info_list()) {
     result.emplace_back(prop.name());
@@ -791,10 +794,32 @@ tsuba::RDG::ListNodeProperties() const {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListEdgeProperties() const {
+tsuba::RDG::ListLoadedNodeProperties() const {
+  std::vector<std::string> result;
+  for (const auto& prop : core_->part_header().node_prop_info_list()) {
+    if (!prop.IsAbsent()) {
+      result.emplace_back(prop.name());
+    }
+  }
+  return result;
+}
+
+std::vector<std::string>
+tsuba::RDG::ListFullEdgeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().edge_prop_info_list()) {
     result.emplace_back(prop.name());
+  }
+  return result;
+}
+
+std::vector<std::string>
+tsuba::RDG::ListLoadedEdgeProperties() const {
+  std::vector<std::string> result;
+  for (const auto& prop : core_->part_header().edge_prop_info_list()) {
+    if (!prop.IsAbsent()) {
+      result.emplace_back(prop.name());
+    }
   }
   return result;
 }

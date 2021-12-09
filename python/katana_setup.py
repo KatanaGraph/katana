@@ -210,7 +210,7 @@ def load_lang_config(lang):
         LINK_OPTIONS=-march=sandybridge;-mtune=generic;
             LINKER:-rpath=[build dir]/external/katana/libgalois;
             LINKER:-rpath=[build dir];
-            LINKER:-rpath=/usr/local/katana/lib;[build dir]/external/katana/libgalois/libkatana_galois.so;[...]
+            LINKER:-rpath=/usr/local/katana/lib;[build dir]/external/katana/libgraph/libkatana_graph.so;[...]
         COMPILE_OPTIONS=-g;-Wall;-Wextra;-Wno-deprecated-copy;[...]
         LINKER_WRAPPER_FLAG=-Xlinker,
         LINKER_WRAPPER_FLAG_SEP=,
@@ -405,10 +405,12 @@ def cythonize(module_list, *, source_root, **kwargs):
 
     test_extension_options = extension_options.copy()
     test_extension_options.setdefault("extra_link_args", [])
+    if not any(s.endswith("/libkatana_graph.so") for s in test_extension_options["extra_link_args"]):
+        test_extension_options["extra_link_args"].append("-lkatana_graph")
     if not any(s.endswith("/libkatana_galois.so") for s in test_extension_options["extra_link_args"]):
         test_extension_options["extra_link_args"].append("-lkatana_galois")
     check_cython_module(
-        "libkatana_galois",
+        "libkatana_graph",
         """
 # distutils: language=c++
 from katana.cpp.libgalois.Galois cimport setActiveThreads, SharedMemSys

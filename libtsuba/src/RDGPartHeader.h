@@ -172,28 +172,22 @@ public:
   }
 
   void UpsertNodePropStorageInfo(PropStorageInfo&& pmd) {
-    auto pmd_it = std::find_if(
-        node_prop_info_list_.begin(), node_prop_info_list_.end(),
-        [&](const PropStorageInfo& my_pmd) {
-          return my_pmd.name() == pmd.name();
-        });
-    if (pmd_it == node_prop_info_list_.end()) {
+    PropStorageInfo* found = find_node_prop_info(pmd.name());
+    if (!found) {
+      pmd.WasModified(pmd.type());
       node_prop_info_list_.emplace_back(std::move(pmd));
     } else {
-      pmd_it->IsDirty();
+      found->WasModified(pmd.type());
     }
   }
 
   void UpsertEdgePropStorageInfo(PropStorageInfo&& pmd) {
-    auto pmd_it = std::find_if(
-        edge_prop_info_list_.begin(), edge_prop_info_list_.end(),
-        [&](const PropStorageInfo& my_pmd) {
-          return my_pmd.name() == pmd.name();
-        });
-    if (pmd_it == edge_prop_info_list_.end()) {
+    PropStorageInfo* found = find_edge_prop_info(pmd.name());
+    if (!found) {
+      pmd.WasModified(pmd.type());
       edge_prop_info_list_.emplace_back(std::move(pmd));
     } else {
-      pmd_it->IsDirty();
+      found->WasModified(pmd.type());
     }
   }
 
@@ -292,6 +286,7 @@ public:
       std::vector<PropStorageInfo>&& node_prop_info_list) {
     node_prop_info_list_ = std::move(node_prop_info_list);
   }
+  PropStorageInfo* find_node_prop_info(const std::string& name);
 
   const std::vector<PropStorageInfo>& edge_prop_info_list() const {
     return edge_prop_info_list_;
@@ -303,6 +298,7 @@ public:
       std::vector<PropStorageInfo>&& edge_prop_info_list) {
     edge_prop_info_list_ = std::move(edge_prop_info_list);
   }
+  PropStorageInfo* find_edge_prop_info(const std::string& name);
 
   const std::vector<PropStorageInfo>& part_prop_info_list() const {
     return part_prop_info_list_;
@@ -310,9 +306,11 @@ public:
   std::vector<PropStorageInfo>& part_prop_info_list() {
     return part_prop_info_list_;
   }
-  void set_part_properties(std::vector<PropStorageInfo>&& part_prop_info_list) {
+  void set_part_prop_info_list(
+      std::vector<PropStorageInfo>&& part_prop_info_list) {
     part_prop_info_list_ = std::move(part_prop_info_list);
   }
+  PropStorageInfo* find_part_prop_info(const std::string& name);
 
   const PartitionMetadata& metadata() const { return metadata_; }
   void set_metadata(const PartitionMetadata& metadata) { metadata_ = metadata; }

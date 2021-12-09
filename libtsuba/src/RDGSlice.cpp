@@ -3,6 +3,7 @@
 #include "AddProperties.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
+#include "RDGPartHeader.h"
 #include "katana/ArrowInterchange.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
@@ -10,6 +11,146 @@
 #include "tsuba/Errors.h"
 #include "tsuba/RDGPrefix.h"
 #include "tsuba/RDGTopology.h"
+
+namespace {
+// empty should be a function that sets the metadata array referred to by
+// array_name to empty when called - see load_local_to_global_id() for an
+// example.
+// This is necessary because depending on the version of the RDG we are loading,
+// the desired metadata array might not exist and the semantics of this function
+// are that it will "load" an empty array in that case. And unfortunately
+// array_name is not enough information on its own to for this function to empty
+// the array by itself.
+katana::Result<void>
+load_metadata_array(
+    const std::string& array_name, const std::function<void()>& empty,
+    tsuba::RDGCore* core) {
+  tsuba::PropStorageInfo* prop_info =
+      core->part_header().find_part_prop_info(array_name);
+  if (!prop_info) {
+    empty();
+    return katana::ResultSuccess();
+  }
+
+  std::vector<tsuba::PropStorageInfo*> prop_infos{prop_info};
+  KATANA_CHECKED(AddProperties(
+      core->rdg_dir(), tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
+      prop_infos, nullptr, [&core](const std::shared_ptr<arrow::Table>& props) {
+        return core->AddPartitionMetadataArray(props);
+      }));
+
+  return katana::ResultSuccess();
+}
+
+// empty should be a function that sets the metadata array referred to by
+// array_name to empty when called - see unload_local_to_global_id() for an
+// example.
+// The semantics of this function are that "unload" means "set to empty". The
+// point of this function is really to free memory and setting the array to
+// empty is the easiest way to do that for metadata arrays.
+katana::Result<void>
+unload_metadata_array(
+    const std::string& array_name, const std::function<void()>& empty,
+    tsuba::RDGCore* core) {
+  tsuba::PropStorageInfo* prop_info =
+      core->part_header().find_part_prop_info(array_name);
+  if (prop_info) {
+    prop_info->WasUnloaded();
+  }
+
+  empty();
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+load_property(
+    const std::string& name, const tsuba::RDGSlice::SliceArg& slice_arg,
+    tsuba::NodeEdge node_edge, tsuba::RDGCore* core) {
+  if (node_edge == tsuba::NodeEdge::kNeitherNodeNorEdge) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "cannot load property that is attached to neither nodes nor edges");
+  }
+
+  tsuba::PropStorageInfo* prop_info =
+      node_edge == tsuba::NodeEdge::kNode
+          ? core->part_header().find_node_prop_info(name)
+          : core->part_header().find_edge_prop_info(name);
+  if (!prop_info) {
+    return tsuba::ErrorCode::PropertyNotFound;
+  }
+
+  std::vector<tsuba::PropStorageInfo*> property{prop_info};
+  KATANA_CHECKED(AddPropertySlice(
+      core->rdg_dir(), property,
+      node_edge == tsuba::NodeEdge::kNode ? slice_arg.node_range
+                                          : slice_arg.edge_range,
+      nullptr,
+      [&](const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
+        std::shared_ptr<arrow::Table> prop_table =
+            node_edge == tsuba::NodeEdge::kNode ? core->node_properties()
+                                                : core->edge_properties();
+
+        if (prop_table && prop_table->num_columns() > 0) {
+          prop_table = KATANA_CHECKED(prop_table->AddColumn(
+              prop_table->num_columns(), props->field(0), props->column(0)));
+        } else {
+          prop_table = props;
+        }
+        node_edge == tsuba::NodeEdge::kNode
+            ? core->set_node_properties(std::move(prop_table))
+            : core->set_edge_properties(std::move(prop_table));
+        return katana::ResultSuccess();
+      }));
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+unload_property(
+    const std::string& name, tsuba::NodeEdge node_edge, tsuba::RDGCore* core) {
+  if (node_edge == tsuba::NodeEdge::kNeitherNodeNorEdge) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "cannot unload property that is attached to neither nodes nor edges");
+  }
+
+  tsuba::PropStorageInfo* prop_info =
+      node_edge == tsuba::NodeEdge::kNode
+          ? core->part_header().find_node_prop_info(name)
+          : core->part_header().find_edge_prop_info(name);
+  if (!prop_info) {
+    return tsuba::ErrorCode::PropertyNotFound;
+  }
+  // RDGSlice is read-only
+  KATANA_LOG_ASSERT(!prop_info->IsDirty());
+
+  if (prop_info->IsAbsent()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "cannot unload property that is not loaded");
+  }
+
+  std::shared_ptr<arrow::Table> table = node_edge == tsuba::NodeEdge::kNode
+                                            ? core->node_properties()
+                                            : core->edge_properties();
+
+  // invariant: property names are unique
+  int table_index = table->schema()->GetFieldIndex(name);
+
+  std::shared_ptr<arrow::Table> new_table =
+      KATANA_CHECKED(table->RemoveColumn(table_index));
+
+  prop_info->WasUnloaded();
+
+  node_edge == tsuba::NodeEdge::kNode
+      ? core->set_node_properties(std::move(new_table))
+      : core->set_edge_properties(std::move(new_table));
+
+  return katana::ResultSuccess();
+}
+
+}  // namespace
 
 katana::Result<void>
 tsuba::RDGSlice::DoMake(
@@ -289,80 +430,86 @@ tsuba::RDGSlice::local_to_global_id() const {
 
 katana::Result<void>
 tsuba::RDGSlice::load_local_to_global_id() {
-  auto ltg_it = std::find_if(
-      core_->part_header().part_prop_info_list().begin(),
-      core_->part_header().part_prop_info_list().end(),
-      [](PropStorageInfo& psi) {
-        return psi.name() == RDGCore::kLocalToGlobalIDPropName;
-      });
-  if (ltg_it == core_->part_header().part_prop_info_list().end()) {
-    // some RDGs have no local to global array - use the default 0-length array
-    // instead
-    core_->set_local_to_global_id(katana::NullChunkedArray(arrow::uint64(), 0));
-    return katana::ResultSuccess();
-  }
-  std::vector<PropStorageInfo*> local_to_global{&(*ltg_it)};
-  KATANA_CHECKED_CONTEXT(
-      AddProperties(
-          core_->rdg_dir(), tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr,
-          nullptr, local_to_global, nullptr,
-          [slice = this](const std::shared_ptr<arrow::Table>& props) {
-            return slice->core_->AddPartitionMetadataArray(props);
-          }),
-      "populating local to global id");
+  KATANA_CHECKED(load_metadata_array(
+      RDGCore::kLocalToGlobalIDPropName,
+      [&]() {
+        core_->set_local_to_global_id(
+            katana::NullChunkedArray(arrow::uint64(), 0));
+      },
+      core_.get()));
+
   return katana::ResultSuccess();
 }
 katana::Result<void>
 tsuba::RDGSlice::load_local_to_user_id() {
-  auto ltu_it = std::find_if(
-      core_->part_header().part_prop_info_list().begin(),
-      core_->part_header().part_prop_info_list().end(),
-      [](PropStorageInfo& psi) {
-        return psi.name() == RDGCore::kLocalToUserIDPropName;
-      });
-  if (ltu_it == core_->part_header().part_prop_info_list().end()) {
-    // some RDGs have no local to user array - use the default 0-length array
-    // instead
-    core_->set_local_to_user_id(katana::NullChunkedArray(arrow::uint64(), 0));
-    return katana::ResultSuccess();
-  }
-  std::vector<PropStorageInfo*> local_to_user{&(*ltu_it)};
-  KATANA_CHECKED_CONTEXT(
-      AddProperties(
-          core_->rdg_dir(), tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr,
-          nullptr, local_to_user, nullptr,
-          [slice = this](const std::shared_ptr<arrow::Table>& props) {
-            return slice->core_->AddPartitionMetadataArray(props);
-          }),
-      "populating local to global id");
+  KATANA_CHECKED(load_metadata_array(
+      RDGCore::kLocalToUserIDPropName,
+      [&]() {
+        core_->set_local_to_user_id(
+            katana::NullChunkedArray(arrow::uint64(), 0));
+      },
+      core_.get()));
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::unload_local_to_global_id() {
+  KATANA_CHECKED(unload_metadata_array(
+      RDGCore::kLocalToGlobalIDPropName,
+      [&]() {
+        core_->set_local_to_global_id(
+            katana::NullChunkedArray(arrow::uint64(), 0));
+      },
+      core_.get()));
+
   return katana::ResultSuccess();
 }
 katana::Result<void>
 tsuba::RDGSlice::remove_local_to_global_id() {
-  auto ltg_it = std::find_if(
-      core_->part_header().part_prop_info_list().begin(),
-      core_->part_header().part_prop_info_list().end(),
-      [](PropStorageInfo& psi) {
-        return psi.name() == RDGCore::kLocalToGlobalIDPropName;
-      });
-  if (ltg_it != core_->part_header().part_prop_info_list().end()) {
-    ltg_it->WasUnloaded();
-  }
-  core_->set_local_to_global_id(katana::NullChunkedArray(arrow::uint64(), 0));
+  return unload_local_to_global_id();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::unload_local_to_user_id() {
+  KATANA_CHECKED(unload_metadata_array(
+      RDGCore::kLocalToUserIDPropName,
+      [&]() {
+        core_->set_local_to_user_id(
+            katana::NullChunkedArray(arrow::uint64(), 0));
+      },
+      core_.get()));
+
   return katana::ResultSuccess();
 }
 katana::Result<void>
 tsuba::RDGSlice::remove_local_to_user_id() {
-  auto ltu_it = std::find_if(
-      core_->part_header().part_prop_info_list().begin(),
-      core_->part_header().part_prop_info_list().end(),
-      [](PropStorageInfo& psi) {
-        return psi.name() == RDGCore::kLocalToUserIDPropName;
-      });
-  if (ltu_it != core_->part_header().part_prop_info_list().end()) {
-    ltu_it->WasUnloaded();
-  }
-  core_->set_local_to_user_id(katana::NullChunkedArray(arrow::uint64(), 0));
+  return unload_local_to_user_id();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::load_node_property(const std::string& name) {
+  KATANA_CHECKED(
+      load_property(name, slice_arg_, tsuba::NodeEdge::kNode, core_.get()));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::unload_node_property(const std::string& name) {
+  KATANA_CHECKED(unload_property(name, tsuba::NodeEdge::kNode, core_.get()));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::load_edge_property(const std::string& name) {
+  KATANA_CHECKED(
+      load_property(name, slice_arg_, tsuba::NodeEdge::kEdge, core_.get()));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDGSlice::unload_edge_property(const std::string& name) {
+  KATANA_CHECKED(unload_property(name, tsuba::NodeEdge::kEdge, core_.get()));
   return katana::ResultSuccess();
 }
 

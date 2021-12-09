@@ -93,8 +93,9 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Cdlp(
-    PropertyGraph* pg, const std::string& output_property_name,
-    size_t max_iterations, CdlpPlan plan = CdlpPlan());
+    tsuba::TxnContext* txn_ctx, PropertyGraph* pg,
+    const std::string& output_property_name, size_t max_iterations,
+    CdlpPlan plan = CdlpPlan());
 
 /// TODO (Yasin): This Struct (Compute function) is now being used by louvain,
 /// cc, and cdlp, basically everything which is calculating communities. Explore

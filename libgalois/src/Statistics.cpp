@@ -30,7 +30,6 @@
 #include "katana/Executor_OnEach.h"
 #include "katana/Logging.h"
 #include "katana/PerThreadStorage.h"
-#include "tsuba/file.h"
 
 namespace {
 
@@ -260,9 +259,13 @@ katana::StatManager::Print() {
   if (stats.empty()) {
     return;
   }
-  if (auto res = tsuba::FileStore(impl_->outfile_, stats); !res) {
-    KATANA_LOG_ERROR("printing stats: {}", res.error());
+  std::ofstream ofs(impl_->outfile_);
+  if (!ofs.is_open()) {
+    KATANA_LOG_ERROR("printing stats");
+    return;
   }
+  ofs << stats;
+  ofs.close();
 }
 
 static katana::StatManager* stat_manager_singleton;

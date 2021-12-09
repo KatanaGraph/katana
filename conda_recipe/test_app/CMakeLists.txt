@@ -6,4 +6,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Katana REQUIRED)
 add_executable(test_app test_app.cpp)
-target_link_libraries(test_app Katana::galois)
+target_link_libraries(test_app Katana::graph)

@@ -5,7 +5,6 @@
 #include <iostream>
 
 #include "katana/Galois.h"
-#include "katana/SharedMemSys.h"
 
 struct Move {
   Move() = default;
@@ -89,7 +88,7 @@ test_accum() {
 
 int
 main() {
-  katana::SharedMemSys sys;
+  katana::GaloisRuntime sys;
   katana::setActiveThreads(2);
 
   static_assert(

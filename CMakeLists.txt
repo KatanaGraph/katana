@@ -5,6 +5,7 @@ project(Katana)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 include(BuildCommon)
+include(AddUnitTest)
 
 string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_USE_GPU)
 
@@ -13,6 +14,7 @@ string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_USE_GPU)
 set_property(GLOBAL APPEND PROPERTY KATANA_DOXYGEN_DIRECTORIES
         ${CMAKE_CURRENT_SOURCE_DIR}/docs/doxygen
         ${CMAKE_CURRENT_SOURCE_DIR}/libgalois
+        ${CMAKE_CURRENT_SOURCE_DIR}/libgraph
         ${CMAKE_CURRENT_SOURCE_DIR}/libsupport
         ${CMAKE_CURRENT_SOURCE_DIR}/libtsuba)
 
@@ -40,6 +42,7 @@ endif()
 add_subdirectory(libsupport)
 add_subdirectory(libtsuba)
 add_subdirectory(libgalois)
+add_subdirectory(libgraph)
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(lonestar)
@@ -62,7 +65,7 @@ add_subdirectory(libgpu)
 
 if(KATANA_LANG_BINDINGS_PYTHON)
   add_python_setuptools_target(katana_python
-                               DEPENDS Katana::support arrow::arrow Katana::galois
+                               DEPENDS Katana::support arrow::arrow Katana::galois Katana::graph
                                COMPONENT python)
   if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
     add_python_setuptools_tests(katana_python PATH python/test)

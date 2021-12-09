@@ -21,8 +21,8 @@
 // to wrap up 3rd-party allocators and use the wrapped heap for STL containers.
 #include <iostream>
 
-#include "katana/Galois.h"
 #include "katana/Mem.h"
+#include "katana/SharedMemSys.h"
 
 int
 main() {

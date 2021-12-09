@@ -1,7 +1,7 @@
 function(app name)
   add_executable(${name} ${ARGN})
   add_dependencies(apps ${name})
-  target_link_libraries(${name} PRIVATE Katana::galois lonestar)
+  target_link_libraries(${name} PRIVATE Katana::graph lonestar)
 endfunction()
 
 app(example-sssp-push-simple SSSPPushSimple.cpp)

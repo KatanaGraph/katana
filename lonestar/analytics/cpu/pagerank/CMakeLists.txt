@@ -1,6 +1,6 @@
 add_executable(pagerank-cpu pagerank-cli.cpp)
 add_dependencies(apps pagerank-cpu)
-target_link_libraries(pagerank-cpu PRIVATE Katana::galois lonestar)
+target_link_libraries(pagerank-cpu PRIVATE Katana::graph lonestar)
 
 add_test_scale(small pagerank-cpu
   INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" REL_TOL 0.01 MEAN_TOL 0.002

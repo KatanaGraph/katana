@@ -3,8 +3,8 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "katana/Bag.h"
-#include "katana/Galois.h"
 #include "katana/PerThreadStorage.h"
+#include "katana/SharedMemSys.h"
 #include "katana/UserContext.h"
 
 class ExampleWrappedWorklist {

@@ -23,8 +23,8 @@
 // 3. addEdge
 #include <iostream>
 
-#include "katana/Galois.h"
 #include "katana/Graph.h"
+#include "katana/SharedMemSys.h"
 
 //! [Define a MorphGraph]
 // Graph has int node data, void edge data and is directed

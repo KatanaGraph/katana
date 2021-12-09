@@ -155,6 +155,6 @@ BENCHMARK(SerialForEach)->Apply(MakeArguments);
 int
 main(int argc, char** argv) {
   ::benchmark::Initialize(&argc, argv);
-  katana::SharedMemSys G;
+  katana::GaloisRuntime G;
   ::benchmark::RunSpecifiedBenchmarks();
 }

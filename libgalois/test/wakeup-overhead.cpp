@@ -94,7 +94,7 @@ std::atomic<int> EXIT;
 
 int
 main(int argc, char* argv[]) {
-  katana::SharedMemSys Katana_runtime;
+  katana::GaloisRuntime Katana_runtime;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   katana::setActiveThreads(threads);

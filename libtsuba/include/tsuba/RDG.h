@@ -11,6 +11,7 @@
 #include <arrow/chunked_array.h>
 #include <nlohmann/json.hpp>
 
+#include "katana/Cache.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
@@ -19,7 +20,6 @@
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"
 #include "tsuba/PartitionMetadata.h"
-#include "tsuba/PropertyCache.h"
 #include "tsuba/RDGLineage.h"
 #include "tsuba/RDGTopology.h"
 #include "tsuba/ReadGroup.h"
@@ -47,7 +47,7 @@ struct KATANA_EXPORT RDGLoadOptions {
   // Each table should only contain a single column.
   // Callback provides a pointer to the RDG so we can evict
   // even before the PropertyGraph is created.
-  tsuba::PropertyCache* prop_cache{nullptr};
+  katana::PropertyCache* prop_cache{nullptr};
 };
 
 class KATANA_EXPORT RDG {
@@ -287,10 +287,10 @@ public:
 
   void set_view_name(const std::string& v) { view_type_ = v; }
 
-  const tsuba::PropertyCache* prop_cache() const { return prop_cache_; }
-  tsuba::PropertyCache* prop_cache() { return prop_cache_; }
+  const katana::PropertyCache* prop_cache() const { return prop_cache_; }
+  katana::PropertyCache* prop_cache() { return prop_cache_; }
 
-  void set_prop_cache(tsuba::PropertyCache* prop_cache) {
+  void set_prop_cache(katana::PropertyCache* prop_cache) {
     prop_cache_ = prop_cache;
   }
 
@@ -330,7 +330,7 @@ private:
 
   std::unique_ptr<RDGCore> core_;
   // Optional property cache
-  tsuba::PropertyCache* prop_cache_{nullptr};
+  katana::PropertyCache* prop_cache_{nullptr};
 };
 
 }  // namespace tsuba

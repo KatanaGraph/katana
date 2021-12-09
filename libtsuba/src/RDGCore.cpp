@@ -163,7 +163,8 @@ RDGCore::AddNodeProperties(
   auto written_prop_names = KATANA_CHECKED(AddProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
   // store write properties into transaction context
-  txn_ctx->InsertNodePropertyWrite<std::unordered_set>(written_prop_names);
+  txn_ctx->InsertNodePropertyWrite<std::unordered_set<std::string>>(
+      written_prop_names);
 
   return katana::ResultSuccess();
 }
@@ -175,7 +176,8 @@ RDGCore::AddEdgeProperties(
   auto written_prop_names = KATANA_CHECKED(AddProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
   // store write properties into transaction context
-  txn_ctx->InsertEdgePropertyWrite<std::unordered_set>(written_prop_names);
+  txn_ctx->InsertEdgePropertyWrite<std::unordered_set<std::string>>(
+      written_prop_names);
 
   return katana::ResultSuccess();
 }
@@ -187,7 +189,8 @@ RDGCore::UpsertNodeProperties(
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
   // store write properties into transaction context
-  txn_ctx->InsertNodePropertyWrite<std::unordered_set>(written_prop_names);
+  txn_ctx->InsertNodePropertyWrite<std::unordered_set<std::string>>(
+      written_prop_names);
 
   return katana::ResultSuccess();
 }
@@ -199,7 +202,8 @@ RDGCore::UpsertEdgeProperties(
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
   // store write properties into transaction context
-  txn_ctx->InsertEdgePropertyWrite<std::unordered_set>(written_prop_names);
+  txn_ctx->InsertEdgePropertyWrite<std::unordered_set<std::string>>(
+      written_prop_names);
 
   return katana::ResultSuccess();
 }

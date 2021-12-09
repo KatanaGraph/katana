@@ -7,7 +7,7 @@ import pyarrow
 from pyarrow.lib cimport pyarrow_unwrap_table, pyarrow_wrap_chunked_array, pyarrow_wrap_schema, to_shared
 
 from katana.cpp.libgalois.graphs cimport Graph as CGraph
-from katana.cpp.libsupport.entity_type_manager cimport EntityTypeManager
+from katana.cpp.libsupport.EntityTypeManager cimport EntityTypeManager as CEntityTypeManager
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
 
 from katana.native_interfacing._pyarrow_wrappers import unchunked
@@ -17,7 +17,7 @@ from . cimport datastructures
 from . import datastructures
 
 from cython.operator cimport dereference as deref
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint16_t, uint32_t
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
 from libcpp.utility cimport move
@@ -26,9 +26,11 @@ from libcpp.vector cimport vector
 from katana.dataframe import DataFrame, LazyDataAccessor, LazyDataFrame
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
-from .entity_type cimport EntityType
+from .entity_type_manager cimport EntityType, EntityTypeManager
 
 from abc import abstractmethod
+
+ctypedef uint16_t EntityTypeID
 
 __all__ = ["GraphBase", "Graph", "TxnContext"]
 
@@ -453,25 +455,66 @@ cdef class GraphBase:
     @property
     def node_types(self):
         """
-        The types of atomic node types in the graph.
-
-        :rtype: list[EntityType]
+        :return: the node type manager
         """
-        cdef const EntityTypeManager* manager = &self.underlying_property_graph().GetNodeTypeManager()
-        type_ids = manager.GetAtomicEntityTypeIDs()
-        types = [EntityType.make(manager, type_id) for type_id in type_ids]
-        return types
+        return EntityTypeManager.make(&self.underlying_property_graph().GetNodeTypeManager())
+
+    def get_type_of_node(self, uint64_t n):
+        """
+        Return the type ID of the most specific type of a node `n`
+
+        :param n: node id
+        :return: the type id of the node
+        """
+        return self.underlying_property_graph().GetTypeOfNode(n)
+
+    def does_node_have_type(self, uint64_t n, entity_type):
+        """
+        Check whether a given node has a certain type
+
+        :param n: node id
+        :param type_id: type id of type int or EntityType
+        :return: True iff node n has the given type
+        """
+        if isinstance(entity_type, int):
+            type_id = entity_type
+        elif isinstance(entity_type, EntityType):
+            type_id = entity_type.type_id
+        else:
+            raise ValueError(f"{entity_type}'s type is not supported")
+        return self.underlying_property_graph().DoesNodeHaveType(n, type_id)
 
     @property
     def edge_types(self):
         """
-        The types of atomic edge types in the graph.
-
-        :rtype: list
+        :return: the edge type manager
         """
-        cdef const EntityTypeManager* manager = &self.underlying_property_graph().GetEdgeTypeManager()
-        types = manager.GetAtomicEntityTypeIDs()
-        return [EntityType.make(manager, typeid) for typeid in types]
+        return EntityTypeManager.make(&self.underlying_property_graph().GetEdgeTypeManager())
+
+    def get_type_of_edge(self, uint64_t e):
+        """
+        Return the type ID of the most specific type of an edge `e`
+
+        :param e: edge id
+        :return: the type id of the edge
+        """
+        return self.underlying_property_graph().GetTypeOfEdge(e)
+
+    def does_edge_have_type(self, uint64_t e, entity_type):
+        """
+        Check whether a given edge has a certain type
+
+        :param e: edge id
+        :param type_id: type id of type int or EntityType
+        :return: True iff edge e has the given type
+        """
+        if isinstance(entity_type, int):
+            type_id = entity_type
+        elif isinstance(entity_type, EntityType):
+            type_id = entity_type.type_id
+        else:
+            raise ValueError(f"{entity_type}'s type is not supported")
+        return self.underlying_property_graph().DoesEdgeHaveType(e, type_id)
 
     @abstractmethod
     def global_out_degree(self, uint64_t node):

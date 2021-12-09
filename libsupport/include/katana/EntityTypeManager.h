@@ -400,7 +400,7 @@ public:
     return std::nullopt;
   }
 
-  /// \returns a vector containing all atomic type names
+  /// \returns a vector containing all atomic type IDs
   std::vector<EntityTypeID> GetAtomicEntityTypeIDs() const {
     std::vector<EntityTypeID> type_vec;
     type_vec.reserve(atomic_type_name_to_entity_type_id_.size());

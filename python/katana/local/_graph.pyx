@@ -26,7 +26,7 @@ from libcpp.vector cimport vector
 from katana.dataframe import DataFrame, LazyDataAccessor, LazyDataFrame
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
-from .entity_type_manager cimport EntityTypeManager
+from .entity_type_manager cimport EntityType, EntityTypeManager
 
 from abc import abstractmethod
 
@@ -468,14 +468,20 @@ cdef class GraphBase:
         """
         return self.underlying_property_graph().GetTypeOfNode(n)
 
-    def does_node_have_type(self, uint64_t n, EntityTypeID type_id):
+    def does_node_have_type(self, uint64_t n, entity_type):
         """
         Check whether a given node has a certain type
 
         :param n: node id
-        :param type_id: type id
+        :param type_id: type id of type int or EntityType
         :return: True iff node n has the given type
         """
+        if isinstance(entity_type, int):
+            type_id = entity_type
+        elif isinstance(entity_type, EntityType):
+            type_id = entity_type.type_id
+        else:
+            raise ValueError(f"{entity_type}'s type is not supported")
         return self.underlying_property_graph().DoesNodeHaveType(n, type_id)
 
     @property
@@ -494,14 +500,20 @@ cdef class GraphBase:
         """
         return self.underlying_property_graph().GetTypeOfEdge(e)
 
-    def does_edge_have_type(self, uint64_t e, EntityTypeID type_id):
+    def does_edge_have_type(self, uint64_t e, entity_type):
         """
         Check whether a given edge has a certain type
 
         :param e: edge id
-        :param type_id: type id
+        :param type_id: type id of type int or EntityType
         :return: True iff edge e has the given type
         """
+        if isinstance(entity_type, int):
+            type_id = entity_type
+        elif isinstance(entity_type, EntityType):
+            type_id = entity_type.type_id
+        else:
+            raise ValueError(f"{entity_type}'s type is not supported")
         return self.underlying_property_graph().DoesEdgeHaveType(e, type_id)
 
     @abstractmethod

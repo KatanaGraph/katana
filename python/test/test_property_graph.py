@@ -327,8 +327,10 @@ def test_types(graph):
     assert len(node_type_set) == 11
     assert len(edge_type_set) == 15
 
-    assert graph.does_node_have_type(0, 17)
-    assert graph.does_edge_have_type(0, 8)
+    node_entity_type = graph.node_types._make_entity_type(17)
+    edge_entity_type = graph.edge_types._make_entity_type(8)
+    assert graph.does_node_have_type(0, node_entity_type)
+    assert graph.does_edge_have_type(0, edge_entity_type)
 
     node_atomic_types = graph.node_types.atomic_types
     node_name_to_id_map = {name: node_atomic_types[name].type_id for name in node_atomic_types}
@@ -348,7 +350,6 @@ def test_types(graph):
         b"Message": 7,
         b"Post": 11,
     }
-    assert graph.node_types.entity_type_to_type_name_set(1) == {b"City"}
     assert graph.node_types.is_subtype_of(0, 1) is True
 
     edge_atomic_types = graph.edge_types.atomic_types

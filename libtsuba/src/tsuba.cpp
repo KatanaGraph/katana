@@ -273,26 +273,26 @@ katana::Result<void>
 tsuba::CopyRDG(std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
   katana::DynamicBitset manifest_uri_idxs;
   katana::do_all(
-    katana::iterate(size_t{0}, src_dst_files.size()),
-        [&](size_t i) {
-      auto [src_file_uri, dst_file_uri] = src_dst_files[i];
-      // We save the names of all the manifest files and we write them out at the end.
-      if (tsuba::RDGManifest::IsManifestUri(src_file_uri)) {
-        manifest_uri_idxs.set(i);
-        return;
-      }
-      // NB: can't use KATANA_CHECKED here because of the do_all, so we keep track of the 
-      // error for now and then return it later
-      tsuba::FileView fv;
-      auto fv_res = fv.Bind(src_file_uri.string(), true);
-      if (!fv_res) {
-        KATANA_LOG_FATAL("Failed to bind {}", src_file_uri.string());
-      }
-      auto fs_res = tsuba::FileStore(dst_file_uri.string(), fv.ptr<char>(), fv.size());
-      if (!fs_res) {
-        KATANA_LOG_FATAL("Failed to store to {}", dst_file_uri.string());
-      }
-    });
+      katana::iterate(size_t{0}, src_dst_files.size()), [&](size_t i) {
+        auto [src_file_uri, dst_file_uri] = src_dst_files[i];
+        // We save the names of all the manifest files and we write them out at the end.
+        if (tsuba::RDGManifest::IsManifestUri(src_file_uri)) {
+          manifest_uri_idxs.set(i);
+          return;
+        }
+        // NB: can't use KATANA_CHECKED here because of the do_all, so we keep track of the
+        // error for now and then return it later
+        tsuba::FileView fv;
+        auto fv_res = fv.Bind(src_file_uri.string(), true);
+        if (!fv_res) {
+          KATANA_LOG_FATAL("Failed to bind {}", src_file_uri.string());
+        }
+        auto fs_res =
+            tsuba::FileStore(dst_file_uri.string(), fv.ptr<char>(), fv.size());
+        if (!fs_res) {
+          KATANA_LOG_FATAL("Failed to store to {}", dst_file_uri.string());
+        }
+      });
 
   // Process all the manifest files, write them out.
   // We want to write this last so that we know whether a write fully finished or not.

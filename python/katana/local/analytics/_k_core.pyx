@@ -47,7 +47,7 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
         @staticmethod
         _KCorePlan Asynchronous()
 
-    Result[void] KCore(CTxnContext* txn_ctx, _PropertyGraph* pg, uint32_t k_core_number, string output_property_name, _KCorePlan plan)
+    Result[void] KCore(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name, CTxnContext* txn_ctx, _KCorePlan plan)
 
 
     Result[void] KCoreAssertValid(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name)
@@ -139,7 +139,7 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(KCore(&txn_ctx._txn_ctx, pg.underlying_property_graph(), k_core_number, output_property_name_str, plan.underlying_))
+        v = handle_result_void(KCore(pg.underlying_property_graph(), k_core_number, output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
     return v
 
 

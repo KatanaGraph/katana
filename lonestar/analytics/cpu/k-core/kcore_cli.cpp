@@ -107,7 +107,7 @@ main(int argc, char** argv) {
   }
 
   tsuba::TxnContext txn_ctx;
-  if (auto r = KCore(&txn_ctx, pg.get(), kCoreNumber, "node-in-core", plan);
+  if (auto r = KCore(pg.get(), kCoreNumber, "node-in-core", &txn_ctx, plan);
       !r) {
     KATANA_LOG_FATAL("Failed to compute k-core: {}", r.error());
   }

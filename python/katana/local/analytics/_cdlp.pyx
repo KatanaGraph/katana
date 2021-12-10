@@ -55,8 +55,8 @@ cdef extern from "katana/analytics/cdlp/cdlp.h" namespace "katana::analytics" no
         #@staticmethod
         #_CdlpPlan Asynchronous()
 
-    Result[void] Cdlp(CTxnContext* txn_ctx, _PropertyGraph*pg, string output_property_name, int max_iteration,
-                                     _CdlpPlan plan)
+    Result[void] Cdlp(_PropertyGraph*pg, string output_property_name, int max_iteration,
+                                     CTxnContext* txn_ctx, _CdlpPlan plan)
 
     cppclass _CdlpStatistics "katana::analytics::CdlpStatistics":
         uint64_t total_communities
@@ -157,7 +157,7 @@ def cdlp(Graph pg, str output_property_name,
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(Cdlp(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_str, max_iteration, plan.underlying_))
+        v = handle_result_void(Cdlp(pg.underlying_property_graph(), output_property_name_str, max_iteration, &txn_ctx._txn_ctx, plan.underlying_))
     return v
 
 cdef _CdlpStatistics handle_result_CdlpStatistics(

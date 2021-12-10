@@ -1117,8 +1117,8 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 template <typename Algorithm>
 static katana::Result<void>
 ConnectedComponentsWithWrap(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    std::string output_property_name, ConnectedComponentsPlan plan) {
+    katana::PropertyGraph* pg, std::string output_property_name,
+    ConnectedComponentsPlan plan, tsuba::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(
       2,
       pg->topology().num_nodes() * sizeof(typename Algorithm::NodeComponent));
@@ -1126,7 +1126,7 @@ ConnectedComponentsWithWrap(
 
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeComponent>>(
-          txn_ctx, pg, {output_property_name});
+          pg, txn_ctx, {output_property_name});
       !r) {
     return r.error();
   }
@@ -1153,42 +1153,42 @@ ConnectedComponentsWithWrap(
 
 katana::Result<void>
 katana::analytics::ConnectedComponents(
-    tsuba::TxnContext* txn_ctx, PropertyGraph* pg,
-    const std::string& output_property_name, ConnectedComponentsPlan plan) {
+    PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx, ConnectedComponentsPlan plan) {
   switch (plan.algorithm()) {
   case ConnectedComponentsPlan::kSerial:
     return ConnectedComponentsWithWrap<ConnectedComponentsSerialAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kLabelProp:
     return ConnectedComponentsWithWrap<ConnectedComponentsLabelPropAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kSynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsSynchronousAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kAsynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsAsynchronousAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kEdgeAsynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAsynchronousAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kEdgeTiledAsynchronous:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsEdgeTiledAsynchronousAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kBlockedAsynchronous:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsBlockedAsynchronousAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kAfforest:
     return ConnectedComponentsWithWrap<ConnectedComponentsAfforestAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kEdgeAfforest:
     return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAfforestAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   case ConnectedComponentsPlan::kEdgeTiledAfforest:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsEdgeTiledAfforestAlgo>(
-        txn_ctx, pg, output_property_name, plan);
+        pg, output_property_name, plan, txn_ctx);
   default:
     return ErrorCode::InvalidArgument;
   }

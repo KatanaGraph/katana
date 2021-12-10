@@ -13,7 +13,7 @@ void
 TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
   tsuba::TxnContext txn_ctx;
   katana::Result<void> result = AddNodeProperties(
-      &txn_ctx, pg.get(),
+      pg.get(), &txn_ctx,
       PropertyGenerator(
           "age", [](Node id) { return static_cast<int32_t>(id * 2); }),
       PropertyGenerator(
@@ -53,7 +53,7 @@ void
 TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
   tsuba::TxnContext txn_ctx;
   katana::Result<void> result = AddEdgeProperties(
-      &txn_ctx, pg.get(),
+      pg.get(), &txn_ctx,
       PropertyGenerator(
           "average",
           [&pg](Edge id) {

@@ -79,7 +79,7 @@ main(int argc, char** argv) {
   node_props.emplace_back(temp_node_property.name());
   tsuba::TxnContext txn_ctx;
   auto res_node_prop = katana::analytics::ConstructNodeProperties<
-      ProjectedPropertyGraphView, NodeData>(&txn_ctx, pg_view, node_props);
+      ProjectedPropertyGraphView, NodeData>(pg_view, &txn_ctx, node_props);
 
   if (!res_node_prop) {
     KATANA_LOG_FATAL(

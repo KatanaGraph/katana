@@ -158,8 +158,8 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> ConnectedComponents(
-    tsuba::TxnContext* txn_ctx, PropertyGraph* pg,
-    const std::string& output_property_name,
+    PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx,
     ConnectedComponentsPlan plan = ConnectedComponentsPlan());
 
 KATANA_EXPORT Result<void> ConnectedComponentsAssertValid(

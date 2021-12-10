@@ -154,7 +154,7 @@ main(int argc, char** argv) {
   }
 
   tsuba::TxnContext txn_ctx;
-  if (auto r = MatrixCompletion(&txn_ctx, pg.get(), plan); !r) {
+  if (auto r = MatrixCompletion(pg.get(), &txn_ctx, plan); !r) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", r.error());
   }
 

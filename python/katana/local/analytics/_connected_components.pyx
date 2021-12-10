@@ -93,8 +93,8 @@ cdef extern from "katana/analytics/connected_components/connected_components.h" 
     uint32_t kDefaultNeighborSampleSize "katana::analytics::ConnectedComponentsPlan::kDefaultNeighborSampleSize"
     uint32_t kDefaultComponentSampleFrequency "katana::analytics::ConnectedComponentsPlan::kDefaultComponentSampleFrequency"
 
-    Result[void] ConnectedComponents(CTxnContext* txn_ctx, _PropertyGraph*pg, string output_property_name,
-                                     _ConnectedComponentsPlan plan)
+    Result[void] ConnectedComponents(_PropertyGraph*pg, string output_property_name,
+                                     CTxnContext* txn_ctx, _ConnectedComponentsPlan plan)
 
     Result[void] ConnectedComponentsAssertValid(_PropertyGraph*pg, string output_property_name)
 
@@ -280,7 +280,7 @@ def connected_components(Graph pg, str output_property_name,
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(ConnectedComponents(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_str, plan.underlying_))
+        v = handle_result_void(ConnectedComponents(pg.underlying_property_graph(), output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
     return v
 
 def connected_components_assert_valid(Graph pg, str output_property_name):

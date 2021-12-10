@@ -58,7 +58,7 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
         @staticmethod
         _IndependentSetPlan EdgeTiledPriority()
 
-    Result[void] IndependentSet(CTxnContext* txn_ctx, _PropertyGraph* pg, string output_property_name, _IndependentSetPlan plan)
+    Result[void] IndependentSet(_PropertyGraph* pg, string output_property_name, CTxnContext* txn_ctx, _IndependentSetPlan plan)
 
     Result[void] IndependentSetAssertValid(_PropertyGraph* pg, string output_property_name)
 
@@ -155,7 +155,7 @@ def independent_set(Graph pg, str output_property_name,
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(IndependentSet(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
+        handle_result_void(IndependentSet(pg.underlying_property_graph(), output_property_name_cstr, &txn_ctx._txn_ctx, plan.underlying_))
 
 
 def independent_set_assert_valid(Graph pg, str output_property_name):

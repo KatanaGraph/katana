@@ -67,10 +67,10 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
     uint32_t kDefaultAlpha "katana::analytics::BfsPlan::kDefaultAlpha"
     uint32_t kDefaultBeta "katana::analytics::BfsPlan::kDefaultBeta"
 
-    Result[void] Bfs(CTxnContext* txn_ctx,
-                     _PropertyGraph * pg,
+    Result[void] Bfs(_PropertyGraph * pg,
                      uint32_t start_node,
                      string output_property_name,
+                     CTxnContext* txn_ctx,
                      _BfsPlan algo)
 
     Result[void] BfsAssertValid(_PropertyGraph* pg, uint32_t start_node,
@@ -196,7 +196,7 @@ def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = 
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Bfs(&txn_ctx._txn_ctx, pg.underlying_property_graph(), start_node, output_property_name_cstr, plan.underlying_))
+        handle_result_void(Bfs(pg.underlying_property_graph(), start_node, output_property_name_cstr, &txn_ctx._txn_ctx, plan.underlying_))
 
 def bfs_assert_valid(Graph pg, uint32_t start_node, str property_name):
     """

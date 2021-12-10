@@ -205,7 +205,7 @@ main(int argc, char** argv) {
   }
 
   tsuba::TxnContext txn_ctx;
-  auto pg_result = ConnectedComponents(&txn_ctx, pg.get(), "component", plan);
+  auto pg_result = ConnectedComponents(pg.get(), "component", &txn_ctx, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL(
         "Failed to run ConnectedComponents: {}", pg_result.error());

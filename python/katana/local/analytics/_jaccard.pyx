@@ -49,8 +49,8 @@ cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analyti
         @staticmethod
         _JaccardPlan Unsorted()
 
-    Result[void] Jaccard(CTxnContext* txn_ctx, _PropertyGraph* pg, size_t compare_node,
-        string output_property_name, _JaccardPlan plan)
+    Result[void] Jaccard(_PropertyGraph* pg, size_t compare_node,
+        string output_property_name, CTxnContext* txn_ctx, _JaccardPlan plan)
 
     Result[void] JaccardAssertValid(_PropertyGraph* pg, size_t compare_node,
         string output_property_name)
@@ -172,7 +172,7 @@ def jaccard(Graph pg, size_t compare_node, str output_property_name,
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Jaccard(&txn_ctx._txn_ctx, pg.underlying_property_graph(), compare_node, output_property_name_cstr, plan.underlying_))
+        handle_result_void(Jaccard(pg.underlying_property_graph(), compare_node, output_property_name_cstr, &txn_ctx._txn_ctx, plan.underlying_))
 
 
 def jaccard_assert_valid(Graph pg, size_t compare_node, str output_property_name):

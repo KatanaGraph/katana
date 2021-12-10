@@ -71,7 +71,7 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
     uint32_t kDefaultMaxIterations "katana::analytics::LouvainClusteringPlan::kDefaultMaxIterations"
     uint32_t kDefaultMinGraphSize "katana::analytics::LouvainClusteringPlan::kDefaultMinGraphSize"
 
-    Result[void] LouvainClustering(CTxnContext* txn_ctx, _PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, _LouvainClusteringPlan plan)
+    Result[void] LouvainClustering(_PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, CTxnContext* txn_ctx, _LouvainClusteringPlan plan)
 
     Result[void] LouvainClusteringAssertValid(_PropertyGraph* pfg,
             const string& edge_weight_property_name,
@@ -88,10 +88,10 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
         void Print(ostream os)
 
         @staticmethod
-        Result[_LouvainClusteringStatistics] Compute(CTxnContext* txn_ctx,
-            _PropertyGraph* pfg,
+        Result[_LouvainClusteringStatistics] Compute(_PropertyGraph* pfg,
             const string& edge_weight_property_name,
-            const string& output_property_name
+            const string& output_property_name,
+            CTxnContext* txn_ctx
             )
 
 
@@ -209,7 +209,7 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(LouvainClustering(&txn_ctx._txn_ctx, pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
+        handle_result_void(LouvainClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
 
 
 def louvain_clustering_assert_valid(Graph pg, str edge_weight_property_name, str output_property_name ):
@@ -242,10 +242,10 @@ cdef class LouvainClusteringStatistics:
         txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_LouvainClusteringStatistics(_LouvainClusteringStatistics.Compute(
-                &txn_ctx._txn_ctx,
                 pg.underlying_property_graph(),
                 edge_weight_property_name_str,
-                output_property_name_str
+                output_property_name_str,
+                &txn_ctx._txn_ctx
                 ))
 
     @property

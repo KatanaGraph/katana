@@ -66,7 +66,7 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
     int kDefaultMaxIterations "katana::analytics::PagerankPlan::kDefaultMaxIterations"
     double kDefaultAlpha "katana::analytics::PagerankPlan::kDefaultAlpha"
 
-    Result[void] Pagerank(CTxnContext* txn_ctx, _PropertyGraph* pg, string output_property_name, _PagerankPlan plan)
+    Result[void] Pagerank(_PropertyGraph* pg, string output_property_name, CTxnContext* txn_ctx, _PagerankPlan plan)
 
     Result[void] PagerankAssertValid(_PropertyGraph* pg, string output_property_name)
 
@@ -203,7 +203,7 @@ def pagerank(Graph pg, str output_property_name, PagerankPlan plan = PagerankPla
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Pagerank(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
+        handle_result_void(Pagerank(pg.underlying_property_graph(), output_property_name_cstr, &txn_ctx._txn_ctx, plan.underlying_))
 
 
 def pagerank_assert_valid(Graph pg, str output_property_name):

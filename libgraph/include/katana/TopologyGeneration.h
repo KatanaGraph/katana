@@ -95,7 +95,7 @@ struct all_property_generators
 template <bool is_node, typename... Args>
 Result<void>
 AddGraphProperties(
-    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, Args&&... generators) {
+    PropertyGraph* pg, tsuba::TxnContext* txn_ctx, Args&&... generators) {
   static_assert(
       internal::all_property_generators<Args...>::value,
       "AddGraphProperties arguments except first must be of type "
@@ -198,10 +198,10 @@ private:
 template <typename... Args>
 KATANA_EXPORT Result<void>
 AddNodeProperties(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    katana::PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
     Args&&... generators) {
   return internal::AddGraphProperties<true>(
-      txn_ctx, pg, std::forward<Args>(generators)...);
+      pg, txn_ctx, std::forward<Args>(generators)...);
 }
 
 /// Convenience function to add edge properties to pre-constructed property graphs.
@@ -221,10 +221,10 @@ AddNodeProperties(
 template <typename... Args>
 KATANA_EXPORT Result<void>
 AddEdgeProperties(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    katana::PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
     Args&&... generators) {
   return internal::AddGraphProperties<false>(
-      txn_ctx, pg, std::forward<Args>(generators)...);
+      pg, txn_ctx, std::forward<Args>(generators)...);
 }
 
 }  // end namespace katana

@@ -79,8 +79,8 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
     unsigned kDefaultDelta "katana::analytics::SsspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
-    Result[void] Sssp(CTxnContext* txn_ctx, _PropertyGraph* pg, size_t start_node,
-        const string& edge_weight_property_name, const string& output_property_name, _SsspPlan plan)
+    Result[void] Sssp(_PropertyGraph* pg, size_t start_node,
+        const string& edge_weight_property_name, const string& output_property_name, CTxnContext* txn_ctx, _SsspPlan plan)
 
     Result[void] SsspAssertValid(_PropertyGraph* pg, size_t start_node,
                                  const string& edge_weight_property_name, const string& output_property_name);
@@ -283,8 +283,8 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Sssp(&txn_ctx._txn_ctx, pg.underlying_property_graph(), start_node, edge_weight_property_name_str,
-                                output_property_name_str, plan.underlying_))
+        handle_result_void(Sssp(pg.underlying_property_graph(), start_node, edge_weight_property_name_str,
+                                output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
 
 def sssp_assert_valid(Graph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
     """

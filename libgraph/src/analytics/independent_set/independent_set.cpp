@@ -603,7 +603,7 @@ Run(katana::PropertyGraph* pg, const std::string& output_property_name,
   using Graph = typename Algo::Graph;
   using GNode = typename Graph::Node;
   auto result = ConstructNodeProperties<typename Algo::NodeData>(
-      txn_ctx, pg, {output_property_name});
+      pg, txn_ctx, {output_property_name});
   if (!result) {
     return result.error();
   }
@@ -662,8 +662,8 @@ Run(katana::PropertyGraph* pg, const std::string& output_property_name,
 
 katana::Result<void>
 katana::analytics::IndependentSet(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    const std::string& output_property_name, IndependentSetPlan plan) {
+    katana::PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx, IndependentSetPlan plan) {
   switch (plan.algorithm()) {
   case IndependentSetPlan::kSerial:
     return Run<SerialAlgo>(pg, output_property_name, txn_ctx);

@@ -124,13 +124,13 @@ main(int argc, char** argv) {
 
   tsuba::TxnContext txn_ctx;
   auto pg_result = LouvainClustering(
-      &txn_ctx, pg.get(), edge_property_name, "clusterId", plan);
+      pg.get(), edge_property_name, "clusterId", &txn_ctx, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run LouvainClustering: {}", pg_result.error());
   }
 
   auto stats_result = LouvainClusteringStatistics::Compute(
-      &txn_ctx, pg.get(), edge_property_name, "clusterId");
+      pg.get(), edge_property_name, "clusterId", &txn_ctx);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute LouvainClustering statistics: {}",

@@ -243,10 +243,10 @@ struct HasOut {
 
 katana::Result<void>
 BetweennessCentralityOuter(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    BetweennessCentralitySources sources,
+    katana::PropertyGraph* pg, BetweennessCentralitySources sources,
     const std::string& output_property_name,
-    BetweennessCentralityPlan plan [[maybe_unused]]) {
+    BetweennessCentralityPlan plan [[maybe_unused]],
+    tsuba::TxnContext* txn_ctx) {
   auto pg_result =
       katana::TypedPropertyGraph<NodeDataOuter, EdgeDataOuter>::Make(
           pg, {}, {});

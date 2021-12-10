@@ -93,8 +93,8 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Cdlp(
-    tsuba::TxnContext* txn_ctx, PropertyGraph* pg,
-    const std::string& output_property_name, size_t max_iterations,
+    PropertyGraph* pg, const std::string& output_property_name,
+    size_t max_iterations, tsuba::TxnContext* txn_ctx,
     CdlpPlan plan = CdlpPlan());
 
 /// TODO (Yasin): This Struct (Compute function) is now being used by louvain,

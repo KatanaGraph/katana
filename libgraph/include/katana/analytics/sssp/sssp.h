@@ -122,9 +122,10 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Sssp(
-    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, size_t start_node,
+    PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
-    const std::string& output_property_name, SsspPlan plan = {});
+    const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
+    SsspPlan plan = {});
 
 KATANA_EXPORT Result<void> SsspAssertValid(
     PropertyGraph* pg, size_t start_node,

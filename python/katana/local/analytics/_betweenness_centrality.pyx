@@ -54,7 +54,7 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
 
     BetweennessCentralitySources kBetweennessCentralityAllNodes;
 
-    Result[void] BetweennessCentrality(CTxnContext* txn_ctx, _PropertyGraph* pg, string output_property_name, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
+    Result[void] BetweennessCentrality(_PropertyGraph* pg, string output_property_name, CTxnContext* txn_ctx, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
 
     # std_result[void] BetweennessCentralityAssertValid(Graph* pg, string output_property_name)
 
@@ -175,7 +175,7 @@ def betweenness_centrality(Graph pg, str output_property_name, sources = None,
     else:
         c_sources = BetweennessCentralitySources_from_int(int(sources))
     with nogil:
-        handle_result_void(BetweennessCentrality(&txn_ctx._txn_ctx, pg.underlying_property_graph(), output_property_name_cstr, c_sources, plan.underlying_))
+        handle_result_void(BetweennessCentrality(pg.underlying_property_graph(), output_property_name_cstr, &txn_ctx._txn_ctx, c_sources, plan.underlying_))
 
 
 cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatistics(Result[_BetweennessCentralityStatistics] res) nogil except *:

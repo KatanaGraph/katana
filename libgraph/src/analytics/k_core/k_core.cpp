@@ -225,13 +225,13 @@ KCoreImpl(
 
 katana::Result<void>
 katana::analytics::KCore(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    uint32_t k_core_number, const std::string& output_property_name,
+    katana::PropertyGraph* pg, uint32_t k_core_number,
+    const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
     KCorePlan algo) {
   katana::analytics::TemporaryPropertyGuard temporary_property{
       pg->NodeMutablePropertyView()};
   if (auto result = ConstructNodeProperties<std::tuple<KCoreNodeCurrentDegree>>(
-          txn_ctx, pg, {temporary_property.name()});
+          pg, txn_ctx, {temporary_property.name()});
       !result) {
     return result.error();
   }
@@ -248,7 +248,7 @@ katana::analytics::KCore(
   }
   // Post processing. Mark alive nodes.
   if (auto result = ConstructNodeProperties<std::tuple<KCoreNodeAlive>>(
-          txn_ctx, pg, {output_property_name});
+          pg, txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }

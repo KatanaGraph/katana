@@ -147,7 +147,7 @@ main(int argc, char** argv) {
             << " sources\n";
   tsuba::TxnContext txn_ctx;
   if (auto r = BetweennessCentrality(
-          &txn_ctx, pg.get(), "betweenness_centrality", sources, plan);
+          pg.get(), "betweenness_centrality", &txn_ctx, sources, plan);
       !r) {
     KATANA_LOG_FATAL("Couldn't run algorithm: {}", r.error());
   }

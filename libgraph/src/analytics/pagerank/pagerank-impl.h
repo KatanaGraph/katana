@@ -34,23 +34,19 @@ typedef float PRTy;
 using NodeValue = katana::PODProperty<PRTy>;
 
 katana::Result<void> PagerankPullTopological(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    const std::string& output_property_name,
-    katana::analytics::PagerankPlan plan);
+    katana::PropertyGraph* pg, const std::string& output_property_name,
+    katana::analytics::PagerankPlan plan, tsuba::TxnContext* txn_ctx);
 
 katana::Result<void> PagerankPullResidual(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    const std::string& output_property_name,
-    katana::analytics::PagerankPlan plan);
+    katana::PropertyGraph* pg, const std::string& output_property_name,
+    katana::analytics::PagerankPlan plan, tsuba::TxnContext* txn_ctx);
 
 katana::Result<void> PagerankPushAsynchronous(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    const std::string& output_property_name,
-    katana::analytics::PagerankPlan plan);
+    katana::PropertyGraph* pg, const std::string& output_property_name,
+    katana::analytics::PagerankPlan plan, tsuba::TxnContext* txn_ctx);
 
 katana::Result<void> PagerankPushSynchronous(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    const std::string& output_property_name,
-    katana::analytics::PagerankPlan plan);
+    katana::PropertyGraph* pg, const std::string& output_property_name,
+    katana::analytics::PagerankPlan plan, tsuba::TxnContext* txn_ctx);
 
 #endif

@@ -109,8 +109,8 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Pagerank(
-    tsuba::TxnContext* txn_ctx, PropertyGraph* pg,
-    const std::string& output_property_name, PagerankPlan plan = {});
+    PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx, PagerankPlan plan = {});
 
 KATANA_EXPORT Result<void> PagerankAssertValid(
     PropertyGraph* pg, const std::string& property_name);

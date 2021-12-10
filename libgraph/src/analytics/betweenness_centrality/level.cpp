@@ -222,7 +222,7 @@ ExtractBC(
   // construct the new property
   if (auto result =
           katana::analytics::ConstructNodeProperties<std::tuple<NodeBC>>(
-              txn_ctx, pg, {output_property_name});
+              pg, txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }
@@ -249,10 +249,11 @@ ExtractBC(
 
 katana::Result<void>
 BetweennessCentralityLevel(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    katana::PropertyGraph* pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
-    katana::analytics::BetweennessCentralityPlan plan [[maybe_unused]]) {
+    katana::analytics::BetweennessCentralityPlan plan [[maybe_unused]],
+    tsuba::TxnContext* txn_ctx) {
   katana::ReportStatSingle(
       "BetweennessCentrality", "ChunkSize", kLevelChunkSize);
   // LevelGraph construction

@@ -86,7 +86,7 @@ main(int argc, char** argv) {
 
   tsuba::TxnContext txn_ctx;
   auto lcc_result = LocalClusteringCoefficient(
-      &txn_ctx, pg.get(), "localClusteringCoefficient", plan);
+      pg.get(), "localClusteringCoefficient", &txn_ctx, plan);
   if (!lcc_result) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", lcc_result.error());
   }

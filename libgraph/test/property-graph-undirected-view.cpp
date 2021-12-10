@@ -11,7 +11,7 @@ void
 TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   tsuba::TxnContext txn_ctx;
   katana::Result<void> res = katana::AddNodeProperties(
-      &txn_ctx, pg.get(),
+      pg.get(), &txn_ctx,
       katana::PropertyGenerator(
           "label", []([[maybe_unused]] auto node_id) { return uint32_t{1}; }),
       katana::PropertyGenerator("deg_sum", []([[maybe_unused]] auto node_id) {

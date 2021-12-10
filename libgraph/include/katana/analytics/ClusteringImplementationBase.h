@@ -436,9 +436,9 @@ struct ClusteringImplementationBase {
  * property graph, pg_from to pg_to.
  */
   static katana::Result<void> CopyEdgeProperty(
-      tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pfg_from,
-      katana::PropertyGraph* pfg_to, const std::string& edge_property_name,
-      const std::string& new_edge_property_name) {
+      katana::PropertyGraph* pfg_from, katana::PropertyGraph* pfg_to,
+      const std::string& edge_property_name,
+      const std::string& new_edge_property_name, tsuba::TxnContext* txn_ctx) {
     // Remove the existing edge property
     if (pfg_to->HasEdgeProperty(new_edge_property_name)) {
       if (auto r = pfg_to->RemoveEdgeProperty(new_edge_property_name); !r) {
@@ -619,13 +619,13 @@ struct ClusteringImplementationBase {
         std::move(pfg_next_res.value());
 
     if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-            txn_ctx, pfg_next.get(), temp_node_property_names);
+            pfg_next.get(), txn_ctx, temp_node_property_names);
         !result) {
       return result.error();
     }
 
     if (auto result = katana::analytics::ConstructEdgeProperties<EdgeData>(
-            txn_ctx, pfg_next.get(), temp_edge_property_names);
+            pfg_next.get(), txn_ctx, temp_edge_property_names);
         !result) {
       return result.error();
     }

@@ -352,7 +352,7 @@ katana::analytics::KTruss(
   katana::ReportPageAllocGuard page_alloc;
 
   if (auto result = ConstructEdgeProperties<EdgeData>(
-          txn_ctx, pg, {output_property_name});
+          pg, txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }

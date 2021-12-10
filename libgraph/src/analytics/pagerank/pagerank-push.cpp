@@ -31,16 +31,21 @@ struct NodeResidual : katana::AtomicPODProperty<PRTy> {};
 
 using NodeData = std::tuple<NodeValue, NodeResidual>;
 using EdgeData = std::tuple<>;
-typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-typedef typename Graph::Node GNode;
+// typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
+// typedef typename Graph::Node GNode;
+
+using Graph = katana::TypedPropertyGraphView<
+    katana::PropertyGraphViews::Default, NodeData, EdgeData>;
+using GNode = typename Graph::Node;
 
 void
-InitializeNodeResidual(Graph& graph, katana::analytics::PagerankPlan plan) {
+InitializeNodeResidual(
+    Graph* graph, const katana::analytics::PagerankPlan& plan) {
   katana::do_all(
-      katana::iterate(graph),
+      katana::iterate(*graph),
       [&](const GNode& n) {
-        graph.GetData<NodeResidual>(n) = plan.initial_residual();
-        graph.GetData<NodeValue>(n) = 0;
+        graph->GetData<NodeResidual>(n) = plan.initial_residual();
+        graph->GetData<NodeValue>(n) = 0;
       },
       katana::no_stats(), katana::loopname("Initialize"));
 }
@@ -63,14 +68,10 @@ PagerankPushAsynchronous(
     return result.error();
   }
 
-  auto graph_result =
-      Graph::Make(pg, {output_property_name, temporary_property.name()}, {});
-  if (!graph_result) {
-    return graph_result.error();
-  }
-  Graph graph = graph_result.value();
+  Graph graph = KATANA_CHECKED(
+      Graph::Make(pg, {output_property_name, temporary_property.name()}, {}));
 
-  InitializeNodeResidual(graph, plan);
+  InitializeNodeResidual(&graph, plan);
 
   typedef katana::PerSocketChunkFIFO<
       katana::analytics::PagerankPlan::kChunkSize>
@@ -88,13 +89,13 @@ PagerankPushAsynchronous(
             PRTy delta = old_residual * plan.alpha() / src_nout;
             //! For each out-going neighbors.
             for (const auto& jj : graph.edges(src)) {
-              auto dest = graph.GetEdgeDest(jj);
+              auto dest = graph.edge_dest(jj);
               auto& dest_residual = graph.GetData<NodeResidual>(dest);
               if (delta > 0) {
                 auto old = atomicAdd(dest_residual, delta);
                 if ((old < plan.tolerance()) &&
                     (old + delta >= plan.tolerance())) {
-                  ctx.push(*dest);
+                  ctx.push(dest);
                 }
               }
             }
@@ -123,14 +124,10 @@ PagerankPushSynchronous(
     return result.error();
   }
 
-  auto graph_result =
-      Graph::Make(pg, {output_property_name, temporary_property.name()}, {});
-  if (!graph_result) {
-    return graph_result.error();
-  }
-  Graph graph = graph_result.value();
+  Graph graph = KATANA_CHECKED(
+      Graph::Make(pg, {output_property_name, temporary_property.name()}, {}));
 
-  InitializeNodeResidual(graph, plan);
+  InitializeNodeResidual(&graph, plan);
 
   struct Update {
     PRTy delta;
@@ -162,8 +159,8 @@ PagerankPushSynchronous(
             int src_nout = graph.edges(src).size();
             PRTy delta = old_residual * plan.alpha() / src_nout;
 
-            auto beg = graph.edge_begin(src);
-            const auto end = graph.edge_end(src);
+            auto beg = graph.edges(src).begin();
+            const auto end = graph.edges(src).end();
 
             KATANA_LOG_ASSERT(beg <= end);
 
@@ -192,7 +189,7 @@ PagerankPushSynchronous(
         [&](const Update& up) {
           //! For each out-going neighbors.
           for (auto jj = up.beg; jj != up.end; ++jj) {
-            auto dest = graph.GetEdgeDest(jj);
+            auto dest = graph.edge_dest(*jj);
             auto& ddata_residual = graph.GetData<NodeResidual>(dest);
             auto old = atomicAdd(ddata_residual, up.delta);
             //! If fabs(old) is greater than tolerance, then it would
@@ -200,7 +197,7 @@ PagerankPushSynchronous(
             //! loop.
             if ((old <= plan.tolerance()) &&
                 (old + up.delta >= plan.tolerance())) {
-              active_nodes.push(*dest);
+              active_nodes.push(dest);
             }
           }
         },

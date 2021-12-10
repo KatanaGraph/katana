@@ -33,20 +33,23 @@ struct PagerankValueAndOutDegreeTy {
 using PagerankValueAndOutDegree =
     katana::StructProperty<PagerankValueAndOutDegreeTy>;
 
-using NodeData = std::tuple<PagerankValueAndOutDegree>;
-using EdgeData = std::tuple<>;
-
-typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-typedef typename Graph::Node GNode;
-
 using DeltaArray = katana::NUMAArray<PRTy>;
 using ResidualArray = katana::NUMAArray<PRTy>;
+using NodeOutDegreeArray = katana::NUMAArray<uint32_t>;
+using PagerankValueAndOutDegreeArray =
+    katana::NUMAArray<PagerankValueAndOutDegreeTy>;
+
+using NodeData = std::tuple<NodeValue>;
+using EdgeData = std::tuple<>;
+
+using Graph = katana::TypedPropertyGraphView<
+    katana::PropertyGraphViews::Transposed, NodeData, EdgeData>;
 
 //! Initialize nodes for the topological algorithm.
-void
+katana::Result<void>
 InitNodeDataTopological(
-    const katana::PropertyGraph& graph,
-    katana::NUMAArray<PagerankValueAndOutDegreeTy>* node_data) {
+    const Graph& graph, PagerankValueAndOutDegreeArray* node_data) {
+  using GNode = typename Graph::Node;
   PRTy init_value = 1.0f / graph.size();
   katana::do_all(
       katana::iterate(graph),
@@ -55,31 +58,33 @@ InitNodeDataTopological(
         (*node_data)[n].out = 0;
       },
       katana::loopname("initNodeData"));
+  return katana::ResultSuccess();
 }
 
 //! Initialize nodes for the residual algorithm.
-void
+katana::Result<void>
 InitNodeDataResidual(
-    Graph* graph, DeltaArray& delta, ResidualArray& residual,
-    katana::analytics::PagerankPlan plan) {
+    Graph* graph, DeltaArray* delta, ResidualArray* residual,
+    NodeOutDegreeArray* node_out_degree, katana::analytics::PagerankPlan plan) {
+  using GNode = typename Graph::Node;
   katana::do_all(
       katana::iterate(*graph),
       [&](const GNode& n) {
-        auto& sdata = graph->GetData<PagerankValueAndOutDegree>(n);
-        sdata.value = 0;
-        sdata.out = 0;
-        delta[n] = 0;
-        residual[n] = plan.initial_residual();
+        auto& sdata = graph->template GetData<NodeValue>(n);
+        sdata = 0;
+        (*node_out_degree)[n] = 0;
+        (*delta)[n] = 0;
+        (*residual)[n] = plan.initial_residual();
       },
       katana::loopname("initNodeData"));
+  return katana::ResultSuccess();
 }
 
 //! Computing outdegrees in the tranpose graph is equivalent to computing the
 //! indegrees in the original graph.
-void
-ComputeOutDeg(
-    const katana::PropertyGraph& graph,
-    katana::NUMAArray<PagerankValueAndOutDegreeTy>* node_data) {
+katana::Result<void>
+ComputeOutDeg(const Graph& graph, PagerankValueAndOutDegreeArray* node_data) {
+  using GNode = typename Graph::Node;
   katana::StatTimer out_degree_timer("computeOutDegFunc");
   out_degree_timer.start();
 
@@ -95,8 +100,8 @@ ComputeOutDeg(
       katana::iterate(graph),
       [&](const GNode& src) {
         for (auto nbr : graph.edges(src)) {
-          auto dest = graph.GetEdgeDest(nbr);
-          vec[*dest].fetch_add(1ul);
+          auto dest = graph.edge_dest(nbr);
+          vec[dest].fetch_add(1ul);
         }
       },
       katana::steal(),
@@ -109,26 +114,29 @@ ComputeOutDeg(
       katana::loopname("CopyDeg"));
 
   out_degree_timer.stop();
+  return katana::ResultSuccess();
 }
-void
-ComputeOutDeg(Graph* graph) {
+
+katana::Result<void>
+ComputeOutDeg(const Graph& graph, NodeOutDegreeArray* node_data) {
+  using GNode = typename Graph::Node;
   katana::StatTimer out_degree_timer("computeOutDegFunc");
   out_degree_timer.start();
 
   katana::NUMAArray<std::atomic<size_t>> vec;
-  vec.allocateInterleaved(graph->size());
+  vec.allocateInterleaved(graph.size());
 
   katana::do_all(
-      katana::iterate(*graph),
+      katana::iterate(graph),
       [&](const GNode& src) { vec.constructAt(src, 0ul); },
       katana::loopname("InitDegVec"));
 
   katana::do_all(
-      katana::iterate(*graph),
+      katana::iterate(graph),
       [&](const GNode& src) {
-        for (auto nbr : graph->edges(src)) {
-          auto dest = graph->GetEdgeDest(nbr);
-          vec[*dest].fetch_add(1ul);
+        for (auto nbr : graph.edges(src)) {
+          auto dest = graph.edge_dest(nbr);
+          vec[dest].fetch_add(1ul);
         }
       },
       katana::steal(),
@@ -136,14 +144,12 @@ ComputeOutDeg(Graph* graph) {
       katana::loopname("ComputeOutDeg"));
 
   katana::do_all(
-      katana::iterate(*graph),
-      [&](const GNode& src) {
-        auto& sdata = graph->GetData<PagerankValueAndOutDegree>(src);
-        sdata.out = vec[src];
-      },
+      katana::iterate(graph),
+      [&](const GNode& src) { (*node_data)[src] = vec[src]; },
       katana::loopname("CopyDeg"));
 
   out_degree_timer.stop();
+  return katana::ResultSuccess();
 }
 
 /**
@@ -154,10 +160,14 @@ ComputeOutDeg(Graph* graph) {
  * the next pagerank.
  */
 //! [scalarreduction]
-void
+katana::Result<void>
 ComputePRResidual(
-    Graph* graph, DeltaArray& delta, ResidualArray& residual,
+    Graph* graph, DeltaArray* delta, ResidualArray* residual,
+    const NodeOutDegreeArray& node_out_degree,
     katana::analytics::PagerankPlan plan) {
+  katana::StatTimer exec_time("PagerankPullResidual");
+  exec_time.start();
+  using GNode = typename Graph::Node;
   unsigned int iterations = 0;
   katana::GAccumulator<unsigned int> accum;
 
@@ -165,17 +175,18 @@ ComputePRResidual(
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<PagerankValueAndOutDegree>(src);
-          delta[src] = 0;
+          auto& sdata = graph->template GetData<NodeValue>(src);
+          (*delta)[src] = 0;
 
           //! Only the residual higher than tolerance will be reflected
           //! to the pagerank.
-          if (residual[src] > plan.tolerance()) {
-            PRTy old_residual = residual[src];
-            residual[src] = 0.0;
-            sdata.value += old_residual;
-            if (sdata.out > 0) {
-              delta[src] = old_residual * plan.alpha() / sdata.out;
+          if ((*residual)[src] > plan.tolerance()) {
+            PRTy old_residual = (*residual)[src];
+            (*residual)[src] = 0.0;
+            sdata += old_residual;
+            if (node_out_degree[src] > 0) {
+              (*delta)[src] =
+                  old_residual * plan.alpha() / node_out_degree[src];
               accum += 1;
             }
           }
@@ -187,13 +198,13 @@ ComputePRResidual(
         [&](const GNode& src) {
           float sum = 0;
           for (auto nbr : graph->edges(src)) {
-            auto dest = graph->GetEdgeDest(nbr);
-            if (delta[*dest] > 0) {
-              sum += delta[*dest];
+            auto dest = graph->edge_dest(nbr);
+            if ((*delta)[dest] > 0) {
+              sum += (*delta)[dest];
             }
           }
           if (sum > 0) {
-            residual[src] = sum;
+            (*residual)[src] = sum;
           }
         },
         katana::steal(),
@@ -210,29 +221,35 @@ ComputePRResidual(
     accum.reset();
   }  ///< End while(true).
   //! [scalarreduction]
+  exec_time.start();
+  return katana::ResultSuccess();
 }
 
 /**
  * PageRank pull topological.
  * Always calculate the new pagerank for each iteration.
  */
-void
+katana::Result<void>
 ComputePRTopological(
-    const katana::PropertyGraph& graph, katana::analytics::PagerankPlan plan,
-    katana::NUMAArray<PagerankValueAndOutDegreeTy>* node_data) {
+    Graph* graph, katana::analytics::PagerankPlan plan,
+    PagerankValueAndOutDegreeArray* node_data) {
+  katana::StatTimer exec_time("PagerankPullTopological");
+  exec_time.start();
+
+  using GNode = typename Graph::Node;
   unsigned int iteration = 0;
   katana::GAccumulator<float> accum;
 
-  float base_score = (1.0f - plan.alpha()) / graph.size();
+  float base_score = (1.0f - plan.alpha());
   while (true) {
     katana::do_all(
-        katana::iterate(graph),
+        katana::iterate(*graph),
         [&](const GNode& src) {
           float sum = 0.0;
 
-          for (auto jj : graph.edges(src)) {
-            auto dest = graph.GetEdgeDest(jj);
-            auto& ddata = (*node_data)[*dest];
+          for (auto jj : graph->edges(src)) {
+            auto dest = graph->edge_dest(jj);
+            auto& ddata = (*node_data)[dest];
             sum += ddata.value / ddata.out;
           }
 
@@ -266,33 +283,16 @@ ComputePRTopological(
   }  ///< End while(true).
 
   katana::ReportStatSingle("PageRank", "Iterations", iteration);
-}
 
-katana::Result<void>
-ExtractValueFromTopoGraph(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
-    const katana::NUMAArray<PagerankValueAndOutDegreeTy>& node_data,
-    tsuba::TxnContext* txn_ctx) {
-  if (auto result =
-          katana::analytics::ConstructNodeProperties<std::tuple<NodeValue>>(
-              pg, txn_ctx, {output_property_name});
-      !result) {
-    return result.error();
-  }
-
-  auto graph_result =
-      katana::TypedPropertyGraph<std::tuple<NodeValue>, std::tuple<>>::Make(
-          pg, {output_property_name}, {});
-  if (!graph_result) {
-    return graph_result.error();
-  }
-  auto graph = graph_result.value();
-
+  /// Assign values back to the property graph.
   katana::do_all(
-      katana::iterate(*pg),
-      [&](uint32_t i) { graph.GetData<NodeValue>(i) = node_data[i].value; },
+      katana::iterate(*graph),
+      [&](uint32_t i) {
+        graph->template GetData<NodeValue>(i) = (*node_data)[i].value;
+      },
       katana::loopname("Extract pagerank"), katana::no_stats());
 
+  exec_time.stop();
   return katana::ResultSuccess();
 }
 
@@ -302,56 +302,49 @@ katana::Result<void>
 PagerankPullTopological(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan, tsuba::TxnContext* txn_ctx) {
-  katana::EnsurePreallocated(2, 3 * pg->num_nodes() * sizeof(NodeData));
+  KATANA_CHECKED(
+      katana::analytics::ConstructNodeProperties<std::tuple<NodeValue>>(
+          pg, txn_ctx, {output_property_name}));
+
+  Graph graph = KATANA_CHECKED(Graph::Make(pg, {output_property_name}, {}));
+
+  katana::EnsurePreallocated(2, 3 * graph.size() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
-  // NUMA-awere temporary node data
-  katana::NUMAArray<PagerankValueAndOutDegreeTy> node_data;
-  node_data.allocateInterleaved(pg->num_nodes());
+  // NUMA-aware temporary node data
+  PagerankValueAndOutDegreeArray node_data;
+  node_data.allocateInterleaved(graph.size());
 
-  InitNodeDataTopological(*pg, &node_data);
-  ComputeOutDeg(*pg, &node_data);
+  KATANA_CHECKED(InitNodeDataTopological(graph, &node_data));
+  KATANA_CHECKED(ComputeOutDeg(graph, &node_data));
 
-  katana::StatTimer exec_time("PagerankPullTopological");
-  exec_time.start();
-  ComputePRTopological(*pg, plan, &node_data);
-  exec_time.stop();
-
-  return ExtractValueFromTopoGraph(
-      pg, output_property_name, node_data, txn_ctx);
+  return ComputePRTopological(&graph, plan, &node_data);
 }
 
 katana::Result<void>
 PagerankPullResidual(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan, tsuba::TxnContext* txn_ctx) {
-  katana::EnsurePreallocated(2, 3 * pg->num_nodes() * sizeof(NodeData));
+  KATANA_CHECKED(katana::analytics::ConstructNodeProperties<NodeData>(
+      pg, txn_ctx, {output_property_name}));
+
+  Graph graph = KATANA_CHECKED(Graph::Make(pg, {output_property_name}, {}));
+
+  katana::EnsurePreallocated(2, 3 * graph.size() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
-  if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pg, txn_ctx, {output_property_name});
-      !result) {
-    return result.error();
-  }
-
-  auto graph_result = Graph::Make(pg, {output_property_name}, {});
-  if (!graph_result) {
-    return graph_result.error();
-  }
-  Graph graph = graph_result.value();
+  // NUMA-aware temporary node data
+  NodeOutDegreeArray node_out_degree;
+  node_out_degree.allocateInterleaved(graph.size());
 
   DeltaArray delta;
-  delta.allocateInterleaved(pg->num_nodes());
+  delta.allocateInterleaved(graph.size());
   ResidualArray residual;
-  residual.allocateInterleaved(pg->num_nodes());
+  residual.allocateInterleaved(graph.size());
 
-  InitNodeDataResidual(&graph, delta, residual, plan);
-  ComputeOutDeg(&graph);
+  KATANA_CHECKED(
+      InitNodeDataResidual(&graph, &delta, &residual, &node_out_degree, plan));
+  KATANA_CHECKED(ComputeOutDeg(graph, &node_out_degree));
 
-  katana::StatTimer exec_time("PagerankPullResidual");
-  exec_time.start();
-  ComputePRResidual(&graph, delta, residual, plan);
-  exec_time.stop();
-
-  return katana::ResultSuccess();
+  return ComputePRResidual(&graph, &delta, &residual, node_out_degree, plan);
 }

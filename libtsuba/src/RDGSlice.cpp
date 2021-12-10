@@ -487,6 +487,11 @@ tsuba::RDGSlice::remove_local_to_user_id() {
   return unload_local_to_user_id();
 }
 
+std::shared_ptr<arrow::Schema>
+tsuba::RDGSlice::full_node_schema() const {
+  return core_->full_node_schema();
+}
+
 katana::Result<void>
 tsuba::RDGSlice::load_node_property(const std::string& name) {
   KATANA_CHECKED(
@@ -498,6 +503,11 @@ katana::Result<void>
 tsuba::RDGSlice::unload_node_property(const std::string& name) {
   KATANA_CHECKED(unload_property(name, tsuba::NodeEdge::kNode, core_.get()));
   return katana::ResultSuccess();
+}
+
+std::shared_ptr<arrow::Schema>
+tsuba::RDGSlice::full_edge_schema() const {
+  return core_->full_edge_schema();
 }
 
 katana::Result<void>

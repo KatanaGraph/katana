@@ -118,9 +118,32 @@ EnsureTypeLoaded(const katana::Uri& rdg_dir, tsuba::PropStorageInfo* psi) {
   }
   return katana::ResultSuccess();
 }
+
+std::shared_ptr<arrow::Schema>
+schemify(const std::vector<tsuba::PropStorageInfo>& prop_info_list) {
+  std::vector<std::shared_ptr<arrow::Field>> fields;
+  for (const auto& prop : prop_info_list) {
+    KATANA_LOG_VASSERT(
+        prop.type(), "should be impossible for type of {} to be null here",
+        prop.name());
+    fields.emplace_back(
+        std::make_shared<arrow::Field>(prop.name(), prop.type()));
+  }
+  return arrow::schema(fields);
+}
 }  // namespace
 
 namespace tsuba {
+
+std::shared_ptr<arrow::Schema>
+RDGCore::full_node_schema() const {
+  return schemify(part_header().node_prop_info_list());
+}
+
+std::shared_ptr<arrow::Schema>
+RDGCore::full_edge_schema() const {
+  return schemify(part_header().edge_prop_info_list());
+}
 
 katana::Result<void>
 RDGCore::AddPartitionMetadataArray(const std::shared_ptr<arrow::Table>& props) {

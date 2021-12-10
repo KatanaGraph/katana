@@ -50,25 +50,10 @@ static cll::opt<PagerankPlan::Algorithm> algo(
         clEnumValN(PagerankPlan::kPushAsynchronous, "PushAsync", "PushAsync")),
     cll::init(PagerankPlan::kPushAsynchronous));
 
-//! Flag that forces user to be aware that they should be passing in a
-//! transposed graph.
-static cll::opt<bool> transposedGraph(
-    "transposedGraph", cll::desc("Specify that the input graph is transposed"),
-    cll::init(false));
-
 int
 main(int argc, char** argv) {
   std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
-
-  if ((algo == PagerankPlan::kPullResidual ||
-       algo == PagerankPlan::kPullTopological) &&
-      !transposedGraph) {
-    KATANA_DIE(
-        "This application requires a transposed graph input;"
-        " please use the -transposedGraph flag "
-        " to indicate the input is a transposed graph.");
-  }
 
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();

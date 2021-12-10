@@ -39,7 +39,7 @@ target_include_directories(tsuba PUBLIC
 )
 set_common_katana_library_options(tsuba ALWAYS_SHARED)
 
-target_link_libraries(tsuba PUBLIC katana_support)
+target_link_libraries(tsuba PUBLIC katana_galois katana_support)
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(test)

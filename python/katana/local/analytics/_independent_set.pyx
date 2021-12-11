@@ -22,10 +22,11 @@ Independent Set
 from libc.stdint cimport uint32_t
 from libcpp.string cimport string
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -57,7 +58,7 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
         @staticmethod
         _IndependentSetPlan EdgeTiledPriority()
 
-    Result[void] IndependentSet(_PropertyGraph* pg, string output_property_name, _IndependentSetPlan plan)
+    Result[void] IndependentSet(_PropertyGraph* pg, string output_property_name, CTxnContext* txn_ctx, _IndependentSetPlan plan)
 
     Result[void] IndependentSetAssertValid(_PropertyGraph* pg, string output_property_name)
 
@@ -122,7 +123,7 @@ cdef class IndependentSetPlan(Plan):
 
 
 def independent_set(Graph pg, str output_property_name,
-             IndependentSetPlan plan = IndependentSetPlan()):
+             IndependentSetPlan plan = IndependentSetPlan(), *, TxnContext txn_ctx = None):
     """
     Find a maximal (not the maximum) independent set in the graph and create an indicator property that is true for
     elements of the independent set. The graph must be symmetric. The property named output_property_name is created by
@@ -134,6 +135,7 @@ def independent_set(Graph pg, str output_property_name,
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: IndependentSetPlan
     :param plan: The execution plan to use.
+    :param txn_ctx: The tranaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -151,8 +153,9 @@ def independent_set(Graph pg, str output_property_name,
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(IndependentSet(pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
+        handle_result_void(IndependentSet(pg.underlying_property_graph(), output_property_name_cstr, &txn_ctx._txn_ctx, plan.underlying_))
 
 
 def independent_set_assert_valid(Graph pg, str output_property_name):

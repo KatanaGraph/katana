@@ -144,7 +144,8 @@ public:
 /// not exist before the call.
 KATANA_EXPORT Result<void> LeidenClustering(
     PropertyGraph* pg, const std::string& edge_weight_property_name,
-    const std::string& output_property_name, LeidenClusteringPlan plan = {});
+    const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
+    LeidenClusteringPlan plan = {});
 
 KATANA_EXPORT Result<void> LeidenClusteringAssertValid(
     PropertyGraph* pg, const std::string& edge_weight_property_name,
@@ -167,7 +168,7 @@ struct KATANA_EXPORT LeidenClusteringStatistics {
 
   static katana::Result<LeidenClusteringStatistics> Compute(
       PropertyGraph* pg, const std::string& edge_weight_property_name,
-      const std::string& output_property_name);
+      const std::string& output_property_name, tsuba::TxnContext* txn_ctx);
 };
 
 }  // namespace katana::analytics

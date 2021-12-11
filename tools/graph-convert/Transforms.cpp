@@ -9,7 +9,7 @@ namespace {
 void
 ApplyTransform(
     katana::PropertyGraph::MutablePropertyView view,
-    katana::ColumnTransformer* transform) {
+    katana::ColumnTransformer* transform, tsuba::TxnContext* txn_ctx) {
   int cur_field = 0;
   int num_fields = view.loaded_schema()->num_fields();
   std::vector<std::shared_ptr<arrow::Field>> new_fields;
@@ -45,7 +45,7 @@ ApplyTransform(
     auto schema = std::make_shared<arrow::Schema>(new_fields);
     std::shared_ptr<arrow::Table> new_table =
         arrow::Table::Make(schema, new_columns);
-    if (auto result = view.AddProperties(new_table); !result) {
+    if (auto result = view.AddProperties(new_table, txn_ctx); !result) {
       KATANA_LOG_FATAL("failed to add properties: {}", result.error());
     }
   }
@@ -154,10 +154,10 @@ katana::SparsifyBooleans::operator()(
 void
 katana::ApplyTransforms(
     katana::PropertyGraph* graph,
-    const std::vector<std::unique_ptr<katana::ColumnTransformer>>&
-        transformers) {
+    const std::vector<std::unique_ptr<katana::ColumnTransformer>>& transformers,
+    tsuba::TxnContext* txn_ctx) {
   for (const auto& t : transformers) {
-    ApplyTransform(graph->NodeMutablePropertyView(), t.get());
-    ApplyTransform(graph->EdgeMutablePropertyView(), t.get());
+    ApplyTransform(graph->NodeMutablePropertyView(), t.get(), txn_ctx);
+    ApplyTransform(graph->EdgeMutablePropertyView(), t.get(), txn_ctx);
   }
 }

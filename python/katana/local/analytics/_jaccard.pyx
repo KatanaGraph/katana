@@ -22,10 +22,11 @@ Jaccard Similarity
 
 from libcpp.string cimport string
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -49,7 +50,7 @@ cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analyti
         _JaccardPlan Unsorted()
 
     Result[void] Jaccard(_PropertyGraph* pg, size_t compare_node,
-        string output_property_name, _JaccardPlan plan)
+        string output_property_name, CTxnContext* txn_ctx, _JaccardPlan plan)
 
     Result[void] JaccardAssertValid(_PropertyGraph* pg, size_t compare_node,
         string output_property_name)
@@ -133,7 +134,7 @@ cdef class JaccardPlan(Plan):
 
 
 def jaccard(Graph pg, size_t compare_node, str output_property_name,
-            JaccardPlan plan = JaccardPlan()):
+            JaccardPlan plan = JaccardPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Jaccard Similarity between `compare_node` and all nodes in the graph.
 
@@ -145,6 +146,7 @@ def jaccard(Graph pg, size_t compare_node, str output_property_name,
     :param output_property_name: The output property for similarities. This property must not already exist.
     :type plan: JaccardPlan
     :param plan: The execution plan to use.
+    :param txn_ctx: The tranaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -168,8 +170,9 @@ def jaccard(Graph pg, size_t compare_node, str output_property_name,
     """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Jaccard(pg.underlying_property_graph(), compare_node, output_property_name_cstr, plan.underlying_))
+        handle_result_void(Jaccard(pg.underlying_property_graph(), compare_node, output_property_name_cstr, &txn_ctx._txn_ctx, plan.underlying_))
 
 
 def jaccard_assert_valid(Graph pg, size_t compare_node, str output_property_name):

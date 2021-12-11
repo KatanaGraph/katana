@@ -16,7 +16,8 @@ void
 TestIsApproximateDegreeDistributionPowerLaw() {
   {
     LinePolicy policy{11};
-    auto g = MakeFileGraph<uint32_t>(100, 1, &policy);
+    tsuba::TxnContext txn_ctx;
+    auto g = MakeFileGraph<uint32_t>(100, 1, &policy, &txn_ctx);
 
     KATANA_LOG_ASSERT(g->size() == 100);
     KATANA_LOG_ASSERT(g->num_edges() == 11 * 100);

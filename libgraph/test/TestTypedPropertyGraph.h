@@ -64,7 +64,9 @@ public:
 /// \tparam ValueType is the type of column data
 template <typename ValueType>
 std::unique_ptr<katana::PropertyGraph>
-MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
+MakeFileGraph(
+    size_t num_nodes, size_t num_properties, Policy* policy,
+    tsuba::TxnContext* txn_ctx) {
   std::vector<uint32_t> dests;
   std::vector<uint64_t> indices;
 
@@ -93,10 +95,10 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
     edge_builder.AddColumn<ValueType>(katana::ColumnOptions());
   }
 
-  if (auto r = g->AddEdgeProperties(edge_builder.Finish()); !r) {
+  if (auto r = g->AddEdgeProperties(edge_builder.Finish(), txn_ctx); !r) {
     KATANA_LOG_FATAL("could not add edge property: {}", r.error());
   }
-  if (auto r = g->AddNodeProperties(node_builder.Finish()); !r) {
+  if (auto r = g->AddNodeProperties(node_builder.Finish(), txn_ctx); !r) {
     KATANA_LOG_FATAL("could not add node property: {}", r.error());
   }
 

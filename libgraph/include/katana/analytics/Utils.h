@@ -52,14 +52,14 @@ DefaultPropertyNames() {
 template <typename NodeProps>
 inline katana::Result<void>
 ConstructNodeProperties(
-    PropertyGraph* pg,
+    PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
   auto res_table = katana::AllocateTable<NodeProps>(pg->num_nodes(), names);
   if (!res_table) {
     return res_table.error();
   }
 
-  return pg->AddNodeProperties(res_table.value());
+  return pg->AddNodeProperties(res_table.value(), txn_ctx);
 }
 
 /// TODO(udit) here pg_view which is a const object
@@ -67,7 +67,7 @@ ConstructNodeProperties(
 template <typename PGView, typename NodeProps>
 inline katana::Result<void>
 ConstructNodeProperties(
-    const PGView& pg_view,
+    const PGView& pg_view, tsuba::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
   auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
   auto bit_mask = pg_view.node_bitmask();
@@ -77,26 +77,26 @@ ConstructNodeProperties(
     return res_table.error();
   }
 
-  return pg->AddNodeProperties(res_table.value());
+  return pg->AddNodeProperties(res_table.value(), txn_ctx);
 }
 
 template <typename EdgeProps>
 inline katana::Result<void>
 ConstructEdgeProperties(
-    PropertyGraph* pg,
+    PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
   auto res_table = katana::AllocateTable<EdgeProps>(pg->num_edges(), names);
   if (!res_table) {
     return res_table.error();
   }
 
-  return pg->AddEdgeProperties(res_table.value());
+  return pg->AddEdgeProperties(res_table.value(), txn_ctx);
 }
 
 template <typename PGView, typename EdgeProps>
 inline katana::Result<void>
 ConstructEdgeProperties(
-    const PGView& pg_view,
+    const PGView& pg_view, tsuba::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
   auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
   auto bit_mask = pg_view.edge_bitmask();
@@ -106,7 +106,7 @@ ConstructEdgeProperties(
     return res_table.error();
   }
 
-  return pg->AddEdgeProperties(res_table.value());
+  return pg->AddEdgeProperties(res_table.value(), txn_ctx);
 }
 
 class KATANA_EXPORT TemporaryPropertyGuard {

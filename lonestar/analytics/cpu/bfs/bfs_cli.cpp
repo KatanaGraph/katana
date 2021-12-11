@@ -166,7 +166,9 @@ main(int argc, char** argv) {
     }
 
     std::string node_distance_prop = "level-" + std::to_string(start_node);
-    if (auto r = Bfs(pg.get(), start_node, node_distance_prop, plan); !r) {
+    tsuba::TxnContext txn_ctx;
+    if (auto r = Bfs(pg.get(), start_node, node_distance_prop, &txn_ctx, plan);
+        !r) {
       KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
 

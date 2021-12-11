@@ -55,7 +55,7 @@ InitializeNodeResidual(
 katana::Result<void>
 PagerankPushAsynchronous(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    katana::analytics::PagerankPlan plan) {
+    katana::analytics::PagerankPlan plan, tsuba::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(5, 5 * pg->num_nodes() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
@@ -63,7 +63,7 @@ PagerankPushAsynchronous(
       pg->NodeMutablePropertyView()};
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pg, {output_property_name, temporary_property.name()});
+          pg, txn_ctx, {output_property_name, temporary_property.name()});
       !result) {
     return result.error();
   }
@@ -111,7 +111,7 @@ PagerankPushAsynchronous(
 katana::Result<void>
 PagerankPushSynchronous(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    katana::analytics::PagerankPlan plan) {
+    katana::analytics::PagerankPlan plan, tsuba::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(5, 5 * pg->num_nodes() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
@@ -119,7 +119,7 @@ PagerankPushSynchronous(
       pg->NodeMutablePropertyView()};
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pg, {output_property_name, temporary_property.name()});
+          pg, txn_ctx, {output_property_name, temporary_property.name()});
       !result) {
     return result.error();
   }

@@ -83,7 +83,7 @@ public:
  */
 KATANA_EXPORT Result<void> LocalClusteringCoefficient(
     PropertyGraph* pg, const std::string& output_property_name,
-    LocalClusteringCoefficientPlan plan = {});
+    tsuba::TxnContext* txn_ctx, LocalClusteringCoefficientPlan plan = {});
 
 }  // namespace katana::analytics
 

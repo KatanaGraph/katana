@@ -177,8 +177,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         shared_ptr[CChunkedArray] GetEdgeProperty(int i)
         shared_ptr[CChunkedArray] GetEdgeProperty(const string&)
 
-        Result[void] AddNodeProperties(shared_ptr[CTable])
-        Result[void] AddEdgeProperties(shared_ptr[CTable])
+        Result[void] AddNodeProperties(shared_ptr[CTable], TxnContext*)
+        Result[void] AddEdgeProperties(shared_ptr[CTable], TxnContext*)
         Result[void] UpsertNodeProperties(shared_ptr[CTable], TxnContext*)
         Result[void] UpsertEdgeProperties(shared_ptr[CTable], TxnContext*)
 
@@ -208,7 +208,7 @@ cdef extern from "katana/BuildGraph.h" namespace "katana" nogil:
         void Dump()
 
 cdef extern from "katana/GraphML.h" namespace "katana" nogil:
-    Result[unique_ptr[_PropertyGraph]] ConvertToPropertyGraph(GraphComponents&& graph_comps);
+    Result[unique_ptr[_PropertyGraph]] ConvertToPropertyGraph(GraphComponents&& graph_comps, TxnContext* txn_ctx);
 
     Result[GraphComponents] ConvertGraphML(
         string input_filename, size_t chunk_size, bint verbose)

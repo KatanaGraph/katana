@@ -598,15 +598,15 @@ tsuba::RDG::Store(
 }
 
 katana::Result<void>
-tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
-  KATANA_CHECKED(core_->AddNodeProperties(props));
-  return katana::ResultSuccess();
+tsuba::RDG::AddNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->AddNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
-  KATANA_CHECKED(core_->AddEdgeProperties(props));
-  return katana::ResultSuccess();
+tsuba::RDG::AddEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->AddEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>

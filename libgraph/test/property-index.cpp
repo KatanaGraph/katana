@@ -13,7 +13,8 @@ struct NodeOrEdge {
   static katana::Result<katana::PropertyIndex<node_or_edge>*> MakeIndex(
       katana::PropertyGraph* pg, const std::string& column_name);
   static katana::Result<void> AddProperties(
-      katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties);
+      katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
+      tsuba::TxnContext* txn_ctx);
   static size_t num_entities(katana::PropertyGraph* pg);
 };
 
@@ -69,15 +70,17 @@ Edge::num_entities(katana::PropertyGraph* pg) {
 template <>
 katana::Result<void>
 Node::AddProperties(
-    katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties) {
-  return pg->AddNodeProperties(properties);
+    katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
+    tsuba::TxnContext* txn_ctx) {
+  return pg->AddNodeProperties(properties, txn_ctx);
 }
 
 template <>
 katana::Result<void>
 Edge::AddProperties(
-    katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties) {
-  return pg->AddEdgeProperties(properties);
+    katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
+    tsuba::TxnContext* txn_ctx) {
+  return pg->AddEdgeProperties(properties, txn_ctx);
 }
 
 template <typename c_type>
@@ -138,8 +141,10 @@ TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
+  tsuba::TxnContext txn_ctx;
+
   std::unique_ptr<katana::PropertyGraph> g =
-      MakeFileGraph<DataType>(num_nodes, 0, &policy);
+      MakeFileGraph<DataType>(num_nodes, 0, &policy, &txn_ctx);
 
   std::shared_ptr<arrow::Table> uniform_prop =
       CreatePrimitiveProperty<DataType>(
@@ -148,9 +153,9 @@ TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
       CreatePrimitiveProperty<DataType>(
           "nonuniform", false, NodeOrEdge<node_or_edge>::num_entities(g.get()));
   KATANA_LOG_ASSERT(
-      NodeOrEdge<node_or_edge>::AddProperties(g.get(), uniform_prop));
-  KATANA_LOG_ASSERT(
-      NodeOrEdge<node_or_edge>::AddProperties(g.get(), nonuniform_prop));
+      NodeOrEdge<node_or_edge>::AddProperties(g.get(), uniform_prop, &txn_ctx));
+  KATANA_LOG_ASSERT(NodeOrEdge<node_or_edge>::AddProperties(
+      g.get(), nonuniform_prop, &txn_ctx));
 
   auto uniform_index_result =
       NodeOrEdge<node_or_edge>::MakeIndex(g.get(), "uniform");
@@ -208,17 +213,19 @@ TestStringIndex(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
+  tsuba::TxnContext txn_ctx;
+
   std::unique_ptr<katana::PropertyGraph> g =
-      MakeFileGraph<int>(num_nodes, 0, &policy);
+      MakeFileGraph<int>(num_nodes, 0, &policy, &txn_ctx);
 
   std::shared_ptr<arrow::Table> uniform_prop = CreateStringProperty(
       "uniform", true, NodeOrEdge<node_or_edge>::num_entities(g.get()));
   std::shared_ptr<arrow::Table> nonuniform_prop = CreateStringProperty(
       "nonuniform", false, NodeOrEdge<node_or_edge>::num_entities(g.get()));
   KATANA_LOG_ASSERT(
-      NodeOrEdge<node_or_edge>::AddProperties(g.get(), uniform_prop));
-  KATANA_LOG_ASSERT(
-      NodeOrEdge<node_or_edge>::AddProperties(g.get(), nonuniform_prop));
+      NodeOrEdge<node_or_edge>::AddProperties(g.get(), uniform_prop, &txn_ctx));
+  KATANA_LOG_ASSERT(NodeOrEdge<node_or_edge>::AddProperties(
+      g.get(), nonuniform_prop, &txn_ctx));
 
   auto uniform_index_result =
       NodeOrEdge<node_or_edge>::MakeIndex(g.get(), "uniform");

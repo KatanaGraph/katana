@@ -8,12 +8,14 @@ katana::Result<void> BetweennessCentralityOuter(
     katana::PropertyGraph* pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
-    [[maybe_unused]] katana::analytics::BetweennessCentralityPlan plan);
+    [[maybe_unused]] katana::analytics::BetweennessCentralityPlan plan,
+    tsuba::TxnContext* txn_ctx);
 
 katana::Result<void> BetweennessCentralityLevel(
     katana::PropertyGraph* pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
-    katana::analytics::BetweennessCentralityPlan plan);
+    katana::analytics::BetweennessCentralityPlan plan,
+    tsuba::TxnContext* txn_ctx);
 
 #endif

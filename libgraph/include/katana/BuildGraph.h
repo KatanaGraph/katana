@@ -232,10 +232,12 @@ private:
 };
 
 KATANA_EXPORT Result<std::unique_ptr<katana::PropertyGraph>>
-ConvertToPropertyGraph(GraphComponents&& graph_comps);
+ConvertToPropertyGraph(
+    GraphComponents&& graph_comps, tsuba::TxnContext* txn_ctx);
 
 KATANA_EXPORT Result<void> WritePropertyGraph(
-    GraphComponents&& graph_comps, const std::string& dir);
+    GraphComponents&& graph_comps, const std::string& dir,
+    tsuba::TxnContext* txn_ctx);
 
 // TODO(amber): Take PropertyGraph by const ref
 KATANA_EXPORT Result<void> WritePropertyGraph(

@@ -28,10 +28,10 @@ public:
   bool Equals(const RDGCore& other) const;
 
   katana::Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   katana::Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   katana::Result<void> UpsertNodeProperties(
       const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);

@@ -172,7 +172,7 @@ public:
     PropertyGraph* g;
 
     Result<void> (PropertyGraph::*add_properties_fn)(
-        const std::shared_ptr<arrow::Table>& props);
+        const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*upsert_properties_fn)(
         const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*remove_property_int)(int i);
@@ -202,8 +202,9 @@ public:
     uint64_t ApproxMemUse() const { return ropv.ApproxMemUse(); }
 
     Result<void> AddProperties(
-        const std::shared_ptr<arrow::Table>& props) const {
-      return (g->*add_properties_fn)(props);
+        const std::shared_ptr<arrow::Table>& props,
+        tsuba::TxnContext* txn_ctx) const {
+      return (g->*add_properties_fn)(props, txn_ctx);
     }
 
     Result<void> UpsertProperties(
@@ -667,9 +668,11 @@ public:
   }
 
   /// Add Node properties that do not exist in the current graph
-  Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);
+  Result<void> AddNodeProperties(
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
   /// Add Edge properties that do not exist in the current graph
-  Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& props);
+  Result<void> AddEdgeProperties(
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
   /// If property name exists, replace it, otherwise insert it
   Result<void> UpsertNodeProperties(
       const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);

@@ -129,7 +129,8 @@ public:
 /// an ArrayProperty.
 /// The plan controls the algorithm and parameters used to compute the latent vectors.
 KATANA_EXPORT Result<void> MatrixCompletion(
-    katana::PropertyGraph* pg, MatrixCompletionPlan plan = {});
+    katana::PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
+    MatrixCompletionPlan plan = {});
 
 }  // namespace katana::analytics
 

@@ -356,6 +356,8 @@ function(add_python_setuptools_tests TARGET_NAME)
            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   set_property(TEST ${TARGET_NAME} APPEND
                PROPERTY ENVIRONMENT KATANA_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+  set_property(TEST ${TARGET_NAME} APPEND
+               PROPERTY ENVIRONMENT KATANA_TEST_DATASETS=${KATANA_TEST_DATASETS})
   if(NOT X_NOT_QUICK)
     set_tests_properties(${TARGET_NAME} PROPERTIES LABELS "quick;python")
   else()

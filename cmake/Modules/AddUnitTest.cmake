@@ -1,3 +1,7 @@
+# args:
+# NOT_QUICK - flag to mark this test as not quick
+# REQUIRES - list of variables that must be true to compile this test
+# LINK_LIBRARIES - list of library names to link
 function(add_test_unit name)
   set(no_value_options NOT_QUICK)
   set(multi_value_options REQUIRES)

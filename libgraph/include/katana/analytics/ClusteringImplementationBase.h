@@ -898,7 +898,6 @@ struct ClusteringImplementationBase {
      * - clusterWeights[j]) * resolution
      */
 
-      //seems like the source code is not doing this
       if (double tmp = resolution * static_cast<double>(node_wt) *
                        static_cast<double>(total_node_wt - node_wt);
           num_edges_within_cluster >= tmp) {

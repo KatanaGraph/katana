@@ -686,10 +686,9 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   static uint64_t GetRandomSubcommunity(
       const Graph& graph, GNode n, CommunityArray& subcomm_info,
-      [[maybe_unused]] uint64_t total_node_wt,
-      [[maybe_unused]] uint64_t total_degree_wt, uint64_t comm_id,
-      [[maybe_unused]] double constant_for_second_term,
-      [[maybe_unused]] double resolution, [[maybe_unused]] double randomness) {
+      uint64_t total_node_wt, [[maybe_unused]] uint64_t total_degree_wt,
+      uint64_t comm_id, double constant_for_second_term, double resolution,
+      [[maybe_unused]] double randomness) {
     auto& n_current_subcomm_id =
         graph.template GetData<CurrentSubCommunityID>(n);
     /*
@@ -757,12 +756,11 @@ struct ClusteringImplementationBase {
     }  // End edge loop
 
     uint64_t best_cluster = n_current_subcomm_id;
-    [[maybe_unused]] double max_quality_value_increment = 0;
+    double max_quality_value_increment = 0;
     double total_transformed_quality_value_increment = 0;
     double quality_value_increment = 0;
     std::vector<double> cum_transformed_quality_value_increment_per_cluster(
         num_unique_clusters);
-    [[maybe_unused]] auto& n_node_wt = graph.template GetData<NodeWeight>(n);
     auto& n_degree_wt = graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
 
     for (auto pair : cluster_local_map) {
@@ -810,18 +808,10 @@ struct ClusteringImplementationBase {
       r = total_transformed_quality_value_increment *
           GenerateRandonNumber(0.0, 1.0);
 
-      katana::gPrint("\n r: ", r);
-
-      //katana::gPrint(
-      //  "\n total_transformed_quality_value_increment: ",
-      //total_transformed_quality_value_increment);
-
       min_idx = -1;
       max_idx = num_unique_clusters;
       while (min_idx < max_idx) {
         mid_idx = (min_idx + max_idx) / 2;
-
-        //katana::gPrint("\n mid idx: ", mid_idx);
 
         if (cum_transformed_quality_value_increment_per_cluster[mid_idx] >= r) {
           if (max_idx == mid_idx) {
@@ -838,9 +828,7 @@ struct ClusteringImplementationBase {
       return (max_idx == 0) ? neighboring_cluster_ids[max_idx]
                             : neighboring_cluster_ids[max_idx - 1];
     } else {
-      //katana::gPrint("here \n");
       return best_cluster;
-      //  return n_current_subcomm_id;
     }
   }
 

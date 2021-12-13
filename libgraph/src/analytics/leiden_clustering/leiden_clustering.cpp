@@ -602,8 +602,8 @@ public:
        */
         Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
         katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
-          graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n;
-          //   original_comm_ass[n];
+          graph_curr_tmp.template GetData<CurrentCommunityID>(n) =
+              original_comm_ass[n];
           graph_curr_tmp.template GetData<NodeWeight>(n) = cluster_node_wt[n];
         });
 

@@ -4,11 +4,6 @@ set(RDG_TEST_DATASETS ${KATANA_TEST_DATASETS}/rdg_datasets)
 set(CSV_TEST_DATASETS ${KATANA_TEST_DATASETS}/csv_datasets)
 set(MISC_TEST_DATASETS ${KATANA_TEST_DATASETS}/misc_datasets)
 
-## other misc test inputs
-#TODO(emcginnis): move the rest of these to test-datasets as well
-set(BASEINPUT "${PROJECT_BINARY_DIR}/inputs/current")
-set(BASE_VERIFICATION "${PROJECT_BINARY_DIR}/inputs/current")
-
 ## latest supported rdg storage_format_version
 #TODO(emcginnis) get this envar in RDGPartHeader.h instead of having to hard code it here and there
 set(KATANA_RDG_STORAGE_FORMAT_VERSION "3")

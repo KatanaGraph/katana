@@ -768,9 +768,8 @@ struct ClusteringImplementationBase {
         continue;
       }
 
-      [[maybe_unused]] double subcomm_node_wt = subcomm_info[subcomm].node_wt;
-      [[maybe_unused]] double subcomm_degree_wt =
-          subcomm_info[subcomm].degree_wt;
+      double subcomm_node_wt = subcomm_info[subcomm].node_wt;
+      double subcomm_degree_wt = subcomm_info[subcomm].degree_wt;
 
       // check if subcommunity is well connected
       if (double tmp = resolution * subcomm_node_wt *

@@ -190,11 +190,11 @@ def triangle_count(Graph pg,  TriangleCountPlan plan = TriangleCountPlan()) -> i
     .. code-block:: python
 
         import katana.local
-        from katana.example_data import get_input
+        from katana.example_data import get_rdg_dataset
         from katana.local import Graph
         katana.local.initialize()
 
-        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_rdg_dataset("ldbc_003"))
         from katana.analytics import triangle_count
         n = triangle_count(graph)
         print("Triangle Count:", n)

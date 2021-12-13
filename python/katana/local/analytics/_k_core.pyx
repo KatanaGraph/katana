@@ -120,11 +120,11 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
     .. code-block:: python
 
         import katana.local
-        from katana.example_data import get_input
+        from katana.example_data import get_rdg_dataset
         from katana.local import Graph
         katana.local.initialize()
 
-        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_rdg_dataset("ldbc_003"))
         from katana.analytics import k_core, KCoreStatistics
         k_core(graph, 10, "output")
 

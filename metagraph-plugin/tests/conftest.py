@@ -6,7 +6,7 @@ import pytest
 from scipy.sparse import csr_matrix
 
 import katana.local
-from katana.example_data import get_input
+from katana.example_data import get_rdg_dataset
 from katana.local import Graph
 from katana.local.import_data import from_csr
 
@@ -16,7 +16,7 @@ from katana.local.import_data import from_csr
 @pytest.fixture(autouse=True)
 def pg_rmat15_cleaned_symmetric():
     katana.local.initialize()
-    pg = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    pg = Graph(get_rdg_dataset("rmat15_cleaned_symmetric"))
     return pg
 
 

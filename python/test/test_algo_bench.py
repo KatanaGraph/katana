@@ -4,13 +4,15 @@ import test.benchmarking.bench_python_cpp_algos
 
 from pytest import approx
 
-from katana.example_data import get_input
+from katana.example_data import _get_test_datasets_directory
 
 
 def generate_args(
     json_output, input_dir, graph, app, source_nodes, trails, num_sources, thread_spin, threads,
 ):
     parser = argparse.Namespace()
+    # TODO once bench_python_cpp_algos properly supports example_data.get_rdg_dataset()
+    #      this input_dir arg should be dropped
     parser.input_dir = input_dir
     parser.threads = threads
     parser.thread_spin = thread_spin
@@ -47,10 +49,11 @@ def assert_types_match(ground_truth, outp):
 
 
 def get_default_args():
-
+    # TODO once bench_python_cpp_algos properly supports example_data.get_rdg_dataset()
+    # this input_dir arg should be dropped
     arguments = {
         "json_output": "",
-        "input_dir": get_input("propertygraphs/"),
+        "input_dir": (_get_test_datasets_directory() / "rdg_datasets").resolve(),
         "graph": "rmat15",
         "app": "all",
         "source_nodes": "",

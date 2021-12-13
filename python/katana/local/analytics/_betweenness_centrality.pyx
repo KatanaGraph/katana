@@ -145,11 +145,11 @@ def betweenness_centrality(Graph pg, str output_property_name, sources = None,
     .. code-block:: python
 
         import katana.local
-        from katana.example_data import get_input
+        from katana.example_data import get_rdg_dataset
         from katana.local import Graph
         katana.local.initialize()
 
-        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_rdg_dataset("ldbc_003"))
         from katana.analytics import betweenness_centrality, BetweennessCentralityPlan, BetweennessCentralityStatistics
         property_name="betweenness_centrality"
         betweenness_centrality(graph, property_name, 16, BetweennessCentralityPlan.outer())

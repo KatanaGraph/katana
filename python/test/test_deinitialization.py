@@ -17,10 +17,10 @@ def test_normal_order():
         """
 import gc
 import katana.local.import_data
-from katana.example_data import get_input
+from katana.example_data import get_rdg_dataset
 katana.local.initialize()
 
-g = katana.local.Graph(get_input("propertygraphs/rmat15"))
+g = katana.local.Graph(get_rdg_dataset("rmat15"))
 print(g.num_nodes())
 
 del g
@@ -33,10 +33,10 @@ def test_implicit_order():
     run_python_subprocess(
         """
 import katana.local.import_data
-from katana.example_data import get_input
+from katana.example_data import get_rdg_dataset
 katana.local.initialize()
 
-g = katana.local.Graph(get_input("propertygraphs/rmat15"))
+g = katana.local.Graph(get_rdg_dataset("rmat15"))
 print(g.num_nodes())
 """
     )
@@ -47,10 +47,10 @@ def test_out_of_order():
         """
 import gc
 import katana.local.import_data
-from katana.example_data import get_input
+from katana.example_data import get_rdg_dataset
 katana.local.initialize()
 
-g = katana.local.Graph(get_input("propertygraphs/rmat15"))
+g = katana.local.Graph(get_rdg_dataset("rmat15"))
 print(g.num_nodes())
 
 katana.set_active_threads(2)

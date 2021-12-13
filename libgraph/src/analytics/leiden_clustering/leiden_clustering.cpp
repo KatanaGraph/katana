@@ -85,7 +85,7 @@ struct LeidenClusteringImplementation
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
 
     katana::gPrint("\n constant_for_second_term : ", constant_for_second_term);
-    if (iter > 1) {
+    if (iter >= 1) {
       katana::do_all(katana::iterate(graph), [&](GNode n) {
         c_info[n].size = 0;
         c_info[n].degree_wt = 0;
@@ -232,7 +232,7 @@ struct LeidenClusteringImplementation
 
     katana::gPrint("\n constant_for_second_term : ", constant_for_second_term);
 
-    if (iter > 1) {
+    if (iter >= 1) {
       katana::do_all(katana::iterate(graph), [&](GNode n) {
         c_info[n].size = 0;
         c_info[n].degree_wt = 0;
@@ -318,8 +318,10 @@ struct LeidenClusteringImplementation
                     cluster_local_map, counter, self_loop_wt, c_info,
                     n_data_node_wt, n_data_curr_comm_id,
                     constant_for_second_term);
+
               } else {
                 local_target[n] = Base::UNASSIGNED;
+                katana::gPrint("\n unassigned");
               }
 
               /* Update cluster info */
@@ -600,8 +602,8 @@ public:
        */
         Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
         katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
-          graph_curr_tmp.template GetData<CurrentCommunityID>(n) =
-              original_comm_ass[n];
+          graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n;
+          //   original_comm_ass[n];
           graph_curr_tmp.template GetData<NodeWeight>(n) = cluster_node_wt[n];
         });
 
@@ -612,6 +614,11 @@ public:
         cluster_node_wt.destroy();
 
       } else {
+        katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
+          clusters_orig[n] =
+              graph_curr.template GetData<CurrentCommunityID>(clusters_orig[n]);
+        });
+
         break;
       }
     }

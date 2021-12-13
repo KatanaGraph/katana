@@ -686,9 +686,10 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   static uint64_t GetRandomSubcommunity(
       const Graph& graph, GNode n, CommunityArray& subcomm_info,
-      uint64_t total_node_wt, [[maybe_unused]] uint64_t total_degree_wt,
-      uint64_t comm_id, [[maybe_unused]] double constant_for_second_term,
-      double resolution, [[maybe_unused]] double randomness) {
+      [[maybe_unused]] uint64_t total_node_wt,
+      [[maybe_unused]] uint64_t total_degree_wt, uint64_t comm_id,
+      [[maybe_unused]] double constant_for_second_term,
+      [[maybe_unused]] double resolution, [[maybe_unused]] double randomness) {
     auto& n_current_subcomm_id =
         graph.template GetData<CurrentSubCommunityID>(n);
     /*
@@ -774,52 +775,54 @@ struct ClusteringImplementationBase {
       [[maybe_unused]] double subcomm_degree_wt =
           subcomm_info[subcomm].degree_wt;
 
-      double tmp = resolution * subcomm_node_wt *
-                   (static_cast<double>(total_node_wt) - subcomm_node_wt);
-      katana::gPrint("\n tmp: ", tmp);
+      //double tmp = resolution * subcomm_node_wt *
+      //             (static_cast<double>(total_node_wt) - subcomm_node_wt);
+      //katana::gPrint("\n tmp: ", tmp);
 
-      katana::gPrint(
-          "\n subcomm_info[subcomm].num_internal_edges: ",
-          subcomm_info[subcomm].num_internal_edges);
+      //      katana::gPrint(
+      //        "\n subcomm_info[subcomm].num_internal_edges: ",
+      //      subcomm_info[subcomm].num_internal_edges);
 
       // check if subcommunity is well connected
-      if (double tmp = resolution * subcomm_node_wt *
-                       (static_cast<double>(total_node_wt) - subcomm_node_wt);
-          subcomm_info[subcomm].num_internal_edges >= tmp) {
-        quality_value_increment =
-            counter[pair.second] -
-            n_degree_wt * subcomm_degree_wt * constant_for_second_term;
+      // if (double tmp = resolution * subcomm_node_wt *
+      //                (static_cast<double>(total_node_wt) - subcomm_node_wt);
+      // subcomm_info[subcomm].num_internal_edges >= tmp) {
+      quality_value_increment =
+          counter[pair.second] -
+          n_degree_wt * subcomm_degree_wt * constant_for_second_term;
 
-        /*if (quality_value_increment > max_quality_value_increment) {
+      /*if (quality_value_increment > max_quality_value_increment) {
           best_cluster = subcomm;
           max_quality_value_increment = quality_value_increment;
         }*/
 
-        katana::gPrint("\n quality_value_increment: ", quality_value_increment);
+      //katana::gPrint("\n quality_value_increment: ", quality_value_increment);
 
-        if (quality_value_increment >= 0) {
-          total_transformed_quality_value_increment +=
-              std::exp(quality_value_increment);
-        }
+      if (quality_value_increment >= 0) {
+        total_transformed_quality_value_increment +=
+            std::exp(quality_value_increment);
       }
+      //}
       cum_transformed_quality_value_increment_per_cluster[pair.second] =
           total_transformed_quality_value_increment;
       counter[pair.second] = 0;
 
-      quality_value_increment =
+      /*quality_value_increment =
           counter[pair.second] -
           n_degree_wt * subcomm_degree_wt * constant_for_second_term;
 
       if (quality_value_increment > max_quality_value_increment) {
         best_cluster = subcomm;
         max_quality_value_increment = quality_value_increment;
-      }
+      }*/
     }
 
+    //return best_cluster;
     /*
    * Determine the neighboring cluster to which the currently
    * selected node will be moved.
    */
+
     int64_t min_idx, max_idx, mid_idx;
     double r;
     if (total_transformed_quality_value_increment > 0 &&
@@ -829,16 +832,16 @@ struct ClusteringImplementationBase {
 
       katana::gPrint("\n r: ", r);
 
-      katana::gPrint(
-          "\n total_transformed_quality_value_increment: ",
-          total_transformed_quality_value_increment);
+      //katana::gPrint(
+      //  "\n total_transformed_quality_value_increment: ",
+      //total_transformed_quality_value_increment);
 
       min_idx = -1;
       max_idx = num_unique_clusters;
       while (min_idx < max_idx) {
         mid_idx = (min_idx + max_idx) / 2;
 
-        katana::gPrint("\n mid idx: ", mid_idx);
+        //katana::gPrint("\n mid idx: ", mid_idx);
 
         if (cum_transformed_quality_value_increment_per_cluster[mid_idx] >= r) {
           if (max_idx == mid_idx) {
@@ -855,8 +858,9 @@ struct ClusteringImplementationBase {
       return (max_idx == 0) ? neighboring_cluster_ids[max_idx]
                             : neighboring_cluster_ids[max_idx - 1];
     } else {
-      katana::gPrint("here \n");
+      //katana::gPrint("here \n");
       return best_cluster;
+      //  return n_current_subcomm_id;
     }
   }
 
@@ -929,6 +933,7 @@ struct ClusteringImplementationBase {
      * - clusterWeights[j]) * resolution
      */
 
+      //seems like the source code is not doing this
       if (double tmp = resolution * static_cast<double>(node_wt) *
                        static_cast<double>(total_node_wt - node_wt);
           num_edges_within_cluster >= tmp) {
@@ -941,6 +946,9 @@ struct ClusteringImplementationBase {
       subcomm_info[n].size = 1;
       subcomm_info[n].degree_wt = degree_wt;
     }
+
+    std::random_shuffle(
+        cluster_nodes_to_move.begin(), cluster_nodes_to_move.end());
 
     for (GNode n : cluster_nodes_to_move) {
       const auto& n_degree_wt =

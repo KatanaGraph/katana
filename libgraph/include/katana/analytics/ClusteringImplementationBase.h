@@ -686,9 +686,8 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   static uint64_t GetRandomSubcommunity(
       const Graph& graph, GNode n, CommunityArray& subcomm_info,
-      uint64_t total_node_wt, [[maybe_unused]] uint64_t total_degree_wt,
-      uint64_t comm_id, double constant_for_second_term, double resolution,
-      [[maybe_unused]] double randomness) {
+      uint64_t total_node_wt, uint64_t comm_id, double constant_for_second_term,
+      double resolution) {
     auto& n_current_subcomm_id =
         graph.template GetData<CurrentSubCommunityID>(n);
     /*
@@ -861,9 +860,9 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   static void MergeNodesSubset(
       Graph* graph, std::vector<GNode>& cluster_nodes, uint64_t comm_id,
-      uint64_t total_node_wt, uint64_t total_degree_wt,
+      uint64_t total_node_wt, [[maybe_unused]] uint64_t total_degree_wt,
       CommunityArray& subcomm_info, double constant_for_second_term,
-      double resolution, double randomness) {
+      double resolution, [[maybe_unused]] double randomness) {
     // select set R
     std::vector<GNode> cluster_nodes_to_move;
     for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
@@ -929,8 +928,8 @@ struct ClusteringImplementationBase {
      */
       if (subcomm_info[n_current_subcomm_id].size == 1) {
         uint64_t new_subcomm_ass = GetRandomSubcommunity<EdgeWeightType>(
-            *graph, n, subcomm_info, total_node_wt, total_degree_wt, comm_id,
-            constant_for_second_term, resolution, randomness);
+            *graph, n, subcomm_info, total_node_wt, comm_id,
+            constant_for_second_term, resolution);
         if (new_subcomm_ass != UNASSIGNED &&
             new_subcomm_ass != n_current_subcomm_id) {
           n_current_subcomm_id = new_subcomm_ass;

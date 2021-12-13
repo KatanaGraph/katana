@@ -912,9 +912,6 @@ struct ClusteringImplementationBase {
       subcomm_info[n].degree_wt = degree_wt;
     }
 
-    std::random_shuffle(
-        cluster_nodes_to_move.begin(), cluster_nodes_to_move.end());
-
     for (GNode n : cluster_nodes_to_move) {
       const auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);

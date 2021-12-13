@@ -46,11 +46,6 @@ add_subdirectory(libgraph)
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(lonestar)
-  # If we are testing and there is no custom input location, add rules to
-  # download inputs
-  if(KATANA_USE_INPUTS)
-    add_subdirectory(inputs)
-  endif()
 else()
   # If we are not testing, only build lonestar targets if they are required by
   # targets outside of lonestar.

@@ -528,10 +528,6 @@ public:
         break;
       }
 
-      katana::gPrint("\n prev: ", prev_mod);
-      katana::gPrint("\n curr: ", curr_mod);
-
-      katana::gPrint("\n curr: ", curr_mod);
       [[maybe_unused]] uint64_t num_unique_clusters =
           Base::template RenumberClustersContiguously<CurrentCommunityID>(
               &graph_curr);

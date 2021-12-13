@@ -321,7 +321,6 @@ struct LeidenClusteringImplementation
 
               } else {
                 local_target[n] = Base::UNASSIGNED;
-                katana::gPrint("\n unassigned");
               }
 
               /* Update cluster info */

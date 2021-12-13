@@ -775,49 +775,29 @@ struct ClusteringImplementationBase {
       [[maybe_unused]] double subcomm_degree_wt =
           subcomm_info[subcomm].degree_wt;
 
-      //double tmp = resolution * subcomm_node_wt *
-      //             (static_cast<double>(total_node_wt) - subcomm_node_wt);
-      //katana::gPrint("\n tmp: ", tmp);
-
-      //      katana::gPrint(
-      //        "\n subcomm_info[subcomm].num_internal_edges: ",
-      //      subcomm_info[subcomm].num_internal_edges);
-
       // check if subcommunity is well connected
-      // if (double tmp = resolution * subcomm_node_wt *
-      //                (static_cast<double>(total_node_wt) - subcomm_node_wt);
-      // subcomm_info[subcomm].num_internal_edges >= tmp) {
-      quality_value_increment =
-          counter[pair.second] -
-          n_degree_wt * subcomm_degree_wt * constant_for_second_term;
+      if (double tmp = resolution * subcomm_node_wt *
+                       (static_cast<double>(total_node_wt) - subcomm_node_wt);
+          subcomm_info[subcomm].num_internal_edges >= tmp) {
+        quality_value_increment =
+            counter[pair.second] -
+            n_degree_wt * subcomm_degree_wt * constant_for_second_term;
 
-      /*if (quality_value_increment > max_quality_value_increment) {
+        if (quality_value_increment > max_quality_value_increment) {
           best_cluster = subcomm;
           max_quality_value_increment = quality_value_increment;
-        }*/
+        }
 
-      //katana::gPrint("\n quality_value_increment: ", quality_value_increment);
-
-      if (quality_value_increment >= 0) {
-        total_transformed_quality_value_increment +=
-            std::exp(quality_value_increment);
+        if (quality_value_increment >= 0) {
+          total_transformed_quality_value_increment +=
+              std::exp(quality_value_increment);
+        }
       }
-      //}
       cum_transformed_quality_value_increment_per_cluster[pair.second] =
           total_transformed_quality_value_increment;
       counter[pair.second] = 0;
-
-      /*quality_value_increment =
-          counter[pair.second] -
-          n_degree_wt * subcomm_degree_wt * constant_for_second_term;
-
-      if (quality_value_increment > max_quality_value_increment) {
-        best_cluster = subcomm;
-        max_quality_value_increment = quality_value_increment;
-      }*/
     }
 
-    //return best_cluster;
     /*
    * Determine the neighboring cluster to which the currently
    * selected node will be moved.

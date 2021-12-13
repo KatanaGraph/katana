@@ -131,10 +131,6 @@ struct LeidenClusteringImplementation
               Base::template FindNeighboringClusters<EdgeWeightType>(
                   graph, n, cluster_local_map, counter, self_loop_wt);
               // Find the max gain in modularity
-              //local_target = Base::MaxCPMQualityWithoutSwaps(
-              //  cluster_local_map, counter, self_loop_wt, c_info,
-              //n_data_node_wt, n_data_curr_comm_id, resolution);
-
               local_target = Base::MaxModularityWithoutSwaps(
                   cluster_local_map, counter, self_loop_wt, c_info,
                   n_data_node_wt, n_data_curr_comm_id,
@@ -165,9 +161,6 @@ struct LeidenClusteringImplementation
       /* Calculate the overall modularity */
       double e_xx = 0;
       double a2_x = 0;
-
-      //curr_mod = Base::template CalCPMQuality<EdgeWeightType>(
-      //  graph, c_info, e_xx, a2_x, constant_for_second_term, resolution);
 
       curr_mod = Base::template CalModularity<EdgeWeightType>(
           graph, c_info, e_xx, a2_x, constant_for_second_term);
@@ -387,9 +380,6 @@ struct LeidenClusteringImplementation
       /* Calculate the overall modularity */
       double e_xx = 0;
       double a2_x = 0;
-
-      //curr_mod = Base::template CalCPMQuality<EdgeWeightType>(
-      //  graph, c_info, e_xx, a2_x, constant_for_second_term, resolution);
 
       curr_mod = Base::template CalModularity<EdgeWeightType>(
           graph, c_info, e_xx, a2_x, constant_for_second_term);

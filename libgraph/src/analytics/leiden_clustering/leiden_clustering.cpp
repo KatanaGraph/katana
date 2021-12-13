@@ -235,6 +235,8 @@ struct LeidenClusteringImplementation
         auto& n_data_degree_wt =
             graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
         auto& n_data_node_wt = graph.template GetData<NodeWeight>(n);
+        katana::gPrint("\n id: ", n_data_curr_comm_id);
+        katana::gPrint("\n id: ", n_data_curr_comm_id);
         katana::atomicAdd(c_info[n_data_curr_comm_id].size, uint64_t{1});
         katana::atomicAdd(c_info[n_data_curr_comm_id].node_wt, n_data_node_wt);
         katana::atomicAdd(
@@ -310,7 +312,7 @@ struct LeidenClusteringImplementation
                     constant_for_second_term);
 
               } else {
-                local_target[n] = Base::UNASSIGNED;
+                local_target[n] = 0;
               }
 
               /* Update cluster info */
@@ -561,7 +563,7 @@ public:
               graph_curr.template GetData<CurrentCommunityID>(n);
           auto& n_node_wt = graph_curr.template GetData<NodeWeight>(n);
           if (n_curr_comm == Base::UNASSIGNED) {
-            original_comm_ass[n_curr_sub_comm] = n;
+            original_comm_ass[n_curr_sub_comm] = n_curr_comm;
           } else {
             original_comm_ass[n_curr_sub_comm] = n_curr_comm;
           }

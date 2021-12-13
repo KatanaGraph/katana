@@ -230,8 +230,6 @@ struct LeidenClusteringImplementation
     constant_for_second_term =
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
 
-    katana::gPrint("\n constant_for_second_term : ", constant_for_second_term);
-
     if (iter >= 1) {
       katana::do_all(katana::iterate(graph), [&](GNode n) {
         c_info[n].size = 0;

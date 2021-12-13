@@ -5,15 +5,19 @@ Testing
 =======
 
 Many tests require sample graphs that are too big to keep in this repository.
-You can get them with ``make input``.
+Test datasets are located in the `external/test-datasets` submodule, which is
+the https://github.com/KatanaGraph/test-datasets git repo
 
-If you need to update the inputs, they are referenced as
-https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-vN.tar.gz
-in ``inputs/CMakeLists.txt`` and ``python/katana/exmaple_data.py``.
-``vN`` is a monotonically increasing version number.
-You can use a command ``inputs/update_inputs.sh`` to create
-create a new input collection. After creating the tar file, you will need to
-upload the file to the S3 bucket.
+If you need to update one of the test datasets, first make a commit to that repo,
+then ensure you have your changes checked out in `external/test-datasets`
+Include `external/test-datasets` in a commit to your katana repo
+Finally, you must also update the `DATASETS_SHA` in
+`python/katana/example_data.py` so that notebooks, and users without the
+source available have access to the correct test datasets.
+
+
+If you are new to git submodules, this documentation may be helpful:
+https://git-scm.com/book/en/v2/Git-Tools-Submodules
 
 Tests are just executables created by the CMake ``add_test`` command.  A test
 succeeds if it can be run and it returns a zero exit value; otherwise, the test

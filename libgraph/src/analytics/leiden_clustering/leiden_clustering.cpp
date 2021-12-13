@@ -528,7 +528,7 @@ public:
           Base::template RenumberClustersContiguously<CurrentCommunityID>(
               &graph_curr);
       Base::template RefinePartition<EdgeWeightType>(
-          &graph_curr, plan.resolution(), plan.randomness());
+          &graph_curr, plan.resolution());
       uint64_t num_unique_subclusters =
           Base::template RenumberClustersContiguously<CurrentSubCommunityID>(
               &graph_curr);

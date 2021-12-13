@@ -859,9 +859,8 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   static void MergeNodesSubset(
       Graph* graph, std::vector<GNode>& cluster_nodes, uint64_t comm_id,
-      uint64_t total_node_wt, [[maybe_unused]] uint64_t total_degree_wt,
-      CommunityArray& subcomm_info, double constant_for_second_term,
-      double resolution, [[maybe_unused]] double randomness) {
+      uint64_t total_node_wt, CommunityArray& subcomm_info,
+      double constant_for_second_term, double resolution) {
     // select set R
     std::vector<GNode> cluster_nodes_to_move;
     for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
@@ -967,8 +966,7 @@ struct ClusteringImplementationBase {
  * trying to split up each cluster into multiple clusters.
  */
   template <typename EdgeWeightType>
-  static void RefinePartition(
-      Graph* graph, double resolution, double randomness) {
+  static void RefinePartition(Graph* graph, double resolution) {
     double constant_for_second_term =
         CalConstantForSecondTerm<EdgeWeightType>(*graph);
     // set singleton subcommunities
@@ -1022,9 +1020,8 @@ struct ClusteringImplementationBase {
       comm_info[c].num_sub_communities = 0;
       if (cluster_bags[c].size() > 1) {
         MergeNodesSubset<EdgeWeightType>(
-            graph, cluster_bags[c], c, comm_info[c].node_wt,
-            comm_info[c].degree_wt, subcomm_info, constant_for_second_term,
-            resolution, randomness);
+            graph, cluster_bags[c], c, comm_info[c].node_wt, subcomm_info,
+            constant_for_second_term, resolution);
       }
     });
   }

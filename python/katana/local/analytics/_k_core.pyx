@@ -22,10 +22,11 @@ k-Core
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -46,7 +47,7 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
         @staticmethod
         _KCorePlan Asynchronous()
 
-    Result[void] KCore(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name, _KCorePlan plan)
+    Result[void] KCore(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name, CTxnContext* txn_ctx, _KCorePlan plan)
 
 
     Result[void] KCoreAssertValid(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name)
@@ -106,7 +107,7 @@ cdef class KCorePlan(Plan):
         return KCorePlan.make(_KCorePlan.Asynchronous())
 
 
-def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan()) -> int:
+def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan(), *, TxnContext txn_ctx = None) -> int:
     """
     Compute nodes which are in the k-core of pg. The pg must be symmetric.
 
@@ -118,6 +119,7 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
         This property must not already exist.
     :type plan: KCorePlan
     :param plan: The execution plan to use.
+    :param txn_ctx: The tranaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -135,8 +137,9 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
 
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(KCore(pg.underlying_property_graph(), k_core_number, output_property_name_str, plan.underlying_))
+        v = handle_result_void(KCore(pg.underlying_property_graph(), k_core_number, output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
     return v
 
 

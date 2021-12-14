@@ -1,4 +1,5 @@
 #include "katana/BuildGraph.h"
+#include "katana/SharedMemSys.h"
 
 constexpr uint64_t kNumNodes = 100;
 
@@ -21,7 +22,7 @@ public:
           ResolveValue) {
     pgb.AddValue(id, ProcessElement, ResolveValue);
   }
-  void CreateRDG() {
+  void CreateRDG(tsuba::TxnContext* txn_ctx) {
     auto uri_res = katana::Uri::MakeRand("/tmp/oplog");
     KATANA_LOG_ASSERT(uri_res);
     std::string dest_dir(uri_res.value().string());
@@ -30,8 +31,8 @@ public:
       KATANA_LOG_FATAL(
           "Failed to construct graph: {}", components_result.error());
     }
-    if (auto r =
-            WritePropertyGraph(std::move(components_result.value()), dest_dir);
+    if (auto r = WritePropertyGraph(
+            std::move(components_result.value()), dest_dir, txn_ctx);
         !r) {
       KATANA_LOG_FATAL("Failed to write graph: {}", r.error());
     }
@@ -40,7 +41,7 @@ public:
 };
 
 void
-ReadLog() {
+ReadLog(tsuba::TxnContext* txn_ctx) {
   LogPlay lp;
 
   std::string prop_id = "n0";
@@ -86,14 +87,15 @@ ReadLog() {
       lp.FinishEdge();
     }
   }
-  lp.CreateRDG();
+  lp.CreateRDG(txn_ctx);
 }
 
 int
 main() {  //int argc, char* argv[]) {
   katana::SharedMemSys sys;
 
-  ReadLog();
+  tsuba::TxnContext txn_ctx;
+  ReadLog(&txn_ctx);
 
   return 0;
 }

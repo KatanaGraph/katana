@@ -1,5 +1,3 @@
-import os
-from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import numpy as np
@@ -15,8 +13,8 @@ from katana.local.import_data import from_csr
 def test_load(graph):
     assert graph.num_nodes() == 29946
     assert graph.num_edges() == 43072
-    assert len(graph.loaded_node_schema()) == 31
-    assert len(graph.loaded_edge_schema()) == 18
+    assert len(graph.loaded_node_schema()) == 17
+    assert len(graph.loaded_edge_schema()) == 3
 
 
 def test_write(graph):
@@ -27,8 +25,8 @@ def test_write(graph):
         graph = Graph(tmpdir)
     assert graph.num_nodes() == 29946
     assert graph.num_edges() == 43072
-    assert len(graph.loaded_node_schema()) == 31
-    assert len(graph.loaded_edge_schema()) == 18
+    assert len(graph.loaded_node_schema()) == 17
+    assert len(graph.loaded_edge_schema()) == 3
 
     assert graph == old_graph
 
@@ -43,8 +41,8 @@ def test_commit(graph):
         graph = Graph(tmpdir)
     assert graph.num_nodes() == 29092
     assert graph.num_edges() == 39283
-    assert len(graph.loaded_node_schema()) == 31
-    assert len(graph.loaded_edge_schema()) == 19
+    assert len(graph.loaded_node_schema()) == 17
+    assert len(graph.loaded_edge_schema()) == 3
 
 
 def test_get_edge_dest(graph):
@@ -52,9 +50,74 @@ def test_get_edge_dest(graph):
     assert graph.get_edge_dest(1) == 8014
 
 
+def test_edge_data_frame(graph):
+    edges = graph.edges()
+    assert len(edges.columns) == 6
+    assert len(edges) == 43072
+    assert edges.at[0, "dest"] == 8014
+    assert edges["dest"][1] == 8014
+    assert edges["source"][0] == 0
+    assert edges["source"][1] == 1
+    assert edges["source"][19993] == 20000
+
+
+def test_edge_data_frame_1_node(graph):
+    edges = graph.edges(0)
+    assert len(edges.columns) == 6
+    assert len(edges) == 1
+    assert edges.at[0, "dest"] == 8014
+    assert edges["dest"][0] == 8014
+    assert edges["source"][0] == 0
+
+
+def test_edge_data_frame_selected_nodes(graph):
+    edges = graph.edges([20000, 5000], properties={"classYear"})
+    assert len(edges.columns) == 1 + 3
+    assert len(edges) == len(graph.edge_ids(20000)) + len(graph.edge_ids(5000))
+    assert edges.at[0, "id"] == 19993
+    assert edges.at[1, "id"] == 5000
+    assert edges.at[0, "dest"] == 9475
+    assert edges.at[1, "dest"] == 9167
+    assert edges["dest"][0] == 9475
+    assert edges["dest"][1] == 9167
+    assert edges["source"][0] == 20000
+    assert edges["source"][1] == 5000
+
+
+def test_edge_data_frame_simple_slice(graph):
+    edges = graph.edges(slice(110, 112))
+    assert len(edges) == 2
+    assert edges.at[0, "dest"] == 8019
+    assert edges.at[1, "dest"] == 8019
+    assert edges["dest"][0] == 8019
+    assert edges["dest"][1] == 8019
+    assert edges["source"][0] == 110
+    assert edges["source"][1] == 111
+
+
+def test_edge_data_frame_complex_slice(graph):
+    edges = graph.edges(slice(1010, 1020, 2))
+    assert len(edges) == 5
+    assert edges.at[0, "dest"] == 7993
+    assert edges.at[1, "dest"] == 7993
+    assert edges["dest"][0] == 7993
+    assert edges["dest"][1] == 7993
+    assert edges["source"][0] == 1010
+    assert edges["source"][1] == 1012
+
+
+def test_edge_data_frame_to_pandas(graph):
+    edges = graph.edges().to_pandas()
+    assert len(edges.columns) == 6
+    assert len(edges) == 43072
+    assert edges.at[0, "dest"] == 8014
+    assert edges["dest"][1] == 8014
+    assert edges["source"][0] == 0
+
+
 def test_reachable_from_10(graph):
     reachable = []
-    for eid in graph.edges(10):
+    for eid in graph.edge_ids(10):
         reachable.append(graph.get_edge_dest(eid))
     assert reachable == [8015]
 
@@ -62,7 +125,7 @@ def test_reachable_from_10(graph):
 def test_nodes_count_edges(graph):
     total = 0
     for nid in graph:
-        total += len(graph.edges(nid))
+        total += len(graph.edge_ids(nid))
     assert graph.num_edges() == total
 
 
@@ -94,9 +157,9 @@ def test_get_node_property_chunked(graph):
 
 def test_remove_node_property(graph):
     graph.remove_node_property(10)
-    assert len(graph.loaded_node_schema()) == 30
+    assert len(graph.loaded_node_schema()) == 16
     graph.remove_node_property("length")
-    assert len(graph.loaded_node_schema()) == 29
+    assert len(graph.loaded_node_schema()) == 15
     assert graph.loaded_node_schema()[4].name == "email"
 
 
@@ -127,33 +190,33 @@ def test_upsert_node_property(graph):
     prop = graph.loaded_node_schema().names[0]
     t = pyarrow.table({prop: range(graph.num_nodes())})
     graph.upsert_node_property(t)
-    assert len(graph.loaded_node_schema()) == 31
+    assert len(graph.loaded_node_schema()) == 17
     assert graph.get_node_property_chunked(prop) == pyarrow.chunked_array([range(graph.num_nodes())])
     assert graph.get_node_property(prop) == pyarrow.array(range(graph.num_nodes()))
 
 
 def test_get_edge_property(graph):
-    prop1 = graph.get_edge_property(15)
+    prop1 = graph.get_edge_property(2)
     assert not prop1[10].as_py()
     # TODO re-enable this test
-    # prop2 = graph.get_edge_property("IS_SUBCLASS_OF")
+    # prop2 = graph.get_edge_property("creationDate")
     # assert prop1 == prop2
 
 
 def test_get_edge_property_chunked(graph):
-    prop1 = graph.get_edge_property(5)
+    prop1 = graph.get_edge_property(2)
     assert isinstance(prop1, pyarrow.Array)
-    prop2 = graph.get_edge_property_chunked(5)
+    prop2 = graph.get_edge_property_chunked(2)
     assert isinstance(prop2, pyarrow.ChunkedArray)
     assert prop1 == prop2.chunk(0)
 
 
 def test_remove_edge_property(graph):
-    graph.remove_edge_property(7)
-    assert len(graph.loaded_edge_schema()) == 17
+    graph.remove_edge_property(2)
+    assert len(graph.loaded_edge_schema()) == 2
     graph.remove_edge_property("classYear")
-    assert len(graph.loaded_edge_schema()) == 16
-    assert graph.loaded_edge_schema()[3].name == "HAS_CREATOR"
+    assert len(graph.loaded_edge_schema()) == 1
+    assert graph.loaded_edge_schema()[0].name == "creationDate"
 
 
 def test_add_edge_property_exception(graph):
@@ -166,7 +229,7 @@ def test_add_edge_property_exception(graph):
 def test_add_edge_property(graph):
     t = pyarrow.table(dict(new_prop=range(graph.num_edges())))
     graph.add_edge_property(t)
-    assert len(graph.loaded_edge_schema()) == 19
+    assert len(graph.loaded_edge_schema()) == 4
     assert graph.get_edge_property("new_prop") == pyarrow.array(range(graph.num_edges()))
 
 
@@ -174,14 +237,14 @@ def test_upsert_edge_property(graph):
     prop = graph.loaded_edge_schema().names[0]
     t = pyarrow.table({prop: range(graph.num_edges())})
     graph.upsert_edge_property(t)
-    assert len(graph.loaded_edge_schema()) == 18
+    assert len(graph.loaded_edge_schema()) == 3
     assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
 
 
 def test_upsert_edge_property_dict(graph):
     prop = graph.loaded_edge_schema().names[0]
     graph.upsert_edge_property({prop: range(graph.num_edges())})
-    assert len(graph.loaded_edge_schema()) == 18
+    assert len(graph.loaded_edge_schema()) == 3
     assert graph.get_edge_property(prop) == pyarrow.array(range(graph.num_edges()))
 
 
@@ -189,7 +252,7 @@ def test_from_csr():
     pg = from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
     assert pg.num_nodes() == 2
     assert pg.num_edges() == 1
-    assert list(pg.edges(0)) == [0]
+    assert list(pg.edge_ids(0)) == [0]
     assert pg.get_edge_dest(0) == 1
 
 
@@ -197,7 +260,7 @@ def test_from_csr_int16():
     pg = from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
     assert pg.num_nodes() == 2
     assert pg.num_edges() == 1
-    assert list(pg.edges(0)) == [0]
+    assert list(pg.edge_ids(0)) == [0]
     assert pg.get_edge_dest(0) == 1
 
 
@@ -205,7 +268,7 @@ def test_from_csr_k3():
     pg = from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
     assert pg.num_nodes() == 3
     assert pg.num_edges() == 6
-    assert list(pg.edges(2)) == [4, 5]
+    assert list(pg.edge_ids(2)) == [4, 5]
     assert pg.get_edge_dest(4) == 0
     assert pg.get_edge_dest(5) == 1
 
@@ -232,7 +295,7 @@ def test_simple_algorithm(graph):
     @do_all_operator()
     def func_operator(g, prop, out, nid):
         t = 0
-        for eid in g.edges(nid):
+        for eid in g.edge_ids(nid):
             nid2 = g.get_edge_dest(eid)
             if prop.is_valid(nid2):
                 t += prop[nid2]
@@ -251,3 +314,61 @@ def test_simple_algorithm(graph):
     assert oprop[0].as_py() == 0
     assert oprop[4].as_py() == 0
     assert oprop[-1].as_py() == 0
+
+
+def test_types(graph):
+    node_type_set = set()
+    edge_type_set = set()
+    for nid in range(0, graph.num_nodes()):
+        node_type_set.add(graph.get_type_of_node(nid))
+        for eid in graph.edge_ids(nid):
+            edge_type_set.add(graph.get_type_of_edge(eid))
+
+    assert len(node_type_set) == 11
+    assert len(edge_type_set) == 15
+
+    node_entity_type = graph.node_types._make_entity_type(17)
+    edge_entity_type = graph.edge_types._make_entity_type(8)
+    assert graph.does_node_have_type(0, node_entity_type)
+    assert graph.does_edge_have_type(0, edge_entity_type)
+
+    node_atomic_types = graph.node_types.atomic_types
+    node_name_to_id_map = {name: node_atomic_types[name].type_id for name in node_atomic_types}
+    assert node_name_to_id_map == {
+        b"Tag": 12,
+        b"Organisation": 8,
+        b"City": 1,
+        b"Comment": 2,
+        b"University": 14,
+        b"Forum": 6,
+        b"Company": 3,
+        b"Continent": 4,
+        b"Country": 5,
+        b"Place": 10,
+        b"TagClass": 13,
+        b"Person": 9,
+        b"Message": 7,
+        b"Post": 11,
+    }
+    assert graph.node_types.is_subtype_of(0, 1) is True
+
+    edge_atomic_types = graph.edge_types.atomic_types
+    edge_name_to_id_map = {name: edge_atomic_types[name].type_id for name in edge_atomic_types}
+    assert edge_name_to_id_map == {
+        b"KNOWS": 11,
+        b"IS_SUBCLASS_OF": 10,
+        b"REPLY_OF": 13,
+        b"LIKES": 12,
+        b"CONTAINER_OF": 1,
+        b"WORK_AT": 15,
+        b"HAS_TYPE": 7,
+        b"HAS_CREATOR": 2,
+        b"STUDY_AT": 14,
+        b"IS_LOCATED_IN": 8,
+        b"HAS_INTEREST": 3,
+        b"HAS_TAG": 6,
+        b"HAS_MEMBER": 4,
+        b"HAS_MODERATOR": 5,
+        b"IS_PART_OF": 9,
+    }
+    assert graph.edge_types.is_subtype_of(0, 1) is True

@@ -11,6 +11,57 @@
 
 #include "katana/config.h"
 
+/// Write debug, warning and error messages to standard error.
+///
+/// Warnings are for situations where code can proceed but in a suboptimal way.
+///
+/// Errors are for situations where code cannot proceed. If it is possible for
+/// the caller to make progress, instead of using the log functions here, it is
+/// preferable to return an explicit error via Result.h and let callers
+/// determine what to do.
+///
+/// Messages at the debug level are only emitted in debug builds.
+///
+/// Messages at the warning and error level are commonly read by people not
+/// familiar with the component producing the message, so at these levels,
+/// avoid jargon and express error conditions using the general terms of the
+/// system first (e.g., graphs, RDGs, properties) and add implementation
+/// details afterwards if needed.
+///
+/// Could be better:
+///
+///     "type_class is null"
+///
+///     "type class ID {} > 3"
+///
+/// Preferred:
+///
+///     "cannot load graph {}: type class ID {} > 3"
+///
+/// Most of the logging functions take a format string, a C++20 STL feature,
+/// that is implemented in our C++17 codebase with the fmt library.
+///
+/// An example of a format string:
+///
+///     KATANA_LOG_VERBOSE("hello {}", s);
+///
+/// In order to print a user-defined type, you can define the appropriate
+/// ostream overload:
+///
+///     struct MyType {};
+///
+///     std::ostream& operator<<(std::ostream& out, MyType item);
+///
+/// It is also possible to directly specialize a user-defined type in the fmt
+/// library, but this should be avoided because it is not compliant with the
+/// C++20 STL interface and does not support traditional ostream usage.
+///
+/// There is a bug in fmt<8 with fmt::join(format_string, args...) when
+/// elements of args only overload operator<<. This manifests as a compilation
+/// error. To work around this, use katana::Join instead of fmt::join.
+///
+/// \file Logging.h
+
 // Small patch to work with libfmt 4.0, which is the version in Ubuntu 18.04.
 #ifndef FMT_STRING
 #define FMT_STRING(...) __VA_ARGS__
@@ -79,6 +130,10 @@ KATANA_EXPORT void AbortApplication [[noreturn]] ();
 
 }  // end namespace katana
 
+/// KATANA_LOG_FATAL logs a message at the error log level and aborts the
+/// application.
+///
+/// Use sparingly. It is usually preferable to return a katana::Result.
 #define KATANA_LOG_FATAL(fmt_string, ...)                                      \
   do {                                                                         \
     ::katana::LogLine(                                                         \
@@ -86,18 +141,21 @@ KATANA_EXPORT void AbortApplication [[noreturn]] ();
         ##__VA_ARGS__);                                                        \
     ::katana::AbortApplication();                                              \
   } while (0)
+/// KATANA_LOG_ERROR logs a message at the error log level.
 #define KATANA_LOG_ERROR(fmt_string, ...)                                      \
   do {                                                                         \
     ::katana::LogLine(                                                         \
         ::katana::LogLevel::Error, __FILE__, __LINE__, FMT_STRING(fmt_string), \
         ##__VA_ARGS__);                                                        \
   } while (0)
+/// KATANA_LOG_WARN logs a message at the warning log level.
 #define KATANA_LOG_WARN(fmt_string, ...)                                       \
   do {                                                                         \
     ::katana::LogLine(                                                         \
         ::katana::LogLevel::Warning, __FILE__, __LINE__,                       \
         FMT_STRING(fmt_string), ##__VA_ARGS__);                                \
   } while (0)
+/// KATANA_LOG_VERBOSE logs a message at the verbose log level.
 #define KATANA_LOG_VERBOSE(fmt_string, ...)                                    \
   do {                                                                         \
     ::katana::LogLine(                                                         \
@@ -106,6 +164,8 @@ KATANA_EXPORT void AbortApplication [[noreturn]] ();
   } while (0)
 
 #ifndef NDEBUG
+/// KATANA_LOG_DEBUG logs a message at the debug log level. Debug messages are
+/// only produced in debug builds.
 #define KATANA_LOG_DEBUG(fmt_string, ...)                                      \
   do {                                                                         \
     ::katana::LogLine(                                                         \
@@ -116,6 +176,8 @@ KATANA_EXPORT void AbortApplication [[noreturn]] ();
 #define KATANA_LOG_DEBUG(...)
 #endif
 
+/// KATANA_LOG_ASSERT asserts that a condition is true, and if it is not,
+/// aborts the application.
 #define KATANA_LOG_ASSERT(cond)                                                \
   do {                                                                         \
     if (!(cond)) {                                                             \
@@ -126,6 +188,8 @@ KATANA_EXPORT void AbortApplication [[noreturn]] ();
     }                                                                          \
   } while (0)
 
+/// KATANA_LOG_VASSERT asserts that a condition is true, and if it is not, logs
+/// an error and aborts the application.
 #define KATANA_LOG_VASSERT(cond, fmt_string, ...)                              \
   do {                                                                         \
     if (!(cond)) {                                                             \
@@ -136,6 +200,8 @@ KATANA_EXPORT void AbortApplication [[noreturn]] ();
     }                                                                          \
   } while (0)
 
+/// KATANA_WARN_ONCE logs a message at the warning log level. The output of
+/// subsequent invocations of KATANA_WARN_ONCE will be suppressed.
 #define KATANA_WARN_ONCE(fmt_string, ...)                                      \
   do {                                                                         \
     static std::once_flag __katana_warn_once_flag;                             \
@@ -147,16 +213,27 @@ KATANA_EXPORT void AbortApplication [[noreturn]] ();
   } while (0)
 
 #ifndef NDEBUG
+/// KATANA_LOG_ASSERT asserts that a condition is true, and if it is not,
+/// aborts the application only in debug builds. This is a replacement for
+/// std::assert.
 #define KATANA_LOG_DEBUG_ASSERT(cond) KATANA_LOG_ASSERT(cond)
 
+/// KATANA_LOG_VASSERT asserts that a condition is true, and if it is not, logs
+/// an error and aborts the application only in debug builds. This is a
+// replacement for std::assert.
 #define KATANA_LOG_DEBUG_VASSERT(cond, fmt_string, ...)                        \
   KATANA_LOG_VASSERT(cond, fmt_string, ##__VA_ARGS__)
 
+/// KATANA_DEBUG_WARN_ONCE logs a message at the warning log level only in
+/// debug builds. The output of subsequent invocations of KATANA_WARN_ONCE will
+/// be suppressed.
 #define KATANA_DEBUG_WARN_ONCE(fmt_string, ...)                                \
   KATANA_WARN_ONCE(fmt_string, ##__VA_ARGS__)
 #else
 #define KATANA_LOG_DEBUG_ASSERT(cond)
+
 #define KATANA_LOG_DEBUG_VASSERT(...)
+
 #define KATANA_DEBUG_WARN_ONCE(...)
 #endif
 

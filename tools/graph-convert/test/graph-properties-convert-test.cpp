@@ -3,9 +3,9 @@
 
 #include <llvm/Support/CommandLine.h>
 
-#include "katana/Galois.h"
 #include "katana/GraphML.h"
 #include "katana/Logging.h"
+#include "katana/SharedMemSys.h"
 #include "katana/config.h"
 
 #if defined(KATANA_MONGOC_FOUND)

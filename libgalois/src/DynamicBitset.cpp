@@ -108,6 +108,21 @@ katana::DynamicBitset::count() const {
   return ret.reduce();
 }
 
+size_t
+katana::DynamicBitset::SerialCount() const {
+  size_t ret = 0;
+  for (uint64_t n : bitvec_) {
+#ifdef __GNUC__
+    ret += __builtin_popcountll(n);
+#else
+    n = n - ((n >> 1) & 0x5555555555555555UL);
+    n = (n & 0x3333333333333333UL) + ((n >> 2) & 0x3333333333333333UL);
+    ret += (((n + (n >> 4)) & 0xF0F0F0F0F0F0F0FUL) * 0x101010101010101UL) >> 56;
+#endif
+  }
+  return ret;
+}
+
 namespace {
 template <typename Integer>
 void

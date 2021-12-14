@@ -9,9 +9,9 @@ You can get them with ``make input``.
 
 If you need to update the inputs, they are referenced as
 https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-vN.tar.gz
-in ``.github/workflows``, ``inputs/CMakeLists.txt`` and
-``python/katana/exmaple_data.py``.  ``vN`` is a monotonically increasing
-version number. You can use a command ``inputs/update_inputs.sh`` to create
+in ``inputs/CMakeLists.txt`` and ``python/katana/exmaple_data.py``.
+``vN`` is a monotonically increasing version number.
+You can use a command ``inputs/update_inputs.sh`` to create
 create a new input collection. After creating the tar file, you will need to
 upload the file to the S3 bucket.
 
@@ -87,6 +87,13 @@ also possible to run Python tests directly with ``pytest``:
    # -k expressions can include python operators and can match
    # against functions, classes, or even files
    $BUILD_DIR/python_env.sh pytest -k 'my_test and not YourClass' python/test
+
+To run Python tests on katana cluster deployed in GCP:
+
+.. code-block:: bash
+
+   # Run tests on katana cluster deployed in GCP
+   $BUILD_DIR/python_env.sh pytest python/test --datasource gcp
 
 
 Notebooks

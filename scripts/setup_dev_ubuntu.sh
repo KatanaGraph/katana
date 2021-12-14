@@ -6,6 +6,8 @@
 set -xeuo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
 
+lsb_release 2> /dev/null > /dev/null || sudo apt install -yq lsb-release
+
 EXPECTED_RELEASES=("21.04" "20.04" "18.04")
 RELEASE=$(lsb_release --release --short)
 
@@ -29,8 +31,8 @@ sudo bash -x "${REPO_ROOT}/scripts/setup_ubuntu.sh" --no-setup-toolchain-variant
 "${REPO_ROOT}/scripts/setup_conan.sh"
 
 # make clang-{tidy,format}-12 the default
-sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-12 90
-sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 90
+sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-12 100
+sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 100
 
 
 cat <<EOF

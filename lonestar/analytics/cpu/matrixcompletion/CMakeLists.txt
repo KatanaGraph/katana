@@ -1,6 +1,6 @@
 add_executable(matrixcompletion-cpu matrixCompletion.cpp)
 add_dependencies(apps matrixcompletion-cpu)
-target_link_libraries(matrixcompletion-cpu PRIVATE Katana::galois lonestar)
+target_link_libraries(matrixcompletion-cpu PRIVATE Katana::graph lonestar)
 
 if(CMAKE_COMPILER_IS_GNUCC)
   target_compile_options(matrixcompletion-cpu PRIVATE -ffast-math)

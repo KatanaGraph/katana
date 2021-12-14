@@ -58,6 +58,7 @@ struct OpaqueID {
   // TODO(amp): We need some check that _IDType is a subtype of
   //  OpaqueID<_IDType, _Value>. There doesn't seem to be any way to do that.
   using ValueType = _Value;
+  using IDType = _IDType;
 
   using Count = typename count_traits<_Value>::Count;
 

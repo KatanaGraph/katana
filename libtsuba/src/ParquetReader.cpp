@@ -61,10 +61,10 @@ BuildReader(
     const std::string& uri, bool preload,
     std::shared_ptr<tsuba::FileView>* fv) {
   auto fv_tmp = std::make_shared<tsuba::FileView>();
+  uint64_t end = preload ? std::numeric_limits<uint64_t>::max() : 0;
   KATANA_CHECKED_CONTEXT(
-      fv_tmp->Bind(
-          uri, 0, preload ? std::numeric_limits<uint64_t>::max() : 0, false),
-      "opening {}", uri);
+      fv_tmp->Bind(uri, 0, end, false), "opening {}; begin: {}, end: {}", uri,
+      0, end);
   *fv = fv_tmp;
 
   std::unique_ptr<parquet::arrow::FileReader> reader;

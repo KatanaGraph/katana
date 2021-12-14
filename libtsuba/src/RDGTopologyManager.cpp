@@ -56,9 +56,20 @@ RDGTopologyManager::Make(PartitionTopologyMetadata* topology_metadata) {
 
 katana::Result<void>
 RDGTopologyManager::DoStore(
-    RDGHandle handle, std::unique_ptr<tsuba::WriteGroup>& write_group) {
+    RDGHandle handle, const katana::Uri& current_rdg_dir,
+    std::unique_ptr<tsuba::WriteGroup>& write_group) {
   KATANA_LOG_VASSERT(num_topologies_ >= 1, "must have at least 1 topology");
+  KATANA_LOG_DEBUG("Storing {} RDGTopologies", num_topologies_);
+
   for (size_t i = 0; i < num_topologies_; i++) {
+    // Ensure that all RDGTopologies get unbound before we get to storing
+    // Keeping the file bound is unnecessary and is a huge waste of memory
+    // since GraphTopology copys the data out of the RDGTopology file and into
+    // its own arrays
+    KATANA_LOG_VASSERT(
+        !topology_set_.at(i).bound() && !topology_set_.at(i).mapped(),
+        "All RDGTopologies should be unbound ");
+
     // don't store invalid RDGTopology instances, they have been superseded
     if (topology_set_.at(i).invalid()) {
       continue;
@@ -68,7 +79,8 @@ RDGTopologyManager::DoStore(
         topology_set_.at(i).metadata_entry_valid(),
         "topology at index {} must have valid metadata before calling DoStore",
         i);
-    KATANA_CHECKED(topology_set_.at(i).DoStore(handle, write_group));
+    KATANA_CHECKED(
+        topology_set_.at(i).DoStore(handle, current_rdg_dir, write_group));
   }
   return katana::ResultSuccess();
 }

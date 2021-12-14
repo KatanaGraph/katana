@@ -86,17 +86,13 @@ DoStoreParquet(
         }
 
         TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
-        if (auto res = ff->Persist(); !res) {
-          return res.error();
-        }
+        KATANA_CHECKED(ff->Persist());
+
         return katana::CopyableResultSuccess();
       });
 
   if (!desc) {
-    auto res = future.get();
-    if (!res) {
-      return res.error();
-    }
+    KATANA_CHECKED(future.get());
     return katana::ResultSuccess();
   }
 
@@ -199,11 +195,7 @@ tsuba::ParquetWriter::StoreParquet(
 
   std::unique_ptr<tsuba::WriteGroup> our_desc;
   if (!desc) {
-    auto desc_res = WriteGroup::Make();
-    if (!desc_res) {
-      return desc_res.error();
-    }
-    our_desc = std::move(desc_res.value());
+    our_desc = KATANA_CHECKED(WriteGroup::Make());
     desc = our_desc.get();
   }
 

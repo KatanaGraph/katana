@@ -5,10 +5,10 @@ from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.vector cimport vector
 from pyarrow.lib cimport CTable, Schema
 
-from katana.cpp.libgalois.graphs.Graph cimport GraphTopology, _PropertyGraph
+from katana.cpp.libgalois.graphs.Graph cimport GraphTopology
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result
-
-from .entity_type cimport EntityType
 
 
 cdef _convert_string_list(l)
@@ -44,3 +44,6 @@ cdef class Graph(GraphBase):
 
     @staticmethod
     cdef Graph make(shared_ptr[_PropertyGraph] u)
+
+cdef class TxnContext:
+    cdef CTxnContext _txn_ctx

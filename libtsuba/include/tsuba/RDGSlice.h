@@ -46,7 +46,7 @@ public:
   };
 
   static katana::Result<RDGSlice> Make(
-      RDGHandle handle, const SliceArg& slice,
+      RDGHandle handle, const SliceArg& slice, uint32_t partition_id = 0,
       const std::optional<std::vector<std::string>>& node_props = std::nullopt,
       const std::optional<std::vector<std::string>>& edge_props = std::nullopt);
 
@@ -54,6 +54,15 @@ public:
       const std::string& rdg_manifest_path, const SliceArg& slice,
       const std::optional<std::vector<std::string>>& node_props = std::nullopt,
       const std::optional<std::vector<std::string>>& edge_props = std::nullopt);
+
+  /// Returns two vectors (one for nodes and one for edges), each with one entry
+  /// per partition in the graph pointed to by handle. Each entry is the number
+  /// of nodes or edges owned by the corresponding partitions.
+  ///
+  /// This information can be useful to users of RDGSlice who want to decide
+  /// what slice of what partition to load.
+  static katana::Result<std::pair<std::vector<size_t>, std::vector<size_t>>>
+  GetPerPartitionCounts(RDGHandle handle);
 
   // metadata sorts of things
   const katana::Uri& rdg_dir() const;
@@ -65,32 +74,56 @@ public:
   const std::shared_ptr<arrow::Table>& node_properties() const;
   const std::shared_ptr<arrow::Table>& edge_properties() const;
 
+  // NB: The following interface differs from the one provided by RDG for
+  // property loading/unloading. You can't remove a property by its
+  // index in the loaded property table and you can't specify an index for a
+  // loaded property in that table. These differences are because RDGSlice has
+  // many fewer users than RDG and those users require a less rich interface.
+  // There is also no upsert call because RDGSlice is read-only.
+
+  /// load the specified node property and append it to the Table returned by
+  /// node_properties()
+  /// @param name the name of the property in full_node_schema()
+  katana::Result<void> load_node_property(const std::string& name);
+  /// remove the specified node property from the Table returned by
+  /// node_properties()
+  /// @param name the name of the property in full_node_schema()
+  katana::Result<void> unload_node_property(const std::string& name);
+  /// load the specified edge property and append it to the Table returned by
+  /// edge_properties()
+  /// @param name the name of the property in full_edge_schema()
+  katana::Result<void> load_edge_property(const std::string& name);
+  /// remove the specified edge property from the Table returned by
+  /// edge_properties()
+  /// @param name the name of the property in full_edge_schema()
+  katana::Result<void> unload_edge_property(const std::string& name);
+
   // topology and friends
   const FileView& topology_file_storage() const;
 
   // optional partition metadata
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
-      const {
-    return master_nodes_;
-  }
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes()
-      const {
-    return mirror_nodes_;
-  }
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes() const;
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes() const;
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_node_ids()
-      const {
-    return host_to_owned_global_node_ids_;
-  }
+      const;
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_edge_ids()
-      const {
-    return host_to_owned_global_edge_ids_;
-  }
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const {
-    return local_to_user_id_;
-  }
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const {
-    return local_to_global_id_;
-  }
+      const;
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const;
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const;
+
+  /// If the RDG underlying this object is missing either of these arrays, an
+  /// empty array will be loaded instead
+  katana::Result<void> load_local_to_user_id();
+  katana::Result<void> load_local_to_global_id();
+  /// The semantics of these two functions are about memory use. So they set
+  /// their respective arrays to empty, removing them from memory without
+  /// semantically removing them from the object.
+  katana::Result<void> unload_local_to_user_id();
+  katana::Result<void> unload_local_to_global_id();
+  /// deprecated duplicates of the unload_* functions for
+  /// backwards-compatibility
+  katana::Result<void> remove_local_to_user_id();
+  katana::Result<void> remove_local_to_global_id();
 
   // type info
   /// Determine if the EntityTypeIDs are stored in properties, or outside
@@ -119,16 +152,13 @@ private:
 
   std::unique_ptr<RDGCore> core_;
   // NB: we intentionally do not include a property cache here because that will
-  // complicate the property cache logic; one could be added in the future if it
-  // seems necessary
+  // complicate the property cache logic and RDGSlice is read-only
+  //
+  // one could be added in the future if it seems useful
 
-  void InitArrowVectors();
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
-  std::shared_ptr<arrow::ChunkedArray> host_to_owned_global_node_ids_;
-  std::shared_ptr<arrow::ChunkedArray> host_to_owned_global_edge_ids_;
-  std::shared_ptr<arrow::ChunkedArray> local_to_user_id_;
-  std::shared_ptr<arrow::ChunkedArray> local_to_global_id_;
+  // the SliceArg used to Make this object, useful for on-demand loading of
+  // properties and metadata arrays
+  SliceArg slice_arg_;
 
   // How this graph was derived from the previous version
   RDGLineage lineage_;

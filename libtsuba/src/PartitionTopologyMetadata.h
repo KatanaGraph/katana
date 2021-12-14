@@ -41,6 +41,9 @@ public:
   /// a PartitionTopologyMetadataEntry marked as invalid has been superseded and should not be stored
   bool invalid_{false};
 
+  /// The old location of the topology file, used during relocation of the RDG
+  std::string old_path_{""};
+
   void Update(
       std::string path, uint64_t num_edges, uint64_t num_nodes,
       bool edge_index_to_property_index_map_present,
@@ -113,6 +116,7 @@ public:
   // actual relocation occurs during RDG::Store, blanking the paths indicates we must relocate
   void ChangeStorageLocation() {
     for (size_t i = 0; i < num_entries_; i++) {
+      entries_.at(i).old_path_ = entries_.at(i).path_;
       entries_.at(i).path_ = "";
     }
   }

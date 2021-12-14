@@ -10,13 +10,11 @@
 namespace tsuba {
 
 katana::Result<tsuba::RDGPrefix>
-RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
-  auto meta_res = RDGPartHeader::Make(manifest.PartitionFileName(0));
-  if (!meta_res) {
-    return meta_res.error();
-  }
+RDGPrefix::DoMakePrefix(
+    const tsuba::RDGManifest& manifest, uint32_t partition_id) {
+  auto part_header = KATANA_CHECKED(
+      RDGPartHeader::Make(manifest.PartitionFileName(partition_id)));
 
-  tsuba::RDGPartHeader part_header = std::move(meta_res.value());
   if (part_header.csr_topology_path().empty()) {
     return RDGPrefix{};
   }
@@ -24,32 +22,23 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
   katana::Uri t_path = manifest.dir().Join(part_header.csr_topology_path());
 
   CSRTopologyHeader gr_header;
-  if (auto res = FileGet(t_path.string(), &gr_header); !res) {
-    return res.error().WithContext(
-        "file get failed: {}: sz: {}", t_path, sizeof(gr_header));
-  }
-  FileView fv;
-  if (auto res = fv.Bind(
-          t_path.string(),
-          sizeof(gr_header) + (gr_header.num_nodes * sizeof(uint64_t)), true);
-      !res) {
-    return res.error().WithContext("failed to bind {}", t_path);
-  }
+  KATANA_CHECKED_CONTEXT(
+      FileGet(t_path.string(), &gr_header), "file get failed: {}; sz: {}",
+      t_path, sizeof(gr_header));
 
-  return RDGPrefix(
-      std::move(fv),
-      sizeof(gr_header) + (gr_header.num_nodes * sizeof(uint64_t)));
+  FileView fv;
+  uint64_t offset =
+      sizeof(gr_header) + (gr_header.num_nodes * sizeof(uint64_t));
+  KATANA_CHECKED_CONTEXT(
+      fv.Bind(t_path.string(), offset, true),
+      "failed to bind {}; begin: 0, end: {}", t_path, offset);
+
+  return RDGPrefix(std::move(fv), offset);
 }
 
 katana::Result<tsuba::RDGPrefix>
-RDGPrefix::Make(RDGHandle handle) {
-  if (handle.impl_->rdg_manifest().num_hosts() != 1) {
-    return KATANA_ERROR(
-        ErrorCode::NotImplemented,
-        "cannot construct RDGPrefix for partitioned graph");
-  }
-
-  return DoMakePrefix(handle.impl_->rdg_manifest());
+RDGPrefix::Make(RDGHandle handle, uint32_t partition_id) {
+  return DoMakePrefix(handle.impl_->rdg_manifest(), partition_id);
 }
 
 }  // namespace tsuba

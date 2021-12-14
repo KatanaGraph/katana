@@ -3,29 +3,35 @@
 
 #include <initializer_list>
 #include <limits>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include <fmt/format.h>
-
 #include "katana/config.h"
 
-/// @file Strings.h
-///
 /// Basic string manipulation functions for situations where you can tolerate
 /// some string copies in exchange for a clear API.
 ///
-/// C++20 will have string.starts_with and string.ends_with.
+/// Some of these functions can eventually be replaced with updated libraries:
+///
+/// - katana::HasPrefix and katana::HasSuffix can be replaced with (C++20)
+///   std::string.starts_with and std::string.ends_with.
+/// - katana::Join can be replaced with (fmt>=8) fmt::join
+///
+/// \file Strings.h
 
 namespace katana {
 
 /// FromBase64 converts from base64 string into a binary encoded string
+///
 /// \param input base64 encoded input string
 KATANA_EXPORT std::string FromBase64(const std::string& input);
 
 /// ToBase64 encodes message string into a Base64 string.
-/// \param url_safe forces URL-safe encoding of result base64 result (replacing +/ with -_)
+///
+/// \param url_safe forces URL-safe encoding of result base64 result (replacing
+///   +/ with -_)
 /// \param message binary string input
 KATANA_EXPORT std::string ToBase64(
     const std::string& message, bool url_safe = false);
@@ -51,37 +57,48 @@ KATANA_EXPORT std::vector<std::string_view> SplitView(
     std::string_view s, std::string_view sep,
     uint64_t max = std::numeric_limits<uint64_t>::max());
 
-/// Join returns a string that is the concatenation of every object from
-/// \param begin to \param end  all separated by an instance of \param sep
-template <typename I>
+/// Join returns a string that is the concatenation of every item from begin to
+/// end with items separated by sep.
+///
+/// Join mirrors the functionality of fmt::join at the expense of an additional
+/// copy but works around a bug in fmt::join (fmt<8) where items that only
+/// overload operator<<(ostream, T) cannot be joined.
+template <typename It>
 std::string
-Join(std::string_view sep, I begin, I end) {
+Join(It begin, It end, std::string_view sep) {
   if (begin == end) {
     return "";
   }
-  fmt::memory_buffer buf;
-  auto last = --end;
-  for (auto it = begin; it != last; ++it) {
-    fmt::format_to(std::back_inserter(buf), "{}{}", *it, sep);
+
+  std::stringstream out;
+
+  for (; begin != end;) {
+    out << *begin;
+
+    ++begin;
+
+    if (begin != end) {
+      out << sep;
+    }
   }
-  fmt::format_to(std::back_inserter(buf), "{}", *last);
-  return std::string(buf.begin(), buf.end());
+
+  return out.str();
 }
 
-/// Join returns a string that is the concatenation of every object in
-/// \param items all separated by an instance of \param sep
-template <typename C>
+/// Join returns a string that is the concatenation of every item in items
+/// with items separated by sep.
+template <typename Range>
 std::string
-Join(std::string_view sep, const C& items) {
-  return Join(sep, items.begin(), items.end());
+Join(const Range& items, std::string_view sep) {
+  return Join(items.begin(), items.end(), sep);
 }
 
-/// Join returns a string that is the concatenation of every object in
-/// \param items all separated by an instance of \param sep
+/// Join returns a string that is the concatenation of every item in items
+/// with items separated by sep.
 template <typename T>
 std::string
-Join(std::string_view sep, const std::initializer_list<T> items) {
-  return Join(sep, items.begin(), items.end());
+Join(const std::initializer_list<T>& items, std::string_view sep) {
+  return Join(items.begin(), items.end(), sep);
 }
 
 }  // namespace katana

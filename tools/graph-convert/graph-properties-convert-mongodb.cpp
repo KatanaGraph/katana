@@ -23,7 +23,6 @@
 #include "katana/GraphMLSchema.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
-#include "katana/SharedMemSys.h"
 #include "katana/Threads.h"
 
 using katana::GraphComponents;

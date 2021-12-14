@@ -137,8 +137,11 @@ public:
   /// The length of entity_type_ids should be equal to topo_size.
   /// properties->num_rows() should be equal to the length of entity_type_ids or
   /// 0.
+  ///
+  /// It returns a list of the properties used for types so that they can be
+  /// removed as properties.
   template <typename EntityTypeArray>
-  static Result<void> AssignEntityTypeIDsFromProperties(
+  static Result<std::vector<std::string>> AssignEntityTypeIDsFromProperties(
       const size_t topo_size,  // == either num_nodes() or  num_edges()
       const std::shared_ptr<arrow::Table>& properties,
       katana::EntityTypeManager* entity_type_manager,
@@ -161,7 +164,7 @@ public:
     if (num_rows == 0) {
       std::fill(
           entity_type_ids->begin(), entity_type_ids->end(), kUnknownEntityType);
-      return ResultSuccess();
+      return std::vector<std::string>();
     }
     auto num_rows_for_comparison = static_cast<size_t>(num_rows);
     if (entity_type_ids->size() != num_rows_for_comparison) {
@@ -175,7 +178,7 @@ public:
     auto res =
         DoAssignEntityTypeIDsFromProperties(properties, entity_type_manager);
     if (!res) {
-      return ResultError(std::move(res.error()));
+      return katana::Result<std::vector<std::string>>(std::move(res.error()));
     }
     TypeProperties type_properties = std::move(res.value());
 
@@ -197,7 +200,13 @@ public:
       }
     }
 
-    return ResultSuccess();
+    std::vector<std::string> properties_used;
+    for (const auto& prop_col : type_properties.uint8_properties) {
+      properties_used.emplace_back(
+          properties->field(prop_col.field_index)->name());
+    }
+
+    return properties_used;
   }
 
   /// adds a new entity type for the atomic type with name \p name
@@ -391,7 +400,7 @@ public:
     return std::nullopt;
   }
 
-  /// \returns a vector containing all atomic type names
+  /// \returns a vector containing all atomic type IDs
   std::vector<EntityTypeID> GetAtomicEntityTypeIDs() const {
     std::vector<EntityTypeID> type_vec;
     type_vec.reserve(atomic_type_name_to_entity_type_id_.size());
@@ -532,6 +541,7 @@ struct KATANA_EXPORT fmt::formatter<katana::TypeNameSet>
     : formatter<std::string> {
   template <typename FormatContext>
   auto format(const katana::TypeNameSet& tns, FormatContext& ctx) {
-    return format_to(ctx.out(), "{}", fmt::join(tns, ", "));
+    // Use Cypher syntax
+    return format_to(ctx.out(), "{}", fmt::join(tns, ":"));
   }
 };

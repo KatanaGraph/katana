@@ -31,9 +31,9 @@ def load(input_files: Optional[Collection[Union[str, Path]]] = None) -> (Require
 
 def package_list(labels: Collection[str], format: OutputFormat) -> List[str]:
     data, _ = load()
-    return [p.format(format) for p in data.select_packages(labels, format)]
+    return [p.format(data.packaging_systems[format.value]) for p in data.select_packages(labels, format)]
 
 
 def package(name: str, format: OutputFormat) -> str:
     data, _ = load()
-    return data.packages_dict()[name].format(format)
+    return data.packages_dict()[name].format(data.packaging_systems[format.value])

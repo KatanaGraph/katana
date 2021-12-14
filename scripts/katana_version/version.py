@@ -1,5 +1,6 @@
 import logging
 import re
+import warnings
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
@@ -59,20 +60,31 @@ def get_version(
     k_commit = k_commit or "HEAD"
     ke_commit = ke_commit or "HEAD"
 
+    original_k_commit = k_commit
+    original_ke_commit = ke_commit
+
     if config.has_git:
         k_commit = git.simplify_merge_commit(k_commit, config.open)
         if config.has_enterprise:
             ke_commit = git.simplify_merge_commit(ke_commit, config.enterprise)
 
     k_explicit_version, variant = get_explicit_version(
-        k_commit, use_working_copy, config.open, config.version_file, variant
+        k_commit, use_working_copy, config.open, config.version_file, variant, other_commits=[original_k_commit]
     )
     ke_tag_version = None
-    if config.has_enterprise and not git.is_dirty(config.enterprise):
+    if config.has_enterprise and (not git.is_dirty(config.enterprise) or pretend_clean):
         ke_tag_version = get_tag_version(ke_commit or "HEAD", config.enterprise)
+        ke_tag_version = ke_tag_version or get_tag_version(original_ke_commit or "HEAD", config.enterprise)
 
-    if k_explicit_version.is_devrelease or (not ke_tag_version and config.has_enterprise):
-        explicit_version = add_dev_to_version(k_explicit_version)
+    if k_explicit_version.is_devrelease:
+        if not ke_tag_version:
+            explicit_version = add_dev_to_version(k_explicit_version)
+        else:
+            warnings.warn(
+                "The enterprise repo is tagged, but the open repo is a dev version. Using the enterprise "
+                "tag, but please check the repo state."
+            )
+            explicit_version = ke_tag_version
     else:
         explicit_version = k_explicit_version
 
@@ -178,8 +190,13 @@ def git_find_closest_core_branch(commit, repo: Repo):
     return nearest_branch
 
 
-def get_explicit_version(k_commit: str, use_working_copy: bool, repo, version_file, variant=None, no_dev=False):
-    tag_version = get_tag_version(k_commit, repo)
+def get_explicit_version(
+    k_commit: str, use_working_copy: bool, repo, version_file, variant=None, no_dev=False, *, other_commits=()
+):
+    # A generator for versions produced from tags on commits.
+    all_tag_versions = (get_tag_version(c, repo) for c in (k_commit,) + tuple(other_commits))
+    # Remove all Nones (filter(None, ...)) and get the first one, returning None if there are no versions found.
+    tag_version = next(filter(None, all_tag_versions), None)
     explicit_version = tag_version or get_config_version(
         None if use_working_copy else k_commit, repo, version_file, no_dev=no_dev
     )

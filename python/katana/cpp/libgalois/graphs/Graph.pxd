@@ -1,4 +1,5 @@
-from libc.stdint cimport uint32_t, uint64_t
+from libc.stdint cimport uint16_t, uint32_t, uint64_t
+from libcpp cimport bool
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
 from libcpp.vector cimport vector
@@ -7,7 +8,7 @@ from pyarrow.lib cimport CArray, CChunkedArray, CSchema, CTable, CUInt32Array, C
 from katana.cpp.boost cimport counting_iterator
 from katana.cpp.libgalois.datastructures cimport NUMAArray
 from katana.cpp.libstd.optional cimport optional
-from katana.cpp.libsupport.entity_type_manager cimport EntityTypeManager
+from katana.cpp.libsupport.EntityTypeManager cimport EntityTypeManager
 from katana.cpp.libsupport.result cimport Result
 
 from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
@@ -19,6 +20,10 @@ cdef extern from "tsuba/RDG.h" namespace "tsuba" nogil:
         optional[uint32_t] partition_id_to_load
         optional[vector[string]] node_properties
         optional[vector[string]] edge_properties
+
+cdef extern from "tsuba/TxnContext.h" namespace "tsuba" nogil:
+    cdef cppclass TxnContext:
+        TxnContext()
 
 
 # Omit the exception specifications here to
@@ -131,6 +136,7 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         uint64_t num_nodes() const
         uint64_t num_edges() const
 
+    ctypedef uint16_t EntityTypeID
     cppclass _PropertyGraph "katana::PropertyGraph":
         PropertyGraph()
         # PropertyGraph(GraphTopology&&)
@@ -155,8 +161,13 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
         shared_ptr[CTable] node_properties()
         shared_ptr[CTable] edge_properties()
+
         EntityTypeManager& GetNodeTypeManager() const
         EntityTypeManager& GetEdgeTypeManager() const
+        EntityTypeID GetTypeOfNode(Node node) const
+        EntityTypeID GetTypeOfEdge(Edge edge) const
+        bool DoesNodeHaveType(Node node, EntityTypeID node_entity_type_id) const
+        bool DoesEdgeHaveType(Edge edge, EntityTypeID edge_entity_type_id) const
 
         const string& rdg_dir()
 
@@ -166,10 +177,10 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         shared_ptr[CChunkedArray] GetEdgeProperty(int i)
         shared_ptr[CChunkedArray] GetEdgeProperty(const string&)
 
-        Result[void] AddNodeProperties(shared_ptr[CTable])
-        Result[void] AddEdgeProperties(shared_ptr[CTable])
-        Result[void] UpsertNodeProperties(shared_ptr[CTable])
-        Result[void] UpsertEdgeProperties(shared_ptr[CTable])
+        Result[void] AddNodeProperties(shared_ptr[CTable], TxnContext*)
+        Result[void] AddEdgeProperties(shared_ptr[CTable], TxnContext*)
+        Result[void] UpsertNodeProperties(shared_ptr[CTable], TxnContext*)
+        Result[void] UpsertEdgeProperties(shared_ptr[CTable], TxnContext*)
 
         Result[void] RemoveNodeProperty(int)
         Result[void] RemoveNodeProperty(const string&)
@@ -197,7 +208,7 @@ cdef extern from "katana/BuildGraph.h" namespace "katana" nogil:
         void Dump()
 
 cdef extern from "katana/GraphML.h" namespace "katana" nogil:
-    Result[unique_ptr[_PropertyGraph]] ConvertToPropertyGraph(GraphComponents&& graph_comps);
+    Result[unique_ptr[_PropertyGraph]] ConvertToPropertyGraph(GraphComponents&& graph_comps, TxnContext* txn_ctx);
 
     Result[GraphComponents] ConvertGraphML(
         string input_filename, size_t chunk_size, bint verbose)

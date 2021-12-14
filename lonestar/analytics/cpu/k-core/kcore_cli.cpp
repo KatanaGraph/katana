@@ -106,7 +106,9 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm");
   }
 
-  if (auto r = KCore(pg.get(), kCoreNumber, "node-in-core", plan); !r) {
+  tsuba::TxnContext txn_ctx;
+  if (auto r = KCore(pg.get(), kCoreNumber, "node-in-core", &txn_ctx, plan);
+      !r) {
     KATANA_LOG_FATAL("Failed to compute k-core: {}", r.error());
   }
 

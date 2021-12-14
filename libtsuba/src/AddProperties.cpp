@@ -4,15 +4,17 @@
 #include <optional>
 
 #include <arrow/chunked_array.h>
+#include <arrow/type_fwd.h>
 
 #include "katana/ArrowInterchange.h"
+#include "katana/Cache.h"
+#include "katana/Logging.h"
 #include "katana/ProgressTracer.h"
 #include "katana/Result.h"
 #include "katana/Time.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
 #include "tsuba/ParquetReader.h"
-#include "tsuba/PropertyCache.h"
 
 namespace {
 
@@ -20,18 +22,11 @@ katana::Result<std::shared_ptr<arrow::Table>>
 DoLoadProperties(
     const std::string& expected_name, const katana::Uri& file_path,
     std::optional<tsuba::ParquetReader::Slice> slice = std::nullopt) {
-  auto reader_res = tsuba::ParquetReader::Make();
-  if (!reader_res) {
-    return reader_res.error().WithContext("loading property");
-  }
-  std::unique_ptr<tsuba::ParquetReader> reader = std::move(reader_res.value());
+  std::unique_ptr<tsuba::ParquetReader> reader =
+      KATANA_CHECKED(tsuba::ParquetReader::Make());
 
-  auto out_res = reader->ReadTable(file_path, slice);
-  if (!out_res) {
-    return out_res.error().WithContext("loading property");
-  }
-
-  std::shared_ptr<arrow::Table> out = std::move(out_res.value());
+  std::shared_ptr<arrow::Table> out =
+      KATANA_CHECKED(reader->ReadTable(file_path, slice));
 
   std::shared_ptr<arrow::Schema> schema = out->schema();
   if (schema->num_fields() != 1) {
@@ -77,8 +72,7 @@ tsuba::LoadPropertySlice(
 
 katana::Result<void>
 tsuba::AddProperties(
-    const katana::Uri& uri, tsuba::NodeEdge node_edge,
-    tsuba::PropertyCache* cache, tsuba::RDG* rdg,
+    const katana::Uri& uri, katana::PropertyCache* cache, tsuba::RDG* rdg,
     const std::vector<tsuba::PropStorageInfo*>& properties, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn) {
@@ -88,25 +82,42 @@ tsuba::AddProperties(
           ErrorCode::Exists, "property {} must be absent to be added",
           std::quoted(prop->name()));
     }
+    // If we have a cache, check it.
     if (cache != nullptr) {
-      tsuba::PropertyCacheKey cache_key(
-          node_edge, rdg->rdg_dir().string(), prop->name());
-      auto column_table = cache->Get(cache_key);
-      if (column_table) {
-        auto props = column_table.value();
+      auto& tracer = katana::GetTracer();
+      katana::Uri cache_key(rdg->rdg_dir().Join(prop->path()));
+      std::optional<std::shared_ptr<arrow::Table>> column_table =
+          cache->Get(cache_key);
+      KATANA_LOG_ASSERT(!rdg->rdg_dir().empty());
+      if (column_table.has_value()) {
+        std::shared_ptr<arrow::Table> props = column_table.value();
+        KATANA_LOG_ASSERT(props != nullptr);
         KATANA_CHECKED_CONTEXT(
             add_fn(props), "adding {}", std::quoted(prop->name()));
         prop->WasLoaded(props->field(0)->type());
         auto& tracer = katana::GetTracer();
+        auto cache_stats = cache->GetStats();
         tracer.GetActiveSpan().Log(
-            "property loaded from cache",
-            {{"type", cache_key.TypeAsConstChar()},
-             {"name", prop->name()},
-             {"approx_size", katana::ApproxTableMemUse(props)},
-             {"approx_size_human",
-              katana::BytesToStr(
-                  "{:.2f}{}", katana::ApproxTableMemUse(props))}});
+            "addproperties property cache hit",
+            {
+                {"name", prop->name()},
+                {"path", cache_key.string()},
+                {"load_factor_percent",
+                 fmt::format(
+                     "{:.1f}%", 100.0 * static_cast<float>(cache->size()) /
+                                    cache->capacity())},
+                {"hit_rate", fmt::format(
+                                 "total: {:.1f}% get: {:.1f}% insert: {:.1f}%",
+                                 cache_stats.total_hit_percentage(),
+                                 cache_stats.get_hit_percentage(),
+                                 cache_stats.insert_hit_percentage())},
+            });
         return katana::ResultSuccess();
+      } else {
+        tracer.GetActiveSpan().Log(
+            "addproperties property cache miss", {
+                                                     {"name", prop->name()},
+                                                 });
       }
     }
     const katana::Uri& path = uri.Join(prop->path());
@@ -119,7 +130,7 @@ tsuba::AddProperties(
               return KATANA_CHECKED_CONTEXT(
                   LoadProperties(prop->name(), path), "error loading {}", path);
             });
-    auto on_complete = [add_fn, prop, node_edge, cache,
+    auto on_complete = [add_fn, prop, cache,
                         rdg](const std::shared_ptr<arrow::Table>& props)
         -> katana::CopyableResult<void> {
       if (cache != nullptr) {
@@ -130,25 +141,34 @@ tsuba::AddProperties(
           KATANA_WARN_ONCE(
               "deprecated graph format; type is uint8: {}",
               props->field(0)->name());
+          KATANA_LOG_VASSERT(
+              !rdg->IsEntityTypeIDsOutsideProperties(),
+              "storage_format_version >= 2 RDG may not have uint8 type "
+              "properties");
         } else {
-          tracer.GetActiveSpan().Log(
-              "property inserted into cache",
-              {{"type",
-                (node_edge == tsuba::NodeEdge::kNode) ? "node" : "edge"},
-               {"name", prop->name()},
-               {"approx_size", katana::ApproxTableMemUse(props)},
-               {"approx_size_human",
-                katana::BytesToStr(
-                    "{:.2f}{}", katana::ApproxTableMemUse(props))}});
           // Only match properties from the same RDG prefix
-          tsuba::PropertyCacheKey cache_key(
-              node_edge, rdg->rdg_dir().string(), prop->name());
-          cache->Insert(cache_key, props, rdg);
+          katana::Uri cache_key(rdg->rdg_dir().Join(prop->path()));
+          cache->Insert(cache_key, props);
+          tracer.GetActiveSpan().Log(
+              "addproperties property cache insert",
+              {
+                  {"name", prop->name()},
+                  {"approx_size", katana::ApproxTableMemUse(props)},
+                  {"approx_size_human",
+                   katana::BytesToStr(
+                       "{:.2f}{}", katana::ApproxTableMemUse(props))},
+              });
         }
       }
       KATANA_CHECKED_CONTEXT(
           add_fn(props), "adding {}", std::quoted(prop->name()));
       prop->WasLoaded(props->field(0)->type());
+      if (prop->type()->Equals(arrow::uint8())) {
+        KATANA_LOG_VASSERT(
+            !rdg->IsEntityTypeIDsOutsideProperties(),
+            "storage_format_version >= 2 RDG may not have uint8 type "
+            "properties");
+      }
       return katana::CopyableResultSuccess();
     };
     if (grp) {
@@ -186,27 +206,23 @@ tsuba::AddPropertySlice(
             std::launch::async,
             [path, prop, begin,
              size]() -> katana::CopyableResult<std::shared_ptr<arrow::Table>> {
-              auto load_result =
-                  LoadPropertySlice(prop->name(), path, begin, size);
-              if (!load_result) {
-                return load_result.error().WithContext(
-                    "error loading {}", path);
-              }
-              return load_result.value();
+              std::shared_ptr<arrow::Table> load_result =
+                  KATANA_CHECKED_CONTEXT(
+                      LoadPropertySlice(prop->name(), path, begin, size),
+                      "error loading {}", path);
+              return load_result;
             });
     auto on_complete = [add_fn,
                         prop](const std::shared_ptr<arrow::Table>& props)
         -> katana::CopyableResult<void> {
-      auto add_result = add_fn(props);
-      if (!add_result) {
-        return add_result.error().WithContext(
-            "adding {}", std::quoted(prop->name()));
-      }
+      KATANA_CHECKED_CONTEXT(
+          add_fn(props), "adding: {}", std::quoted(prop->name()));
+      // NB: Sliced properties don't fit super cleanly into the PropStorageInfo
+      // model. This property is dirty in the sense that there is no file on
+      // storage that exactly matches it but it is clean in the sense that it
+      // has not been modified. Leave it as clean to simplify loading/unloading
+      // logic in RDGSlice.
       prop->WasLoaded(props->field(0)->type());
-
-      // since this property is going to be sliced it has no on disk form, so
-      // immediately mark it dirty
-      prop->WasModified(props->field(0)->type());
 
       return katana::CopyableResultSuccess();
     };
@@ -215,14 +231,8 @@ tsuba::AddPropertySlice(
           std::move(future), path.string(), on_complete);
       continue;
     }
-    auto read_res = future.get();
-    if (!read_res) {
-      return read_res.error();
-    }
-    auto on_complete_res = on_complete(read_res.value());
-    if (!on_complete_res) {
-      return on_complete_res.error();
-    }
+    std::shared_ptr<arrow::Table> props = KATANA_CHECKED(future.get());
+    KATANA_CHECKED(on_complete(props));
   }
 
   return katana::ResultSuccess();

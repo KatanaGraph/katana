@@ -104,23 +104,65 @@ public:
 
   uint64_t num_nodes() const { return num_nodes_; }
 
-  const uint64_t* adj_indices() const { return adj_indices_; }
+  /// Requires backing FileView to be mapped & bound, or the RDGTopology to be filled from memory
+  const uint64_t* adj_indices() const {
+    KATANA_LOG_VASSERT(
+        adj_indices_ != nullptr,
+        "RDGTopology must be either bound & mapped, or filled from memory");
+    return adj_indices_;
+  }
 
-  const uint32_t* dests() const { return dests_; }
+  /// Requires backing FileView to be mapped & bound, or the RDGTopology to be filled from memory
+  const uint32_t* dests() const {
+    KATANA_LOG_VASSERT(
+        dests_ != nullptr,
+        "RDGTopology must be either bound & mapped, or filled from memory");
+    return dests_;
+  }
 
+  /// Optional field, may not be present depending on the kind of topology this is
+  /// Requires backing FileView to be mapped & bound, or the RDGTopology to be filled from memory
   const uint64_t* node_index_to_property_index_map() const {
+    KATANA_LOG_VASSERT(
+        node_index_to_property_index_map_ != nullptr,
+        "Either this optional field is not present, or the RDGTopology must be "
+        "either bound & mapped, or filled from memory.");
     return node_index_to_property_index_map_;
   }
 
+  /// Optional field, may not be present depending on the kind of topology this is
+  /// Requires backing FileView to be mapped & bound, or the RDGTopology to be filled from memory
   const uint64_t* edge_index_to_property_index_map() const {
+    KATANA_LOG_VASSERT(
+        edge_index_to_property_index_map_ != nullptr,
+        "Either this optional field is not present, or the RDGTopology must be "
+        "either bound & mapped, or filled from memory.");
     return edge_index_to_property_index_map_;
   }
 
+  /// Optional field, may not be present depending on the kind of topology this is
+  /// Requires backing FileView to be mapped & bound, or the RDGTopology to be filled from memory
   const katana::EntityTypeID* edge_condensed_type_id_map() const {
+    if (edge_condensed_type_id_map_size() > 0) {
+      KATANA_LOG_VASSERT(
+          edge_condensed_type_id_map_ != nullptr,
+          "Either this optional field is not present, or the RDGTopology must "
+          "be "
+          "either bound & mapped, or filled from memory.");
+    }
     return edge_condensed_type_id_map_;
   }
 
+  /// Optional field, may not be present depending on the kind of topology this is
+  /// Requires backing FileView to be mapped & bound, or the RDGTopology to be filled from memory
   const katana::EntityTypeID* node_condensed_type_id_map() const {
+    if (node_condensed_type_id_map_size() > 0) {
+      KATANA_LOG_VASSERT(
+          node_condensed_type_id_map_ != nullptr,
+          "Either this optional field is not present, or the RDGTopology must "
+          "be "
+          "either bound & mapped, or filled from memory.");
+    }
     return node_condensed_type_id_map_;
   }
 
@@ -208,7 +250,8 @@ public:
       uint64_t num_nodes, uint64_t num_edges, bool storage_valid = false);
 
   katana::Result<void> DoStore(
-      RDGHandle handle, std::unique_ptr<tsuba::WriteGroup>& write_group);
+      RDGHandle handle, const katana::Uri& current_rdg_dir,
+      std::unique_ptr<tsuba::WriteGroup>& write_group);
 
   bool Equals(const RDGTopology& other) const;
 

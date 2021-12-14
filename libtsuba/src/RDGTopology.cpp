@@ -71,13 +71,15 @@ RDGTopology::Bind(const katana::Uri& metadata_dir, bool resolve) {
     KATANA_LOG_WARN("topology already bound, nothing to do");
     return katana::ResultSuccess();
   }
+  if (path().empty()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "Cannot bind topology with empty path");
+  }
 
   katana::Uri t_path = metadata_dir.Join(path());
   KATANA_LOG_DEBUG(
       "binding to entire topology file at path {}", t_path.string());
-  if (auto res = file_storage_.Bind(t_path.string(), resolve); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(file_storage_.Bind(t_path.string(), resolve));
 
   file_store_bound_ = true;
   storage_valid_ = true;
@@ -89,14 +91,15 @@ katana::Result<void>
 RDGTopology::Bind(
     const katana::Uri& metadata_dir, uint64_t begin, uint64_t end,
     bool resolve) {
+  if (path().empty()) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "Cannot bind topology with empty path");
+  }
   katana::Uri t_path = metadata_dir.Join(path());
   KATANA_LOG_DEBUG(
       "binding from {} to {} with topology file at path {}", begin, end,
       t_path.string());
-  if (auto res = file_storage_.Bind(t_path.string(), begin, end, resolve);
-      !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(file_storage_.Bind(t_path.string(), begin, end, resolve));
 
   file_store_bound_ = true;
   storage_valid_ = true;
@@ -120,11 +123,16 @@ RDGTopology::Map() {
 
   size_t min_size = 4;
   if (file_storage_.size() < min_size) {
-    return katana::ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "file_storage size {} is less than the minimum size {}",
+        file_storage_.size(), min_size);
   }
 
   if (data[0] != 1) {
-    return katana::ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "first entry in the topology data array must be 1, is {}", data[0]);
   }
 
   // ensure the data file matches the metadata
@@ -151,11 +159,8 @@ RDGTopology::Map() {
   // EdgeTypeAwareTopologies have a larger adj_indices array than usual topologies
   if (topology_state_ ==
       tsuba::RDGTopology::TopologyKind::kEdgeTypeAwareTopology) {
-    KATANA_LOG_VASSERT(
-        edge_condensed_type_id_map_size_,
-        "mapping an EdgeTypeAwareTopology with a zero sized "
-        "condensed_type_id_map");
-    adj_indices_size = num_nodes_ * edge_condensed_type_id_map_size_;
+    adj_indices_size =
+        std::max(num_nodes_, num_nodes_ * edge_condensed_type_id_map_size_);
   }
 
   cursor += adj_indices_size;
@@ -299,12 +304,12 @@ RDGTopology::MapMetadataExtract(
 
 katana::Result<void>
 tsuba::RDGTopology::DoStore(
-    RDGHandle handle, std::unique_ptr<tsuba::WriteGroup>& write_group) {
+    RDGHandle handle, const katana::Uri& current_rdg_dir,
+    std::unique_ptr<tsuba::WriteGroup>& write_group) {
   KATANA_LOG_VASSERT(!invalid_, "tried to store an invalid RDGTopology");
 
   if (!storage_valid_) {
-    // We have an update, make and write the file frame
-    // This path is also taken if we are a newly created RDGTopology getting stored for the first time
+    // This RDGTopology is either new, or is an update to a now-invalid RDGTopology
 
     KATANA_LOG_DEBUG(
         "Storing RDGTopology to file. TopologyKind={}, TransposeKind={}, "
@@ -312,9 +317,8 @@ tsuba::RDGTopology::DoStore(
         topology_state_, transpose_state_, edge_sort_state_, node_sort_state_);
 
     auto ff = std::make_unique<tsuba::FileFrame>();
-    if (auto res = ff->Init(); !res) {
-      return res.error();
-    }
+    KATANA_CHECKED(ff->Init());
+
     uint64_t data[4] = {1, 0, num_nodes_, num_edges_};
     arrow::Status aro_sts = ff->Write(&data, 4 * sizeof(uint64_t));
     if (!aro_sts.ok()) {
@@ -322,6 +326,11 @@ tsuba::RDGTopology::DoStore(
     }
 
     if (num_nodes_) {
+      if (edge_condensed_type_id_map_size_ > 0) {
+        KATANA_LOG_VASSERT(
+            adj_indices_ != nullptr,
+            "Cannot store an RDGTopology with edges and null adj_indices");
+      }
       const auto* raw = adj_indices_;
       static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint64_t>);
       uint64_t adj_indices_size = num_nodes_;
@@ -336,14 +345,18 @@ tsuba::RDGTopology::DoStore(
           "Storing RDGTopology to file. Writing adj_indices, size = {}",
           adj_indices_size);
 
-      auto buf = arrow::Buffer::Wrap(raw, adj_indices_size);
-      aro_sts = ff->Write(buf);
-      if (!aro_sts.ok()) {
-        return tsuba::ArrowToTsuba(aro_sts.code());
+      if (adj_indices_size > 0) {
+        auto buf = arrow::Buffer::Wrap(raw, adj_indices_size);
+        aro_sts = ff->Write(buf);
+        if (!aro_sts.ok()) {
+          return tsuba::ArrowToTsuba(aro_sts.code());
+        }
       }
     }
 
     if (num_edges_) {
+      KATANA_LOG_VASSERT(
+          dests_ != nullptr, "Cannot store an RDGTopology with null dests_");
       const auto* raw = dests_;
       static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint32_t>);
 
@@ -489,8 +502,34 @@ tsuba::RDGTopology::DoStore(
     //TODO: emcginnis need different naming schemes for the optional topologies
     katana::Uri path_uri = MakeTopologyFileName(handle);
 
+    // file store must be bound to make a copy of it in a new location
+    if (!file_store_bound_) {
+      // Can't just use RDGTopology::Bind() here since path() is empty
+      // Must bind to old_path since we are persisting in a new location
+      std::string old_path = metadata_entry_->old_path_;
+      if (old_path.empty()) {
+        return KATANA_ERROR(
+            ErrorCode::InvalidArgument, "Cannot bind topology with empty path");
+      }
+      katana::Uri t_path = current_rdg_dir.Join(old_path);
+
+      KATANA_LOG_DEBUG(
+          "binding to entire topology file at path {} for relocation",
+          t_path.string());
+      KATANA_CHECKED_CONTEXT(
+          file_storage_.Bind(t_path.string(), true),
+          "failed binding topology file for copying at path = {}, "
+          "TopologyKind={}, "
+          "TransposeKind={}, EdgeSortKind={}, NodeSortKind={}",
+          t_path.string(), topology_state_, transpose_state_, edge_sort_state_,
+          node_sort_state_);
+
+      file_store_bound_ = true;
+    }
+
     TSUBA_PTP(internal::FaultSensitivity::Normal);
-    // depends on `topology_file_storage_` outliving writes
+    // depends on `topology file_storage_` outliving writes
+    // all topology file stores must remain bound until write_group->Finish() completes
     write_group->StartStore(
         path_uri.string(), file_storage_.ptr<uint8_t>(), file_storage_.size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);

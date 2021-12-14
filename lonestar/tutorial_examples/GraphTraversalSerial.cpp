@@ -24,8 +24,8 @@
 // 3. usage of katana::StatTimer
 #include <iostream>
 
-#include "katana/Galois.h"
 #include "katana/LCGraph.h"
+#include "katana/SharedMemSys.h"
 #include "katana/Timer.h"
 
 int

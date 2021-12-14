@@ -99,7 +99,7 @@ you can put the following in your `CMakeLists.txt`:
 ```CMake
 add_subdirectory(katana EXCLUDE_FROM_ALL)
 add_executable(app ...)
-target_link_libraries(app Katana::galois)
+target_link_libraries(app Katana::graph)
 ```
 
 The other common method is to install Katana outside your project and import it
@@ -128,14 +128,14 @@ like the following in your `CMakeLists.txt`:
 list(APPEND CMAKE_PREFIX_PATH ${INSTALL_DIR})
 find_package(Katana REQUIRED)
 add_executable(app ...)
-target_link_libraries(app Katana::galois)
+target_link_libraries(app Katana::graph)
 ```
 
 If you are not using CMake, the corresponding basic commands (although the
 specific commands vary by system) are:
 
 ```Shell
-c++ -std=c++14 app.cpp -I$INSTALL_DIR/include -L$INSTALL_DIR/lib -lkatana_galois
+c++ -std=c++14 app.cpp -I$INSTALL_DIR/include -L$INSTALL_DIR/lib -lkatana_graph
 ```
 
 Contact Us

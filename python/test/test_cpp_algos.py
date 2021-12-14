@@ -74,14 +74,14 @@ def test_assert_valid(graph: Graph):
 
 
 def test_sort_all_edges_by_dest(graph: Graph):
-    original_dests = [[graph.get_edge_dest(e) for e in graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
+    original_dests = [[graph.get_edge_dest(e) for e in graph.edge_ids(n)] for n in range(NODES_TO_SAMPLE)]
     mapping = sort_all_edges_by_dest(graph)
-    new_dests = [[graph.get_edge_dest(e) for e in graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
+    new_dests = [[graph.get_edge_dest(e) for e in graph.edge_ids(n)] for n in range(NODES_TO_SAMPLE)]
     for n in range(NODES_TO_SAMPLE):
         assert len(original_dests[n]) == len(new_dests[n])
-        my_mapping = [mapping[e] for e in graph.edges(n)]
+        my_mapping = [mapping[e] for e in graph.edge_ids(n)]
         for i, _ in enumerate(my_mapping):
-            assert original_dests[n][i] == new_dests[n][my_mapping[i] - graph.edges(n)[0]]
+            assert original_dests[n][i] == new_dests[n][my_mapping[i] - graph.edge_ids(n)[0]]
         original_dests[n].sort()
 
         assert original_dests[n] == new_dests[n]
@@ -95,10 +95,10 @@ def test_find_edge_sorted_by_dest(graph: Graph):
 
 def test_sort_nodes_by_degree(graph: Graph):
     sort_nodes_by_degree(graph)
-    assert len(graph.edges(0)) == 103
+    assert len(graph.edge_ids(0)) == 103
     last_node_n_edges = 103
     for n in range(1, NODES_TO_SAMPLE):
-        v = len(graph.edges(n))
+        v = len(graph.edge_ids(n))
         assert v <= last_node_n_edges
         last_node_n_edges = v
 
@@ -247,7 +247,7 @@ def test_betweenness_centrality_level(graph: Graph):
 
 def test_triangle_count():
     graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
-    original_first_edge_list = [graph.get_edge_dest(e) for e in graph.edges(0)]
+    original_first_edge_list = [graph.get_edge_dest(e) for e in graph.edge_ids(0)]
     n = triangle_count(graph)
     assert n == 282617
 
@@ -257,7 +257,7 @@ def test_triangle_count():
     n = triangle_count(graph, TriangleCountPlan.edge_iteration())
     assert n == 282617
 
-    assert [graph.get_edge_dest(e) for e in graph.edges(0)] == original_first_edge_list
+    assert [graph.get_edge_dest(e) for e in graph.edge_ids(0)] == original_first_edge_list
 
     sort_all_edges_by_dest(graph)
     n = triangle_count(graph, TriangleCountPlan.ordered_count(edges_sorted=True))
@@ -297,8 +297,8 @@ def test_connected_components():
 
     assert stats.total_components == 69
     assert stats.total_non_trivial_components == 1
-    assert stats.largest_component_size == 957
-    assert stats.largest_component_ratio == approx(0.93457)
+    assert stats.largest_component_size == 956
+    assert stats.largest_component_ratio == approx(0.933594)
 
     connected_components_assert_valid(graph, "output")
 
@@ -384,7 +384,8 @@ def test_subgraph_extraction():
     nodes = [1, 3, 11, 120]
 
     expected_edges = [
-        [nodes.index(graph.get_edge_dest(e)) for e in graph.edges(i) if graph.get_edge_dest(e) in nodes] for i in nodes
+        [nodes.index(graph.get_edge_dest(e)) for e in graph.edge_ids(i) if graph.get_edge_dest(e) in nodes]
+        for i in nodes
     ]
 
     pg = subgraph_extraction(graph, nodes)
@@ -394,8 +395,8 @@ def test_subgraph_extraction():
     assert pg.num_edges() == 6
 
     for i, _ in enumerate(expected_edges):
-        assert len(pg.edges(i)) == len(expected_edges[i])
-        assert [pg.get_edge_dest(e) for e in pg.edges(i)] == expected_edges[i]
+        assert len(pg.edge_ids(i)) == len(expected_edges[i])
+        assert [pg.get_edge_dest(e) for e in pg.edge_ids(i)] == expected_edges[i]
 
 
 def test_busy_wait(graph: Graph):

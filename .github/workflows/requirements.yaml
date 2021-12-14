@@ -1,0 +1,73 @@
+name: Requirements CI
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'release/*'
+  pull_request:
+
+# Cancel any previous runs with the same key.
+concurrency:
+  # Example key: Repository Structure CI-refs/pull/1381/merge
+  #   or Repository Structure CI-<owner>-<sha> for pushes
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || format('{0}-{1}', github.repository_owner, github.sha) }}
+  cancel-in-progress: true
+
+jobs:
+  do_requirements:
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        !contains(github.event.pull_request.body, '[no test]') &&
+        !contains(github.event.pull_request.body, '[no requirements test]') &&
+        !contains(github.event.pull_request.body, '[no requirements]')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info
+        run: echo "will test"
+
+  ###################################################################
+  # lint
+  ###################################################################
+  test_requirements:
+    needs: do_requirements
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      ###
+      # Caching between builds
+      ###
+      - name: Cache miniconda
+        id: cache-miniconda
+        uses: actions/cache@v2
+        with:
+          key: ubuntu-20.04-miniconda-${{hashFiles('.github/workflows/download_miniconda.sh')}}
+          path: ~/.cache/miniconda
+
+      ###
+      # Install platform-level dependencies (OS-specific)
+      ###
+      - name: Install dependencies
+        run: |
+          sudo apt install -yq ccache curl libz-dev bzip2 make libnuma1
+
+      ###
+      # Install Conda environment
+      ###
+      - name: Download miniconda
+        run: .github/workflows/download_miniconda.sh ubuntu-20.04
+        if: steps.cache-miniconda.outputs.cache-hit != 'true'
+      - name: Install Conda dependencies
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          mamba install -y -q -c conda-forge pyyaml packaging pytest
+
+      - name: Test requirements install
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          python3 -m pytest test

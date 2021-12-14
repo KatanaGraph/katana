@@ -21,8 +21,8 @@ from katana.local.atomic import (
 from katana.local.barrier import Barrier, SimpleBarrier, get_fast_barrier
 from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.local.dynamic_bitset import DynamicBitset
-from katana.local.entity_type import EntityType
-from katana.local.graph import Graph
+from katana.local.entity_type_manager import AtomicEntityType, EntityType, EntityTypeManager
+from katana.local.graph import Graph, TxnContext
 
 __all__ = [
     "Barrier",
@@ -35,6 +35,7 @@ __all__ = [
     "InsertBag",
     "NUMAArray",
     "Graph",
+    "TxnContext",
     "SimpleBarrier",
     "atomic_add",
     "atomic_max",
@@ -44,4 +45,6 @@ __all__ = [
     "initialize",
     "AllocationPolicy",
     "EntityType",
+    "AtomicEntityType",
+    "EntityTypeManager",
 ]

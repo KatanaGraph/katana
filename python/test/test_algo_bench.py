@@ -149,8 +149,8 @@ def test_connected_components():
     stats = run_single_test(arguments)[0]
     assert stats.total_components == 3417
     assert stats.total_non_trivial_components == 1
-    assert stats.largest_component_size == 29353
-    assert stats.largest_component_ratio == approx(0.895782470703125)
+    assert stats.largest_component_size == 29352
+    assert stats.largest_component_ratio == approx(0.895752)
 
 
 def test_k_core():

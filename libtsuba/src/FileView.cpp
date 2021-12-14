@@ -43,10 +43,9 @@ FileView::Unbind() {
   if (bound_) {
     // Resolve all outstanding reads so they don't write to the memory we are
     // about to unmap
-    if (auto res = Resolve(0, file_size_); !res) {
-      return res.error().WithContext("resolving for unmap");
-    }
-    if (map_start_ != nullptr) {
+    KATANA_CHECKED(Resolve(0, file_size_));
+
+    if (map_start_ != nullptr && file_size_ > 0) {
       if (int err = munmap(map_start_, file_size_); err) {
         return KATANA_ERROR(katana::ResultErrno(), "unmapping buffer");
       }
@@ -70,9 +69,8 @@ FileView::Bind(
     std::string_view filename, uint64_t begin, uint64_t end, bool resolve) {
   StatBuf buf;
   filename_ = filename;
-  if (auto res = FileStat(filename_, &buf); !res) {
-    return res.error().WithContext("getting file size");
-  }
+  KATANA_CHECKED(FileStat(filename_, &buf));
+
   uint64_t in_end = std::min<uint64_t>(end, static_cast<uint64_t>(buf.size));
   if (in_end < begin) {
     return KATANA_ERROR(
@@ -100,9 +98,7 @@ FileView::Bind(
     }
   }
 
-  if (auto res = Unbind(); !res) {
-    return res.error().WithContext("resetting for new content");
-  }
+  KATANA_CHECKED(Unbind());
 
   map_start_ = static_cast<uint8_t*>(tmp);
   mem_start_ = -1;
@@ -110,9 +106,9 @@ FileView::Bind(
   filling_.resize(page_number(buf.size) / 64 + 1, 0);
   file_size_ = buf.size;
   fetches_ = std::make_unique<std::vector<FillingRange>>();
-  if (auto res = Fill(begin, in_end, resolve); !res) {
-    return res.error().WithContext("reading content");
-  }
+  KATANA_CHECKED_CONTEXT(
+      Fill(begin, in_end, resolve), "failed to fill, begin: {}, end: {}", begin,
+      in_end);
 
   cursor_ = 0;
   bound_ = true;
@@ -159,13 +155,9 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
       KATANA_LOG_ASSERT(peek_fut.valid());
       FillingRange fetch = {first_page, last_page, std::move(peek_fut)};
       fetches_->push_back(std::move(fetch));
-      if (auto res = MarkFilled(&filling_[0], first_page, last_page); !res) {
-        return res.error().WithContext("updating bookkeeping data");
-      }
+      KATANA_CHECKED(MarkFilled(&filling_[0], first_page, last_page));
       if (resolve) {
-        if (auto res = Resolve(file_off, map_size); !res) {
-          return res.error().WithContext("resolving fill");
-        }
+        KATANA_CHECKED(Resolve(file_off, map_size));
       }
       int64_t signed_begin = static_cast<int64_t>(in_begin);
       if (mem_start_ < 0 || signed_begin < mem_start_) {
@@ -478,9 +470,7 @@ FileView::Resolve(int64_t start, int64_t size) {
         fetch->last_page >= page_number(start)) {
       // Complete the remaining work if there is some
       if (fetch->work.valid()) {
-        if (auto res = fetch->work.get(); !res) {
-          return res.error();
-        }
+        KATANA_CHECKED(fetch->work.get());
       } else {
         KATANA_LOG_DEBUG("bad future in FileView::Resolve {} {}", start, size);
       }
@@ -503,9 +493,7 @@ FileView::PreFetch(int64_t start, int64_t size) {
   KATANA_LOG_DEBUG_ASSERT(fetch_size >= 0);
   uint64_t begin = static_cast<uint64_t>(start + size);
   uint64_t end = static_cast<uint64_t>(start + size + fetch_size);
-  if (auto res = Fill(begin, end, false); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(Fill(begin, end, false));
   return katana::ResultSuccess();
 }
 }  // namespace tsuba

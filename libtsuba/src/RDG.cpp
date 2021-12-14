@@ -35,7 +35,6 @@
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/ParquetWriter.h"
-#include "tsuba/PropertyCache.h"
 #include "tsuba/RDGTopology.h"
 #include "tsuba/ReadGroup.h"
 #include "tsuba/WriteGroup.h"
@@ -50,16 +49,12 @@ katana::Result<std::string>
 StoreArrowArrayAtName(
     const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
     const std::string& name, tsuba::WriteGroup* desc) {
-  auto writer_res = tsuba::ParquetWriter::Make(array, name);
-  if (!writer_res) {
-    return writer_res.error().WithContext("making property writer");
-  }
+  std::unique_ptr<tsuba::ParquetWriter> writer =
+      KATANA_CHECKED(tsuba::ParquetWriter::Make(array, name));
 
   katana::Uri new_path = dir.RandFile(name);
-  auto res = writer_res.value()->WriteToUri(new_path, desc);
-  if (!res) {
-    return res.error().WithContext("writing property writer");
-  }
+  KATANA_CHECKED_CONTEXT(
+      writer->WriteToUri(new_path, desc), "writing to: {}", new_path);
   return new_path.BaseName();
 }
 
@@ -101,9 +96,8 @@ CommitRDG(
 
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-  if (auto res = desc->Finish(); !res) {
-    return res.error().WithContext("at least one async write failed");
-  }
+  KATANA_CHECKED_CONTEXT(desc->Finish(), "at least one async write failed");
+
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
 
@@ -112,19 +106,14 @@ CommitRDG(
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
     std::string curr_s = new_manifest.ToJsonString();
-    auto res = tsuba::FileStore(
-        tsuba::RDGManifest::FileName(
-            handle.impl_->rdg_manifest().dir(),
-            handle.impl_->rdg_manifest().viewtype(), new_manifest.version())
-            .string(),
-        reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size());
-    if (!res) {
-      return res.error().WithContext(
-          "CommitRDG future failed {}",
-          tsuba::RDGManifest::FileName(
-              handle.impl_->rdg_manifest().dir(),
-              handle.impl_->rdg_manifest().viewtype(), new_manifest.version()));
-    }
+    auto manifest_file = tsuba::RDGManifest::FileName(
+        handle.impl_->rdg_manifest().dir(),
+        handle.impl_->rdg_manifest().viewtype(), new_manifest.version());
+    KATANA_CHECKED_CONTEXT(
+        tsuba::FileStore(
+            manifest_file.string(),
+            reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size()),
+        "CommitRDG future failed {}", manifest_file);
     return katana::ResultSuccess();
   });
   if (ret) {
@@ -328,11 +317,10 @@ tsuba::RDG::DoStore(
   std::vector<PropStorageInfo*> node_props_to_store = KATANA_CHECKED(
       core_->part_header().SelectNodeProperties(node_prop_names));
 
-  KATANA_CHECKED_CONTEXT(
-      WriteProperties(
-          *core_->node_properties(), node_props_to_store,
-          handle.impl_->rdg_manifest().dir(), write_group.get()),
-      "writing node properties");
+  // writing node properties
+  KATANA_CHECKED(WriteProperties(
+      *core_->node_properties(), node_props_to_store,
+      handle.impl_->rdg_manifest().dir(), write_group.get()));
 
   std::vector<std::string> edge_prop_names;
   for (const auto& field : core_->edge_properties()->fields()) {
@@ -342,15 +330,14 @@ tsuba::RDG::DoStore(
   std::vector<PropStorageInfo*> edge_props_to_store = KATANA_CHECKED(
       core_->part_header().SelectEdgeProperties(edge_prop_names));
 
-  KATANA_CHECKED_CONTEXT(
-      WriteProperties(
-          *core_->edge_properties(), edge_props_to_store,
-          handle.impl_->rdg_manifest().dir(), write_group.get()),
-      "writing edge properties");
+  // writing edge properties
+  KATANA_CHECKED(WriteProperties(
+      *core_->edge_properties(), edge_props_to_store,
+      handle.impl_->rdg_manifest().dir(), write_group.get()));
 
-  core_->part_header().set_part_properties(KATANA_CHECKED_CONTEXT(
-      WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get()),
-      "writing partition metadata"));
+  // writing partition metadata
+  core_->part_header().set_part_prop_info_list(KATANA_CHECKED(
+      WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get())));
 
   //If a view type has been set, use it otherwise pass in the default view type
   if (view_type_.empty()) {
@@ -359,21 +346,16 @@ tsuba::RDG::DoStore(
     handle.impl_->set_viewtype(view_type_);
   }
 
-  if (auto write_result = core_->part_header().Write(
-          handle, write_group.get(), versioning_action);
-      !write_result) {
-    return write_result.error().WithContext("failed to write metadata");
-  }
+  // writing metadata
+  KATANA_CHECKED(
+      core_->part_header().Write(handle, write_group.get(), versioning_action));
 
   // Update lineage and commit
   core_->AddCommandLine(command_line);
-  if (auto res = CommitRDG(
-          handle, core_->part_header().metadata().policy_id_,
-          core_->part_header().metadata().transposed_, versioning_action,
-          core_->lineage(), std::move(write_group));
-      !res) {
-    return res.error().WithContext("failed to finalize RDG");
-  }
+  KATANA_CHECKED(CommitRDG(
+      handle, core_->part_header().metadata().policy_id_,
+      core_->part_header().metadata().transposed_, versioning_action,
+      core_->lineage(), std::move(write_group)));
   return katana::ResultSuccess();
 }
 
@@ -384,82 +366,66 @@ tsuba::RDG::DoMake(
     const katana::Uri& metadata_dir) {
   ReadGroup grp;
 
-  KATANA_CHECKED_CONTEXT(
-      AddProperties(
-          metadata_dir, tsuba::NodeEdge::kNode, prop_cache_, this,
-          node_props_to_be_loaded, &grp,
-          [rdg = this](const std::shared_ptr<arrow::Table>& props)
-              -> katana::Result<void> {
-            std::shared_ptr<arrow::Table> prop_table =
-                rdg->core_->node_properties();
+  // populating node properties
+  KATANA_CHECKED(AddProperties(
+      metadata_dir, prop_cache_, this, node_props_to_be_loaded, &grp,
+      [rdg = this](
+          const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
+        std::shared_ptr<arrow::Table> prop_table =
+            rdg->core_->node_properties();
 
-            if (prop_table && prop_table->num_columns() > 0) {
-              for (int i = 0; i < props->num_columns(); ++i) {
-                prop_table = KATANA_CHECKED(prop_table->AddColumn(
-                    prop_table->num_columns(), props->field(i),
-                    props->column(i)));
-              }
-            } else {
-              prop_table = props;
-            }
-            rdg->core_->set_node_properties(std::move(prop_table));
-            return katana::ResultSuccess();
-          }),
-      "populating node properties");
+        if (prop_table && prop_table->num_columns() > 0) {
+          for (int i = 0; i < props->num_columns(); ++i) {
+            prop_table = KATANA_CHECKED(prop_table->AddColumn(
+                prop_table->num_columns(), props->field(i), props->column(i)));
+          }
+        } else {
+          prop_table = props;
+        }
+        rdg->core_->set_node_properties(std::move(prop_table));
+        return katana::ResultSuccess();
+      }));
 
-  KATANA_CHECKED_CONTEXT(
-      AddProperties(
-          metadata_dir, tsuba::NodeEdge::kEdge, prop_cache_, this,
-          edge_props_to_be_loaded, &grp,
-          [rdg = this](const std::shared_ptr<arrow::Table>& props)
-              -> katana::Result<void> {
-            std::shared_ptr<arrow::Table> prop_table =
-                rdg->core_->edge_properties();
+  // populating edge properties
+  KATANA_CHECKED(AddProperties(
+      metadata_dir, prop_cache_, this, edge_props_to_be_loaded, &grp,
+      [rdg = this](
+          const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
+        std::shared_ptr<arrow::Table> prop_table =
+            rdg->core_->edge_properties();
 
-            if (prop_table && prop_table->num_columns() > 0) {
-              for (int i = 0; i < props->num_columns(); ++i) {
-                prop_table = KATANA_CHECKED(prop_table->AddColumn(
-                    prop_table->num_columns(), props->field(i),
-                    props->column(i)));
-              }
-            } else {
-              prop_table = props;
-            }
-            rdg->core_->set_edge_properties(std::move(prop_table));
-            return katana::ResultSuccess();
-          }),
-      "populating edge properties");
+        if (prop_table && prop_table->num_columns() > 0) {
+          for (int i = 0; i < props->num_columns(); ++i) {
+            prop_table = KATANA_CHECKED(prop_table->AddColumn(
+                prop_table->num_columns(), props->field(i), props->column(i)));
+          }
+        } else {
+          prop_table = props;
+        }
+        rdg->core_->set_edge_properties(std::move(prop_table));
+        return katana::ResultSuccess();
+      }));
 
-  KATANA_CHECKED_CONTEXT(
-      core_->MakeTopologyManager(metadata_dir), "populating topologies");
+  // populating topologies
+  KATANA_CHECKED(core_->MakeTopologyManager(metadata_dir));
 
-  // find & bind the default csr topology
+  // ensure we can find the default csr topology
   RDGTopology shadow_csr = RDGTopology::MakeShadowCSR();
   RDGTopology* csr = KATANA_CHECKED_CONTEXT(
       core_->topology_manager().GetTopology(shadow_csr),
       "unable to find csr topology, must have csr topology");
-
   KATANA_LOG_VASSERT(csr != nullptr, "csr topology is null");
-  //TODO: emcginnis is there any reason we should be binding the csr topology here?
-  // getting it makes sense, to make sure it is present, but I don't think we need to bind it
-  KATANA_CHECKED_CONTEXT(csr->Bind(metadata_dir), "binding csr topology");
 
   if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
     katana::Uri node_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().node_entity_type_id_array_path());
-    if (auto res = core_->node_entity_type_id_array_file_storage().Bind(
-            node_entity_type_id_array_path.string(), true);
-        !res) {
-      return res.error();
-    }
+    KATANA_CHECKED(core_->node_entity_type_id_array_file_storage().Bind(
+        node_entity_type_id_array_path.string(), true));
 
     katana::Uri edge_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().edge_entity_type_id_array_path());
-    if (auto res = core_->edge_entity_type_id_array_file_storage().Bind(
-            edge_entity_type_id_array_path.string(), true);
-        !res) {
-      return res.error();
-    }
+    KATANA_CHECKED(core_->edge_entity_type_id_array_file_storage().Bind(
+        edge_entity_type_id_array_path.string(), true));
   }
   core_->set_rdg_dir(metadata_dir);
 
@@ -474,14 +440,12 @@ tsuba::RDG::DoMake(
     return grp.Finish();
   }
 
-  KATANA_CHECKED_CONTEXT(
-      AddProperties(
-          metadata_dir, tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
-          part_info, &grp,
-          [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-            return rdg->core_->AddPartitionMetadataArray(props);
-          }),
-      "populating partition metadata");
+  // populating partition metadata
+  KATANA_CHECKED(AddProperties(
+      metadata_dir, nullptr, nullptr, part_info, &grp,
+      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+        return rdg->core_->AddPartitionMetadataArray(props);
+      }));
   KATANA_CHECKED(grp.Finish());
 
   if (local_to_user_id()->length() == 0) {
@@ -534,14 +498,15 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
 
   katana::Uri partition_path = manifest.PartitionFileName(partition_id_to_load);
 
-  auto part_header_res = RDGPartHeader::Make(partition_path);
-  if (!part_header_res) {
-    return part_header_res.error().WithContext(
-        "failed to read path {}", partition_path);
-  }
+  RDGPartHeader part_header = KATANA_CHECKED_CONTEXT(
+      RDGPartHeader::Make(partition_path), "failed to read path {}",
+      partition_path);
 
-  RDG rdg(std::make_unique<RDGCore>(std::move(part_header_res.value())));
+  RDG rdg(std::make_unique<RDGCore>(std::move(part_header)));
+  // rdg.DoMake will try to lookup in the property cache, and it
+  // needs a valid rdg_dir
   rdg.prop_cache_ = opts.prop_cache;
+  rdg.set_rdg_dir(manifest.dir());
 
   std::vector<PropStorageInfo*> node_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectNodeProperties(opts.node_properties));
@@ -568,9 +533,7 @@ tsuba::RDG::IsUint16tEntityTypeIDs() const {
 
 katana::Result<void>
 tsuba::RDG::Validate() const {
-  if (auto res = core_->part_header().Validate(); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(core_->part_header().Validate());
   return katana::ResultSuccess();
 }
 
@@ -613,29 +576,16 @@ tsuba::RDG::Store(
         rdg_dir(), handle.impl_->rdg_manifest().dir()));
   }
 
-  auto desc_res = WriteGroup::Make();
-  if (!desc_res) {
-    return desc_res.error();
-  }
   // All write buffers must outlive desc
-  std::unique_ptr<WriteGroup> desc = std::move(desc_res.value());
+  std::unique_ptr<WriteGroup> desc = KATANA_CHECKED(WriteGroup::Make());
 
-  auto res = core_->topology_manager().DoStore(handle, desc);
-  if (!res) {
-    return res.error();
-  }
+  KATANA_CHECKED(core_->topology_manager().DoStore(handle, rdg_dir(), desc));
 
-  res = DoStoreNodeEntityTypeIDArray(
-      handle, std::move(node_entity_type_id_array_ff), desc);
-  if (!res) {
-    return res.error();
-  }
+  KATANA_CHECKED(DoStoreNodeEntityTypeIDArray(
+      handle, std::move(node_entity_type_id_array_ff), desc));
 
-  res = DoStoreEdgeEntityTypeIDArray(
-      handle, std::move(edge_entity_type_id_array_ff), desc);
-  if (!res) {
-    return res.error();
-  }
+  KATANA_CHECKED(DoStoreEdgeEntityTypeIDArray(
+      handle, std::move(edge_entity_type_id_array_ff), desc));
 
   core_->part_header().StoreNodeEntityTypeManager(node_entity_type_manager);
   core_->part_header().StoreEdgeEntityTypeManager(edge_entity_type_manager);
@@ -644,31 +594,27 @@ tsuba::RDG::Store(
 }
 
 katana::Result<void>
-tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
-  if (auto res = core_->AddNodeProperties(props); !res) {
-    return res.error();
-  }
-
-  return katana::ResultSuccess();
+tsuba::RDG::AddNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->AddNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
-  if (auto res = core_->AddEdgeProperties(props); !res) {
-    return res.error();
-  }
-
-  return katana::ResultSuccess();
+tsuba::RDG::AddEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->AddEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::UpsertNodeProperties(const std::shared_ptr<arrow::Table>& props) {
-  return core_->UpsertNodeProperties(props);
+tsuba::RDG::UpsertNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->UpsertNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::UpsertEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
-  return core_->UpsertEdgeProperties(props);
+tsuba::RDG::UpsertEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->UpsertEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
@@ -728,7 +674,7 @@ UnloadProperty(
 katana::Result<std::shared_ptr<arrow::Table>>
 LoadProperty(
     const std::shared_ptr<arrow::Table>& props, const std::string name, int i,
-    tsuba::NodeEdge node_edge, tsuba::PropertyCache* cache, tsuba::RDG* rdg,
+    katana::PropertyCache* cache, tsuba::RDG* rdg,
     std::vector<tsuba::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
   if (i < 0 || i > props->num_columns()) {
@@ -756,7 +702,7 @@ LoadProperty(
   std::shared_ptr<arrow::Table> new_table;
 
   KATANA_CHECKED(tsuba::AddProperties(
-      dir, node_edge, cache, rdg, {&prop_info}, nullptr,
+      dir, cache, rdg, {&prop_info}, nullptr,
       [&](const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
         if (props->num_columns() > 0) {
           new_table = KATANA_CHECKED(
@@ -819,7 +765,7 @@ tsuba::RDG::UnloadEdgeProperty(const std::string& name) {
 katana::Result<void>
 tsuba::RDG::LoadNodeProperty(const std::string& name, int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
-      node_properties(), name, i, tsuba::NodeEdge::kNode, prop_cache_, this,
+      node_properties(), name, i, prop_cache_, this,
       &core_->part_header().node_prop_info_list(), rdg_dir()));
   core_->set_node_properties(std::move(new_props));
   return katana::ResultSuccess();
@@ -828,14 +774,14 @@ tsuba::RDG::LoadNodeProperty(const std::string& name, int i) {
 katana::Result<void>
 tsuba::RDG::LoadEdgeProperty(const std::string& name, int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
-      edge_properties(), name, i, tsuba::NodeEdge::kEdge, prop_cache_, this,
+      edge_properties(), name, i, prop_cache_, this,
       &core_->part_header().edge_prop_info_list(), rdg_dir()));
   core_->set_edge_properties(std::move(new_props));
   return katana::ResultSuccess();
 }
 
 std::vector<std::string>
-tsuba::RDG::ListNodeProperties() const {
+tsuba::RDG::ListFullNodeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().node_prop_info_list()) {
     result.emplace_back(prop.name());
@@ -844,10 +790,32 @@ tsuba::RDG::ListNodeProperties() const {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListEdgeProperties() const {
+tsuba::RDG::ListLoadedNodeProperties() const {
+  std::vector<std::string> result;
+  for (const auto& prop : core_->part_header().node_prop_info_list()) {
+    if (!prop.IsAbsent()) {
+      result.emplace_back(prop.name());
+    }
+  }
+  return result;
+}
+
+std::vector<std::string>
+tsuba::RDG::ListFullEdgeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().edge_prop_info_list()) {
     result.emplace_back(prop.name());
+  }
+  return result;
+}
+
+std::vector<std::string>
+tsuba::RDG::ListLoadedEdgeProperties() const {
+  std::vector<std::string> result;
+  for (const auto& prop : core_->part_header().edge_prop_info_list()) {
+    if (!prop.IsAbsent()) {
+      result.emplace_back(prop.name());
+    }
   }
   return result;
 }
@@ -903,28 +871,12 @@ tsuba::RDG::DropAllTopologies() {
 
 std::shared_ptr<arrow::Schema>
 tsuba::RDG::full_node_schema() const {
-  std::vector<std::shared_ptr<arrow::Field>> fields;
-  for (const auto& prop : core_->part_header().node_prop_info_list()) {
-    KATANA_LOG_VASSERT(
-        prop.type(), "should be impossible for type of {} to be null here",
-        prop.name());
-    fields.emplace_back(
-        std::make_shared<arrow::Field>(prop.name(), prop.type()));
-  }
-  return arrow::schema(fields);
+  return core_->full_node_schema();
 }
 
 std::shared_ptr<arrow::Schema>
 tsuba::RDG::full_edge_schema() const {
-  std::vector<std::shared_ptr<arrow::Field>> fields;
-  for (const auto& prop : core_->part_header().edge_prop_info_list()) {
-    KATANA_LOG_VASSERT(
-        prop.type(), "should be impossible for type of {} to be null here",
-        prop.name());
-    fields.emplace_back(
-        std::make_shared<arrow::Field>(prop.name(), prop.type()));
-  }
-  return arrow::schema(fields);
+  return core_->full_edge_schema();
 }
 
 const std::vector<std::shared_ptr<arrow::ChunkedArray>>&
@@ -1002,8 +954,8 @@ katana::Result<tsuba::RDGTopology*>
 tsuba::RDG::GetTopology(const tsuba::RDGTopology& shadow) {
   RDGTopology* topology =
       KATANA_CHECKED(core_->topology_manager().GetTopology(shadow));
-  KATANA_CHECKED_CONTEXT(topology->Bind(rdg_dir()), "binding topology file");
-  KATANA_CHECKED_CONTEXT(topology->Map(), "mapping topology file");
+  KATANA_CHECKED(topology->Bind(rdg_dir()));
+  KATANA_CHECKED(topology->Map());
   return topology;
 }
 

@@ -23,7 +23,7 @@
 
 int
 main() {
-  katana::SharedMemSys Katana_runtime;
+  katana::GaloisRuntime Katana_runtime;
   katana::SimpleLock l;
   katana::setActiveThreads(10000);
   katana::on_each(

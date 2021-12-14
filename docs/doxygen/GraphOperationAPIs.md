@@ -380,7 +380,7 @@ add_cython_module(_[operation] _[operation].pyx
 ```
 
 `[libraries]` should be a list of native libraries required by the operation.
-For the analytics operations in the open repository this will be `Katana::galois`.
+For the analytics operations in the open repository this will be `Katana::graph`.
 Other operations may require additional libraries.
 
 The `DEPENDS` line lists other Cython modules that the operation depends on.

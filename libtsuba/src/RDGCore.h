@@ -13,6 +13,7 @@
 #include "katana/config.h"
 #include "tsuba/FileView.h"
 #include "tsuba/RDGTopology.h"
+#include "tsuba/TxnContext.h"
 
 namespace tsuba {
 
@@ -27,16 +28,16 @@ public:
   bool Equals(const RDGCore& other) const;
 
   katana::Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   katana::Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   katana::Result<void> UpsertNodeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   katana::Result<void> UpsertEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   katana::Result<void> RemoveNodeProperty(int i);
 
@@ -83,12 +84,16 @@ public:
   uint32_t partition_id() const { return partition_id_; }
   void set_partition_id(uint32_t partition_id) { partition_id_ = partition_id; }
 
+  std::shared_ptr<arrow::Schema> full_node_schema() const;
+
   const std::shared_ptr<arrow::Table>& node_properties() const {
     return node_properties_;
   }
   void set_node_properties(std::shared_ptr<arrow::Table>&& node_properties) {
     node_properties_ = std::move(node_properties);
   }
+
+  std::shared_ptr<arrow::Schema> full_edge_schema() const;
 
   const std::shared_ptr<arrow::Table>& edge_properties() const {
     return edge_properties_;
@@ -208,11 +213,9 @@ public:
     topology_manager_ = std::move(topo_manager);
     if (!part_header_.IsMetadataOutsideTopologyFile()) {
       // need to bind & map topology file now to extract the metadata
-      KATANA_CHECKED_CONTEXT(
-          topology_manager_.ExtractMetadata(
-              metadata_dir, part_header_.metadata().num_nodes_,
-              part_header_.metadata().num_edges_),
-          "Extracting metadata from previous format topology file");
+      KATANA_CHECKED(topology_manager_.ExtractMetadata(
+          metadata_dir, part_header_.metadata().num_nodes_,
+          part_header_.metadata().num_edges_));
     }
 
     return katana::ResultSuccess();
@@ -248,10 +251,8 @@ public:
     topology_manager_ = std::move(topo_manager);
 
     // get the metadata we need from the topology file
-    KATANA_CHECKED_CONTEXT(
-        topology_manager_.ExtractMetadata(
-            rdg_dir, num_nodes, num_edges, /*storage_valid=*/true),
-        "Extracting metadata from previous format topology file");
+    KATANA_CHECKED(topology_manager_.ExtractMetadata(
+        rdg_dir, num_nodes, num_edges, /*storage_valid=*/true));
     return katana::ResultSuccess();
   }
 

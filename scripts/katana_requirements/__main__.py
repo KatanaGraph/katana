@@ -1,14 +1,17 @@
 import argparse
 import os
+import re
 import subprocess
 import sys
 import textwrap
 from enum import Enum
 from functools import partial
 from pathlib import Path
+from typing import List, Sequence
 
 from katana_requirements.data import KATANA_REQUIREMENTS_FILE_NAME, load
-from katana_requirements.model import OutputFormat, Requirements
+from katana_requirements.model import OutputFormat, Package, PackagingSystem, Requirements
+from packaging.version import Version
 
 
 class OutputSeparation(Enum):
@@ -60,6 +63,13 @@ def setup_general_arguments(parser):
         action="append",
     )
     parser.add_argument(
+        "--packaging-system",
+        "-p",
+        help="The packaging system to use. Only print packages which support this system and use defaults appropriate "
+        "for this system. To list the available packaging systems, run `requirements packaging-systems`.",
+        type=str,
+    )
+    parser.add_argument(
         "--input",
         "-i",
         help=f"Input YAML file. By default the file {KATANA_REQUIREMENTS_FILE_NAME} in the root of the repository.",
@@ -69,30 +79,36 @@ def setup_general_arguments(parser):
     )
 
 
-def labels_subcommand(args, inputs, data):
+def labels_subcommand(args, inputs, data: Requirements):
     # pylint: disable=unused-argument
 
     print("Loaded data from files: " + ", ".join(str(f) for f in inputs))
 
     print("Labels listed in data files:")
-    print_str_table(data.labels)
+    print_str_table({k: f"{v.description} (inherits from: {list(v.inherits)})" for k, v in data.labels.items()})
 
 
-def packaging_systems_subcommand(args, inputs, data):
+def packaging_systems_subcommand(args, inputs, data: Requirements):
     # pylint: disable=unused-argument
 
     print("Loaded data from files: " + ", ".join(str(f) for f in inputs))
 
     print("Packaging systems listed in data files:")
-    print_str_table(data.packaging_systems)
+    print_str_table(
+        {
+            k: f"{v.description} (inherits from: {list(v.inherits)})\nChannels: {v.channels}"
+            for k, v in data.packaging_systems.items()
+        }
+    )
 
 
 def select_packages(args, data: Requirements):
-    return data.select_packages(args.label, args.format.value)
+    return data.select_packages(args.label, args.packaging_system)
 
 
-def list_subcommand(args, inputs, data):
+def list_subcommand(args, inputs, data: Requirements):
     # pylint: disable=unused-argument
+    _, ps = get_format(args, data)
 
     print(args.separation.prefix, end="")
     is_first = True
@@ -100,7 +116,7 @@ def list_subcommand(args, inputs, data):
         if not is_first:
             print(args.separation.infix, end="")
         is_first = False
-        print(p.format(args.format), end="")
+        print(p.format(ps), end="")
     print(args.separation.suffix, end="")
 
 
@@ -131,19 +147,23 @@ def markdown_subcommand(args, inputs, data: Requirements):
         labels = ", ".join(p.labels)
         print(
             f"{p.name} | {labels} "
-            + "".join(f"| {p.format(OutputFormat(ps))} " for ps in data.packaging_systems.keys())
+            + "".join(f"| {p.format(data._sub_packaging_systems(ps))} " for ps in data.packaging_systems.values())
         )
 
     print()
     print("Packaging systems")
     print("=================")
     print()
-    print_markdown_table(data.packaging_systems)
+    print("Name | Description | Channels")
+    print("------- | ------- | ------------")
+    comma = ", "
+    for ps in data.packaging_systems.values():
+        print(f"{ps.name} | {ps.description} | {comma.join(ps.channels)}")
     print()
     print("Labels")
     print("======")
     print()
-    print_markdown_table(data.labels)
+    print_markdown_table({k: v.description for k, v in data.labels.items()})
 
 
 def setup_install_arguments(parser):
@@ -152,9 +172,9 @@ def setup_install_arguments(parser):
     parser.add_argument(
         "--format",
         "-f",
-        help=f"The output format: {comma.join(v.value for v in OutputFormat)}",
+        help=f"The output format: {comma.join(v.value for v in OutputFormat)}. (Default based on --packaging-system.)",
         type=OutputFormat,
-        default=OutputFormat.YAML,
+        default=None,
     )
     parser.add_argument(
         "--command",
@@ -175,47 +195,84 @@ def setup_install_arguments(parser):
     setup_general_arguments(parser)
 
 
-def install_package_list(args, packages, silent=False):
-    # TODO(amp): Remove special cases for these throughout the system. This should probably be configurable.
-    if args.format == OutputFormat.APT:
+def get_apt_version():
+    version_information_str = str(subprocess.check_output(["apt-get", "-v"], stderr=subprocess.DEVNULL), "UTF-8")
+    version_match = re.match(r"apt ([0-9.]+) \(.*\)", version_information_str)
+    if not version_match:
+        raise RuntimeError(f"apt-get returned unexpected version information:\n{version_information_str}")
+    return Version(version_match.group(1))
+
+
+def has_mamba():
+    try:
+        subprocess.check_call(["mamba", "-V"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+
+def install_package_list(args, packages: List[Package], data: Requirements, silent=False):
+    format, ps = get_format(args, data)
+    if format == OutputFormat.APT:
         # Because APT is unable to handle bounds correctly, we need a special case to install different packages
         # differently.
         pinned_package_arguments = []
         specified_package_arguments = []
+        # The same packages as specified_package_arguments, but without versions (used for old APT)
+        unpinned_package_arguments = []
         for p in packages:
-            version = p.version_for(OutputFormat.APT)
+            version = p.version_for(ps)
             if version[0] == "=":
                 # This is pinned for APT
-                pinned_package_arguments.append(p.name_for(OutputFormat.APT) + version)
+                pinned_package_arguments.append(p.name_for(ps) + version)
             else:
-                specified_package_arguments.append(p.format(OutputFormat.APT))
+                specified_package_arguments.append(p.format(ps))
+                unpinned_package_arguments.append(p.name_for(ps))
         install_command = ["apt-get", "install"] + args.argument
-        execute_subprocess(install_command + pinned_package_arguments, silent)
         satisfy_command = ["apt-get", "satisfy"] + args.argument
-        execute_subprocess(satisfy_command + specified_package_arguments, silent)
+        if get_apt_version() >= Version("2.0.0"):
+            execute_subprocess(install_command + pinned_package_arguments, silent)
+            execute_subprocess(satisfy_command + specified_package_arguments, silent)
+        else:
+            warning_msg = (
+                "WARNING: You are using apt < 2.0. This means package versions will not be specified "
+                "correctly due to lack of support for the satisfy subcommand. If you have any problems, "
+                "manually check the installed package versions."
+            )
+            print(warning_msg, file=sys.stderr)
+            execute_subprocess(install_command + pinned_package_arguments + unpinned_package_arguments, silent)
+            print(warning_msg, file=sys.stderr)
         return
 
     if args.command:
         command = args.command.split()
-    elif args.format == OutputFormat.PIP:
+    elif format == OutputFormat.PIP:
         command = [sys.executable, "-m", "pip", "install"]
-    elif args.format == OutputFormat.CONDA:
-        command = ["conda", "install"]
+    elif format == OutputFormat.CONDA:
+        mamba_or_conda = "conda"
+        if has_mamba():
+            mamba_or_conda = "mamba"
+        command = [mamba_or_conda, "install", "--override-channels"] + [v for c in ps.channels for v in ["-c", c]]
     else:
-        raise ValueError(f"{args.format.value} installation not supported from this command.")
+        raise ValueError(f"{format.value} installation not supported from this command.")
 
     command += args.argument
 
-    execute_subprocess(command + [p.format(args.format) for p in packages], silent)
+    execute_subprocess(command + [p.format(ps) for p in packages], silent)
 
 
 def execute_subprocess(full_command, silent):
+    command_str = " ".join(f"'{v}'" for v in full_command)
     if not silent:
-        s = " ".join(f"'{v}'" for v in full_command)
-        print(f"Executing: {s}")
-    return subprocess.check_call(
-        full_command, stdout=subprocess.DEVNULL if silent else None, stderr=subprocess.DEVNULL if silent else None
-    )
+        print(f"Executing: {command_str}")
+    try:
+        return subprocess.check_call(
+            full_command, stdout=subprocess.DEVNULL if silent else None, stderr=subprocess.DEVNULL if silent else None
+        )
+    except subprocess.SubprocessError:
+        print(f"Failed to execute:\n{command_str}")
+        print("You might be able to modify the command and run it yourself to make it work.")
+        raise
 
 
 def bisect_list_for_working(packages, func):
@@ -247,34 +304,42 @@ def install_subcommand(args, inputs, data):
     # pylint: disable=unused-argument
 
     packages = list(select_packages(args, data))
-    install_package_list(args, packages)
+    install_package_list(args, packages, data)
 
 
-def bisect_install_subcommand(args, inputs, data):
+def bisect_install_subcommand(args, inputs, data: Requirements):
     # pylint: disable=unused-argument
-
+    _, ps = get_format(args, data)
     packages = list(select_packages(args, data))
-    i = bisect_list_for_working(packages, partial(install_package_list, args, silent=True))
+    i = bisect_list_for_working(packages, partial(install_package_list, args, silent=True, data=data))
 
     succeeding_packages = packages[:i]
     print()
     print(f"Prefix of {len(succeeding_packages)} packages works:")
-    print("\n".join(p.format(args.format) for p in succeeding_packages))
+    print("\n".join(p.format(ps) for p in succeeding_packages))
 
     failing_packages = packages[i:]
     print()
     print(f"The adding packages from this suffix of {len(failing_packages)} packages causes failure:")
-    print("\n".join(p.format(args.format) for p in failing_packages))
+    print("\n".join(p.format(ps) for p in failing_packages))
 
     if failing_packages:
         print()
         print("Rerunning smallest failing prefix:")
-        install_package_list(args, succeeding_packages + [failing_packages[0]])
+        install_package_list(args, succeeding_packages + [failing_packages[0]], data)
+
+
+def get_format(args, data) -> (OutputFormat, Sequence[PackagingSystem]):
+    if not args.packaging_system:
+        raise ValueError("--packaging-system/-p is required.")
+
+    ps = data.packaging_systems[args.packaging_system]
+    return args.format or ps.format, ps
 
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="katana_requirements",
+        prog="scripts/requirements",
         description="""
         A tool to extract and format information from katana requirements YAML files.
         """,
@@ -305,7 +370,7 @@ def main():
         "-f",
         help=f"The output format: {comma.join(v.value for v in OutputFormat)}",
         type=OutputFormat,
-        default=OutputFormat.YAML,
+        default=None,
     )
     list_parser.add_argument(
         "--separation",
@@ -325,7 +390,7 @@ def main():
     # Subcommand: install
     install_parser = subparsers.add_parser(
         "install",
-        help="Install packages using a known packaging system. "
+        help="Install packages using a packaging system based on the format it uses. "
         "(There are special cases for some packaging systems. Beware.)",
     )
 
@@ -349,6 +414,8 @@ def main():
         args.cmd(args, inputs, data)
     else:
         parser.print_help()
+
+    return 0
 
 
 if __name__ == "__main__":

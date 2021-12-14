@@ -83,12 +83,6 @@ private:
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
 
-  // Users of PropertyGraph rely on the topology to always be present
-  // even if it is empty. This is a temporary solution, since this variable
-  // is going away.
-  std::shared_ptr<katana::GraphTopology> topology_ =
-      std::make_shared<katana::GraphTopology>();
-
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;
   /// Manages the relations between the edge entity types
@@ -243,11 +237,11 @@ public:
       EntityTypeManager&& edge_type_manager) noexcept
       : rdg_(std::move(rdg)),
         file_(std::move(rdg_file)),
-        topology_(std::make_shared<GraphTopology>(std::move(topo))),
         node_entity_type_manager_(std::move(node_type_manager)),
         edge_entity_type_manager_(std::move(edge_type_manager)),
         node_entity_type_ids_(std::move(node_entity_type_ids)),
-        edge_entity_type_ids_(std::move(edge_entity_type_ids)) {
+        edge_entity_type_ids_(std::move(edge_entity_type_ids)),
+        pg_view_cache_(std::move(topo)) {
     KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == num_nodes());
     KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == num_edges());
   }
@@ -529,12 +523,14 @@ public:
 
   /// \return returns the most specific node entity type for @param node
   EntityTypeID GetTypeOfNode(Node node) const {
-    return node_entity_type_ids_[node];
+    auto idx = node_property_index(node);
+    return node_entity_type_ids_[idx];
   }
 
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdge(Edge edge) const {
-    return edge_entity_type_ids_[edge];
+    auto idx = edge_property_index(edge);
+    return edge_entity_type_ids_[idx];
   }
 
   /// \return true iff the node @param node has the given entity type
@@ -662,7 +658,13 @@ public:
     return MakeResult(std::move(array));
   }
 
-  const GraphTopology& topology() const noexcept { return *topology_; }
+  void DropAllTopologies() noexcept {
+    return pg_view_cache_.DropAllTopologies();
+  }
+
+  const GraphTopology& topology() const noexcept {
+    return pg_view_cache_.GetDefaultTopologyRef();
+  }
 
   const EntityTypeManager& node_entity_type_manager() const noexcept {
     return node_entity_type_manager_;
@@ -670,6 +672,16 @@ public:
 
   const EntityTypeManager& edge_entity_type_manager() const noexcept {
     return edge_entity_type_manager_;
+  }
+
+  GraphTopology::PropertyIndex edge_property_index(
+      const Edge& eid) const noexcept {
+    return topology().edge_property_index(eid);
+  }
+
+  GraphTopology::PropertyIndex node_property_index(
+      const Node& nid) const noexcept {
+    return topology().node_property_index(nid);
   }
 
   /// Add Node properties that do not exist in the current graph
@@ -755,6 +767,7 @@ public:
         .unload_property_fn = &PropertyGraph::UnloadNodeProperty,
     };
   }
+
   ReadOnlyPropertyView NodeReadOnlyPropertyView() const {
     return ReadOnlyPropertyView{
         .const_g = this,
@@ -786,6 +799,7 @@ public:
         .unload_property_fn = &PropertyGraph::UnloadEdgeProperty,
     };
   }
+
   ReadOnlyPropertyView EdgeReadOnlyPropertyView() const {
     return ReadOnlyPropertyView{
         .const_g = this,

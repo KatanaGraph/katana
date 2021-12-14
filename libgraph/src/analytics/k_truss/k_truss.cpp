@@ -29,8 +29,8 @@ using NodeData = std::tuple<>;
 struct EdgeFlag : public katana::PODProperty<uint32_t> {};
 using EdgeData = std::tuple<EdgeFlag>;
 
-typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-typedef typename Graph::Node GNode;
+using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
+using GNode = typename Graph::Node;
 
 using SortedGraphView = katana::TypedPropertyGraphView<
     katana::PropertyGraphViews::EdgesSortedByDestID, NodeData, EdgeData>;
@@ -45,7 +45,7 @@ static const uint32_t removed = 0x1;
 /// Initialize edge data to valid.
 void
 KTrussInitialization(SortedGraphView* g) {
-  //! Initializa all edges to valid.
+  //! Initialize all edges to valid.
   katana::do_all(
       katana::iterate(*g),
       [&g](typename SortedGraphView::Node N) {
@@ -351,30 +351,11 @@ katana::analytics::KTruss(
     KTrussPlan plan) {
   katana::ReportPageAllocGuard page_alloc;
 
-  if (auto result = ConstructEdgeProperties<EdgeData>(
-          pg, txn_ctx, {output_property_name});
-      !result) {
-    return result.error();
-  }
+  KATANA_CHECKED(
+      ConstructEdgeProperties<EdgeData>(pg, txn_ctx, {output_property_name}));
 
-  // // TODO(amp): Don't mutate the users topology!
-  // auto result = katana::SortAllEdgesByDest(pg);
-  // if (!result) {
-  // return result.error();
-  // }
-  //
-  // auto pg_result = Graph::Make(pg, {}, {output_property_name});
-  // if (!pg_result) {
-  // return pg_result.error();
-  // }
-  // auto graph = pg_result.value();
-
-  auto gv_res = SortedGraphView::Make(pg, {}, {output_property_name});
-  if (!gv_res) {
-    return gv_res.error();
-  }
-
-  auto graph = gv_res.value();
+  auto graph =
+      KATANA_CHECKED(SortedGraphView::Make(pg, {}, {output_property_name}));
 
   KTrussInitialization(&graph);
 
@@ -409,12 +390,7 @@ katana::Result<KTrussStatistics>
 katana::analytics::KTrussStatistics::Compute(
     katana::PropertyGraph* pg, [[maybe_unused]] uint32_t k_truss_number,
     const std::string& property_name) {
-  auto pg_result = Graph::Make(pg, {}, {property_name});
-  if (!pg_result) {
-    return pg_result.error();
-  }
-
-  auto graph = pg_result.value();
+  auto graph = KATANA_CHECKED(Graph::Make(pg, {}, {property_name}));
 
   katana::GAccumulator<uint32_t> alive_edges;
   alive_edges.reset();

@@ -48,6 +48,10 @@ class KATANA_EXPORT EdgeShuffleTopology;
 class KATANA_EXPORT EdgeTypeAwareTopology;
 class KATANA_EXPORT ProjectedTopology;
 
+/********************/
+/* Topology classes */
+/********************/
+
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
 class KATANA_EXPORT GraphTopology : public GraphTopologyTypes {
@@ -58,6 +62,7 @@ public:
 
   GraphTopology(const GraphTopology&) = delete;
   GraphTopology& operator=(const GraphTopology&) = delete;
+  virtual ~GraphTopology();
 
   GraphTopology(
       const Edge* adj_indices, size_t num_nodes, const Node* dests,
@@ -154,11 +159,11 @@ public:
   ///@returns Degree of node N
   size_t degree(Node node) const noexcept { return edges(node).size(); }
 
-  PropertyIndex edge_property_index(const Edge& eid) const noexcept {
+  virtual PropertyIndex edge_property_index(const Edge& eid) const noexcept {
     return eid;
   }
 
-  PropertyIndex node_property_index(const Node& nid) const noexcept {
+  virtual PropertyIndex node_property_index(const Node& nid) const noexcept {
     return nid;
   }
 
@@ -172,35 +177,8 @@ public:
     return edge_property_index(eid);
   }
 
-  void Print() const noexcept;
-
-private:
-  // need these friend relationships to construct instances of friend classes below
-  // by moving NUMAArrays in this class.
-  friend class EdgeShuffleTopology;
-  friend class EdgeTypeAwareTopology;
-
-  NUMAArray<Edge>& GetAdjIndices() noexcept { return adj_indices_; }
-  NUMAArray<Node>& GetDests() noexcept { return dests_; }
-
-  NUMAArray<Edge> adj_indices_;
-  NUMAArray<Node> dests_;
-};
-
-// TODO(amber): In the future, when we group properties e.g., by node or edge type,
-// this class might get merged with ShuffleTopology. Not doing it at the moment to
-// avoid having to keep unnecessary arrays like node_property_indices_
-class KATANA_EXPORT EdgeShuffleTopology : public GraphTopology {
-  using Base = GraphTopology;
-
-public:
-  EdgeShuffleTopology() = default;
-  EdgeShuffleTopology(EdgeShuffleTopology&&) = default;
-  EdgeShuffleTopology& operator=(EdgeShuffleTopology&&) = default;
-
-  EdgeShuffleTopology(const EdgeShuffleTopology&) = delete;
-  EdgeShuffleTopology& operator=(const EdgeShuffleTopology&) = delete;
-
+  // We promote these methods to the base topology to make it easier to search among all
+  // already cached topologies using the same predicate.
   bool is_transposed() const noexcept {
     return has_transpose_state(tsuba::RDGTopology::TransposeKind::kYes);
   }
@@ -218,6 +196,71 @@ public:
     return edge_sort_state_;
   }
 
+  bool has_nodes_sorted_by(
+      const tsuba::RDGTopology::NodeSortKind& kind) const noexcept {
+    if (kind == tsuba::RDGTopology::NodeSortKind::kAny) {
+      return true;
+    }
+    return node_sort_state_ == kind;
+  }
+
+  tsuba::RDGTopology::NodeSortKind node_sort_state() const noexcept {
+    return node_sort_state_;
+  }
+
+  void Print() const noexcept;
+
+protected:
+  void SetTransposeState(
+      tsuba::RDGTopology::TransposeKind tpose_state) noexcept {
+    tpose_state_ = tpose_state;
+  }
+
+  void SetEdgeSortState(
+      tsuba::RDGTopology::EdgeSortKind edge_sort_state) noexcept {
+    edge_sort_state_ = edge_sort_state;
+  }
+
+  void SetNodeSortState(
+      tsuba::RDGTopology::NodeSortKind node_sort_state) noexcept {
+    node_sort_state_ = node_sort_state;
+  }
+
+private:
+  // need these friend relationships to construct instances of friend classes below
+  // by moving NUMAArrays in this class.
+  friend class EdgeShuffleTopology;
+  friend class EdgeTypeAwareTopology;
+
+  NUMAArray<Edge>& GetAdjIndices() noexcept { return adj_indices_; }
+  NUMAArray<Node>& GetDests() noexcept { return dests_; }
+
+  NUMAArray<Edge> adj_indices_;
+  NUMAArray<Node> dests_;
+
+  tsuba::RDGTopology::TransposeKind tpose_state_{
+      tsuba::RDGTopology::TransposeKind::kNo};
+  tsuba::RDGTopology::EdgeSortKind edge_sort_state_{
+      tsuba::RDGTopology::EdgeSortKind::kAny};
+  tsuba::RDGTopology::NodeSortKind node_sort_state_{
+      tsuba::RDGTopology::NodeSortKind::kAny};
+};
+
+// TODO(amber): In the future, when we group properties e.g., by node or edge type,
+// this class might get merged with ShuffleTopology. Not doing it at the moment to
+// avoid having to keep unnecessary arrays like node_property_indices_
+class KATANA_EXPORT EdgeShuffleTopology : public GraphTopology {
+  using Base = GraphTopology;
+
+public:
+  EdgeShuffleTopology() = default;
+  EdgeShuffleTopology(EdgeShuffleTopology&&) = default;
+  EdgeShuffleTopology& operator=(EdgeShuffleTopology&&) = default;
+
+  EdgeShuffleTopology(const EdgeShuffleTopology&) = delete;
+  EdgeShuffleTopology& operator=(const EdgeShuffleTopology&) = delete;
+  virtual ~EdgeShuffleTopology();
+
   bool is_valid() const noexcept { return is_valid_; }
 
   void invalidate() noexcept { is_valid_ = false; }
@@ -225,19 +268,15 @@ public:
   bool has_edges_sorted_by(
       const tsuba::RDGTopology::EdgeSortKind& kind) const noexcept {
     return (kind == tsuba::RDGTopology::EdgeSortKind::kAny) ||
-           (kind == edge_sort_state_);
+           (kind == edge_sort_state());
   }
 
-  PropertyIndex edge_property_index(const Edge& eid) const noexcept {
+  PropertyIndex edge_property_index(const Edge& eid) const noexcept override {
     KATANA_LOG_DEBUG_ASSERT(eid < num_edges());
     return edge_prop_indices_[eid];
   }
 
-  // Need to redefine the method here so it overrides and hides base-class
-  // version of this method
-  Edge original_edge_id(const Edge& eid) const noexcept {
-    return edge_property_index(eid);
-  }
+  using Base::original_edge_id;
 
   static std::shared_ptr<EdgeShuffleTopology> MakeTransposeCopy(
       const PropertyGraph* pg);
@@ -319,19 +358,14 @@ protected:
       PropIndexVec&& edge_prop_indices) noexcept
       : Base(std::move(adj_indices), std::move(dests)),
         is_valid_(true),
-        tpose_state_(tpose_todo),
-        edge_sort_state_(edge_sort_todo),
         edge_prop_indices_(std::move(edge_prop_indices)) {
     KATANA_LOG_DEBUG_ASSERT(edge_prop_indices_.size() == num_edges());
+    SetTransposeState(tpose_todo);
+    SetEdgeSortState(edge_sort_todo);
   }
 
 private:
   bool is_valid_ = true;
-  tsuba::RDGTopology::TransposeKind tpose_state_ =
-      tsuba::RDGTopology::TransposeKind::kNo;
-  tsuba::RDGTopology::EdgeSortKind edge_sort_state_ =
-      tsuba::RDGTopology::EdgeSortKind::kAny;
-
   // TODO(amber): In the future, we may need to keep a copy of edge_type_ids in
   // addition to edge_prop_indices_. Today, we assume that we can use
   // PropertyGraph.edge_type_set_id(edge_prop_indices_[edge_id]) to obtain
@@ -346,21 +380,18 @@ class KATANA_EXPORT ShuffleTopology : public EdgeShuffleTopology {
   using Base = EdgeShuffleTopology;
 
 public:
-  PropertyIndex node_property_index(const Node& nid) const noexcept {
+  ShuffleTopology() = default;
+  ShuffleTopology(ShuffleTopology&&) = default;
+  ShuffleTopology& operator=(ShuffleTopology&&) = default;
+
+  ShuffleTopology(const ShuffleTopology&) = delete;
+  ShuffleTopology& operator=(const ShuffleTopology&) = delete;
+
+  virtual ~ShuffleTopology();
+
+  PropertyIndex node_property_index(const Node& nid) const noexcept override {
     KATANA_LOG_DEBUG_ASSERT(nid < num_nodes());
     return node_prop_indices_[nid];
-  }
-
-  bool has_nodes_sorted_by(
-      const tsuba::RDGTopology::NodeSortKind& kind) const noexcept {
-    if (kind == tsuba::RDGTopology::NodeSortKind::kAny) {
-      return true;
-    }
-    return node_sort_state_ == kind;
-  }
-
-  tsuba::RDGTopology::NodeSortKind node_sort_state() const noexcept {
-    return node_sort_state_;
   }
 
   static std::shared_ptr<ShuffleTopology> MakeFrom(
@@ -481,18 +512,13 @@ private:
       const tsuba::RDGTopology::EdgeSortKind& edge_sort_todo,
       AdjIndexVec&& adj_indices, PropIndexVec&& node_prop_indices,
       EdgeDestVec&& dests, PropIndexVec&& edge_prop_indices) noexcept
-      :
-
-        Base(
+      : Base(
             tpose_todo, edge_sort_todo, std::move(adj_indices),
             std::move(dests), std::move(edge_prop_indices)),
-        node_sort_state_(node_sort_todo),
         node_prop_indices_(std::move(node_prop_indices)) {
     KATANA_LOG_DEBUG_ASSERT(node_prop_indices_.size() == num_nodes());
+    SetNodeSortState(node_sort_todo);
   }
-
-  tsuba::RDGTopology::NodeSortKind node_sort_state_ =
-      tsuba::RDGTopology::NodeSortKind::kAny;
 
   // TODO(amber): In the future, we may need to keep a copy of node_type_ids in
   // addition to node_prop_indices_. Today, we assume that we can use
@@ -706,6 +732,340 @@ private:
   arrow::internal::Bitmap edge_bitmask_;
 };
 
+namespace internal {
+// TODO(amber): make private
+template <typename Topo>
+struct EdgeDestComparator {
+  const Topo* topo_;
+
+  bool operator()(const typename Topo::Edge& e, const typename Topo::Node& n)
+      const noexcept {
+    return topo_->edge_dest(e) < n;
+  }
+
+  bool operator()(const typename Topo::Node& n, const typename Topo::Edge& e)
+      const noexcept {
+    return n < topo_->edge_dest(e);
+  }
+};
+}  // end namespace internal
+
+class KATANA_EXPORT CondensedTypeIDMap : public GraphTopologyTypes {
+  /// map an integer id to each unique edge edge_type in the graph, such that, the
+  /// integer ids assigned are contiguous, i.e., 0 .. num_unique_types-1
+  using TypeIDToIndexMap = std::unordered_map<EntityTypeID, uint32_t>;
+  /// reverse map that allows looking up edge_type using its integer index
+  using IndexToTypeIDMap = std::vector<EntityTypeID>;
+
+public:
+  using EdgeTypeIDRange =
+      katana::StandardRange<IndexToTypeIDMap::const_iterator>;
+
+  CondensedTypeIDMap() = default;
+  CondensedTypeIDMap(CondensedTypeIDMap&&) = default;
+  CondensedTypeIDMap& operator=(CondensedTypeIDMap&&) = default;
+
+  CondensedTypeIDMap(const CondensedTypeIDMap&) = delete;
+  CondensedTypeIDMap& operator=(const CondensedTypeIDMap&) = delete;
+
+  static std::shared_ptr<CondensedTypeIDMap> MakeFromEdgeTypes(
+      const PropertyGraph* pg) noexcept;
+  // TODO(amber): add MakeFromNodeTypes
+
+  EntityTypeID GetType(uint32_t index) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(size_t(index) < index_to_type_map_.size());
+    return index_to_type_map_[index];
+  }
+
+  uint32_t GetIndex(const EntityTypeID& edge_type) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(type_to_index_map_.count(edge_type) > 0);
+    return type_to_index_map_.at(edge_type);
+  }
+
+  size_t num_unique_types() const noexcept { return index_to_type_map_.size(); }
+
+  /// @param edge_type: edge_type to check
+  /// @returns true iff there exists some edge in the graph with that edge_type
+  bool has_edge_type_id(const EntityTypeID& edge_type) const noexcept {
+    return (type_to_index_map_.find(edge_type) != type_to_index_map_.cend());
+  }
+
+  /// Wrapper to get the distinct edge types in the graph.
+  ///
+  /// @returns Range of the distinct edge types
+  EdgeTypeIDRange distinct_edge_type_ids() const noexcept {
+    return EdgeTypeIDRange{
+        index_to_type_map_.cbegin(), index_to_type_map_.cend()};
+  }
+
+  bool is_valid() const noexcept { return is_valid_; }
+  void invalidate() noexcept { is_valid_ = false; };
+
+  const EntityTypeID* index_to_type_map_data() const noexcept {
+    return &index_to_type_map_[0];
+  }
+
+  //TODO:(emcginnis) when ArrayView is available, we should use that here
+  bool index_to_type_map_matches(size_t size, const EntityTypeID* other) const {
+    if (size != num_unique_types()) {
+      return false;
+    }
+    for (size_t i = 0; i < num_unique_types(); i++) {
+      if (other[i] != GetType(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+private:
+  CondensedTypeIDMap(
+      TypeIDToIndexMap&& type_to_index,
+      IndexToTypeIDMap&& index_to_type) noexcept
+      : type_to_index_map_(std::move(type_to_index)),
+        index_to_type_map_(std::move(index_to_type)),
+        is_valid_(true) {
+    KATANA_LOG_ASSERT(index_to_type_map_.size() == type_to_index_map_.size());
+  }
+
+  TypeIDToIndexMap type_to_index_map_;
+  IndexToTypeIDMap index_to_type_map_;
+  bool is_valid_ = true;
+};
+
+/// store adjacency indices per each node such that they are divided by edge edge_type type.
+/// Requires sorting the graph by edge edge_type type
+class KATANA_EXPORT EdgeTypeAwareTopology : public EdgeShuffleTopology {
+  using Base = EdgeShuffleTopology;
+
+public:
+  EdgeTypeAwareTopology(EdgeTypeAwareTopology&&) = default;
+  EdgeTypeAwareTopology& operator=(EdgeTypeAwareTopology&&) = default;
+
+  EdgeTypeAwareTopology(const EdgeTypeAwareTopology&) = delete;
+  EdgeTypeAwareTopology& operator=(const EdgeTypeAwareTopology&) = delete;
+
+  virtual ~EdgeTypeAwareTopology();
+
+  static std::shared_ptr<EdgeTypeAwareTopology> MakeFrom(
+      const PropertyGraph* pg,
+      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
+      EdgeShuffleTopology&& e_topo) noexcept;
+
+  static std::shared_ptr<EdgeTypeAwareTopology> Make(
+      tsuba::RDGTopology* rdg_topo,
+      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
+      EdgeShuffleTopology&& e_topo);
+
+  using Base::degree;
+  using Base::edge_sort_state;
+  using Base::edges;
+  using Base::has_transpose_state;
+  using Base::invalidate;
+  using Base::is_transposed;
+  using Base::is_valid;
+  using Base::transpose_state;
+
+  /// @param N node to get edges for
+  /// @param edge_type edge_type to get edges of
+  /// @returns Range to edges of node N that have edge type == edge_type
+  edges_range edges(Node N, const EntityTypeID& edge_type) const noexcept {
+    // per_type_adj_indices_ is expanded so that it stores P prefix sums per node, where
+    // P == edge_type_index_->num_unique_types()
+    // We pick the prefix sum based on the index of the edge_type provided
+    KATANA_LOG_DEBUG_ASSERT(edge_type_index_->num_unique_types() > 0);
+    auto beg_idx = (N * edge_type_index_->num_unique_types()) +
+                   edge_type_index_->GetIndex(edge_type);
+    edge_iterator e_beg{
+        (beg_idx == 0) ? 0 : per_type_adj_indices_[beg_idx - 1]};
+
+    auto end_idx = (N * edge_type_index_->num_unique_types()) +
+                   edge_type_index_->GetIndex(edge_type);
+    KATANA_LOG_DEBUG_ASSERT(end_idx < per_type_adj_indices_.size());
+    edge_iterator e_end{per_type_adj_indices_[end_idx]};
+
+    return katana::MakeStandardRange(e_beg, e_end);
+  }
+
+  /// @param N node to get degree for
+  /// @param edge_type edge_type to get degree of
+  /// @returns Degree of node N
+  size_t degree(Node N, const EntityTypeID& edge_type) const noexcept {
+    return edges(N, edge_type).size();
+  }
+
+  auto GetDistinctEdgeTypes() const noexcept {
+    return edge_type_index_->distinct_edge_type_ids();
+  }
+
+  bool DoesEdgeTypeExist(const EntityTypeID& edge_type) const noexcept {
+    return edge_type_index_->has_edge_type_id(edge_type);
+  }
+
+  /// Returns all edges from src to dst with some edge_type.  If not found, returns
+  /// empty range.
+  edges_range FindAllEdgesWithType(
+      Node node, Node key, const EntityTypeID& edge_type) const noexcept {
+    auto e_range = edges(node, edge_type);
+    if (e_range.empty()) {
+      return e_range;
+    }
+
+    internal::EdgeDestComparator<EdgeTypeAwareTopology> comp{this};
+    auto [first_it, last_it] =
+        std::equal_range(e_range.begin(), e_range.end(), key, comp);
+
+    if (first_it == e_range.end() || edge_dest(*first_it) != key) {
+      // return empty range
+      return MakeStandardRange(e_range.end(), e_range.end());
+    }
+
+    auto ret_range = MakeStandardRange(first_it, last_it);
+    for ([[maybe_unused]] auto e : ret_range) {
+      KATANA_LOG_DEBUG_ASSERT(edge_dest(e) == key);
+    }
+    return ret_range;
+  }
+
+  /// Returns an edge iterator to an edge with some node and key by
+  /// searching for the key via the node's outgoing or incoming edges.
+  /// If not found, returns nothing.
+  // TODO(amber): Assess the usefulness of this method. This method cannot return
+  // edges of all types. Only the first found type. We should however support
+  // find_edges(src, dst) or find_edge(src, dst) that doesn't care about edge type
+  edges_range FindAllEdgesSingleType(Node src, Node dst) const {
+    // trivial check; can't be connected if degree is 0
+    auto empty_range = MakeStandardRange<edge_iterator>(Edge{0}, Edge{0});
+    if (degree(src) == 0) {
+      return empty_range;
+    }
+
+    // loop through all type_ids
+    for (const EntityTypeID& edge_type : GetDistinctEdgeTypes()) {
+      // always use out edges (we want an id to the out edge returned)
+      edges_range r = FindAllEdgesWithType(src, dst, edge_type);
+
+      // return if something was found
+      if (r) {
+        return r;
+      }
+    }
+
+    // not found, return empty optional
+    return empty_range;
+  }
+
+  /// Check if vertex src is connected to vertex dst with the given edge edge_type
+  ///
+  /// @param src source node of the edge
+  /// @param dst destination node of the edge
+  /// @param edge_type edge_type of the edge
+  /// @returns true iff the edge exists
+  bool IsConnectedWithEdgeType(
+      Node src, Node dst, const EntityTypeID& edge_type) const {
+    auto e_range = edges(src, edge_type);
+    if (e_range.empty()) {
+      return false;
+    }
+
+    internal::EdgeDestComparator<EdgeTypeAwareTopology> comp{this};
+    return std::binary_search(e_range.begin(), e_range.end(), dst, comp);
+  }
+
+  /// Search over all edges of each type between src and dst until an edge satisfying func is
+  /// found.
+  ///
+  /// @param src source node of the edge
+  /// @param dst destination node of the edge
+  /// @returns true iff an edge satisfying func exists
+  template <typename TestFunc>
+  bool HasEdgeSatisfyingPredicate(
+      Node src, Node dst, const TestFunc& func) const noexcept {
+    // ensure that return type is bool
+    static_assert(std::is_same_v<std::invoke_result_t<TestFunc, Edge>, bool>);
+
+    for (const auto& edge_type : GetDistinctEdgeTypes()) {
+      for (auto e : FindAllEdgesWithType(src, dst, edge_type)) {
+        if (func(e)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Search over all out edges of src of each type until an edge satisfying func is
+  /// found.
+  ///
+  /// @param src source node of the edge
+  /// @returns true iff an edge satisfying func exists
+  template <typename TestFunc>
+  bool HasOutEdgeSatisfyingPredicate(
+      Node src, const TestFunc& func) const noexcept {
+    // ensure that return type is bool
+    static_assert(std::is_same_v<std::invoke_result_t<TestFunc, Edge>, bool>);
+
+    for (const auto& edge_type : GetDistinctEdgeTypes()) {
+      for (auto e : edges(src, edge_type)) {
+        if (func(e)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Check if vertex src is connected to vertex dst with any edge edge_type
+  ///
+  /// @param src source node of the edge
+  /// @param dst destination node of the edge
+  /// @returns true iff the edge exists
+  bool IsConnected(Node src, Node dst) const {
+    // trivial check; can't be connected if degree is 0
+
+    if (degree(src) == 0ul) {
+      return false;
+    }
+
+    for (const auto& edge_type : GetDistinctEdgeTypes()) {
+      if (IsConnectedWithEdgeType(src, dst, edge_type)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  katana::Result<tsuba::RDGTopology> ToRDGTopology() const;
+
+private:
+  // Must invoke SortAllEdgesByDataThenDst() before
+  // calling this function
+  static AdjIndexVec CreatePerEdgeTypeAdjacencyIndex(
+      const PropertyGraph& pg, const CondensedTypeIDMap& edge_type_index,
+      const EdgeShuffleTopology& e_topo) noexcept;
+
+  EdgeTypeAwareTopology(
+      EdgeShuffleTopology&& e_topo,
+      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
+      AdjIndexVec&& per_type_adj_indices) noexcept
+      : Base(std::move(e_topo)),
+        edge_type_index_(std::move(edge_type_index)),
+        per_type_adj_indices_(std::move(per_type_adj_indices)) {
+    KATANA_LOG_DEBUG_ASSERT(edge_type_index_);
+
+    KATANA_LOG_DEBUG_ASSERT(
+        per_type_adj_indices_.size() ==
+        num_nodes() * edge_type_index_->num_unique_types());
+  }
+
+  std::shared_ptr<const CondensedTypeIDMap> edge_type_index_;
+  AdjIndexVec per_type_adj_indices_;
+};
+
+/****************************/
+/* Topology wrapper classes */
+/****************************/
+
 template <typename Topo>
 class KATANA_EXPORT BasicTopologyWrapper : public GraphTopologyTypes {
 public:
@@ -842,6 +1202,7 @@ public:
   auto projected_to_original_edge_id(const Edge& eid) const noexcept {
     return topo().projected_to_original_edge_id(eid);
   }
+
   auto original_to_projected_edge_id(const Edge& eid) const noexcept {
     return topo().original_to_projected_edge_id(eid);
   }
@@ -863,366 +1224,6 @@ protected:
 private:
   const PropertyGraph* prop_graph_;
   std::shared_ptr<const ProjectedTopology> projected_topo_ptr_;
-};
-
-namespace internal {
-// TODO(amber): make private
-template <typename Topo>
-struct EdgeDestComparator {
-  const Topo* topo_;
-
-  bool operator()(const typename Topo::Edge& e, const typename Topo::Node& n)
-      const noexcept {
-    return topo_->edge_dest(e) < n;
-  }
-
-  bool operator()(const typename Topo::Node& n, const typename Topo::Edge& e)
-      const noexcept {
-    return n < topo_->edge_dest(e);
-  }
-};
-}  // end namespace internal
-
-class KATANA_EXPORT CondensedTypeIDMap : public GraphTopologyTypes {
-  /// map an integer id to each unique edge edge_type in the graph, such that, the
-  /// integer ids assigned are contiguous, i.e., 0 .. num_unique_types-1
-  using TypeIDToIndexMap = std::unordered_map<EntityTypeID, uint32_t>;
-  /// reverse map that allows looking up edge_type using its integer index
-  using IndexToTypeIDMap = std::vector<EntityTypeID>;
-
-public:
-  using EdgeTypeIDRange =
-      katana::StandardRange<IndexToTypeIDMap::const_iterator>;
-
-  CondensedTypeIDMap() = default;
-  CondensedTypeIDMap(CondensedTypeIDMap&&) = default;
-  CondensedTypeIDMap& operator=(CondensedTypeIDMap&&) = default;
-
-  CondensedTypeIDMap(const CondensedTypeIDMap&) = delete;
-  CondensedTypeIDMap& operator=(const CondensedTypeIDMap&) = delete;
-
-  static std::shared_ptr<CondensedTypeIDMap> MakeFromEdgeTypes(
-      const PropertyGraph* pg) noexcept;
-  // TODO(amber): add MakeFromNodeTypes
-
-  static std::shared_ptr<CondensedTypeIDMap> MakeFromIndexToTypeMap(
-      EntityTypeID* index_to_type_map);
-
-  EntityTypeID GetType(uint32_t index) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(size_t(index) < index_to_type_map_.size());
-    return index_to_type_map_[index];
-  }
-
-  uint32_t GetIndex(const EntityTypeID& edge_type) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(type_to_index_map_.count(edge_type) > 0);
-    return type_to_index_map_.at(edge_type);
-  }
-
-  size_t num_unique_types() const noexcept { return index_to_type_map_.size(); }
-
-  /// @param edge_type: edge_type to check
-  /// @returns true iff there exists some edge in the graph with that edge_type
-  bool has_edge_type_id(const EntityTypeID& edge_type) const noexcept {
-    return (type_to_index_map_.find(edge_type) != type_to_index_map_.cend());
-  }
-
-  /// Wrapper to get the distinct edge types in the graph.
-  ///
-  /// @returns Range of the distinct edge types
-  EdgeTypeIDRange distinct_edge_type_ids() const noexcept {
-    return EdgeTypeIDRange{
-        index_to_type_map_.cbegin(), index_to_type_map_.cend()};
-  }
-
-  bool is_valid() const noexcept { return is_valid_; }
-  void invalidate() noexcept { is_valid_ = false; };
-
-  const EntityTypeID* index_to_type_map_data() const noexcept {
-    return &index_to_type_map_[0];
-  }
-
-  //TODO:(emcginnis) when ArrayView is available, we should use that here
-  bool index_to_type_map_matches(size_t size, const EntityTypeID* other) const {
-    if (size != num_unique_types()) {
-      return false;
-    }
-    for (size_t i = 0; i < num_unique_types(); i++) {
-      if (other[i] != GetType(i)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-private:
-  CondensedTypeIDMap(
-      TypeIDToIndexMap&& type_to_index,
-      IndexToTypeIDMap&& index_to_type) noexcept
-      : type_to_index_map_(std::move(type_to_index)),
-        index_to_type_map_(std::move(index_to_type)),
-        is_valid_(true) {
-    KATANA_LOG_ASSERT(index_to_type_map_.size() == type_to_index_map_.size());
-  }
-
-  TypeIDToIndexMap type_to_index_map_;
-  IndexToTypeIDMap index_to_type_map_;
-  bool is_valid_ = true;
-};
-
-/// store adjacency indices per each node such that they are divided by edge edge_type type.
-/// Requires sorting the graph by edge edge_type type
-class KATANA_EXPORT EdgeTypeAwareTopology
-    : public BasicTopologyWrapper<EdgeShuffleTopology> {
-  using Base = BasicTopologyWrapper<EdgeShuffleTopology>;
-
-public:
-  EdgeTypeAwareTopology(EdgeTypeAwareTopology&&) = default;
-  EdgeTypeAwareTopology& operator=(EdgeTypeAwareTopology&&) = default;
-
-  EdgeTypeAwareTopology(const EdgeTypeAwareTopology&) = delete;
-  EdgeTypeAwareTopology& operator=(const EdgeTypeAwareTopology&) = delete;
-
-  static std::shared_ptr<EdgeTypeAwareTopology> MakeFrom(
-      const PropertyGraph* pg,
-      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
-      std::shared_ptr<const EdgeShuffleTopology> e_topo) noexcept;
-
-  static std::shared_ptr<EdgeTypeAwareTopology> Make(
-      tsuba::RDGTopology* rdg_topo,
-      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
-      std::shared_ptr<const EdgeShuffleTopology> e_topo);
-
-  /// @param N node to get edges for
-  /// @param edge_type edge_type to get edges of
-  /// @returns Range to edges of node N that have edge type == edge_type
-  edges_range edges(Node N, const EntityTypeID& edge_type) const noexcept {
-    // per_type_adj_indices_ is expanded so that it stores P prefix sums per node, where
-    // P == edge_type_index_->num_unique_types()
-    // We pick the prefix sum based on the index of the edge_type provided
-    KATANA_LOG_DEBUG_ASSERT(edge_type_index_->num_unique_types() > 0);
-    auto beg_idx = (N * edge_type_index_->num_unique_types()) +
-                   edge_type_index_->GetIndex(edge_type);
-    edge_iterator e_beg{
-        (beg_idx == 0) ? 0 : per_type_adj_indices_[beg_idx - 1]};
-
-    auto end_idx = (N * edge_type_index_->num_unique_types()) +
-                   edge_type_index_->GetIndex(edge_type);
-    KATANA_LOG_DEBUG_ASSERT(end_idx < per_type_adj_indices_.size());
-    edge_iterator e_end{per_type_adj_indices_[end_idx]};
-
-    return katana::MakeStandardRange(e_beg, e_end);
-  }
-
-  // C++ Derived classes hides Base class methods with the same name
-  auto edges(const Node& N) const noexcept { return Base::edges(N); };
-
-  /// @param N node to get degree for
-  /// @param edge_type edge_type to get degree of
-  /// @returns Degree of node N
-  size_t degree(Node N, const EntityTypeID& edge_type) const noexcept {
-    return edges(N, edge_type).size();
-  }
-
-  // C++ Derived classes hides Base class methods with the same name
-  auto degree(const Node& N) const noexcept { return Base::degree(N); }
-
-  auto GetDistinctEdgeTypes() const noexcept {
-    return edge_type_index_->distinct_edge_type_ids();
-  }
-
-  bool DoesEdgeTypeExist(const EntityTypeID& edge_type) const noexcept {
-    return edge_type_index_->has_edge_type_id(edge_type);
-  }
-
-  /// Returns all edges from src to dst with some edge_type.  If not found, returns
-  /// empty range.
-  edges_range FindAllEdgesWithType(
-      Node node, Node key, const EntityTypeID& edge_type) const noexcept {
-    auto e_range = edges(node, edge_type);
-    if (e_range.empty()) {
-      return e_range;
-    }
-
-    internal::EdgeDestComparator<EdgeTypeAwareTopology> comp{this};
-    auto [first_it, last_it] =
-        std::equal_range(e_range.begin(), e_range.end(), key, comp);
-
-    if (first_it == e_range.end() || edge_dest(*first_it) != key) {
-      // return empty range
-      return MakeStandardRange(e_range.end(), e_range.end());
-    }
-
-    auto ret_range = MakeStandardRange(first_it, last_it);
-    for ([[maybe_unused]] auto e : ret_range) {
-      KATANA_LOG_DEBUG_ASSERT(edge_dest(e) == key);
-    }
-    return ret_range;
-  }
-
-  /// Returns an edge iterator to an edge with some node and key by
-  /// searching for the key via the node's outgoing or incoming edges.
-  /// If not found, returns nothing.
-  // TODO(amber): Assess the usefulness of this method. This method cannot return
-  // edges of all types. Only the first found type. We should however support
-  // find_edges(src, dst) or find_edge(src, dst) that doesn't care about edge type
-  edges_range FindAllEdgesSingleType(Node src, Node dst) const {
-    // trivial check; can't be connected if degree is 0
-
-    auto empty_range = MakeStandardRange<edge_iterator>(Edge{0}, Edge{0});
-    if (degree(src) == 0) {
-      return empty_range;
-    }
-
-    // loop through all type_ids
-    for (const EntityTypeID& edge_type : GetDistinctEdgeTypes()) {
-      // always use out edges (we want an id to the out edge returned)
-      edges_range r = FindAllEdgesWithType(src, dst, edge_type);
-
-      // return if something was found
-      if (r) {
-        return r;
-      }
-    }
-
-    // not found, return empty optional
-    return empty_range;
-  }
-
-  /// Check if vertex src is connected to vertex dst with the given edge edge_type
-  ///
-  /// @param src source node of the edge
-  /// @param dst destination node of the edge
-  /// @param edge_type edge_type of the edge
-  /// @returns true iff the edge exists
-  bool IsConnectedWithEdgeType(
-      Node src, Node dst, const EntityTypeID& edge_type) const {
-    auto e_range = edges(src, edge_type);
-    if (e_range.empty()) {
-      return false;
-    }
-
-    internal::EdgeDestComparator<EdgeTypeAwareTopology> comp{this};
-    return std::binary_search(e_range.begin(), e_range.end(), dst, comp);
-  }
-
-  /// Search over all edges of each type between src and dst until an edge satisfying func is
-  /// found.
-  ///
-  /// @param src source node of the edge
-  /// @param dst destination node of the edge
-  /// @returns true iff an edge satisfying func exists
-  template <typename TestFunc>
-  bool HasEdgeSatisfyingPredicate(
-      Node src, Node dst, const TestFunc& func) const noexcept {
-    // TODO(john) Update this to use std::is_invocable_v.
-    using RetTy = decltype(func(Edge{}));
-    static_assert(
-        std::is_same_v<RetTy, bool>);  // ensure that return type is bool.
-
-    for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      for (auto e : FindAllEdgesWithType(src, dst, edge_type)) {
-        if (func(e)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /// Search over all out edges of src of each type until an edge satisfying func is
-  /// found.
-  ///
-  /// @param src source node of the edge
-  /// @returns true iff an edge satisfying func exists
-  template <typename TestFunc>
-  bool HasOutEdgeSatisfyingPredicate(
-      Node src, const TestFunc& func) const noexcept {
-    // TODO(john) Update this to use std::is_invocable_v.
-    using RetTy = decltype(func(Edge{}));
-    static_assert(
-        std::is_same_v<RetTy, bool>);  // ensure that return type is bool.
-
-    for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      for (auto e : edges(src, edge_type)) {
-        if (func(e)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /// Check if vertex src is connected to vertex dst with any edge edge_type
-  ///
-  /// @param src source node of the edge
-  /// @param dst destination node of the edge
-  /// @returns true iff the edge exists
-  bool IsConnected(Node src, Node dst) const {
-    // trivial check; can't be connected if degree is 0
-
-    if (degree(src) == 0ul) {
-      return false;
-    }
-
-    for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      if (IsConnectedWithEdgeType(src, dst, edge_type)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool is_transposed() const noexcept {
-    return edge_shuff_topo_->is_transposed();
-  }
-
-  bool has_transpose_state(
-      const tsuba::RDGTopology::TransposeKind& k) const noexcept {
-    return edge_shuff_topo_->has_transpose_state(k);
-  }
-
-  tsuba::RDGTopology::TransposeKind transpose_state() const noexcept {
-    return edge_shuff_topo_->transpose_state();
-  }
-  tsuba::RDGTopology::EdgeSortKind edge_sort_state() const noexcept {
-    return edge_shuff_topo_->edge_sort_state();
-  }
-
-  bool is_valid() const noexcept { return edge_shuff_topo_->is_valid(); }
-
-  void invalidate() noexcept {
-    // TODO(yan): Get rid of this const_cast if possible.
-    std::const_pointer_cast<EdgeShuffleTopology>(edge_shuff_topo_)
-        ->invalidate();
-  }
-
-  katana::Result<tsuba::RDGTopology> ToRDGTopology() const;
-
-private:
-  // Must invoke SortAllEdgesByDataThenDst() before
-  // calling this function
-  static AdjIndexVec CreatePerEdgeTypeAdjacencyIndex(
-      const PropertyGraph* pg, const CondensedTypeIDMap* edge_type_index,
-      const EdgeShuffleTopology* e_topo) noexcept;
-
-  EdgeTypeAwareTopology(
-      std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
-      std::shared_ptr<const EdgeShuffleTopology> e_topo,
-      AdjIndexVec&& per_type_adj_indices) noexcept
-      : Base(e_topo),
-        edge_type_index_(std::move(edge_type_index)),
-        edge_shuff_topo_(std::move(e_topo)),
-        per_type_adj_indices_(std::move(per_type_adj_indices)) {
-    KATANA_LOG_DEBUG_ASSERT(edge_type_index_);
-
-    KATANA_LOG_DEBUG_ASSERT(
-        per_type_adj_indices_.size() ==
-        edge_shuff_topo_->num_nodes() * edge_type_index_->num_unique_types());
-  }
-
-  std::shared_ptr<const CondensedTypeIDMap> edge_type_index_;
-  std::shared_ptr<const EdgeShuffleTopology> edge_shuff_topo_;
-  AdjIndexVec per_type_adj_indices_;
 };
 
 template <typename OutTopo, typename InTopo>
@@ -1272,11 +1273,8 @@ private:
   std::shared_ptr<const InTopo> in_topo_;
 };
 
-using SimpleBiDirTopology =
-    BasicBiDirTopoWrapper<GraphTopology, EdgeShuffleTopology>;
-
 template <typename OutTopo, typename InTopo>
-class KATANA_EXPORT UndirectedTopologyImpl : public GraphTopologyTypes {
+class KATANA_EXPORT UndirectedTopologyWrapper : public GraphTopologyTypes {
   // Important:
   // We assign fake Edge IDs to in_edges to separate them from out edges
   // fake in-edge-ID == real in-edge-ID + out().num_edges();
@@ -1286,7 +1284,7 @@ public:
       katana::DisjointRangesIterator<boost::counting_iterator<Edge>>;
   using edges_range = StandardRange<edge_iterator>;
 
-  UndirectedTopologyImpl(
+  UndirectedTopologyWrapper(
       std::shared_ptr<const OutTopo> out,
       std::shared_ptr<const InTopo> in) noexcept
       : out_topo_(std::move(out)), in_topo_(std::move(in)) {}
@@ -1413,9 +1411,6 @@ private:
   std::shared_ptr<const InTopo> in_topo_;
 };
 
-using UndirectedTopology =
-    UndirectedTopologyImpl<GraphTopology, EdgeShuffleTopology>;
-
 template <typename Topo>
 class SortedTopologyWrapper : public BasicTopologyWrapper<Topo> {
   using Base = BasicTopologyWrapper<Topo>;
@@ -1441,13 +1436,6 @@ public:
     return Base::topo().find_edges(src, dst);
   }
 };
-
-using DefaultPGTopology = BasicTopologyWrapper<GraphTopology>;
-using TransposedTopology = BasicTopologyWrapper<EdgeShuffleTopology>;
-using EdgesSortedByDestTopology = SortedTopologyWrapper<EdgeShuffleTopology>;
-
-using NodesSortedByDegreeEdgesSortedByDestIDTopology =
-    SortedTopologyWrapper<ShuffleTopology>;
 
 class KATANA_EXPORT EdgeTypeAwareBiDirTopology
     : public BasicBiDirTopoWrapper<
@@ -1630,30 +1618,28 @@ private:
 };
 
 namespace internal {
-using PGViewDefault = BasicPropGraphViewWrapper<DefaultPGTopology>;
-using PGViewTransposed = BasicPropGraphViewWrapper<TransposedTopology>;
-using PGViewEdgesSortedByDestID =
-    BasicPropGraphViewWrapper<EdgesSortedByDestTopology>;
-using PGViewNodesSortedByDegreeEdgesSortedByDestID =
-    BasicPropGraphViewWrapper<NodesSortedByDegreeEdgesSortedByDestIDTopology>;
-using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
-using PGViewUnDirected = BasicPropGraphViewWrapper<UndirectedTopology>;
-using PGViewEdgeTypeAwareBiDir =
-    BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
-using PGViewProjectedGraph = ProjectedPropGraphViewWrapper;
-
 template <typename PGView>
 struct PGViewBuilder {};
+
+// Default view
+
+using DefaultPGTopology = BasicTopologyWrapper<GraphTopology>;
+using PGViewDefault = BasicPropGraphViewWrapper<DefaultPGTopology>;
 
 template <>
 struct PGViewBuilder<PGViewDefault> {
   template <typename ViewCache>
   static PGViewDefault BuildView(
       PropertyGraph* pg, ViewCache& viewCache) noexcept {
-    auto topo = viewCache.GetOriginalTopology(pg);
+    auto topo = viewCache.GetDefaultTopology();
     return PGViewDefault{pg, DefaultPGTopology{topo}};
   }
 };
+
+// Transposed view
+
+using TransposedTopology = BasicTopologyWrapper<EdgeShuffleTopology>;
+using PGViewTransposed = BasicPropGraphViewWrapper<TransposedTopology>;
 
 template <>
 struct PGViewBuilder<PGViewTransposed> {
@@ -1668,35 +1654,11 @@ struct PGViewBuilder<PGViewTransposed> {
   }
 };
 
-template <>
-struct PGViewBuilder<PGViewBiDirectional> {
-  template <typename ViewCache>
-  static PGViewBiDirectional BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
-    auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
-        pg, tsuba::RDGTopology::TransposeKind::kYes,
-        tsuba::RDGTopology::EdgeSortKind::kAny);
-    auto bidir_topo =
-        SimpleBiDirTopology{viewCache.GetOriginalTopology(pg), tpose_topo};
+// Edges sorted by destination view
 
-    return PGViewBiDirectional{pg, bidir_topo};
-  }
-};
-
-template <>
-struct PGViewBuilder<PGViewUnDirected> {
-  template <typename ViewCache>
-  static internal::PGViewUnDirected BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
-    auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
-        pg, tsuba::RDGTopology::TransposeKind::kYes,
-        tsuba::RDGTopology::EdgeSortKind::kAny);
-    auto undir_topo =
-        UndirectedTopology{viewCache.GetOriginalTopology(pg), tpose_topo};
-
-    return PGViewUnDirected{pg, undir_topo};
-  }
-};
+using EdgesSortedByDestTopology = SortedTopologyWrapper<EdgeShuffleTopology>;
+using PGViewEdgesSortedByDestID =
+    BasicPropGraphViewWrapper<EdgesSortedByDestTopology>;
 
 template <>
 struct PGViewBuilder<PGViewEdgesSortedByDestID> {
@@ -1711,6 +1673,13 @@ struct PGViewBuilder<PGViewEdgesSortedByDestID> {
         pg, EdgesSortedByDestTopology{sorted_topo}};
   }
 };
+
+// Nodes sorted by degree, edges sorted by destination view
+
+using NodesSortedByDegreeEdgesSortedByDestIDTopology =
+    SortedTopologyWrapper<ShuffleTopology>;
+using PGViewNodesSortedByDegreeEdgesSortedByDestID =
+    BasicPropGraphViewWrapper<NodesSortedByDegreeEdgesSortedByDestIDTopology>;
 
 template <>
 struct PGViewBuilder<PGViewNodesSortedByDegreeEdgesSortedByDestID> {
@@ -1727,6 +1696,53 @@ struct PGViewBuilder<PGViewNodesSortedByDegreeEdgesSortedByDestID> {
   }
 };
 
+// Bidirectional view
+
+using SimpleBiDirTopology =
+    BasicBiDirTopoWrapper<GraphTopology, EdgeShuffleTopology>;
+using PGViewBiDirectional = BasicPropGraphViewWrapper<SimpleBiDirTopology>;
+
+template <>
+struct PGViewBuilder<PGViewBiDirectional> {
+  template <typename ViewCache>
+  static PGViewBiDirectional BuildView(
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+    auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
+        pg, tsuba::RDGTopology::TransposeKind::kYes,
+        tsuba::RDGTopology::EdgeSortKind::kAny);
+    auto bidir_topo =
+        SimpleBiDirTopology{viewCache.GetDefaultTopology(), tpose_topo};
+
+    return PGViewBiDirectional{pg, bidir_topo};
+  }
+};
+
+// Undirected view
+
+using UndirectedTopology =
+    UndirectedTopologyWrapper<GraphTopology, EdgeShuffleTopology>;
+using PGViewUnDirected = BasicPropGraphViewWrapper<UndirectedTopology>;
+
+template <>
+struct PGViewBuilder<PGViewUnDirected> {
+  template <typename ViewCache>
+  static internal::PGViewUnDirected BuildView(
+      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+    auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
+        pg, tsuba::RDGTopology::TransposeKind::kYes,
+        tsuba::RDGTopology::EdgeSortKind::kAny);
+    auto undir_topo =
+        UndirectedTopology{viewCache.GetDefaultTopology(), tpose_topo};
+
+    return PGViewUnDirected{pg, undir_topo};
+  }
+};
+
+// Edge type aware bidirectional view
+
+using PGViewEdgeTypeAwareBiDir =
+    BasicPropGraphViewWrapper<EdgeTypeAwareBiDirTopology>;
+
 template <>
 struct PGViewBuilder<PGViewEdgeTypeAwareBiDir> {
   template <typename ViewCache>
@@ -1741,6 +1757,10 @@ struct PGViewBuilder<PGViewEdgeTypeAwareBiDir> {
         pg, EdgeTypeAwareBiDirTopology{out_topo, in_topo}};
   }
 };
+
+// Projected view
+
+using PGViewProjectedGraph = ProjectedPropGraphViewWrapper;
 
 template <>
 struct PGViewBuilder<PGViewProjectedGraph> {
@@ -1771,6 +1791,8 @@ struct PropertyGraphViews {
 };
 
 class KATANA_EXPORT PGViewCache {
+  std::shared_ptr<GraphTopology> original_topo_ =
+      std::make_shared<GraphTopology>();
   std::vector<std::shared_ptr<EdgeShuffleTopology>> edge_shuff_topos_;
   std::vector<std::shared_ptr<ShuffleTopology>> fully_shuff_topos_;
   std::vector<std::shared_ptr<EdgeTypeAwareTopology>> edge_type_aware_topos_;
@@ -1783,6 +1805,9 @@ class KATANA_EXPORT PGViewCache {
 
 public:
   PGViewCache() = default;
+  PGViewCache(GraphTopology&& original_topo)
+      : original_topo_(
+            std::make_shared<GraphTopology>(std::move(original_topo))) {}
   PGViewCache(PGViewCache&&) = default;
   PGViewCache& operator=(PGViewCache&&) = default;
 
@@ -1804,14 +1829,28 @@ public:
         pg, node_types, edge_types, *this);
   }
 
+  // Avoids a copy of the default topology.
+  const GraphTopology& GetDefaultTopologyRef() const noexcept;
+
+  void DropAllTopologies() noexcept;
+
 private:
-  std::shared_ptr<GraphTopology> GetOriginalTopology(
-      const PropertyGraph* pg) const noexcept;
+  std::shared_ptr<GraphTopology> GetDefaultTopology() const noexcept;
 
   std::shared_ptr<CondensedTypeIDMap> BuildOrGetEdgeTypeIndex(
       const PropertyGraph* pg) noexcept;
 
+  // The pop flag ensures that the returned topology is not
+  // in the edge_shuff_topos_ cache.
+  std::shared_ptr<EdgeShuffleTopology> BuildOrGetEdgeShuffTopoImpl(
+      PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_kind,
+      const tsuba::RDGTopology::EdgeSortKind& sort_kind, bool pop) noexcept;
+
   std::shared_ptr<EdgeShuffleTopology> BuildOrGetEdgeShuffTopo(
+      PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_kind,
+      const tsuba::RDGTopology::EdgeSortKind& sort_kind) noexcept;
+
+  std::shared_ptr<EdgeShuffleTopology> PopEdgeShuffTopo(
       PropertyGraph* pg, const tsuba::RDGTopology::TransposeKind& tpose_kind,
       const tsuba::RDGTopology::EdgeSortKind& sort_kind) noexcept;
 

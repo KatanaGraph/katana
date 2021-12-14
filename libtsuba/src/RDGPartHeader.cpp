@@ -11,6 +11,7 @@
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/FileView.h"
+#include "tsuba/RDGStorageFormatVersion.h"
 #include "tsuba/RDGTopology.h"
 
 using json = nlohmann::json;
@@ -325,12 +326,10 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
   if (auto it = j.find(kStorageFormatVersionKey); it != j.end()) {
     it->get_to(header.storage_format_version_);
   } else {
-    header.storage_format_version_ =
-        RDGPartHeader::kPartitionStorageFormatVersion1;
+    header.storage_format_version_ = kPartitionStorageFormatVersion1;
   }
 
-  if (header.storage_format_version_ ==
-      RDGPartHeader::kPartitionStorageFormatVersion2) {
+  if (header.storage_format_version_ == kPartitionStorageFormatVersion2) {
     // Version 2 was found to be buggy,
     throw std::runtime_error(
         "Loaded graph is RDG storage_format_version 2 (aka RDG v2), which is "
@@ -339,8 +338,7 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
   }
 
   // Version 2 added entity type id files
-  if (header.storage_format_version_ >=
-      RDGPartHeader::kPartitionStorageFormatVersion2) {
+  if (header.storage_format_version_ >= kPartitionStorageFormatVersion2) {
     j.at(kNodeEntityTypeIDArrayPathKey)
         .get_to(header.node_entity_type_id_array_path_);
     j.at(kEdgeEntityTypeIDArrayPathKey)
@@ -354,8 +352,7 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
   }
 
   // Version 3 added topology metadata
-  if (header.storage_format_version_ >=
-      RDGPartHeader::kPartitionStorageFormatVersion3) {
+  if (header.storage_format_version_ >= kPartitionStorageFormatVersion3) {
     j.at(kPartitionTopologyMetadataKey).get_to(header.topology_metadata_);
   } else {
     //make a new minimal entry from just the path so we can load the metadata later

@@ -21,6 +21,7 @@
 #include "tsuba/Errors.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/RDG.h"
+#include "tsuba/RDGStorageFormatVersion.h"
 #include "tsuba/RDGTopology.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/tsuba.h"
@@ -317,7 +318,7 @@ public:
 
   uint32_t storage_format_version() const { return storage_format_version_; }
   void update_storage_format_version() {
-    storage_format_version_ = latest_storage_format_version_;
+    storage_format_version_ = kLatestPartitionStorageFormatVersion;
   }
 
   const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
@@ -586,17 +587,11 @@ private:
   PartitionMetadata metadata_;
 
   /// tracks changes to json on disk structure of the PartitionHeader
-  /// current one is defined by latest_storage_format_version_
+  /// current one is defined by kLatestPartitionStorageFormatVersion
+  /// located in RDGStorageFormatVersion.h
   /// When a graph is loaded from file, this is overwritten with the loaded value
   /// When a graph is created in memory, this is updated on store
   uint32_t storage_format_version_ = 0;
-
-  static const uint32_t kPartitionStorageFormatVersion1 = 1;
-  static const uint32_t kPartitionStorageFormatVersion2 = 2;
-  static const uint32_t kPartitionStorageFormatVersion3 = 3;
-  /// current_storage_format_version_ to be bumped any time
-  /// the on disk format of RDGPartHeader changes
-  uint32_t latest_storage_format_version_ = kPartitionStorageFormatVersion3;
 
   PartitionTopologyMetadata topology_metadata_;
 

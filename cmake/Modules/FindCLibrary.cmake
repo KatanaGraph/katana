@@ -59,18 +59,19 @@ function(find_c_library)
     # Make find_path and find_library behave more similarly to their behavior
     # when called from find_package by adding ${lib}_ROOT to the search path
     # list.
-    find_path(include_dir ${X_MAIN_HEADER} HINTS ${${X_NAME}_ROOT})
-    if(NOT include_dir)
+    find_path(${X_NAME}_DIR ${X_MAIN_HEADER} HINTS ${${X_NAME}_ROOT})
+    if(NOT ${X_NAME}_DIR)
       message(CHECK_FAIL "not found")
       if(X_REQUIRED)
         message(FATAL_ERROR "${X_NAME} not found")
       endif()
       return()
     endif()
+    set(include_dir ${${X_NAME}_DIR})
   endif()
 
-  find_library(library ${X_NAME} HINTS ${${X_NAME}_ROOT})
-  if(NOT library)
+  find_library(${X_NAME}_LIB ${X_NAME} HINTS ${${X_NAME}_ROOT})
+  if(NOT ${X_NAME}_LIB)
     message(CHECK_FAIL "not found")
     if(X_REQUIRED)
       message(FATAL_ERROR "${X_NAME} not found")
@@ -81,14 +82,14 @@ function(find_c_library)
   add_library(${X_TARGET} INTERFACE IMPORTED)
   set_target_properties(${X_TARGET} PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${include_dir}"
-    IMPORTED_LOCATION "${library}"
-    INTERFACE_LINK_LIBRARIES "${library}")
+    IMPORTED_LOCATION "${${X_NAME}_LIB}"
+    INTERFACE_LINK_LIBRARIES "${${X_NAME}_LIB}")
 
   # Set cache variable just in case and for human checking
   set(${X_NAME}_FOUND TRUE CACHE INTERNAL "")
   set(${X_NAME}_INCLUDE_DIRS ${include_dir} CACHE INTERNAL "")
-  set(${X_NAME}_LIBRARIES ${library} CACHE INTERNAL "")
+  set(${X_NAME}_LIBRARIES ${${X_NAME}_LIB} CACHE INTERNAL "")
 
-  message(CHECK_PASS "found (via find_library): ${library}; ${include_dir}")
+  message(CHECK_PASS "found (via find_library): ${${X_NAME}_LIBRARIES}; ${${X_NAME}_INCLUDE_DIRS}")
 endfunction()
 

@@ -69,6 +69,10 @@ function(find_c_library)
     endif()
   endif()
 
+  # clear the cached values for find_library() such that
+  # INTERFACE_INCLUDE_DIRECTORIES, IMPORTED_LOCATION and INTERFACE_LINK_LIBRARIES below can be populated correctly
+  unset(library CACHE)
+
   find_library(library ${X_NAME} HINTS ${${X_NAME}_ROOT})
   if(NOT library)
     message(CHECK_FAIL "not found")

@@ -59,7 +59,7 @@ def get_rdg_dataset(rdg_name, as_url=False):
     >>> from katana.local import Graph
     ... graph = Graph(get_rdg_dataset("ldbc_003", as_url=True))
     """
-    latest_rdg_storage_format_version = _get_latest_rdg_storage_format_version()
+    latest_rdg_storage_format_version = get_latest_storage_format_version()
     return get_rdg_dataset_at_version(rdg_name, latest_rdg_storage_format_version, as_url)
 
 

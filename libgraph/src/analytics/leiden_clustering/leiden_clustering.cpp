@@ -235,8 +235,6 @@ struct LeidenClusteringImplementation
         auto& n_data_degree_wt =
             graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
         auto& n_data_node_wt = graph.template GetData<NodeWeight>(n);
-        katana::gPrint("\n id: ", n_data_curr_comm_id);
-        katana::gPrint("\n id: ", n_data_curr_comm_id);
         katana::atomicAdd(c_info[n_data_curr_comm_id].size, uint64_t{1});
         katana::atomicAdd(c_info[n_data_curr_comm_id].node_wt, n_data_node_wt);
         katana::atomicAdd(

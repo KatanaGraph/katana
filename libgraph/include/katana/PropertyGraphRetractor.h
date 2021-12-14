@@ -124,13 +124,13 @@ public:
     pg_->rdg_.set_local_to_global_id(std::move(a));
   }
 
-  const tsuba::PropertyCache* prop_cache() const {
+  const katana::PropertyCache* prop_cache() const {
     return pg_->rdg_.prop_cache();
   }
 
-  tsuba::PropertyCache* prop_cache() { return pg_->rdg_.prop_cache(); }
+  katana::PropertyCache* prop_cache() { return pg_->rdg_.prop_cache(); }
 
-  void set_prop_cache(tsuba::PropertyCache* prop_cache) {
+  void set_prop_cache(katana::PropertyCache* prop_cache) {
     pg_->rdg_.set_prop_cache(prop_cache);
   }
 

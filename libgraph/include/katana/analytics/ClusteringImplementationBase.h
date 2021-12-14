@@ -45,6 +45,7 @@ struct LeidenCommunityType {
   std::atomic<EdgeWeightType> degree_wt;
   std::atomic<uint64_t> node_wt;
   EdgeWeightType internal_edge_wt;
+  uint64_t num_internal_edges;
   uint64_t num_sub_communities;
 };
 
@@ -685,8 +686,8 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   static uint64_t GetRandomSubcommunity(
       const Graph& graph, GNode n, CommunityArray& subcomm_info,
-      uint64_t total_degree_wt, uint64_t comm_id,
-      double constant_for_second_term, double resolution, double randomness) {
+      uint64_t total_node_wt, uint64_t comm_id, double constant_for_second_term,
+      double resolution) {
     auto& n_current_subcomm_id =
         graph.template GetData<CurrentSubCommunityID>(n);
     /*
@@ -759,7 +760,8 @@ struct ClusteringImplementationBase {
     double quality_value_increment = 0;
     std::vector<double> cum_transformed_quality_value_increment_per_cluster(
         num_unique_clusters);
-    auto& n_node_wt = graph.template GetData<NodeWeight>(n);
+    auto& n_degree_wt = graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
+
     for (auto pair : cluster_local_map) {
       auto subcomm = pair.first;
       if (n_current_subcomm_id == subcomm) {
@@ -770,12 +772,12 @@ struct ClusteringImplementationBase {
       double subcomm_degree_wt = subcomm_info[subcomm].degree_wt;
 
       // check if subcommunity is well connected
-      if (double tmp =
-              constant_for_second_term * subcomm_degree_wt *
-              (static_cast<double>(total_degree_wt) - subcomm_degree_wt);
-          subcomm_info[subcomm].internal_edge_wt >= tmp) {
+      if (double tmp = resolution * subcomm_node_wt *
+                       (static_cast<double>(total_node_wt) - subcomm_node_wt);
+          subcomm_info[subcomm].num_internal_edges >= tmp) {
         quality_value_increment =
-            counter[pair.second] - n_node_wt * subcomm_node_wt * resolution;
+            counter[pair.second] -
+            n_degree_wt * subcomm_degree_wt * constant_for_second_term;
 
         if (quality_value_increment > max_quality_value_increment) {
           best_cluster = subcomm;
@@ -784,7 +786,7 @@ struct ClusteringImplementationBase {
 
         if (quality_value_increment >= 0) {
           total_transformed_quality_value_increment +=
-              std::exp(quality_value_increment / randomness);
+              std::exp(quality_value_increment);
         }
       }
       cum_transformed_quality_value_increment_per_cluster[pair.second] =
@@ -796,15 +798,19 @@ struct ClusteringImplementationBase {
    * Determine the neighboring cluster to which the currently
    * selected node will be moved.
    */
+
     int64_t min_idx, max_idx, mid_idx;
     double r;
-    if (total_transformed_quality_value_increment < INFINITY_DOUBLE) {
+    if (total_transformed_quality_value_increment > 0 &&
+        total_transformed_quality_value_increment < INFINITY_DOUBLE) {
       r = total_transformed_quality_value_increment *
           GenerateRandonNumber(0.0, 1.0);
+
       min_idx = -1;
       max_idx = num_unique_clusters;
       while (min_idx < max_idx) {
         mid_idx = (min_idx + max_idx) / 2;
+
         if (cum_transformed_quality_value_increment_per_cluster[mid_idx] >= r) {
           if (max_idx == mid_idx) {
             break;
@@ -853,8 +859,8 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   static void MergeNodesSubset(
       Graph* graph, std::vector<GNode>& cluster_nodes, uint64_t comm_id,
-      uint64_t total_degree_wt, CommunityArray& subcomm_info,
-      double constant_for_second_term, double resolution, double randomness) {
+      uint64_t total_node_wt, CommunityArray& subcomm_info,
+      double constant_for_second_term, double resolution) {
     // select set R
     std::vector<GNode> cluster_nodes_to_move;
     for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
@@ -866,6 +872,8 @@ struct ClusteringImplementationBase {
      * Initialize with singleton sub-communities
      */
       EdgeWeightType node_edge_weight_within_cluster = 0;
+      uint64_t num_edges_within_cluster = 0;
+
       for (auto e : graph->edges(n)) {
         auto dst = graph->edge_dest(e);
         EdgeWeightType edge_wt =
@@ -877,6 +885,7 @@ struct ClusteringImplementationBase {
         if (dst != n &&
             graph->template GetData<CurrentCommunityID>(dst) == comm_id) {
           node_edge_weight_within_cluster += edge_wt;
+          num_edges_within_cluster++;
         }
       }
 
@@ -889,15 +898,15 @@ struct ClusteringImplementationBase {
      * - clusterWeights[j]) * resolution
      */
 
-      if (double tmp = constant_for_second_term *
-                       static_cast<double>(degree_wt) *
-                       static_cast<double>(total_degree_wt - degree_wt);
-          node_edge_weight_within_cluster >= tmp) {
+      if (double tmp = resolution * static_cast<double>(node_wt) *
+                       static_cast<double>(total_node_wt - node_wt);
+          num_edges_within_cluster >= tmp) {
         cluster_nodes_to_move.push_back(n);
       }
 
       subcomm_info[n].node_wt = node_wt;
       subcomm_info[n].internal_edge_wt = node_edge_weight_within_cluster;
+      subcomm_info[n].num_internal_edges = num_edges_within_cluster;
       subcomm_info[n].size = 1;
       subcomm_info[n].degree_wt = degree_wt;
     }
@@ -913,8 +922,8 @@ struct ClusteringImplementationBase {
      */
       if (subcomm_info[n_current_subcomm_id].size == 1) {
         uint64_t new_subcomm_ass = GetRandomSubcommunity<EdgeWeightType>(
-            *graph, n, subcomm_info, total_degree_wt, comm_id,
-            constant_for_second_term, resolution, randomness);
+            *graph, n, subcomm_info, total_node_wt, comm_id,
+            constant_for_second_term, resolution);
         if (new_subcomm_ass != UNASSIGNED &&
             new_subcomm_ass != n_current_subcomm_id) {
           n_current_subcomm_id = new_subcomm_ass;
@@ -936,8 +945,10 @@ struct ClusteringImplementationBase {
               if (graph->template GetData<CurrentSubCommunityID>(dst) ==
                   new_subcomm_ass) {
                 subcomm_info[new_subcomm_ass].internal_edge_wt -= edge_wt;
+                subcomm_info[new_subcomm_ass].num_internal_edges--;
               } else {
                 subcomm_info[new_subcomm_ass].internal_edge_wt += edge_wt;
+                subcomm_info[new_subcomm_ass].num_internal_edges++;
               }
             }
           }
@@ -951,8 +962,7 @@ struct ClusteringImplementationBase {
  * trying to split up each cluster into multiple clusters.
  */
   template <typename EdgeWeightType>
-  static void RefinePartition(
-      Graph* graph, double resolution, double randomness) {
+  static void RefinePartition(Graph* graph, double resolution) {
     double constant_for_second_term =
         CalConstantForSecondTerm<EdgeWeightType>(*graph);
     // set singleton subcommunities
@@ -1006,8 +1016,8 @@ struct ClusteringImplementationBase {
       comm_info[c].num_sub_communities = 0;
       if (cluster_bags[c].size() > 1) {
         MergeNodesSubset<EdgeWeightType>(
-            graph, cluster_bags[c], c, comm_info[c].degree_wt, subcomm_info,
-            constant_for_second_term, resolution, randomness);
+            graph, cluster_bags[c], c, comm_info[c].node_wt, subcomm_info,
+            constant_for_second_term, resolution);
       }
     });
   }

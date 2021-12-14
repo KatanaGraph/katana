@@ -54,7 +54,7 @@ struct LeidenClusteringImplementation
   katana::Result<double> LeidenWithoutLockingDoAll(
       katana::PropertyGraph* pg, double lower,
       double modularity_threshold_per_round, uint32_t& iter,
-      double resolution) {
+      [[maybe_unused]] double resolution) {
     katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
     TimerClusteringTotal.start();
 
@@ -84,7 +84,7 @@ struct LeidenClusteringImplementation
     constant_for_second_term =
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
 
-    if (iter > 1) {
+    if (iter >= 1) {
       katana::do_all(katana::iterate(graph), [&](GNode n) {
         c_info[n].size = 0;
         c_info[n].degree_wt = 0;
@@ -131,10 +131,10 @@ struct LeidenClusteringImplementation
               Base::template FindNeighboringClusters<EdgeWeightType>(
                   graph, n, cluster_local_map, counter, self_loop_wt);
               // Find the max gain in modularity
-              local_target = Base::MaxCPMQualityWithoutSwaps(
+              local_target = Base::MaxModularityWithoutSwaps(
                   cluster_local_map, counter, self_loop_wt, c_info,
-                  n_data_node_wt, n_data_curr_comm_id, resolution);
-
+                  n_data_node_wt, n_data_curr_comm_id,
+                  constant_for_second_term);
             } else {
               local_target = Base::UNASSIGNED;
             }
@@ -162,8 +162,8 @@ struct LeidenClusteringImplementation
       double e_xx = 0;
       double a2_x = 0;
 
-      curr_mod = Base::template CalCPMQuality<EdgeWeightType>(
-          graph, c_info, e_xx, a2_x, constant_for_second_term, resolution);
+      curr_mod = Base::template CalModularity<EdgeWeightType>(
+          graph, c_info, e_xx, a2_x, constant_for_second_term);
 
       if ((curr_mod - prev_mod) < modularity_threshold_per_round) {
         prev_mod = curr_mod;
@@ -190,7 +190,7 @@ struct LeidenClusteringImplementation
   katana::Result<double> LeidenDeterministic(
       katana::PropertyGraph* pg, double lower,
       double modularity_threshold_per_round, uint32_t& iter,
-      double resolution) {
+      [[maybe_unused]] double resolution) {
     katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
     katana::TimerGuard TimerClusteringGuard(TimerClusteringTotal);
 
@@ -222,7 +222,7 @@ struct LeidenClusteringImplementation
     constant_for_second_term =
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
 
-    if (iter > 1) {
+    if (iter >= 1) {
       katana::do_all(katana::iterate(graph), [&](GNode n) {
         c_info[n].size = 0;
         c_info[n].degree_wt = 0;
@@ -235,6 +235,8 @@ struct LeidenClusteringImplementation
         auto& n_data_degree_wt =
             graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
         auto& n_data_node_wt = graph.template GetData<NodeWeight>(n);
+        katana::gPrint("\n id: ", n_data_curr_comm_id);
+        katana::gPrint("\n id: ", n_data_curr_comm_id);
         katana::atomicAdd(c_info[n_data_curr_comm_id].size, uint64_t{1});
         katana::atomicAdd(c_info[n_data_curr_comm_id].node_wt, n_data_node_wt);
         katana::atomicAdd(
@@ -300,12 +302,17 @@ struct LeidenClusteringImplementation
                 Base::template FindNeighboringClusters<EdgeWeightType>(
                     graph, n, cluster_local_map, counter, self_loop_wt);
                 // Find the max gain in modularity
-                local_target[n] = Base::MaxCPMQualityWithoutSwaps(
+                //     local_target[n] = Base::MaxCPMQualityWithoutSwaps(
+                //       cluster_local_map, counter, self_loop_wt, c_info,
+                //     n_data_node_wt, n_data_curr_comm_id, resolution);
+
+                local_target[n] = Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
-                    n_data_node_wt, n_data_curr_comm_id, resolution);
+                    n_data_node_wt, n_data_curr_comm_id,
+                    constant_for_second_term);
 
               } else {
-                local_target[n] = 0;  //Base::UNASSIGNED;
+                local_target[n] = 0;
               }
 
               /* Update cluster info */
@@ -376,8 +383,8 @@ struct LeidenClusteringImplementation
       double e_xx = 0;
       double a2_x = 0;
 
-      curr_mod = Base::template CalCPMQuality<EdgeWeightType>(
-          graph, c_info, e_xx, a2_x, constant_for_second_term, resolution);
+      curr_mod = Base::template CalModularity<EdgeWeightType>(
+          graph, c_info, e_xx, a2_x, constant_for_second_term);
 
       if ((curr_mod - prev_mod) < modularity_threshold_per_round) {
         prev_mod = curr_mod;
@@ -483,6 +490,7 @@ public:
           graph_curr.template GetData<CurrentCommunityID>(n) = n;
           graph_curr.template GetData<PreviousCommunityID>(n) = n;
           clusters_orig[n] = n;
+          graph_curr.template GetData<NodeWeight>(n) = 1;
         });
       }
       if (graph_curr.num_nodes() > plan.min_graph_size()) {
@@ -512,7 +520,7 @@ public:
           Base::template RenumberClustersContiguously<CurrentCommunityID>(
               &graph_curr);
       Base::template RefinePartition<EdgeWeightType>(
-          &graph_curr, plan.resolution(), plan.randomness());
+          &graph_curr, plan.resolution());
       uint64_t num_unique_subclusters =
           Base::template RenumberClustersContiguously<CurrentSubCommunityID>(
               &graph_curr);
@@ -539,7 +547,7 @@ public:
         }
 
         katana::NUMAArray<uint64_t> original_comm_ass;
-        katana::NUMAArray<uint64_t> cluster_node_wt;
+        katana::NUMAArray<std::atomic<uint64_t>> cluster_node_wt;
 
         original_comm_ass.allocateBlocked(num_unique_subclusters + 1);
         cluster_node_wt.allocateBlocked(num_unique_subclusters + 1);
@@ -554,12 +562,12 @@ public:
           auto& n_curr_comm =
               graph_curr.template GetData<CurrentCommunityID>(n);
           auto& n_node_wt = graph_curr.template GetData<NodeWeight>(n);
-          if (n_curr_comm != Base::UNASSIGNED) {
-            original_comm_ass[n_curr_sub_comm] = n;
+          if (n_curr_comm == Base::UNASSIGNED) {
+            original_comm_ass[n_curr_sub_comm] = n_curr_comm;
           } else {
             original_comm_ass[n_curr_sub_comm] = n_curr_comm;
           }
-          cluster_node_wt[n_curr_sub_comm] = n_node_wt;
+          katana::atomicAdd(cluster_node_wt[n_curr_sub_comm], n_node_wt);
         });
 
         auto coarsened_graph_result = Base::template GraphCoarsening<
@@ -590,6 +598,11 @@ public:
         cluster_node_wt.destroy();
 
       } else {
+        katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
+          clusters_orig[n] =
+              graph_curr.template GetData<CurrentCommunityID>(clusters_orig[n]);
+        });
+
         break;
       }
     }

@@ -22,6 +22,7 @@ add_unit_test(bitmath)
 add_unit_test(cache)
 add_unit_test(disjoint_range_iterator)
 add_unit_test(env)
+add_unit_test(experimental)
 add_unit_test(logging)
 add_unit_test(opaque-id)
 add_unit_test(random)
@@ -32,6 +33,9 @@ add_unit_test(tracing)
 add_unit_test(type-manager)
 add_unit_test(uri)
 add_unit_test(zip_iterator)
+
+set_tests_properties(experimental-test PROPERTIES
+  ENVIRONMENT KATANA_ENABLE_EXPERIMENTAL=TestOn,TestSecond,DefinedButUnused,EnvironmentOnly)
 
 add_executable(arrow-bench arrow-bench.cpp)
 target_link_libraries(arrow-bench katana_support benchmark::benchmark)

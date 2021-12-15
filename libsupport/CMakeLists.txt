@@ -19,16 +19,17 @@ set(sources
         src/EntityTypeManager.cpp
         src/Env.cpp
         src/ErrorCode.cpp
-        src/HostAllocator.cpp
+        src/Experimental.cpp
         src/HTTP.cpp
+        src/HostAllocator.cpp
         src/JSON.cpp
         src/JSONTracer.cpp
         src/Logging.cpp
         src/NoopTracer.cpp
-        src/Random.cpp
-        src/Result.cpp
         src/Plugin.cpp
         src/ProgressTracer.cpp
+        src/Random.cpp
+        src/Result.cpp
         src/Signals.cpp
         src/Strings.cpp
         src/TextTracer.cpp

@@ -8,15 +8,11 @@ class URL:
     the class in the following ways:
 
     - URL("file:///home/") / "a" / "b" => URL("file:///home/a/b")
-    - URL("file:///home/", "a", "b") => URL("file:///home/a/b")
     - "file:///home/" / URL("a") => URL("file:///home/a")
     """
 
-    def __init__(self, *args):
-        if len(args) > 1:
-            self.url = self._join_path(args[0], *args[1:])
-        else:
-            self.url = args[0]
+    def __init__(self, url: str):
+        self.url = url
 
     def __truediv__(self, other):
         return URL(self._join_path(self.url, other))

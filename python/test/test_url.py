@@ -13,7 +13,6 @@ def test_url_join_path():
 def test_url_div_op():
     assert str(url.URL("file:///home/") / "a" / "b") == "file:///home/a/b"
     assert str(url.URL("file:///home/") / "a/b") == "file:///home/a/b"
-    assert str(url.URL("file:///home/", "a", "b")) == "file:///home/a/b"
     assert str(url.URL("file:///home?query=string") / "a") == "file:///home/a?query=string"
     assert url.URL("file:///home") / "a" == url.URL("file:///home/a")
     assert url.URL("file:///home/") / "a" == url.URL("file:///home/a")

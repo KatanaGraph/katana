@@ -29,7 +29,9 @@ static cll::opt<std::string> OutputFile(
 katana::PropertyGraph
 LoadGraph(const std::string& rdg_file) {
   KATANA_LOG_ASSERT(!rdg_file.empty());
-  auto g_res = katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
+  tsuba::TxnContext txn_ctx;
+  auto g_res =
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, tsuba::RDGLoadOptions());
 
   if (!g_res) {
     KATANA_LOG_FATAL("making result: {}", g_res.error());

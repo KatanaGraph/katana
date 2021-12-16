@@ -276,17 +276,21 @@ RDGCore::Equals(const RDGCore& other) const {
 }
 
 katana::Result<void>
-RDGCore::RemoveNodeProperty(int i) {
+RDGCore::RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx) {
   auto field = node_properties_->field(i);
   node_properties_ = KATANA_CHECKED(node_properties_->RemoveColumn(i));
+  // store write properties into transaction context
+  txn_ctx->InsertNodePropertyWrite(field->name());
 
   return part_header_.RemoveNodeProperty(field->name());
 }
 
 katana::Result<void>
-RDGCore::RemoveEdgeProperty(int i) {
+RDGCore::RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx) {
   auto field = edge_properties_->field(i);
   edge_properties_ = KATANA_CHECKED(edge_properties_->RemoveColumn(i));
+  // store write properties into transaction context
+  txn_ctx->InsertEdgePropertyWrite(field->name());
 
   return part_header_.RemoveEdgeProperty(field->name());
 }

@@ -115,6 +115,7 @@ class KATANA_EXPORT TemporaryPropertyGuard {
   std::optional<katana::PropertyGraph::MutablePropertyView> property_view_ =
       std::nullopt;
   std::string name_;
+  std::unique_ptr<tsuba::TxnContext> txn_ctx_;  // Temporary TxnContext
 
   std::string GetPropertyName() {
     // Use a thread local counter and the thread ID to get a unique name.
@@ -129,7 +130,9 @@ class KATANA_EXPORT TemporaryPropertyGuard {
       return;
     }
 
-    if (auto r = property_view_->RemoveProperty(name_); !r) {
+    // Since the property is a temporary, thread-local one, we don't need
+    // to pass the TxnContext to the caller. Hence, use a local TxnContext.
+    if (auto r = property_view_->RemoveProperty(name_, txn_ctx_.get()); !r) {
       if (r.error() != ErrorCode::PropertyNotFound) {
         // Log an error if something goes wrong other than the property not
         // existing.
@@ -139,7 +142,10 @@ class KATANA_EXPORT TemporaryPropertyGuard {
     Clear();
   }
 
-  void Clear() { property_view_ = std::nullopt; }
+  void Clear() {
+    property_view_ = std::nullopt;
+    txn_ctx_.reset();
+  }
 
 public:
   TemporaryPropertyGuard() = default;
@@ -154,7 +160,9 @@ public:
 
   TemporaryPropertyGuard(
       PropertyGraph::MutablePropertyView pv, std::string name)
-      : property_view_(pv), name_(std::move(name)) {}
+      : property_view_(pv), name_(std::move(name)) {
+    txn_ctx_ = std::make_unique<tsuba::TxnContext>();
+  }
 
   explicit TemporaryPropertyGuard(PropertyGraph::MutablePropertyView pv)
       : TemporaryPropertyGuard(pv, GetPropertyName()) {}
@@ -165,6 +173,7 @@ public:
 
   TemporaryPropertyGuard(TemporaryPropertyGuard&& rhs) noexcept
       : property_view_(rhs.property_view_), name_(std::move(rhs.name_)) {
+    txn_ctx_ = std::make_unique<tsuba::TxnContext>();
     rhs.Clear();
   }
 
@@ -172,6 +181,7 @@ public:
     Deinit();
     property_view_ = rhs.property_view_;
     name_ = std::move(rhs.name_);
+    txn_ctx_ = std::make_unique<tsuba::TxnContext>();
     rhs.Clear();
     return *this;
   }

@@ -68,7 +68,7 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   KATANA_LOG_ASSERT(add_edge_result);
 
   /// Construct types from IDs.
-  auto type_construction_result = g->ConstructEntityTypeIDs();
+  auto type_construction_result = g->ConstructEntityTypeIDs(&txn_ctx);
   KATANA_LOG_ASSERT(type_construction_result);
 
   auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
@@ -103,7 +103,7 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -180,7 +180,7 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   KATANA_LOG_ASSERT(add_edge_two_result);
 
   /// Construct types from IDs.
-  auto type_construction_result = g->ConstructEntityTypeIDs();
+  auto type_construction_result = g->ConstructEntityTypeIDs(&txn_ctx);
   KATANA_LOG_ASSERT(type_construction_result);
 
   auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
@@ -222,7 +222,7 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -284,10 +284,12 @@ TestRoundTrip() {
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
   // don't persist throwaway properties
-  auto remove_node_throw_away_res = g->RemoveNodeProperty("node-throw-away");
+  auto remove_node_throw_away_res =
+      g->RemoveNodeProperty("node-throw-away", &txn_ctx);
   KATANA_LOG_ASSERT(remove_node_throw_away_res);
 
-  auto remove_edge_throw_away_res = g->RemoveEdgeProperty("edge-throw-away");
+  auto remove_edge_throw_away_res =
+      g->RemoveEdgeProperty("edge-throw-away", &txn_ctx);
   KATANA_LOG_ASSERT(remove_edge_throw_away_res);
 
   auto write_result = g->Write(rdg_dir, command_line);
@@ -300,7 +302,7 @@ TestRoundTrip() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -360,8 +362,9 @@ TestGarbageMetadata() {
   out << "garbage to make the file non-empty";
   out.close();
 
+  tsuba::TxnContext txn_ctx;
   auto no_dir_result =
-      katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(temp_dir);
   KATANA_LOG_ASSERT(!no_dir_result.has_value());
 }
@@ -416,8 +419,9 @@ TestSimplePGs() {
   auto rdg_file = MakePFGFile("n0");
   KATANA_LOG_ASSERT(rdg_file.empty());
   rdg_file = MakePFGFile("n1");
+  tsuba::TxnContext txn_ctx;
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_file);
   KATANA_LOG_ASSERT(make_result);
 }

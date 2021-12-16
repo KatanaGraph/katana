@@ -142,7 +142,7 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         # PropertyGraph(GraphTopology&&)
 
         @staticmethod
-        Result[unique_ptr[_PropertyGraph]] Make(string filename, RDGLoadOptions opts)
+        Result[unique_ptr[_PropertyGraph]] Make(string filename, TxnContext* txn_ctx, RDGLoadOptions opts)
 
         # TODO(amp/amber): Having multiple methods with the same name 'Make'
         # confuses cython, so applying the trick of renaming for python API
@@ -182,11 +182,11 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         Result[void] UpsertNodeProperties(shared_ptr[CTable], TxnContext*)
         Result[void] UpsertEdgeProperties(shared_ptr[CTable], TxnContext*)
 
-        Result[void] RemoveNodeProperty(int)
-        Result[void] RemoveNodeProperty(const string&)
+        Result[void] RemoveNodeProperty(int, TxnContext*)
+        Result[void] RemoveNodeProperty(const string&, TxnContext*)
 
-        Result[void] RemoveEdgeProperty(int)
-        Result[void] RemoveEdgeProperty(const string&)
+        Result[void] RemoveEdgeProperty(int, TxnContext*)
+        Result[void] RemoveEdgeProperty(const string&, TxnContext*)
 
         void MarkAllPropertiesPersistent()
         Result[void] MarkNodePropertiesPersistent(const vector[string]& persist_node_props)

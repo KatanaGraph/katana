@@ -5,9 +5,10 @@
 #include "katana/PropertyGraph.h"
 
 katana::PropertyGraph
-LoadGraph(const std::string& rdg_file) {
+LoadGraph(const std::string& rdg_file, tsuba::TxnContext* txn_ctx) {
   KATANA_LOG_ASSERT(!rdg_file.empty());
-  auto g_res = katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
+  auto g_res =
+      katana::PropertyGraph::Make(rdg_file, txn_ctx, tsuba::RDGLoadOptions());
 
   if (!g_res) {
     KATANA_LOG_FATAL("making result: {}", g_res.error());

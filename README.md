@@ -60,7 +60,7 @@ At the minimum, Katana depends on the following software:
 - libxml2 (>=  2.9.1)
 - libarrow (>= 4.0)
 - libuuid (>= 2.31.1)
-- [nlohmann/json](https://github.com/nlohmann/json) (>= 3.7.3)
+- [nlohmann/json](https://github.com/nlohmann/json) (>= 3.10.4)
 
 Here are the dependencies for the optional features:
 

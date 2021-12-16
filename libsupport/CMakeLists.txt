@@ -48,7 +48,7 @@ set_common_katana_library_options(katana_support ALWAYS_SHARED)
 target_link_libraries(katana_support PUBLIC arrow::arrow arrow::parquet)
 
 
-find_package(nlohmann_json 3.7.3 REQUIRED)
+find_package(nlohmann_json 3.10.4 REQUIRED)
 target_link_libraries(katana_support PUBLIC nlohmann_json::nlohmann_json)
 
 find_package(libcurl QUIET)

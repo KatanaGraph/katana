@@ -50,7 +50,7 @@ dependencies:
  - nbsphinx>=0.8
  - ncurses>=6.1,<7a0
  - ninja>=1.10
- - nlohmann_json>=3.7.3,<4a0
+ - nlohmann_json>=3.10.4,<4a0
  - numba>=0.53.1,<0.54a0
  - numpy>=1.17,<2a0
  - openblas>=0.3.12

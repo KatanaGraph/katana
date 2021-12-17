@@ -923,6 +923,20 @@ katana::PGViewCache::GetDefaultTopology() const noexcept {
   return original_topo_;
 }
 
+bool
+katana::PGViewCache::ReseatDefaultTopo(
+    const std::shared_ptr<GraphTopology>& other) noexcept {
+  // We check for the original sort state to avoid doing this every time a new
+  // edge shuffle topo is cached.
+  if (original_topo_->edge_sort_state() !=
+      tsuba::RDGTopology::EdgeSortKind::kAny) {
+    return false;
+  }
+
+  original_topo_ = other;
+  return true;
+}
+
 void
 katana::PGViewCache::DropAllTopologies() noexcept {
   original_topo_ = std::make_shared<katana::GraphTopology>();
@@ -1017,13 +1031,6 @@ katana::PGViewCache::BuildOrGetEdgeShuffTopoImpl(
     return new_topo;
   } else {
     edge_shuff_topos_.emplace_back(std::move(new_topo));
-    if (tpose_kind == tsuba::RDGTopology::TransposeKind::kNo &&
-        original_topo_->edge_sort_state() ==
-            tsuba::RDGTopology::EdgeSortKind::kAny) {
-      // The new topology can replace the defaut one. We check for the original sort state
-      // to avoid doing this every time a new edge shuffle topo is cached.
-      original_topo_ = edge_shuff_topos_.back();
-    }
     return edge_shuff_topos_.back();
   }
 }
@@ -1129,10 +1136,6 @@ katana::PGViewCache::BuildOrGetEdgeTypeAwareTopo(
     KATANA_LOG_DEBUG_ASSERT(
         CheckTopology(pg, edge_type_aware_topos_.back().get()));
 
-    if (tpose_kind == tsuba::RDGTopology::TransposeKind::kNo) {
-      // The new topology can replace the defaut one.
-      original_topo_ = edge_type_aware_topos_.back();
-    }
     return edge_type_aware_topos_.back();
   }
 }

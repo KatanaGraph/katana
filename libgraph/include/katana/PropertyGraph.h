@@ -533,6 +533,11 @@ public:
     return edge_entity_type_ids_[idx];
   }
 
+  /// \return returns the most specific edge entity type for @param edge
+  EntityTypeID GetTypeOfOriginalEdge(Edge edge) const {
+    return edge_entity_type_ids_[edge];
+  }
+
   /// \return true iff the node @param node has the given entity type
   /// @param node_entity_type_id (need not be the most specific type)
   /// (assumes that the node entity type exists)
@@ -545,6 +550,10 @@ public:
   /// (assumes that the edge entity type exists)
   bool DoesEdgeHaveType(Edge edge, EntityTypeID edge_entity_type_id) const {
     return IsEdgeSubtypeOf(edge_entity_type_id, GetTypeOfEdge(edge));
+  }
+
+  bool DoesOriginalEdgeHaveType(Edge edge, EntityTypeID edge_entity_type_id) const {
+    return IsEdgeSubtypeOf(edge_entity_type_id, GetTypeOfOriginalEdge(edge));
   }
 
   // Return type dictated by arrow

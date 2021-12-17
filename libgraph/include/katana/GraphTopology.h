@@ -1669,6 +1669,8 @@ struct PGViewBuilder<PGViewEdgesSortedByDestID> {
         pg, tsuba::RDGTopology::TransposeKind::kNo,
         tsuba::RDGTopology::EdgeSortKind::kSortedByDestID);
 
+    viewCache.ReseatDefaultTopo(sorted_topo);
+
     return PGViewEdgesSortedByDestID{
         pg, EdgesSortedByDestTopology{sorted_topo}};
   }
@@ -1753,6 +1755,9 @@ struct PGViewBuilder<PGViewEdgeTypeAwareBiDir> {
     auto in_topo = viewCache.BuildOrGetEdgeTypeAwareTopo(
         pg, tsuba::RDGTopology::TransposeKind::kYes);
 
+    // The new topology can replace the defaut one.
+    viewCache.ReseatDefaultTopo(out_topo);
+
     return PGViewEdgeTypeAwareBiDir{
         pg, EdgeTypeAwareBiDirTopology{out_topo, in_topo}};
   }
@@ -1832,10 +1837,14 @@ public:
   // Avoids a copy of the default topology.
   const GraphTopology& GetDefaultTopologyRef() const noexcept;
 
+  // Purge cache and construct an empty topology as the default one.
   void DropAllTopologies() noexcept;
 
 private:
   std::shared_ptr<GraphTopology> GetDefaultTopology() const noexcept;
+
+  // Reseat the default topology pointer to a more constrained one.
+  bool ReseatDefaultTopo(const std::shared_ptr<GraphTopology>& other) noexcept;
 
   std::shared_ptr<CondensedTypeIDMap> BuildOrGetEdgeTypeIndex(
       const PropertyGraph* pg) noexcept;

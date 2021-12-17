@@ -48,9 +48,28 @@ set_common_katana_library_options(katana_support ALWAYS_SHARED)
 
 target_link_libraries(katana_support PUBLIC arrow::arrow arrow::parquet)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  MESSAGE("CMAKE_CXX_COMPILER_ID: GNU")
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
+    MESSAGE("CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}")
+    target_link_libraries(katana_support PUBLIC stdc++fs)
+  endif()
+endif()
 
-find_package(nlohmann_json 3.7.3 REQUIRED)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  MESSAGE("CMAKE_CXX_COMPILER_ID: Clang")
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+    MESSAGE("CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}")
+    target_link_libraries(katana_support PUBLIC c++fs)
+  endif()
+endif()
+
+
+find_package(nlohmann_json 3.10.3 REQUIRED)
 target_link_libraries(katana_support PUBLIC nlohmann_json::nlohmann_json)
+
+
+
 
 find_package(libcurl QUIET)
 if(libcurl_FOUND)

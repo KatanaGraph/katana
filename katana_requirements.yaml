@@ -265,7 +265,7 @@ ninja:
   labels:
     - conda
 nlohmann_json:
-  version: [ 3.10.4, 4 ]
+  version: [ 3.10.3, 4 ]
   labels:
     - conda
     - conan

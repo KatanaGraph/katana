@@ -494,11 +494,13 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
     return false;
   }
 
-  if (!node_entity_type_manager_.Equals(other->node_entity_type_manager())) {
+  if (!node_entity_type_manager_.IsIsomorphicTo(
+          other->node_entity_type_manager())) {
     return false;
   }
 
-  if (!edge_entity_type_manager_.Equals(other->edge_entity_type_manager())) {
+  if (!edge_entity_type_manager_.IsIsomorphicTo(
+          other->edge_entity_type_manager())) {
     return false;
   }
 

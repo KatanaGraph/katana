@@ -12,8 +12,12 @@
 // execute insert code with the parallel-hashmap write lock held, it seemed like there
 // would be some form of race condition.
 
+#include <cstdint>
+#include <functional>
 #include <list>
+#include <optional>
 #include <string>
+#include <unordered_map>
 
 #include <arrow/table.h>
 

@@ -528,14 +528,15 @@ public:
   }
 
   /// \return returns the most specific edge entity type for @param edge
-  EntityTypeID GetTypeOfEdge(Edge edge) const {
+  EntityTypeID GetTypeOfEdgeFromTopoIndex(Edge edge) const {
     auto idx = edge_property_index(edge);
     return edge_entity_type_ids_[idx];
   }
 
   /// \return returns the most specific edge entity type for @param edge
-  EntityTypeID GetTypeOfOriginalEdge(Edge edge) const {
-    return edge_entity_type_ids_[edge];
+  EntityTypeID GetTypeOfEdgeFromPropertyIndex(
+      GraphTopology::PropertyIndex prop_index) const {
+    return edge_entity_type_ids_[prop_index];
   }
 
   /// \return true iff the node @param node has the given entity type
@@ -548,12 +549,16 @@ public:
   /// \return true iff the edge @param edge has the given entity type
   /// @param edge_entity_type_id (need not be the most specific type)
   /// (assumes that the edge entity type exists)
-  bool DoesEdgeHaveType(Edge edge, EntityTypeID edge_entity_type_id) const {
-    return IsEdgeSubtypeOf(edge_entity_type_id, GetTypeOfEdge(edge));
+  bool DoesEdgeHaveTypeFromTopoIndex(
+      Edge edge, EntityTypeID edge_entity_type_id) const {
+    return IsEdgeSubtypeOf(
+        edge_entity_type_id, GetTypeOfEdgeFromTopoIndex(edge));
   }
 
-  bool DoesOriginalEdgeHaveType(Edge edge, EntityTypeID edge_entity_type_id) const {
-    return IsEdgeSubtypeOf(edge_entity_type_id, GetTypeOfOriginalEdge(edge));
+  bool DoesEdgeHaveTypeFromPropertyIndex(
+      Edge edge, EntityTypeID edge_entity_type_id) const {
+    return IsEdgeSubtypeOf(
+        edge_entity_type_id, GetTypeOfEdgeFromPropertyIndex(edge));
   }
 
   // Return type dictated by arrow

@@ -332,8 +332,10 @@ katana::EdgeShuffleTopology::SortEdgesByTypeThenDest(
               static_assert(
                   std::is_same_v<decltype(e2), GraphTopology::PropertyIndex>);
 
-              katana::EntityTypeID data1 = pg->GetTypeOfEdge(e1);
-              katana::EntityTypeID data2 = pg->GetTypeOfEdge(e2);
+              katana::EntityTypeID data1 =
+                  pg->GetTypeOfEdgeFromPropertyIndex(e1);
+              katana::EntityTypeID data2 =
+                  pg->GetTypeOfEdgeFromPropertyIndex(e2);
               if (data1 != data2) {
                 return data1 < data2;
               }
@@ -463,7 +465,7 @@ katana::CondensedTypeIDMap::MakeFromEdgeTypes(
   katana::do_all(
       katana::iterate(Edge{0}, topo.num_edges()),
       [&](const Edge& e) {
-        katana::EntityTypeID type = pg->GetTypeOfEdge(e);
+        katana::EntityTypeID type = pg->GetTypeOfEdgeFromPropertyIndex(e);
         edgeTypes.getLocal()->insert(type);
       },
       katana::no_stats());
@@ -526,7 +528,8 @@ katana::EdgeTypeAwareTopology::CreatePerEdgeTypeAdjacencyIndex(
         for (auto e : e_topo.edges(N)) {
           // Since we sort the edges, we must use the
           // edge_property_index because EdgeShuffleTopology rearranges the edges
-          const auto type = pg.GetTypeOfEdge(e_topo.edge_property_index(e));
+          const auto type =
+              pg.GetTypeOfEdgeFromPropertyIndex(e_topo.edge_property_index(e));
           while (type != edge_type_index.GetType(index)) {
             adj_indices[offset + index] = e;
             index++;
@@ -829,7 +832,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
             auto dest = topology.edge_dest(e);
             if (bitset_nodes.test(dest)) {
               for (auto type : edge_entity_type_ids) {
-                if (pg->DoesEdgeHaveType(e, type)) {
+                if (pg->DoesEdgeHaveTypeFromTopoIndex(e, type)) {
                   accum_num_new_edges += 1;
                   bitset_edges.set(e);
                   out_indices[src] += 1;

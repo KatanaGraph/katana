@@ -165,9 +165,9 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         EntityTypeManager& GetNodeTypeManager() const
         EntityTypeManager& GetEdgeTypeManager() const
         EntityTypeID GetTypeOfNode(Node node) const
-        EntityTypeID GetTypeOfEdge(Edge edge) const
+        EntityTypeID GetTypeOfEdgeFromPropertyIndex(Edge edge) const
         bool DoesNodeHaveType(Node node, EntityTypeID node_entity_type_id) const
-        bool DoesEdgeHaveType(Edge edge, EntityTypeID edge_entity_type_id) const
+        bool DoesEdgeHaveTypeFromPropertyIndex(Edge edge, EntityTypeID edge_entity_type_id) const
 
         const string& rdg_dir()
 

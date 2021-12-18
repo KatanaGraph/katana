@@ -67,6 +67,11 @@ public:
     return *this;
   }
 
+  void SetAllocator(
+      const HostAllocator<katana::CopyableAtomic<uint64_t>>& host_alloc) {
+    bitvec_.SetAllocator(host_alloc);
+  }
+
   /**
    * Returns the underlying bitset representation to the user
    *

@@ -56,11 +56,11 @@ TestEntityTypeManagerRoundTrip(const std::string& rdg_name) {
       KATANA_CHECKED(rdg_converted.node_entity_type_manager());
 
   KATANA_LOG_VASSERT(
-      edge_manager_orig.Equals(edge_manager_converted),
+      edge_manager_orig.IsIsomorphicTo(edge_manager_converted),
       "original edge EntityTypeManager does not match the stored converted "
       "edge EntityTypeManager");
   KATANA_LOG_VASSERT(
-      node_manager_orig.Equals(node_manager_converted),
+      node_manager_orig.IsIsomorphicTo(node_manager_converted),
       "original node EntityTypeManager does not match the stored converted "
       "node EntityTypeManager");
 
@@ -194,11 +194,11 @@ TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
       std::numeric_limits<katana::EntityTypeID>::max());
 
   KATANA_LOG_VASSERT(
-      edge_manager_orig.Equals(edge_manager),
+      edge_manager_orig.IsIsomorphicTo(edge_manager),
       "original edge EntityTypeManager does not match the stored "
       "edge EntityTypeManager");
   KATANA_LOG_VASSERT(
-      node_manager_orig.Equals(node_manager),
+      node_manager_orig.IsIsomorphicTo(node_manager),
       "original node EntityTypeManager does not match the stored "
       "node EntityTypeManager");
 

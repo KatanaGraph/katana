@@ -61,7 +61,7 @@ ValidateConstructor() {
 
   katana::EntityTypeManager mgr_copy(std::move(name_map), std::move(id_map));
 
-  if (!mgr.Equals(mgr_copy)) {
+  if (!mgr.IsIsomorphicTo(mgr_copy)) {
     KATANA_LOG_WARN("{}", mgr.ReportDiff(mgr_copy));
     KATANA_LOG_ASSERT(false);
   }

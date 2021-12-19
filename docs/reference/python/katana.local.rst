@@ -16,8 +16,6 @@ as part of a real data science pipeline that does not require scale out.
 
    katana.local.graph
    katana.local.analytics
+   katana.local.import_data
    katana.local.atomic
    katana.local.datastructures
-
-.. automodule:: katana.local
-   :no-members:

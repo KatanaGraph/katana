@@ -68,6 +68,7 @@ html_theme_options = {"show_prev_next": False}
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+html_css_files = ["style.css"]
 
 autodoc_preserve_defaults = True
 autodoc_member_order = "groupwise"

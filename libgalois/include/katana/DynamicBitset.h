@@ -43,7 +43,11 @@ namespace katana {
  * Concurrent dynamically allocated bitset
  **/
 class KATANA_EXPORT DynamicBitset {
-  katana::PODVector<katana::CopyableAtomic<uint64_t>> bitvec_;
+public:  // types
+  using TItem = katana::CopyableAtomic<uint64_t>;
+
+private:  // variables
+  katana::PODVector<TItem> bitvec_;
   size_t num_bits_{0};
 
 public:

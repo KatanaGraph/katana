@@ -293,19 +293,6 @@ public:
   Result<EntityTypeID> GetNonAtomicEntityType(
       const SetOfEntityTypeIDs& type_id_set) const;
 
-  /// Get the intersection of the types passed in.
-  ///
-  /// this function is required to be deterministic because it adds new entity
-  /// type ids
-  ///
-  /// \warning This function does not do proper error checking. Only use if you
-  ///     can prove the intersection type does not already exist. Otherwise, use
-  ///     GetOrAddNonAtomicEntityType(const SetOfEntityTypeIDs& type_id_set).
-  ///
-  /// \returns the EntityTypeID of the intersection type.
-  Result<EntityTypeID> AddNonAtomicEntityType(
-      const SetOfEntityTypeIDs& type_id_set);
-
   /// \returns the number of atomic types
   size_t GetNumAtomicTypes() const {
     return atomic_entity_type_id_to_type_name_.size();
@@ -506,6 +493,19 @@ private:
     using FieldEntity = std::vector<int>;
     std::map<FieldEntity, katana::EntityTypeID> type_field_indices_to_id;
   };
+
+  /// Get the intersection of the types passed in.
+  ///
+  /// this function is required to be deterministic because it adds new entity
+  /// type ids
+  ///
+  /// \warning This function does not do proper error checking. Only use if you
+  ///     can prove the intersection type does not already exist. Otherwise, use
+  ///     GetOrAddNonAtomicEntityType(const SetOfEntityTypeIDs& type_id_set).
+  ///
+  /// \returns the EntityTypeID of the intersection type.
+  Result<EntityTypeID> AddNonAtomicEntityType(
+      const SetOfEntityTypeIDs& type_id_set);
 
   static Result<TypeProperties> DoAssignEntityTypeIDsFromProperties(
       const std::shared_ptr<arrow::Table>& properties,

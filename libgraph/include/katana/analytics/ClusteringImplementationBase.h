@@ -843,8 +843,6 @@ struct ClusteringImplementationBase {
       CommunityArray& subcomm_info,
       katana::NUMAArray<std::atomic<double>>& constant_for_second_term,
       double resolution) {
-    // select set R
-    std::vector<GNode> cluster_nodes_to_move;
     for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
       GNode n = cluster_nodes[i];
       const auto& n_degree_wt =
@@ -880,25 +878,12 @@ struct ClusteringImplementationBase {
      * - clusterWeights[j]) * resolution
      */
 
-      /*    if (double tmp = resolution * static_cast<double>(node_wt) *
-                       static_cast<double>(total_node_wt - node_wt);
-          num_edges_within_cluster >= tmp) {
-       */
-      cluster_nodes_to_move.push_back(n);
-      //}
-
       subcomm_info[n].node_wt = node_wt;
       subcomm_info[n].internal_edge_wt = node_edge_weight_within_cluster;
       subcomm_info[n].num_internal_edges = num_edges_within_cluster;
       subcomm_info[n].size = 1;
       subcomm_info[n].degree_wt = degree_wt;
     }
-
-    //for (int i = 0; i < 20; i++) {
-    //std::vector<bool> is_updated(graph->size(), false);
-
-    //uint64_t start = cluster_nodes[0];
-    //uint64_t end = cluster_nodes.back();
 
     std::vector<GNode> subcomms;
     for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
@@ -907,19 +892,7 @@ struct ClusteringImplementationBase {
       subcomms.push_back(graph->template GetData<CurrentSubCommunityID>(n));
     }
 
-    //   for (int i = 0; i < 20; i++) {
     for (GNode n : cluster_nodes) {
-      //if (is_updated[node]) {
-      //continue;
-      //}
-
-      //std::set<GNode> node_set;
-      //node_set.insert(node);
-
-      //std::set<GNode> new_set;
-
-      //while (!node_set.empty()) {
-      //for (auto n : node_set) {
       const auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
       const auto& n_node_wt = graph->template GetData<NodeWeight>(n);
@@ -933,19 +906,8 @@ struct ClusteringImplementationBase {
             *graph, n, subcomm_info, comm_id, constant_for_second_term[comm_id],
             resolution, subcomms);
 
-        //katana::gPrint("\n current : {} ", n_current_subcomm_id);
-        //katana::gPrint("\n new: {} ", new_subcomm_ass);
-
-        /* is_updated[n] = true;
-        for (auto e : graph->edges(n)) {
-          auto dst = graph->edge_dest(e);
-          if (!is_updated[dst]) {
-            new_set.insert(dst);
-          }
-        }*/
         if (new_subcomm_ass != UNASSIGNED &&
             new_subcomm_ass != n_current_subcomm_id) {
-          //n_current_subcomm_id = new_subcomm_ass;
           /*
          * Move the currently selected node to its new cluster and
          * update the clustering statistics.
@@ -996,27 +958,7 @@ struct ClusteringImplementationBase {
 
         n_current_subcomm_id = new_subcomm_ass;
       }  // end outer if
-         // }    //end for
-
-      //node_set.clear();
-      //for (auto n : new_set) {
-      //node_set.insert(n);
-      //}
-      //new_set.clear();
-      //}
     }
-    //}
-
-    std::set<GNode> num_sub;
-    for (auto n : cluster_nodes) {
-      auto& n_current_subcomm_id =
-          graph->template GetData<CurrentSubCommunityID>(n);
-      num_sub.insert(n_current_subcomm_id);
-    }
-
-    katana::gPrint("\n num_sub suize: ", num_sub.size());
-
-    katana::gPrint("\n num_comm_sze: ", cluster_nodes.size());
   }
 
   /*

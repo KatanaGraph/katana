@@ -1030,6 +1030,9 @@ struct ClusteringImplementationBase {
             resolution);
       }
     });
+
+    comm_constant_term.deallocate();
+    comm_constant_term.destroy();
   }
 
   template <typename EdgeWeightType>

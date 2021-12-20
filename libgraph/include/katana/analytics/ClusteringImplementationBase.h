@@ -1031,6 +1031,9 @@ struct ClusteringImplementationBase {
       }
     });
 
+    subcomm_info.deallocate();
+    subcomm_info.destroy();
+
     comm_constant_term.deallocate();
     comm_constant_term.destroy();
   }

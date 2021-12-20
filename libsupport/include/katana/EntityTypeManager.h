@@ -17,10 +17,27 @@
 
 namespace katana {
 
-/// EntityTypeID uniquely identifies an entity (node or edge) type
-/// EntityTypeID for nodes is distinct from EntityTypeID for edges
-/// This type may either be an atomic type or an intersection of atomic types
-/// EntityTypeID is represented using 8 bits
+/// EntityTypeID uniquely identifies an entity (node or edge) type, which is
+/// a set of user-defined strings.
+/// Types may either be an atomic type or an intersection of atomic types,
+/// where an atomic type is a unique user-defined string and
+/// an intersection of atomic types is a set of corresponding user-defined strings.
+/// The EntityTypeID space for nodes is distinct from EntityTypeID for edges.
+///
+/// Types are sets of strings; all other representations are optimizations.  Clients
+/// should never compare EntityTypeIDs across different managers.  Only comparison of
+/// the string representations are valid.
+///
+/// The type manager should guarantee that two entity type ids never map to the same
+/// set of strings, but the current implementation does not guarantee it for
+/// performance reasons.
+/// The GetOrAdd* functions only add a type if it isn't already present.
+/// There are two Add* functions: AddAtomicEntityType and AddNonAtomicEntityType.
+/// AddAtomicEntityType returns an error if the type is already present.
+/// AddNonAtomicEntityType has a debug assert but does not return an error if the type
+/// is already present because that check is too costly.
+///
+/// EntityTypeID is represented using 16 bits
 using EntityTypeID = uint16_t;
 static constexpr EntityTypeID kUnknownEntityType = EntityTypeID{0};
 static constexpr EntityTypeID kInvalidEntityType =
@@ -239,6 +256,8 @@ public:
   }
 
   /// Get the intersection of the types named in \p names
+  /// Note that AtomicEntityTypeIds map to their "NonAtomic" identity set
+  /// so this function will return EntityTypeIDs for atomic types.
   ///
   /// \returns the EntityTypeID of the intersection type.
   template <typename Container>
@@ -459,7 +478,7 @@ public:
   static size_t CalculateSetOfEntityTypeIDsSize(EntityTypeID max_id);
 
   /// bool Equals() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
-  bool Equals(const EntityTypeManager& other) const;
+  bool IsIsomorphicTo(const EntityTypeManager& other) const;
 
   /// std::string ReportDiff() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   std::string ReportDiff(const EntityTypeManager& other) const;

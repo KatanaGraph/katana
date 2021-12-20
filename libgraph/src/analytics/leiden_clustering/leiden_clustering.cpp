@@ -300,10 +300,6 @@ struct LeidenClusteringImplementation
                 Base::template FindNeighboringClusters<EdgeWeightType>(
                     graph, n, cluster_local_map, counter, self_loop_wt);
                 // Find the max gain in modularity
-                //     local_target[n] = Base::MaxCPMQualityWithoutSwaps(
-                //       cluster_local_map, counter, self_loop_wt, c_info,
-                //     n_data_node_wt, n_data_curr_comm_id, resolution);
-
                 local_target[n] = Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
                     n_data_degree_wt, n_data_curr_comm_id,

@@ -306,7 +306,7 @@ struct LeidenClusteringImplementation
                     constant_for_second_term);
 
               } else {
-                local_target[n] = Base::UNASSIGNED;
+                local_target[n] = 0;
               }
 
               /* Update cluster info */

@@ -150,22 +150,14 @@ class KATANA_EXPORT TemporaryPropertyGuard {
 public:
   TemporaryPropertyGuard() = default;
 
-  // TODO(amp): Remove old constructors. They were left to avoid simultainious
-  //  changes to enterprise.
-  TemporaryPropertyGuard(PropertyGraph* pv, std::string name)
-      : TemporaryPropertyGuard(pv->NodeMutablePropertyView(), std::move(name)) {
-  }
   TemporaryPropertyGuard(PropertyGraph* pv)
       : TemporaryPropertyGuard(pv->NodeMutablePropertyView()) {}
 
-  TemporaryPropertyGuard(
-      PropertyGraph::MutablePropertyView pv, std::string name)
-      : property_view_(pv), name_(std::move(name)) {
+  explicit TemporaryPropertyGuard(PropertyGraph::MutablePropertyView pv)
+      : property_view_(pv) {
+    name_ = GetPropertyName();
     txn_ctx_ = std::make_unique<tsuba::TxnContext>();
   }
-
-  explicit TemporaryPropertyGuard(PropertyGraph::MutablePropertyView pv)
-      : TemporaryPropertyGuard(pv, GetPropertyName()) {}
 
   const TemporaryPropertyGuard& operator=(const TemporaryPropertyGuard&) =
       delete;

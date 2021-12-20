@@ -71,7 +71,8 @@ struct ClusteringImplementationBase {
   using EdgeTy = _EdgeType;
   using CommunityType = _CommunityType;
 
-  constexpr static const GNode UNASSIGNED = std::numeric_limits<GNode>::max();
+  constexpr static const GNode UNASSIGNED =
+      std::numeric_limits<GNode>::max() / 4;
   constexpr static const double INFINITY_DOUBLE =
       std::numeric_limits<double>::max() / 4;
 
@@ -932,11 +933,11 @@ struct ClusteringImplementationBase {
                 graph->template GetData<CurrentCommunityID>(dst) == comm_id) {
               if (graph->template GetData<CurrentSubCommunityID>(dst) ==
                   new_subcomm_ass) {
-                subcomm_info[new_subcomm_ass].internal_edge_wt -= 2.0 * edge_wt;
-                subcomm_info[new_subcomm_ass].num_internal_edges -= 2;
+                subcomm_info[new_subcomm_ass].internal_edge_wt -= edge_wt;
+                subcomm_info[new_subcomm_ass].num_internal_edges--;
               } else {
-                subcomm_info[new_subcomm_ass].internal_edge_wt += 2.0 * edge_wt;
-                subcomm_info[new_subcomm_ass].num_internal_edges += 2;
+                subcomm_info[new_subcomm_ass].internal_edge_wt += edge_wt;
+                subcomm_info[new_subcomm_ass].num_internal_edges++;
               }
             }  //end outer if
 
@@ -944,13 +945,11 @@ struct ClusteringImplementationBase {
                 graph->template GetData<CurrentCommunityID>(dst) == comm_id) {
               if (graph->template GetData<CurrentSubCommunityID>(dst) ==
                   n_current_subcomm_id) {
-                subcomm_info[n_current_subcomm_id].internal_edge_wt +=
-                    2.0 * edge_wt;
-                subcomm_info[n_current_subcomm_id].num_internal_edges += 2;
+                subcomm_info[n_current_subcomm_id].internal_edge_wt += edge_wt;
+                subcomm_info[n_current_subcomm_id].num_internal_edges++;
               } else {
-                subcomm_info[n_current_subcomm_id].internal_edge_wt -=
-                    2.0 * edge_wt;
-                subcomm_info[n_current_subcomm_id].num_internal_edges -= 2;
+                subcomm_info[n_current_subcomm_id].internal_edge_wt -= edge_wt;
+                subcomm_info[n_current_subcomm_id].num_internal_edges--;
               }
             }  //end outer if
           }

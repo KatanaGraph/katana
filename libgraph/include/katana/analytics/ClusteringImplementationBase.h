@@ -966,8 +966,7 @@ struct ClusteringImplementationBase {
  * trying to split up each cluster into multiple clusters.
  */
   template <typename EdgeWeightType>
-  static void RefinePartition(
-      Graph* graph, [[maybe_unused]] double resolution) {
+  static void RefinePartition(Graph* graph, double resolution) {
     [[maybe_unused]] double constant_for_second_term =
         CalConstantForSecondTerm<EdgeWeightType>(*graph);
     // set singleton subcommunities
@@ -979,7 +978,6 @@ struct ClusteringImplementationBase {
     std::vector<std::vector<GNode>> cluster_bags(graph->size());
     CommunityArray comm_info;
 
-    // comm_info.allocateBlocked(2 * graph->size() + 1);
     comm_info.allocateBlocked(graph->size());
 
     katana::do_all(katana::iterate(size_t{0}, (graph->size())), [&](size_t n) {
@@ -1008,7 +1006,6 @@ struct ClusteringImplementationBase {
 
     CommunityArray subcomm_info;
 
-    // subcomm_info.allocateBlocked(graph->size() + 1);
     subcomm_info.allocateBlocked(graph->size());
 
     SumVertexDegreeWeightCommunity<EdgeWeightType>(graph);
@@ -1032,12 +1029,6 @@ struct ClusteringImplementationBase {
             graph, cluster_bags[c], c, subcomm_info, comm_constant_term,
             resolution);
       }
-      /*if (cluster_bags[c].size() > 1){
-                uint64_t id = cluster_bags[c][0];
-                for(auto n : cluster_bags[c]){
-                        graph->template GetData<CurrentSubCommunityID>(n) = id;
-                }
-        }*/
     });
   }
 

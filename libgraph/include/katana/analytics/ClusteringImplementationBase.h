@@ -252,7 +252,7 @@ struct ClusteringImplementationBase {
       const Graph& graph,
       katana::NUMAArray<std::atomic<double>>* comm_constant_term_array) {
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      (*comm_constant_term_array)[n] = 0.0;
+      (*comm_constant_term_array)[n] = double{0.0};
     });
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
@@ -263,7 +263,7 @@ struct ClusteringImplementationBase {
     });
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      if ((*comm_constant_term_array)[n] != 0) {
+      if ((*comm_constant_term_array)[n] != double{0.0}) {
         (*comm_constant_term_array)[n] = 1.0 / (*comm_constant_term_array)[n];
       }
     });
@@ -843,7 +843,7 @@ struct ClusteringImplementationBase {
       CommunityArray& subcomm_info,
       katana::NUMAArray<std::atomic<double>>& constant_for_second_term,
       double resolution) {
-    for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
+    for (GNode i = 0; i < cluster_nodes.size(); ++i) {
       GNode n = cluster_nodes[i];
       const auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);

@@ -179,6 +179,11 @@ struct ClusteringImplementationBase {
     });
   }
 
+  /**
+   * Sums up the internal degree weight for all
+   * the unique clusters.
+   * This is required for finding subcommunities.
+   */
   template <typename EdgeWeightType>
   static void SumVertexDegreeWeightCommunity(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](GNode n) {

@@ -752,54 +752,13 @@ struct ClusteringImplementationBase {
   }
 
   template <typename EdgeWeightType>
-  static uint64_t GetRandomSubcommunity(
+  static uint64_t GetSubcommunity(
       const Graph& graph, GNode n, CommunityArray& subcomm_info,
-      [[maybe_unused]] uint64_t total_node_wt, uint64_t comm_id,
-      [[maybe_unused]] double constant_for_second_term,
-      [[maybe_unused]] double resolution, std::set<GNode>& subcomms) {
-    //       return comm_id;
-
+      uint64_t comm_id, double constant_for_second_term, double resolution,
+      std::vector<GNode>& subcomms) {
     auto& n_current_subcomm_id =
         graph.template GetData<CurrentSubCommunityID>(n);
-    /*
-   * Remove the currently selected node from its current cluster.
-   * This causes the cluster to be empty.
-   */
-    //    subcomm_info[n_current_subcomm_id].node_wt = 0;
-    //  subcomm_info[n_current_subcomm_id].internal_edge_wt = 0;
-
-    // TODO(amber): this method is called from a parallel loop. Use iteration
-    // local allocator for the following STL containers
-    /*
-   * Map each neighbor's subcommunity to local number: Subcommunity --> Index
-   */
-    // std::map<uint64_t, uint64_t> cluster_local_map;
-
-    /*
-   * Edges weight to each unique subcommunity
-   */
     std::vector<EdgeTy> counter(graph.size(), 0);
-    //std::vector<uint64_t> neighboring_cluster_ids;
-
-    /*
-   * Identify the neighboring clusters of the currently selected
-   * node, that is, the clusters with which the currently
-   * selected node is connected. The old cluster of the currently
-   * selected node is also included in the set of neighboring
-   * clusters. In this way, it is always possible that the
-   * currently selected node will be moved back to its old
-   * cluster.
-   */
-    /*for(uint64_t id = start; id <= end; id++) {
-    cluster_local_map[id] = 0;  // Add n's current
-                                                  // subcommunity
-    counter.push_back(0);  // Initialize the counter to zero (no edges incident
-                           // yet)
-    neighboring_cluster_ids.push_back(id);
-        }
-    uint64_t num_unique_clusters = end - start + 1;
-*/
-    //    uint64_t num_unique_clusters = 0;
 
     EdgeTy self_loop_wt = 0;
 
@@ -817,131 +776,39 @@ struct ClusteringImplementationBase {
           self_loop_wt += edge_wt;  // Self loop weights is recorded
           continue;
         }
-        /*      auto stored_already = cluster_local_map.find(
-            n_current_subcomm);  // Check if it already exists
-        if (stored_already != cluster_local_map.end()) {
-          counter[stored_already->second] += edge_wt;
-        } else {
-          cluster_local_map[n_current_subcomm] = num_unique_clusters;
-          counter.push_back(edge_wt);
-          neighboring_cluster_ids.push_back(n_current_subcomm);
-          num_unique_clusters++;
-        }*/
         counter[n_current_subcomm] += edge_wt;
       }
     }  // End edge loop
 
     uint64_t best_cluster = n_current_subcomm_id;
-    double max_quality_value_increment = -1000000;
-    double total_transformed_quality_value_increment = 0;
+    double max_quality_value_increment = -INFINITY_DOUBLE;
     double quality_value_increment = 0;
-    std::vector<double> cum_transformed_quality_value_increment_per_cluster(
-        graph.size());
-    [[maybe_unused]] auto& n_degree_wt =
-        graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-    [[maybe_unused]] auto n_node_wt = graph.template GetData<NodeWeight>(n);
+    auto& n_degree_wt = graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-    //for (auto pair : cluster_local_map) {
-    //auto subcomm = pair.first;
     for (auto subcomm : subcomms) {
       if (n_current_subcomm_id == subcomm || subcomm_info[subcomm].size == 0) {
         continue;
       }
 
-      [[maybe_unused]] double subcomm_degree_wt =
-          subcomm_info[subcomm].degree_wt;
+      double subcomm_degree_wt = subcomm_info[subcomm].degree_wt;
 
-      /*if (subcomm_degree_wt < subcomm_info[n_current_subcomm_id].degree_wt) {
-        continue;
-      }
-
-      if (subcomm_degree_wt == subcomm_info[n_current_subcomm_id].degree_wt &&
-          subcomm > n_current_subcomm_id) {
-        continue;
-      }*/
-
-      //if(subcomm_info[subcomm].size == 1){
-      //      continue;
-      //}
-
-      [[maybe_unused]] double subcomm_node_wt = subcomm_info[subcomm].node_wt;
-      //    [[maybe_unused]] double subcomm_degree_wt =
-      //          subcomm_info[subcomm].degree_wt;
-
-      // check if subcommunity is well connected
-      //       if (double tmp = resolution * subcomm_node_wt *
-      //                    (static_cast<double>(total_node_wt) - subcomm_node_wt);
-      //   subcomm_info[subcomm].num_internal_edges >= tmp) {
       quality_value_increment =
           counter[subcomm] - counter[n_current_subcomm_id] -
-          //         n_node_wt * (subcomm_node_wt - subcomm_info[n_current_subcomm_id].node_wt + n_node_wt) * resolution;
           n_degree_wt *
               (subcomm_degree_wt -
                subcomm_info[n_current_subcomm_id].degree_wt + n_degree_wt) *
               constant_for_second_term * resolution;
-
-      katana::gPrint("\n quality: ", quality_value_increment);
 
       if (quality_value_increment > max_quality_value_increment) {
         best_cluster = subcomm;
         max_quality_value_increment = quality_value_increment;
       }
 
-      if (quality_value_increment >= 0) {
-        total_transformed_quality_value_increment +=
-            std::exp(quality_value_increment);
-      }
-      //}
-      cum_transformed_quality_value_increment_per_cluster[subcomm] =
-          total_transformed_quality_value_increment;
       counter[subcomm] = 0;
     }
 
-    cum_transformed_quality_value_increment_per_cluster[n_current_subcomm_id] =
-        (n_current_subcomm_id == 0)
-            ? 0
-            : cum_transformed_quality_value_increment_per_cluster
-                  [n_current_subcomm_id - 1];
-
-    katana::gPrint("\n best cluster: ", best_cluster);
-    katana::gPrint("\n subcomm id: ", n_current_subcomm_id);
-
     return best_cluster;
-    /*
-   * Determine the neighboring cluster to which the currently
-   * selected node will be moved.
-   */
-
-    /*int64_t min_idx, max_idx, mid_idx;
-    double r;
-    if (total_transformed_quality_value_increment > 0 &&
-        total_transformed_quality_value_increment < INFINITY_DOUBLE) {
-      r = total_transformed_quality_value_increment *
-          GenerateRandonNumber(0.0, 1.0);
-
-      min_idx = start;
-      max_idx = end;
-      while (min_idx < max_idx) {
-        mid_idx = (min_idx + max_idx) / 2;
-
-        if (cum_transformed_quality_value_increment_per_cluster[mid_idx] >= r) {
-          if (max_idx == mid_idx) {
-            break;
-          }
-          max_idx = mid_idx;
-        } else {
-          if (min_idx == mid_idx) {
-            break;
-          }
-          min_idx = mid_idx;
-        }
-      }
-      return max_idx;  //(max_idx == 0) ? neighboring_cluster_ids[max_idx]
-                       //       : neighboring_cluster_ids[max_idx - 1];
-    } else {
-      return best_cluster;
-    }*/
   }
 
   /**
@@ -973,7 +840,7 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   static void MergeNodesSubset(
       Graph* graph, std::vector<GNode>& cluster_nodes, uint64_t comm_id,
-      uint64_t total_node_wt, CommunityArray& subcomm_info,
+      CommunityArray& subcomm_info,
       katana::NUMAArray<std::atomic<double>>& constant_for_second_term,
       double resolution) {
     // select set R
@@ -1033,11 +900,11 @@ struct ClusteringImplementationBase {
     //uint64_t start = cluster_nodes[0];
     //uint64_t end = cluster_nodes.back();
 
-    std::set<GNode> subcomms;
+    std::vector<GNode> subcomms;
     for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
       GNode n = cluster_nodes[i];
 
-      subcomms.insert(graph->template GetData<CurrentSubCommunityID>(n));
+      subcomms.push_back(graph->template GetData<CurrentSubCommunityID>(n));
     }
 
     //   for (int i = 0; i < 20; i++) {
@@ -1062,9 +929,9 @@ struct ClusteringImplementationBase {
      * Only consider singleton communities
      */
       if (subcomm_info[n_current_subcomm_id].size == 1) {
-        uint64_t new_subcomm_ass = GetRandomSubcommunity<EdgeWeightType>(
-            *graph, n, subcomm_info, total_node_wt, comm_id,
-            constant_for_second_term[comm_id], resolution, subcomms);
+        uint64_t new_subcomm_ass = GetSubcommunity<EdgeWeightType>(
+            *graph, n, subcomm_info, comm_id, constant_for_second_term[comm_id],
+            resolution, subcomms);
 
         //katana::gPrint("\n current : {} ", n_current_subcomm_id);
         //katana::gPrint("\n new: {} ", new_subcomm_ass);
@@ -1220,8 +1087,8 @@ struct ClusteringImplementationBase {
       comm_info[c].num_sub_communities = 0;
       if (cluster_bags[c].size() > 1) {
         MergeNodesSubset<EdgeWeightType>(
-            graph, cluster_bags[c], c, comm_info[c].node_wt, subcomm_info,
-            comm_constant_term, resolution);
+            graph, cluster_bags[c], c, subcomm_info, comm_constant_term,
+            resolution);
       }
       /*if (cluster_bags[c].size() > 1){
                 uint64_t id = cluster_bags[c][0];

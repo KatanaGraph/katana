@@ -139,4 +139,9 @@ public:
   }
 };
 
+inline HostAllocator<char>
+GetSwappableAllocator() {
+  return HostAllocator<char>(GetSwappableHostHeap());
+}
+
 }  // namespace katana

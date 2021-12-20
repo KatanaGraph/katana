@@ -442,39 +442,25 @@ struct ClusteringImplementationBase {
       auto& n_data_curr_comm_id = graph->template GetData<CommunityIDType>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         auto stored_already = cluster_local_map.find(n_data_curr_comm_id);
-        if (stored_already != cluster_local_map.end()) {
-          // n_data_curr_comm_id = stored_already->second;
-        } else {
+        if (stored_already == cluster_local_map.end()) {
           cluster_local_map[n_data_curr_comm_id] = num_unique_clusters;
-          //   n_data_curr_comm_id = num_unique_clusters;
           num_unique_clusters++;
         }
       }
     }
 
-    katana::gPrint("\n num uniqe: ", num_unique_clusters);
-
-    uint64_t idx = 0;
-    for (std::pair<uint64_t, uint64_t> tmp : cluster_local_map) {
-      cluster_local_map[tmp.first] = idx;
-      idx++;
+    uint64_t new_comm_id = 0;
+    for (std::pair<uint64_t, uint64_t> old_comm_id : cluster_local_map) {
+      cluster_local_map[old_comm_id.first] = new_comm_id;
+      new_comm_id++;
     }
 
-    katana::gPrint("\n idx: ", idx);
-
-    for (GNode n : graph->all_nodes()) {
+    katana::do_all(katana::iterate(*graph), [&](GNode n) {
       auto& n_data_curr_comm_id = graph->template GetData<CommunityIDType>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
-        //auto stored_already = cluster_local_map.find(n_data_curr_comm_id);
-        //if (stored_already != cluster_local_map.end()) {
-        //n_data_curr_comm_id = stored_already->second;
-        //} else {
-        //cluster_local_map[n_data_curr_comm_id] = num_unique_clusters;
         n_data_curr_comm_id = cluster_local_map[n_data_curr_comm_id];
-        //num_unique_clusters++;
-        //}
       }
-    }
+    });
 
     return num_unique_clusters;
   }

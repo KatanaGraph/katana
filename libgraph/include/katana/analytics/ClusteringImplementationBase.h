@@ -242,25 +242,31 @@ struct ClusteringImplementationBase {
     return 1 / total_edge_weight_twice;
   }
 
+  /**
+   * Computes the constant term 1/(2 * total internal edge weight)
+   * for subgraphs corresponding to each individual community.
+   * This is required for finding subcommunities.
+   */
   template <typename EdgeWeightType>
   static void CalConstantForSecondTerm(
       const Graph& graph,
-      katana::NUMAArray<EdgeWeightType>* comm_constant_term_array) {
-    // Using double to avoid overflow
-    for (GNode n = 0; n < graph.size(); n++) {
+      katana::NUMAArray<std::atomic<double>>* comm_constant_term_array) {
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
       (*comm_constant_term_array)[n] = 0.0;
-    }
-    for (GNode n = 0; n < graph.size(); n++) {
-      auto comm_id = graph.template GetData<CurrentCommunityID>(n);
-      (*comm_constant_term_array)[comm_id] +=
-          graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
-    }
+    });
 
-    for (GNode n = 0; n < graph.size(); n++) {
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
+      auto comm_id = graph.template GetData<CurrentCommunityID>(n);
+      katana::atomicAdd(
+          (*comm_constant_term_array)[comm_id],
+          (double)graph.template GetData<DegreeWeight<EdgeWeightType>>(n));
+    });
+
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
       if ((*comm_constant_term_array)[n] != 0) {
         (*comm_constant_term_array)[n] = 1.0 / (*comm_constant_term_array)[n];
       }
-    }
+    });
   }
 
   /**
@@ -982,7 +988,7 @@ struct ClusteringImplementationBase {
   static void MergeNodesSubset(
       Graph* graph, std::vector<GNode>& cluster_nodes, uint64_t comm_id,
       uint64_t total_node_wt, CommunityArray& subcomm_info,
-      katana::NUMAArray<EdgeWeightType>& constant_for_second_term,
+      katana::NUMAArray<std::atomic<double>>& constant_for_second_term,
       double resolution) {
     // select set R
     std::vector<GNode> cluster_nodes_to_move;
@@ -1212,7 +1218,7 @@ struct ClusteringImplementationBase {
 
     SumVertexDegreeWeightCommunity<EdgeWeightType>(graph);
 
-    katana::NUMAArray<EdgeWeightType> comm_constant_term;
+    katana::NUMAArray<std::atomic<double>> comm_constant_term;
 
     comm_constant_term.allocateBlocked(graph->size());
 

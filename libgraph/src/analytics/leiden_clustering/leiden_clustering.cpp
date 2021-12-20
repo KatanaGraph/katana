@@ -477,8 +477,6 @@ public:
     uint32_t iter = 0;
     uint64_t num_nodes_orig = clusters_orig.size();
 
-    //Graph graph_curr = KATANA_CHECKED(Graph::Make(pg_curr.get()));
-
     while (true) {
       iter++;
       phase++;
@@ -514,40 +512,6 @@ public:
               katana::ErrorCode::InvalidArgument, "Unknown algorithm");
         }
       } else {
-        /*        uint64_t num_unique_clusters =
-          Base::template RenumberClustersContiguously<CurrentCommunityID>(
-              &graph_curr);
-        
-        katana::do_all(
-              katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
-        clusters_orig[n] =
-                      graph_curr.template GetData<CurrentCommunityID>(
-                          clusters_orig[n]);
-                });
-
-        auto coarsened_graph_result = Base::template GraphCoarsening<
-            NodeData, EdgeData, EdgeWeightType, CurrentCommunityID>(
-            graph_curr, pg_curr.get(), num_unique_clusters,
-            temp_node_property_names, temp_edge_property_names, txn_ctx);
-        if (!coarsened_graph_result) {
-          return coarsened_graph_result.error();
-        }
-        pg_curr = std::move(coarsened_graph_result.value());
-
-        prev_mod = curr_mod;
-
-       */ /**
-       * Assign cluster id from previous iteration
-       */
-        /*Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
-        katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
-          graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n;
-        });
-
-        curr_mod = KATANA_CHECKED(LeidenDeterministic(
-              pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
-              iter, plan.resolution()));
-  */
         break;
       }
 
@@ -580,8 +544,6 @@ public:
                 }
               });
         }
-
-        katana::gPrint("\n curr: ", curr_mod);
 
         katana::NUMAArray<uint64_t> original_comm_ass;
         katana::NUMAArray<std::atomic<uint64_t>> cluster_node_wt;
@@ -635,48 +597,11 @@ public:
         cluster_node_wt.destroy();
 
       } else {
-        /*      uint64_t num_unique_clusters =
-          Base::template RenumberClustersContiguously<CurrentCommunityID>(
-              &graph_curr);
-
-        katana::do_all(
-              katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
-        clusters_orig[n] =
-                      graph_curr.template GetData<CurrentCommunityID>(
-                          clusters_orig[n]);
-                });
-
-        auto coarsened_graph_result = Base::template GraphCoarsening<
-            NodeData, EdgeData, EdgeWeightType, CurrentCommunityID>(
-            graph_curr, pg_curr.get(), num_unique_clusters,
-            temp_node_property_names, temp_edge_property_names, txn_ctx);
-        if (!coarsened_graph_result) {
-          return coarsened_graph_result.error();
-        }
-        pg_curr = std::move(coarsened_graph_result.value());
-
-        prev_mod = curr_mod;
-*/
-
-        /*      Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
-        katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
-          graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n;
-        });
-
-        curr_mod = KATANA_CHECKED(LeidenDeterministic(
-              pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
-              iter, plan.resolution()));
-*/
-        /* katana::do_all(
-              katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
-          clusters_orig[n] =
-              graph_curr.template GetData<CurrentSubCommunityID>(clusters_orig[n]);
-        });*/
-
         break;
       }
     }
 
+    // Do one iteration of louvain clustering nopw
     uint64_t num_unique_clusters =
         Base::template RenumberClustersContiguously<CurrentCommunityID>(
             &graph_curr);
@@ -702,22 +627,14 @@ public:
       graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n;
     });
 
-    /*curr_mod = KATANA_CHECKED(LeidenWithoutLockingDoAll(
-              pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
-              iter, plan.resolution()));
-        */
-
     curr_mod = KATANA_CHECKED(LeidenDeterministic(
         pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(), iter,
         plan.resolution()));
 
-    //katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
     katana::do_all(katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
       clusters_orig[n] =
           graph_curr.template GetData<CurrentCommunityID>(clusters_orig[n]);
     });
-
-    katana::gPrint("\n here");
 
     return katana::ResultSuccess();
   }

@@ -16,6 +16,7 @@ ARG MAMBAFORGE_PLATFORM=Linux-x86_64
 
 RUN set -eux; \
     curl --location --output /mambaforge.sh "https://github.com/conda-forge/miniforge/releases/download/${MAMBAFORGE_VERSION}/Mambaforge-${MAMBAFORGE_VERSION}-${MAMBAFORGE_PLATFORM}.sh"; \
+    /opt/conda/bin/conda install preconda \
     bash /mambaforge.sh -b -p $CONDA_PREFIX; \
     rm /mambaforge.sh; \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh; \

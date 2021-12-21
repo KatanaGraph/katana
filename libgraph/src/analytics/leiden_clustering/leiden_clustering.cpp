@@ -31,7 +31,8 @@ namespace {
 template <typename EdgeWeightType>
 struct LeidenClusteringImplementation
     : public katana::analytics::ClusteringImplementationBase<
-          katana::TypedPropertyGraph<
+          katana::TypedPropertyGraphView<
+              katana::PropertyGraphViews::Undirected,
               std::tuple<
                   PreviousCommunityID, CurrentCommunityID,
                   DegreeWeight<EdgeWeightType>, CurrentSubCommunityID,
@@ -45,7 +46,8 @@ struct LeidenClusteringImplementation
   using CommTy = LeidenCommunityType<EdgeWeightType>;
   using CommunityArray = katana::NUMAArray<CommTy>;
 
-  using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
   using GNode = typename Graph::Node;
 
   using Base = katana::analytics::ClusteringImplementationBase<
@@ -117,8 +119,7 @@ struct LeidenClusteringImplementation
                 graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
             auto& n_data_node_wt = graph.template GetData<NodeWeight>(n);
 
-            uint64_t degree =
-                std::distance(graph.edge_begin(n), graph.edge_end(n));
+            uint64_t degree = graph.degree(n);
             uint64_t local_target = Base::UNASSIGNED;
             std::map<uint64_t, uint64_t>
                 cluster_local_map;  // Map each neighbor's cluster to local number:
@@ -235,8 +236,6 @@ struct LeidenClusteringImplementation
         auto& n_data_degree_wt =
             graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
         auto& n_data_node_wt = graph.template GetData<NodeWeight>(n);
-        katana::gPrint("\n id: ", n_data_curr_comm_id);
-        katana::gPrint("\n id: ", n_data_curr_comm_id);
         katana::atomicAdd(c_info[n_data_curr_comm_id].size, uint64_t{1});
         katana::atomicAdd(c_info[n_data_curr_comm_id].node_wt, n_data_node_wt);
         katana::atomicAdd(
@@ -288,8 +287,7 @@ struct LeidenClusteringImplementation
                   graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
               auto& n_data_node_wt = graph.template GetData<NodeWeight>(n);
 
-              uint64_t degree =
-                  std::distance(graph.edge_begin(n), graph.edge_end(n));
+              uint64_t degree = graph.degree(n);
 
               std::map<uint64_t, uint64_t>
                   cluster_local_map;  // Map each neighbor's cluster to local number:
@@ -302,13 +300,9 @@ struct LeidenClusteringImplementation
                 Base::template FindNeighboringClusters<EdgeWeightType>(
                     graph, n, cluster_local_map, counter, self_loop_wt);
                 // Find the max gain in modularity
-                //     local_target[n] = Base::MaxCPMQualityWithoutSwaps(
-                //       cluster_local_map, counter, self_loop_wt, c_info,
-                //     n_data_node_wt, n_data_curr_comm_id, resolution);
-
                 local_target[n] = Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
-                    n_data_node_wt, n_data_curr_comm_id,
+                    n_data_degree_wt, n_data_curr_comm_id,
                     constant_for_second_term);
 
               } else {
@@ -483,7 +477,8 @@ public:
       iter++;
       phase++;
 
-      Graph graph_curr = KATANA_CHECKED(Graph::Make(pg_curr.get()));
+      graph_curr = KATANA_CHECKED(Graph::Make(pg_curr.get()));
+
       if (iter == 1) {
         /* Initialization each node to its own cluster */
         katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
@@ -531,7 +526,7 @@ public:
           KATANA_LOG_DEBUG_ASSERT(num_nodes_orig == graph_curr.num_nodes());
           katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
             clusters_orig[n] =
-                graph_curr.template GetData<CurrentCommunityID>(n);
+                graph_curr.template GetData<CurrentSubCommunityID>(n);
           });
         } else {
           katana::do_all(
@@ -540,7 +535,7 @@ public:
                   KATANA_LOG_DEBUG_ASSERT(
                       clusters_orig[n] < graph_curr.num_nodes());
                   clusters_orig[n] =
-                      graph_curr.template GetData<CurrentCommunityID>(
+                      graph_curr.template GetData<CurrentSubCommunityID>(
                           clusters_orig[n]);
                 }
               });
@@ -598,14 +593,45 @@ public:
         cluster_node_wt.destroy();
 
       } else {
-        katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-          clusters_orig[n] =
-              graph_curr.template GetData<CurrentCommunityID>(clusters_orig[n]);
-        });
-
         break;
       }
     }
+
+    // Do one iteration of louvain clustering nopw
+    uint64_t num_unique_clusters =
+        Base::template RenumberClustersContiguously<CurrentCommunityID>(
+            &graph_curr);
+
+    katana::do_all(katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
+      clusters_orig[n] =
+          graph_curr.template GetData<CurrentCommunityID>(clusters_orig[n]);
+    });
+
+    auto coarsened_graph_result = Base::template GraphCoarsening<
+        NodeData, EdgeData, EdgeWeightType, CurrentCommunityID>(
+        graph_curr, pg_curr.get(), num_unique_clusters,
+        temp_node_property_names, temp_edge_property_names, txn_ctx);
+    if (!coarsened_graph_result) {
+      return coarsened_graph_result.error();
+    }
+    pg_curr = std::move(coarsened_graph_result.value());
+
+    prev_mod = curr_mod;
+
+    Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
+    katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
+      graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n;
+    });
+
+    curr_mod = KATANA_CHECKED(LeidenDeterministic(
+        pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(), iter,
+        plan.resolution()));
+
+    katana::do_all(katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
+      clusters_orig[n] =
+          graph_curr.template GetData<CurrentCommunityID>(clusters_orig[n]);
+    });
+
     return katana::ResultSuccess();
   }
 };
@@ -772,7 +798,7 @@ CalModularityWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& property_name) {
   using CommTy = CommunityType<EdgeWeightType>;
-  using NodeData = std::tuple<PreviousCommunityID>;
+  using NodeData = std::tuple<CurrentCommunityID>;
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
   using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
   using ClusterBase = katana::analytics::ClusteringImplementationBase<
@@ -784,7 +810,7 @@ CalModularityWrap(
   }
   auto graph = graph_result.value();
   return ClusterBase::template CalModularityFinal<
-      EdgeWeightType, PreviousCommunityID>(graph);
+      EdgeWeightType, CurrentCommunityID>(graph);
 }
 
 katana::Result<katana::analytics::LeidenClusteringStatistics>

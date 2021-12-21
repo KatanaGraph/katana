@@ -11,12 +11,12 @@ RUN set -eux; \
     ${APT_GET} clean
 
 ENV CONDA_PREFIX=/opt/conda
-ARG MAMBAFORGE_VERSION="4.10.0-0"
+ARG MAMBAFORGE_VERSION="4.11.0-0"
 ARG MAMBAFORGE_PLATFORM=Linux-x86_64
 
 RUN set -eux; \
     curl --location --output /mambaforge.sh "https://github.com/conda-forge/miniforge/releases/download/${MAMBAFORGE_VERSION}/Mambaforge-${MAMBAFORGE_VERSION}-${MAMBAFORGE_PLATFORM}.sh"; \
-    bash /mambaforge.sh -b -p $CONDA_PREFIX; \
+    bash /mambaforge.sh -b $CONDA_PREFIX; \
     rm /mambaforge.sh; \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh; \
     echo "conda activate base" >> /etc/profile.d/z-conda-activate.sh; \

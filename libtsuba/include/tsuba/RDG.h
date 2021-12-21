@@ -150,8 +150,8 @@ public:
   katana::Result<void> UpsertEdgeProperties(
       const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
-  katana::Result<void> RemoveNodeProperty(int i);
-  katana::Result<void> RemoveEdgeProperty(int i);
+  katana::Result<void> RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx);
+  katana::Result<void> RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx);
 
   /// Ensure the node property at index `i` was written back to storage
   /// then free its memory

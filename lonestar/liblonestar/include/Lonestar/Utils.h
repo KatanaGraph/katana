@@ -37,10 +37,11 @@ MakeFileGraph(
     edge_properties.emplace_back(edge_property_name);
   }
 
+  tsuba::TxnContext txn_ctx;
   tsuba::RDGLoadOptions opts;
   opts.node_properties = node_properties;
   opts.edge_properties = edge_properties;
-  auto pfg_result = katana::PropertyGraph::Make(rdg_name, opts);
+  auto pfg_result = katana::PropertyGraph::Make(rdg_name, &txn_ctx, opts);
   if (!pfg_result) {
     KATANA_LOG_FATAL("cannot make graph: {}", pfg_result.error());
   }

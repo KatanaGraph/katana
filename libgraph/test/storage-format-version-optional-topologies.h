@@ -34,7 +34,8 @@ void
 TestOptionalTopologyStorageEdgeShuffleTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeShuffleTopology *****");
 
-  katana::PropertyGraph pg = LoadGraph(inputFile);
+  tsuba::TxnContext txn_ctx;
+  katana::PropertyGraph pg = LoadGraph(inputFile, &txn_ctx);
 
   // Build a EdgeSortedByDestID view, which uses GraphTopology EdgeShuffleTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
@@ -44,7 +45,7 @@ TestOptionalTopologyStorageEdgeShuffleTopology(std::string inputFile) {
   // generated_sorted_view.Print();
 
   std::string g2_rdg_file = StoreGraph(&pg);
-  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
+  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file, &txn_ctx);
 
   SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();
 
@@ -57,7 +58,8 @@ void
 TestOptionalTopologyStorageShuffleTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing ShuffleTopology *****");
 
-  katana::PropertyGraph pg = LoadGraph(inputFile);
+  tsuba::TxnContext txn_ctx;
+  katana::PropertyGraph pg = LoadGraph(inputFile, &txn_ctx);
 
   // Build a NodesSortedByDegreeEdgesSortedByDestID view, which uses GraphTopology ShuffleTopology in the background
   using SortedGraphView =
@@ -68,7 +70,7 @@ TestOptionalTopologyStorageShuffleTopology(std::string inputFile) {
   // generated_sorted_view.Print();
 
   std::string g2_rdg_file = StoreGraph(&pg);
-  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
+  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file, &txn_ctx);
 
   SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();
 
@@ -81,7 +83,8 @@ void
 TestOptionalTopologyStorageEdgeTypeAwareTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeTypeAware Topology *****");
 
-  katana::PropertyGraph pg = LoadGraph(inputFile);
+  tsuba::TxnContext txn_ctx;
+  katana::PropertyGraph pg = LoadGraph(inputFile, &txn_ctx);
 
   // Build a EdgeTypeAwareBiDir view, which uses GraphTopology EdgeTypeAwareTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgeTypeAwareBiDir;
@@ -90,7 +93,7 @@ TestOptionalTopologyStorageEdgeTypeAwareTopology(std::string inputFile) {
   // generated_sorted_view.Print();
 
   std::string g2_rdg_file = StoreGraph(&pg);
-  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
+  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file, &txn_ctx);
 
   SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();
 

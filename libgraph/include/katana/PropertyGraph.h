@@ -175,8 +175,10 @@ public:
         const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*upsert_properties_fn)(
         const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
-    Result<void> (PropertyGraph::*remove_property_int)(int i);
-    Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
+    Result<void> (PropertyGraph::*remove_property_int)(
+        int i, tsuba::TxnContext* txn_ctx);
+    Result<void> (PropertyGraph::*remove_property_str)(
+        const std::string& str, tsuba::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*ensure_loaded_property_fn)(
         const std::string& str);
     Result<void> (PropertyGraph::*unload_property_fn)(const std::string& str);
@@ -213,11 +215,12 @@ public:
       return (g->*upsert_properties_fn)(props, txn_ctx);
     }
 
-    Result<void> RemoveProperty(int i) const {
-      return (g->*remove_property_int)(i);
+    Result<void> RemoveProperty(int i, tsuba::TxnContext* txn_ctx) const {
+      return (g->*remove_property_int)(i, txn_ctx);
     }
-    Result<void> RemoveProperty(const std::string& str) const {
-      return (g->*remove_property_str)(str);
+    Result<void> RemoveProperty(
+        const std::string& str, tsuba::TxnContext* txn_ctx) const {
+      return (g->*remove_property_str)(str, txn_ctx);
     }
 
     Result<void> EnsurePropertyLoaded(const std::string& str) const {
@@ -264,11 +267,12 @@ public:
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
+      std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
+      tsuba::TxnContext* txn_ctx);
 
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name,
+      const std::string& rdg_name, tsuba::TxnContext* txn_ctx,
       const tsuba::RDGLoadOptions& opts = tsuba::RDGLoadOptions());
 
   /// Make a property graph from topology
@@ -283,12 +287,12 @@ public:
       EntityTypeManager&& edge_type_manager);
 
   static Result<std::unique_ptr<katana::PropertyGraph>> Make(
-      const tsuba::RDGManifest& rdg_manifest,
-      const tsuba::RDGLoadOptions& opts);
+      const tsuba::RDGManifest& rdg_manifest, const tsuba::RDGLoadOptions& opts,
+      tsuba::TxnContext* txn_ctx);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.
-  Result<std::unique_ptr<PropertyGraph>> Copy() const;
+  Result<std::unique_ptr<PropertyGraph>> Copy(tsuba::TxnContext* txn_ctx) const;
 
   /// \param node_properties The node properties to copy.
   /// \param edge_properties The edge properties to copy.
@@ -296,13 +300,14 @@ public:
   ///        state with this.
   Result<std::unique_ptr<PropertyGraph>> Copy(
       const std::vector<std::string>& node_properties,
-      const std::vector<std::string>& edge_properties) const;
+      const std::vector<std::string>& edge_properties,
+      tsuba::TxnContext* txn_ctx) const;
 
   /// Construct node & edge EntityTypeIDs from node & edge properties
   /// Also constructs metadata to convert between atomic types and EntityTypeIDs
   /// Assumes all boolean or uint8 properties are atomic types
   /// TODO(roshan) move this to be a part of Make()
-  Result<void> ConstructEntityTypeIDs();
+  Result<void> ConstructEntityTypeIDs(tsuba::TxnContext* txn_ctx);
 
   size_t node_entity_type_ids_size() const noexcept {
     return node_entity_type_ids_.size();
@@ -680,11 +685,13 @@ public:
   Result<void> UpsertEdgeProperties(
       const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
-  Result<void> RemoveNodeProperty(int i);
-  Result<void> RemoveNodeProperty(const std::string& prop_name);
+  Result<void> RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx);
+  Result<void> RemoveNodeProperty(
+      const std::string& prop_name, tsuba::TxnContext* txn_ctx);
 
-  Result<void> RemoveEdgeProperty(int i);
-  Result<void> RemoveEdgeProperty(const std::string& prop_name);
+  Result<void> RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx);
+  Result<void> RemoveEdgeProperty(
+      const std::string& prop_name, tsuba::TxnContext* txn_ctx);
 
   /// Write a node property column out to storage and de-allocate the memory
   /// it was using

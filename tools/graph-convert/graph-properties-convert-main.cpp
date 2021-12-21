@@ -93,7 +93,8 @@ cll::opt<bool> export_graphml(
 
 std::unique_ptr<katana::PropertyGraph>
 ConvertKatana(const std::string& rdg_file, tsuba::TxnContext* txn_ctx) {
-  auto result = katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
+  auto result =
+      katana::PropertyGraph::Make(rdg_file, txn_ctx, tsuba::RDGLoadOptions());
   if (!result) {
     KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }
@@ -236,7 +237,7 @@ main(int argc, char** argv) {
 
   tsuba::TxnContext txn_ctx;
   if (export_graphml) {
-    katana::graphml::ExportGraph(output_directory, input_filename);
+    katana::graphml::ExportGraph(output_directory, input_filename, &txn_ctx);
   } else {
     switch (database) {
     case katana::SourceDatabase::kNone:

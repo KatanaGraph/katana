@@ -442,7 +442,8 @@ struct ClusteringImplementationBase {
       const std::string& new_edge_property_name, tsuba::TxnContext* txn_ctx) {
     // Remove the existing edge property
     if (pfg_to->HasEdgeProperty(new_edge_property_name)) {
-      if (auto r = pfg_to->RemoveEdgeProperty(new_edge_property_name); !r) {
+      if (auto r = pfg_to->RemoveEdgeProperty(new_edge_property_name, txn_ctx);
+          !r) {
         return r.error();
       }
     }
@@ -469,7 +470,7 @@ struct ClusteringImplementationBase {
   /**
  * Creates a coarsened hierarchical graph for the next phase
  * of the clustering algorithm. It merges all the nodes within a
- * same cluster to form a super node for the coursened graphs.
+ * same cluster to form a super node for the coarsened graphs.
  * The total number of nodes in the coarsened graph are equal to
  * the number of unique clusters in the previous level of the graph.
  * All the edges inside a cluster are merged (edge weights are summed
@@ -563,14 +564,14 @@ struct ClusteringImplementationBase {
     // Remove all the existing node/edge properties
     for (auto property : temp_node_property_names) {
       if (pfg_mutable->HasNodeProperty(property)) {
-        if (auto r = pfg_mutable->RemoveNodeProperty(property); !r) {
+        if (auto r = pfg_mutable->RemoveNodeProperty(property, txn_ctx); !r) {
           return r.error();
         }
       }
     }
     for (auto property : temp_edge_property_names) {
       if (pfg_mutable->HasEdgeProperty(property)) {
-        if (auto r = pfg_mutable->RemoveEdgeProperty(property); !r) {
+        if (auto r = pfg_mutable->RemoveEdgeProperty(property, txn_ctx); !r) {
           return r.error();
         }
       }

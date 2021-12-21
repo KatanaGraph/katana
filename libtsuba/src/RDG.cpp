@@ -618,13 +618,13 @@ tsuba::RDG::UpsertEdgeProperties(
 }
 
 katana::Result<void>
-tsuba::RDG::RemoveNodeProperty(int i) {
-  return core_->RemoveNodeProperty(i);
+tsuba::RDG::RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx) {
+  return core_->RemoveNodeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::RemoveEdgeProperty(int i) {
-  return core_->RemoveEdgeProperty(i);
+tsuba::RDG::RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx) {
+  return core_->RemoveEdgeProperty(i, txn_ctx);
 }
 
 void

@@ -435,17 +435,19 @@ cdef class GraphBase:
         txn_ctx = txn_ctx or TxnContext()
         handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(GraphBase._convert_table(table, kwargs), &txn_ctx._txn_ctx))
 
-    def remove_node_property(self, prop):
+    def remove_node_property(self, prop, TxnContext txn_ctx=None):
         """
         Remove a node property from the graph by name or index.
         """
-        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(Graph._property_name_to_id(prop, self.loaded_node_schema())))
+        txn_ctx = txn_ctx or TxnContext()
+        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(Graph._property_name_to_id(prop, self.loaded_node_schema()), &txn_ctx._txn_ctx))
 
-    def remove_edge_property(self, prop):
+    def remove_edge_property(self, prop, TxnContext txn_ctx=None):
         """
         Remove an edge property from the graph by name or index.
         """
-        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(Graph._property_name_to_id(prop, self.loaded_edge_schema())))
+        txn_ctx = txn_ctx or TxnContext()
+        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(Graph._property_name_to_id(prop, self.loaded_edge_schema()), &txn_ctx._txn_ctx))
 
     @property
     def path(self):
@@ -536,7 +538,7 @@ cdef class Graph(GraphBase):
     cdef _PropertyGraph * underlying_property_graph(self) nogil except NULL:
         return self._underlying_property_graph.get()
 
-    def __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None):
+    def __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None, TxnContext txn_ctx=None):
         """
         __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None)
 
@@ -550,6 +552,7 @@ cdef class Graph(GraphBase):
             properties are loaded.
         :param edge_properties: A list of edge property names to load into memory. If this is None (default), then all
             properties are loaded.
+        :param txn_ctx: The tranaction context for passing read write sets.
         """
         cdef CGraph.RDGLoadOptions opts
         cdef vector[string] node_props
@@ -567,8 +570,9 @@ cdef class Graph(GraphBase):
             edge_props = _convert_string_list(edge_properties)
             opts.edge_properties = edge_props
         path_str = <string>bytes(str(path), "utf-8")
+        txn_ctx = txn_ctx or TxnContext()
         with nogil:
-            self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, opts))
+            self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, &txn_ctx._txn_ctx, opts))
 
     @staticmethod
     cdef Graph make(shared_ptr[_PropertyGraph] u):

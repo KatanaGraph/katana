@@ -61,6 +61,7 @@ dependencies:
  - parquet-cpp>=1.5,<2a0
  - pexpect>=4.8,<5a0
  - pkg-config>=0.29
+ - preconda>=0
  - pyarrow>=4,<5a0
  - pydata-sphinx-theme>=0.6.3
  - pygithub>=1.54,<2a0

@@ -35,6 +35,20 @@ katana::GraphTopology::GraphTopology(
   katana::ParallelSTL::copy(
       &adj_indices[0], &adj_indices[num_nodes], adj_indices_.begin());
   katana::ParallelSTL::copy(&dests[0], &dests[num_edges], dests_.begin());
+
+  edge_prop_indices_.allocateInterleaved(num_edges);
+
+  katana::ParallelSTL::iota(
+      edge_prop_indices_.begin(), edge_prop_indices_.end(), Edge{0});
+}
+
+katana::GraphTopology::GraphTopology(
+    NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests) noexcept
+    : adj_indices_(std::move(adj_indices)), dests_(std::move(dests)) {
+  edge_prop_indices_.allocateInterleaved(dests_.size());
+
+  katana::ParallelSTL::iota(
+      edge_prop_indices_.begin(), edge_prop_indices_.end(), Edge{0});
 }
 
 katana::GraphTopology

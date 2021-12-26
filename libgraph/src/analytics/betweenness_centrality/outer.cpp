@@ -250,7 +250,7 @@ BetweennessCentralityOuter(
     const std::string& output_property_name,
     BetweennessCentralityPlan plan [[maybe_unused]],
     tsuba::TxnContext* txn_ctx) {
-    OuterGraph graph = KATANA_CHECKED(OuterGraph::Make(pg, {}, {}));
+  OuterGraph graph = KATANA_CHECKED(OuterGraph::Make(pg, {}, {}));
 
   BCOuter bc_outer(graph);
 

@@ -10,8 +10,9 @@ namespace {
 using NodeDataOuter = std::tuple<>;
 using EdgeDataOuter = std::tuple<>;
 
-typedef katana::TypedPropertyGraph<NodeDataOuter, EdgeDataOuter> OuterGraph;
-typedef typename OuterGraph::Node OuterGNode;
+using OuterGraph = katana::TypedPropertyGraphView<
+    katana::PropertyGraphViews::Default, NodeDataOuter, EdgeDataOuter>;
+using OuterGNode = typename OuterGraph::Node;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -63,16 +64,16 @@ public:
       int src = *qq;
 
       for (auto edge : graph_.edges(src)) {
-        auto dest = graph_.GetEdgeDest(edge);
+        auto dest = graph_.edge_dest(edge);
 
-        if (!distance[*dest]) {
-          source_queue.push_back(*dest);
-          distance[*dest] = distance[src] + 1;
+        if (!distance[dest]) {
+          source_queue.push_back(dest);
+          distance[dest] = distance[src] + 1;
         }
 
-        if (distance[*dest] == distance[src] + 1) {
-          sigma[*dest] = sigma[*dest] + sigma[src];
-          successor[src].push_back(*dest);
+        if (distance[dest] == distance[src] + 1) {
+          sigma[dest] = sigma[dest] + sigma[src];
+          successor[src].push_back(dest);
         }
       }
     }
@@ -234,7 +235,9 @@ struct HasOut {
   HasOut(const OuterGraph& g) : graph(g) {}
 
   bool operator()(const OuterGNode& n) const {
-    return *graph.edge_begin(n) != *graph.edge_end(n);
+    // return *graph.edge_begin(n) != *graph.edge_end(n);
+    auto edge_range = graph.edges(n);
+    return !edge_range.empty();
   }
 };
 }  // namespace
@@ -247,13 +250,7 @@ BetweennessCentralityOuter(
     const std::string& output_property_name,
     BetweennessCentralityPlan plan [[maybe_unused]],
     tsuba::TxnContext* txn_ctx) {
-  auto pg_result =
-      katana::TypedPropertyGraph<NodeDataOuter, EdgeDataOuter>::Make(
-          pg, {}, {});
-  if (!pg_result) {
-    return pg_result.error();
-  }
-  OuterGraph graph = pg_result.value();
+  OuterGraph graph = KATANA_CHECKED(OuterGraph::Make(pg, {}, {}));
 
   BCOuter bc_outer(graph);
 

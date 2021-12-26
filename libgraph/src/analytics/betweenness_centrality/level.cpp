@@ -26,8 +26,11 @@ struct NodeBC : public katana::PODProperty<float> {};
 using NodeDataLevel = std::tuple<>;
 using EdgeDataLevel = std::tuple<>;
 
-typedef katana::TypedPropertyGraph<NodeDataLevel, EdgeDataLevel> LevelGraph;
-typedef typename LevelGraph::Node LevelGNode;
+using LevelGraph = katana::TypedPropertyGraphView<
+    katana::PropertyGraphViews::Default, NodeDataLevel, EdgeDataLevel>;
+using LevelGNode = typename LevelGraph::Node;
+
+using BCLevelNodeDataArray = katana::NUMAArray<BCLevelNodeDataTy>;
 
 using LevelWorklistType = katana::InsertBag<LevelGNode, 4096>;
 
@@ -42,7 +45,7 @@ constexpr static const unsigned kLevelChunkSize = 256u;
  */
 void
 LevelInitializeGraph(
-    LevelGraph* graph, katana::NUMAArray<BCLevelNodeDataTy>* graph_data,
+    LevelGraph* graph, BCLevelNodeDataArray* graph_data,
     katana::DynamicBitset* active_edges) {
   graph_data->allocateBlocked(graph->size());
   katana::do_all(
@@ -65,8 +68,7 @@ LevelInitializeGraph(
  */
 void
 LevelInitializeIteration(
-    LevelGraph* graph, LevelGNode src_node,
-    katana::NUMAArray<BCLevelNodeDataTy>* graph_data,
+    LevelGraph* graph, LevelGNode src_node, BCLevelNodeDataArray* graph_data,
     katana::DynamicBitset* active_edges) {
   katana::do_all(
       katana::iterate(*graph),
@@ -98,8 +100,7 @@ LevelInitializeIteration(
  */
 katana::gstl::Vector<LevelWorklistType>
 LevelSSSP(
-    LevelGraph* graph, LevelGNode src_node,
-    katana::NUMAArray<BCLevelNodeDataTy>* graph_data,
+    LevelGraph* graph, LevelGNode src_node, BCLevelNodeDataArray* graph_data,
     katana::DynamicBitset* active_edges) {
   katana::gstl::Vector<LevelWorklistType> vector_of_worklists;
   uint32_t current_level = 0;
@@ -121,8 +122,8 @@ LevelSSSP(
           KATANA_LOG_ASSERT(src_data.current_dist == current_level);
 
           for (auto e : graph->edges(n)) {
-            auto dest = graph->GetEdgeDest(e);
-            auto& dst_data = (*graph_data)[*dest];
+            auto dest = graph->edge_dest(e);
+            auto& dst_data = (*graph_data)[dest];
 
             if (dst_data.current_dist == kInfinity) {
               auto expected = kInfinity;
@@ -131,7 +132,7 @@ LevelSSSP(
                   dst_data.current_dist.compare_exchange_strong(
                       expected, next_level);
               if (performed_set) {
-                vector_of_worklists[next_level].emplace(*dest);
+                vector_of_worklists[next_level].emplace(dest);
               }
 
               active_edges->set(e);
@@ -165,8 +166,7 @@ void
 LevelBackwardBrandes(
     LevelGraph* graph,
     katana::gstl::Vector<LevelWorklistType>* vector_of_worklists,
-    katana::NUMAArray<BCLevelNodeDataTy>* graph_data,
-    katana::DynamicBitset* active_edges) {
+    BCLevelNodeDataArray* graph_data, katana::DynamicBitset* active_edges) {
   // minus 3 because last one is empty, one after is leaf nodes, and one
   // to correct indexing to 0 index
   if (vector_of_worklists->size() >= 3) {
@@ -188,8 +188,8 @@ LevelBackwardBrandes(
                 // note: distance check not required because an edge
                 // will never be revisited in a BFS DAG, meaning it
                 // will only ever be activated once
-                auto dest = graph->GetEdgeDest(e);
-                auto& dst_data = (*graph_data)[*dest];
+                auto dest = graph->edge_dest(e);
+                auto& dst_data = (*graph_data)[dest];
 
                 // grab dependency, add to self
                 float contrib = ((float)1 + dst_data.dependency) /
@@ -217,7 +217,7 @@ LevelBackwardBrandes(
 katana::Result<void>
 ExtractBC(
     katana::PropertyGraph* pg, const LevelGraph& array_of_struct_graph,
-    const katana::NUMAArray<BCLevelNodeDataTy>& graph_data,
+    const BCLevelNodeDataArray& graph_data,
     const std::string& output_property_name, tsuba::TxnContext* txn_ctx) {
   // construct the new property
   if (auto result =
@@ -226,13 +226,11 @@ ExtractBC(
       !result) {
     return result.error();
   }
-  auto graph_result =
-      katana::TypedPropertyGraph<std::tuple<NodeBC>, std::tuple<>>::Make(
-          pg, {output_property_name}, {});
-  if (!graph_result) {
-    return graph_result.error();
-  }
-  auto new_graph = graph_result.value();
+
+  using NewGraph = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Default, std::tuple<NodeBC>, std::tuple<>>;
+  auto new_graph =
+      KATANA_CHECKED(NewGraph::Make(pg, {output_property_name}, {}));
 
   // extract bc to property
   katana::do_all(
@@ -261,13 +259,7 @@ BetweennessCentralityLevel(
       "TimerConstructGraph", "BetweennessCentrality");
   graph_construct_timer.start();
 
-  auto pg_result =
-      katana::TypedPropertyGraph<NodeDataLevel, EdgeDataLevel>::Make(
-          pg, {}, {});
-  if (!pg_result) {
-    return pg_result.error();
-  }
-  LevelGraph graph = pg_result.value();
+  LevelGraph graph = KATANA_CHECKED(LevelGraph::Make(pg, {}, {}));
 
   graph_construct_timer.stop();
 
@@ -298,7 +290,7 @@ BetweennessCentralityLevel(
     loop_end = source_vector.size();
   }
 
-  katana::NUMAArray<BCLevelNodeDataTy> graph_data;
+  BCLevelNodeDataArray graph_data;
   katana::DynamicBitset active_edges;
   // graph initialization, then main loop
   LevelInitializeGraph(&graph, &graph_data, &active_edges);

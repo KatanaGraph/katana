@@ -12,12 +12,6 @@
 namespace katana {
 
 class KATANA_EXPORT Uri {
-  std::string scheme_;
-  std::string path_;
-  std::string string_;
-
-  Uri(std::string scheme, std::string path);
-
 public:
   static constexpr const char kSepChar = '/';
   static constexpr const char* kFileScheme = "file";
@@ -34,6 +28,12 @@ public:
 
   /// Return the base64 (url variant) encoded version of this uri
   std::string Encode() const;
+  /// Hash URI
+  struct Hash {
+    std::size_t operator()(const Uri& uri) const {
+      return std::hash<std::string>{}(uri.path_);
+    }
+  };
 
   const std::string& scheme() const { return scheme_; }
   const std::string& path() const { return path_; }
@@ -54,6 +54,13 @@ public:
 
   Uri operator+(char rhs) const;
   Uri operator+(const std::string& rhs) const;
+
+private:
+  Uri(std::string scheme, std::string path);
+
+  std::string scheme_;
+  std::string path_;
+  std::string string_;
 };
 
 KATANA_EXPORT bool operator==(const Uri& lhs, const Uri& rhs);

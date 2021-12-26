@@ -15,6 +15,7 @@
 # no tool generated files
 .clang-complete
 .clangd
+.cache
 compile_commands.json
 cscope.out
 /GPATH

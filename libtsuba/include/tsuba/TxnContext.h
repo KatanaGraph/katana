@@ -49,19 +49,19 @@ public:
 
   void SetTopologyWrite() { topology_write_ = true; }
 
-  const std::unordered_set<std::string>& GetNodePropertyRead() const {
+  const std::set<std::string>& GetNodePropertyRead() const {
     return node_properties_read_;
   }
 
-  const std::unordered_set<std::string>& GetNodePropertyWrite() const {
+  const std::set<std::string>& GetNodePropertyWrite() const {
     return node_properties_write_;
   }
 
-  const std::unordered_set<std::string>& GetEdgePropertyRead() const {
+  const std::set<std::string>& GetEdgePropertyRead() const {
     return edge_properties_read_;
   }
 
-  const std::unordered_set<std::string>& GetEdgePropertyWrite() const {
+  const std::set<std::string>& GetEdgePropertyWrite() const {
     return edge_properties_write_;
   }
 
@@ -74,10 +74,10 @@ public:
   bool GetTopologyWrite() const { return topology_write_; }
 
 private:
-  std::unordered_set<std::string> node_properties_read_;
-  std::unordered_set<std::string> node_properties_write_;
-  std::unordered_set<std::string> edge_properties_read_;
-  std::unordered_set<std::string> edge_properties_write_;
+  std::set<std::string> node_properties_read_;
+  std::set<std::string> node_properties_write_;
+  std::set<std::string> edge_properties_read_;
+  std::set<std::string> edge_properties_write_;
   bool all_properties_read_{false};
   bool all_properties_write_{false};
   bool topology_read_{false};

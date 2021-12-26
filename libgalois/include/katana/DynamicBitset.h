@@ -43,7 +43,11 @@ namespace katana {
  * Concurrent dynamically allocated bitset
  **/
 class KATANA_EXPORT DynamicBitset {
-  katana::PODVector<katana::CopyableAtomic<uint64_t>> bitvec_;
+public:  // types
+  using TItem = katana::CopyableAtomic<uint64_t>;
+
+private:  // variables
+  katana::PODVector<TItem> bitvec_;
   size_t num_bits_{0};
 
 public:
@@ -65,6 +69,11 @@ public:
       bitset.num_bits_ = 0;
     }
     return *this;
+  }
+
+  void SetAllocator(
+      const HostAllocator<katana::CopyableAtomic<uint64_t>>& host_alloc) {
+    bitvec_.SetAllocator(host_alloc);
   }
 
   /**
@@ -309,11 +318,20 @@ public:
   void bitwise_xor(const DynamicBitset& other1, const DynamicBitset& other2);
 
   /**
-   * Count how many bits are set in the bitset
+   * Count how many bits are set in the bitset. Do not call in a parallel
+   * region as it uses a parallel loop.
    *
    * @returns number of set bits in the bitset
    */
   size_t count() const;
+
+  /***
+   * Count number of set bits in the bitset serially. Useful if
+   * you need to count different bitsets on different threads.
+   *
+   * @returns number of set bits in the bitset
+   */
+  size_t SerialCount() const;
 
   /**
    * Returns a vector containing the set bits in this bitset in order

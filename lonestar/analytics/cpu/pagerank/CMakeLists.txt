@@ -6,6 +6,15 @@ add_test_scale(small pagerank-cpu
   INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" REL_TOL 0.01 MEAN_TOL 0.002
   -maxIterations=100 -algo=PushAsync)
 
-#add_test_scale(small pagerank-cpu -transposedGraph -tolerance=0.01 "${BASEINPUT}/scalefree/transpose/rmat10.tgr")
-#add_test_scale(small-topo pagerank-cpu -transposedGraph -tolerance=0.01 -algo=Topo "${BASEINPUT}/scalefree/transpose/rmat10.tgr")
-#add_test_scale(small-sync pagerank-cpu -tolerance=0.01 -algo=Sync "${BASEINPUT}/propertygraphs/rmat15")
+add_test_scale(small pagerank-cpu
+  INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" REL_TOL 0.01 MEAN_TOL 0.002
+  -maxIterations=100 -algo=PushSync)
+
+add_test_scale(small pagerank-cpu
+  INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" REL_TOL 0.01 MEAN_TOL 0.002
+  -maxIterations=100 -algo=PullTopological)
+
+add_test_scale(small pagerank-cpu
+  INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" REL_TOL 0.01 MEAN_TOL 0.002
+  -maxIterations=100 -algo=PullResidual)
+

@@ -140,7 +140,8 @@ MakeDefaultEntityTypeIDArray(size_t vec_sz) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
+    std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
+    tsuba::TxnContext* txn_ctx) {
   // find & map the default csr topology
   tsuba::RDGTopology shadow_csr = tsuba::RDGTopology::MakeShadowCSR();
   tsuba::RDGTopology* csr = KATANA_CHECKED_CONTEXT(
@@ -189,7 +190,7 @@ katana::PropertyGraph::Make(
         MakeDefaultEntityTypeIDArray(topo.num_edges()), EntityTypeManager{},
         EntityTypeManager{});
 
-    KATANA_CHECKED(pg->ConstructEntityTypeIDs());
+    KATANA_CHECKED(pg->ConstructEntityTypeIDs(txn_ctx));
 
     return MakeResult(std::move(pg));
   }
@@ -197,25 +198,29 @@ katana::PropertyGraph::Make(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
+    const std::string& rdg_name, tsuba::TxnContext* txn_ctx,
+    const tsuba::RDGLoadOptions& opts) {
   tsuba::RDGManifest manifest = KATANA_CHECKED(tsuba::FindManifest(rdg_name));
   tsuba::RDGFile rdg_file{
       KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite))};
   tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
 
   return katana::PropertyGraph::Make(
-      std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg));
+      std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg),
+      txn_ctx);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const tsuba::RDGManifest& rdg_manifest, const tsuba::RDGLoadOptions& opts) {
+    const tsuba::RDGManifest& rdg_manifest, const tsuba::RDGLoadOptions& opts,
+    tsuba::TxnContext* txn_ctx) {
   tsuba::RDGFile rdg_file{
       KATANA_CHECKED(tsuba::Open(std::move(rdg_manifest), tsuba::kReadWrite))};
   tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
 
   return katana::PropertyGraph::Make(
-      std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg));
+      std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg),
+      txn_ctx);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -243,22 +248,24 @@ katana::PropertyGraph::Make(
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
-katana::PropertyGraph::Copy() const {
+katana::PropertyGraph::Copy(tsuba::TxnContext* txn_ctx) const {
   return Copy(
-      loaded_node_schema()->field_names(), loaded_edge_schema()->field_names());
+      loaded_node_schema()->field_names(), loaded_edge_schema()->field_names(),
+      txn_ctx);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Copy(
     const std::vector<std::string>& node_properties,
-    const std::vector<std::string>& edge_properties) const {
+    const std::vector<std::string>& edge_properties,
+    tsuba::TxnContext* txn_ctx) const {
   // TODO(gill): This should copy the RDG in memory without reloading from storage.
   tsuba::RDGLoadOptions opts;
   opts.partition_id_to_load = partition_id();
   opts.node_properties = node_properties;
   opts.edge_properties = edge_properties;
 
-  return Make(rdg_dir(), opts);
+  return Make(rdg_dir(), txn_ctx, opts);
 }
 
 katana::Result<void>
@@ -331,7 +338,7 @@ katana::PropertyGraph::Validate() {
 /// Converts all uint8/bool properties into EntityTypeIDs
 /// Only call this if every uint8/bool property should be considered a type
 katana::Result<void>
-katana::PropertyGraph::ConstructEntityTypeIDs() {
+katana::PropertyGraph::ConstructEntityTypeIDs(tsuba::TxnContext* txn_ctx) {
   // only relevant to actually construct when EntityTypeIDs are expected in properties
   // when EntityTypeIDs are not expected in properties then we have nothing to do here
   KATANA_LOG_WARN("Loading types from properties.");
@@ -352,7 +359,7 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
           num_nodes(), rdg_.node_properties(), &node_entity_type_manager_,
           &node_entity_type_ids_));
   for (const auto& node_prop : node_props_to_remove) {
-    KATANA_CHECKED(RemoveNodeProperty(node_prop));
+    KATANA_CHECKED(RemoveNodeProperty(node_prop, txn_ctx));
   }
 
   int64_t total_num_edge_props = full_edge_schema()->num_fields();
@@ -372,7 +379,7 @@ katana::PropertyGraph::ConstructEntityTypeIDs() {
           num_edges(), rdg_.edge_properties(), &edge_entity_type_manager_,
           &edge_entity_type_ids_));
   for (const auto& edge_prop : edge_props_to_remove) {
-    KATANA_CHECKED(RemoveEdgeProperty(edge_prop));
+    KATANA_CHECKED(RemoveEdgeProperty(edge_prop, txn_ctx));
   }
 
   return katana::ResultSuccess();
@@ -494,11 +501,13 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
     return false;
   }
 
-  if (!node_entity_type_manager_.Equals(other->node_entity_type_manager())) {
+  if (!node_entity_type_manager_.IsIsomorphicTo(
+          other->node_entity_type_manager())) {
     return false;
   }
 
-  if (!edge_entity_type_manager_.Equals(other->edge_entity_type_manager())) {
+  if (!edge_entity_type_manager_.IsIsomorphicTo(
+          other->edge_entity_type_manager())) {
     return false;
   }
 
@@ -750,7 +759,7 @@ katana::PropertyGraph::Write(
 
 katana::Result<void>
 katana::PropertyGraph::AddNodeProperties(
-    const std::shared_ptr<arrow::Table>& props) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("adding empty node prop table");
     return ResultSuccess();
@@ -760,7 +769,7 @@ katana::PropertyGraph::AddNodeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().num_nodes(), props->num_rows());
   }
-  return rdg_.AddNodeProperties(props);
+  return rdg_.AddNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
@@ -779,16 +788,18 @@ katana::PropertyGraph::UpsertNodeProperties(
 }
 
 katana::Result<void>
-katana::PropertyGraph::RemoveNodeProperty(int i) {
-  return rdg_.RemoveNodeProperty(i);
+katana::PropertyGraph::RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx) {
+  return rdg_.RemoveNodeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
-katana::PropertyGraph::RemoveNodeProperty(const std::string& prop_name) {
+katana::PropertyGraph::RemoveNodeProperty(
+    const std::string& prop_name, tsuba::TxnContext* txn_ctx) {
   auto col_names = rdg_.node_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {
-    return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
+    return rdg_.RemoveNodeProperty(
+        std::distance(col_names.cbegin(), pos), txn_ctx);
   }
   return katana::ErrorCode::PropertyNotFound;
 }
@@ -814,7 +825,7 @@ katana::PropertyGraph::UnloadNodeProperty(const std::string& prop_name) {
 
 katana::Result<void>
 katana::PropertyGraph::AddEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props) {
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("adding empty edge prop table");
     return ResultSuccess();
@@ -824,7 +835,7 @@ katana::PropertyGraph::AddEdgeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().num_edges(), props->num_rows());
   }
-  return rdg_.AddEdgeProperties(props);
+  return rdg_.AddEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
@@ -843,16 +854,18 @@ katana::PropertyGraph::UpsertEdgeProperties(
 }
 
 katana::Result<void>
-katana::PropertyGraph::RemoveEdgeProperty(int i) {
-  return rdg_.RemoveEdgeProperty(i);
+katana::PropertyGraph::RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx) {
+  return rdg_.RemoveEdgeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
-katana::PropertyGraph::RemoveEdgeProperty(const std::string& prop_name) {
+katana::PropertyGraph::RemoveEdgeProperty(
+    const std::string& prop_name, tsuba::TxnContext* txn_ctx) {
   auto col_names = rdg_.edge_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {
-    return rdg_.RemoveEdgeProperty(std::distance(col_names.cbegin(), pos));
+    return rdg_.RemoveEdgeProperty(
+        std::distance(col_names.cbegin(), pos), txn_ctx);
   }
   return katana::ErrorCode::PropertyNotFound;
 }

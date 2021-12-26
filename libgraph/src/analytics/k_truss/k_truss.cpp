@@ -346,12 +346,13 @@ BSPCoreThenTrussAlgo(SortedGraphView* g, uint32_t k) {
 
 katana::Result<void>
 katana::analytics::KTruss(
-    katana::PropertyGraph* pg, uint32_t k_truss_number,
-    const std::string& output_property_name, KTrussPlan plan) {
+    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    uint32_t k_truss_number, const std::string& output_property_name,
+    KTrussPlan plan) {
   katana::ReportPageAllocGuard page_alloc;
 
-  if (auto result =
-          ConstructEdgeProperties<EdgeData>(pg, {output_property_name});
+  if (auto result = ConstructEdgeProperties<EdgeData>(
+          pg, txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }

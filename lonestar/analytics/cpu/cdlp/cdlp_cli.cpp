@@ -110,7 +110,8 @@ main(int argc, char** argv) {
     abort();
   }
 
-  auto pg_result = Cdlp(pg.get(), property_name, maxIterations, plan);
+  tsuba::TxnContext txn_ctx;
+  auto pg_result = Cdlp(pg.get(), property_name, maxIterations, &txn_ctx, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run Cdlp: {}", pg_result.error());
   }

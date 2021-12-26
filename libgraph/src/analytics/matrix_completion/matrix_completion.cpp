@@ -370,8 +370,9 @@ public:
 
 template <typename Algo>
 katana::Result<void>
-Run(katana::PropertyGraph* pg, MatrixCompletionPlan plan) {
-  KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg));
+Run(katana::PropertyGraph* pg, MatrixCompletionPlan plan,
+    tsuba::TxnContext* txn_ctx) {
+  KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg, txn_ctx));
   Graph graph = KATANA_CHECKED(Graph::Make(pg));
 
   Algo algo;
@@ -397,10 +398,11 @@ Run(katana::PropertyGraph* pg, MatrixCompletionPlan plan) {
 
 katana::Result<void>
 katana::analytics::MatrixCompletion(
-    katana::PropertyGraph* pg, MatrixCompletionPlan plan) {
+    katana::PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
+    MatrixCompletionPlan plan) {
   switch (plan.algorithm()) {
   case MatrixCompletionPlan::kSGDByItems:
-    return Run<SGDItemsAlgo>(pg, plan);
+    return Run<SGDItemsAlgo>(pg, plan, txn_ctx);
   default:
     return katana::ErrorCode::InvalidArgument;
   }

@@ -152,6 +152,7 @@ endif ()
 
 # Always include debug info
 add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-g>")
+add_compile_options("$<$<COMPILE_LANGUAGE:C>:-g>")
 
 # GCC
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

@@ -129,6 +129,11 @@ public:
 
   ~PODVector() { host_alloc_.Free(data_); }
 
+  void SetAllocator(const HostAllocator<_Tp>& host_alloc) {
+    KATANA_LOG_ASSERT(capacity_ == 0);
+    host_alloc_ = host_alloc;
+  }
+
   // iterators:
   iterator begin() { return iterator(&data_[0]); }
   const_iterator begin() const { return const_iterator(&data_[0]); }

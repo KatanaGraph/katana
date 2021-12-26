@@ -20,10 +20,12 @@
 #include "katana/SharedMemSys.h"
 
 #include "katana/CommBackend.h"
+#include "katana/Experimental.h"
 #include "katana/Galois.h"
 #include "katana/GaloisRuntime.h"
 #include "katana/Logging.h"
 #include "katana/Plugin.h"
+#include "katana/Strings.h"
 #include "katana/TextTracer.h"
 #include "tsuba/FileStorage.h"
 #include "tsuba/tsuba.h"
@@ -44,6 +46,23 @@ katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
   if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
     KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
+
+  auto features_on = katana::internal::ExperimentalFeature::ReportEnabled();
+  if (!features_on.empty()) {
+    auto feature_string = katana::Join(features_on, ",");
+    tracer->GetActiveSpan().SetTags(
+        {{"experimental_features_enabled", feature_string}});
+  }
+
+  auto unrecognized =
+      katana::internal::ExperimentalFeature::ReportUnrecognized();
+  if (!unrecognized.empty()) {
+    KATANA_LOG_WARN(
+        "these values from KATANA_ENABLE_EXPERIMENTAL did not match any "
+        "features:\n\t{}",
+        katana::Join(unrecognized, " "));
+  }
+
   katana::ProgressTracer::Set(std::move(tracer));
 }
 

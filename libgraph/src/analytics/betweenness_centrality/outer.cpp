@@ -248,8 +248,9 @@ katana::Result<void>
 BetweennessCentralityOuter(
     katana::PropertyGraph* pg, BetweennessCentralitySources sources,
     const std::string& output_property_name,
-    BetweennessCentralityPlan plan [[maybe_unused]]) {
-  OuterGraph graph = KATANA_CHECKED(OuterGraph::Make(pg, {}, {}));
+    BetweennessCentralityPlan plan [[maybe_unused]],
+    tsuba::TxnContext* txn_ctx) {
+    OuterGraph graph = KATANA_CHECKED(OuterGraph::Make(pg, {}, {}));
 
   BCOuter bc_outer(graph);
 
@@ -300,7 +301,7 @@ BetweennessCentralityOuter(
   auto table = arrow::Table::Make(
       arrow::schema({arrow::field(output_property_name, arrow::float32())}),
       {data_result.value()});
-  if (auto r = pg->AddNodeProperties(table); !r) {
+  if (auto r = pg->AddNodeProperties(table, txn_ctx); !r) {
     return r.error();
   }
 

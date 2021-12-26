@@ -58,7 +58,7 @@ public:
 /// not exist before the call. The created property has type uint8_t.
 KATANA_EXPORT Result<void> IndependentSet(
     PropertyGraph* pg, const std::string& output_property_name,
-    IndependentSetPlan plan = {});
+    tsuba::TxnContext* txn_ctx, IndependentSetPlan plan = {});
 
 KATANA_EXPORT Result<void> IndependentSetAssertValid(
     PropertyGraph* pg, const std::string& property_name);

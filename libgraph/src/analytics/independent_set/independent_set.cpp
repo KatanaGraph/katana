@@ -598,11 +598,12 @@ struct IsBad {
 
 template <typename Algo>
 katana::Result<void>
-Run(katana::PropertyGraph* pg, const std::string& output_property_name) {
+Run(katana::PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx) {
   using Graph = typename Algo::Graph;
   using GNode = typename Graph::Node;
   auto result = ConstructNodeProperties<typename Algo::NodeData>(
-      pg, {output_property_name});
+      pg, txn_ctx, {output_property_name});
   if (!result) {
     return result.error();
   }
@@ -662,16 +663,16 @@ Run(katana::PropertyGraph* pg, const std::string& output_property_name) {
 katana::Result<void>
 katana::analytics::IndependentSet(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    IndependentSetPlan plan) {
+    tsuba::TxnContext* txn_ctx, IndependentSetPlan plan) {
   switch (plan.algorithm()) {
   case IndependentSetPlan::kSerial:
-    return Run<SerialAlgo>(pg, output_property_name);
+    return Run<SerialAlgo>(pg, output_property_name, txn_ctx);
   case IndependentSetPlan::kPull:
-    return Run<PullAlgo>(pg, output_property_name);
+    return Run<PullAlgo>(pg, output_property_name, txn_ctx);
   case IndependentSetPlan::kPriority:
-    return Run<PrioAlgo>(pg, output_property_name);
+    return Run<PrioAlgo>(pg, output_property_name, txn_ctx);
   case IndependentSetPlan::kEdgeTiledPriority:
-    return Run<EdgeTiledPrioAlgo>(pg, output_property_name);
+    return Run<EdgeTiledPrioAlgo>(pg, output_property_name, txn_ctx);
   default:
     return katana::ErrorCode::InvalidArgument;
   }

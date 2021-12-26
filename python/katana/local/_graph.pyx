@@ -7,7 +7,7 @@ import pyarrow
 from pyarrow.lib cimport pyarrow_unwrap_table, pyarrow_wrap_chunked_array, pyarrow_wrap_schema, to_shared
 
 from katana.cpp.libgalois.graphs cimport Graph as CGraph
-from katana.cpp.libsupport.entity_type_manager cimport EntityTypeManager
+from katana.cpp.libsupport.EntityTypeManager cimport EntityTypeManager as CEntityTypeManager
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
 
 from katana.native_interfacing._pyarrow_wrappers import unchunked
@@ -17,7 +17,7 @@ from . cimport datastructures
 from . import datastructures
 
 from cython.operator cimport dereference as deref
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint16_t, uint32_t
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
 from libcpp.utility cimport move
@@ -26,9 +26,11 @@ from libcpp.vector cimport vector
 from katana.dataframe import DataFrame, LazyDataAccessor, LazyDataFrame
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
-from .entity_type cimport EntityType
+from .entity_type_manager cimport EntityType, EntityTypeManager
 
 from abc import abstractmethod
+
+ctypedef uint16_t EntityTypeID
 
 __all__ = ["GraphBase", "Graph", "TxnContext"]
 
@@ -385,61 +387,67 @@ cdef class GraphBase:
 
         return pyarrow_unwrap_table(arrow_table)
 
-    def add_node_property(self, table=None, **kwargs):
+    def add_node_property(self, table=None, *, TxnContext txn_ctx=None, **kwargs):
         """
         Insert new node properties into this graph.
 
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_nodes()``. (Optional)
+        :param txn_ctx: The tranaction context for passing read write sets.
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_nodes()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().AddNodeProperties(GraphBase._convert_table(table, kwargs)))
+        txn_ctx = txn_ctx or TxnContext()
+        handle_result_void(self.underlying_property_graph().AddNodeProperties(GraphBase._convert_table(table, kwargs), &txn_ctx._txn_ctx))
 
-    def upsert_node_property(self, table=None, TxnContext txn_ctx=None, **kwargs):
+    def upsert_node_property(self, table=None, *, TxnContext txn_ctx=None, **kwargs):
         """
         Update or insert node properties into this graph.
 
-        :param txn_ctx: The tranaction context for passing read write sets.
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_nodes()``. (Optional)
+        :param txn_ctx: The tranaction context for passing read write sets.
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_nodes()``. (Optional)
         """
-        txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+        txn_ctx = txn_ctx or TxnContext()
         handle_result_void(self.underlying_property_graph().UpsertNodeProperties(GraphBase._convert_table(table, kwargs), &txn_ctx._txn_ctx))
 
-    def add_edge_property(self, table=None, **kwargs):
+    def add_edge_property(self, table=None, *, TxnContext txn_ctx=None, **kwargs):
         """
         Insert new edge properties into this graph.
 
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_edges()``. (Optional)
+        :param txn_ctx: The tranaction context for passing read write sets.
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_edges()``. (Optional)
         """
-        handle_result_void(self.underlying_property_graph().AddEdgeProperties(GraphBase._convert_table(table, kwargs)))
+        txn_ctx = txn_ctx or TxnContext()
+        handle_result_void(self.underlying_property_graph().AddEdgeProperties(GraphBase._convert_table(table, kwargs), &txn_ctx._txn_ctx))
 
-    def upsert_edge_property(self, table=None, TxnContext txn_ctx=None, **kwargs):
+    def upsert_edge_property(self, table=None, *, TxnContext txn_ctx=None, **kwargs):
         """
         Update or insert edge properties into this graph.
 
-        :param txn_ctx: The tranaction context for passing read write sets.
         :param table: A pyarrow Table or other dataframe-like object containing the properties. The table must have
             length ``self.num_edges()``. (Optional)
+        :param txn_ctx: The tranaction context for passing read write sets.
         :param kwargs: Properties to add. The values must be arrays or sequences of length ``self.num_edges()``. (Optional)
         """
-        txn_ctx = TxnContext() if txn_ctx is None else txn_ctx
+        txn_ctx = txn_ctx or TxnContext()
         handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(GraphBase._convert_table(table, kwargs), &txn_ctx._txn_ctx))
 
-    def remove_node_property(self, prop):
+    def remove_node_property(self, prop, TxnContext txn_ctx=None):
         """
         Remove a node property from the graph by name or index.
         """
-        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(Graph._property_name_to_id(prop, self.loaded_node_schema())))
+        txn_ctx = txn_ctx or TxnContext()
+        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(Graph._property_name_to_id(prop, self.loaded_node_schema()), &txn_ctx._txn_ctx))
 
-    def remove_edge_property(self, prop):
+    def remove_edge_property(self, prop, TxnContext txn_ctx=None):
         """
         Remove an edge property from the graph by name or index.
         """
-        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(Graph._property_name_to_id(prop, self.loaded_edge_schema())))
+        txn_ctx = txn_ctx or TxnContext()
+        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(Graph._property_name_to_id(prop, self.loaded_edge_schema()), &txn_ctx._txn_ctx))
 
     @property
     def path(self):
@@ -453,25 +461,66 @@ cdef class GraphBase:
     @property
     def node_types(self):
         """
-        The types of atomic node types in the graph.
-
-        :rtype: list[EntityType]
+        :return: the node type manager
         """
-        cdef const EntityTypeManager* manager = &self.underlying_property_graph().GetNodeTypeManager()
-        type_ids = manager.GetAtomicEntityTypeIDs()
-        types = [EntityType.make(manager, type_id) for type_id in type_ids]
-        return types
+        return EntityTypeManager.make(&self.underlying_property_graph().GetNodeTypeManager())
+
+    def get_type_of_node(self, uint64_t n):
+        """
+        Return the type ID of the most specific type of a node `n`
+
+        :param n: node id
+        :return: the type id of the node
+        """
+        return self.underlying_property_graph().GetTypeOfNode(n)
+
+    def does_node_have_type(self, uint64_t n, entity_type):
+        """
+        Check whether a given node has a certain type
+
+        :param n: node id
+        :param type_id: type id of type int or EntityType
+        :return: True iff node n has the given type
+        """
+        if isinstance(entity_type, int):
+            type_id = entity_type
+        elif isinstance(entity_type, EntityType):
+            type_id = entity_type.type_id
+        else:
+            raise ValueError(f"{entity_type}'s type is not supported")
+        return self.underlying_property_graph().DoesNodeHaveType(n, type_id)
 
     @property
     def edge_types(self):
         """
-        The types of atomic edge types in the graph.
-
-        :rtype: list
+        :return: the edge type manager
         """
-        cdef const EntityTypeManager* manager = &self.underlying_property_graph().GetEdgeTypeManager()
-        types = manager.GetAtomicEntityTypeIDs()
-        return [EntityType.make(manager, typeid) for typeid in types]
+        return EntityTypeManager.make(&self.underlying_property_graph().GetEdgeTypeManager())
+
+    def get_type_of_edge(self, uint64_t e):
+        """
+        Return the type ID of the most specific type of an edge `e`
+
+        :param e: edge id
+        :return: the type id of the edge
+        """
+        return self.underlying_property_graph().GetTypeOfEdge(e)
+
+    def does_edge_have_type(self, uint64_t e, entity_type):
+        """
+        Check whether a given edge has a certain type
+
+        :param e: edge id
+        :param type_id: type id of type int or EntityType
+        :return: True iff edge e has the given type
+        """
+        if isinstance(entity_type, int):
+            type_id = entity_type
+        elif isinstance(entity_type, EntityType):
+            type_id = entity_type.type_id
+        else:
+            raise ValueError(f"{entity_type}'s type is not supported")
+        return self.underlying_property_graph().DoesEdgeHaveType(e, type_id)
 
     @abstractmethod
     def global_out_degree(self, uint64_t node):
@@ -489,7 +538,7 @@ cdef class Graph(GraphBase):
     cdef _PropertyGraph * underlying_property_graph(self) nogil except NULL:
         return self._underlying_property_graph.get()
 
-    def __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None):
+    def __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None, TxnContext txn_ctx=None):
         """
         __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None)
 
@@ -503,6 +552,7 @@ cdef class Graph(GraphBase):
             properties are loaded.
         :param edge_properties: A list of edge property names to load into memory. If this is None (default), then all
             properties are loaded.
+        :param txn_ctx: The tranaction context for passing read write sets.
         """
         cdef CGraph.RDGLoadOptions opts
         cdef vector[string] node_props
@@ -520,8 +570,9 @@ cdef class Graph(GraphBase):
             edge_props = _convert_string_list(edge_properties)
             opts.edge_properties = edge_props
         path_str = <string>bytes(str(path), "utf-8")
+        txn_ctx = txn_ctx or TxnContext()
         with nogil:
-            self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, opts))
+            self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, &txn_ctx._txn_ctx, opts))
 
     @staticmethod
     cdef Graph make(shared_ptr[_PropertyGraph] u):

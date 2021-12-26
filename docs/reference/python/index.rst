@@ -7,6 +7,7 @@ Python Library
    :no-members:
 
 .. toctree::
+   :maxdepth: 1
 
    katana
    katana.local

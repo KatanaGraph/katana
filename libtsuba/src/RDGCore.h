@@ -28,10 +28,10 @@ public:
   bool Equals(const RDGCore& other) const;
 
   katana::Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   katana::Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props);
+      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
   katana::Result<void> UpsertNodeProperties(
       const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
@@ -39,9 +39,9 @@ public:
   katana::Result<void> UpsertEdgeProperties(
       const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
 
-  katana::Result<void> RemoveNodeProperty(int i);
+  katana::Result<void> RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx);
 
-  katana::Result<void> RemoveEdgeProperty(int i);
+  katana::Result<void> RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx);
 
   // type info will be missing for properties that weren't loaded
   // make sure it's not missing
@@ -84,12 +84,16 @@ public:
   uint32_t partition_id() const { return partition_id_; }
   void set_partition_id(uint32_t partition_id) { partition_id_ = partition_id; }
 
+  std::shared_ptr<arrow::Schema> full_node_schema() const;
+
   const std::shared_ptr<arrow::Table>& node_properties() const {
     return node_properties_;
   }
   void set_node_properties(std::shared_ptr<arrow::Table>&& node_properties) {
     node_properties_ = std::move(node_properties);
   }
+
+  std::shared_ptr<arrow::Schema> full_edge_schema() const;
 
   const std::shared_ptr<arrow::Table>& edge_properties() const {
     return edge_properties_;

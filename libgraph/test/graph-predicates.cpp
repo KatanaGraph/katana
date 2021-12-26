@@ -14,9 +14,10 @@ static cll::opt<std::string> rmat10InputFile(
 
 void
 TestIsApproximateDegreeDistributionPowerLaw() {
+  tsuba::TxnContext txn_ctx;
   {
     LinePolicy policy{11};
-    auto g = MakeFileGraph<uint32_t>(100, 1, &policy);
+    auto g = MakeFileGraph<uint32_t>(100, 1, &policy, &txn_ctx);
 
     KATANA_LOG_ASSERT(g->size() == 100);
     KATANA_LOG_ASSERT(g->num_edges() == 11 * 100);
@@ -25,8 +26,8 @@ TestIsApproximateDegreeDistributionPowerLaw() {
         !katana::analytics::IsApproximateDegreeDistributionPowerLaw(*g.get()));
   }
   {
-    auto g =
-        katana::PropertyGraph::Make(rmat10InputFile, tsuba::RDGLoadOptions());
+    auto g = katana::PropertyGraph::Make(
+        rmat10InputFile, &txn_ctx, tsuba::RDGLoadOptions());
 
     KATANA_LOG_ASSERT(
         katana::analytics::IsApproximateDegreeDistributionPowerLaw(

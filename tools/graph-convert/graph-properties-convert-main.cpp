@@ -92,8 +92,9 @@ cll::opt<bool> export_graphml(
     cll::init(false));
 
 std::unique_ptr<katana::PropertyGraph>
-ConvertKatana(const std::string& rdg_file) {
-  auto result = katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
+ConvertKatana(const std::string& rdg_file, tsuba::TxnContext* txn_ctx) {
+  auto result =
+      katana::PropertyGraph::Make(rdg_file, txn_ctx, tsuba::RDGLoadOptions());
   if (!result) {
     KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }
@@ -130,13 +131,13 @@ ConvertKatana(const std::string& rdg_file) {
         std::make_unique<katana::ConvertDateTime>(arrow::date64(), t_fields));
   }
 
-  ApplyTransforms(graph.get(), transformers);
+  ApplyTransforms(graph.get(), transformers, txn_ctx);
 
   return graph;
 }
 
 void
-ParseWild() {
+ParseWild(tsuba::TxnContext* txn_ctx) {
   switch (type) {
   case katana::SourceType::kGraphml: {
     auto components_result =
@@ -145,7 +146,7 @@ ParseWild() {
       KATANA_LOG_FATAL("Error converting graph: {}", components_result.error());
     }
     if (auto r = katana::WritePropertyGraph(
-            std::move(components_result.value()), output_directory);
+            std::move(components_result.value()), output_directory, txn_ctx);
         !r) {
       KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
     }
@@ -153,7 +154,7 @@ ParseWild() {
   }
   case katana::SourceType::kKatana:
     if (auto r = katana::WritePropertyGraph(
-            *ConvertKatana(input_filename), output_directory);
+            *ConvertKatana(input_filename, txn_ctx), output_directory);
         !r) {
       KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
     }
@@ -164,7 +165,7 @@ ParseWild() {
 }
 
 void
-ParseNeo4j() {
+ParseNeo4j(tsuba::TxnContext* txn_ctx) {
   switch (type) {
   case katana::SourceType::kGraphml: {
     auto components_result =
@@ -173,7 +174,7 @@ ParseNeo4j() {
       KATANA_LOG_FATAL("Error converting graph: {}", components_result.error());
     }
     if (auto r = katana::WritePropertyGraph(
-            std::move(components_result.value()), output_directory);
+            std::move(components_result.value()), output_directory, txn_ctx);
         !r) {
       KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
     }
@@ -185,14 +186,14 @@ ParseNeo4j() {
 }
 
 void
-ParseMongoDB() {
+ParseMongoDB([[maybe_unused]] tsuba::TxnContext* txn_ctx) {
 #if defined(KATANA_MONGOC_FOUND)
   if (generate_mapping) {
     katana::GenerateMappingMongoDB(input_filename, output_directory);
   } else {
     if (auto r = katana::WritePropertyGraph(
             katana::ConvertMongoDB(input_filename, mapping, chunk_size),
-            output_directory);
+            output_directory, txn_ctx);
         !r) {
       KATANA_LOG_FATAL("Failed to write property graph: {}", r.error());
     }
@@ -203,7 +204,7 @@ ParseMongoDB() {
 }
 
 void
-ParseMysql() {
+ParseMysql([[maybe_unused]] tsuba::TxnContext* txn_ctx) {
 #if defined(KATANA_MYSQL_FOUND)
   if (generate_mapping) {
     katana::GenerateMappingMysql(input_filename, output_directory, host, user);
@@ -211,7 +212,7 @@ ParseMysql() {
     if (auto r = katana::WritePropertyGraph(
             katana::ConvertMysql(
                 input_filename, mapping, chunk_size, host, user),
-            output_directory);
+            output_directory, txn_ctx);
         !r) {
       KATANA_LOG_FATAL("Failed to write property graph: {}", r.error());
     }
@@ -234,21 +235,22 @@ main(int argc, char** argv) {
     chunk_size = 25000;
   }
 
+  tsuba::TxnContext txn_ctx;
   if (export_graphml) {
-    katana::graphml::ExportGraph(output_directory, input_filename);
+    katana::graphml::ExportGraph(output_directory, input_filename, &txn_ctx);
   } else {
     switch (database) {
     case katana::SourceDatabase::kNone:
-      ParseWild();
+      ParseWild(&txn_ctx);
       break;
     case katana::SourceDatabase::kNeo4j:
-      ParseNeo4j();
+      ParseNeo4j(&txn_ctx);
       break;
     case katana::SourceDatabase::kMongodb:
-      ParseMongoDB();
+      ParseMongoDB(&txn_ctx);
       break;
     case katana::SourceDatabase::kMysql:
-      ParseMysql();
+      ParseMysql(&txn_ctx);
       break;
     }
   }

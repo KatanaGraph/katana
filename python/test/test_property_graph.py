@@ -314,3 +314,61 @@ def test_simple_algorithm(graph):
     assert oprop[0].as_py() == 0
     assert oprop[4].as_py() == 0
     assert oprop[-1].as_py() == 0
+
+
+def test_types(graph):
+    node_type_set = set()
+    edge_type_set = set()
+    for nid in range(0, graph.num_nodes()):
+        node_type_set.add(graph.get_type_of_node(nid))
+        for eid in graph.edge_ids(nid):
+            edge_type_set.add(graph.get_type_of_edge(eid))
+
+    assert len(node_type_set) == 11
+    assert len(edge_type_set) == 15
+
+    node_entity_type = graph.node_types._make_entity_type(17)
+    edge_entity_type = graph.edge_types._make_entity_type(8)
+    assert graph.does_node_have_type(0, node_entity_type)
+    assert graph.does_edge_have_type(0, edge_entity_type)
+
+    node_atomic_types = graph.node_types.atomic_types
+    node_name_to_id_map = {name: node_atomic_types[name].type_id for name in node_atomic_types}
+    assert node_name_to_id_map == {
+        b"Tag": 12,
+        b"Organisation": 8,
+        b"City": 1,
+        b"Comment": 2,
+        b"University": 14,
+        b"Forum": 6,
+        b"Company": 3,
+        b"Continent": 4,
+        b"Country": 5,
+        b"Place": 10,
+        b"TagClass": 13,
+        b"Person": 9,
+        b"Message": 7,
+        b"Post": 11,
+    }
+    assert graph.node_types.is_subtype_of(0, 1) is True
+
+    edge_atomic_types = graph.edge_types.atomic_types
+    edge_name_to_id_map = {name: edge_atomic_types[name].type_id for name in edge_atomic_types}
+    assert edge_name_to_id_map == {
+        b"KNOWS": 11,
+        b"IS_SUBCLASS_OF": 10,
+        b"REPLY_OF": 13,
+        b"LIKES": 12,
+        b"CONTAINER_OF": 1,
+        b"WORK_AT": 15,
+        b"HAS_TYPE": 7,
+        b"HAS_CREATOR": 2,
+        b"STUDY_AT": 14,
+        b"IS_LOCATED_IN": 8,
+        b"HAS_INTEREST": 3,
+        b"HAS_TAG": 6,
+        b"HAS_MEMBER": 4,
+        b"HAS_MODERATOR": 5,
+        b"IS_PART_OF": 9,
+    }
+    assert graph.edge_types.is_subtype_of(0, 1) is True

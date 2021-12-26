@@ -242,9 +242,10 @@ struct LocalClusteringCoefficientPerThread {
 template <typename Algorithm>
 katana::Result<void>
 LocalClusteringCoefficientWithWrap(
-    katana::PropertyGraph* pg, const std::string& output_property_name) {
+    katana::PropertyGraph* pg, const std::string& output_property_name,
+    tsuba::TxnContext* txn_ctx) {
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pg, {output_property_name});
+          pg, txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }
@@ -258,7 +259,7 @@ LocalClusteringCoefficientWithWrap(
 katana::Result<void>
 katana::analytics::LocalClusteringCoefficient(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    LocalClusteringCoefficientPlan plan) {
+    tsuba::TxnContext* txn_ctx, LocalClusteringCoefficientPlan plan) {
   katana::StatTimer timer_graph_read(
       "GraphReadingTime", "LocalClusteringCoefficient");
   katana::StatTimer timer_auto_algo(
@@ -314,11 +315,11 @@ katana::analytics::LocalClusteringCoefficient(
   switch (plan.algorithm()) {
   case LocalClusteringCoefficientPlan::kOrderedCountAtomics: {
     return LocalClusteringCoefficientWithWrap<
-        LocalClusteringCoefficientAtomics>(pg, output_property_name);
+        LocalClusteringCoefficientAtomics>(pg, output_property_name, txn_ctx);
   }
   case LocalClusteringCoefficientPlan::kOrderedCountPerThread: {
     return LocalClusteringCoefficientWithWrap<
-        LocalClusteringCoefficientPerThread>(pg, output_property_name);
+        LocalClusteringCoefficientPerThread>(pg, output_property_name, txn_ctx);
   }
   default:
     return katana::ErrorCode::InvalidArgument;

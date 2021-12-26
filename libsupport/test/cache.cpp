@@ -7,45 +7,11 @@
 #include "katana/Logging.h"
 #include "katana/Random.h"
 
-enum class NodeEdge { kNode, kEdge };
-
-// This code is replicated from libtsuba::PropertyCache.h to allow testing of
-// libsupport::Cache.h (libtsuba depends on libsupport, not the other way around)
-struct KATANA_EXPORT PropertyCacheKey {
-  bool is_node() const { return node_edge == NodeEdge::kNode; }
-  bool is_edge() const { return node_edge == NodeEdge::kEdge; }
-  std::string prop_name() const { return name; }
-  std::string rdg_prefix() const { return ""; }
-
-  PropertyCacheKey(NodeEdge _node_edge, const std::string& _name = "")
-      : node_edge(_node_edge), name(_name) {}
-  bool operator==(const PropertyCacheKey& o) const {
-    return node_edge == o.node_edge && name == o.name;
-  }
-  struct Hash {
-    std::size_t operator()(const PropertyCacheKey& k) const {
-      using boost::hash_combine;
-      using boost::hash_value;
-
-      std::size_t seed = 0;
-      hash_combine(seed, hash_value(k.node_edge));
-      hash_combine(seed, hash_value(k.name));
-
-      // Return the result.
-      return seed;
-    }
-  };
-  // Data
-  NodeEdge node_edge;
-  std::string name;
-};
-
 struct CacheValue {
   int64_t a;
   int32_t b;
   uint32_t c;
 };
-static uint64_t count_evictions{0};
 
 CacheValue
 RandomValue() {
@@ -83,8 +49,7 @@ SizeFiveValue() {
 
 void
 InsertRandom(
-    const std::vector<PropertyCacheKey>& keys,
-    katana::Cache<PropertyCacheKey, CacheValue>& cache) {
+    const std::vector<katana::Uri>& keys, katana::Cache<CacheValue>& cache) {
   for (const auto& key : keys) {
     cache.Insert(key, RandomValue());
     KATANA_LOG_ASSERT(cache.LRUPosition(key) == 0);
@@ -93,12 +58,12 @@ InsertRandom(
 
 void
 AssertLRUElements(
-    std::vector<PropertyCacheKey>::const_iterator endit, size_t num,
-    katana::Cache<PropertyCacheKey, CacheValue>& cache) {
+    std::vector<katana::Uri>::const_iterator endit, size_t num,
+    katana::Cache<CacheValue>& cache) {
   for (auto it = endit - num; it < endit; ++it) {
     KATANA_LOG_ASSERT(cache.Get(*it).has_value());
     KATANA_LOG_VASSERT(
-        cache.LRUPosition(*it) == 0, "{} LRUPosition {}", it->prop_name(),
+        cache.LRUPosition(*it) == 0, "{} LRUPosition {}", *it,
         cache.LRUPosition(*it));
   }
   auto outofboundsit = endit - num - 1;
@@ -107,56 +72,45 @@ AssertLRUElements(
 }
 
 void
-TestLRUBytes(
-    const std::vector<PropertyCacheKey>& node_keys,
-    const std::vector<PropertyCacheKey>& edge_keys) {
-  count_evictions = 0;
+TestLRUBytes(const std::vector<katana::Uri>& keys) {
   size_t byte_size = 4;
-  katana::Cache<PropertyCacheKey, CacheValue> cache(
-      byte_size, [](const CacheValue& value) { return BytesInValue(value); },
-      [&](const PropertyCacheKey&, [[maybe_unused]] uint64_t approx_bytes,
-          void*) { count_evictions++; });
+  katana::Cache<CacheValue> cache(
+      byte_size, [](const CacheValue& value) { return BytesInValue(value); });
+
   KATANA_LOG_VASSERT(
       cache.capacity() == byte_size, "capacity {} allocated {}",
       cache.capacity(), byte_size);
 
-  PropertyCacheKey key(NodeEdge::kNode, "not gonna happen");
-  KATANA_LOG_ASSERT(!cache.Get(key).has_value());
-  KATANA_LOG_ASSERT(cache.LRUPosition(key) == -1L);
-  auto nodeit = --node_keys.end();
-  KATANA_LOG_ASSERT(nodeit != node_keys.begin());
-  cache.Insert(*nodeit--, SizeOneValue());
-  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
-  KATANA_LOG_ASSERT(nodeit != node_keys.begin());
-  cache.Insert(*nodeit--, SizeOneValue());
-  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
-  KATANA_LOG_ASSERT(nodeit != node_keys.begin());
-  cache.Insert(*nodeit--, SizeOneValue());
-  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
-  KATANA_LOG_ASSERT(nodeit != node_keys.begin());
-  cache.Insert(*nodeit--, SizeOneValue());
-  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
+  auto uri_res = katana::Uri::Make("not gonna happen");
+  KATANA_LOG_ASSERT(uri_res);
+  katana::Uri badKey = uri_res.value();
+  KATANA_LOG_ASSERT(!cache.Get(badKey).has_value());
+  KATANA_LOG_ASSERT(cache.LRUPosition(badKey) == -1L);
+  auto keyit = --keys.end();
+  KATANA_LOG_ASSERT(keyit != keys.begin());
+  cache.Insert(*keyit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(keyit + 1)) == 0);
+  KATANA_LOG_ASSERT(keyit != keys.begin());
+  cache.Insert(*keyit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(keyit + 1)) == 0);
+  KATANA_LOG_ASSERT(keyit != keys.begin());
+  cache.Insert(*keyit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(keyit + 1)) == 0);
+  KATANA_LOG_ASSERT(keyit != keys.begin());
+  cache.Insert(*keyit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(keyit + 1)) == 0);
 
-  KATANA_LOG_ASSERT((byte_size + 1) < node_keys.size());
-  AssertLRUElements(node_keys.end(), byte_size, cache);
-  // Check eviction count
-  KATANA_LOG_ASSERT(count_evictions == 0);
+  KATANA_LOG_ASSERT((byte_size + 1) < keys.size());
+  AssertLRUElements(keys.end(), byte_size, cache);
 
-  KATANA_LOG_ASSERT(nodeit != node_keys.begin());
-  cache.Insert(*nodeit--, SizeOneValue());
-  KATANA_LOG_ASSERT(count_evictions == 1);
+  KATANA_LOG_ASSERT(keyit != keys.begin());
+  cache.Insert(*keyit--, SizeOneValue());
 
-  // EDGE keys
-  nodeit = --edge_keys.end();
-  KATANA_LOG_ASSERT(nodeit != edge_keys.begin());
-  fmt::print(" insert edge key {}\n", nodeit->name);
-  cache.Insert(*nodeit--, SizeFiveValue());
-  KATANA_LOG_ASSERT(count_evictions == 5);
+  cache.Insert(*keyit--, SizeFiveValue());
   KATANA_LOG_ASSERT(cache.size() == 5);
 
-  cache.Insert(*nodeit--, SizeOneValue());
-  KATANA_LOG_ASSERT(cache.LRUPosition(*(nodeit + 1)) == 0);
-  KATANA_LOG_ASSERT(count_evictions == 6);
+  cache.Insert(*keyit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(keyit + 1)) == 0);
   KATANA_LOG_ASSERT(cache.size() == 1);
 
   cache.clear();
@@ -168,36 +122,25 @@ TestLRUBytes(
 }
 
 void
-TestLRUSize(
-    size_t lru_size, const std::vector<PropertyCacheKey>& node_keys,
-    const std::vector<PropertyCacheKey>& edge_keys) {
-  count_evictions = 0;
-  katana::Cache<PropertyCacheKey, CacheValue> cache(
-      lru_size,
-      [&](const PropertyCacheKey&, [[maybe_unused]] uint64_t approx_bytes,
-          void*) { count_evictions++; });
+TestLRUSize(size_t lru_size, const std::vector<katana::Uri>& keys) {
+  katana::Cache<CacheValue> cache(lru_size);
   KATANA_LOG_VASSERT(
       cache.capacity() == lru_size, "capcity {} allocated {}", cache.capacity(),
       lru_size);
 
-  InsertRandom(node_keys, cache);
+  InsertRandom(keys, cache);
 
   fmt::print(
-      "Inserted {} node keys, size {}\n", node_keys.size(), cache.size());
-  KATANA_LOG_VASSERT(
-      cache.size() == lru_size, "size {} allocated {}", cache.size(), lru_size);
+      "Inserted {} keys, size {} keys[0]={} \n", keys.size(), cache.size(),
+      keys.empty() ? "NO KEYS" : keys[0].string());
 
-  InsertRandom(edge_keys, cache);
-
-  fmt::print(
-      "Inserted {} edge keys, size {}\n", edge_keys.size(), cache.size());
   KATANA_LOG_VASSERT(
       cache.size() == lru_size, "size {} allocated {}", cache.size(), lru_size);
 
   // Make sure we have the LRU elements and only them.
-  KATANA_LOG_ASSERT((lru_size + 1) < edge_keys.size());
+  KATANA_LOG_ASSERT((lru_size + 1) < keys.size());
 
-  AssertLRUElements(edge_keys.end(), lru_size, cache);
+  AssertLRUElements(keys.end(), lru_size, cache);
 
   cache.clear();
   KATANA_LOG_VASSERT(
@@ -219,27 +162,15 @@ main(int argc, char** argv) {
     size = 1000000;
   }
 
-  std::vector<PropertyCacheKey> node_keys;
-  std::vector<PropertyCacheKey> edge_keys;
-  // Generate maximum overlap of names
-  std::vector<std::string> names;
-  size_t mid = size / 2;
-  if (mid * mid < size) {
-    mid++;
+  std::vector<katana::Uri> keys(size);
+  for (size_t i = 0; i < size; ++i) {
+    auto uri_res = katana::Uri::Make(katana::RandomAlphanumericString(16));
+    KATANA_LOG_ASSERT(uri_res);
+    keys[i] = uri_res.value();
   }
-  KATANA_LOG_ASSERT(mid * mid >= size);
-  for (size_t i = 0; i < mid; ++i) {
-    names.emplace_back(katana::RandomAlphanumericString(16));
-    node_keys.emplace_back(PropertyCacheKey(NodeEdge::kNode, names.back()));
-  }
+  TestLRUSize(lru_size, keys);
 
-  for (size_t i = 0, end = size - node_keys.size(); i < end; ++i) {
-    edge_keys.emplace_back(PropertyCacheKey(NodeEdge::kEdge, names[i]));
-  }
-
-  TestLRUSize(lru_size, node_keys, edge_keys);
-
-  TestLRUBytes(node_keys, edge_keys);
+  TestLRUBytes(keys);
 
   return 0;
 }

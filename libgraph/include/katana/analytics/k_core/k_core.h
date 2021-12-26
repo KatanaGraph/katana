@@ -49,7 +49,8 @@ public:
 /// not exist before the call.
 KATANA_EXPORT Result<void> KCore(
     PropertyGraph* pg, uint32_t k_core_number,
-    const std::string& output_property_name, KCorePlan plan = KCorePlan());
+    const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
+    KCorePlan plan = KCorePlan());
 
 KATANA_EXPORT Result<void> KCoreAssertValid(
     PropertyGraph* pg, uint32_t k_core_number,

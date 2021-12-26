@@ -33,8 +33,10 @@ TestIterate1(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
+  tsuba::TxnContext txn_ctx;
+
   std::unique_ptr<katana::PropertyGraph> g =
-      MakeFileGraph<DataType>(num_nodes, num_properties, &policy);
+      MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
 
   auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(g.get());
   if (!r) {
@@ -62,8 +64,10 @@ TestIterate3(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
+  tsuba::TxnContext txn_ctx;
+
   std::unique_ptr<katana::PropertyGraph> g =
-      MakeFileGraph<DataType>(num_nodes, num_properties, &policy);
+      MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
 
   auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(g.get());
   if (!r) {
@@ -87,8 +91,10 @@ TestIterate4(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
+  tsuba::TxnContext txn_ctx;
+
   std::unique_ptr<katana::PropertyGraph> g =
-      MakeFileGraph<DataType>(num_nodes, 5, &policy);
+      MakeFileGraph<DataType>(num_nodes, 5, &policy, &txn_ctx);
 
   auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(
       g.get(), {"1", "3"}, {"0", "4"});
@@ -111,8 +117,10 @@ TestError1(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
+  tsuba::TxnContext txn_ctx;
+
   std::unique_ptr<katana::PropertyGraph> g =
-      MakeFileGraph<DataType>(num_nodes, 5, &policy);
+      MakeFileGraph<DataType>(num_nodes, 5, &policy, &txn_ctx);
 
   auto r1 = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(
       g.get(), {"1", "3"}, {"0", "noexist"});

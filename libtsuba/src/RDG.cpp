@@ -35,7 +35,6 @@
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/ParquetWriter.h"
-#include "tsuba/PropertyCache.h"
 #include "tsuba/RDGTopology.h"
 #include "tsuba/ReadGroup.h"
 #include "tsuba/WriteGroup.h"
@@ -369,8 +368,7 @@ tsuba::RDG::DoMake(
 
   // populating node properties
   KATANA_CHECKED(AddProperties(
-      metadata_dir, tsuba::NodeEdge::kNode, prop_cache_, this,
-      node_props_to_be_loaded, &grp,
+      metadata_dir, prop_cache_, this, node_props_to_be_loaded, &grp,
       [rdg = this](
           const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
         std::shared_ptr<arrow::Table> prop_table =
@@ -390,8 +388,7 @@ tsuba::RDG::DoMake(
 
   // populating edge properties
   KATANA_CHECKED(AddProperties(
-      metadata_dir, tsuba::NodeEdge::kEdge, prop_cache_, this,
-      edge_props_to_be_loaded, &grp,
+      metadata_dir, prop_cache_, this, edge_props_to_be_loaded, &grp,
       [rdg = this](
           const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
         std::shared_ptr<arrow::Table> prop_table =
@@ -445,8 +442,7 @@ tsuba::RDG::DoMake(
 
   // populating partition metadata
   KATANA_CHECKED(AddProperties(
-      metadata_dir, tsuba::NodeEdge::kNeitherNodeNorEdge, nullptr, nullptr,
-      part_info, &grp,
+      metadata_dir, nullptr, nullptr, part_info, &grp,
       [rdg = this](const std::shared_ptr<arrow::Table>& props) {
         return rdg->core_->AddPartitionMetadataArray(props);
       }));
@@ -598,15 +594,15 @@ tsuba::RDG::Store(
 }
 
 katana::Result<void>
-tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
-  KATANA_CHECKED(core_->AddNodeProperties(props));
-  return katana::ResultSuccess();
+tsuba::RDG::AddNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->AddNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
-  KATANA_CHECKED(core_->AddEdgeProperties(props));
-  return katana::ResultSuccess();
+tsuba::RDG::AddEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+  return core_->AddEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
@@ -622,13 +618,13 @@ tsuba::RDG::UpsertEdgeProperties(
 }
 
 katana::Result<void>
-tsuba::RDG::RemoveNodeProperty(int i) {
-  return core_->RemoveNodeProperty(i);
+tsuba::RDG::RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx) {
+  return core_->RemoveNodeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::RemoveEdgeProperty(int i) {
-  return core_->RemoveEdgeProperty(i);
+tsuba::RDG::RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx) {
+  return core_->RemoveEdgeProperty(i, txn_ctx);
 }
 
 void
@@ -678,7 +674,7 @@ UnloadProperty(
 katana::Result<std::shared_ptr<arrow::Table>>
 LoadProperty(
     const std::shared_ptr<arrow::Table>& props, const std::string name, int i,
-    tsuba::NodeEdge node_edge, tsuba::PropertyCache* cache, tsuba::RDG* rdg,
+    katana::PropertyCache* cache, tsuba::RDG* rdg,
     std::vector<tsuba::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
   if (i < 0 || i > props->num_columns()) {
@@ -706,7 +702,7 @@ LoadProperty(
   std::shared_ptr<arrow::Table> new_table;
 
   KATANA_CHECKED(tsuba::AddProperties(
-      dir, node_edge, cache, rdg, {&prop_info}, nullptr,
+      dir, cache, rdg, {&prop_info}, nullptr,
       [&](const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
         if (props->num_columns() > 0) {
           new_table = KATANA_CHECKED(
@@ -769,7 +765,7 @@ tsuba::RDG::UnloadEdgeProperty(const std::string& name) {
 katana::Result<void>
 tsuba::RDG::LoadNodeProperty(const std::string& name, int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
-      node_properties(), name, i, tsuba::NodeEdge::kNode, prop_cache_, this,
+      node_properties(), name, i, prop_cache_, this,
       &core_->part_header().node_prop_info_list(), rdg_dir()));
   core_->set_node_properties(std::move(new_props));
   return katana::ResultSuccess();
@@ -778,7 +774,7 @@ tsuba::RDG::LoadNodeProperty(const std::string& name, int i) {
 katana::Result<void>
 tsuba::RDG::LoadEdgeProperty(const std::string& name, int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
-      edge_properties(), name, i, tsuba::NodeEdge::kEdge, prop_cache_, this,
+      edge_properties(), name, i, prop_cache_, this,
       &core_->part_header().edge_prop_info_list(), rdg_dir()));
   core_->set_edge_properties(std::move(new_props));
   return katana::ResultSuccess();
@@ -875,28 +871,12 @@ tsuba::RDG::DropAllTopologies() {
 
 std::shared_ptr<arrow::Schema>
 tsuba::RDG::full_node_schema() const {
-  std::vector<std::shared_ptr<arrow::Field>> fields;
-  for (const auto& prop : core_->part_header().node_prop_info_list()) {
-    KATANA_LOG_VASSERT(
-        prop.type(), "should be impossible for type of {} to be null here",
-        prop.name());
-    fields.emplace_back(
-        std::make_shared<arrow::Field>(prop.name(), prop.type()));
-  }
-  return arrow::schema(fields);
+  return core_->full_node_schema();
 }
 
 std::shared_ptr<arrow::Schema>
 tsuba::RDG::full_edge_schema() const {
-  std::vector<std::shared_ptr<arrow::Field>> fields;
-  for (const auto& prop : core_->part_header().edge_prop_info_list()) {
-    KATANA_LOG_VASSERT(
-        prop.type(), "should be impossible for type of {} to be null here",
-        prop.name());
-    fields.emplace_back(
-        std::make_shared<arrow::Field>(prop.name(), prop.type()));
-  }
-  return arrow::schema(fields);
+  return core_->full_edge_schema();
 }
 
 const std::vector<std::shared_ptr<arrow::ChunkedArray>>&

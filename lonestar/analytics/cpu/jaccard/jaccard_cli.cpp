@@ -50,8 +50,9 @@ using NodeValue = katana::PODProperty<double>;
 using NodeData = std::tuple<NodeValue>;
 using EdgeData = std::tuple<>;
 
-typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-typedef typename Graph::Node GNode;
+using Graph = katana::TypedPropertyGraphView<
+    katana::PropertyGraphViews::Default, NodeData, EdgeData>;
+using GNode = typename Graph::Node;
 
 int
 main(int argc, char** argv) {
@@ -76,15 +77,19 @@ main(int argc, char** argv) {
     abort();
   }
 
+  tsuba::TxnContext txn_ctx;
   if (auto r = katana::analytics::Jaccard(
-          pg.get(), base_node, output_property_name,
+          pg.get(), base_node, output_property_name, &txn_ctx,
           katana::analytics::JaccardPlan());
       !r) {
     KATANA_LOG_FATAL("Jaccard failed: {}", r.error());
   }
 
-  auto pg_result = katana::TypedPropertyGraph<NodeData, EdgeData>::Make(
-      pg.get(), {output_property_name}, {});
+  /// TODO (Yasin): not sure whythe following  KATANA_CHECKED gave me error here.
+  /// Graph graph = KATANA_CHECKED(Graph::Make(pg.get(), {output_property_name}, {}));
+  auto pg_result = katana::TypedPropertyGraphView<
+      katana::PropertyGraphViews::Default, NodeData,
+      EdgeData>::Make(pg.get(), {output_property_name}, {});
   if (!pg_result) {
     KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }

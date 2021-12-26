@@ -36,36 +36,39 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   constexpr size_t test_length = 10;
   using PropertyType = uint8_t;
   using ThrowAwayType = int64_t;
+  tsuba::TxnContext txn_ctx;
 
   RandomPolicy policy{1};
-  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy);
+  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy, &txn_ctx);
 
   std::shared_ptr<arrow::Table> node_throw_away =
       MakeProps<ThrowAwayType>("node-throw-away", test_length);
 
-  auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
+  auto add_throw_away_node_result =
+      g->AddNodeProperties(node_throw_away, &txn_ctx);
   KATANA_LOG_ASSERT(add_throw_away_node_result);
 
   std::shared_ptr<arrow::Table> edge_throw_away =
       MakeProps<ThrowAwayType>("edge-throw-away", test_length);
 
-  auto add_throw_away_edge_result = g->AddNodeProperties(edge_throw_away);
+  auto add_throw_away_edge_result =
+      g->AddNodeProperties(edge_throw_away, &txn_ctx);
   KATANA_LOG_ASSERT(add_throw_away_edge_result);
 
   std::shared_ptr<arrow::Table> node_props =
       MakeProps<PropertyType>("node-name", test_length);
 
-  auto add_node_result = g->AddNodeProperties(node_props);
+  auto add_node_result = g->AddNodeProperties(node_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_node_result);
 
   std::shared_ptr<arrow::Table> edge_props =
       MakeProps<PropertyType>("edge-name", test_length);
 
-  auto add_edge_result = g->AddEdgeProperties(edge_props);
+  auto add_edge_result = g->AddEdgeProperties(edge_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_edge_result);
 
   /// Construct types from IDs.
-  auto type_construction_result = g->ConstructEntityTypeIDs();
+  auto type_construction_result = g->ConstructEntityTypeIDs(&txn_ctx);
   KATANA_LOG_ASSERT(type_construction_result);
 
   auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
@@ -100,7 +103,7 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -133,48 +136,51 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   constexpr size_t test_length = 10;
   using PropertyType = uint8_t;
   using ThrowAwayType = int64_t;
+  tsuba::TxnContext txn_ctx;
 
   RandomPolicy policy{1};
-  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy);
+  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy, &txn_ctx);
 
   std::shared_ptr<arrow::Table> node_throw_away =
       MakeProps<ThrowAwayType>("node-throw-away", test_length);
 
-  auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
+  auto add_throw_away_node_result =
+      g->AddNodeProperties(node_throw_away, &txn_ctx);
   KATANA_LOG_ASSERT(add_throw_away_node_result);
 
   std::shared_ptr<arrow::Table> edge_throw_away =
       MakeProps<ThrowAwayType>("edge-throw-away", test_length);
 
-  auto add_throw_away_edge_result = g->AddNodeProperties(edge_throw_away);
+  auto add_throw_away_edge_result =
+      g->AddNodeProperties(edge_throw_away, &txn_ctx);
   KATANA_LOG_ASSERT(add_throw_away_edge_result);
 
   std::shared_ptr<arrow::Table> node_props_one =
       MakeProps<PropertyType>("node-name-1", test_length);
 
-  auto add_node_one_result = g->AddNodeProperties(node_props_one);
+  auto add_node_one_result = g->AddNodeProperties(node_props_one, &txn_ctx);
   KATANA_LOG_ASSERT(add_node_one_result);
 
   std::shared_ptr<arrow::Table> edge_props_one =
       MakeProps<PropertyType>("edge-name-1", test_length);
 
-  auto add_edge_one_result = g->AddEdgeProperties(edge_props_one);
+  auto add_edge_one_result = g->AddEdgeProperties(edge_props_one, &txn_ctx);
   KATANA_LOG_ASSERT(add_edge_one_result);
 
   std::shared_ptr<arrow::Table> node_props_two =
       MakeProps<PropertyType>("node-name-2", test_length);
 
-  auto add_node_two_result = g->AddNodeProperties(node_props_two);
+  auto add_node_two_result = g->AddNodeProperties(node_props_two, &txn_ctx);
   KATANA_LOG_ASSERT(add_node_two_result);
 
   std::shared_ptr<arrow::Table> edge_props_two =
       MakeProps<PropertyType>("edge-name-2", test_length);
 
-  auto add_edge_two_result = g->AddEdgeProperties(edge_props_two);
+  auto add_edge_two_result = g->AddEdgeProperties(edge_props_two, &txn_ctx);
   KATANA_LOG_ASSERT(add_edge_two_result);
 
   /// Construct types from IDs.
-  auto type_construction_result = g->ConstructEntityTypeIDs();
+  auto type_construction_result = g->ConstructEntityTypeIDs(&txn_ctx);
   KATANA_LOG_ASSERT(type_construction_result);
 
   auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
@@ -216,7 +222,7 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -242,32 +248,35 @@ TestRoundTrip() {
   constexpr size_t test_length = 10;
   using ValueType = int32_t;
   using ThrowAwayType = int64_t;
+  tsuba::TxnContext txn_ctx;
 
   RandomPolicy policy{1};
-  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy);
+  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy, &txn_ctx);
 
   std::shared_ptr<arrow::Table> node_throw_away =
       MakeProps<ThrowAwayType>("node-throw-away", test_length);
 
-  auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
+  auto add_throw_away_node_result =
+      g->AddNodeProperties(node_throw_away, &txn_ctx);
   KATANA_LOG_ASSERT(add_throw_away_node_result);
 
   std::shared_ptr<arrow::Table> edge_throw_away_props =
       MakeProps<ThrowAwayType>("edge-throw-away", test_length);
 
-  auto add_edge_throw_away_result = g->AddEdgeProperties(edge_throw_away_props);
+  auto add_edge_throw_away_result =
+      g->AddEdgeProperties(edge_throw_away_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_edge_throw_away_result);
 
   std::shared_ptr<arrow::Table> node_props =
       MakeProps<ValueType>("node-name", test_length);
 
-  auto add_node_result = g->AddNodeProperties(node_props);
+  auto add_node_result = g->AddNodeProperties(node_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_node_result);
 
   std::shared_ptr<arrow::Table> edge_props =
       MakeProps<ValueType>("edge-name", test_length);
 
-  auto add_edge_result = g->AddEdgeProperties(edge_props);
+  auto add_edge_result = g->AddEdgeProperties(edge_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_edge_result);
 
   auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
@@ -275,10 +284,12 @@ TestRoundTrip() {
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
   // don't persist throwaway properties
-  auto remove_node_throw_away_res = g->RemoveNodeProperty("node-throw-away");
+  auto remove_node_throw_away_res =
+      g->RemoveNodeProperty("node-throw-away", &txn_ctx);
   KATANA_LOG_ASSERT(remove_node_throw_away_res);
 
-  auto remove_edge_throw_away_res = g->RemoveEdgeProperty("edge-throw-away");
+  auto remove_edge_throw_away_res =
+      g->RemoveEdgeProperty("edge-throw-away", &txn_ctx);
   KATANA_LOG_ASSERT(remove_edge_throw_away_res);
 
   auto write_result = g->Write(rdg_dir, command_line);
@@ -291,7 +302,7 @@ TestRoundTrip() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -351,8 +362,9 @@ TestGarbageMetadata() {
   out << "garbage to make the file non-empty";
   out.close();
 
+  tsuba::TxnContext txn_ctx;
   auto no_dir_result =
-      katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(temp_dir);
   KATANA_LOG_ASSERT(!no_dir_result.has_value());
 }
@@ -365,23 +377,25 @@ MakePFGFile(const std::string& n1name) {
   const std::string n0name = "n0";
   const std::string e0name = "e0";
   const std::string e1name = "e1";
+  tsuba::TxnContext txn_ctx;
 
   RandomPolicy policy{1};
-  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy);
+  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy, &txn_ctx);
 
   std::shared_ptr<arrow::Table> node_props = MakeProps<V0>(n0name, test_length);
 
-  auto add_node_result = g->AddNodeProperties(node_props);
+  auto add_node_result = g->AddNodeProperties(node_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_node_result);
 
-  add_node_result = g->AddNodeProperties(MakeProps<V1>(n1name, test_length));
+  add_node_result =
+      g->AddNodeProperties(MakeProps<V1>(n1name, test_length), &txn_ctx);
   if (!add_node_result) {
     return "";
   }
 
   std::shared_ptr<arrow::Table> edge_props = MakeProps<V0>(e0name, test_length);
 
-  auto add_edge_result = g->AddEdgeProperties(edge_props);
+  auto add_edge_result = g->AddEdgeProperties(edge_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_edge_result);
 
   auto unique_result = katana::Uri::MakeRand("/tmp/propertygraphtests");
@@ -405,8 +419,9 @@ TestSimplePGs() {
   auto rdg_file = MakePFGFile("n0");
   KATANA_LOG_ASSERT(rdg_file.empty());
   rdg_file = MakePFGFile("n1");
+  tsuba::TxnContext txn_ctx;
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_file);
   KATANA_LOG_ASSERT(make_result);
 }
@@ -414,7 +429,8 @@ TestSimplePGs() {
 void
 TestTopologyAccess() {
   RandomPolicy policy{3};
-  auto g = MakeFileGraph<uint32_t>(10, 1, &policy);
+  tsuba::TxnContext txn_ctx;
+  auto g = MakeFileGraph<uint32_t>(10, 1, &policy, &txn_ctx);
 
   KATANA_LOG_ASSERT(g->size() == 10);
   KATANA_LOG_ASSERT(g->num_nodes() == 10);

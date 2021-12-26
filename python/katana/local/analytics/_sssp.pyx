@@ -25,10 +25,11 @@ from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint64_t
 from libcpp.string cimport string
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, Statistics, _Plan
 
 
@@ -79,7 +80,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
     Result[void] Sssp(_PropertyGraph* pg, size_t start_node,
-        const string& edge_weight_property_name, const string& output_property_name, _SsspPlan plan)
+        const string& edge_weight_property_name, const string& output_property_name, CTxnContext* txn_ctx, _SsspPlan plan)
 
     Result[void] SsspAssertValid(_PropertyGraph* pg, size_t start_node,
                                  const string& edge_weight_property_name, const string& output_property_name);
@@ -244,7 +245,7 @@ cdef class SsspPlan(Plan):
 
 
 def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
-         SsspPlan plan = SsspPlan()):
+         SsspPlan plan = SsspPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Single-Source Shortest Path on `pg` using `start_node` as the source. The computed path lengths are
     written to the property `output_property_name`.
@@ -259,6 +260,7 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: SsspPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
+    :param txn_ctx: The tranaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -279,9 +281,10 @@ def sssp(Graph pg, size_t start_node, str edge_weight_property_name, str output_
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(Sssp(pg.underlying_property_graph(), start_node, edge_weight_property_name_str,
-                                output_property_name_str, plan.underlying_))
+                                output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
 
 def sssp_assert_valid(Graph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
     """

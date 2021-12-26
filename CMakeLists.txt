@@ -28,7 +28,7 @@ if(KATANA_USE_SANITIZER)
 endif()
 
 add_sanitize_options()
-add_sanitize_blacklist(config/sanitizers/ubsan_blacklist.txt.in)
+add_sanitize_blacklist(config/sanitizer/ubsan_blacklist.txt.in)
 
 if(KATANA_USE_GPU)
   enable_language(CUDA)

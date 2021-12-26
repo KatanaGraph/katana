@@ -12,14 +12,17 @@
 // execute insert code with the parallel-hashmap write lock held, it seemed like there
 // would be some form of race condition.
 
+#include <cstdint>
+#include <functional>
 #include <list>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
-#include <boost/container_hash/hash.hpp>
+#include <arrow/table.h>
 
 #include "katana/Logging.h"
-#include "katana/Strings.h"
+#include "katana/URI.h"
 
 namespace katana {
 
@@ -53,41 +56,33 @@ struct CacheStats {
   uint64_t insert_hit_count{0ULL};
 };
 
-template <typename Key, typename Value, typename CallerPointer = void*>
+template <typename Value>
 class KATANA_EXPORT Cache {
+  using Key = katana::Uri;
   using ListType = std::list<Key>;
   struct MapValue {
     Value value;
     // This allows us to delete the old position in the LRU list without a scan
     typename ListType::iterator lru_it;
   };
-  using MapType = std::unordered_map<Key, MapValue, typename Key::Hash>;
+  using MapType = std::unordered_map<Key, MapValue, Key::Hash>;
   enum class ReplacementPolicy { kLRUSize, kLRUBytes };
 
 public:
   /// Construct an LRU cache that has a fixed number of entries.
-  Cache(
-      size_t capacity,  // number of entries
-      std::function<
-          void(const Key& key, uint64_t approx_bytes, CallerPointer rdg)>
-          evict_cb = nullptr)
+  Cache(size_t capacity)  // number of entries
       : policy_(ReplacementPolicy::kLRUSize),
         capacity_(capacity),
-        value_to_bytes_(nullptr),
-        evict_cb_(std::move(evict_cb)) {
+        value_to_bytes_(nullptr) {
     KATANA_LOG_VASSERT(capacity_ > 0, "cache requires positive capacity");
   }
   /// Construct an LRU cache that holds fixed number of bytes.
   Cache(
       size_t capacity,  // bytes of entries
-      std::function<size_t(const Value& value)> value_to_bytes,
-      std::function<
-          void(const Key& key, uint64_t approx_bytes, CallerPointer rdg)>
-          evict_cb = nullptr)
+      std::function<size_t(const Value& value)> value_to_bytes)
       : policy_(ReplacementPolicy::kLRUBytes),
         capacity_(capacity),
-        value_to_bytes_(std::move(value_to_bytes)),
-        evict_cb_(std::move(evict_cb)) {
+        value_to_bytes_(std::move(value_to_bytes)) {
     KATANA_LOG_VASSERT(capacity_ > 0, "cache requires positive capacity");
     KATANA_LOG_VASSERT(
         value_to_bytes_ != nullptr,
@@ -116,31 +111,7 @@ public:
     return key_to_value_.find(key) != key_to_value_.end();
   }
 
-  // Return a vector of node properties present in the cache, in LRU order
-  std::vector<std::string> GetNodeProperties(
-      const std::string& rdg_prefix) const {
-    std::vector<std::string> node_props;
-    for (const auto& elt : lru_list_) {
-      if (elt.is_node() && elt.rdg_prefix() == rdg_prefix) {
-        node_props.emplace_back(elt.prop_name());
-      }
-    }
-    return node_props;
-  }
-
-  // Return a vector of edge properties present in the cache, in LRU order
-  std::vector<std::string> GetEdgeProperties(
-      const std::string& rdg_prefix) const {
-    std::vector<std::string> edge_props;
-    for (const auto& elt : lru_list_) {
-      if (elt.is_edge() && elt.rdg_prefix() == rdg_prefix) {
-        edge_props.emplace_back(elt.prop_name());
-      }
-    }
-    return edge_props;
-  }
-
-  void Insert(const Key& key, const Value& value, CallerPointer rdg = nullptr) {
+  void Insert(const Key& key, const Value& value) {
     cache_stats_.insert_count++;
     auto mapit = key_to_value_.find(key);
     if (mapit == key_to_value_.end()) {
@@ -159,7 +130,7 @@ public:
       mapit->second.value = value;
       UpdateLRU(mapit);
     }
-    EvictIfNecessary(rdg);
+    EvictIfNecessary();
     // An inserted entry should be accessible
     KATANA_LOG_DEBUG_ASSERT(Get(key));
   }
@@ -200,7 +171,7 @@ private:
     return mapit->second.value;
   }
 
-  void EvictLastOne(CallerPointer rdg) {
+  void EvictLastOne() {
     // evict item from the end of most recently used list
     auto tail = --lru_list_.end();
     KATANA_LOG_ASSERT(tail != lru_list_.end());
@@ -213,16 +184,13 @@ private:
       approx_evicted_bytes = value_to_bytes_(evicted_value);
       total_bytes_ -= approx_evicted_bytes;
     }
-    if (evict_cb_) {
-      evict_cb_(evicted_key, approx_evicted_bytes, rdg);
-    }
   }
 
-  void EvictIfNecessary(CallerPointer rdg) {
+  void EvictIfNecessary() {
     switch (policy_) {
     case ReplacementPolicy::kLRUSize: {
       while (size() > capacity_) {
-        EvictLastOne(rdg);
+        EvictLastOne();
       }
     } break;
     case ReplacementPolicy::kLRUBytes: {
@@ -230,7 +198,7 @@ private:
       // Allow a single entry to exceed our byte capacity.
       // The new entry has already been added to the cache, hence > 1.
       while (size() > capacity_ && key_to_value_.size() > 1) {
-        EvictLastOne(rdg);
+        EvictLastOne();
       }
     } break;
     default:
@@ -251,9 +219,12 @@ private:
   CacheStats cache_stats_;
 
   std::function<size_t(const Value& value)> value_to_bytes_;
-  std::function<void(const Key& key, uint64_t approx_bytes, CallerPointer rdg)>
-      evict_cb_;
 };
+
+// The property cache contains properties NOT in use by the graph and never contains a
+// property that IS in use by the graph.  When a graph unloads a property, it goes
+// into the cache, and when it loads a property it (hopefully) comes from the cache.
+using PropertyCache = Cache<std::shared_ptr<arrow::Table>>;
 
 }  // namespace katana
 

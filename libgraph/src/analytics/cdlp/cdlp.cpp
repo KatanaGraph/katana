@@ -130,7 +130,7 @@ template <typename Algorithm>
 static katana::Result<void>
 CdlpWithWrap(
     katana::PropertyGraph* pg, std::string output_property_name,
-    size_t max_iterations) {
+    size_t max_iterations, tsuba::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(
       2,
       pg->topology().num_nodes() * sizeof(typename Algorithm::NodeCommunity));
@@ -138,7 +138,7 @@ CdlpWithWrap(
 
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeCommunity>>(
-          pg, {output_property_name});
+          pg, txn_ctx, {output_property_name});
       !r) {
     return r.error();
   }
@@ -164,11 +164,11 @@ CdlpWithWrap(
 katana::Result<void>
 katana::analytics::Cdlp(
     PropertyGraph* pg, const std::string& output_property_name,
-    size_t max_iterations, CdlpPlan plan) {
+    size_t max_iterations, tsuba::TxnContext* txn_ctx, CdlpPlan plan) {
   switch (plan.algorithm()) {
   case CdlpPlan::kSynchronous:
     return CdlpWithWrap<CdlpSynchronousAlgo>(
-        pg, output_property_name, max_iterations);
+        pg, output_property_name, max_iterations, txn_ctx);
   /// TODO (Yasin): Asynchronous Algorithm will be implemented later after Synchronous
   /// is done for both shared and distributed versions.
   /*

@@ -473,57 +473,36 @@ katana::EntityTypeManager::PrintEntityTypes() const {
   return std::string(buf.begin(), buf.end());
 }
 
+// This tests if two different type managers have the same entity types with the same
+// subtype relationship.  Such managers are isomorphic, but not necessarily equal
+// because they can assign different EntityTypeIDs to the same type.
 bool
-katana::EntityTypeManager::Equals(
+katana::EntityTypeManager::IsIsomorphicTo(
     const katana::EntityTypeManager& other) const {
-  if (entity_type_id_to_atomic_entity_type_ids_ !=
-      other.entity_type_id_to_atomic_entity_type_ids_) {
+  auto end = GetNumEntityTypes();
+  auto other_end = other.GetNumEntityTypes();
+  // If we have a different number of entity types, managers are not equivalent.
+  if (end != other_end) {
     KATANA_LOG_DEBUG(
-        "this.entity_type_id_to_atomic_entity_type_ids_.size() = {}, "
-        "other.size() = {}. SetOfEntityTypeIDsSize = {}, "
-        "other.SetOfEntityTypeIDsSize = {}",
-        entity_type_id_to_atomic_entity_type_ids_.size(),
-        other.entity_type_id_to_atomic_entity_type_ids_.size(),
-        SetOfEntityTypeIDsSize_, other.SetOfEntityTypeIDsSize_);
-
-    KATANA_LOG_DEBUG(
-        "this.entity_type_id_to_atomic_entity_type_ids_.at(0).size = {}, "
-        "other.size = "
-        "{}",
-        entity_type_id_to_atomic_entity_type_ids_.at(0).size(),
-        other.entity_type_id_to_atomic_entity_type_ids_.at(0).size());
+        "this.GetNumEntityTypes() = {}, "
+        "other.GetNumEntityTypes() == {}",
+        end, other_end);
     return false;
   }
-  if (atomic_entity_type_id_to_type_name_ !=
-      other.atomic_entity_type_id_to_type_name_) {
-    KATANA_LOG_DEBUG(
-        "this.atomic_entity_type_id_to_type_name_.size() = {}, other.size() = "
-        "{}",
-        atomic_entity_type_id_to_type_name_.size(),
-        other.atomic_entity_type_id_to_type_name_.size());
-    return false;
-  }
-
-  if (atomic_type_name_to_entity_type_id_ !=
-      other.atomic_type_name_to_entity_type_id_) {
-    KATANA_LOG_DEBUG(
-        "this.atomic_type_name_to_entity_type_id_.size() = {}, other.size() = "
-        "{}",
-        atomic_type_name_to_entity_type_id_.size(),
-        other.atomic_type_name_to_entity_type_id_.size());
-    return false;
-  }
-
-  if (atomic_entity_type_id_to_entity_type_ids_ !=
-      other.atomic_entity_type_id_to_entity_type_ids_) {
-    KATANA_LOG_DEBUG(
-        "this.atomic_entity_type_id_to_entity_type_ids_.size() = {}, "
-        "other.size() = {}. SetOfEntityTypeIDsSize = {}, "
-        "other.SetOfEntityTypeIDsSize = {}",
-        atomic_entity_type_id_to_entity_type_ids_.size(),
-        other.atomic_entity_type_id_to_entity_type_ids_.size(),
-        SetOfEntityTypeIDsSize_, other.SetOfEntityTypeIDsSize_);
-    return false;
+  // Every type name set in one manager must be in both
+  for (size_t i = 0; i < end; ++i) {
+    auto res = EntityTypeToTypeNameSet(i);
+    if (!res) {
+      KATANA_LOG_DEBUG(
+          "equality fails, no type name set for entity number {}\n", i);
+      return false;
+    }
+    auto tns = res.value();
+    auto res_type_id = other.GetNonAtomicEntityTypeFromStrings(tns);
+    if (!res_type_id) {
+      KATANA_LOG_DEBUG("this type name set ({}) not found in other", tns);
+      return false;
+    }
   }
   return true;
 }

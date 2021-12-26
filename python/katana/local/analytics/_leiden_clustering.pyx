@@ -23,10 +23,11 @@ from libc.stdint cimport uint32_t, uint64_t
 from libcpp cimport bool
 from libcpp.string cimport string
 
+from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local._graph cimport Graph, TxnContext
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -81,7 +82,7 @@ cdef extern from "katana/analytics/leiden_clustering/leiden_clustering.h" namesp
     uint32_t kDefaultMaxIterations "katana::analytics::LeidenClusteringPlan::kDefaultMaxIterations"
     uint32_t kDefaultMinGraphSize "katana::analytics::LeidenClusteringPlan::kDefaultMinGraphSize"
 
-    Result[void] LeidenClustering(_PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, _LeidenClusteringPlan plan)
+    Result[void] LeidenClustering(_PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, CTxnContext* txn_ctx, _LeidenClusteringPlan plan)
 
     Result[void] LeidenClusteringAssertValid(_PropertyGraph* pfg,
             const string& edge_weight_property_name,
@@ -100,7 +101,8 @@ cdef extern from "katana/analytics/leiden_clustering/leiden_clustering.h" namesp
         @staticmethod
         Result[_LeidenClusteringStatistics] Compute(_PropertyGraph* pfg,
             const string& edge_weight_property_name,
-            const string& output_property_name
+            const string& output_property_name,
+            CTxnContext* txn_ctx
             )
 
 
@@ -187,7 +189,7 @@ cdef class LeidenClusteringPlan(Plan):
             min_graph_size, resolution, randomness))
 
 
-def leiden_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LeidenClusteringPlan plan = LeidenClusteringPlan()):
+def leiden_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LeidenClusteringPlan plan = LeidenClusteringPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Leiden Clustering for pg.
     The edge weights are taken from the property named
@@ -205,6 +207,7 @@ def leiden_clustering(Graph pg, str edge_weight_property_name, str output_proper
     :param output_property_name: The output edge property
     :type LeidenClusteringPlan: LeidenClusteringPlan
     :param LeidenClusteringPlan: The Leiden Clustering Plan
+    :param txn_ctx: The tranaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -222,8 +225,9 @@ def leiden_clustering(Graph pg, str edge_weight_property_name, str output_proper
     """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
+    txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(LeidenClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
+        handle_result_void(LeidenClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
 
 
 def leiden_clustering_assert_valid(Graph pg, str edge_weight_property_name, str output_property_name ):
@@ -248,15 +252,18 @@ cdef class LeidenClusteringStatistics:
 
     def __init__(self, Graph pg,
             str edge_weight_property_name,
-            str output_property_name
+            str output_property_name,
+            *, TxnContext txn_ctx = None
             ):
         cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
         cdef string output_property_name_str = bytes(output_property_name, "utf-8")
+        txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_LeidenClusteringStatistics(_LeidenClusteringStatistics.Compute(
                 pg.underlying_property_graph(),
                 edge_weight_property_name_str,
-                output_property_name_str
+                output_property_name_str,
+                &txn_ctx._txn_ctx
                 ))
 
     @property

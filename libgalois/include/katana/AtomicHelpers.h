@@ -17,7 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#pragma once
+#ifndef KATANA_LIBGALOIS_KATANA_ATOMICHELPERS_H_
+#define KATANA_LIBGALOIS_KATANA_ATOMICHELPERS_H_
 
 #include <atomic>
 #include <type_traits>
@@ -101,3 +102,5 @@ atomicSub(
 #endif
 
 }  // end namespace katana
+
+#endif

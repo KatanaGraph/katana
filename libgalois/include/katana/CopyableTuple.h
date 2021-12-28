@@ -22,7 +22,8 @@
  *
  * Contains copyable tuple classes whose elements are contiguous in memory
  */
-#pragma once
+#ifndef KATANA_LIBGALOIS_KATANA_COPYABLETUPLE_H_
+#define KATANA_LIBGALOIS_KATANA_COPYABLETUPLE_H_
 
 #include "katana/config.h"
 
@@ -81,3 +82,5 @@ struct TupleOfThree {
 };
 
 }  // namespace katana
+
+#endif

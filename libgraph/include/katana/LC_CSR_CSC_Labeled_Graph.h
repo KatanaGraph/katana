@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KATANA_LIBGRAPH_KATANA_LCCSRCSCLABELEDGRAPH_H_
+#define KATANA_LIBGRAPH_KATANA_LCCSRCSCLABELEDGRAPH_H_
 
 #include "katana/LC_CSR_CSC_Graph.h"
 
@@ -629,3 +630,5 @@ private:
 };
 
 }  // namespace katana
+
+#endif

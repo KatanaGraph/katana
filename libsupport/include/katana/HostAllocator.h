@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KATANA_LIBSUPPORT_KATANA_HOSTALLOCATOR_H_
+#define KATANA_LIBSUPPORT_KATANA_HOSTALLOCATOR_H_
 
 #include <cstddef>
 #include <cstdlib>
@@ -145,3 +146,5 @@ GetSwappableAllocator() {
 }
 
 }  // namespace katana
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KATANA_LIBSUPPORT_KATANA_ENTITYTYPEMANAGER_H_
+#define KATANA_LIBSUPPORT_KATANA_ENTITYTYPEMANAGER_H_
 
 #include <bitset>
 #include <cstddef>
@@ -564,3 +565,5 @@ struct KATANA_EXPORT fmt::formatter<katana::TypeNameSet>
     return format_to(ctx.out(), "{}", fmt::join(tns, ":"));
   }
 };
+
+#endif

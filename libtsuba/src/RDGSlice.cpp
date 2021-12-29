@@ -26,12 +26,12 @@ enum class NodeEdge { kNode = 10, kEdge, kNeitherNodeNorEdge };
 // the array by itself.
 katana::Result<void>
 load_metadata_array(
-    const std::string& array_name, const std::function<void()>& empty,
-    tsuba::RDGCore* core) {
+    const std::string& array_name,
+    const std::function<katana::Result<void>()>& empty, tsuba::RDGCore* core) {
   tsuba::PropStorageInfo* prop_info =
       core->part_header().find_part_prop_info(array_name);
   if (!prop_info) {
-    empty();
+    KATANA_CHECKED(empty());
     return katana::ResultSuccess();
   }
 
@@ -434,9 +434,10 @@ katana::Result<void>
 tsuba::RDGSlice::load_local_to_global_id() {
   KATANA_CHECKED(load_metadata_array(
       RDGCore::kLocalToGlobalIDPropName,
-      [&]() {
+      [&]() -> katana::Result<void> {
         core_->set_local_to_global_id(
-            katana::NullChunkedArray(arrow::uint64(), 0));
+            KATANA_CHECKED(katana::NullChunkedArray(arrow::uint64(), 0)));
+        return katana::ResultSuccess();
       },
       core_.get()));
 
@@ -446,9 +447,10 @@ katana::Result<void>
 tsuba::RDGSlice::load_local_to_user_id() {
   KATANA_CHECKED(load_metadata_array(
       RDGCore::kLocalToUserIDPropName,
-      [&]() {
+      [&]() -> katana::Result<void> {
         core_->set_local_to_user_id(
-            katana::NullChunkedArray(arrow::uint64(), 0));
+            KATANA_CHECKED(katana::NullChunkedArray(arrow::uint64(), 0)));
+        return katana::ResultSuccess();
       },
       core_.get()));
 
@@ -459,9 +461,10 @@ katana::Result<void>
 tsuba::RDGSlice::unload_local_to_global_id() {
   KATANA_CHECKED(unload_metadata_array(
       RDGCore::kLocalToGlobalIDPropName,
-      [&]() {
+      [&]() -> katana::Result<void> {
         core_->set_local_to_global_id(
-            katana::NullChunkedArray(arrow::uint64(), 0));
+            KATANA_CHECKED(katana::NullChunkedArray(arrow::uint64(), 0)));
+        return katana::ResultSuccess();
       },
       core_.get()));
 
@@ -476,9 +479,10 @@ katana::Result<void>
 tsuba::RDGSlice::unload_local_to_user_id() {
   KATANA_CHECKED(unload_metadata_array(
       RDGCore::kLocalToUserIDPropName,
-      [&]() {
+      [&]() -> katana::Result<void> {
         core_->set_local_to_user_id(
-            katana::NullChunkedArray(arrow::uint64(), 0));
+            KATANA_CHECKED(katana::NullChunkedArray(arrow::uint64(), 0)));
+        return katana::ResultSuccess();
       },
       core_.get()));
 

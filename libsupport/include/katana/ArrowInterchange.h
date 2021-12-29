@@ -276,8 +276,10 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
 }
 
 /// Return a ChunkeArray of Nulls of the given type and length
-KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> NullChunkedArray(
+KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> NullChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length);
+
+KATANA_EXPORT std::shared_ptr<arrow::Table> MakeEmptyArrowTable();
 
 /// Print the differences between two ChunkedArrays only using
 /// about approx_total_characters
@@ -297,6 +299,10 @@ ApproxArrayMemUse(const std::shared_ptr<arrow::Array>& array);
 ///   large_string; it will be an upper bound in those cases
 KATANA_EXPORT uint64_t
 ApproxTableMemUse(const std::shared_ptr<arrow::Table>& table);
+
+KATANA_EXPORT Result<std::shared_ptr<arrow::Table>> TakeRows(
+    const std::shared_ptr<arrow::Table>& original,
+    const std::shared_ptr<arrow::BooleanArray> picker);
 
 }  // namespace katana
 

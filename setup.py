@@ -1,4 +1,5 @@
 import sys
+from distutils.extension import Extension
 
 assert sys.version_info.major >= 3 and sys.version_info.minor >= 6, "Katana requires Python 3.6 or greater"
 
@@ -11,7 +12,15 @@ import katana_setup
 def package_setup():
     # Following PEP-518, use pyproject.toml instead of setup(setup_requires=...) to
     # specify setup dependencies.
-    katana_setup.setup(source_dir="python", package_name="katana")
+    katana_setup.setup(
+        source_dir="python",
+        package_name="katana",
+        ext_modules=[
+            katana_setup.extension(
+                ("katana", "local_native"), ["EntityTypeManager.cpp", "LoadAll.cpp", "NUMAArray.cpp", "Reductions.cpp"]
+            )
+        ],
+    )
 
 
 if __name__ == "__main__":

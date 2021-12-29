@@ -43,7 +43,6 @@ add_subdirectory(libsupport)
 add_subdirectory(libtsuba)
 add_subdirectory(libgalois)
 add_subdirectory(libgraph)
-add_subdirectory(libkatana-python)
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(lonestar)
@@ -60,6 +59,7 @@ add_subdirectory(libgpu)
 ####### Language Bindings #######
 
 if(KATANA_LANG_BINDINGS_PYTHON)
+  find_package(pybind11 REQUIRED)
   add_python_setuptools_target(katana_python
                                DEPENDS Katana::support arrow::arrow Katana::galois Katana::graph
                                COMPONENT python)

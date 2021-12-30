@@ -67,6 +67,10 @@ if(KATANA_LANG_BINDINGS_PYTHON)
     add_python_setuptools_tests(katana_python PATH python/test)
   endif()
   add_katana_sphinx_target(katana_python)
+
+  if(KATANA_PYTHON_CXX_IDE_SUPPORT)
+    add_subdirectory(python/katana/local_native)
+  endif()
 endif()
 
 ###### Packaging ######

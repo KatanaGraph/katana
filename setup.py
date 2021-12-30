@@ -15,11 +15,7 @@ def package_setup():
     katana_setup.setup(
         source_dir="python",
         package_name="katana",
-        ext_modules=[
-            katana_setup.extension(
-                ("katana", "local_native"), ["EntityTypeManager.cpp", "LoadAll.cpp", "NUMAArray.cpp", "Reductions.cpp"]
-            )
-        ],
+        ext_modules=[katana_setup.extension(("katana", "local_native"), ["LoadAll.cpp", "Reductions.cpp"])],
     )
 
 

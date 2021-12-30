@@ -4,5 +4,5 @@ message(WARNING
 
 find_package(pybind11 REQUIRED)
 
-pybind11_add_module(libkatanapython MODULE EntityTypeManager.cpp LoadAll.cpp NUMAArray.cpp Reductions.cpp)
+pybind11_add_module(libkatanapython MODULE LoadAll.cpp Reductions.cpp)
 target_link_libraries(libkatanapython PRIVATE Katana::support Katana::galois Katana::graph)

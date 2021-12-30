@@ -7,12 +7,7 @@
 
 namespace katana {
 
-// TODO(amp): Add support for numpy structs
-template <int n>
-struct OpaqueValue {
-  char data[n];
-};
-
+// TODO(amp): Use template template parameters once we can rely on having them.
 template <typename T, typename F>
 pybind11::object
 InstantiateForType(
@@ -30,6 +25,9 @@ void
 InstantiateForStandardTypes(
     pybind11::module_ m, const std::string& basename, F f) {
   pybind11::module_ builtins = pybind11::module_::import("builtins");
+  auto make_template_type1 = pybind11::cast<pybind11::function>(
+      pybind11::module_::import("katana.native_interfacing.template_type")
+          .attr("make_template_type1"));
   pybind11::dict types;
   InstantiateForType<uint8_t>(m, basename, f, types);
   InstantiateForType<uint16_t>(m, basename, f, types);
@@ -45,7 +43,7 @@ InstantiateForStandardTypes(
   // Set the builtin type float as an alias for float64/double
   types[builtins.attr("float")] =
       InstantiateForType<double>(m, basename, f, types);
-  m.attr(basename.c_str()) = types;
+  m.attr(basename.c_str()) = make_template_type1(basename, types);
 }
 
 }  // namespace katana

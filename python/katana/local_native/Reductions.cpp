@@ -1,5 +1,4 @@
 #include <katana/Reduction.h>
-#include <katana/SharedMemSys.h>
 #include <pybind11/pybind11.h>
 
 #include "NumbaSupport.h"
@@ -9,6 +8,7 @@ namespace py = pybind11;
 
 namespace {
 
+// TODO(amp): Use template template parameters once we can rely on having them.
 struct ForGAccumulator {
   template <typename T>
   using type = katana::GAccumulator<T>;

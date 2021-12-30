@@ -9,6 +9,10 @@
 
 namespace katana {
 
+// TODO(amp): Use std::remove_cvref_t when/if we are only supporting C++20.
+template <typename T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
 /// A wrapper around a member function pointer which (unlike std::mem_fn) allows
 /// calls to the function via a static function pointer allowing it to be
 /// called from Numba generated code.
@@ -21,7 +25,8 @@ struct MemberFunction {
   Return (Cls::*member_func)(Args...);
 
   static Return call(
-      MemberFunction<Cls, Return, Args...>* func, Cls* self, Args... args) {
+      MemberFunction<Cls, Return, Args...>* func, Cls* self,
+      remove_cvref_t<Args>... args) {
     return (self->*(func->member_func))(args...);
   }
 };
@@ -32,14 +37,10 @@ struct ConstMemberFunction {
 
   static Return call(
       ConstMemberFunction<Cls, Return, Args...>* func, const Cls* self,
-      Args... args) {
+      remove_cvref_t<Args>... args) {
     return (self->*(func->member_func))(args...);
   }
 };
-
-// TODO(amp): Use std::remove_cvref_t when/if we are only supporting C++20.
-template <typename T>
-using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
 template <typename... Args>
 class DefWithNumbaImpl {
@@ -109,21 +110,21 @@ public:
         cls, name, pmf, new ConstMemberFunction<ImplCls, Return, Args...>{pmf});
   }
 
-  template <typename Cls, typename Func>
-  void operator()(
-      pybind11::class_<Cls>& cls, const char* name, Func&& f) const {
-    cls.def(name, f);
-    auto ff = [](Func* f_ptr, Cls* self, Args... args) {
-      return (*f_ptr)(self, args...);
-    };
-    auto numba =
-        pybind11::module_::import("katana.native_interfacing.numba_support");
-    numba.attr("register_method")(
-        cls, cls.attr(name), (uintptr_t)&f, (uintptr_t)&ff,
-        PythonTypeTraits<remove_cvref_t<pybind11::detail::remove_class<
-            decltype(Func::operator())>>>::representation(),
-        PythonTypeTraits<remove_cvref_t<Args>>::representation()...);
-  }
+  //  template <typename Cls, typename Func>
+  //  void operator()(
+  //      pybind11::class_<Cls>& cls, const char* name, Func&& f) const {
+  //    cls.def(name, f);
+  //    auto ff = [](Func* f_ptr, Cls* self, Args... args) {
+  //      return (*f_ptr)(self, args...);
+  //    };
+  //    auto numba =
+  //        pybind11::module_::import("katana.native_interfacing.numba_support");
+  //    numba.attr("register_method")(
+  //        cls, cls.attr(name), (uintptr_t)&f, (uintptr_t)&ff,
+  //        PythonTypeTraits<remove_cvref_t<pybind11::detail::remove_class<
+  //            decltype(Func::operator())>>>::representation(),
+  //        PythonTypeTraits<remove_cvref_t<Args>>::representation()...);
+  //  }
 };
 
 template <typename... Args>
@@ -134,6 +135,11 @@ void
 RegisterNumbaClass(pybind11::class_<T>& cls) {
   cls.def_property_readonly(
       "__katana_address__", [](T* self) { return (uintptr_t)self; });
+
+  auto SimpleNumbaPointerWrapper =
+      pybind11::module_::import("katana.native_interfacing.wrappers")
+          .attr("SimpleNumbaPointerWrapper");
+  cls.attr("_numba_wrapper") = SimpleNumbaPointerWrapper(cls);
 }
 
 }  // namespace katana

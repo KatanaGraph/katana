@@ -1,3 +1,4 @@
+import ctypes
 import logging
 from abc import ABCMeta, abstractmethod
 from functools import lru_cache
@@ -86,7 +87,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
 
         return Type
 
-    def register_method(self, func_name, typ, cython_func_name=None, addr=None, dtype_arguments=None):
+    def register_method(self, func_name, typ, cython_func_name=None, addr=None, dtype_arguments=None, data=None):
         addr_found = None
         if cython_func_name:
             addr_found = get_cython_function_address_with_defaults(
@@ -97,7 +98,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         func = typ(addr or addr_found)
 
         if dtype_arguments is None:
-            dtype_arguments = [False] * (len(func.argtypes) - 1)
+            dtype_arguments = [False] * (len(func.argtypes) - 1 - (1 if data else 0))
         # if not isinstance(dtype_arguments, list) or len(dtype_arguments) != len(func.argtypes):
         #     raise ValueError("dtype_arguments must have one element per argument of the function: "
         #         f"{func_name} ({typ}, {dtype_arguments})")
@@ -125,6 +126,14 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
             for i, is_dtype in enumerate(dtype_arguments)
         )
         src = f"""
+@overload_method(self.Type, func_name)
+def overload(self, {arguments}):
+    def impl(self, {arguments}):
+        return func({data}, self.ptr, {arguments_construct})
+    return impl
+"""
+        if data is None:
+            src = f"""
 @overload_method(self.Type, func_name)
 def overload(self, {arguments}):
     def impl(self, {arguments}):

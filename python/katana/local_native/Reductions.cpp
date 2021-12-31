@@ -1,6 +1,7 @@
 #include <katana/Reduction.h>
 #include <pybind11/pybind11.h>
 
+#include "Conventions.h"
 #include "NumbaSupport.h"
 #include "TemplateSupport.h"
 
@@ -40,11 +41,18 @@ struct ReducibleFunctor {
   py::object operator()(py::module_& m, const char* name) {
     py::class_<typename For::template type<T>> cls(m, name);
     cls.def(py::init<>());
+    cls.def(py::init([](T v) {
+      auto self = std::make_unique<typename For::template type<T>>();
+      self->update(v);
+      return self;
+    }));
     katana::RegisterNumbaClass(cls);
     katana::DefWithNumba<const T&>(
         cls, "update", &For::template type<T>::update);
     katana::DefWithNumba<>(cls, "reduce", &For::template type<T>::reduce);
+    katana::DefWithNumba<>(cls, "get_local", &For::template type<T>::getLocal);
     katana::DefWithNumba<>(cls, "reset", &For::template type<T>::reset);
+    katana::DefConventions(cls);
     return std::move(cls);
   }
 };

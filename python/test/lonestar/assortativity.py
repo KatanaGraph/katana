@@ -5,8 +5,7 @@ from test.lonestar.calculate_degree import calculate_degree
 import numpy as np
 
 from katana import do_all, do_all_operator
-from katana.local import Graph
-from katana.local.atomic import ReduceSum
+from katana.local import Graph, ReduceSum
 
 
 class DegreeType(Enum):

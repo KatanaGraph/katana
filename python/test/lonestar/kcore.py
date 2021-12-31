@@ -2,8 +2,7 @@ import numpy as np
 import pyarrow
 
 from katana import do_all, do_all_operator, for_each, for_each_operator, set_active_threads
-from katana.local import Graph
-from katana.local.atomic import ReduceSum, atomic_sub
+from katana.local import Graph, ReduceSum, atomic_sub
 from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.timer import StatTimer
 

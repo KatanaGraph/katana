@@ -2,8 +2,7 @@ import numpy as np
 import pyarrow
 
 from katana import do_all, do_all_operator
-from katana.local import Graph
-from katana.local.atomic import atomic_add
+from katana.local import Graph, atomic_add
 from katana.local.datastructures import AllocationPolicy, NUMAArray
 
 

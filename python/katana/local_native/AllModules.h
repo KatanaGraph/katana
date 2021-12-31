@@ -3,8 +3,6 @@
 
 #include <pybind11/pybind11.h>
 
-void InitEntityTypeManager(pybind11::module_& m);
-void InitNUMAArray(pybind11::module_& m);
 void InitReductions(pybind11::module_& m);
 
 #endif

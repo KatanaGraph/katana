@@ -6,10 +6,10 @@ import pytest
 from katana import do_all, do_all_operator
 from katana.local import (
     NUMAArray,
-    ReduceLogicalAnd,
-    ReduceLogicalOr,
+    ReduceAnd,
     ReduceMax,
     ReduceMin,
+    ReduceOr,
     ReduceSum,
     atomic_add,
     atomic_max,
@@ -87,8 +87,8 @@ def test_ReduceMin_parallel(threads_many):
     assert acc.reduce() == -50.0
 
 
-def test_ReduceLogicalOr_parallel(threads_many):
-    T = ReduceLogicalOr
+def test_ReduceOr_parallel(threads_many):
+    T = ReduceOr
     acc = T()
 
     @do_all_operator()
@@ -99,8 +99,8 @@ def test_ReduceLogicalOr_parallel(threads_many):
     assert acc.reduce() is True
 
 
-def test_ReduceLogicalAnd_parallel(threads_many):
-    T = ReduceLogicalAnd
+def test_ReduceAnd_parallel(threads_many):
+    T = ReduceAnd
     acc = T()
 
     @do_all_operator()
@@ -111,8 +111,8 @@ def test_ReduceLogicalAnd_parallel(threads_many):
     assert acc.reduce() is False
 
 
-def test_ReduceLogicalOr_simple():
-    T = ReduceLogicalOr
+def test_ReduceOr_simple():
+    T = ReduceOr
     acc = T()
     acc.update(True)
     acc.update(False)
@@ -124,8 +124,8 @@ def test_ReduceLogicalOr_simple():
     assert acc.reduce() is False
 
 
-def test_ReduceLogicalAnd_simple():
-    T = ReduceLogicalAnd
+def test_ReduceAnd_simple():
+    T = ReduceAnd
     acc = T()
     acc.update(True)
     acc.update(False)

@@ -1,26 +1,62 @@
+"""
+A set of functions for registering classes, methods, and functions from Numba compiled code.
+The primary user of this module is the `pybind11` code in `NumbaSupport.h`.
+"""
+
 import ctypes
 
 from katana.native_interfacing.wrappers import SimpleNumbaPointerWrapper
 
 
-def _simplify_type(t):
-    if t is None:
-        return None
-    if t.__module__ == "ctypes":
-        return t
-    return ctypes.c_void_p
+def register_class(cls: type) -> None:
+    """
+    Configure ``cls`` to support Numba methods.
+
+    :param cls: The class to configure. It must have a ``__katana_address__`` property which returns the pointer to the
+        native object as an `int`.
+    """
+    if not hasattr(cls, "__katana_address__"):
+        raise ValueError("Numba supporting classes must have a __katana_address__ property.")
+    cls._numba_type_wrapper = SimpleNumbaPointerWrapper(cls)
 
 
-def register_method(cls, method, invoker_data, invoker_ptr, ret_type, *arg_types):
-    numba_wrapper: SimpleNumbaPointerWrapper = cls._numba_wrapper
-    ctypes_func_type = ctypes.CFUNCTYPE(
-        _simplify_type(ret_type), ctypes.c_int64, _simplify_type(cls), *(_simplify_type(t) for t in arg_types)
-    )
+def register_method(cls: type, method, invoker_ptr: int, invoker_data: int, ret_type, *arg_types) -> None:
+    """
+    Register a function pointer to implement ``method`` when called from Numba compiled code.
+    ``cls`` must have been registered with `register_class`.
+
+    :param cls: The class containing the method.
+    :param method: The method to register.
+    :type method: unbound method.
+    :param invoker_ptr: The pointer to the invoker function.
+    :param invoker_data: A 64-bit integer value to be passed as the first argument to the invoker function. This is
+        often a data pointer.
+    :param ret_type: The type of the method return value.
+    :type ret_type: `ctype` type object or None.
+    :param arg_types: The types of each argument value.
+    :type arg_types: `ctype` type object.
+    """
+    if not hasattr(cls, "_numba_type_wrapper"):
+        raise ValueError(
+            "Classes with numba methods must be registered as numba classes with "
+            "katana.native_interfacing.numba_support.register_class (in C++, katana::RegisterNumbaClass)."
+        )
+    numba_wrapper: SimpleNumbaPointerWrapper = cls._numba_type_wrapper
+    ctypes_func_type = ctypes.CFUNCTYPE(ret_type, ctypes.c_int64, ctypes.c_void_p, *arg_types)
     numba_wrapper.register_method(method.__name__, ctypes_func_type, addr=invoker_ptr, data=invoker_data)
 
 
-def register_function(func, func_ptr, ret_type, *arg_types):
-    print(func, func.__name__)
-    print(func_ptr)
-    print(ret_type, arg_types)
-    raise NotImplementedError()
+def register_function(func: callable, invoker_ptr: int, invoker_data: int, ret_type, *arg_types) -> None:
+    """
+    Register a function pointer to implement ``func`` when called from Numba compiled code.
+
+    :param func: The Python function to register.
+    :param invoker_ptr: The pointer to the invoker function.
+    :param invoker_data: A 64-bit integer value to be passed as the first argument to the invoker function. This is
+        often a data pointer.
+    :param ret_type: The type of the method return value.
+    :type ret_type: `ctype` type object or None.
+    :param arg_types: The types of each argument value.
+    :type arg_types: `ctype` type object.
+    """
+    raise NotImplementedError("Top level functions are not yet supported by the numba wrapper framework.")

@@ -5,10 +5,4 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(local_native, m) {
-  py::class_<katana::SharedMemSys>(m, "SharedMemSys").def(py::init());
-
-  InitEntityTypeManager(m);
-  InitNUMAArray(m);
-  InitReductions(m);
-}
+PYBIND11_MODULE(local_native, m) { InitReductions(m); }

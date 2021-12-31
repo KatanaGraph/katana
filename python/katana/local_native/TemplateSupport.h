@@ -8,6 +8,14 @@
 namespace katana {
 
 // TODO(amp): Use template template parameters once we can rely on having them.
+
+/// Invoke `f<T>(m, name)` and assign the resulting class into `types[T]`.
+///
+/// \param m The module which should contain the resulting class.
+/// \param basename The base name of the class which will be suffixed with a type name.
+/// \param f The functor which instantiates the class.
+/// \param types A dict to fill with instantiations.
+/// \return The resulting class.
 template <typename T, typename F>
 pybind11::object
 InstantiateForType(
@@ -20,6 +28,12 @@ InstantiateForType(
   return cls;
 }
 
+/// Invoke `f<T>(m, fullname)` for a set of standard types and store the
+/// resulting collection of classes in `m.basename` for use from Python.
+///
+/// \param m The module which should contain the resulting class.
+/// \param basename The base name of the class which will be suffixed with a type name.
+/// \param f The functor which instantiates the class.
 template <typename F>
 void
 InstantiateForStandardTypes(

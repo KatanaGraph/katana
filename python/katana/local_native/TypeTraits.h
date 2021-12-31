@@ -10,6 +10,12 @@ struct PythonTypeTraits {};
 
 template <typename T>
 struct PythonTypeTraits<T, std::void_t<decltype(pybind11::type::of<T>())>> {
+  /// All pybind11 types use void* at the ctypes level.
+  static pybind11::object ctypes_type() {
+    pybind11::module_ ctypes = pybind11::module_::import("ctypes");
+    return ctypes.attr("c_void_p");
+  }
+
   /// Get a Python object which represents the type in Python for purposes of
   /// numba or type checking.
   static pybind11::object representation() { return pybind11::type::of<T>(); }
@@ -46,6 +52,9 @@ PYTHON_TYPE_TRAITS_BY_PREFIX(int64);
 PYTHON_TYPE_TRAITS(float, "float32", "c_float");
 PYTHON_TYPE_TRAITS(double, "float64", "c_double");
 
+#undef PYTHON_TYPE_TRAITS_BY_PREFIX
+#undef PYTHON_TYPE_TRAITS
+
 /// There is no numpy dtype for bool. Requesting it will give a C++ compiler
 /// error.
 template <>
@@ -61,11 +70,9 @@ struct PythonTypeTraits<bool> {
 template <>
 struct PythonTypeTraits<void> {
   static constexpr const char* name = "void";
+  static pybind11::object ctypes_type() { return pybind11::none(); }
   static pybind11::object representation() { return pybind11::none(); }
 };
-
-#undef PYTHON_TYPE_TRAITS_BY_PREFIX
-#undef PYTHON_TYPE_TRAITS
 
 }  // namespace katana
 

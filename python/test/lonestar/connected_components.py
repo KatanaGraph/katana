@@ -2,8 +2,7 @@ import numpy as np
 import pyarrow
 
 from katana import do_all, do_all_operator, set_active_threads
-from katana.local import Graph
-from katana.local.atomic import ReduceLogicalOr, ReduceSum, atomic_min
+from katana.local import Graph, ReduceOr, ReduceSum, atomic_min
 from katana.timer import StatTimer
 
 
@@ -43,7 +42,7 @@ def cc_pull_topo(graph: Graph, property_name):
     )
 
     # Execute while component ids are updated
-    changed = ReduceLogicalOr()
+    changed = ReduceOr()
     changed.update(True)
     while changed.reduce():
         changed.reset()
@@ -99,7 +98,7 @@ def cc_push_topo(graph: Graph, property_name):
     )
 
     # Execute while component ids are updated
-    changed = ReduceLogicalOr()
+    changed = ReduceOr()
     changed.update(True)
     while changed.reduce():
         changed.reset()

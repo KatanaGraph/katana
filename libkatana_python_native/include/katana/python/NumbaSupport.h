@@ -108,22 +108,6 @@ public:
     def_class_method<Cls, Return>(
         cls, name, pmf, new ConstMemberFunction<ImplCls, Return, Args...>{pmf});
   }
-
-  //  template <typename Cls, typename Func>
-  //  void operator()(
-  //      pybind11::class_<Cls>& cls, const char* name, Func&& f) const {
-  //    cls.def(name, f);
-  //    auto ff = [](Func* f_ptr, Cls* self, Args... args) {
-  //      return (*f_ptr)(self, args...);
-  //    };
-  //    auto numba =
-  //        pybind11::module_::import("katana.native_interfacing.numba_support");
-  //    numba.attr("register_method")(
-  //        cls, cls.attr(name), (uintptr_t)&f, (uintptr_t)&ff,
-  //        PythonTypeTraits<remove_cvref_t<pybind11::detail::remove_class<
-  //            decltype(Func::operator())>>>::representation(),
-  //        PythonTypeTraits<remove_cvref_t<Args>>::representation()...);
-  //  }
 };
 
 /// Declare a method or function to be called from Numba and Python.

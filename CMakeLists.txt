@@ -60,17 +60,14 @@ add_subdirectory(libgpu)
 
 if(KATANA_LANG_BINDINGS_PYTHON)
   find_package(pybind11 REQUIRED)
+  add_subdirectory(libkatana_python_native)
   add_python_setuptools_target(katana_python
-                               DEPENDS Katana::support arrow::arrow Katana::galois Katana::graph pybind11::pybind11
+                               DEPENDS Katana::support arrow::arrow Katana::galois Katana::graph Katana::python
                                COMPONENT python)
   if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
     add_python_setuptools_tests(katana_python PATH python/test)
   endif()
   add_katana_sphinx_target(katana_python)
-
-  if(KATANA_PYTHON_CXX_IDE_SUPPORT)
-    add_subdirectory(python/katana/local_native)
-  endif()
 endif()
 
 ###### Packaging ######

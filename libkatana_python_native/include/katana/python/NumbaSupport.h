@@ -1,11 +1,10 @@
-#ifndef KATANA_PYTHON_KATANA_LOCALNATIVE_NUMBASUPPORT_H_
-#define KATANA_PYTHON_KATANA_LOCALNATIVE_NUMBASUPPORT_H_
+#ifndef KATANA_LIBKATANAPYTHONNATIVE_KATANA_PYTHON_NUMBASUPPORT_H_
+#define KATANA_LIBKATANAPYTHONNATIVE_KATANA_PYTHON_NUMBASUPPORT_H_
 
 #include <type_traits>
 
+#include <katana/python/TypeTraits.h>
 #include <pybind11/pybind11.h>
-
-#include "TypeTraits.h"
 
 namespace katana {
 

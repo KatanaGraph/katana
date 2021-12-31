@@ -1,9 +1,9 @@
 #include <katana/Reduction.h>
+#include <katana/python/Conventions.h>
+#include <katana/python/NumbaSupport.h>
+#include <katana/python/PythonModuleInitializers.h>
+#include <katana/python/TemplateSupport.h>
 #include <pybind11/pybind11.h>
-
-#include "Conventions.h"
-#include "NumbaSupport.h"
-#include "TemplateSupport.h"
 
 namespace py = pybind11;
 

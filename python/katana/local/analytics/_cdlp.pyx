@@ -3,9 +3,7 @@ Community Detection using Label Propagation (CDLP)
 --------------------------------------------------
 
 .. autoclass:: katana.local.analytics.CdlpPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. [Raghavan] U. N. Raghavan, R. Albert and S. Kumara, "Near linear time algorithm
             to detect community structures in large-scale networks,"  In: Physical
@@ -15,15 +13,13 @@ Community Detection using Label Propagation (CDLP)
                   Benchmark," arXiv preprint arXiv:2011.15028 (2020).
 
 .. autoclass:: katana.local.analytics._cdlp._CdlpPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 
 .. autofunction:: katana.local.analytics.cdlp
 
 .. autoclass:: katana.local.analytics.CdlpStatistics
-    :members:
-    :undoc-members:
+
 """
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t

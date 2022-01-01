@@ -3,16 +3,13 @@ Triangle Counting
 -----------------
 
 .. autoclass:: katana.local.analytics.TriangleCountPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. [Schank] Thomas Schank. Algorithmic Aspects of Triangle-Based Network Analysis. PhD
     Thesis. Universitat Karlsruhe. 2007.
 
 .. autoclass:: katana.local.analytics._triangle_count._TriangleCountPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.triangle_count
 """

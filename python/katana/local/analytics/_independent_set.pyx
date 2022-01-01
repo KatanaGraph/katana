@@ -3,19 +3,15 @@ Independent Set
 ---------------
 
 .. autoclass:: katana.local.analytics.IndependentSetPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._independent_set._IndependentSetPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.independent_set
 
 .. autoclass:: katana.local.analytics.IndependentSetStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.independent_set_assert_valid
 """

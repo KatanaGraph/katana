@@ -5,19 +5,15 @@ k-Truss
 The k-Truss is a maximal connected subgraph in which all edges are part of at least (k-2) triangles.
 
 .. autoclass:: katana.local.analytics.KTrussPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._k_truss._KTrussPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.k_truss
 
 .. autoclass:: katana.local.analytics.KTrussStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.k_truss_assert_valid
 """

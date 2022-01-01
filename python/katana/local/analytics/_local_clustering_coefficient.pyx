@@ -3,13 +3,10 @@ Local Clustering Coefficient
 ----------------------------
 
 .. autoclass:: katana.local.analytics.LocalClusteringCoefficientPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._local_clustering_coefficient._LocalClusteringCoefficientPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.local_clustering_coefficient
 """

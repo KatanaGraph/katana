@@ -3,23 +3,19 @@ Page Rank
 ---------
 
 .. autoclass:: katana.local.analytics.PagerankPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. [WHANG] WHANG, Joyce Jiyoung, et al. Scalable data-driven pagerank: Algorithms,
     system issues, and lessons learned. In: European Conference on Parallel
     Processing. Springer, Berlin, Heidelberg, 2015. p. 438-450.
 
 .. autoclass:: katana.local.analytics._pagerank._PagerankPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.pagerank
 
 .. autoclass:: katana.local.analytics.PagerankStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.pagerank_assert_valid
 """

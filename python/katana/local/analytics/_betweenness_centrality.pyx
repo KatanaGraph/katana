@@ -3,19 +3,15 @@ Betweenness Centrality
 ----------------------
 
 .. autoclass:: katana.local.analytics.BetweennessCentralityPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._betweenness_centrality._BetweennessCentralityAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.betweenness_centrality
 
 .. autoclass:: katana.local.analytics.BetweennessCentralityStatistics
-    :members:
-    :undoc-members:
+
 """
 
 from libc.stdint cimport uint32_t

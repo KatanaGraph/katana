@@ -3,19 +3,15 @@ Louvain Clustering
 ------------------
 
 .. autoclass:: katana.local.analytics.LouvainClusteringPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._louvain_clustering._LouvainClusteringPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.louvain_clustering
 
 .. autoclass:: katana.local.analytics.LouvainClusteringStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.louvain_clustering_assert_valid
 """

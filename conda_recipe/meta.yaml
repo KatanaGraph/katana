@@ -29,6 +29,7 @@ requirements:
     - sphinx {{ sphinx }}
     - sphinx-copybutton {{ sphinx_copybutton }}
     - sphinx-tabs {{ sphinx_tabs }}
+    - pybind11 {{ pybind11 }}
   host:
     - jinja2 {{ jinja2 }}
     - cython {{ cython }}

@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import sys
 import tarfile
 from pathlib import Path
 from subprocess import PIPE, Popen, check_call, check_output
@@ -118,4 +119,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

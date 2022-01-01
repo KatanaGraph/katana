@@ -43,11 +43,13 @@ struct ConstMemberFunction {
 
 template <typename... Args>
 class DefWithNumbaImpl {
-  template <typename Cls, typename Return, typename Func, typename Caller>
+  template <
+      typename Cls, typename Return, typename Func, typename Caller,
+      typename... Extra>
   void def_class_method(
-      pybind11::class_<Cls>& cls, const char* name, Func f,
-      Caller* caller) const {
-    cls.def(name, f);
+      pybind11::class_<Cls>& cls, const char* name, Func f, Caller* caller,
+      const Extra&... extra) const {
+    cls.def(name, f, extra...);
     auto numba_support =
         pybind11::module_::import("katana.native_interfacing.numba_support");
     numba_support.attr("register_method")(
@@ -56,10 +58,11 @@ class DefWithNumbaImpl {
         PythonTypeTraits<remove_cvref_t<Args>>::ctypes_type()...);
   }
 
-  template <typename Return>
+  template <typename Return, typename... Extra>
   void def_func(
-      pybind11::module_& m, const char* name, Return (*f)(Args...)) const {
-    m.def(name, f);
+      pybind11::module_& m, const char* name, Return (*f)(Args...),
+      const Extra&... extra) const {
+    m.def(name, f, extra...);
     auto func = m.attr(name);
     auto numba_support =
         pybind11::module_::import("katana.native_interfacing.numba_support");
@@ -78,35 +81,41 @@ public:
   //  functions/methods at the template level. This could be done with a counter
   //  or a name argument of some kind.
 
-  template <typename Return>
+  template <typename Return, typename... Extra>
   void operator()(
-      pybind11::module_& m, const char* name, Return (*pf)(Args...)) const {
-    def_func(m, name, pf);
+      pybind11::module_& m, const char* name, Return (*pf)(Args...),
+      const Extra&... extra) const {
+    def_func(m, name, pf, extra...);
   }
 
-  template <typename Func>
-  void operator()(pybind11::module_& m, const char* name, Func&& f) const {
-    this->template operator()(m, name, &f);
+  template <typename Func, typename... Extra>
+  void operator()(
+      pybind11::module_& m, const char* name, Func&& f,
+      const Extra&... extra) const {
+    this->template operator()(m, name, &f, extra...);
   }
 
-  template <typename Cls, typename Return, typename ImplCls>
+  template <typename Cls, typename Return, typename ImplCls, typename... Extra>
   void operator()(
       pybind11::class_<Cls>& cls, const char* name,
-      Return (ImplCls::*pmf)(Args...), std::false_type = {}) const {
+      Return (ImplCls::*pmf)(Args...), const Extra&... extra) const {
     // This leaks a single pointer sized struct for each defined numba function.
     // Repeated import could theoretically cause this to matter, but it's very
     // unlikely.
     def_class_method<Cls, Return>(
-        cls, name, pmf, new MemberFunction<ImplCls, Return, Args...>{pmf});
+        cls, name, pmf, new MemberFunction<ImplCls, Return, Args...>{pmf},
+        extra...);
   }
 
-  template <typename Cls, typename Return, typename ImplCls>
+  template <typename Cls, typename Return, typename ImplCls, typename... Extra>
   void operator()(
       pybind11::class_<Cls>& cls, const char* name,
-      Return (ImplCls::*pmf)(Args...) const, std::true_type) const {
+      Return (ImplCls::*pmf)(Args...) const, std::true_type,
+      const Extra&... extra) const {
     // As above.
     def_class_method<Cls, Return>(
-        cls, name, pmf, new ConstMemberFunction<ImplCls, Return, Args...>{pmf});
+        cls, name, pmf, new ConstMemberFunction<ImplCls, Return, Args...>{pmf},
+        extra...);
   }
 };
 

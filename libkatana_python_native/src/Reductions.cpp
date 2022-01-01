@@ -39,19 +39,37 @@ template <typename For>
 struct ReducibleFunctor {
   template <typename T>
   py::object operator()(py::module_& m, const char* name) {
-    py::class_<typename For::template type<T>> cls(m, name);
+    py::class_<typename For::template type<T>> cls(
+        m, name,
+        "A reducer object that can updated with new values and combines the "
+        "results efficiently using the appropriate operator.\n"
+        "\n"
+        "This class can be passed into numba compiled code and it's methods "
+        "can be used from there.\n");
     cls.def(py::init<>());
-    cls.def(py::init([](T v) {
-      auto self = std::make_unique<typename For::template type<T>>();
-      self->update(v);
-      return self;
-    }));
+    cls.def(
+        py::init([](T v) {
+          auto self = std::make_unique<typename For::template type<T>>();
+          self->update(v);
+          return self;
+        }),
+        "Create a new instance with an initial value.");
     katana::RegisterNumbaClass(cls);
     katana::DefWithNumba<const T&>(
-        cls, "update", &For::template type<T>::update);
-    katana::DefWithNumba<>(cls, "reduce", &For::template type<T>::reduce);
-    katana::DefWithNumba<>(cls, "get_local", &For::template type<T>::getLocal);
-    katana::DefWithNumba<>(cls, "reset", &For::template type<T>::reset);
+        cls, "update", &For::template type<T>::update,
+        "Update this reducer with ``v`` performing the operation.");
+    katana::DefWithNumba<>(
+        cls, "reduce", &For::template type<T>::reduce,
+        "Get the current value of the reducer. This must only be called from "
+        "single threaded code.");
+    katana::DefWithNumba<>(
+        cls, "get_local", &For::template type<T>::getLocal,
+        "Get a sub-result of the reducers operation. This is generally the "
+        "reduced value for this thread.");
+    katana::DefWithNumba<>(
+        cls, "reset", &For::template type<T>::reset,
+        "Reset the reducer to its zero. This must only be called from single "
+        "threaded code.");
     katana::DefConventions(cls);
     return std::move(cls);
   }
@@ -60,7 +78,7 @@ struct ReducibleFunctor {
 }  // namespace
 
 void
-InitReductions(py::module_& m) {
+katana::python::InitReductions(py::module_& m) {
   katana::InstantiateForStandardTypes(
       m, "ReduceSum", ReducibleFunctor<ForGAccumulator>());
   katana::InstantiateForStandardTypes(

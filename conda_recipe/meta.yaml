@@ -87,7 +87,6 @@ outputs:
       run:
         - boost-cpp
         - arrow-cpp
-        - fmt
         - nlohmann_json
         - libcurl
         - backward-cpp
@@ -131,6 +130,7 @@ outputs:
         - numpy {{ numpy }}
         - python {{ python }}
         - pandas {{ pandas }}
+        - fmt {{ fmt }}
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - numba
@@ -169,6 +169,7 @@ outputs:
         - {{ cdt('numactl-devel') }}
       host:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
+        - fmt {{ fmt }}
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - llvm

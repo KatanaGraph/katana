@@ -23,7 +23,7 @@ pin_run_as_build:
     min_pin: x # This means that we accept OLDER versions of elfutils at runtime. This may not be correct.
     max_pin: x
   fmt:
-    max_pin: x
+    max_pin: x.x
   libcurl:
     max_pin: x
   libxml2:

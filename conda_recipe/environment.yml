@@ -29,7 +29,7 @@ dependencies:
  - doxygen>=1.8
  - eigen>=3.3.7,<4a0
  - elfutils>=0.176
- - fmt>=6.2.1,<9a0
+ - fmt>=6.2.1,<8.1a0
  - gcc_linux-64>=9.3
  - gxx_linux-64>=9.3
  - isort>=5.9.3,<5.10a0

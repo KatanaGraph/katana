@@ -158,7 +158,10 @@ elfutils:
     - apt
   version: [ 0.176, null ]
 fmt:
-  version: [ 6.2.1, 9 ]
+  # 8.1 fixes a bug/misfeature which implicitly converted enum class values into ints for formatting.
+  # We rely on this all over.
+  # TODO(amp, https://katanagraph.atlassian.net/browse/KAT-3182): Allow more recent fmt once we eliminate reliance on the above implicit conversion.
+  version: [ 6.2.1, 8.1 ]
   labels:
     - conan
     - conda

@@ -101,7 +101,7 @@ copyright = "Katana Graph, Inc. 2021"
 # -- Options for extensions --------------------------------------------------
 
 # nbsphinx configuration values
-html_sourcelink_suffix = ""  # Don"t add .txt suffix to source files
+html_sourcelink_suffix = ""  # Don't add .txt suffix to source files
 nbsphinx_execute = "never"
 nbsphinx_prolog = """
 .. raw:: html

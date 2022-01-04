@@ -108,6 +108,7 @@ outputs:
     about:
       summary: Python library for parallel and distributed graph analytics and processing. (Open-source)
     files:
+      - lib/libkatana_python_native.so*
       - lib/python*/site-packages/katana_python-*/**
     requirements:
       build:

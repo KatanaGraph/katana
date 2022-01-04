@@ -69,14 +69,14 @@ The ``conda env update`` line can be run later to update your environment. Deact
 
 .. warning::
 
-   Not all conda installation scripts are well-behaved. In particular, the default behavior of the ``cudatoolkit-dev`` package's post-installation script is to write a log to the hard-coded path ``/tmp/cuda-installer.log`` and not delete it. Once one user on a system has written this file all other users will fail to install the package because they won't be able to write the log file. The recommended workaround for this is to set the ``TMP`` variable in your shell environment (if that variable is set, the script will write its log to ``$TMP/cuda-installer.log`` so you can avoid conflicts with other users).
+   Not all conda installation scripts are well-behaved. In particular, the default behavior of the ``cudatoolkit-dev`` package's post-installation script is to write a log to the hard-coded path ``/tmp/cuda-installer.log`` and not delete it. Once one user on a system has written this file all other users will fail to install the package because they won't be able to write the log file. The only known workaround is to manually delete the log file. It is best practice to delete your own log file immediately after you have updated your environment. If you are on a system where someone else has written the log file and you can't overwrite it please contact that user to delete it. You may also write to sudoers@katanagraph.com.
 
 .. code-block:: bash
 
    # If you are sharing a system with other users,
-   # you will need to use the following workaround:
-   mkdir -p /tmp/$USER
-   TMP=/tmp/$USER conda env update --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
+   # please perform the following manual clean-up:
+   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
+   rm /tmp/cuda-installer.log
 
 
 Now, run ``cmake`` to configure your build directory and ``make`` to build Katana.

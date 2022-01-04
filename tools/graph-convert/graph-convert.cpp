@@ -33,17 +33,16 @@
 #include <boost/mpl/if.hpp>
 #include <llvm/Support/CommandLine.h>
 
+#include "katana/CSRTopology.h"
 #include "katana/ErrorCode.h"
 #include "katana/FileGraph.h"
 #include "katana/Galois.h"
 #include "katana/NUMAArray.h"
+#include "katana/RDGManifest.h"
+#include "katana/RDGPrefix.h"
 #include "katana/SharedMemSys.h"
 #include "katana/Strings.h"
-#include "tsuba/CSRTopology.h"
-#include "tsuba/Errors.h"
-#include "tsuba/RDGManifest.h"
-#include "tsuba/RDGPrefix.h"
-#include "tsuba/file.h"
+#include "katana/file.h"
 
 // TODO: move these enums to a common location for all graph convert tools
 enum ConvertMode {
@@ -2834,7 +2833,7 @@ template <typename EdgeTy>
 katana::Result<void>
 AppendEdgeData(
     katana::PropertyGraph* pg, const katana::NUMAArray<EdgeTy>& edge_data,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   using Builder = typename arrow::CTypeTraits<EdgeTy>::BuilderType;
   using ArrowType = typename arrow::CTypeTraits<EdgeTy>::ArrowType;
   Builder builder;
@@ -2865,7 +2864,7 @@ template <>
 katana::Result<void>
 AppendEdgeData<void>(
     katana::PropertyGraph*, const katana::NUMAArray<void>&,
-    tsuba::TxnContext*) {
+    katana::TxnContext*) {
   return katana::ResultSuccess();
 }
 
@@ -2876,8 +2875,8 @@ AppendEdgeData<void>(
 struct Gr2Kg : public Conversion {
   katana::Result<void> OutOfCoreConvert(
       const std::string& in_file_name, const std::string& out_file_name) {
-    tsuba::CSRTopologyHeader header;
-    if (auto res = tsuba::FileGet(in_file_name, &header); !res) {
+    katana::CSRTopologyHeader header;
+    if (auto res = katana::FileGet(in_file_name, &header); !res) {
       return res.error();
     }
 
@@ -2891,52 +2890,52 @@ struct Gr2Kg : public Conversion {
       header.edge_type_size = 0;
     }
 
-    tsuba::StatBuf stat_buf;
-    if (auto res = tsuba::FileStat(in_file_name, &stat_buf); !res) {
+    katana::StatBuf stat_buf;
+    if (auto res = katana::FileStat(in_file_name, &stat_buf); !res) {
       KATANA_LOG_DEBUG("could not stat {}", out_file_name);
       return res.error();
     }
 
-    uint64_t new_size = tsuba::CSRTopologyFileSize(header);
+    uint64_t new_size = katana::CSRTopologyFileSize(header);
     if (stat_buf.size < new_size) {
       KATANA_LOG_ERROR(
           "{} does not appear to be well formed (too small)", in_file_name);
       return katana::ErrorCode::InvalidArgument;
     }
 
-    if (auto res = tsuba::Create(out_file_name); !res) {
+    if (auto res = katana::Create(out_file_name); !res) {
       return res.error();
     }
 
-    tsuba::RDGManifest manifest =
-        KATANA_CHECKED(tsuba::FindManifest(out_file_name));
-    tsuba::RDGHandle rdg_handle =
-        KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite));
-    tsuba::RDGFile handle(std::move(rdg_handle));
+    katana::RDGManifest manifest =
+        KATANA_CHECKED(katana::FindManifest(out_file_name));
+    katana::RDGHandle rdg_handle =
+        KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
+    katana::RDGFile handle(std::move(rdg_handle));
 
-    katana::Uri top_file_name = tsuba::MakeTopologyFileName(handle);
-    if (auto res = tsuba::FileRemoteCopy(
+    katana::Uri top_file_name = katana::MakeTopologyFileName(handle);
+    if (auto res = katana::FileRemoteCopy(
             in_file_name, top_file_name.string(), 0, new_size);
         !res) {
       return res.error();
     }
 
-    tsuba::RDG rdg;
-    rdg.set_rdg_dir(tsuba::GetRDGDir(handle));
+    katana::RDG rdg;
+    rdg.set_rdg_dir(katana::GetRDGDir(handle));
     if (auto res = rdg.AddCSRTopologyByFile(
             top_file_name, header.num_nodes, header.num_edges);
         !res) {
       return res.error();
     }
-    auto node_types = std::make_unique<tsuba::FileFrame>();
+    auto node_types = std::make_unique<katana::FileFrame>();
     size_t node_type_buffer_size =
         header.num_nodes * sizeof(katana::EntityTypeID) +
-        sizeof(tsuba::EntityTypeIDArrayHeader);
+        sizeof(katana::EntityTypeIDArrayHeader);
     KATANA_CHECKED(node_types->Init(node_type_buffer_size));
     KATANA_CHECKED(node_types->SetCursor(node_type_buffer_size));
 
     auto* node_header =
-        KATANA_CHECKED(node_types->ptr<tsuba::EntityTypeIDArrayHeader>());
+        KATANA_CHECKED(node_types->ptr<katana::EntityTypeIDArrayHeader>());
     node_header->size = header.num_nodes;
     katana::EntityTypeManager node_type_manager;
     std::fill_n(
@@ -2945,14 +2944,14 @@ struct Gr2Kg : public Conversion {
         header.num_nodes,
         KATANA_CHECKED(node_type_manager.AddAtomicEntityType("vertex")));
 
-    auto edge_types = std::make_unique<tsuba::FileFrame>();
+    auto edge_types = std::make_unique<katana::FileFrame>();
     size_t edge_type_buffer_size =
         header.num_edges * sizeof(katana::EntityTypeID) + sizeof(uint64_t);
     KATANA_CHECKED(edge_types->Init(edge_type_buffer_size));
     KATANA_CHECKED(edge_types->SetCursor(edge_type_buffer_size));
 
     auto* edge_header =
-        KATANA_CHECKED(edge_types->ptr<tsuba::EntityTypeIDArrayHeader>());
+        KATANA_CHECKED(edge_types->ptr<katana::EntityTypeIDArrayHeader>());
     edge_header->size = header.num_edges;
     katana::EntityTypeManager edge_type_manager;
     std::fill_n(
@@ -3027,7 +3026,7 @@ struct Gr2Kg : public Conversion {
     std::unique_ptr<katana::PropertyGraph> pg = std::move(pg_res.value());
 
     if (EdgeData::has_value) {
-      tsuba::TxnContext txn_ctx;
+      katana::TxnContext txn_ctx;
       if (auto r = AppendEdgeData<EdgeTy>(pg.get(), out_dests_data, &txn_ctx);
           !r) {
         KATANA_LOG_FATAL("could not add edge property: {}", r.error());

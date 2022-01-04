@@ -1,11 +1,12 @@
-add_library(tsuba SHARED)
+add_library(katana_tsuba SHARED)
+add_library(Katana::tsuba ALIAS katana_tsuba)
+set_target_properties(katana_tsuba PROPERTIES EXPORT_NAME tsuba)
 
-add_dependencies(lib tsuba)
+add_dependencies(lib katana_tsuba)
 
 set(sources
   src/AddProperties.cpp
   src/AsyncOpGroup.cpp
-  src/Errors.cpp
   src/FaultTest.cpp
   src/file.cpp
   src/FileFrame.cpp
@@ -31,15 +32,16 @@ set(sources
   src/WriteGroup.cpp
 )
 
-target_sources(tsuba PRIVATE ${sources})
+target_sources(katana_tsuba PRIVATE ${sources})
 
-target_include_directories(tsuba PUBLIC
+target_include_directories(katana_tsuba PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-set_common_katana_library_options(tsuba ALWAYS_SHARED)
+set_common_katana_library_options(katana_tsuba ALWAYS_SHARED)
 
-target_link_libraries(tsuba PUBLIC katana_support)
+target_link_libraries(katana_tsuba PUBLIC katana_support)
+target_link_libraries(katana_tsuba PUBLIC katana_galois)
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(test)
@@ -52,7 +54,7 @@ install(
   FILES_MATCHING PATTERN "*.h"
 )
 
-install(TARGETS tsuba
+install(TARGETS katana_tsuba
   EXPORT KatanaTargets
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"

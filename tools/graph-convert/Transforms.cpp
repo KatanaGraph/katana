@@ -9,7 +9,7 @@ namespace {
 void
 ApplyTransform(
     katana::PropertyGraph::MutablePropertyView view,
-    katana::ColumnTransformer* transform, tsuba::TxnContext* txn_ctx) {
+    katana::ColumnTransformer* transform, katana::TxnContext* txn_ctx) {
   int cur_field = 0;
   int num_fields = view.loaded_schema()->num_fields();
   std::vector<std::shared_ptr<arrow::Field>> new_fields;
@@ -155,7 +155,7 @@ void
 katana::ApplyTransforms(
     katana::PropertyGraph* graph,
     const std::vector<std::unique_ptr<katana::ColumnTransformer>>& transformers,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   for (const auto& t : transformers) {
     ApplyTransform(graph->NodeMutablePropertyView(), t.get(), txn_ctx);
     ApplyTransform(graph->EdgeMutablePropertyView(), t.get(), txn_ctx);

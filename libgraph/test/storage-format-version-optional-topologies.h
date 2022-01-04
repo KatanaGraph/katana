@@ -34,7 +34,7 @@ void
 TestOptionalTopologyStorageEdgeShuffleTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeShuffleTopology *****");
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::PropertyGraph pg = LoadGraph(inputFile, &txn_ctx);
 
   // Build a EdgeSortedByDestID view, which uses GraphTopology EdgeShuffleTopology in the background
@@ -58,7 +58,7 @@ void
 TestOptionalTopologyStorageShuffleTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing ShuffleTopology *****");
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::PropertyGraph pg = LoadGraph(inputFile, &txn_ctx);
 
   // Build a NodesSortedByDegreeEdgesSortedByDestID view, which uses GraphTopology ShuffleTopology in the background
@@ -83,7 +83,7 @@ void
 TestOptionalTopologyStorageEdgeTypeAwareTopology(std::string inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeTypeAware Topology *****");
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::PropertyGraph pg = LoadGraph(inputFile, &txn_ctx);
 
   // Build a EdgeTypeAwareBiDir view, which uses GraphTopology EdgeTypeAwareTopology in the background

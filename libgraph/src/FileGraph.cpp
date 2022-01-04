@@ -31,8 +31,8 @@
 
 #include "katana/Logging.h"
 #include "katana/PageAlloc.h"
+#include "katana/file.h"
 #include "katana/gIO.h"
-#include "tsuba/file.h"
 
 #ifdef __linux__
 #include <linux/mman.h>

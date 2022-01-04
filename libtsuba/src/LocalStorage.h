@@ -8,10 +8,10 @@
 #include <string>
 #include <thread>
 
+#include "katana/FileStorage.h"
 #include "katana/Result.h"
-#include "tsuba/FileStorage.h"
 
-namespace tsuba {
+namespace katana {
 
 /// Store byte arrays to the local file system; Provided as a convenience for
 /// testing only (un-optimized)
@@ -90,6 +90,6 @@ public:
       const std::unordered_set<std::string>& files) override;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

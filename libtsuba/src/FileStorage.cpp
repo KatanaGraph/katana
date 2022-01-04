@@ -1,16 +1,16 @@
-#include "tsuba/FileStorage.h"
+#include "katana/FileStorage.h"
 
 #include "FileStorage_internal.h"
 
-tsuba::FileStorage::~FileStorage() = default;
+katana::FileStorage::~FileStorage() = default;
 
-std::vector<tsuba::FileStorage*>&
-tsuba::GetRegisteredFileStorages() {
+std::vector<katana::FileStorage*>&
+katana::GetRegisteredFileStorages() {
   static std::vector<FileStorage*> fs;
   return fs;
 }
 
 void
-tsuba::RegisterFileStorage(FileStorage* fs) {
+katana::RegisterFileStorage(FileStorage* fs) {
   GetRegisteredFileStorages().emplace_back(fs);
 }

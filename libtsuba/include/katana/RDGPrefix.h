@@ -1,13 +1,13 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_RDGPREFIX_H_
-#define KATANA_LIBTSUBA_TSUBA_RDGPREFIX_H_
+#ifndef KATANA_LIBTSUBA_KATANA_RDGPREFIX_H_
+#define KATANA_LIBTSUBA_KATANA_RDGPREFIX_H_
 
 #include <cstdint>
 
-#include "tsuba/CSRTopology.h"
-#include "tsuba/FileView.h"
-#include "tsuba/tsuba.h"
+#include "katana/CSRTopology.h"
+#include "katana/FileView.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 class RDGManifest;
 
@@ -63,6 +63,6 @@ struct EntityTypeIDArrayHeader {
   uint64_t size;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

@@ -243,7 +243,7 @@ template <typename Algorithm>
 katana::Result<void>
 LocalClusteringCoefficientWithWrap(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
           pg, txn_ctx, {output_property_name});
       !result) {
@@ -259,7 +259,7 @@ LocalClusteringCoefficientWithWrap(
 katana::Result<void>
 katana::analytics::LocalClusteringCoefficient(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    tsuba::TxnContext* txn_ctx, LocalClusteringCoefficientPlan plan) {
+    katana::TxnContext* txn_ctx, LocalClusteringCoefficientPlan plan) {
   katana::StatTimer timer_graph_read(
       "GraphReadingTime", "LocalClusteringCoefficient");
   katana::StatTimer timer_auto_algo(

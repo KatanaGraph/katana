@@ -8,10 +8,10 @@
 #include "katana/GraphML.h"
 #include "katana/GraphMLSchema.h"
 #include "katana/Logging.h"
+#include "katana/RDG.h"
 #include "katana/SharedMemSys.h"
 #include "katana/Timer.h"
 #include "katana/config.h"
-#include "tsuba/RDG.h"
 
 #if defined(KATANA_MONGOC_FOUND)
 #include "graph-properties-convert-mongodb.h"
@@ -92,9 +92,9 @@ cll::opt<bool> export_graphml(
     cll::init(false));
 
 std::unique_ptr<katana::PropertyGraph>
-ConvertKatana(const std::string& rdg_file, tsuba::TxnContext* txn_ctx) {
+ConvertKatana(const std::string& rdg_file, katana::TxnContext* txn_ctx) {
   auto result =
-      katana::PropertyGraph::Make(rdg_file, txn_ctx, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, txn_ctx, katana::RDGLoadOptions());
   if (!result) {
     KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }
@@ -137,7 +137,7 @@ ConvertKatana(const std::string& rdg_file, tsuba::TxnContext* txn_ctx) {
 }
 
 void
-ParseWild(tsuba::TxnContext* txn_ctx) {
+ParseWild(katana::TxnContext* txn_ctx) {
   switch (type) {
   case katana::SourceType::kGraphml: {
     auto components_result =
@@ -165,7 +165,7 @@ ParseWild(tsuba::TxnContext* txn_ctx) {
 }
 
 void
-ParseNeo4j(tsuba::TxnContext* txn_ctx) {
+ParseNeo4j(katana::TxnContext* txn_ctx) {
   switch (type) {
   case katana::SourceType::kGraphml: {
     auto components_result =
@@ -186,7 +186,7 @@ ParseNeo4j(tsuba::TxnContext* txn_ctx) {
 }
 
 void
-ParseMongoDB([[maybe_unused]] tsuba::TxnContext* txn_ctx) {
+ParseMongoDB([[maybe_unused]] katana::TxnContext* txn_ctx) {
 #if defined(KATANA_MONGOC_FOUND)
   if (generate_mapping) {
     katana::GenerateMappingMongoDB(input_filename, output_directory);
@@ -204,7 +204,7 @@ ParseMongoDB([[maybe_unused]] tsuba::TxnContext* txn_ctx) {
 }
 
 void
-ParseMysql([[maybe_unused]] tsuba::TxnContext* txn_ctx) {
+ParseMysql([[maybe_unused]] katana::TxnContext* txn_ctx) {
 #if defined(KATANA_MYSQL_FOUND)
   if (generate_mapping) {
     katana::GenerateMappingMysql(input_filename, output_directory, host, user);
@@ -235,7 +235,7 @@ main(int argc, char** argv) {
     chunk_size = 25000;
   }
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   if (export_graphml) {
     katana::graphml::ExportGraph(output_directory, input_filename, &txn_ctx);
   } else {

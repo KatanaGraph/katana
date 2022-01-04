@@ -8,14 +8,14 @@
 #include "PartitionTopologyMetadata.h"
 #include "RDGPartHeader.h"
 #include "RDGTopologyManager.h"
+#include "katana/FileView.h"
 #include "katana/Logging.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
+#include "katana/TxnContext.h"
 #include "katana/config.h"
-#include "tsuba/FileView.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/TxnContext.h"
 
-namespace tsuba {
+namespace katana {
 
 class KATANA_EXPORT RDGCore {
 public:
@@ -28,20 +28,20 @@ public:
   bool Equals(const RDGCore& other) const;
 
   katana::Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
   katana::Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
   katana::Result<void> UpsertNodeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
   katana::Result<void> UpsertEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
-  katana::Result<void> RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx);
+  katana::Result<void> RemoveNodeProperty(int i, katana::TxnContext* txn_ctx);
 
-  katana::Result<void> RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx);
+  katana::Result<void> RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx);
 
   // type info will be missing for properties that weren't loaded
   // make sure it's not missing
@@ -209,7 +209,7 @@ public:
 
   katana::Result<void> MakeTopologyManager(const katana::Uri& metadata_dir) {
     RDGTopologyManager topo_manager = KATANA_CHECKED(
-        tsuba::RDGTopologyManager::Make(part_header_.topology_metadata()));
+        katana::RDGTopologyManager::Make(part_header_.topology_metadata()));
     topology_manager_ = std::move(topo_manager);
     if (!part_header_.IsMetadataOutsideTopologyFile()) {
       // need to bind & map topology file now to extract the metadata
@@ -247,7 +247,7 @@ public:
 
     // generate a RDGTopologyManager from the now present entry
     RDGTopologyManager topo_manager = KATANA_CHECKED(
-        tsuba::RDGTopologyManager::Make(part_header_.topology_metadata()));
+        katana::RDGTopologyManager::Make(part_header_.topology_metadata()));
     topology_manager_ = std::move(topo_manager);
 
     // get the metadata we need from the topology file
@@ -308,6 +308,6 @@ private:
   RDGLineage lineage_;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

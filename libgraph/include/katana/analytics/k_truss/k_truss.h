@@ -50,7 +50,7 @@ public:
 ///
 /// @warning This algorithm will reorder nodes and edges in the graph.
 KATANA_EXPORT Result<void> KTruss(
-    tsuba::TxnContext* txn_ctx, PropertyGraph* pg, uint32_t k_truss_number,
+    katana::TxnContext* txn_ctx, PropertyGraph* pg, uint32_t k_truss_number,
     const std::string& output_property_name, KTrussPlan plan = KTrussPlan());
 
 KATANA_EXPORT Result<void> KTrussAssertValid(

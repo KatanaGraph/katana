@@ -14,19 +14,19 @@
 
 #include "PartitionTopologyMetadata.h"
 #include "katana/EntityTypeManager.h"
+#include "katana/ErrorCode.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
+#include "katana/PartitionMetadata.h"
+#include "katana/RDG.h"
+#include "katana/RDGStorageFormatVersion.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/Errors.h"
-#include "tsuba/PartitionMetadata.h"
-#include "tsuba/RDG.h"
-#include "tsuba/RDGStorageFormatVersion.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/WriteGroup.h"
-#include "tsuba/tsuba.h"
+#include "katana/WriteGroup.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 /// PropStorageInfo objects track the state of properties, and sanity check their
 /// transitions. N.b., It does not "DO" the transitions, this structure is purely
@@ -205,7 +205,7 @@ public:
     });
     if (it == p.end()) {
       return KATANA_ERROR(
-          tsuba::ErrorCode::PropertyNotFound, "no such node property");
+          katana::ErrorCode::PropertyNotFound, "no such node property");
     }
     p.erase(it);
     return katana::ResultSuccess();
@@ -224,7 +224,7 @@ public:
     });
     if (it == p.end()) {
       return KATANA_ERROR(
-          tsuba::ErrorCode::PropertyNotFound, "no such edge property");
+          katana::ErrorCode::PropertyNotFound, "no such edge property");
     }
     p.erase(it);
     return katana::ResultSuccess();
@@ -249,11 +249,11 @@ public:
     for (size_t i = 0; i < topology_metadata()->num_entries(); i++) {
       PartitionTopologyMetadataEntry entry =
           topology_metadata()->Entries().at(i);
-      if (entry.topology_state_ == tsuba::RDGTopology::TopologyKind::kCSR &&
-          (entry.transpose_state_ == tsuba::RDGTopology::TransposeKind::kYes ||
-           entry.transpose_state_ == tsuba::RDGTopology::TransposeKind::kNo) &&
-          entry.edge_sort_state_ == tsuba::RDGTopology::EdgeSortKind::kAny &&
-          entry.node_sort_state_ == tsuba::RDGTopology::NodeSortKind::kAny) {
+      if (entry.topology_state_ == katana::RDGTopology::TopologyKind::kCSR &&
+          (entry.transpose_state_ == katana::RDGTopology::TransposeKind::kYes ||
+           entry.transpose_state_ == katana::RDGTopology::TransposeKind::kNo) &&
+          entry.edge_sort_state_ == katana::RDGTopology::EdgeSortKind::kAny &&
+          entry.node_sort_state_ == katana::RDGTopology::NodeSortKind::kAny) {
         return topology_metadata()->Entries().at(i).path_;
       }
     }
@@ -321,23 +321,23 @@ public:
     storage_format_version_ = kLatestPartitionStorageFormatVersion;
   }
 
-  const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
+  const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
   node_entity_type_id_dictionary() const {
     return node_entity_type_id_dictionary_;
   }
 
-  const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
+  const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
   edge_entity_type_id_dictionary() const {
     return edge_entity_type_id_dictionary_;
   }
 
   void ValidateDictBitset(
       const katana::EntityTypeIDToSetOfEntityTypeIDsMap& manager_map,
-      const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict) const {
+      const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict) const {
     KATANA_LOG_ASSERT(!id_dict.empty());
     for (const auto& pair : id_dict) {
       katana::EntityTypeID cur_id = pair.first;
-      tsuba::StorageSetOfEntityTypeIDs cur_id_set = pair.second;
+      katana::StorageSetOfEntityTypeIDs cur_id_set = pair.second;
 
       for (auto& id : cur_id_set) {
         KATANA_LOG_ASSERT(manager_map.at(cur_id).size() != 0);
@@ -347,7 +347,7 @@ public:
   }
 
   void StoreNodeEntityTypeManager(const katana::EntityTypeManager& manager) {
-    tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap id_dict;
+    katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap id_dict;
     katana::EntityTypeIDToAtomicTypeNameMap id_name;
 
     ConvertEntityTypeManager(manager, &id_dict, &id_name);
@@ -365,7 +365,7 @@ public:
   }
 
   void StoreEdgeEntityTypeManager(const katana::EntityTypeManager& manager) {
-    tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap id_dict;
+    katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap id_dict;
     katana::EntityTypeIDToAtomicTypeNameMap id_name;
 
     ConvertEntityTypeManager(manager, &id_dict, &id_name);
@@ -383,7 +383,7 @@ public:
   }
 
   katana::Result<katana::EntityTypeManager> GetEntityTypeManager(
-      const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict,
+      const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict,
       const katana::EntityTypeIDToAtomicTypeNameMap& id_name) const {
     katana::EntityTypeIDToAtomicTypeNameMap manager_name_map;
     katana::EntityTypeIDToSetOfEntityTypeIDsMap manager_type_id_map;
@@ -463,7 +463,7 @@ private:
   /// Extract the EntityType information from an EntityTypeManager and convert it for storage
   void ConvertEntityTypeManager(
       const katana::EntityTypeManager& manager,
-      tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap* id_dict,
+      katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap* id_dict,
       katana::EntityTypeIDToAtomicTypeNameMap* id_name) const {
     static_assert(
         katana::kDefaultSetOfEntityTypeIDsSize == 256,
@@ -481,7 +481,7 @@ private:
     size_t num_entity_types = manager_type_id_sets.size();
     for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
       auto cur_id = katana::EntityTypeID(i);
-      tsuba::StorageSetOfEntityTypeIDs empty_set;
+      katana::StorageSetOfEntityTypeIDs empty_set;
       id_dict->emplace(std::make_pair(cur_id, empty_set));
     }
     for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
@@ -558,13 +558,13 @@ private:
       const katana::Uri& partition_path);
 
   void set_node_entity_type_id_dictionary(
-      const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
+      const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
           node_entity_type_id_dictionary) {
     node_entity_type_id_dictionary_ = node_entity_type_id_dictionary;
   }
 
   void set_edge_entity_type_id_dictionary(
-      const tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
+      const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap&
           edge_entity_type_id_dictionary) {
     edge_entity_type_id_dictionary_ = edge_entity_type_id_dictionary;
   }
@@ -601,9 +601,9 @@ private:
   // entity_type_id_dictionary maps from Entity Type ID to set of  Atomic Entity Type IDs
   // if EntityTypeID is an Atomic Type ID, then the set is size 1 containing only itself
   // if EntityTypeID is a Combination Type ID, then the set contains all of the Atomic Entity Type IDs that make it
-  tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap
+  katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap
       node_entity_type_id_dictionary_;
-  tsuba::EntityTypeIDToSetOfEntityTypeIDsStorageMap
+  katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap
       edge_entity_type_id_dictionary_;
 
   // entity_type_id_name maps from Atomic Entity Type ID to string name for the Entity Type ID
@@ -627,7 +627,7 @@ void to_json(nlohmann::json& j, const PartitionTopologyMetadata& topomd);
 void from_json(const nlohmann::json& j, PartitionTopologyMetadata& topomd);
 
 void to_json(
-    nlohmann::json& j, const std::vector<tsuba::PropStorageInfo>& vec_pmd);
+    nlohmann::json& j, const std::vector<katana::PropStorageInfo>& vec_pmd);
 
 // nlohmann map enum values to JSON as strings
 // *** do not alter these mappings, only append to them ***
@@ -663,6 +663,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
      {RDGTopology::TopologyKind::kEdgeTypeAwareTopology,
       "kEdgeTypeAwareTopology"}})
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

@@ -1,16 +1,16 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_WRITEGROUP_H_
-#define KATANA_LIBTSUBA_TSUBA_WRITEGROUP_H_
+#ifndef KATANA_LIBTSUBA_KATANA_WRITEGROUP_H_
+#define KATANA_LIBTSUBA_KATANA_WRITEGROUP_H_
 
 #include <future>
 #include <list>
 #include <memory>
 
+#include "katana/AsyncOpGroup.h"
+#include "katana/FileFrame.h"
 #include "katana/Result.h"
-#include "tsuba/AsyncOpGroup.h"
-#include "tsuba/FileFrame.h"
-#include "tsuba/file.h"
+#include "katana/file.h"
 
-namespace tsuba {
+namespace katana {
 
 /// Track multiple, outstanding async writes and provide a mechanism to ensure
 /// that they have all completed
@@ -58,6 +58,6 @@ public:
       uint64_t accounted_size = 0);
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

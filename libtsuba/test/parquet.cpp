@@ -1,10 +1,10 @@
 #include <arrow/chunked_array.h>
 #include <arrow/type_fwd.h>
 
+#include "katana/ParquetReader.h"
+#include "katana/ParquetWriter.h"
 #include "katana/Result.h"
-#include "tsuba/ParquetReader.h"
-#include "tsuba/ParquetWriter.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 MakeArrayOfStrings() {
@@ -25,11 +25,11 @@ TestLargeStringRoundTrip(const std::string& dir) {
 
   auto string_array = KATANA_CHECKED(MakeArrayOfStrings());
   auto writer =
-      KATANA_CHECKED(tsuba::ParquetWriter::Make(string_array, "test-array"));
+      KATANA_CHECKED(katana::ParquetWriter::Make(string_array, "test-array"));
 
   KATANA_CHECKED(writer->WriteToUri(uri));
 
-  auto reader = KATANA_CHECKED(tsuba::ParquetReader::Make());
+  auto reader = KATANA_CHECKED(katana::ParquetReader::Make());
   auto table = KATANA_CHECKED(reader->ReadTable(uri));
 
   KATANA_LOG_ASSERT(table->num_columns() == 1);
@@ -48,8 +48,8 @@ TestAll(const std::string& dir) {
 
 int
 main(int argc, char* argv[]) {
-  if (auto init_good = tsuba::Init(); !init_good) {
-    KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  if (auto init_good = katana::InitTsuba(); !init_good) {
+    KATANA_LOG_FATAL("katana::InitTsuba: {}", init_good.error());
   }
 
   if (argc <= 1) {
@@ -61,8 +61,8 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("test failed: {}", res.error());
   }
 
-  if (auto fini_good = tsuba::Fini(); !fini_good) {
-    KATANA_LOG_FATAL("tsuba::Fini: {}", fini_good.error());
+  if (auto fini_good = katana::FiniTsuba(); !fini_good) {
+    KATANA_LOG_FATAL("katana::FiniTsuba: {}", fini_good.error());
   }
 
   return 0;

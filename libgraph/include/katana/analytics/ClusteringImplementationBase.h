@@ -507,7 +507,7 @@ struct ClusteringImplementationBase {
   static katana::Result<void> CopyEdgeProperty(
       katana::PropertyGraph* pfg_from, katana::PropertyGraph* pfg_to,
       const std::string& edge_property_name,
-      const std::string& new_edge_property_name, tsuba::TxnContext* txn_ctx) {
+      const std::string& new_edge_property_name, katana::TxnContext* txn_ctx) {
     // Remove the existing edge property
     if (pfg_to->HasEdgeProperty(new_edge_property_name)) {
       if (auto r = pfg_to->RemoveEdgeProperty(new_edge_property_name, txn_ctx);
@@ -552,7 +552,7 @@ struct ClusteringImplementationBase {
       uint64_t num_unique_clusters,
       const std::vector<std::string>& temp_node_property_names,
       const std::vector<std::string>& temp_edge_property_names,
-      tsuba::TxnContext* txn_ctx) {
+      katana::TxnContext* txn_ctx) {
     using GNode = typename Graph::Node;
 
     katana::StatTimer TimerGraphBuild("Timer_Graph_build");

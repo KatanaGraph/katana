@@ -1118,7 +1118,7 @@ template <typename Algorithm>
 static katana::Result<void>
 ConnectedComponentsWithWrap(
     katana::PropertyGraph* pg, std::string output_property_name,
-    ConnectedComponentsPlan plan, tsuba::TxnContext* txn_ctx) {
+    ConnectedComponentsPlan plan, katana::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(
       2,
       pg->topology().num_nodes() * sizeof(typename Algorithm::NodeComponent));
@@ -1154,7 +1154,7 @@ ConnectedComponentsWithWrap(
 katana::Result<void>
 katana::analytics::ConnectedComponents(
     PropertyGraph* pg, const std::string& output_property_name,
-    tsuba::TxnContext* txn_ctx, ConnectedComponentsPlan plan) {
+    katana::TxnContext* txn_ctx, ConnectedComponentsPlan plan) {
   switch (plan.algorithm()) {
   case ConnectedComponentsPlan::kSerial:
     return ConnectedComponentsWithWrap<ConnectedComponentsSerialAlgo>(

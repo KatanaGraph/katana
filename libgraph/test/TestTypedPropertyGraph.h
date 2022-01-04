@@ -66,7 +66,7 @@ template <typename ValueType>
 std::unique_ptr<katana::PropertyGraph>
 MakeFileGraph(
     size_t num_nodes, size_t num_properties, Policy* policy,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   std::vector<uint32_t> dests;
   std::vector<uint64_t> indices;
 

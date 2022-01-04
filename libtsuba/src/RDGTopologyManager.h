@@ -7,13 +7,12 @@
 #include "RDGPartHeader.h"
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/Errors.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 ///store references to the various topologies, provide functionality to map various topologies
 class KATANA_EXPORT RDGTopologyManager {
@@ -55,7 +54,7 @@ public:
 
   katana::Result<void> DoStore(
       RDGHandle handle, const katana::Uri& current_rdg_dir,
-      std::unique_ptr<tsuba::WriteGroup>& write_group);
+      std::unique_ptr<katana::WriteGroup>& write_group);
 
   /// Extract metadata from an previous storage format topology
   /// Only should be used when transitioning from a previous storage format topology
@@ -111,7 +110,7 @@ public:
   }
 
   /// Create an RDGTopologyManager instance from a set of entries
-  static katana::Result<tsuba::RDGTopologyManager> Make(
+  static katana::Result<katana::RDGTopologyManager> Make(
       PartitionTopologyMetadata* topology_metadata);
 
 private:
@@ -120,6 +119,6 @@ private:
   size_t num_topologies_{0};
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

@@ -318,7 +318,7 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto result = ConstructNodeProperties<NodeData>(pg.get(), &txn_ctx);
   if (!result) {
     KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());

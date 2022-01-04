@@ -10,6 +10,8 @@
 #include <arrow/array.h>
 
 #include "katana/ArrowInterchange.h"
+#include "katana/ErrorCode.h"
+#include "katana/FileFrame.h"
 #include "katana/GraphTopology.h"
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
@@ -18,14 +20,12 @@
 #include "katana/PerThreadStorage.h"
 #include "katana/Platform.h"
 #include "katana/Properties.h"
+#include "katana/RDG.h"
+#include "katana/RDGManifest.h"
+#include "katana/RDGPrefix.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
-#include "tsuba/FileFrame.h"
-#include "tsuba/RDG.h"
-#include "tsuba/RDGManifest.h"
-#include "tsuba/RDGPrefix.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
 namespace {
 
@@ -63,8 +63,8 @@ CheckTopology(
 /// favor of this method.
 katana::Result<katana::PropertyGraph::EntityTypeIDArray>
 MapEntityTypeIDsArray(
-    const tsuba::FileView& file_view, bool is_uint16_t_entity_type_ids) {
-  const auto* data = file_view.ptr<tsuba::EntityTypeIDArrayHeader>();
+    const katana::FileView& file_view, bool is_uint16_t_entity_type_ids) {
+  const auto* data = file_view.ptr<katana::EntityTypeIDArrayHeader>();
   const auto header = data[0];
 
   if (file_view.size() == 0) {
@@ -98,22 +98,22 @@ MapEntityTypeIDsArray(
   return katana::MakeResult(std::move(entity_type_id_array));
 }
 
-katana::Result<std::unique_ptr<tsuba::FileFrame>>
+katana::Result<std::unique_ptr<katana::FileFrame>>
 WriteEntityTypeIDsArray(
     const katana::NUMAArray<katana::EntityTypeID>& entity_type_id_array) {
-  auto ff = std::make_unique<tsuba::FileFrame>();
+  auto ff = std::make_unique<katana::FileFrame>();
 
   if (auto res = ff->Init(); !res) {
     return res.error();
   }
 
-  tsuba::EntityTypeIDArrayHeader data[1] = {
+  katana::EntityTypeIDArrayHeader data[1] = {
       {.size = entity_type_id_array.size()}};
   arrow::Status aro_sts =
-      ff->Write(&data, sizeof(tsuba::EntityTypeIDArrayHeader));
+      ff->Write(&data, sizeof(katana::EntityTypeIDArrayHeader));
 
   if (!aro_sts.ok()) {
-    return tsuba::ArrowToTsuba(aro_sts.code());
+    return katana::ArrowToKatana(aro_sts.code());
   }
 
   if (entity_type_id_array.size()) {
@@ -121,10 +121,10 @@ WriteEntityTypeIDsArray(
     auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
     aro_sts = ff->Write(buf);
     if (!aro_sts.ok()) {
-      return tsuba::ArrowToTsuba(aro_sts.code());
+      return katana::ArrowToKatana(aro_sts.code());
     }
   }
-  return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
+  return std::unique_ptr<katana::FileFrame>(std::move(ff));
 }
 
 katana::PropertyGraph::EntityTypeIDArray
@@ -140,11 +140,11 @@ MakeDefaultEntityTypeIDArray(size_t vec_sz) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
-    tsuba::TxnContext* txn_ctx) {
+    std::unique_ptr<katana::RDGFile> rdg_file, katana::RDG&& rdg,
+    katana::TxnContext* txn_ctx) {
   // find & map the default csr topology
-  tsuba::RDGTopology shadow_csr = tsuba::RDGTopology::MakeShadowCSR();
-  tsuba::RDGTopology* csr = KATANA_CHECKED_CONTEXT(
+  katana::RDGTopology shadow_csr = katana::RDGTopology::MakeShadowCSR();
+  katana::RDGTopology* csr = KATANA_CHECKED_CONTEXT(
       rdg.GetTopology(shadow_csr),
       "unable to find csr topology, must have csr topology to Make a "
       "PropertyGraph");
@@ -198,35 +198,35 @@ katana::PropertyGraph::Make(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const std::string& rdg_name, tsuba::TxnContext* txn_ctx,
-    const tsuba::RDGLoadOptions& opts) {
-  tsuba::RDGManifest manifest = KATANA_CHECKED(tsuba::FindManifest(rdg_name));
-  tsuba::RDGFile rdg_file{
-      KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite))};
-  tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
+    const std::string& rdg_name, katana::TxnContext* txn_ctx,
+    const katana::RDGLoadOptions& opts) {
+  katana::RDGManifest manifest = KATANA_CHECKED(katana::FindManifest(rdg_name));
+  katana::RDGFile rdg_file{
+      KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite))};
+  katana::RDG rdg = KATANA_CHECKED(katana::RDG::Make(rdg_file, opts));
 
   return katana::PropertyGraph::Make(
-      std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg),
+      std::make_unique<katana::RDGFile>(std::move(rdg_file)), std::move(rdg),
       txn_ctx);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const tsuba::RDGManifest& rdg_manifest, const tsuba::RDGLoadOptions& opts,
-    tsuba::TxnContext* txn_ctx) {
-  tsuba::RDGFile rdg_file{
-      KATANA_CHECKED(tsuba::Open(std::move(rdg_manifest), tsuba::kReadWrite))};
-  tsuba::RDG rdg = KATANA_CHECKED(tsuba::RDG::Make(rdg_file, opts));
+    const katana::RDGManifest& rdg_manifest, const katana::RDGLoadOptions& opts,
+    katana::TxnContext* txn_ctx) {
+  katana::RDGFile rdg_file{KATANA_CHECKED(
+      katana::Open(std::move(rdg_manifest), katana::kReadWrite))};
+  katana::RDG rdg = KATANA_CHECKED(katana::RDG::Make(rdg_file, opts));
 
   return katana::PropertyGraph::Make(
-      std::make_unique<tsuba::RDGFile>(std::move(rdg_file)), std::move(rdg),
+      std::make_unique<katana::RDGFile>(std::move(rdg_file)), std::move(rdg),
       txn_ctx);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
   return std::make_unique<katana::PropertyGraph>(
-      std::unique_ptr<tsuba::RDGFile>(), tsuba::RDG{},
+      std::unique_ptr<katana::RDGFile>(), katana::RDG{},
       std::move(topo_to_assign),
       MakeDefaultEntityTypeIDArray(topo_to_assign.num_nodes()),
       MakeDefaultEntityTypeIDArray(topo_to_assign.num_edges()),
@@ -241,14 +241,14 @@ katana::PropertyGraph::Make(
     EntityTypeManager&& node_type_manager,
     EntityTypeManager&& edge_type_manager) {
   return std::make_unique<katana::PropertyGraph>(
-      std::unique_ptr<tsuba::RDGFile>(), tsuba::RDG{},
+      std::unique_ptr<katana::RDGFile>(), katana::RDG{},
       std::move(topo_to_assign), std::move(node_entity_type_ids),
       std::move(edge_entity_type_ids), std::move(node_type_manager),
       std::move(edge_type_manager));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
-katana::PropertyGraph::Copy(tsuba::TxnContext* txn_ctx) const {
+katana::PropertyGraph::Copy(katana::TxnContext* txn_ctx) const {
   return Copy(
       loaded_node_schema()->field_names(), loaded_edge_schema()->field_names(),
       txn_ctx);
@@ -258,9 +258,9 @@ katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Copy(
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties,
-    tsuba::TxnContext* txn_ctx) const {
+    katana::TxnContext* txn_ctx) const {
   // TODO(gill): This should copy the RDG in memory without reloading from storage.
-  tsuba::RDGLoadOptions opts;
+  katana::RDGLoadOptions opts;
   opts.partition_id_to_load = partition_id();
   opts.node_properties = node_properties;
   opts.edge_properties = edge_properties;
@@ -338,7 +338,7 @@ katana::PropertyGraph::Validate() {
 /// Converts all uint8/bool properties into EntityTypeIDs
 /// Only call this if every uint8/bool property should be considered a type
 katana::Result<void>
-katana::PropertyGraph::ConstructEntityTypeIDs(tsuba::TxnContext* txn_ctx) {
+katana::PropertyGraph::ConstructEntityTypeIDs(katana::TxnContext* txn_ctx) {
   // only relevant to actually construct when EntityTypeIDs are expected in properties
   // when EntityTypeIDs are not expected in properties then we have nothing to do here
   KATANA_LOG_WARN("Loading types from properties.");
@@ -388,16 +388,16 @@ katana::PropertyGraph::ConstructEntityTypeIDs(tsuba::TxnContext* txn_ctx) {
 katana::Result<void>
 katana::PropertyGraph::DoWriteTopologies() {
   // Since PGViewCache doesn't manage the main csr topology, see if we need to store it now
-  tsuba::RDGTopology shadow = KATANA_CHECKED(tsuba::RDGTopology::Make(
+  katana::RDGTopology shadow = KATANA_CHECKED(katana::RDGTopology::Make(
       topology().adj_data(), topology().num_nodes(), topology().dest_data(),
-      topology().num_edges(), tsuba::RDGTopology::TopologyKind::kCSR,
-      tsuba::RDGTopology::TransposeKind::kNo,
-      tsuba::RDGTopology::EdgeSortKind::kAny,
-      tsuba::RDGTopology::NodeSortKind::kAny));
+      topology().num_edges(), katana::RDGTopology::TopologyKind::kCSR,
+      katana::RDGTopology::TransposeKind::kNo,
+      katana::RDGTopology::EdgeSortKind::kAny,
+      katana::RDGTopology::NodeSortKind::kAny));
 
   rdg_.UpsertTopology(std::move(shadow));
 
-  std::vector<tsuba::RDGTopology> topologies =
+  std::vector<katana::RDGTopology> topologies =
       KATANA_CHECKED(pg_view_cache_.ToRDGTopology());
   for (size_t i = 0; i < topologies.size(); i++) {
     rdg_.UpsertTopology(std::move(topologies.at(i)));
@@ -407,8 +407,8 @@ katana::PropertyGraph::DoWriteTopologies() {
 
 katana::Result<void>
 katana::PropertyGraph::DoWrite(
-    tsuba::RDGHandle handle, const std::string& command_line,
-    tsuba::RDG::RDGVersioningPolicy versioning_action) {
+    katana::RDGHandle handle, const std::string& command_line,
+    katana::RDG::RDGVersioningPolicy versioning_action) {
   KATANA_LOG_DEBUG(
       " node array valid: {}, edge array valid: {}",
       rdg_.node_entity_type_id_array_file_storage().Valid(),
@@ -420,7 +420,7 @@ katana::PropertyGraph::DoWrite(
     KATANA_LOG_DEBUG("node_entity_type_id_array file store invalid, writing");
   }
 
-  std::unique_ptr<tsuba::FileFrame> node_entity_type_id_array_res =
+  std::unique_ptr<katana::FileFrame> node_entity_type_id_array_res =
       !rdg_.node_entity_type_id_array_file_storage().Valid() ||
               !rdg_.IsUint16tEntityTypeIDs()
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(node_entity_type_ids_))
@@ -430,7 +430,7 @@ katana::PropertyGraph::DoWrite(
     KATANA_LOG_DEBUG("edge_entity_type_id_array file store invalid, writing");
   }
 
-  std::unique_ptr<tsuba::FileFrame> edge_entity_type_id_array_res =
+  std::unique_ptr<katana::FileFrame> edge_entity_type_id_array_res =
       !rdg_.edge_entity_type_id_array_file_storage().Valid() ||
               !rdg_.IsUint16tEntityTypeIDs()
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(edge_entity_type_ids_))
@@ -446,11 +446,11 @@ katana::PropertyGraph::DoWrite(
 katana::Result<void>
 katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
-    tsuba::RDG::RDGVersioningPolicy versioning_action) {
-  tsuba::RDGManifest manifest = KATANA_CHECKED(tsuba::FindManifest(uri));
-  tsuba::RDGHandle rdg_handle =
-      KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadWrite));
-  auto new_file = std::make_unique<tsuba::RDGFile>(rdg_handle);
+    katana::RDG::RDGVersioningPolicy versioning_action) {
+  katana::RDGManifest manifest = KATANA_CHECKED(katana::FindManifest(uri));
+  katana::RDGHandle rdg_handle =
+      KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
+  auto new_file = std::make_unique<katana::RDGFile>(rdg_handle);
 
   if (auto res = DoWrite(*new_file, command_line, versioning_action); !res) {
     return res.error();
@@ -465,14 +465,14 @@ katana::Result<void>
 katana::PropertyGraph::WriteView(
     const std::string& uri, const std::string& command_line) {
   return ConductWriteOp(
-      uri, command_line, tsuba::RDG::RDGVersioningPolicy::RetainVersion);
+      uri, command_line, katana::RDG::RDGVersioningPolicy::RetainVersion);
 }
 
 katana::Result<void>
 katana::PropertyGraph::WriteGraph(
     const std::string& uri, const std::string& command_line) {
   return ConductWriteOp(
-      uri, command_line, tsuba::RDG::RDGVersioningPolicy::IncrementVersion);
+      uri, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion);
 }
 
 katana::Result<void>
@@ -485,7 +485,7 @@ katana::PropertyGraph::Commit(const std::string& command_line) {
     return WriteGraph(rdg_.rdg_dir().string(), command_line);
   }
   return DoWrite(
-      *file_, command_line, tsuba::RDG::RDGVersioningPolicy::IncrementVersion);
+      *file_, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion);
 }
 
 katana::Result<void>
@@ -751,7 +751,7 @@ katana::PropertyGraph::GetEdgeProperty(const std::string& name) const {
 katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
-  if (auto res = tsuba::Create(rdg_name); !res) {
+  if (auto res = katana::Create(rdg_name); !res) {
     return res.error();
   }
   return WriteGraph(rdg_name, command_line);
@@ -759,7 +759,7 @@ katana::PropertyGraph::Write(
 
 katana::Result<void>
 katana::PropertyGraph::AddNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("adding empty node prop table");
     return ResultSuccess();
@@ -774,7 +774,7 @@ katana::PropertyGraph::AddNodeProperties(
 
 katana::Result<void>
 katana::PropertyGraph::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("upsert empty node prop table");
     return ResultSuccess();
@@ -788,13 +788,13 @@ katana::PropertyGraph::UpsertNodeProperties(
 }
 
 katana::Result<void>
-katana::PropertyGraph::RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx) {
+katana::PropertyGraph::RemoveNodeProperty(int i, katana::TxnContext* txn_ctx) {
   return rdg_.RemoveNodeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
 katana::PropertyGraph::RemoveNodeProperty(
-    const std::string& prop_name, tsuba::TxnContext* txn_ctx) {
+    const std::string& prop_name, katana::TxnContext* txn_ctx) {
   auto col_names = rdg_.node_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {
@@ -825,7 +825,7 @@ katana::PropertyGraph::UnloadNodeProperty(const std::string& prop_name) {
 
 katana::Result<void>
 katana::PropertyGraph::AddEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("adding empty edge prop table");
     return ResultSuccess();
@@ -840,7 +840,7 @@ katana::PropertyGraph::AddEdgeProperties(
 
 katana::Result<void>
 katana::PropertyGraph::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   if (props->num_columns() == 0) {
     KATANA_LOG_DEBUG("upsert empty edge prop table");
     return ResultSuccess();
@@ -854,13 +854,13 @@ katana::PropertyGraph::UpsertEdgeProperties(
 }
 
 katana::Result<void>
-katana::PropertyGraph::RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx) {
+katana::PropertyGraph::RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx) {
   return rdg_.RemoveEdgeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
 katana::PropertyGraph::RemoveEdgeProperty(
-    const std::string& prop_name, tsuba::TxnContext* txn_ctx) {
+    const std::string& prop_name, katana::TxnContext* txn_ctx) {
   auto col_names = rdg_.edge_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {

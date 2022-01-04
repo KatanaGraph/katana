@@ -1,12 +1,12 @@
 #ifndef KATANA_LIBTSUBA_FILESTORAGEINTERNAL_H_
 #define KATANA_LIBTSUBA_FILESTORAGEINTERNAL_H_
 
-#include "tsuba/FileStorage.h"
+#include "katana/FileStorage.h"
 
-namespace tsuba {
+namespace katana {
 
 std::vector<FileStorage*>& GetRegisteredFileStorages();
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

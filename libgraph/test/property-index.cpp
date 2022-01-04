@@ -14,7 +14,7 @@ struct NodeOrEdge {
       katana::PropertyGraph* pg, const std::string& column_name);
   static katana::Result<void> AddProperties(
       katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
-      tsuba::TxnContext* txn_ctx);
+      katana::TxnContext* txn_ctx);
   static size_t num_entities(katana::PropertyGraph* pg);
 };
 
@@ -71,7 +71,7 @@ template <>
 katana::Result<void>
 Node::AddProperties(
     katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   return pg->AddNodeProperties(properties, txn_ctx);
 }
 
@@ -79,7 +79,7 @@ template <>
 katana::Result<void>
 Edge::AddProperties(
     katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   return pg->AddEdgeProperties(properties, txn_ctx);
 }
 
@@ -141,7 +141,7 @@ TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, 0, &policy, &txn_ctx);
@@ -213,7 +213,7 @@ TestStringIndex(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<int>(num_nodes, 0, &policy, &txn_ctx);

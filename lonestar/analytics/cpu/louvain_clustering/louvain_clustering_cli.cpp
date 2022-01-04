@@ -122,7 +122,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("invalid algorithm");
   }
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto pg_result = LouvainClustering(
       pg.get(), edge_property_name, "clusterId", &txn_ctx, plan);
   if (!pg_result) {

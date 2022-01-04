@@ -204,7 +204,7 @@ main(int argc, char** argv) {
     abort();
   }
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto pg_result = ConnectedComponents(pg.get(), "component", &txn_ctx, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL(

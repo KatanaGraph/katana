@@ -599,7 +599,7 @@ struct IsBad {
 template <typename Algo>
 katana::Result<void>
 Run(katana::PropertyGraph* pg, const std::string& output_property_name,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   using Graph = typename Algo::Graph;
   using GNode = typename Graph::Node;
   auto result = ConstructNodeProperties<typename Algo::NodeData>(
@@ -663,7 +663,7 @@ Run(katana::PropertyGraph* pg, const std::string& output_property_name,
 katana::Result<void>
 katana::analytics::IndependentSet(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    tsuba::TxnContext* txn_ctx, IndependentSetPlan plan) {
+    katana::TxnContext* txn_ctx, IndependentSetPlan plan) {
   switch (plan.algorithm()) {
   case IndependentSetPlan::kSerial:
     return Run<SerialAlgo>(pg, output_property_name, txn_ctx);

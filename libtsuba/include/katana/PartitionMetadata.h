@@ -1,10 +1,10 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_PARTITIONMETADATA_H_
-#define KATANA_LIBTSUBA_TSUBA_PARTITIONMETADATA_H_
+#ifndef KATANA_LIBTSUBA_KATANA_PARTITIONMETADATA_H_
+#define KATANA_LIBTSUBA_KATANA_PARTITIONMETADATA_H_
 
 #include <cstdint>
 #include <utility>
 
-namespace tsuba {
+namespace katana {
 
 struct PartitionMetadata {
   uint32_t policy_id_{0};
@@ -20,6 +20,6 @@ struct PartitionMetadata {
   std::pair<uint32_t, uint32_t> cartesian_grid_{0, 0};
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

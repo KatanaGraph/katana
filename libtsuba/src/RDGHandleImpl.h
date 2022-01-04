@@ -3,11 +3,11 @@
 
 #include <cstdint>
 
+#include "katana/RDGManifest.h"
 #include "katana/URI.h"
-#include "tsuba/RDGManifest.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 class RDGHandleImpl {
 public:
@@ -33,6 +33,6 @@ private:
   RDGManifest rdg_manifest_;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

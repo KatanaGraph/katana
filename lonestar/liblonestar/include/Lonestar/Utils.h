@@ -25,8 +25,8 @@
 #include <boost/filesystem.hpp>
 
 #include "katana/PropertyGraph.h"
+#include "katana/RDG.h"
 #include "katana/analytics/Utils.h"
-#include "tsuba/RDG.h"
 
 inline std::unique_ptr<katana::PropertyGraph>
 MakeFileGraph(
@@ -37,8 +37,8 @@ MakeFileGraph(
     edge_properties.emplace_back(edge_property_name);
   }
 
-  tsuba::TxnContext txn_ctx;
-  tsuba::RDGLoadOptions opts;
+  katana::TxnContext txn_ctx;
+  katana::RDGLoadOptions opts;
   opts.node_properties = node_properties;
   opts.edge_properties = edge_properties;
   auto pfg_result = katana::PropertyGraph::Make(rdg_name, &txn_ctx, opts);

@@ -77,7 +77,7 @@ main(int argc, char** argv) {
     abort();
   }
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   if (auto r = katana::analytics::Jaccard(
           pg.get(), base_node, output_property_name, &txn_ctx,
           katana::analytics::JaccardPlan());

@@ -33,5 +33,3 @@ Error Codes
    :sections: briefdescription detaileddescription
 
 .. doxygenenum:: katana::ErrorCode
-
-.. doxygenenum:: tsuba::ErrorCode

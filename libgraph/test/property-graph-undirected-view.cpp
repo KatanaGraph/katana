@@ -9,7 +9,7 @@ struct DegreeSum : public katana::PODProperty<uint32_t> {};
 
 void
 TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::Result<void> res = katana::AddNodeProperties(
       pg.get(), &txn_ctx,
       katana::PropertyGenerator(

@@ -95,7 +95,7 @@ struct all_property_generators
 template <bool is_node, typename... Args>
 Result<void>
 AddGraphProperties(
-    PropertyGraph* pg, tsuba::TxnContext* txn_ctx, Args&&... generators) {
+    PropertyGraph* pg, katana::TxnContext* txn_ctx, Args&&... generators) {
   static_assert(
       internal::all_property_generators<Args...>::value,
       "AddGraphProperties arguments except first must be of type "
@@ -198,7 +198,7 @@ private:
 template <typename... Args>
 KATANA_EXPORT Result<void>
 AddNodeProperties(
-    katana::PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
+    katana::PropertyGraph* pg, katana::TxnContext* txn_ctx,
     Args&&... generators) {
   return internal::AddGraphProperties<true>(
       pg, txn_ctx, std::forward<Args>(generators)...);
@@ -221,7 +221,7 @@ AddNodeProperties(
 template <typename... Args>
 KATANA_EXPORT Result<void>
 AddEdgeProperties(
-    katana::PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
+    katana::PropertyGraph* pg, katana::TxnContext* txn_ctx,
     Args&&... generators) {
   return internal::AddGraphProperties<false>(
       pg, txn_ctx, std::forward<Args>(generators)...);

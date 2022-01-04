@@ -346,7 +346,7 @@ BSPCoreThenTrussAlgo(SortedGraphView* g, uint32_t k) {
 
 katana::Result<void>
 katana::analytics::KTruss(
-    tsuba::TxnContext* txn_ctx, katana::PropertyGraph* pg,
+    katana::TxnContext* txn_ctx, katana::PropertyGraph* pg,
     uint32_t k_truss_number, const std::string& output_property_name,
     KTrussPlan plan) {
   katana::ReportPageAllocGuard page_alloc;

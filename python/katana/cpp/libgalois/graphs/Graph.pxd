@@ -14,14 +14,13 @@ from katana.cpp.libsupport.result cimport Result
 from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
 
 
-# This is very similar to the block below, but needs to be in the tsuba namespace
-cdef extern from "tsuba/RDG.h" namespace "tsuba" nogil:
+cdef extern from "katana/RDG.h" namespace "katana" nogil:
     cdef struct RDGLoadOptions:
         optional[uint32_t] partition_id_to_load
         optional[vector[string]] node_properties
         optional[vector[string]] edge_properties
 
-cdef extern from "tsuba/TxnContext.h" namespace "tsuba" nogil:
+cdef extern from "katana/TxnContext.h" namespace "katana" nogil:
     cdef cppclass TxnContext:
         TxnContext()
 

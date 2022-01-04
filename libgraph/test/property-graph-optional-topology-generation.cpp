@@ -4,12 +4,12 @@
 #include "katana/GraphTopology.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
+#include "katana/RDG.h"
 #include "katana/SharedMemSys.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "stdio.h"
 #include "storage-format-version.h"
-#include "tsuba/RDG.h"
 
 namespace cll = llvm::cl;
 namespace fs = boost::filesystem;
@@ -25,7 +25,7 @@ void
 TestOptionalTopologyGenerationEdgeShuffleTopology() {
   KATANA_LOG_DEBUG("##### Testing EdgeShuffleTopology Generation #####");
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::PropertyGraph pg = LoadGraph(ldbc_003InputFile, &txn_ctx);
 
   // Build a EdgeSortedByDestID view, which uses GraphTopology EdgeShuffleTopology in the background
@@ -38,7 +38,7 @@ void
 TestOptionalTopologyGenerationShuffleTopology() {
   KATANA_LOG_DEBUG("##### Testing ShuffleTopology Generation #####");
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::PropertyGraph pg = LoadGraph(ldbc_003InputFile, &txn_ctx);
 
   // Build a NodesSortedByDegreeEdgesSortedByDestID view, which uses GraphTopology ShuffleTopology in the background
@@ -52,7 +52,7 @@ void
 TestOptionalTopologyGenerationEdgeTypeAwareTopology() {
   KATANA_LOG_DEBUG("##### Testing EdgeTypeAware Topology Generation ######");
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::PropertyGraph pg = LoadGraph(ldbc_003InputFile, &txn_ctx);
 
   // Build a EdgeTypeAwareBiDir view, which uses GraphTopology EdgeTypeAwareTopology in the background

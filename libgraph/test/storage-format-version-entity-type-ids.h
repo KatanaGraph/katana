@@ -137,7 +137,7 @@ TestConvertGraphStorageFormat(std::string& input_rdg) {
 
   KATANA_LOG_WARN("***** TestConvertGraphStorageFormat *****");
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   katana::PropertyGraph g = LoadGraph(input_rdg, &txn_ctx);
   ValidateLDBC003EntityTypeManagers(
@@ -170,7 +170,7 @@ TestRoundTripNewStorageFormat(std::string& input_rdg) {
 
   KATANA_LOG_WARN("***** TestRoundTripNewStorageFormat *****");
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   // first cycle converts old->new
   katana::PropertyGraph g = LoadGraph(input_rdg, &txn_ctx);

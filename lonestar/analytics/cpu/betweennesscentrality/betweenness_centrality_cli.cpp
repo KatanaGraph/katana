@@ -145,7 +145,7 @@ main(int argc, char** argv) {
 
   std::cout << "Running betweenness-centrality on " << num_sources
             << " sources\n";
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   if (auto r = BetweennessCentrality(
           pg.get(), "betweenness_centrality", &txn_ctx, sources, plan);
       !r) {

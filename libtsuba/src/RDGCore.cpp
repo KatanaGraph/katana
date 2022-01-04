@@ -3,9 +3,9 @@
 #include "RDGPartHeader.h"
 #include "RDGTopologyManager.h"
 #include "katana/ArrowInterchange.h"
+#include "katana/ErrorCode.h"
+#include "katana/ParquetReader.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
-#include "tsuba/ParquetReader.h"
 
 namespace {
 
@@ -13,11 +13,11 @@ katana::Result<std::set<std::string>>
 UpsertProperties(
     const std::shared_ptr<arrow::Table>& props,
     std::shared_ptr<arrow::Table>* to_update,
-    std::vector<tsuba::PropStorageInfo>* prop_state) {
+    std::vector<katana::PropStorageInfo>* prop_state) {
   std::set<std::string> written_prop_names;
   if (!props->schema()->HasDistinctFieldNames()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::Exists, "column names must be distinct: {}",
+        katana::ErrorCode::AlreadyExists, "column names must be distinct: {}",
         fmt::join(props->schema()->field_names(), ", "));
   }
 
@@ -35,7 +35,7 @@ UpsertProperties(
 
   if (next->num_columns() > 0 && next->num_rows() != props->num_rows()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::InvalidArgument, "expected {} rows found {} instead",
+        katana::ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         next->num_rows(), props->num_rows());
   }
 
@@ -47,12 +47,12 @@ UpsertProperties(
 
     auto prop_info_it = std::find_if(
         prop_state->begin(), prop_state->end(),
-        [&](const tsuba::PropStorageInfo& psi) {
+        [&](const katana::PropStorageInfo& psi) {
           return field->name() == psi.name();
         });
     if (prop_info_it == prop_state->end()) {
       prop_info_it = prop_state->insert(
-          prop_info_it, tsuba::PropStorageInfo(field->name(), field->type()));
+          prop_info_it, katana::PropStorageInfo(field->name(), field->type()));
     } else if (!prop_info_it->IsAbsent()) {
       current_col = next->schema()->GetFieldIndex(field->name());
     }
@@ -76,7 +76,7 @@ UpsertProperties(
 
   if (!next->schema()->HasDistinctFieldNames()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::Exists, "column names are not distinct: {}",
+        katana::ErrorCode::AlreadyExists, "column names are not distinct: {}",
         fmt::join(next->schema()->field_names(), ", "));
   }
 
@@ -89,18 +89,18 @@ katana::Result<std::set<std::string>>
 AddProperties(
     const std::shared_ptr<arrow::Table>& props,
     std::shared_ptr<arrow::Table>* to_update,
-    std::vector<tsuba::PropStorageInfo>* prop_state) {
+    std::vector<katana::PropStorageInfo>* prop_state) {
   for (const auto& field : props->fields()) {
     // Column names are not sorted, but assumed to be less than 100s
     auto prop_info_it = std::find_if(
         prop_state->begin(), prop_state->end(),
-        [&](const tsuba::PropStorageInfo& psi) {
+        [&](const katana::PropStorageInfo& psi) {
           return field->name() == psi.name();
         });
 
     if (prop_info_it != prop_state->end()) {
       return KATANA_ERROR(
-          tsuba::ErrorCode::Exists, "column names are not distinct");
+          katana::ErrorCode::AlreadyExists, "column names are not distinct");
     }
   }
 
@@ -108,9 +108,9 @@ AddProperties(
 }
 
 katana::Result<void>
-EnsureTypeLoaded(const katana::Uri& rdg_dir, tsuba::PropStorageInfo* psi) {
+EnsureTypeLoaded(const katana::Uri& rdg_dir, katana::PropStorageInfo* psi) {
   if (!psi->type()) {
-    auto reader = KATANA_CHECKED(tsuba::ParquetReader::Make());
+    auto reader = KATANA_CHECKED(katana::ParquetReader::Make());
     KATANA_LOG_ASSERT(psi->IsAbsent());
     std::shared_ptr<arrow::Schema> schema =
         KATANA_CHECKED(reader->GetSchema(rdg_dir.Join(psi->path())));
@@ -120,7 +120,7 @@ EnsureTypeLoaded(const katana::Uri& rdg_dir, tsuba::PropStorageInfo* psi) {
 }
 
 std::shared_ptr<arrow::Schema>
-schemify(const std::vector<tsuba::PropStorageInfo>& prop_info_list) {
+schemify(const std::vector<katana::PropStorageInfo>& prop_info_list) {
   std::vector<std::shared_ptr<arrow::Field>> fields;
   for (const auto& prop : prop_info_list) {
     KATANA_LOG_VASSERT(
@@ -133,20 +133,19 @@ schemify(const std::vector<tsuba::PropStorageInfo>& prop_info_list) {
 }
 }  // namespace
 
-namespace tsuba {
-
 std::shared_ptr<arrow::Schema>
-RDGCore::full_node_schema() const {
+katana::RDGCore::full_node_schema() const {
   return schemify(part_header().node_prop_info_list());
 }
 
 std::shared_ptr<arrow::Schema>
-RDGCore::full_edge_schema() const {
+katana::RDGCore::full_edge_schema() const {
   return schemify(part_header().edge_prop_info_list());
 }
 
 katana::Result<void>
-RDGCore::AddPartitionMetadataArray(const std::shared_ptr<arrow::Table>& props) {
+katana::RDGCore::AddPartitionMetadataArray(
+    const std::shared_ptr<arrow::Table>& props) {
   auto field = props->schema()->field(0);
   const std::string& name = field->name();
   std::shared_ptr<arrow::ChunkedArray> col = props->column(0);
@@ -180,8 +179,8 @@ RDGCore::AddPartitionMetadataArray(const std::shared_ptr<arrow::Table>& props) {
 }
 
 katana::Result<void>
-RDGCore::AddNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+katana::RDGCore::AddNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   KATANA_LOG_DEBUG_ASSERT(txn_ctx != nullptr);
   auto written_prop_names = KATANA_CHECKED(AddProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
@@ -192,8 +191,8 @@ RDGCore::AddNodeProperties(
 }
 
 katana::Result<void>
-RDGCore::AddEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+katana::RDGCore::AddEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   KATANA_LOG_DEBUG_ASSERT(txn_ctx != nullptr);
   auto written_prop_names = KATANA_CHECKED(AddProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
@@ -204,8 +203,8 @@ RDGCore::AddEdgeProperties(
 }
 
 katana::Result<void>
-RDGCore::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+katana::RDGCore::UpsertNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   KATANA_LOG_DEBUG_ASSERT(txn_ctx != nullptr);
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
@@ -216,8 +215,8 @@ RDGCore::UpsertNodeProperties(
 }
 
 katana::Result<void>
-RDGCore::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+katana::RDGCore::UpsertEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   KATANA_LOG_DEBUG_ASSERT(txn_ctx != nullptr);
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
@@ -228,10 +227,10 @@ RDGCore::UpsertEdgeProperties(
 }
 
 katana::Result<void>
-RDGCore::EnsureNodeTypesLoaded() {
+katana::RDGCore::EnsureNodeTypesLoaded() {
   if (rdg_dir_.empty()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::InvalidArgument,
+        katana::ErrorCode::InvalidArgument,
         "no rdg_dir set, cannot ensure node types are loaded");
   }
   for (auto& prop : part_header_.node_prop_info_list()) {
@@ -243,10 +242,10 @@ RDGCore::EnsureNodeTypesLoaded() {
 }
 
 katana::Result<void>
-RDGCore::EnsureEdgeTypesLoaded() {
+katana::RDGCore::EnsureEdgeTypesLoaded() {
   if (rdg_dir_.empty()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::InvalidArgument,
+        katana::ErrorCode::InvalidArgument,
         "no rdg_dir set, cannot ensure edge types are loaded");
   }
   for (auto& prop : part_header_.edge_prop_info_list()) {
@@ -258,14 +257,14 @@ RDGCore::EnsureEdgeTypesLoaded() {
 }
 
 void
-RDGCore::InitEmptyProperties() {
+katana::RDGCore::InitEmptyProperties() {
   std::vector<std::shared_ptr<arrow::Array>> empty;
   node_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
   edge_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
 }
 
 bool
-RDGCore::Equals(const RDGCore& other) const {
+katana::RDGCore::Equals(const katana::RDGCore& other) const {
   // Assumption: all RDGTopology objeccts in topology_manger_ and other.topology_manager_
   // are bound to their files
   return topology_manager_.Equals(other.topology_manager_) &&
@@ -276,7 +275,7 @@ RDGCore::Equals(const RDGCore& other) const {
 }
 
 katana::Result<void>
-RDGCore::RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx) {
+katana::RDGCore::RemoveNodeProperty(int i, katana::TxnContext* txn_ctx) {
   auto field = node_properties_->field(i);
   node_properties_ = KATANA_CHECKED(node_properties_->RemoveColumn(i));
   // store write properties into transaction context
@@ -286,7 +285,7 @@ RDGCore::RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx) {
 }
 
 katana::Result<void>
-RDGCore::RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx) {
+katana::RDGCore::RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx) {
   auto field = edge_properties_->field(i);
   edge_properties_ = KATANA_CHECKED(edge_properties_->RemoveColumn(i));
   // store write properties into transaction context
@@ -294,5 +293,3 @@ RDGCore::RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx) {
 
   return part_header_.RemoveEdgeProperty(field->name());
 }
-
-}  // namespace tsuba

@@ -5,7 +5,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "tsuba/RDG.h"
+#include "katana/RDG.h"
 
 using katana::ImportDataType;
 using katana::LabelRule;
@@ -377,9 +377,9 @@ InRange(uint64_t id, const EdgeIterRange& range) {
 void
 katana::graphml::ExportGraph(
     const std::string& outfile, const std::string& rdg_file,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   auto result =
-      katana::PropertyGraph::Make(rdg_file, txn_ctx, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, txn_ctx, katana::RDGLoadOptions());
   if (!result) {
     KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }

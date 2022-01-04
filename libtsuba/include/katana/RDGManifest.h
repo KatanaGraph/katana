@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_RDGMANIFEST_H_
-#define KATANA_LIBTSUBA_TSUBA_RDGMANIFEST_H_
+#ifndef KATANA_LIBTSUBA_KATANA_RDGMANIFEST_H_
+#define KATANA_LIBTSUBA_KATANA_RDGMANIFEST_H_
 
 #include <cstdint>
 #include <regex>
@@ -7,12 +7,12 @@
 
 #include "katana/JSON.h"
 #include "katana/Logging.h"
+#include "katana/RDGLineage.h"
 #include "katana/URI.h"
 #include "katana/config.h"
-#include "tsuba/RDGLineage.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 static const char* kDefaultRDGViewType = "rdg";
 
@@ -157,6 +157,6 @@ public:
 KATANA_EXPORT void to_json(nlohmann::json& j, const RDGManifest& manifest);
 KATANA_EXPORT void from_json(const nlohmann::json& j, RDGManifest& manifest);
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

@@ -1,4 +1,4 @@
-#include "tsuba/WriteGroup.h"
+#include "katana/WriteGroup.h"
 
 #include "GlobalState.h"
 #include "katana/Random.h"
@@ -13,10 +13,8 @@ constexpr uint32_t kTagLen = 12;
 
 }  // namespace
 
-namespace tsuba {
-
-Result<std::unique_ptr<WriteGroup>>
-WriteGroup::Make() {
+Result<std::unique_ptr<katana::WriteGroup>>
+katana::WriteGroup::Make() {
   // Don't use `OneHostOnly` because we can skip its broadcast
   std::string tag;
   if (Comm()->Rank == 0) {
@@ -27,12 +25,12 @@ WriteGroup::Make() {
 }
 
 Result<void>
-WriteGroup::Finish() {
+katana::WriteGroup::Finish() {
   return async_op_group_.Finish();
 }
 
 void
-WriteGroup::AddOp(
+katana::WriteGroup::AddOp(
     std::future<katana::CopyableResult<void>> future, std::string file,
     uint64_t accounted_size) {
   if (accounted_size > kMaxOutstandingSize) {
@@ -58,7 +56,7 @@ WriteGroup::AddOp(
 // shared pointer because FileFrames are often held that way due do the way
 // they're used with arrow
 void
-WriteGroup::StartStore(std::shared_ptr<FileFrame> ff) {
+katana::WriteGroup::StartStore(std::shared_ptr<katana::FileFrame> ff) {
   std::string file = ff->path();
   uint64_t size = ff->map_size();
 
@@ -68,5 +66,3 @@ WriteGroup::StartStore(std::shared_ptr<FileFrame> ff) {
   });
   AddOp(std::move(future), file, size);
 }
-
-}  // namespace tsuba

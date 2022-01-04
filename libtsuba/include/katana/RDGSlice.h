@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_RDGSLICE_H_
-#define KATANA_LIBTSUBA_TSUBA_RDGSLICE_H_
+#ifndef KATANA_LIBTSUBA_KATANA_RDGSLICE_H_
+#define KATANA_LIBTSUBA_KATANA_RDGSLICE_H_
 
 #include <cstdint>
 #include <memory>
@@ -7,15 +7,15 @@
 #include <utility>
 #include <vector>
 
+#include "katana/FileView.h"
+#include "katana/RDGLineage.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/config.h"
-#include "tsuba/FileView.h"
-#include "tsuba/RDGLineage.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 class RDGManifest;
 class RDGCore;
@@ -164,6 +164,6 @@ private:
   RDGLineage lineage_;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

@@ -1,16 +1,16 @@
 #include <boost/filesystem.hpp>
 
+#include "katana/RDG.h"
+#include "katana/RDGManifest.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/RDG.h"
-#include "tsuba/RDGManifest.h"
 
 namespace fs = boost::filesystem;
 
 katana::Result<void>
 TestFileNames(const std::string& path) {
   auto uri = KATANA_CHECKED(katana::Uri::MakeFromFile(path));
-  auto manifest = KATANA_CHECKED(tsuba::RDGManifest::Make(uri));
+  auto manifest = KATANA_CHECKED(katana::RDGManifest::Make(uri));
 
   fs::path p = path;
   p = p.parent_path();
@@ -39,8 +39,8 @@ TestAll(const std::string& path) {
 
 int
 main(int argc, char* argv[]) {
-  if (auto init_good = tsuba::Init(); !init_good) {
-    KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  if (auto init_good = katana::InitTsuba(); !init_good) {
+    KATANA_LOG_FATAL("katana::InitTsuba: {}", init_good.error());
   }
 
   if (argc <= 1) {
@@ -52,8 +52,8 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("test failed: {}", res.error());
   }
 
-  if (auto fini_good = tsuba::Fini(); !fini_good) {
-    KATANA_LOG_FATAL("tsuba::Fini: {}", fini_good.error());
+  if (auto fini_good = katana::FiniTsuba(); !fini_good) {
+    KATANA_LOG_FATAL("katana::FiniTsuba: {}", fini_good.error());
   }
 
   return 0;

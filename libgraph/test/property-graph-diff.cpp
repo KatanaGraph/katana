@@ -61,7 +61,7 @@ CreateGraph1() {
     KATANA_LOG_FATAL(
         "Failed to construct graph: {}", components_result.error());
   }
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto graph_result = katana::ConvertToPropertyGraph(
       std::move(components_result.value()), &txn_ctx);
   if (!graph_result) {
@@ -132,7 +132,7 @@ CreateGraph2() {
     KATANA_LOG_FATAL(
         "Failed to construct graph: {}", components_result.error());
   }
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto graph_result = katana::ConvertToPropertyGraph(
       std::move(components_result.value()), &txn_ctx);
   if (!graph_result) {
@@ -195,7 +195,7 @@ CreateGraph3() {
     KATANA_LOG_FATAL(
         "Failed to construct graph: {}", components_result.error());
   }
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto graph_result = katana::ConvertToPropertyGraph(
       std::move(components_result.value()), &txn_ctx);
   if (!graph_result) {

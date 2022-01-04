@@ -1,21 +1,20 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_RDGTOPOLOGY_H_
-#define KATANA_LIBTSUBA_TSUBA_RDGTOPOLOGY_H_
+#ifndef KATANA_LIBTSUBA_KATANA_RDGTOPOLOGY_H_
+#define KATANA_LIBTSUBA_KATANA_RDGTOPOLOGY_H_
 
 #include <array>
 
 #include "katana/EntityTypeManager.h"
 #include "katana/ErrorCode.h"
+#include "katana/FileView.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
+#include "katana/WriteGroup.h"
 #include "katana/config.h"
-#include "tsuba/Errors.h"
-#include "tsuba/FileView.h"
-#include "tsuba/WriteGroup.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 class PartitionTopologyMetadataEntry;
 
@@ -251,34 +250,34 @@ public:
 
   katana::Result<void> DoStore(
       RDGHandle handle, const katana::Uri& current_rdg_dir,
-      std::unique_ptr<tsuba::WriteGroup>& write_group);
+      std::unique_ptr<katana::WriteGroup>& write_group);
 
   bool Equals(const RDGTopology& other) const;
 
   /// Create a shadow RDGTopology with parameters
-  static tsuba::RDGTopology MakeShadow(
+  static katana::RDGTopology MakeShadow(
       TopologyKind topology_state, TransposeKind transpose_state,
       EdgeSortKind edge_sort_state, NodeSortKind node_sort_state);
 
   /// Create a shadow RDGTopology with default CSR state
-  static tsuba::RDGTopology MakeShadowCSR();
+  static katana::RDGTopology MakeShadowCSR();
 
   /// Make a new basic RDGTopology from in memory structures
-  static katana::Result<tsuba::RDGTopology> Make(
+  static katana::Result<katana::RDGTopology> Make(
       const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
       uint64_t num_edges, TopologyKind topology_state,
       TransposeKind transpose_state, EdgeSortKind edge_sort_state,
       NodeSortKind node_sort_state);
 
   /// Make an RDGTopology for an EdgeShuffle related Topology from in memory structures
-  static katana::Result<tsuba::RDGTopology> Make(
+  static katana::Result<katana::RDGTopology> Make(
       const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
       uint64_t num_edges, TopologyKind topology_state,
       TransposeKind transpose_state, EdgeSortKind edge_sort_state,
       const uint64_t* edge_index_to_property_index_map);
 
   /// Make an RDGTopology for an EdgeTypeAware related Topology from in memory structures
-  static katana::Result<tsuba::RDGTopology> Make(
+  static katana::Result<katana::RDGTopology> Make(
       const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
       uint64_t num_edges, TopologyKind topology_state,
       TransposeKind transpose_state, EdgeSortKind edge_sort_state,
@@ -287,7 +286,7 @@ public:
       const katana::EntityTypeID* edge_condensed_type_id_map_);
 
   /// Make an RDGTopology for a Shuffle related Topology from in memory structures
-  static katana::Result<tsuba::RDGTopology> Make(
+  static katana::Result<katana::RDGTopology> Make(
       const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
       uint64_t num_edges, TopologyKind topology_state,
       TransposeKind transpose_state, EdgeSortKind edge_sort_state,
@@ -296,7 +295,7 @@ public:
       const uint64_t* node_index_to_property_index_map);
 
   /// Make and fully populate an RDGTopology from in memory structures
-  static katana::Result<tsuba::RDGTopology> Make(
+  static katana::Result<katana::RDGTopology> Make(
       const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
       uint64_t num_edges, TopologyKind topology_state,
       TransposeKind transpose_state, EdgeSortKind edge_sort_state,
@@ -309,7 +308,7 @@ public:
       const katana::EntityTypeID* node_condensed_type_id_map_);
 
   // Make an RDGTopology from on storage metadata
-  static katana::Result<tsuba::RDGTopology> Make(
+  static katana::Result<katana::RDGTopology> Make(
       PartitionTopologyMetadataEntry* entry);
 
 private:
@@ -348,8 +347,8 @@ private:
 
   FileView file_storage_;
 
-  static katana::Result<tsuba::RDGTopology> DoMake(
-      tsuba::RDGTopology topo, const uint64_t* adj_indices, uint64_t num_nodes,
+  static katana::Result<katana::RDGTopology> DoMake(
+      katana::RDGTopology topo, const uint64_t* adj_indices, uint64_t num_nodes,
       const uint32_t* dests, uint64_t num_edges, TopologyKind topology_state,
       TransposeKind transpose_state, EdgeSortKind edge_sort_state,
       NodeSortKind node_sort_state);
@@ -366,6 +365,6 @@ private:
 // Definitions
 using RDGTopologySet = std::array<RDGTopology, kMaxNumTopologies>;
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

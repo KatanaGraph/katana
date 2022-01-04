@@ -5,11 +5,11 @@
 #include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
+#include "katana/RDG.h"
 #include "katana/SharedMemSys.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
-#include "tsuba/RDG.h"
 
 namespace cll = llvm::cl;
 namespace fs = boost::filesystem;
@@ -36,9 +36,9 @@ using GNode = typename ProjectedGraphView::Node;
 katana::PropertyGraph
 LoadGraph(const std::string& rdg_file) {
   KATANA_LOG_ASSERT(!rdg_file.empty());
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto g_res =
-      katana::PropertyGraph::Make(rdg_file, &txn_ctx, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, katana::RDGLoadOptions());
 
   if (!g_res) {
     KATANA_LOG_FATAL("making result: {}", g_res.error());
@@ -79,7 +79,7 @@ main(int argc, char** argv) {
 
   std::vector<std::string> node_props;
   node_props.emplace_back(temp_node_property.name());
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto res_node_prop = katana::analytics::ConstructNodeProperties<
       ProjectedPropertyGraphView, NodeData>(pg_view, &txn_ctx, node_props);
 

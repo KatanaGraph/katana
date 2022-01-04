@@ -5,13 +5,13 @@
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
+#include "katana/RDG.h"
 #include "katana/Result.h"
 #include "katana/SharedMemSys.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "stdio.h"
 #include "storage-format-version-optional-topologies.h"
-#include "tsuba/RDG.h"
 
 namespace cll = llvm::cl;
 namespace fs = boost::filesystem;

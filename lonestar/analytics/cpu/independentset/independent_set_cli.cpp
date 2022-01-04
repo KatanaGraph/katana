@@ -89,7 +89,7 @@ main(int argc, char** argv) {
 
   IndependentSetPlan plan = IndependentSetPlan::FromAlgorithm(algo);
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   if (auto r = IndependentSet(pg.get(), "indicator", &txn_ctx, plan); !r) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", r.error());
   }

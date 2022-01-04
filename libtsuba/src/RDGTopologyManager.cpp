@@ -6,14 +6,12 @@
 #include "PartitionTopologyMetadata.h"
 #include "RDGPartHeader.h"
 #include "katana/Logging.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
-
-katana::Result<RDGTopology*>
-RDGTopologyManager::GetTopology(const RDGTopology& shadow) {
+katana::Result<katana::RDGTopology*>
+katana::RDGTopologyManager::GetTopology(const katana::RDGTopology& shadow) {
   // find if we have a toplogy that matches the shadow
 
   KATANA_LOG_DEBUG(
@@ -42,8 +40,8 @@ RDGTopologyManager::GetTopology(const RDGTopology& shadow) {
   return KATANA_ERROR(ErrorCode::InvalidArgument, "No matching topology found");
 }
 
-katana::Result<tsuba::RDGTopologyManager>
-RDGTopologyManager::Make(PartitionTopologyMetadata* topology_metadata) {
+katana::Result<katana::RDGTopologyManager>
+katana::RDGTopologyManager::Make(PartitionTopologyMetadata* topology_metadata) {
   RDGTopologyManager manager = RDGTopologyManager();
 
   for (size_t i = 0; i < topology_metadata->num_entries(); i++) {
@@ -55,9 +53,9 @@ RDGTopologyManager::Make(PartitionTopologyMetadata* topology_metadata) {
 }
 
 katana::Result<void>
-RDGTopologyManager::DoStore(
-    RDGHandle handle, const katana::Uri& current_rdg_dir,
-    std::unique_ptr<tsuba::WriteGroup>& write_group) {
+katana::RDGTopologyManager::DoStore(
+    katana::RDGHandle handle, const katana::Uri& current_rdg_dir,
+    std::unique_ptr<katana::WriteGroup>& write_group) {
   KATANA_LOG_VASSERT(num_topologies_ >= 1, "must have at least 1 topology");
   KATANA_LOG_DEBUG("Storing {} RDGTopologies", num_topologies_);
 
@@ -84,5 +82,3 @@ RDGTopologyManager::DoStore(
   }
   return katana::ResultSuccess();
 }
-
-}  // namespace tsuba

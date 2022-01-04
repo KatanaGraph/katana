@@ -33,7 +33,7 @@ TestIterate1(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
@@ -64,7 +64,7 @@ TestIterate3(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
@@ -91,7 +91,7 @@ TestIterate4(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, 5, &policy, &txn_ctx);
@@ -117,7 +117,7 @@ TestError1(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, 5, &policy, &txn_ctx);

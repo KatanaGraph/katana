@@ -11,7 +11,7 @@ using katana::PropertyGenerator;
 
 void
 TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::Result<void> result = AddNodeProperties(
       pg.get(), &txn_ctx,
       PropertyGenerator(
@@ -51,7 +51,7 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
 
 void
 TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::Result<void> result = AddEdgeProperties(
       pg.get(), &txn_ctx,
       PropertyGenerator(

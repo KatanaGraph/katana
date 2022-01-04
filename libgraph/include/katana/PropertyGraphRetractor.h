@@ -21,10 +21,10 @@ public:
   PropertyGraphRetractor(std::unique_ptr<PropertyGraph> pg)
       : pg_(std::move(pg)) {}
 
-  const tsuba::PartitionMetadata& partition_metadata() const {
+  const katana::PartitionMetadata& partition_metadata() const {
     return pg_->rdg_.part_metadata();
   }
-  void set_partition_metadata(const tsuba::PartitionMetadata& meta) {
+  void set_partition_metadata(const katana::PartitionMetadata& meta) {
     pg_->rdg_.set_part_metadata(meta);
   }
 

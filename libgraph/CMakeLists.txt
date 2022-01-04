@@ -52,7 +52,7 @@ target_include_directories(katana_graph PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(katana_graph PUBLIC tsuba)
+target_link_libraries(katana_graph PUBLIC katana_tsuba)
 target_link_libraries(katana_graph PUBLIC katana_galois)
 target_link_libraries(katana_graph PUBLIC katana_support)
 target_link_libraries(katana_graph PUBLIC LibXml2::LibXml2)

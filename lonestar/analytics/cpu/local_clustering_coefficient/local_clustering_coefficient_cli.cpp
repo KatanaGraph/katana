@@ -84,7 +84,7 @@ main(int argc, char** argv) {
     std::cerr << "Unknown algo: " << algo << "\n";
   }
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto lcc_result = LocalClusteringCoefficient(
       pg.get(), "localClusteringCoefficient", &txn_ctx, plan);
   if (!lcc_result) {

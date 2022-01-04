@@ -517,7 +517,7 @@ SSSPWithWrap(
     katana::PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   if (auto r = ConstructNodeProperties<std::tuple<SsspNodeDistance<Weight>>>(
           pg, txn_ctx, {output_property_name});
       !r) {
@@ -547,7 +547,7 @@ katana::Result<void>
 katana::analytics::Sssp(
     PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
-    const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
     SsspPlan plan) {
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()

@@ -1,7 +1,7 @@
 find_package(pybind11 REQUIRED)
 
 add_library(katana_python_native SHARED)
-add_library(Katana::python ALIAS katana_python_native)
+add_library(Katana::python_native ALIAS katana_python_native)
 set_target_properties(katana_python_native PROPERTIES EXPORT_NAME python)
 add_dependencies(lib katana_python_native)
 
@@ -30,7 +30,6 @@ target_link_libraries(katana_python_native PRIVATE pybind11::lto)
 
 install(
     TARGETS katana_python_native
-    EXPORT KatanaTargets
     LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT shlib

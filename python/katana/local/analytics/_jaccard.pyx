@@ -3,19 +3,15 @@ Jaccard Similarity
 ------------------
 
 .. autoclass:: katana.local.analytics.JaccardPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._jaccard._JaccardEdgeSorting
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.jaccard
 
 .. autoclass:: katana.local.analytics.JaccardStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.jaccard_assert_valid
 """

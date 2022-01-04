@@ -17,7 +17,6 @@ Statistics
 ----------
 
 .. autoclass:: katana.local.analytics.Statistics
-    :members: __init__
 
 Algorithms
 ----------
@@ -51,7 +50,6 @@ Algorithms
 .. automodule:: katana.local.analytics._triangle_count
 
 .. automodule:: katana.local.analytics._wrappers
-    :members:
 
 """
 

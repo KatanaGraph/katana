@@ -3,19 +3,15 @@ Single-Source Shortest Path
 ---------------------------
 
 .. autoclass:: katana.local.analytics.SsspPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._sssp._SsspAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.sssp
 
 .. autoclass:: katana.local.analytics.SsspStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.sssp_assert_valid
 """

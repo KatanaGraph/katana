@@ -3,19 +3,15 @@ k-Core
 ---------------
 
 .. autoclass:: katana.local.analytics.KCorePlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._k_core._KCorePlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.k_core
 
 .. autoclass:: katana.local.analytics.KCoreStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.k_core_assert_valid
 """

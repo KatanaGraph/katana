@@ -3,19 +3,15 @@ Leiden Clustering
 ------------------
 
 .. autoclass:: katana.local.analytics.LeidenClusteringPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._leiden_clustering._LeidenClusteringPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.leiden_clustering
 
 .. autoclass:: katana.local.analytics.LeidenClusteringStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.leiden_clustering_assert_valid
 """

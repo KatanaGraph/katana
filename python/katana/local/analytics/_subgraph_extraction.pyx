@@ -3,9 +3,7 @@ Subgraph Extraction
 -------------------
 
 .. autoclass:: katana.local.analytics.SubGraphExtractionPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.subgraph_extraction
 """

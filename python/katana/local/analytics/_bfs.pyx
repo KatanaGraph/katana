@@ -3,19 +3,15 @@ Breadth-first Search
 --------------------
 
 .. autoclass:: katana.local.analytics.BfsPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. autoclass:: katana.local.analytics._bfs._BfsAlgorithm
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.bfs
 
 .. autoclass:: katana.local.analytics.BfsStatistics
-    :members:
-    :undoc-members:
+
 
 .. autofunction:: katana.local.analytics.bfs_assert_valid
 """

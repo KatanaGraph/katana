@@ -3,9 +3,7 @@ Connected Components
 --------------------
 
 .. autoclass:: katana.local.analytics.ConnectedComponentsPlan
-    :members:
-    :special-members: __init__
-    :undoc-members:
+
 
 .. [Sutton] M. Sutton, T. Ben-Nun and A. Barak, "Optimizing Parallel Graph
     Connectivity Computation via Subgraph Sampling," 2018 IEEE International
@@ -13,15 +11,13 @@ Connected Components
     pp. 12-21.
 
 .. autoclass:: katana.local.analytics._connected_components._ConnectedComponentsPlanAlgorithm
-    :members:
-    :undoc-members:
+
 
 
 .. autofunction:: katana.local.analytics.connected_components
 
 .. autoclass:: katana.local.analytics.ConnectedComponentsStatistics
-    :members:
-    :undoc-members:
+
 """
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t

@@ -5,8 +5,9 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here.
 
-import pathlib
 import os
+import pathlib
+
 import katana
 
 try:
@@ -24,26 +25,34 @@ doxygen_path = os.environ["KATANA_DOXYGEN_PATH"]
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
+# extensions coming with Sphinx (named "sphinx.ext.*") or your custom
 # ones.
 extensions = [
     "breathe",
     "nbsphinx",
     "sphinx.ext.intersphinx",
-    #'sphinx.ext.autosummary',
+    # "sphinx.ext.autosummary",
     "sphinx.ext.autodoc",
-    # 'sphinx_autodoc_typehints',
+    # "sphinx_autodoc_typehints",
     "sphinx.ext.doctest",
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx_tabs.tabs",
-    "sphinx_copybutton"
+    "sphinx_copybutton",
 ]
 
 breathe_default_project = "katana"
 breathe_projects = {"katana": str(pathlib.Path(doxygen_path))}
 breathe_default_members = ("members", "undoc-members")
+
+autodoc_default_options = {
+    "members": "",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__, __katana_address__",
+    "inherited-members": True,
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -78,7 +87,7 @@ nitpick_ignore = []
 
 # Exclude drafts from external documentation
 if tags.has("external"):
-    exclude_patterns.extend(["**-draft*","**-internal*"])
+    exclude_patterns.extend(["**-draft*", "**-internal*"])
 
 # Standard Sphinx values
 project = "Katana Graph"
@@ -92,7 +101,7 @@ copyright = "Katana Graph, Inc. 2021"
 # -- Options for extensions --------------------------------------------------
 
 # nbsphinx configuration values
-html_sourcelink_suffix = '' # Don't add .txt suffix to source files
+html_sourcelink_suffix = ""  # Don't add .txt suffix to source files
 nbsphinx_execute = "never"
 nbsphinx_prolog = """
 .. raw:: html

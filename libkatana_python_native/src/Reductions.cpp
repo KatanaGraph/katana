@@ -47,7 +47,7 @@ struct ReducibleFunctor {
   py::object instantiate(py::module_& m, const char* name) {
     py::class_<typename For::template type<T>> cls(
         m, name,
-        "A reducer object that can updated with new values and combines the "
+        "A reducer object that can be updated with new values and combines the "
         "results efficiently using the appropriate operator.\n"
         "\n"
         "This class can be passed into numba compiled code and it's methods "

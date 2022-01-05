@@ -82,8 +82,11 @@ html_css_files = ["style.css"]
 autodoc_preserve_defaults = True
 autodoc_member_order = "groupwise"
 
-suppress_warning = []
+# the open documentation links to the enterprise documentation in some places
+# let those links be broken in the open-only documentation and don't complain
+suppress_warnings = ["ref.ref"]
 nitpick_ignore = []
+
 
 # Exclude drafts from external documentation
 if tags.has("external"):

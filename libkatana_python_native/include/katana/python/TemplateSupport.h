@@ -8,11 +8,13 @@ namespace katana {
 
 // TODO(amp): Use template template parameters once we can rely on having them.
 
-/// Invoke `f<T>(m, name)` and assign the resulting class into `types[T]`.
+/// Invoke @c f&lt;T&gt;(m, name) and assign the resulting class into
+/// @c types[T].
 ///
 /// \param m The module which should contain the resulting class.
 /// \param basename The base name of the class which will be suffixed with a type name.
-/// \param f The functor which instantiates the class.
+/// \param f The functor which instantiates the class. It must provide a method
+///     @c instantiate&lt;T&gt; which instantiates and wraps the type at @c T.
 /// \param types A dict to fill with instantiations.
 /// \return The resulting class.
 template <typename T, typename F>
@@ -21,7 +23,7 @@ InstantiateForType(
     pybind11::module_ m, const std::string& basename, F f,
     pybind11::dict types) {
   pybind11::object dtype = katana::PythonTypeTraits<T>::default_dtype();
-  pybind11::object cls = f.template operator()<T>(
+  pybind11::object cls = f.template instantiate<T>(
       m, (basename + "[" + katana::PythonTypeTraits<T>::name + "]").c_str());
   types[dtype] = cls;
   return cls;
@@ -31,8 +33,10 @@ InstantiateForType(
 /// resulting collection of classes in `m.basename` for use from Python.
 ///
 /// \param m The module which should contain the resulting class.
-/// \param basename The base name of the class which will be suffixed with a type name.
-/// \param f The functor which instantiates the class.
+/// \param basename The base name of the class which will be suffixed with a
+///     type name.
+/// \param f The functor which instantiates the class. It must provide a method
+///     @c instantiate&lt;T&gt; which instantiates and wraps the type at @c T.
 template <typename F>
 void
 InstantiateForStandardTypes(

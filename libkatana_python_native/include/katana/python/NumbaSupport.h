@@ -43,6 +43,8 @@ struct ConstMemberFunction {
 
 template <typename... Args>
 class DefWithNumbaImpl {
+  /// Define an actual python method and numba wrapper using the provided
+  /// function pointer and data pointer (@p caller).
   template <
       typename Cls, typename Return, typename Func, typename Caller,
       typename... Extra>
@@ -58,6 +60,8 @@ class DefWithNumbaImpl {
         PythonTypeTraits<remove_cvref_t<Args>>::ctypes_type()...);
   }
 
+  /// Define an actual python funct8ion and numba wrapper using the provided
+  /// function pointer. Unlike methods, there is no need for a data pointer.
   template <typename Return, typename... Extra>
   void def_func(
       pybind11::module_& m, const char* name, Return (*f)(Args...),
@@ -73,14 +77,8 @@ class DefWithNumbaImpl {
   }
 
 public:
-  // TODO(amp): The generated wrappers used from numba code are created per
-  //  *signature*, not per function. So two functions will the same overall
-  //  signature (including containing class) will use the same wrapper. This
-  //  could possibly cause a megamorphic call site that defeats the CPU branch
-  //  predictor. The fix for this is to somehow distinguish different
-  //  functions/methods at the template level. This could be done with a counter
-  //  or a name argument of some kind.
-
+  // Overload to handle non-capturing lambdas and static functions. These
+  // should all take self as the first argument.
   template <typename Return, typename... Extra>
   void operator()(
       pybind11::module_& m, const char* name, Return (*pf)(Args...),
@@ -88,6 +86,9 @@ public:
     def_func(m, name, pf, extra...);
   }
 
+  // Overload to handle functions values which are not yet pointers and forward
+  // them to the other overloads. This reduces the need for the user to
+  // explicitly write &.
   template <typename Func, typename... Extra>
   void operator()(
       pybind11::module_& m, const char* name, Func&& f,
@@ -95,6 +96,15 @@ public:
     this->template operator()(m, name, &f, extra...);
   }
 
+  // TODO(amp): The generated method wrappers used from numba code are created per
+  //  *signature*, not per function. So two functions with the same overall
+  //  signature (including containing class) will use the same wrapper. This
+  //  could possibly cause a megamorphic call site that defeats the CPU branch
+  //  predictor. The fix for this is to somehow distinguish different
+  //  functions/methods at the template level. This could be done with a counter
+  //  or name template argument of some kind.
+
+  // Overload to handle non-const methods on classes.
   template <typename Cls, typename Return, typename ImplCls, typename... Extra>
   void operator()(
       pybind11::class_<Cls>& cls, const char* name,
@@ -107,6 +117,7 @@ public:
         extra...);
   }
 
+  // Overload to handle const methods on classes.
   template <typename Cls, typename Return, typename ImplCls, typename... Extra>
   void operator()(
       pybind11::class_<Cls>& cls, const char* name,

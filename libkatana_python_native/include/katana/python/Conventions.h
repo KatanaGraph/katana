@@ -41,7 +41,8 @@ struct DefEqualsEquals<
 };
 
 /// DefEqualsEquals will def ``__eq__`` (Python ``==``) based on Equals() or
-/// operator==() if one is available (`Equals` is preferred).
+/// operator==() if one is available (`Equals` is preferred). Falling back to
+/// operator==() is handled by deferring to DefEqualsEquals.
 template <typename T, typename Enable = void>
 struct DefEquals {
   void operator()(pybind11::class_<T>& cls) {

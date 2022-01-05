@@ -9,6 +9,10 @@ namespace py = pybind11;
 
 namespace {
 
+// The following structures are used to pass reducer *templates* into
+// ReducibleFunctor, so it can be used to handle all instantiations of all
+// reducers.
+
 // TODO(amp): Use template template parameters once we can rely on having them.
 struct ForGAccumulator {
   template <typename T>
@@ -40,7 +44,7 @@ struct ForReduceLogicalAnd {
 template <typename For>
 struct ReducibleFunctor {
   template <typename T>
-  py::object operator()(py::module_& m, const char* name) {
+  py::object instantiate(py::module_& m, const char* name) {
     py::class_<typename For::template type<T>> cls(
         m, name,
         "A reducer object that can updated with new values and combines the "
@@ -79,6 +83,7 @@ struct ReducibleFunctor {
 
 }  // namespace
 
+/// Add reduction classes to the module @p m.
 void
 katana::python::InitReductions(py::module_& m) {
   katana::InstantiateForStandardTypes(
@@ -90,6 +95,6 @@ katana::python::InitReductions(py::module_& m) {
   // These calls are complex because they would usually be made from the
   // template above. However, it's better than duplicating the implementation of
   // ReducibleFunctor.
-  ReducibleFunctor<ForReduceLogicalOr>().operator()<bool>(m, "ReduceOr");
-  ReducibleFunctor<ForReduceLogicalAnd>().operator()<bool>(m, "ReduceAnd");
+  ReducibleFunctor<ForReduceLogicalOr>().instantiate<bool>(m, "ReduceOr");
+  ReducibleFunctor<ForReduceLogicalAnd>().instantiate<bool>(m, "ReduceAnd");
 }

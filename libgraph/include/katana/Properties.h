@@ -622,8 +622,8 @@ private:
 /// of elements with trivial constructors (std::is_trivial) and standard layout
 /// (std::is_standard_layout). (i.e., POD)
 ///
+/// TODO(gurbinder) Currently, only double is supported. Support for other types need to be added.
 /// \tparam T the C type of array elements.
-/// Currently, only double is supported. Support for other types need to be added.
 /// \tparam N the size of the arrays in arrow::LargeLIstArray
 template <typename T, size_t N>
 class ArrayPropertyView {
@@ -665,8 +665,8 @@ private:
 /// with trivial constructors (std::is_trivial) and standard layout
 /// (std::is_standard_layout). (i.e., POD)
 ///
+/// TODO(gurbinder) Currently, only double is supported. Support for other types need to be added.
 /// \tparam T the C type of array elements.
-/// Currently, only double is supported. Support for other types need to be added.
 /// \tparam N the size of the array
 template <typename T, size_t N>
 struct ArrayProperty {
@@ -696,6 +696,127 @@ struct ArrayProperty {
         arrow::schema(
             {arrow::field(name, arrow::large_list(arrow::float64()))}),
         {array_of_list_of_double}));
+  }
+};
+
+/// A mutable view over a FixedSizedBinaryArray with a fixed number of POD types.
+/// (POD: elements with trivial constructors (std::is_trivial) and standard layout
+/// (std::is_standard_layout))
+template <typename PODType, size_t array_size>
+class FixedSizeBinaryPODArrayView {
+public:
+  using value_type = ArrayRef<const PODType>;
+  using reference = ArrayRef<PODType>;
+  using const_reference = ArrayRef<const PODType>;
+
+  /// Returns a view over the provided FixedSizeBinaryArray given the POD type
+  /// contained in the array and the number of elements in the array as template
+  /// arguments to the class.
+  ///
+  /// Note: although the "array" argument is marked "const", the view can make
+  /// edits to the underlying memory of the array and edit it.
+  static Result<FixedSizeBinaryPODArrayView> Make(
+      const arrow::FixedSizeBinaryArray& array) {
+    ////////////////////////////////////////////////////////////////////////////
+    // sanity checks
+    ////////////////////////////////////////////////////////////////////////////
+    constexpr size_t total_byte_size = sizeof(PODType) * array_size;
+    if (array.byte_width() != total_byte_size) {
+      return KATANA_ERROR(
+          ErrorCode::ArrowError, "bad byte width of data: {} != {}",
+          array.byte_width(), total_byte_size);
+    }
+
+    if (array.offset() < 0) {
+      return KATANA_ERROR(
+          ErrorCode::ArrowError, "offset must be non-negative, given {}",
+          array.offset());
+    }
+
+    if (array.data()->buffers.size() <= 1 ||
+        !array.data()->buffers[1]->is_mutable()) {
+      return KATANA_ERROR(
+          ErrorCode::ArrowError, "immutable buffers not supported");
+    }
+    ////////////////////////////////////////////////////////////////////////////
+
+    return FixedSizeBinaryPODArrayView(
+        internal::GetMutableValuesWorkAround<uint8_t>(array.data(), 1, 0),
+        array.length());
+  }
+
+  size_t size() const { return length_; }
+
+  // The functions below return (const) references to the beginning
+  // of a particular index's array (See ArrayRef).
+
+  reference GetValue(size_t index) {
+    return ArrayRef(ComputePointerLocation(index), array_size);
+  }
+
+  const_reference GetValue(size_t index) const {
+    return ArrayRef(ComputePointerLocation(index), array_size);
+  }
+
+  reference operator[](size_t index) {
+    return ArrayRef(ComputePointerLocation(index), array_size);
+  }
+
+  const_reference operator[](size_t index) const {
+    return ArrayRef(ComputePointerLocation(index), array_size);
+  }
+
+private:
+  FixedSizeBinaryPODArrayView(uint8_t* ptr, size_t length)
+      : ptr_(ptr), length_(length) {}
+
+  /// Pointer to the raw data contained by the FixedSizedBinaryArray.
+  uint8_t* ptr_;
+  /// Number of elements in the array
+  size_t length_;
+
+  /// Returns the correct pointer location for a particular index since
+  /// this class will know how many bytes each array element should take
+  PODType* ComputePointerLocation(size_t index) {
+    constexpr size_t element_byte_size = sizeof(PODType) * array_size;
+    return reinterpret_cast<PODType*>(ptr_ + (element_byte_size * index));
+  }
+};
+
+/// This is an property where each row has some fixed number of POD types with
+/// an underlying FixedSizedBinaryArray arrow representation. Constrasts with
+/// the ArrayProperty in that it does not use LargeLists (variable size is
+/// technically allowed there) and that the current implementation of ArrayProperty
+/// only supports doubles.
+///
+/// @tparam PODType POD type the array will contain
+/// @tparam array_size The fixed size of the property array.
+template <typename PODType, size_t array_size>
+struct FixedSizedBinaryPODArrayProperty
+    : public Property<
+          arrow::FixedSizeBinaryType,
+          FixedSizeBinaryPODArrayView<PODType, array_size>> {
+  /// Creates the table that contains a array_size elements of the PODType
+  /// for each row as a FixedSizeBinary.
+  static katana::Result<std::shared_ptr<arrow::Table>> Allocate(
+      size_t num_rows, const std::string& name) {
+    // creates the type of the necessary size
+    constexpr size_t binary_size = sizeof(PODType) * array_size;
+    auto fixed_size_type = KATANA_CHECKED_CONTEXT(
+        arrow::FixedSizeBinaryType::Make(binary_size),
+        "failed to make fixed size type of size {}", binary_size);
+
+    arrow::FixedSizeBinaryBuilder fixed_sized_binary_builder(fixed_size_type);
+    KATANA_CHECKED(fixed_sized_binary_builder.AppendEmptyValues(num_rows));
+
+    std::shared_ptr<arrow::Array> array_of_fixed_size_binaries =
+        KATANA_CHECKED_CONTEXT(
+            fixed_sized_binary_builder.Finish(),
+            "failed to finish fixed size binary builder");
+
+    return arrow::Table::Make(
+        arrow::schema({arrow::field(name, fixed_size_type)}),
+        {std::move(array_of_fixed_size_binaries)});
   }
 };
 

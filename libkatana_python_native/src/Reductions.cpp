@@ -25,6 +25,8 @@ struct ForReduceMax {
   using type = katana::GReduceMax<T>;
 };
 
+// The following two structs allow GReduceLogicalOr/And to be passed to
+// ReducibleFunctor despite not being templated.
 struct ForReduceLogicalOr {
   template <typename T>
   using type = katana::GReduceLogicalOr;
@@ -85,6 +87,9 @@ katana::python::InitReductions(py::module_& m) {
       m, "ReduceMax", ReducibleFunctor<ForReduceMax>());
   katana::InstantiateForStandardTypes(
       m, "ReduceMin", ReducibleFunctor<ForReduceMin>());
+  // These calls are complex because they would usually be made from the
+  // template above. However, it's better than duplicating the implementation of
+  // ReducibleFunctor.
   ReducibleFunctor<ForReduceLogicalOr>().operator()<bool>(m, "ReduceOr");
   ReducibleFunctor<ForReduceLogicalAnd>().operator()<bool>(m, "ReduceAnd");
 }

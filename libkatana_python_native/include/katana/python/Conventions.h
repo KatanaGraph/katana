@@ -9,6 +9,9 @@ namespace katana {
 
 namespace detail {
 
+// In these classes, the empty implementations are the default cases used when
+// the class T does *not* have the method being checked for.
+
 /// DefRepr will def `__repr__` based on `ToString` if it is available.
 template <typename T, typename Enable = void>
 struct DefRepr {
@@ -22,7 +25,8 @@ struct DefRepr<T, std::void_t<decltype(std::declval<T>().ToString())>> {
   }
 };
 
-/// DefEqualsEquals will def `__eq__` based on `operator==` if it is available.
+/// DefEqualsEquals will def ``__eq__`` (Python ``==``) based on operator==() if
+/// it is available.
 template <typename T, typename Enable = void>
 struct DefEqualsEquals {
   void operator()(pybind11::class_<T>& cls [[maybe_unused]]) {}
@@ -36,8 +40,8 @@ struct DefEqualsEquals<
   }
 };
 
-/// DefEqualsEquals will def `__eq__` based on `Equals` or `operator==` if one
-/// is available (`Equals` is preferred).
+/// DefEqualsEquals will def ``__eq__`` (Python ``==``) based on Equals() or
+/// operator==() if one is available (`Equals` is preferred).
 template <typename T, typename Enable = void>
 struct DefEquals {
   void operator()(pybind11::class_<T>& cls) {
@@ -70,13 +74,15 @@ struct DefCopy<T, std::void_t<decltype(T((const T&)std::declval<T>()))>> {
 
 }  // namespace detail
 
-/// Define Python members of cls based on which methods the C++ type T provides.
+/// Define Python members of cls based on which methods the C++ type @p T
+/// provides. If the C++ methods are not available, the Python definitions are
+/// omitted as well. This method can be applied to any type, at worst it will do
+/// nothing.
 ///
 /// This will attempt to define:
-///
-/// @li __repr__
-/// @li __eq__
-/// @li __copy__
+///   - __repr__
+///   - __eq__
+///   - __copy__
 ///
 /// \tparam T The C++ type wrapped by @p cls. Usually inferred.
 /// \param cls The pybind11 class object.

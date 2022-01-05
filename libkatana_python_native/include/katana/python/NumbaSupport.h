@@ -128,6 +128,7 @@ template <typename... Args>
 constexpr DefWithNumbaImpl<Args...> DefWithNumba{};
 
 /// Register a Python class for use from Numba compiled code.
+/// This enables DefWithNumba() to be used on methods of this class.
 ///
 /// This calls `katana.native_interfacing.numba_support.register_class`
 template <typename T>

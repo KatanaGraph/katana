@@ -2,7 +2,7 @@ import ctypes
 import logging
 from abc import ABCMeta, abstractmethod
 from functools import lru_cache
-from typing import Union
+from typing import Sequence, Union
 
 import numba.core.ccallback
 import numba.types
@@ -45,6 +45,13 @@ def get_cython_function_address_with_defaults(full_function_name, default_module
 
 
 class NumbaPointerWrapper(metaclass=ABCMeta):
+    """
+    A collection of methods to configure Numba to correctly handle an extension type that can provide a raw pointer
+    to some underlying native object.
+
+    This class is used from Numba wrappers in pybind11 and Cython.
+    """
+
     def __init__(self, orig_typ, override_module_name=None):
         _logger.debug("NumbaPointerWrapper: %r, %r", orig_typ, override_module_name)
         Type = self._build_typing(orig_typ)
@@ -87,7 +94,29 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
 
         return Type
 
-    def register_method(self, func_name, typ, cython_func_name=None, addr=None, dtype_arguments=None, data=None):
+    def register_method(
+        self,
+        func_name: str,
+        typ,
+        cython_func_name: str = None,
+        addr: int = None,
+        dtype_arguments: Sequence[bool] = None,
+        data: int = None,
+    ):
+        """
+        Add a Numba callable Method to the type represented by self.
+
+        This is called from `katana.native_interfacing.numba_support.register_method`.
+
+        :param func_name: The name of the method.
+        :param typ: The type of the method, with :py:data:`~ctypes.c_void_p` used for object pointers.
+        :type typ: `ctypes` type
+        :param cython_func_name: Deprecated. Used for Cython sanity checks.
+        :param addr: The address of the function implementing the method. It must have a type matching ``typ``.
+        :param dtype_arguments: A sequence of `bool` specifying if each argument's type is defined by the dtype
+            associated with the runtime value.
+        :param data: An opaque value passed to the implementation (``addr``) as the first argument.
+        """
         addr_found = None
         if cython_func_name:
             addr_found = get_cython_function_address_with_defaults(
@@ -99,9 +128,11 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
 
         if dtype_arguments is None:
             dtype_arguments = [False] * (len(func.argtypes) - 1 - (1 if data else 0))
-        # if not isinstance(dtype_arguments, list) or len(dtype_arguments) != len(func.argtypes):
-        #     raise ValueError("dtype_arguments must have one element per argument of the function: "
-        #         f"{func_name} ({typ}, {dtype_arguments})")
+        if not isinstance(dtype_arguments, Sequence) or len(dtype_arguments) != len(func.argtypes):
+            raise ValueError(
+                "dtype_arguments must have one element per argument of the function: "
+                f"{func_name} ({typ}, {dtype_arguments})"
+            )
 
         _logger.debug(
             "%r.register_method: %r, %r: %r%r, %x, %r",

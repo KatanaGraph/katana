@@ -629,7 +629,7 @@ public:
 
     katana::do_all(katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
       clusters_orig[n] =
-          graph_curr.template GetData<CurrentCommunityID>(clusters_orig[n]);
+          graph_curr_tmp.template GetData<CurrentCommunityID>(clusters_orig[n]);
     });
 
     return katana::ResultSuccess();

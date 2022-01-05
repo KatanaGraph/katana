@@ -8,6 +8,8 @@
 
 namespace katana {
 
+namespace detail {
+
 // TODO(amp): Use std::remove_cvref_t when/if we are only supporting C++20.
 template <typename T>
 using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -130,13 +132,15 @@ public:
   }
 };
 
+}  // namespace detail
+
 /// Declare a method or function to be called from Numba and Python.
 ///
 /// This should be called the same way `pybind11`'s `def` function is called.
 ///
 /// \tparam Args The argument types of the function.
 template <typename... Args>
-constexpr DefWithNumbaImpl<Args...> DefWithNumba{};
+constexpr detail::DefWithNumbaImpl<Args...> DefWithNumba{};
 
 /// Register a Python class for use from Numba compiled code.
 /// This enables DefWithNumba() to be used on methods of this class.

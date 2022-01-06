@@ -23,7 +23,6 @@ endif ()
 set(KATANA_USE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
 set(KATANA_USE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
 set(KATANA_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fail")
-set(KATANA_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
 set(KATANA_USE_COVERAGE OFF CACHE BOOL "Add instrumentation (used for code coverage collection) to binaries.")
 set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
 set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
@@ -378,19 +377,7 @@ function(set_common_katana_library_options)
 endfunction ()
 
 ###### Test Inputs ######
-
-if (KATANA_GRAPH_LOCATION)
-  set(BASEINPUT "${KATANA_GRAPH_LOCATION}")
-  set(BASE_VERIFICATION "${KATANA_GRAPH_LOCATION}")
-  set(KATANA_USE_INPUTS OFF)
-  message(STATUS "Using graph input and verification logs location ${KATANA_GRAPH_LOCATION}")
-else ()
-  set(BASEINPUT "${PROJECT_BINARY_DIR}/inputs/current")
-  set(BASE_VERIFICATION "${PROJECT_BINARY_DIR}/inputs/current")
-  set(KATANA_USE_INPUTS ON)
-endif ()
-# Set a common graph location for any nested projects.
-set(KATANA_GRAPH_LOCATION ${BASEINPUT})
+include(TestDatasets)
 
 ###### Documentation ######
 

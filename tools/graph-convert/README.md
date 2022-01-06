@@ -11,7 +11,7 @@ GraphML
 GraphML is an xml format for representing graphs and property graphs
 A good overview of GraphML can be found at https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwjZhs6VyOHqAhVICKwKHeFnDfcQFjAFegQIBhAB&url=http%3A%2F%2Fcs.brown.edu%2Fpeople%2Frtamassi%2Fgdhandbook%2Fchapters%2Fgraphml.pdf&usg=AOvVaw2F0RI4v5jWb4auIb5eZEh2
 
-An example GraphML file is available at test-inputs/array_test.graphml
+An example GraphML file is available at external/test-datasets/misc_datasets/array_test.graphml
 
 For practical use of GraphML with the converter:
 

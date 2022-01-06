@@ -129,6 +129,7 @@ jobs:
       run: |
         . .github/workflows/activate_miniconda.sh
         export KATANA_VERSION=$(scripts/version show --pep440)
+        export KATANA_TEST_DATASETS=$(realpath external/test-datasets)
         cd metagraph-plugin/conda_recipe
         conda mambabuild . -c conda-forge -c metagraph -c file://$HOME/build/ --output-folder $HOME/build/
 

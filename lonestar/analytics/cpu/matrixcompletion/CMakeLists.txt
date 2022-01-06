@@ -13,15 +13,15 @@ if(Eigen_FOUND)
 endif()
 
 if (Eigen_FOUND)
-  add_test_scale(small-sync matrixcompletion-cpu -algo=syncALS -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
+  add_test_scale(small-sync matrixcompletion-cpu -algo=syncALS -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${MISC_TEST_DATASETS}/weighted/bipartite/Epinions_dataset.gr")
 
-  add_test_scale(small-simple matrixcompletion-cpu -algo=simpleALS -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
+  add_test_scale(small-simple matrixcompletion-cpu -algo=simpleALS -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${MISC_TEST_DATASETS}/weighted/bipartite/Epinions_dataset.gr")
 endif()
 
-add_test_scale(small-edge matrixcompletion-cpu INPUT Epinions_dataset INPUT_URI "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr" NOT_QUICK NO_VERIFY -algo=sgdBlockEdge -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit)
+add_test_scale(small-edge matrixcompletion-cpu INPUT Epinions_dataset INPUT_URI "${MISC_TEST_DATASETS}/weighted/bipartite/Epinions_dataset.gr" NOT_QUICK NO_VERIFY -algo=sgdBlockEdge -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit)
 
-add_test_scale(small-jump matrixcompletion-cpu INPUT Epinions_dataset INPUT_URI "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr"  NOT_QUICK NO_VERIFY -algo=sgdBlockJump -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit)
+add_test_scale(small-jump matrixcompletion-cpu INPUT Epinions_dataset INPUT_URI "${MISC_TEST_DATASETS}/weighted/bipartite/Epinions_dataset.gr"  NOT_QUICK NO_VERIFY -algo=sgdBlockJump -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit)
 
-add_test_scale(small-byitems matrixcompletion-cpu INPUT Epinions_dataset INPUT_URI "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr"  NOT_QUICK NO_VERIFY -algo=sgdByItems -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit)
+add_test_scale(small-byitems matrixcompletion-cpu INPUT Epinions_dataset INPUT_URI "${MISC_TEST_DATASETS}/weighted/bipartite/Epinions_dataset.gr"  NOT_QUICK NO_VERIFY -algo=sgdByItems -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit)
 
-add_test_scale(small-byedges matrixcompletion-cpu INPUT Epinions_dataset INPUT_URI "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr"  NOT_QUICK NO_VERIFY -algo=sgdByEdges -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit)
+add_test_scale(small-byedges matrixcompletion-cpu INPUT Epinions_dataset INPUT_URI "${MISC_TEST_DATASETS}/weighted/bipartite/Epinions_dataset.gr"  NOT_QUICK NO_VERIFY -algo=sgdByEdges -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit)

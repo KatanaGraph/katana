@@ -175,11 +175,11 @@ def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = 
     .. code-block:: python
 
         import katana.local
-        from katana.example_data import get_input
+        from katana.example_data import get_rdg_dataset
         from katana.local import Graph
         katana.local.initialize()
 
-        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_rdg_dataset("ldbc_003"))
         from katana.analytics import bfs, BfsStatistics
         property_name="bfs"
         start_node = 0

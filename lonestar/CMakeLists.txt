@@ -22,7 +22,7 @@ function(add_test_scale type app)
   cmake_parse_arguments(X "${no_value_options}" "${single_value_options}" "${multi_value_options}" ${ARGN})
 
   stem_app(${app} app_id)
-  set(verification_log ${BASE_VERIFICATION}/verify/${app_id}.${X_INPUT})
+  set(verification_log ${MISC_TEST_DATASETS}/verify/${app_id}.${X_INPUT})
 
   set(threads "${KATANA_NUM_TEST_THREADS}")
   if (KATANA_NUM_TEST_THREADS GREATER 1)

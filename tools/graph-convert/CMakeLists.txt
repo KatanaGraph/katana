@@ -11,7 +11,7 @@ function(compare_with_sample test_arg compare_arg input expected)
   get_filename_component(base_input ${input} NAME)
 
   add_test(NAME create${suffix}
-    COMMAND graph-convert ${test_arg} ${CMAKE_CURRENT_SOURCE_DIR}/${input} ${base_input}.test
+    COMMAND graph-convert ${test_arg} ${input} ${base_input}.test
   )
 
   add_test(NAME convert${suffix}
@@ -19,7 +19,7 @@ function(compare_with_sample test_arg compare_arg input expected)
   )
 
   add_test(NAME compare${suffix}
-    COMMAND ${CMAKE_COMMAND} -E compare_files ${base_input}.compare ${CMAKE_CURRENT_SOURCE_DIR}/${expected}
+    COMMAND ${CMAKE_COMMAND} -E compare_files ${base_input}.compare ${expected}
   )
 
   set_tests_properties(create${suffix}
@@ -39,9 +39,11 @@ function(compare_with_sample test_arg compare_arg input expected)
       FIXTURES_REQUIRED convert${suffix})
 endfunction()
 
-compare_with_sample(-edgelist2gr -gr2edgelist test-inputs/with-blank-lines.edgelist test-inputs/with-blank-lines.edgelist.expected)
-compare_with_sample(-csv2gr -gr2edgelist test-inputs/sample.csv test-inputs/with-blank-lines.edgelist.expected)
-compare_with_sample(-edgelist2gr -gr2edgelist test-inputs/with-comments.edgelist test-inputs/with-comments.edgelist.expected)
+set(inputs ${MISC_TEST_DATASETS}/graph-convert)
+
+compare_with_sample(-edgelist2gr -gr2edgelist ${inputs}/with-blank-lines.edgelist ${inputs}/with-blank-lines.edgelist.expected)
+compare_with_sample(-csv2gr -gr2edgelist ${inputs}/sample.csv ${inputs}/with-blank-lines.edgelist.expected)
+compare_with_sample(-edgelist2gr -gr2edgelist ${inputs}/with-comments.edgelist ${inputs}/with-comments.edgelist.expected)
 
 add_executable(graph-convert-huge graph-convert-huge.cpp)
 target_link_libraries(graph-convert-huge katana_graph LLVMSupport)

@@ -190,11 +190,11 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
     .. code-block:: python
 
         import katana.local
-        from katana.example_data import get_input
+        from katana.example_data import get_rdg_dataset
         from katana.local import Graph
         katana.local.initialize()
 
-        graph = Graph(get_input("propertygraphs/ldbc_003"))
+        graph = Graph(get_rdg_dataset("ldbc_003"))
         from katana.analytics import louvain_clustering, LouvainClusteringStatistics
         louvain_clustering(graph, "value", "output")
         stats = LouvainClusteringStatistics(graph, "value", "output")

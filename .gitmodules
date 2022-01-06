@@ -1,0 +1,3 @@
+[submodule "external/test-datasets"]
+	path = external/test-datasets
+	url = https://github.com/KatanaGraph/test-datasets.git

@@ -6,7 +6,7 @@ from pyarrow import Schema, table
 from pytest import approx, raises
 
 from katana import GaloisError, set_busy_wait
-from katana.example_data import get_input
+from katana.example_data import get_rdg_dataset
 from katana.local import Graph
 from katana.local.analytics import (
     BetweennessCentralityPlan,
@@ -246,7 +246,7 @@ def test_betweenness_centrality_level(graph: Graph):
 
 
 def test_triangle_count():
-    graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat15_cleaned_symmetric"))
     original_first_edge_list = [graph.get_edge_dest(e) for e in graph.edge_ids(0)]
     n = triangle_count(graph)
     assert n == 282617
@@ -265,7 +265,7 @@ def test_triangle_count():
 
 
 def test_triangle_count_presorted():
-    graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat15_cleaned_symmetric"))
     sort_nodes_by_degree(graph)
     sort_all_edges_by_dest(graph)
     n = triangle_count(graph, TriangleCountPlan.node_iteration(relabeling=False, edges_sorted=True))
@@ -273,7 +273,7 @@ def test_triangle_count_presorted():
 
 
 def test_independent_set():
-    graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
     independent_set(graph, "output")
 
@@ -289,7 +289,7 @@ def test_independent_set():
 
 
 def test_connected_components():
-    graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
     connected_components(graph, "output")
 
@@ -304,7 +304,7 @@ def test_connected_components():
 
 
 def test_k_core():
-    graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
     k_core(graph, 10, "output")
 
@@ -316,7 +316,7 @@ def test_k_core():
 
 
 def test_k_truss():
-    graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
     k_truss(graph, 10, "output")
 
@@ -328,7 +328,7 @@ def test_k_truss():
 
 
 def test_k_truss_fail():
-    graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
     with raises(GaloisError):
         k_truss(graph, 2, "output")
@@ -338,7 +338,7 @@ def test_k_truss_fail():
 
 
 def test_louvain_clustering():
-    graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
     louvain_clustering(graph, "value", "output")
 
@@ -353,7 +353,7 @@ def test_louvain_clustering():
 
 
 def test_leiden_clustering():
-    graph = Graph(get_input("propertygraphs/rmat10_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
     leiden_clustering(graph, "value", "output")
 
@@ -368,7 +368,7 @@ def test_leiden_clustering():
 
 
 def test_local_clustering_coefficient():
-    graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat15_cleaned_symmetric"))
 
     local_clustering_coefficient(graph, "output")
     graph: Graph
@@ -379,7 +379,7 @@ def test_local_clustering_coefficient():
 
 
 def test_subgraph_extraction():
-    graph = Graph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    graph = Graph(get_rdg_dataset("rmat15_cleaned_symmetric"))
     sort_all_edges_by_dest(graph)
     nodes = [1, 3, 11, 120]
 

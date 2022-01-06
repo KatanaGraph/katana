@@ -26,6 +26,10 @@ def find_default_repo_root():
     return open_repo_root
 
 
+def find_test_datasets_root(repo: Path) -> Path:
+    return repo / "external" / "test-datasets"
+
+
 def has_mambabuild():
     r = subprocess.call(["conda", "mambabuild"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return r != 127
@@ -100,6 +104,7 @@ def build_conda(force_conda, render, repo, use_pythonpath, output_folder):
         os.environ["KATANA_VERSION"] = katana_version.version.format_version_pep440(
             katana_version.version.get_version()
         )
+        os.environ["KATANA_TEST_DATASETS"] = str(find_test_datasets_root(repo))
         if not use_pythonpath:
             # Clear python path because if it is set, it will leak into conda build potentially causing issues.
             os.environ["PYTHONPATH"] = ""

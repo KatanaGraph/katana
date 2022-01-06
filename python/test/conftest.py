@@ -4,7 +4,7 @@ import pytest
 
 import katana.local
 from katana import set_active_threads
-from katana.example_data import get_input
+from katana.example_data import get_rdg_dataset
 from katana.local import Graph
 
 katana.local.initialize()
@@ -23,7 +23,7 @@ def pytest_runtest_setup(item: "pytest.hookspec.Item"):
 
 @pytest.fixture
 def graph():
-    g = Graph(get_input("propertygraphs/ldbc_003"))
+    g = Graph(get_rdg_dataset("ldbc_003"))
     return g
 
 

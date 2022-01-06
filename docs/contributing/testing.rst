@@ -4,17 +4,6 @@
 Testing
 =======
 
-Many tests require sample graphs that are too big to keep in this repository.
-You can get them with ``make input``.
-
-If you need to update the inputs, they are referenced as
-https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-vN.tar.gz
-in ``inputs/CMakeLists.txt`` and ``python/katana/exmaple_data.py``.
-``vN`` is a monotonically increasing version number.
-You can use a command ``inputs/update_inputs.sh`` to create
-create a new input collection. After creating the tar file, you will need to
-upload the file to the S3 bucket.
-
 Tests are just executables created by the CMake ``add_test`` command.  A test
 succeeds if it can be run and it returns a zero exit value; otherwise, the test
 execution is considered a failure. A test executable itself may contain many
@@ -31,6 +20,74 @@ Labels:
   tests are run as part of our continuous integration pipeline.
 
 - **gpu**: Tests that require a GPU.
+
+
+Test Inputs
+===========
+
+Many tests require sample graphs that are too big to keep in this repository.
+Test datasets are located in the `katana/external/test-datasets` submodule, which is
+the https://github.com/KatanaGraph/test-datasets git repo
+
+If you need to update one of the test datasets, first make a commit to that repo,
+then ensure you have your changes checked out in `katana/external/test-datasets`
+Include `katana/external/test-datasets` in a commit to your katana repo
+Finally, you must also update the `DATASETS_SHA` in
+`python/katana/example_data.py` so that notebooks, CI, and users without the
+source available have access to the correct test datasets.
+
+If you are new to git submodules, this documentation may be helpful:
+https://git-scm.com/book/en/v2/Git-Tools-Submodules
+
+Tests using test inputs should make a temporary copy of that input to avoid
+dirtying the inputs for other tests.
+
+Using inputs with CMake tests
+-----------------------------
+
+To avoid hardcoding the path to an input in tests
+`katana/cmake/Modules/TestDatasets.cmake` defines variables for common test inputs,
+as well as functions for managing RDG test inputs
+
+For csv and miscellaneous test inputs `CSV_TEST_DATASETS` and `MISC_TEST_DATASETS` can be used
+instead of hard coding their exact location
+
+For RDG test inputs, the `RDG_*` variables can be used to get the latest storage_format_version
+of commonly used RDGs. If you don't know if you need a specific storage_format_version RDG, do not specify it
+so that the latest is always used.
+
+Two additional functions are available for locating RDG test inputs if they do not already have a `RDG_*` variable:
+ - `rdg_dataset()`
+ - `rdg_dataset_at_version()`
+
+
+Using inputs with python tests and notebooks
+--------------------------------------------
+
+To avoid hardcoding the path or url to an input in tests, the enterprise and open katana repos provide
+test input helper functions.
+
+For tests located in the enterprise repo, `katana-enterprise/python/test/datasets.py` provides the following functions
+  - `rdg_dataset_url()`
+  - `csv_dataset_url()`
+  - `misc_dataset_url()`
+
+These take the name of the desired input and a datasource and provide a `file://`, `gs://`, or `aws://` url
+
+Common inputs like `LDBC003` and `Movies` also have dataset classes defined for them which can be used.
+
+For tests requiring only local inputs, or only testing the open source katana repo
+`katana/python/katana/example_data.py` provides the following functions
+which take the name of the test input, and return its path. These will only work for
+local test inputs, not inputs located on gcp/aws.
+
+  - `get_misc_dataset()`
+  - `get_csv_dataset()`
+  - `get_rdg_dataset()`
+
+all take an optional `as_url=True/False` which will cause the function to return
+a `file://` url instead of a standard unix/posix path
+
 
 Running
 =======

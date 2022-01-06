@@ -12,7 +12,9 @@ import pytz
 from pyarrow import Schema
 
 import katana.local
+from katana.example_data import _get_test_datasets_directory
 from katana.local import Graph, analytics
+from katana.local.rdg_storage_format_version import get_latest_storage_format_version
 
 # TODO(giorgi): This script needs to be tested in CI.
 PathExt = namedtuple("PathExt", ["warn_prefix", "path_ext"])
@@ -433,7 +435,11 @@ def _run_all_gap(args):
 
         # Select the routine to run
         routine_to_run = routine_name_args_mappings[args.application]
-        graph_path = f"{args.input_dir}/{routine_to_run.path.path_ext}"
+        # TODO: this logic should be reworked to use example_data.get_rdg_dataset()
+        graph_path = (
+            f"{args.input_dir}/{routine_to_run.path.path_ext}/"
+            f"storage_format_version_{get_latest_storage_format_version()}"
+        )
         if not os.path.exists(graph_path):
             print(f"{routine_to_run.path.warn_prefix} {main_warn} {graph_path}")
 
@@ -453,7 +459,10 @@ def _run_all_gap(args):
         for k in routine_name_args_mappings:
 
             routine_to_run = routine_name_args_mappings[k]
-            graph_path = f"{args.input_dir}/{routine_to_run.path.path_ext}"
+            graph_path = (
+                f"{args.input_dir}/{routine_to_run.path.path_ext}/"
+                f"storage_format_version_{get_latest_storage_format_version()}"
+            )
             if not os.path.exists(graph_path):
                 print(f"{routine_to_run.path.warn_prefix} {main_warn} {graph_path}")
 

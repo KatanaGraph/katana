@@ -6,6 +6,7 @@ import numpy as np
 import pandas
 import pytest
 
+from katana.example_data import get_misc_dataset
 from katana.local import Graph
 from katana.local.import_data import (
     from_adjacency_matrix,
@@ -127,14 +128,14 @@ def test_dataframe():
 
 @pytest.mark.required_env("KATANA_SOURCE_DIR")
 def test_load_graphml():
-    input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
+    input_file = Path(get_misc_dataset("graph-convert/movies.graphml"))
     pg = from_graphml(input_file)
     assert pg.get_node_property(0)[1].as_py() == "Keanu Reeves"
 
 
 @pytest.mark.required_env("KATANA_SOURCE_DIR")
 def test_load_graphml_write():
-    input_file = Path(os.environ["KATANA_SOURCE_DIR"]) / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
+    input_file = Path(get_misc_dataset("graph-convert/movies.graphml"))
     pg = from_graphml(input_file)
     with TemporaryDirectory() as tmpdir:
         pg.write(tmpdir)

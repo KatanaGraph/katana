@@ -39,22 +39,21 @@ struct KCoreNodeAlive : public katana::PODProperty<uint32_t> {};
 using NodeData = std::tuple<KCoreNodeCurrentDegree>;
 using EdgeData = std::tuple<>;
 
-using Graph = katana::TypedPropertyGraphView<
-    katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
-using GNode = Graph::Node;
 /**
  * Initialize degree fields in graph with current degree. Since symmetric,
  * out edge count is equivalent to in-edge count.
  *
  * @param graph Graph to initialize degrees in
  */
+template <typename GraphTy>
 void
-DegreeCounting(Graph* graph) {
+DegreeCounting(GraphTy* graph) {
+  using GNode = typename GraphTy::Node;
   katana::do_all(
       katana::iterate(*graph),
       [&](const GNode& node) {
         auto& node_current_degree =
-            graph->GetData<KCoreNodeCurrentDegree>(node);
+            graph->template GetData<KCoreNodeCurrentDegree>(node);
         node_current_degree.store(graph->degree(node));
       },
       katana::loopname("DegreeCounting"), katana::no_stats());
@@ -67,15 +66,18 @@ DegreeCounting(Graph* graph) {
  * @param initial_worklist Empty worklist to be filled with dead nodes.
  * @param k_core_number Each node in the core is expected to have degree <= k_core_number.
  */
+template <typename GraphTy>
 void
 SetupInitialWorklist(
-    const Graph& graph, katana::InsertBag<GNode>& initial_worklist,
+    const GraphTy& graph,
+    katana::InsertBag<typename GraphTy::Node>& initial_worklist,
     uint32_t k_core_number) {
+  using GNode = typename GraphTy::Node;
   katana::do_all(
       katana::iterate(graph),
       [&](const GNode& node) {
         const auto& node_current_degree =
-            graph.GetData<KCoreNodeCurrentDegree>(node);
+            graph.template GetData<KCoreNodeCurrentDegree>(node);
         if (node_current_degree < k_core_number) {
           //! Dead node, add to initial_worklist for processing later.
           initial_worklist.emplace(node);
@@ -92,8 +94,10 @@ SetupInitialWorklist(
  * @param graph Graph to operate on
  * @param k_core_number Each node in the core is expected to have degree <= k_core_number
  */
+template <typename GraphTy>
 void
-SyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
+SyncCascadeKCore(GraphTy* graph, uint32_t k_core_number) {
+  using GNode = typename GraphTy::Node;
   auto current = std::make_unique<katana::InsertBag<GNode>>();
   auto next = std::make_unique<katana::InsertBag<GNode>>();
 
@@ -112,7 +116,7 @@ SyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
           for (auto e : graph->edges(dead_node)) {
             auto dest = graph->edge_dest(e);
             auto& dest_current_degree =
-                graph->GetData<KCoreNodeCurrentDegree>(dest);
+                graph->template GetData<KCoreNodeCurrentDegree>(dest);
             uint32_t old_degree = katana::atomicSub(dest_current_degree, 1u);
 
             if (old_degree == k_core_number) {
@@ -135,8 +139,10 @@ SyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
  * @param graph Graph to operate on
  * @param k_core_number Each node in the core is expected to have degree <= k_core_number.
  */
+template <typename GraphTy>
 void
-AsyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
+AsyncCascadeKCore(GraphTy* graph, uint32_t k_core_number) {
+  using GNode = typename GraphTy::Node;
   katana::InsertBag<GNode> initial_worklist;
   //! Setup worklist.
   SetupInitialWorklist(*graph, initial_worklist, k_core_number);
@@ -148,7 +154,7 @@ AsyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
         for (auto e : graph->edges(dead_node)) {
           auto dest = graph->edge_dest(e);
           auto& dest_current_degree =
-              graph->GetData<KCoreNodeCurrentDegree>(dest);
+              graph->template GetData<KCoreNodeCurrentDegree>(dest);
           uint32_t old_degree = katana::atomicSub(dest_current_degree, 1u);
 
           if (old_degree == k_core_number) {
@@ -170,18 +176,16 @@ AsyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
  * @param graph Graph to operate on
  * @param k_core_number Each node in the core is expected to have degree <= k_core_number.
  */
+template <typename GraphTy>
 katana::Result<void>
-KCoreMarkAliveNodes(
-    katana::TypedPropertyGraph<
-        std::tuple<KCoreNodeAlive, KCoreNodeCurrentDegree>, std::tuple<>>*
-        graph,
-    uint32_t k_core_number) {
+KCoreMarkAliveNodes(GraphTy* graph, uint32_t k_core_number) {
+  using GNode = typename GraphTy::Node;
   katana::do_all(
       katana::iterate(*graph),
       [&](const GNode& node) {
         auto& node_current_degree =
-            graph->GetData<KCoreNodeCurrentDegree>(node);
-        auto& node_flag = graph->GetData<KCoreNodeAlive>(node);
+            graph->template GetData<KCoreNodeCurrentDegree>(node);
+        auto& node_flag = graph->template GetData<KCoreNodeAlive>(node);
         node_flag = 1;
         if (node_current_degree < k_core_number) {
           node_flag = 0;
@@ -191,11 +195,9 @@ KCoreMarkAliveNodes(
   return katana::ResultSuccess();
 }
 
+template <typename GraphTy>
 static katana::Result<void>
-KCoreImpl(
-    // katana::TypedPropertyGraph<
-    //     std::tuple<KCoreNodeCurrentDegree>, std::tuple<>>* graph,
-    Graph* graph, KCorePlan algo, uint32_t k_core_number) {
+KCoreImpl(GraphTy* graph, KCorePlan algo, uint32_t k_core_number) {
   size_t approxNodeData = 4 * (graph->num_nodes() + graph->num_edges());
   katana::EnsurePreallocated(8, approxNodeData);
   katana::ReportPageAllocGuard page_alloc;
@@ -227,7 +229,7 @@ katana::Result<void>
 katana::analytics::KCore(
     katana::PropertyGraph* pg, uint32_t k_core_number,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
-    KCorePlan algo) {
+    const bool& is_symmetric, KCorePlan plan) {
   katana::analytics::TemporaryPropertyGuard temporary_property{
       pg->NodeMutablePropertyView()};
 
@@ -235,11 +237,22 @@ katana::analytics::KCore(
                  std::tuple<KCoreNodeCurrentDegree>>(
       pg, txn_ctx, {temporary_property.name()}));
 
-  Graph graph =
-      KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
+  if (is_symmetric) {
+    using Graph = katana::TypedPropertyGraphView<
+        katana::PropertyGraphViews::Default, NodeData, EdgeData>;
+    Graph graph =
+        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
 
-  KATANA_CHECKED(KCoreImpl(&graph, algo, k_core_number));
+    KATANA_CHECKED(KCoreImpl(&graph, plan, k_core_number));
+  } else {
+    using Graph = katana::TypedPropertyGraphView<
+        katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 
+    Graph graph =
+        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
+
+    KATANA_CHECKED(KCoreImpl(&graph, plan, k_core_number));
+  }
   // Post processing. Mark alive nodes.
   KATANA_CHECKED(
       katana::analytics::ConstructNodeProperties<std::tuple<KCoreNodeAlive>>(
@@ -269,8 +282,10 @@ katana::Result<KCoreStatistics>
 katana::analytics::KCoreStatistics::Compute(
     katana::PropertyGraph* pg, [[maybe_unused]] uint32_t k_core_number,
     const std::string& property_name) {
-  auto pg_result = katana::TypedPropertyGraph<
-      std::tuple<KCoreNodeAlive>, std::tuple<>>::Make(pg, {property_name}, {});
+  using Graph =
+      katana::TypedPropertyGraph<std::tuple<KCoreNodeAlive>, std::tuple<>>;
+  using GNode = Graph::Node;
+  auto pg_result = Graph::Make(pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }

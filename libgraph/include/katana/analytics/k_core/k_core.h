@@ -50,7 +50,7 @@ public:
 KATANA_EXPORT Result<void> KCore(
     PropertyGraph* pg, uint32_t k_core_number,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
-    KCorePlan plan = KCorePlan());
+    const bool& is_symmetric = false, KCorePlan plan = KCorePlan());
 
 KATANA_EXPORT Result<void> KCoreAssertValid(
     PropertyGraph* pg, uint32_t k_core_number,

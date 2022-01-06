@@ -160,7 +160,7 @@ def test_k_core():
     arguments = get_default_args()
     arguments["app"] = "kcore"
     stats = run_single_test(arguments)[0]
-    assert stats.number_of_nodes_in_kcore == 11958
+    assert stats.number_of_nodes_in_kcore == 11959
 
 
 def run_on_all_graphs(arguments):

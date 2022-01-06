@@ -306,13 +306,26 @@ def test_connected_components():
 def test_k_core():
     graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
-    k_core(graph, 10, "output")
+    # Graph is already symmetric. Last bool argument (True)
+    # indicates that.
+    k_core(graph, 10, "output_sym", True)
+
+    stats_sym = KCoreStatistics(graph, 10, "output_sym")
+
+    assert stats_sym.number_of_nodes_in_kcore == 438
+
+    k_core_assert_valid(graph, 10, "output_sym")
+
+    # Graph is not symmetric. Last bool argument (False)
+    # indicates that. k_core routine will create
+    # undirected view for computation.
+    graph = Graph(get_rdg_dataset("rmat10"))
+
+    k_core(graph, 10, "output", False)
 
     stats = KCoreStatistics(graph, 10, "output")
 
-    assert stats.number_of_nodes_in_kcore == 438
-
-    k_core_assert_valid(graph, 10, "output")
+    assert stats.number_of_nodes_in_kcore == stats_sym.number_of_nodes_in_kcore
 
 
 def test_k_truss():

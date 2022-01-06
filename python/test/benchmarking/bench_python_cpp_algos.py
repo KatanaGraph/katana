@@ -420,12 +420,12 @@ def _run_all_gap(args):
     routine_name_args_mappings = {
         "tc": RoutinePaths(PathExt("Symmetric clean", input["symmetric_clean_input"]), True),
         "cc": RoutinePaths(PathExt("Symmetric", input["symmetric_input"]), True),
-        "kcore": RoutinePaths(PathExt("Symmetric", input["symmetric_input"]), True),
+        "kcore": RoutinePaths(PathExt("Symmetric", input["name"]), True),
         "bfs": RoutinePaths(PathExt("", input["name"]), False),
         "sssp": RoutinePaths(PathExt("", input["name"]), False),
         "jaccard": RoutinePaths(PathExt("", input["name"]), False),
         "bc": RoutinePaths(PathExt("", input["name"]), False),
-        "louvain": RoutinePaths(PathExt("Symmetric", input["name"]), False),
+        "louvain": RoutinePaths(PathExt("Symmetric", input["symmetric_input"]), False),
         "pagerank": RoutinePaths(PathExt("", input["transpose_input"]), False),
     }
     start_time = time.time()

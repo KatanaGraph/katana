@@ -342,7 +342,7 @@ struct PrioAlgo {
     katana::GReduceLogicalOr unmatched;
     katana::PerThreadStorage<std::mt19937*> generator;
 
-    float avg_degree = graph->num_edges() / graph->size();
+    float avg_degree = graph->NumEdges() / graph->size();
     uint8_t in = ~1;
     float scale_avg = ((in / 2) - 1) * avg_degree;
 
@@ -439,7 +439,7 @@ struct EdgeTiledPrioAlgo {
     katana::InsertBag<EdgeTile> works;
     constexpr int kEdgeTileSize = 64;
 
-    float avg_degree = graph->num_edges() / float(graph->size());
+    float avg_degree = graph->NumEdges() / float(graph->size());
     uint8_t in = ~1;
     float scale_avg = ((in / 2) - 1) * avg_degree;
 

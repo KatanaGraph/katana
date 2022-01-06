@@ -332,7 +332,7 @@ main(int argc, char** argv) {
   Graph graph = pg_result.value();
 
   katana::gPrint(
-      "Read ", graph.num_nodes(), " nodes, ", graph.num_edges(), " edges\n");
+      "Read ", graph.NumNodes(), " nodes, ", graph.NumEdges(), " edges\n");
 
   if (startNode >= graph.size() || reportNode >= graph.size()) {
     KATANA_LOG_ERROR(

@@ -435,7 +435,7 @@ std::vector<uint32_t>
 determineUnitRangesFromGraph(
     GraphTy& graph, uint32_t unitsToSplit, uint32_t nodeAlpha = 0) {
   // uint32_t totalNodes = graph.size();
-  uint32_t totalNodes = graph.topology().num_nodes();
+  uint32_t totalNodes = graph.topology().NumNodes();
 
   std::vector<uint32_t> returnRanges;
   returnRanges.resize(unitsToSplit + 1);

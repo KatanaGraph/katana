@@ -419,10 +419,10 @@ public:
     bool use_block = false;
     if (use_block) {
       node_data.allocateBlocked(graph.size());
-      edge_data.allocateBlocked(graph.num_edges());
+      edge_data.allocateBlocked(graph.NumEdges());
     } else {
       node_data.allocateInterleaved(graph.size());
-      edge_data.allocateInterleaved(graph.num_edges());
+      edge_data.allocateInterleaved(graph.NumEdges());
     }
 
     katana::do_all(katana::iterate(graph), [&](const typename Graph::Node& n) {

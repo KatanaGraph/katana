@@ -139,7 +139,7 @@ OutputResults(
   }
   auto results = r.value();
   KATANA_LOG_DEBUG_ASSERT(
-      uint64_t(results->length()) == pg->topology().num_nodes());
+      uint64_t(results->length()) == pg->topology().NumNodes());
 
   writeOutput(
       outputLocation, results->raw_values(), results->length(),
@@ -164,10 +164,10 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
-            << pg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
+            << pg->topology().NumEdges() << " edges\n";
 
-  if (reportNode >= pg->topology().num_nodes()) {
+  if (reportNode >= pg->topology().NumNodes()) {
     KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
@@ -239,7 +239,7 @@ main(int argc, char** argv) {
   }
 
   for (auto startNode : startNodes) {
-    if (startNode >= pg->topology().num_nodes()) {
+    if (startNode >= pg->topology().NumNodes()) {
       KATANA_LOG_FATAL("failed to set source: {}", startNode);
     }
 
@@ -260,11 +260,11 @@ main(int argc, char** argv) {
     stats.Print();
 
     if (!skipVerify) {
-      if (stats.n_reached_nodes < pg->topology().num_nodes()) {
+      if (stats.n_reached_nodes < pg->topology().NumNodes()) {
         KATANA_LOG_WARN(
             "{} unvisited nodes; this is an error if the graph is strongly "
             "connected",
-            pg->topology().num_nodes() - stats.n_reached_nodes);
+            pg->topology().NumNodes() - stats.n_reached_nodes);
       }
       if (auto r = SsspAssertValid(
               pg.get(), startNode, edge_property_name, node_distance_prop);

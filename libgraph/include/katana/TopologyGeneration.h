@@ -119,12 +119,12 @@ AddGraphProperties(
     // For property values
     auto builder = generator.MakeBuilder();
     if constexpr (is_node) {
-      KATANA_CHECKED(builder->Reserve(pg->num_nodes()));
+      KATANA_CHECKED(builder->Reserve(pg->NumNodes()));
       for (Node n : pg->all_nodes()) {
         KATANA_CHECKED(builder->Append(generator(n)));
       }
     } else {
-      KATANA_CHECKED(builder->Reserve(pg->num_edges()));
+      KATANA_CHECKED(builder->Reserve(pg->NumEdges()));
       for (Edge e : pg->all_edges()) {
         KATANA_CHECKED(builder->Append(generator(e)));
       }

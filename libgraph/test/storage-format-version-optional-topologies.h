@@ -8,8 +8,8 @@
 template <typename View>
 void
 verify_view(View generated_view, View loaded_view) {
-  KATANA_LOG_ASSERT(generated_view.num_edges() == loaded_view.num_edges());
-  KATANA_LOG_ASSERT(generated_view.num_nodes() == loaded_view.num_nodes());
+  KATANA_LOG_ASSERT(generated_view.NumEdges() == loaded_view.NumEdges());
+  KATANA_LOG_ASSERT(generated_view.NumNodes() == loaded_view.NumNodes());
 
   auto beg_edge = katana::make_zip_iterator(
       generated_view.all_edges().begin(), loaded_view.all_edges().begin());

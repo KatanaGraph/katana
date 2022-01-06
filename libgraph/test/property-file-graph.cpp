@@ -433,8 +433,8 @@ TestTopologyAccess() {
   auto g = MakeFileGraph<uint32_t>(10, 1, &policy, &txn_ctx);
 
   KATANA_LOG_ASSERT(g->size() == 10);
-  KATANA_LOG_ASSERT(g->num_nodes() == 10);
-  KATANA_LOG_ASSERT(g->num_edges() == 30);
+  KATANA_LOG_ASSERT(g->NumNodes() == 10);
+  KATANA_LOG_ASSERT(g->NumEdges() == 30);
 
   for (int i = 0; i < 10; ++i) {
     KATANA_LOG_ASSERT(

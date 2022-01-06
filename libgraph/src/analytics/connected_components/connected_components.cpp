@@ -1128,8 +1128,7 @@ ConnectedComponentsWithWrap(
     katana::PropertyGraph* pg, std::string output_property_name,
     katana::TxnContext* txn_ctx, ConnectedComponentsPlan plan) {
   katana::EnsurePreallocated(
-      2,
-      pg->topology().num_nodes() * sizeof(typename Algorithm::NodeComponent));
+      2, pg->topology().NumNodes() * sizeof(typename Algorithm::NodeComponent));
   katana::ReportPageAllocGuard page_alloc;
 
   if (auto r = ConstructNodeProperties<

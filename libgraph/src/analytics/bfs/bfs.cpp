@@ -235,8 +235,8 @@ SynchronousDirectOpt(
   katana::DynamicBitset front_bitset;
   katana::DynamicBitset next_bitset;
 
-  uint32_t num_nodes = bidir_view.num_nodes();
-  uint64_t num_edges = bidir_view.num_edges();
+  uint32_t num_nodes = bidir_view.NumNodes();
+  uint64_t num_edges = bidir_view.NumEdges();
 
   front_bitset.resize(num_nodes);
   next_bitset.resize(num_nodes);
@@ -379,7 +379,7 @@ RunAlgo(
   case BfsPlan::kSynchronousDirectOpt: {
     // Set up node data
     katana::NUMAArray<GNode> node_data;
-    node_data.allocateInterleaved(graph->num_nodes());
+    node_data.allocateInterleaved(graph->NumNodes());
     InitNodeDataVec(BfsImplementation::kDistanceInfinity, &node_data);
 
     exec_time.start();
@@ -394,8 +394,8 @@ RunAlgo(
   case BfsPlan::kAsynchronous: {
     katana::NUMAArray<GNode> node_parent;
     katana::NUMAArray<Dist> node_dist;
-    node_parent.allocateInterleaved(graph->num_nodes());
-    node_dist.allocateInterleaved(graph->num_nodes());
+    node_parent.allocateInterleaved(graph->NumNodes());
+    node_dist.allocateInterleaved(graph->NumNodes());
 
     InitNodeDataVec(BfsImplementation::kDistanceInfinity, &node_parent);
     InitNodeDataVec(BfsImplementation::kDistanceInfinity, &node_dist);
@@ -422,7 +422,7 @@ katana::Result<void>
 BfsImpl(
     Graph* graph, const BiDirGraphView& bidir_view, size_t start_node,
     BfsPlan algo) {
-  if (start_node >= graph->num_nodes()) {
+  if (start_node >= graph->NumNodes()) {
     return katana::ErrorCode::InvalidArgument;
   }
 
@@ -437,7 +437,7 @@ BfsImpl(
   std::advance(it, start_node);
   GNode source = *it;
 
-  size_t approxNodeData = 4 * (graph->num_nodes() + graph->num_edges());
+  size_t approxNodeData = 4 * (graph->NumNodes() + graph->NumEdges());
   katana::EnsurePreallocated(8, approxNodeData);
   katana::ReportPageAllocGuard page_alloc;
 
@@ -618,7 +618,7 @@ katana::analytics::BfsAssertValid(
       KATANA_CHECKED(BiDirGraphView::Make(pg, {output_property_name}, {}));
 
   katana::NUMAArray<Dist> levels;
-  levels.allocateInterleaved(graph.num_nodes());
+  levels.allocateInterleaved(graph.NumNodes());
 
   katana::ParallelSTL::fill(
       levels.begin(), levels.end(), BfsImplementation::kDistanceInfinity);
@@ -641,7 +641,7 @@ katana::analytics::BfsStatistics::Compute(
   GNode source_node = std::numeric_limits<GNode>::max();
   GAccumulator<uint64_t> num_visited;
 
-  auto max_possible_parent = graph.num_nodes();
+  auto max_possible_parent = graph.NumNodes();
 
   do_all(
       iterate(graph),

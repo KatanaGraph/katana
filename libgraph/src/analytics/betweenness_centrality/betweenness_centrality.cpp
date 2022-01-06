@@ -70,7 +70,7 @@ BetweennessCentralityStatistics::Compute(
 
   // get max, min, sum of BC values using accumulators and reducers
   katana::do_all(
-      katana::iterate((uint64_t)0, pg->num_nodes()),
+      katana::iterate((uint64_t)0, pg->NumNodes()),
       [&](uint32_t n) {
         accum_max.update(values->Value(n));
         accum_min.update(values->Value(n));
@@ -81,5 +81,5 @@ BetweennessCentralityStatistics::Compute(
 
   return BetweennessCentralityStatistics{
       accum_max.reduce(), accum_min.reduce(),
-      accum_sum.reduce() / pg->num_nodes()};
+      accum_sum.reduce() / pg->NumNodes()};
 }

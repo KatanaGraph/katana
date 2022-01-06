@@ -140,7 +140,7 @@ CdlpWithWrap(
     size_t max_iterations, katana::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(
       2,
-      pg->topology().num_nodes() * sizeof(typename Algorithm::NodeCommunity));
+      pg->topology().NumNodes() * sizeof(typename Algorithm::NodeCommunity));
   katana::ReportPageAllocGuard page_alloc;
 
   if (auto r = ConstructNodeProperties<

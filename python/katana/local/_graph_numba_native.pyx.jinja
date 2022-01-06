@@ -9,10 +9,10 @@ from cython.operator cimport dereference as deref
 
 {% call numba.class_("Graph", "_PropertyGraph") %}
 {% call numba.method_with_body("num_nodes", "uint64_t", []) %}
-    return self.topology().num_nodes()
+    return self.topology().NumNodes()
 {% endcall %}
 {% call numba.method_with_body("num_edges", "uint64_t", []) %}
-    return self.topology().num_edges()
+    return self.topology().NumEdges()
 {% endcall %}
 {% call numba.method_with_body("edge_index", "uint64_t", ["uint64_t"]) %}
     return deref(self.topology().edges(arg1).end())

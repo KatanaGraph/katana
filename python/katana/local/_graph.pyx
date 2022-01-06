@@ -118,7 +118,7 @@ cdef class GraphBase:
         return &self.underlying_property_graph().topology()
 
     cpdef uint64_t num_nodes(Graph self):
-        return self.topology().num_nodes()
+        return self.topology().NumNodes()
 
     def __eq__(self, Graph other):
         return self.underlying_property_graph().Equals(other.underlying_property_graph())
@@ -139,7 +139,7 @@ cdef class GraphBase:
 
         Can be called from numba compiled code.
         """
-        return self.topology().num_edges()
+        return self.topology().NumEdges()
 
     def loaded_node_schema(self):
         """

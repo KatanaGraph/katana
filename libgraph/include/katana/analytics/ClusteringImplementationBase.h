@@ -330,7 +330,7 @@ struct ClusteringImplementationBase {
       const Graph& graph, const NodeWeightFunc& node_wt_func, double& e_xx,
       double& a2_x, const double constant_for_second_term) {
     katana::NUMAArray<EdgeTy> cluster_wt_internal;
-    cluster_wt_internal.allocateBlocked(graph.num_nodes());
+    cluster_wt_internal.allocateBlocked(graph.NumNodes());
     katana::ParallelSTL::fill(
         cluster_wt_internal.begin(), cluster_wt_internal.end(), 0);
 
@@ -409,10 +409,10 @@ struct ClusteringImplementationBase {
     CommunityArray c_info;  // Community info
 
     /*** Initialization ***/
-    c_info.allocateBlocked(graph.num_nodes());
+    c_info.allocateBlocked(graph.NumNodes());
 
     katana::NUMAArray<EdgeWeightType> degree_weight_array;
-    degree_weight_array.allocateBlocked(graph.num_nodes());
+    degree_weight_array.allocateBlocked(graph.NumNodes());
 
     /* Calculate the weighted degree sum for each vertex */
     SumClusterWeight<EdgeWeightType, CommunityIDType>(
@@ -564,7 +564,7 @@ struct ClusteringImplementationBase {
     // TODO(amber): This loop can be parallelized when using a concurrent container
     // for cluster_bags, but something like katana::InsertBag exhausts the
     // per-thread-storage memory
-    for (GNode n = 0; n < graph.num_nodes(); ++n) {
+    for (GNode n = 0; n < graph.NumNodes(); ++n) {
       auto n_data_curr_comm_id = graph.template GetData<CommunityIDType>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         cluster_bags[n_data_curr_comm_id].push_back(n);

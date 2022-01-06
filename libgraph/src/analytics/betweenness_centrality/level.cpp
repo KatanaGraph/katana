@@ -58,7 +58,7 @@ LevelInitializeGraph(
         node_data.bc = 0;
       },
       katana::no_stats(), katana::loopname("InitializeGraph"));
-  active_edges->resize(graph->num_edges());
+  active_edges->resize(graph->NumEdges());
 }
 
 /**
@@ -282,7 +282,7 @@ BetweennessCentralityLevel(
 
   if (std::holds_alternative<uint32_t>(sources)) {
     if (sources == kBetweennessCentralityAllNodes) {
-      loop_end = pg->num_nodes();
+      loop_end = pg->NumNodes();
     } else {
       loop_end = std::get<uint32_t>(sources);
     }

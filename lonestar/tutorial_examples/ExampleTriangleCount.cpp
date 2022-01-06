@@ -299,12 +299,12 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Sorting edge destination failed: {}", r.error());
   }
 
-  std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
+  std::cout << "Read " << graph.NumNodes() << " nodes, " << graph.NumEdges()
             << " edges\n";
 
   timer_graph_read.stop();
 
-  katana::Prealloc(1, 16 * (graph.num_nodes() + graph.num_edges()));
+  katana::Prealloc(1, 16 * (graph.NumNodes() + graph.NumEdges()));
   katana::ReportPageAllocGuard page_alloc;
 
   katana::gInfo("Starting triangle counting...");

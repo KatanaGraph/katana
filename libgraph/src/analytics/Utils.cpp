@@ -36,10 +36,10 @@ katana::analytics::SourcePicker::PickNext() {
 bool
 katana::analytics::IsApproximateDegreeDistributionPowerLaw(
     const PropertyGraph& graph) {
-  if (graph.num_nodes() < 10) {
+  if (graph.NumNodes() < 10) {
     return false;
   }
-  uint32_t averageDegree = graph.num_edges() / graph.num_nodes();
+  uint32_t averageDegree = graph.NumEdges() / graph.NumNodes();
   if (averageDegree < 10) {
     return false;
   }
@@ -47,8 +47,8 @@ katana::analytics::IsApproximateDegreeDistributionPowerLaw(
   autoAlgoTimer.start();
   SourcePicker sp(graph);
   uint32_t num_samples = 1000;
-  if (num_samples > graph.num_nodes()) {
-    num_samples = graph.num_nodes();
+  if (num_samples > graph.NumNodes()) {
+    num_samples = graph.NumNodes();
   }
   uint32_t sample_total = 0;
   std::vector<uint32_t> samples(num_samples);

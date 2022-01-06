@@ -75,7 +75,7 @@ struct LocalClusteringCoefficientAtomics {
 
   void ComputeLocalClusteringCoefficient(SortedGraphView* graph) {
     katana::NUMAArray<uint32_t> per_node_triangles;
-    per_node_triangles.allocateInterleaved(graph->num_nodes());
+    per_node_triangles.allocateInterleaved(graph->NumNodes());
 
     katana::ParallelSTL::fill(
         per_node_triangles.begin(), per_node_triangles.end(), uint32_t{0});
@@ -223,7 +223,7 @@ struct LocalClusteringCoefficientPerThread {
         "LocalClusteringCoefficient", "LocalClusteringCoefficient");
     execTime.start();
 
-    node_triangle_count_.allocateBlocked(graph->num_nodes());
+    node_triangle_count_.allocateBlocked(graph->NumNodes());
 
     // Calculate the number of triangles
     // on each node
@@ -310,7 +310,7 @@ katana::analytics::LocalClusteringCoefficient(
 
   timer_graph_read.stop();
 
-  katana::EnsurePreallocated(1, 16 * (pg->num_nodes() + pg->num_edges()));
+  katana::EnsurePreallocated(1, 16 * (pg->NumNodes() + pg->NumEdges()));
 
   switch (plan.algorithm()) {
   case LocalClusteringCoefficientPlan::kOrderedCountAtomics: {

@@ -79,7 +79,7 @@ IterateProperty(benchmark::State& state, katana::PropertyGraph* g) {
   for (auto _ : state) {
     size_t r_iterate = Iterate(r.value(), num_properties);
     size_t expected = ExpectedValue(
-        g->topology().num_nodes(), g->topology().num_edges(), num_properties,
+        g->topology().NumNodes(), g->topology().NumEdges(), num_properties,
         false);
     KATANA_LOG_VASSERT(
         r_iterate == expected, "expected {} found {}", expected, r_iterate);
@@ -127,7 +127,7 @@ IterateBaseline(benchmark::State& state) {
   for (auto _ : state) {
     size_t r = BaselineIterate<Field0, Field0>(g.get(), num_properties);
     size_t expected = ExpectedValue(
-        g->topology().num_nodes(), g->topology().num_edges(), num_properties,
+        g->topology().NumNodes(), g->topology().NumEdges(), num_properties,
         false);
     KATANA_LOG_VASSERT(r == expected, "expected {} found {}", expected, r);
   }

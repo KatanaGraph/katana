@@ -198,7 +198,7 @@ KCoreMarkAliveNodes(GraphTy* graph, uint32_t k_core_number) {
 template <typename GraphTy>
 static katana::Result<void>
 KCoreImpl(GraphTy* graph, KCorePlan algo, uint32_t k_core_number) {
-  size_t approxNodeData = 4 * (graph->num_nodes() + graph->num_edges());
+  size_t approxNodeData = 4 * (graph->NumNodes() + graph->NumEdges());
   katana::EnsurePreallocated(8, approxNodeData);
   katana::ReportPageAllocGuard page_alloc;
 

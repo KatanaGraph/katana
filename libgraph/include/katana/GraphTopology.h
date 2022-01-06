@@ -73,13 +73,13 @@ public:
 
   static GraphTopology Copy(const GraphTopology& that) noexcept;
 
-  uint64_t num_nodes() const noexcept { return adj_indices_.size(); }
+  uint64_t NumNodes() const noexcept { return adj_indices_.size(); }
 
-  uint64_t num_edges() const noexcept { return dests_.size(); }
+  uint64_t NumEdges() const noexcept { return dests_.size(); }
 
-  const Edge* adj_data() const noexcept { return adj_indices_.data(); }
+  const Edge* AdjData() const noexcept { return adj_indices_.data(); }
 
-  const Node* dest_data() const noexcept { return dests_.data(); }
+  const Node* DestData() const noexcept { return dests_.data(); }
 
   /// Checks equality against another instance of GraphTopology.
   /// WARNING: Expensive operation due to element-wise checks on large arrays
@@ -89,10 +89,10 @@ public:
     if (this == &that) {
       return true;
     }
-    if (num_nodes() != that.num_nodes()) {
+    if (NumNodes() != that.NumNodes()) {
       return false;
     }
-    if (num_edges() != that.num_edges()) {
+    if (NumEdges() != that.NumEdges()) {
       return false;
     }
 
@@ -112,7 +112,7 @@ public:
   }
 
   Node edge_source(const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(eid < num_edges());
+    KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
 
     if (eid < adj_indices_[0]) {
       return Node{0};
@@ -123,7 +123,7 @@ public:
     KATANA_LOG_DEBUG_ASSERT(*it > eid);
 
     auto d = std::distance(adj_indices_.begin(), it);
-    KATANA_LOG_DEBUG_ASSERT(static_cast<size_t>(d) < num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(static_cast<size_t>(d) < NumNodes());
     KATANA_LOG_DEBUG_ASSERT(d > 0);
 
     return static_cast<Node>(d);
@@ -139,28 +139,28 @@ public:
   }
 
   nodes_range all_nodes() const noexcept {
-    return nodes(Node{0}, static_cast<Node>(num_nodes()));
+    return nodes(Node{0}, static_cast<Node>(NumNodes()));
   }
 
   edges_range all_edges() const noexcept {
-    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{num_edges()});
+    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{NumEdges()});
   }
   // Standard container concepts
 
   node_iterator begin() const noexcept { return node_iterator(0); }
 
-  node_iterator end() const noexcept { return node_iterator(num_nodes()); }
+  node_iterator end() const noexcept { return node_iterator(NumNodes()); }
 
-  size_t size() const noexcept { return num_nodes(); }
+  size_t size() const noexcept { return NumNodes(); }
 
-  bool empty() const noexcept { return num_nodes() == 0; }
+  bool empty() const noexcept { return NumNodes() == 0; }
 
   ///@param node node to get degree for
   ///@returns Degree of node N
   size_t degree(Node node) const noexcept { return edges(node).size(); }
 
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(eid < num_edges());
+    KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
     return edge_prop_indices_[eid];
   }
 
@@ -211,7 +211,7 @@ protected:
   }
 
   void SetEdgePropIndices(PropIndexVec&& edge_prop_indices) noexcept {
-    KATANA_LOG_DEBUG_ASSERT(edge_prop_indices_.size() == num_edges());
+    KATANA_LOG_DEBUG_ASSERT(edge_prop_indices_.size() == NumEdges());
     edge_prop_indices_ = std::move(edge_prop_indices);
   }
 
@@ -368,7 +368,7 @@ public:
   virtual ~ShuffleTopology();
 
   PropertyIndex node_property_index(const Node& nid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(nid < num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(nid < NumNodes());
     return node_prop_indices_[nid];
   }
 
@@ -428,7 +428,7 @@ private:
       const EdgeShuffleTopology& seed_topo, const CmpFunc& cmp,
       const katana::RDGTopology::NodeSortKind& node_sort_todo) {
     GraphTopology::PropIndexVec node_prop_indices;
-    node_prop_indices.allocateInterleaved(seed_topo.num_nodes());
+    node_prop_indices.allocateInterleaved(seed_topo.NumNodes());
 
     katana::ParallelSTL::iota(
         node_prop_indices.begin(), node_prop_indices.end(),
@@ -439,10 +439,10 @@ private:
         [&](const auto& i1, const auto& i2) { return cmp(i1, i2); });
 
     GraphTopology::AdjIndexVec degrees;
-    degrees.allocateInterleaved(seed_topo.num_nodes());
+    degrees.allocateInterleaved(seed_topo.NumNodes());
 
     katana::NUMAArray<GraphTopologyTypes::Node> old_to_new_map;
-    old_to_new_map.allocateInterleaved(seed_topo.num_nodes());
+    old_to_new_map.allocateInterleaved(seed_topo.NumNodes());
     // TODO(amber): given 32-bit node ids, put a check here that
     // node_prop_indices.size() < 2^32
     katana::do_all(
@@ -461,10 +461,10 @@ private:
         degrees.begin(), degrees.end(), degrees.begin());
 
     GraphTopologyTypes::EdgeDestVec new_dest_vec;
-    new_dest_vec.allocateInterleaved(seed_topo.num_edges());
+    new_dest_vec.allocateInterleaved(seed_topo.NumEdges());
 
     GraphTopologyTypes::PropIndexVec edge_prop_indices;
-    edge_prop_indices.allocateInterleaved(seed_topo.num_edges());
+    edge_prop_indices.allocateInterleaved(seed_topo.NumEdges());
 
     katana::do_all(
         katana::iterate(seed_topo.all_nodes()),
@@ -474,7 +474,7 @@ private:
 
           for (auto e : seed_topo.edges(old_src_id)) {
             auto new_edge_dest = old_to_new_map[seed_topo.edge_dest(e)];
-            KATANA_LOG_DEBUG_ASSERT(new_edge_dest < seed_topo.num_nodes());
+            KATANA_LOG_DEBUG_ASSERT(new_edge_dest < seed_topo.NumNodes());
 
             auto new_edge_id = new_out_index;
             ++new_out_index;
@@ -507,7 +507,7 @@ private:
             std::move(dests), std::move(edge_prop_indices)),
         node_sort_state_(node_sort_todo),
         node_prop_indices_(std::move(node_prop_indices)) {
-    KATANA_LOG_DEBUG_ASSERT(node_prop_indices_.size() == num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(node_prop_indices_.size() == NumNodes());
   }
 
   katana::RDGTopology::NodeSortKind node_sort_state_{
@@ -532,13 +532,13 @@ public:
   ProjectedTopology(const ProjectedTopology&) = delete;
   ProjectedTopology& operator=(const ProjectedTopology&) = delete;
 
-  uint64_t num_nodes() const noexcept { return adj_indices_.size(); }
+  uint64_t NumNodes() const noexcept { return adj_indices_.size(); }
 
-  uint64_t num_edges() const noexcept { return dests_.size(); }
+  uint64_t NumEdges() const noexcept { return dests_.size(); }
 
-  const Edge* adj_data() const noexcept { return adj_indices_.data(); }
+  const Edge* AdjData() const noexcept { return adj_indices_.data(); }
 
-  const Node* dest_data() const noexcept { return dests_.data(); }
+  const Node* DestData() const noexcept { return dests_.data(); }
 
   /// Checks equality against another instance of ProjectedTopology.
   /// WARNING: Expensive operation due to element-wise checks on large arrays
@@ -549,10 +549,10 @@ public:
     if (this == &projected_topo_) {
       return true;
     }
-    if (num_nodes() != projected_topo_.num_nodes()) {
+    if (NumNodes() != projected_topo_.NumNodes()) {
       return false;
     }
-    if (num_edges() != projected_topo_.num_edges()) {
+    if (NumEdges() != projected_topo_.NumEdges()) {
       return false;
     }
 
@@ -573,7 +573,7 @@ public:
   }
 
   Node edge_source(const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(eid < num_edges());
+    KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
 
     if (eid < adj_indices_[0]) {
       return Node{0};
@@ -587,7 +587,7 @@ public:
     KATANA_LOG_DEBUG_ASSERT(*it > eid);
 
     const size_t d = it - adj_indices_.begin();
-    KATANA_LOG_DEBUG_ASSERT(d < num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(d < NumNodes());
 
     return static_cast<Node>(d);
   }
@@ -602,28 +602,28 @@ public:
   }
 
   nodes_range all_nodes() const noexcept {
-    return nodes(Node{0}, static_cast<Node>(num_nodes()));
+    return nodes(Node{0}, static_cast<Node>(NumNodes()));
   }
 
   edges_range all_edges() const noexcept {
-    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{num_edges()});
+    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{NumEdges()});
   }
   // Standard container concepts
 
   node_iterator begin() const noexcept { return node_iterator(0); }
 
-  node_iterator end() const noexcept { return node_iterator(num_nodes()); }
+  node_iterator end() const noexcept { return node_iterator(NumNodes()); }
 
-  size_t size() const noexcept { return num_nodes(); }
+  size_t size() const noexcept { return NumNodes(); }
 
-  bool empty() const noexcept { return num_nodes() == 0; }
+  bool empty() const noexcept { return NumNodes() == 0; }
 
   ///@param node node to get degree for
   ///@returns Degree of node N
   size_t degree(Node node) const noexcept { return edges(node).size(); }
 
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(eid < num_edges());
+    KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
     return projected_to_original_edges_mapping_[eid];
   }
 
@@ -638,7 +638,7 @@ public:
   }
 
   PropertyIndex node_property_index(const Node& nid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(nid < num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(nid < NumNodes());
     return projected_to_original_nodes_mapping_[nid];
   }
 
@@ -1048,7 +1048,7 @@ private:
 
     KATANA_LOG_DEBUG_ASSERT(
         per_type_adj_indices_.size() ==
-        num_nodes() * edge_type_index_->num_unique_types());
+        NumNodes() * edge_type_index_->num_unique_types());
   }
 
   std::shared_ptr<const CondensedTypeIDMap> edge_type_index_;
@@ -1067,9 +1067,9 @@ public:
     KATANA_LOG_DEBUG_ASSERT(topo_ptr_);
   }
 
-  auto num_nodes() const noexcept { return topo().num_nodes(); }
+  auto NumNodes() const noexcept { return topo().NumNodes(); }
 
-  auto num_edges() const noexcept { return topo().num_edges(); }
+  auto NumEdges() const noexcept { return topo().NumEdges(); }
 
   /// Gets the edge range of some node.
   ///
@@ -1139,9 +1139,9 @@ public:
     KATANA_LOG_DEBUG_ASSERT(projected_topo_ptr_);
   }
 
-  auto num_nodes() const noexcept { return topo().num_nodes(); }
+  auto NumNodes() const noexcept { return topo().NumNodes(); }
 
-  auto num_edges() const noexcept { return topo().num_edges(); }
+  auto NumEdges() const noexcept { return topo().NumEdges(); }
 
   /// Gets the edge range of some node.
   ///
@@ -1233,8 +1233,8 @@ public:
 
     KATANA_LOG_DEBUG_ASSERT(in_topo_->is_transposed());
 
-    KATANA_LOG_DEBUG_ASSERT(out().num_nodes() == in_topo_->num_nodes());
-    KATANA_LOG_DEBUG_ASSERT(out().num_edges() == in_topo_->num_edges());
+    KATANA_LOG_DEBUG_ASSERT(out().NumNodes() == in_topo_->NumNodes());
+    KATANA_LOG_DEBUG_ASSERT(out().NumEdges() == in_topo_->NumEdges());
   }
 
   auto in_edges(const GraphTopologyTypes::Node& node) const noexcept {
@@ -1270,7 +1270,7 @@ template <typename OutTopo, typename InTopo>
 class KATANA_EXPORT UndirectedTopologyWrapper : public GraphTopologyTypes {
   // Important:
   // We assign fake Edge IDs to in_edges to separate them from out edges
-  // fake in-edge-ID == real in-edge-ID + out().num_edges();
+  // fake in-edge-ID == real in-edge-ID + out().NumEdges();
 
 public:
   using edge_iterator =
@@ -1282,10 +1282,10 @@ public:
       std::shared_ptr<const InTopo> in) noexcept
       : out_topo_(std::move(out)), in_topo_(std::move(in)) {}
 
-  auto num_nodes() const noexcept { return out().num_nodes(); }
+  auto NumNodes() const noexcept { return out().NumNodes(); }
 
   // TODO(amber): Should it be sum of in and out edges?
-  auto num_edges() const noexcept { return out().num_edges(); }
+  auto NumEdges() const noexcept { return out().NumEdges(); }
 
   /// Gets the edge range of some node.
   ///
@@ -1296,7 +1296,7 @@ public:
   }
 
   bool is_in_edge(const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(out().num_edges() > 0);
+    KATANA_LOG_DEBUG_ASSERT(out().NumEdges() > 0);
     return eid >= fake_id_offset();
   }
 
@@ -1319,7 +1319,7 @@ public:
   }
 
   nodes_range all_nodes() const noexcept {
-    return nodes(Node{0}, static_cast<Node>(num_nodes()));
+    return nodes(Node{0}, static_cast<Node>(NumNodes()));
   }
 
   auto all_edges() const noexcept {
@@ -1332,11 +1332,11 @@ public:
 
   node_iterator begin() const noexcept { return node_iterator(0); }
 
-  node_iterator end() const noexcept { return node_iterator(num_nodes()); }
+  node_iterator end() const noexcept { return node_iterator(NumNodes()); }
 
-  size_t size() const noexcept { return num_nodes(); }
+  size_t size() const noexcept { return NumNodes(); }
 
-  bool empty() const noexcept { return num_nodes() == 0; }
+  bool empty() const noexcept { return NumNodes() == 0; }
 
   ///@param node node to get degree for
   ///@returns Degree of node N
@@ -1371,12 +1371,12 @@ protected:
 
 private:
   Edge fake_id_offset() const noexcept {
-    return out().num_edges() +
+    return out().NumEdges() +
            1;  // +1 so that last edge iterator of out() is different from first edge of in()
   }
 
   Edge real_in_edge_id(const Edge& id) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(id >= out().num_edges());
+    KATANA_LOG_DEBUG_ASSERT(id >= out().NumEdges());
     return id - fake_id_offset();
   }
 

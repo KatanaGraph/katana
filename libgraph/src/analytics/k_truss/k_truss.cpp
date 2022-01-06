@@ -297,7 +297,7 @@ katana::Result<void>
 BSPCoreAlgo(SortedGraphView* g, uint32_t k) {
   auto cur = std::make_unique<NodeVec>();
   auto next = std::make_unique<NodeVec>();
-  size_t curSize = g->num_nodes(), nextSize;
+  size_t curSize = g->NumNodes(), nextSize;
 
   katana::do_all(
       katana::iterate(*g), KeepValidNodes{g, k, *next}, katana::steal());

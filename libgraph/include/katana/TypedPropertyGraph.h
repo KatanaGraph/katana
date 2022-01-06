@@ -144,8 +144,8 @@ public:
 
   size_t degree(Node n) const noexcept { return pg_->topology().degree(n); }
 
-  uint64_t num_nodes() const { return pg_->num_nodes(); }
-  uint64_t num_edges() const { return pg_->num_edges(); }
+  uint64_t NumNodes() const { return pg_->NumNodes(); }
+  uint64_t NumEdges() const { return pg_->NumEdges(); }
 
   /**
    * Gets the edge range of some node.

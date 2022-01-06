@@ -33,7 +33,7 @@ public:
   /**
    * Constructor initializes thread local storage.
    */
-  BCOuter(const OuterGraph& g) : graph_(g), num_nodes_(g.num_nodes()) {
+  BCOuter(const OuterGraph& g) : graph_(g), num_nodes_(g.NumNodes()) {
     InitializeLocal();
   }
 
@@ -256,7 +256,7 @@ BetweennessCentralityOuter(
 
   // preallocate pages for use in algorithm
   katana::EnsurePreallocated(
-      katana::getActiveThreads() * graph.num_nodes() / 1650);
+      katana::getActiveThreads() * graph.NumNodes() / 1650);
   katana::ReportPageAllocGuard page_alloc;
 
   // vector of sources to process; initialized if doing outSources
@@ -293,7 +293,7 @@ BetweennessCentralityOuter(
   }
   exec_time.stop();
 
-  auto data_result = bc_outer.ExtractBCValues(0, graph.num_nodes());
+  auto data_result = bc_outer.ExtractBCValues(0, graph.NumNodes());
   if (!data_result) {
     return data_result.error();
   }

@@ -120,8 +120,8 @@ BaselineIterate(katana::PropertyGraph* g, int num_properties) {
   using NodePointer = typename arrow::TypeTraits<NodeArrowType>::CType*;
   using EdgePointer = typename arrow::TypeTraits<EdgeArrowType>::CType*;
 
-  const auto* indices = g->topology().adj_data();
-  const auto* dests = g->topology().dest_data();
+  const auto* indices = g->topology().AdjData();
+  const auto* dests = g->topology().DestData();
 
   std::vector<NodePointer> node_data;
   std::vector<EdgePointer> edge_data;
@@ -137,10 +137,10 @@ BaselineIterate(katana::PropertyGraph* g, int num_properties) {
 
     KATANA_LOG_ASSERT(
         static_cast<size_t>(node_property->length()) ==
-        g->topology().num_nodes());
+        g->topology().NumNodes());
     KATANA_LOG_ASSERT(
         static_cast<size_t>(edge_property->length()) ==
-        g->topology().num_edges());
+        g->topology().NumEdges());
 
     node_data.emplace_back(
         const_cast<NodePointer>(node_property->raw_values()));
@@ -150,7 +150,7 @@ BaselineIterate(katana::PropertyGraph* g, int num_properties) {
 
   size_t result = 0;
 
-  for (size_t i = 0, n = g->topology().num_nodes(); i < n; ++i) {
+  for (size_t i = 0, n = g->topology().NumNodes(); i < n; ++i) {
     uint64_t begin = (i == 0) ? 0 : indices[i - 1];
     uint64_t end = indices[i];
 

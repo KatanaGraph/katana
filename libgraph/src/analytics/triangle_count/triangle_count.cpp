@@ -323,7 +323,7 @@ katana::analytics::TriangleCount(
   timer_graph_read.stop();
 #endif
 
-  katana::EnsurePreallocated(1, 16 * (pg->num_nodes() + pg->num_edges()));
+  katana::EnsurePreallocated(1, 16 * (pg->NumNodes() + pg->NumEdges()));
   katana::ReportPageAllocGuard page_alloc;
 
   KATANA_LOG_VERBOSE("Done relabeling. Starting TriangleCount");

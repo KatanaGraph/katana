@@ -87,10 +87,10 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
   GraphTopologyTypes::PropIndexVec edge_prop_indices;
   GraphTopologyTypes::AdjIndexVec out_dests_offset;
 
-  out_indices.allocateInterleaved(topology.num_nodes());
-  out_dests.allocateInterleaved(topology.num_edges());
-  edge_prop_indices.allocateInterleaved(topology.num_edges());
-  out_dests_offset.allocateInterleaved(topology.num_nodes());
+  out_indices.allocateInterleaved(topology.NumNodes());
+  out_dests.allocateInterleaved(topology.NumEdges());
+  edge_prop_indices.allocateInterleaved(topology.NumEdges());
+  out_dests_offset.allocateInterleaved(topology.NumNodes());
 
   katana::ParallelSTL::fill(out_indices.begin(), out_indices.end(), Edge{0});
 
@@ -114,7 +114,7 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
   // adjacency
   out_dests_offset[0] = 0;
   katana::do_all(
-      katana::iterate(Edge{1}, Edge{topology.num_nodes()}),
+      katana::iterate(Edge{1}, Edge{topology.NumNodes()}),
       [&](Edge n) { out_dests_offset[n] = out_indices[n - 1]; },
       katana::no_stats());
 
@@ -150,7 +150,7 @@ katana::EdgeShuffleTopology::MakeOriginalCopy(const katana::PropertyGraph* pg) {
   GraphTopology copy_topo = GraphTopology::Copy(pg->topology());
 
   GraphTopologyTypes::PropIndexVec edge_prop_indices;
-  edge_prop_indices.allocateInterleaved(copy_topo.num_edges());
+  edge_prop_indices.allocateInterleaved(copy_topo.NumEdges());
   katana::ParallelSTL::iota(
       edge_prop_indices.begin(), edge_prop_indices.end(), Edge{0});
 
@@ -206,7 +206,7 @@ katana::EdgeShuffleTopology::Make(katana::RDGTopology* rdg_topo) {
 katana::Result<katana::RDGTopology>
 katana::EdgeShuffleTopology::ToRDGTopology() const {
   katana::RDGTopology topo = KATANA_CHECKED(katana::RDGTopology::Make(
-      adj_data(), num_nodes(), dest_data(), num_edges(),
+      AdjData(), NumNodes(), DestData(), NumEdges(),
       katana::RDGTopology::TopologyKind::kEdgeShuffleTopology, tpose_state_,
       edge_sort_state_, edge_prop_indices_.data()));
   return katana::RDGTopology(std::move(topo));
@@ -460,7 +460,7 @@ katana::ShuffleTopology::Make(katana::RDGTopology* rdg_topo) {
 katana::Result<katana::RDGTopology>
 katana::ShuffleTopology::ToRDGTopology() const {
   katana::RDGTopology topo = KATANA_CHECKED(katana::RDGTopology::Make(
-      adj_data(), num_nodes(), dest_data(), num_edges(),
+      AdjData(), NumNodes(), DestData(), NumEdges(),
       katana::RDGTopology::TopologyKind::kShuffleTopology, transpose_state(),
       edge_sort_state(), node_sort_state(), edge_property_index_data(),
       node_prop_indices_.data()));
@@ -478,7 +478,7 @@ katana::CondensedTypeIDMap::MakeFromEdgeTypes(
   const auto& topo = pg->topology();
 
   katana::do_all(
-      katana::iterate(Edge{0}, topo.num_edges()),
+      katana::iterate(Edge{0}, topo.NumEdges()),
       [&](const Edge& e) {
         katana::EntityTypeID type = pg->GetTypeOfEdgeFromPropertyIndex(e);
         edgeTypes.getLocal()->insert(type);
@@ -518,20 +518,20 @@ katana::EdgeTypeAwareTopology::AdjIndexVec
 katana::EdgeTypeAwareTopology::CreatePerEdgeTypeAdjacencyIndex(
     const PropertyGraph& pg, const CondensedTypeIDMap& edge_type_index,
     const EdgeShuffleTopology& e_topo) noexcept {
-  if (e_topo.num_nodes() == 0) {
+  if (e_topo.empty()) {
     KATANA_LOG_VASSERT(
-        e_topo.num_edges() == 0, "Found graph with edges but no nodes");
+        e_topo.NumEdges() == 0, "Found graph with edges but no nodes");
     return AdjIndexVec{};
   }
 
   if (edge_type_index.num_unique_types() == 0) {
     KATANA_LOG_VASSERT(
-        e_topo.num_edges() == 0, "Found graph with edges but no edge types");
+        e_topo.NumEdges() == 0, "Found graph with edges but no edge types");
     // Graph has some nodes but no edges.
     return AdjIndexVec{};
   }
 
-  const size_t sz = e_topo.num_nodes() * edge_type_index.num_unique_types();
+  const size_t sz = e_topo.NumNodes() * edge_type_index.num_unique_types();
   AdjIndexVec adj_indices;
   adj_indices.allocateInterleaved(sz);
 
@@ -570,7 +570,7 @@ katana::EdgeTypeAwareTopology::MakeFrom(
   KATANA_LOG_DEBUG_ASSERT(e_topo.has_edges_sorted_by(
       katana::RDGTopology::EdgeSortKind::kSortedByEdgeType));
 
-  KATANA_LOG_DEBUG_ASSERT(e_topo.num_edges() == pg->topology().num_edges());
+  KATANA_LOG_DEBUG_ASSERT(e_topo.NumEdges() == pg->topology().NumEdges());
 
   AdjIndexVec per_type_adj_indices =
       CreatePerEdgeTypeAdjacencyIndex(*pg, *edge_type_index, e_topo);
@@ -583,7 +583,7 @@ katana::EdgeTypeAwareTopology::MakeFrom(
 katana::Result<katana::RDGTopology>
 katana::EdgeTypeAwareTopology::ToRDGTopology() const {
   katana::RDGTopology topo = KATANA_CHECKED(katana::RDGTopology::Make(
-      per_type_adj_indices_.data(), num_nodes(), Base::dest_data(), num_edges(),
+      per_type_adj_indices_.data(), NumNodes(), Base::DestData(), NumEdges(),
       katana::RDGTopology::TopologyKind::kEdgeTypeAwareTopology,
       transpose_state(), edge_sort_state(), Base::edge_property_index_data(),
       edge_type_index_->num_unique_types(),
@@ -610,8 +610,8 @@ katana::EdgeTypeAwareTopology::Make(
       edge_type_index->index_to_type_map_matches(
           rdg_topo->edge_condensed_type_id_map_size(),
           rdg_topo->edge_condensed_type_id_map()) &&
-          e_topo.num_edges() == rdg_topo->num_edges() &&
-          e_topo.num_nodes() == rdg_topo->num_nodes(),
+          e_topo.NumEdges() == rdg_topo->num_edges() &&
+          e_topo.NumNodes() == rdg_topo->num_nodes(),
       "tried to load out of date EdgeTypeAwareTopology; on disk topologies "
       "must be invalidated when updates occur");
 
@@ -670,11 +670,11 @@ katana::ProjectedTopology::CreateEmptyEdgeProjectedTopology(
 
   katana::NUMAArray<Node> out_dests;
   katana::NUMAArray<Node> original_to_projected_nodes_mapping;
-  original_to_projected_nodes_mapping.allocateInterleaved(topology.num_nodes());
+  original_to_projected_nodes_mapping.allocateInterleaved(topology.NumNodes());
   katana::ParallelSTL::fill(
       original_to_projected_nodes_mapping.begin(),
       original_to_projected_nodes_mapping.end(),
-      static_cast<Node>(topology.num_nodes()));
+      static_cast<Node>(topology.NumNodes()));
 
   katana::NUMAArray<Node> projected_to_original_nodes_mapping;
   projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
@@ -682,18 +682,18 @@ katana::ProjectedTopology::CreateEmptyEdgeProjectedTopology(
   katana::NUMAArray<Edge> original_to_projected_edges_mapping;
   katana::NUMAArray<Edge> projected_to_original_edges_mapping;
 
-  original_to_projected_edges_mapping.allocateInterleaved(topology.num_edges());
+  original_to_projected_edges_mapping.allocateInterleaved(topology.NumEdges());
   katana::ParallelSTL::fill(
       original_to_projected_edges_mapping.begin(),
-      original_to_projected_edges_mapping.end(), Edge{topology.num_edges()});
+      original_to_projected_edges_mapping.end(), Edge{topology.NumEdges()});
 
   NUMAArray<uint8_t> node_bitmask;
-  node_bitmask.allocateInterleaved((topology.num_nodes() + 7) / 8);
+  node_bitmask.allocateInterleaved((topology.NumNodes() + 7) / 8);
 
-  FillBitMask(topology.num_nodes(), bitset, &node_bitmask);
+  FillBitMask(topology.NumNodes(), bitset, &node_bitmask);
 
   NUMAArray<uint8_t> edge_bitmask;
-  edge_bitmask.allocateInterleaved((topology.num_edges() + 7) / 8);
+  edge_bitmask.allocateInterleaved((topology.NumNodes() + 7) / 8);
 
   return std::make_shared<katana::ProjectedTopology>(katana::ProjectedTopology{
       std::move(out_indices), std::move(out_dests),
@@ -726,13 +726,13 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   uint32_t num_new_edges = 0;
 
   katana::DynamicBitset bitset_nodes;
-  bitset_nodes.resize(topology.num_nodes());
+  bitset_nodes.resize(topology.NumNodes());
 
   NUMAArray<Node> original_to_projected_nodes_mapping;
-  original_to_projected_nodes_mapping.allocateInterleaved(topology.num_nodes());
+  original_to_projected_nodes_mapping.allocateInterleaved(topology.NumNodes());
 
   if (node_types.empty()) {
-    num_new_nodes = topology.num_nodes();
+    num_new_nodes = topology.NumNodes();
     // set all nodes
     katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
       bitset_nodes.set(src);
@@ -782,7 +782,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   NUMAArray<Node> projected_to_original_nodes_mapping;
   projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
 
-  uint32_t num_nodes_bytes = (topology.num_nodes() + 7) / 8;
+  uint32_t num_nodes_bytes = (topology.NumNodes() + 7) / 8;
 
   NUMAArray<uint8_t> node_bitmask;
   node_bitmask.allocateInterleaved(num_nodes_bytes);
@@ -793,15 +793,15 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
       projected_to_original_nodes_mapping
           [original_to_projected_nodes_mapping[src]] = src;
     } else {
-      original_to_projected_nodes_mapping[src] = topology.num_nodes();
+      original_to_projected_nodes_mapping[src] = topology.NumNodes();
     }
   });
 
-  FillBitMask(topology.num_nodes(), bitset_nodes, &node_bitmask);
+  FillBitMask(topology.NumNodes(), bitset_nodes, &node_bitmask);
 
   // calculate number of new edges
   katana::DynamicBitset bitset_edges;
-  bitset_edges.resize(topology.num_edges());
+  bitset_edges.resize(topology.NumNodes());
 
   NUMAArray<Edge> out_indices;
   out_indices.allocateInterleaved(num_new_nodes);
@@ -889,9 +889,9 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   NUMAArray<uint8_t> edge_bitmask;
 
   out_dests.allocateInterleaved(num_new_edges);
-  original_to_projected_edges_mapping.allocateInterleaved(topology.num_edges());
+  original_to_projected_edges_mapping.allocateInterleaved(topology.NumEdges());
   projected_to_original_edges_mapping.allocateInterleaved(num_new_edges);
-  edge_bitmask.allocateInterleaved((topology.num_edges() + 7) / 8);
+  edge_bitmask.allocateInterleaved((topology.NumEdges() + 7) / 8);
 
   // Update out_dests with the new destination ids
   katana::do_all(
@@ -917,11 +917,11 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
 
   katana::do_all(katana::iterate(topology.all_edges()), [&](auto edge) {
     if (!bitset_edges.test(edge)) {
-      original_to_projected_edges_mapping[edge] = topology.num_edges();
+      original_to_projected_edges_mapping[edge] = topology.NumEdges();
     }
   });
 
-  FillBitMask(topology.num_edges(), bitset_edges, &edge_bitmask);
+  FillBitMask(topology.NumEdges(), bitset_edges, &edge_bitmask);
   return std::make_shared<ProjectedTopology>(ProjectedTopology{
       std::move(out_indices), std::move(out_dests),
       std::move(original_to_projected_nodes_mapping),
@@ -981,8 +981,7 @@ katana::PGViewCache::BuildOrGetEdgeTypeIndex(
 template <typename Topo>
 [[maybe_unused]] bool
 CheckTopology(const katana::PropertyGraph* pg, const Topo* t) noexcept {
-  return (pg->num_nodes() == t->num_nodes()) &&
-         (pg->num_edges() == t->num_edges());
+  return (pg->NumNodes() == t->NumNodes()) && (pg->NumEdges() == t->NumEdges());
 }
 
 std::shared_ptr<katana::EdgeShuffleTopology>

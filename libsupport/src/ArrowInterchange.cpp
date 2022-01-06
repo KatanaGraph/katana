@@ -7,6 +7,7 @@
 #include <arrow/array/concatenate.h>
 
 #include "katana/Random.h"
+#include "katana/Result.h"
 
 namespace {
 
@@ -48,17 +49,28 @@ ApproxArrayDataMemUse(const std::shared_ptr<arrow::ArrayData>& data) {
 
 }  // anonymous namespace
 
-std::shared_ptr<arrow::ChunkedArray>
+katana::Result<std::shared_ptr<arrow::Table>>
+katana::TakeRows(
+    const std::shared_ptr<arrow::Table>& original,
+    const std::shared_ptr<arrow::BooleanArray> picker) {
+  arrow::compute::FilterOptions opts(arrow::compute::FilterOptions::DROP);
+  arrow::Datum filtered =
+      KATANA_CHECKED(arrow::compute::Filter(original, picker, opts));
+  return filtered.table();
+}
+
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 katana::NullChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length) {
-  auto maybe_array = arrow::MakeArrayOfNull(type, length);
-  if (!maybe_array.ok()) {
-    KATANA_LOG_ERROR(
-        "cannot create an empty arrow array: {}", maybe_array.status());
-    return nullptr;
-  }
-  std::vector<std::shared_ptr<arrow::Array>> chunks{maybe_array.ValueOrDie()};
+  auto array = KATANA_CHECKED(arrow::MakeArrayOfNull(type, length));
+  std::vector<std::shared_ptr<arrow::Array>> chunks{array};
   return std::make_shared<arrow::ChunkedArray>(chunks);
+}
+
+std::shared_ptr<arrow::Table>
+katana::MakeEmptyArrowTable() {
+  return arrow::Table::Make(
+      arrow::schema({}), std::vector<std::shared_ptr<arrow::ChunkedArray>>());
 }
 
 void

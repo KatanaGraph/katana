@@ -35,6 +35,7 @@ struct DefEqualsEquals {
 template <typename T>
 struct DefEqualsEquals<
     T, std::void_t<decltype(std::declval<T>() == std::declval<T>())>> {
+  static bool Equals(const T& a, const T& b) { return a == b; }
   void operator()(pybind11::class_<T>& cls) {
     cls.def("__eq__", &T::operator==);
   }
@@ -45,6 +46,9 @@ struct DefEqualsEquals<
 /// operator==() is handled by deferring to DefEqualsEquals.
 template <typename T, typename Enable = void>
 struct DefEquals {
+  static bool Equals(const T& a, const T& b) {
+    return DefEqualsEquals<T>::Equals(a, b);
+  }
   void operator()(pybind11::class_<T>& cls) {
     // If Equals doesn't exist then check for ==.
     DefEqualsEquals<T>{}(cls);
@@ -54,7 +58,35 @@ struct DefEquals {
 template <typename T>
 struct DefEquals<
     T, std::void_t<decltype(std::declval<T>().Equals(std::declval<T>()))>> {
+  static bool Equals(const T& a, const T& b) { return a.Equals(b); }
   void operator()(pybind11::class_<T>& cls) { cls.def("__eq__", &T::Equals); }
+};
+
+/// DefComparison will def the python comparison operators based on
+/// operator<() if it is available.
+template <typename T, typename Enable = void>
+struct DefComparison {
+  void operator()(pybind11::class_<T>& cls [[maybe_unused]]) {}
+};
+
+template <typename T>
+struct DefComparison<
+    T, std::tuple<
+           std::void_t<std::less<T>>,
+           std::void_t<decltype(DefEquals<T>::Equals(
+               std::declval<T>(), std::declval<T>()))>>> {
+  static constexpr std::less<T> less = {};
+
+  void operator()(pybind11::class_<T>& cls) {
+    cls.def("__lt__", [](const T& a, const T& b) { return dless(a, b); });
+    cls.def("__le__", [](const T& a, const T& b) {
+      return less(a, b) || DefEquals<T>::Equals(a, b);
+    });
+    cls.def("__gt__", [](const T& a, const T& b) {
+      return !less(a, b) && !DefEquals<T>::Equals(a, b);
+    });
+    cls.def("__ge__", [](const T& a, const T& b) { return !less(a, b); });
+  }
 };
 
 /// DefCopy defs `__copy__` and `copy` based on the copy constructor if it is
@@ -93,6 +125,7 @@ pybind11::class_<T>
 DefConventions(pybind11::class_<T>& cls) {
   detail::DefRepr<T>{}(cls);
   detail::DefEquals<T>{}(cls);
+  detail::DefComparison<T>{}(cls);
   detail::DefCopy<T>{}(cls);
   return cls;
 }

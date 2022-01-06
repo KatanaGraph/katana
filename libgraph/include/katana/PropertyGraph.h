@@ -530,7 +530,7 @@ public:
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdgeFromTopoIndex(Edge edge) const {
     auto idx = edge_property_index(edge);
-    return edge_entity_type_ids_[idx];
+    return GetTypeOfEdgeFromPropertyIndex(idx);
   }
 
   /// \return returns the most specific edge entity type for @param edge
@@ -672,6 +672,7 @@ public:
     return MakeResult(std::move(array));
   }
 
+  //TODO(yan): Add fine-grained control for dropping specific topologies.
   void DropAllTopologies() noexcept {
     return pg_view_cache_.DropAllTopologies();
   }

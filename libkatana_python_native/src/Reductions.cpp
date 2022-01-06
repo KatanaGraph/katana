@@ -61,19 +61,20 @@ struct ReducibleFunctor {
         }),
         "Create a new instance with an initial value.");
     katana::RegisterNumbaClass(cls);
-    katana::DefWithNumba<const T&>(
-        cls, "update", &For::template type<T>::update,
+    katana::DefWithNumba<py::overload_cast<const T&>(
+        &For::template type<T>::update)>(
+        cls, "update",
         "Update this reducer with ``v`` performing the operation.");
-    katana::DefWithNumba<>(
-        cls, "reduce", &For::template type<T>::reduce,
+    katana::DefWithNumba<&For::template type<T>::reduce>(
+        cls, "reduce",
         "Get the current value of the reducer. This must only be called from "
         "single threaded code.");
-    katana::DefWithNumba<>(
-        cls, "get_local", &For::template type<T>::getLocal,
+    katana::DefWithNumba<&For::template type<T>::getLocal>(
+        cls, "get_local",
         "Get a sub-result of the reducers operation. This is generally the "
         "reduced value for this thread.");
-    katana::DefWithNumba<>(
-        cls, "reset", &For::template type<T>::reset,
+    katana::DefWithNumba<&For::template type<T>::reset>(
+        cls, "reset",
         "Reset the reducer to its zero. This must only be called from single "
         "threaded code.");
     katana::DefConventions(cls);

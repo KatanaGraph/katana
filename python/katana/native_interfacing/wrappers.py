@@ -2,7 +2,7 @@ import ctypes
 import logging
 from abc import ABCMeta, abstractmethod
 from functools import lru_cache
-from typing import Sequence, Union
+from typing import Optional, Sequence, Union
 
 import numba.core.ccallback
 import numba.types
@@ -98,10 +98,10 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         self,
         func_name: str,
         typ,
-        cython_func_name: str = None,
-        addr: int = None,
-        dtype_arguments: Sequence[bool] = None,
-        data: int = None,
+        cython_func_name: Optional[str] = None,
+        addr: Optional[int] = None,
+        dtype_arguments: Optional[Sequence[bool]] = None,
+        data: Optional[int] = None,
     ):
         """
         Add a Numba callable Method to the type represented by self.
@@ -127,12 +127,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         func = typ(addr or addr_found)
 
         if dtype_arguments is None:
-            dtype_arguments = [False] * (len(func.argtypes) - 1 - (1 if data else 0))
-        if not isinstance(dtype_arguments, Sequence) or len(dtype_arguments) != len(func.argtypes):
-            raise ValueError(
-                "dtype_arguments must have one element per argument of the function: "
-                f"{func_name} ({typ}, {dtype_arguments})"
-            )
+            dtype_arguments = [False] * (len(func.argtypes) - 1 - (1 if data is not None else 0))
 
         _logger.debug(
             "%r.register_method: %r, %r: %r%r, %x, %r",

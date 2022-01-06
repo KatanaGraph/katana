@@ -20,7 +20,7 @@ def register_class(cls: type) -> None:
     cls._numba_type_wrapper = SimpleNumbaPointerWrapper(cls)
 
 
-def register_method(cls: type, method, invoker_ptr: int, invoker_data: int, ret_type, *arg_types) -> None:
+def register_method(cls: type, method, invoker_ptr: int, ret_type, *arg_types) -> None:
     """
     Register a function pointer to implement ``method`` when called from Numba compiled code.
     ``cls`` must have been registered with `register_class`.
@@ -29,8 +29,6 @@ def register_method(cls: type, method, invoker_ptr: int, invoker_data: int, ret_
     :param method: The method to register.
     :type method: unbound method.
     :param invoker_ptr: The pointer to the invoker function.
-    :param invoker_data: A 64-bit integer value to be passed as the first argument to the invoker function. This is
-        often a data pointer.
     :param ret_type: The type of the method return value.
     :type ret_type: `ctype` type object or None.
     :param arg_types: The types of each argument value.
@@ -42,18 +40,16 @@ def register_method(cls: type, method, invoker_ptr: int, invoker_data: int, ret_
             "katana.native_interfacing.numba_support.register_class (in C++, katana::RegisterNumbaClass)."
         )
     numba_wrapper: SimpleNumbaPointerWrapper = cls._numba_type_wrapper
-    ctypes_func_type = ctypes.CFUNCTYPE(ret_type, ctypes.c_int64, ctypes.c_void_p, *arg_types)
-    numba_wrapper.register_method(method.__name__, ctypes_func_type, addr=invoker_ptr, data=invoker_data)
+    ctypes_func_type = ctypes.CFUNCTYPE(ret_type, ctypes.c_void_p, *arg_types)
+    numba_wrapper.register_method(method.__name__, ctypes_func_type, addr=invoker_ptr)
 
 
-def register_function(func: callable, invoker_ptr: int, invoker_data: int, ret_type, *arg_types) -> None:
+def register_function(func: callable, invoker_ptr: int, ret_type, *arg_types) -> None:
     """
     Register a function pointer to implement ``func`` when called from Numba compiled code.
 
     :param func: The Python function to register.
     :param invoker_ptr: The pointer to the invoker function.
-    :param invoker_data: A 64-bit integer value to be passed as the first argument to the invoker function. This is
-        often a data pointer.
     :param ret_type: The type of the method return value.
     :type ret_type: `ctype` type object or None.
     :param arg_types: The types of each argument value.

@@ -16,6 +16,7 @@ k-Core
 .. autofunction:: katana.local.analytics.k_core_assert_valid
 """
 from libc.stdint cimport uint32_t, uint64_t
+from libcpp cimport bool
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -43,7 +44,7 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
         @staticmethod
         _KCorePlan Asynchronous()
 
-    Result[void] KCore(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name, CTxnContext* txn_ctx, _KCorePlan plan)
+    Result[void] KCore(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name, CTxnContext* txn_ctx, bool is_symmetric, _KCorePlan plan)
 
 
     Result[void] KCoreAssertValid(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name)
@@ -103,7 +104,7 @@ cdef class KCorePlan(Plan):
         return KCorePlan.make(_KCorePlan.Asynchronous())
 
 
-def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan(), *, TxnContext txn_ctx = None) -> int:
+def k_core(Graph pg, uint32_t k_core_number, str output_property_name, bool is_symmetric = False, KCorePlan plan = KCorePlan(), *, TxnContext txn_ctx = None) -> int:
     """
     Compute nodes which are in the k-core of pg. The pg must be symmetric.
 
@@ -113,6 +114,7 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
     :type output_property_name: str
     :param output_property_name: The output property holding an indicator 1 if the node is in the k-core, 0 otherwise.
         This property must not already exist.
+    :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type plan: KCorePlan
     :param plan: The execution plan to use.
     :param txn_ctx: The tranaction context for passing read write sets.
@@ -135,7 +137,7 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, KCorePlan
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(KCore(pg.underlying_property_graph(), k_core_number, output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
+        v = handle_result_void(KCore(pg.underlying_property_graph(), k_core_number, output_property_name_str, &txn_ctx._txn_ctx, is_symmetric, plan.underlying_))
     return v
 
 

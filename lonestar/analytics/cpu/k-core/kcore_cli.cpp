@@ -78,11 +78,12 @@ main(int argc, char** argv) {
   katana::StatTimer total_timer("TimerTotal");
   total_timer.start();
 
-  if (!symmetricGraph) {
-    KATANA_LOG_FATAL(
+  if (symmetricGraph) {
+    KATANA_LOG_WARN(
         "This application requires a symmetric graph input;"
-        " please use the -symmetricGraph flag "
-        " to indicate the input is a symmetric graph.");
+        " Using the -symmetricGraph flag "
+        " indicates that the input is a symmetric graph and can be used as it "
+        "is.");
   }
 
   std::cout << "Reading from file: " << inputFile << "\n";
@@ -107,7 +108,9 @@ main(int argc, char** argv) {
   }
 
   katana::TxnContext txn_ctx;
-  if (auto r = KCore(pg.get(), kCoreNumber, "node-in-core", &txn_ctx, plan);
+  if (auto r = KCore(
+          pg.get(), kCoreNumber, "node-in-core", &txn_ctx, symmetricGraph,
+          plan);
       !r) {
     KATANA_LOG_FATAL("Failed to compute k-core: {}", r.error());
   }

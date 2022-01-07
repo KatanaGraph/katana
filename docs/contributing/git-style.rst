@@ -49,6 +49,8 @@ features or plugins to streamline this process (e.g.,
 It is also possible to ask GitHub to squash your commits for you. This is the
 "squash and merge" option when merging your PR.
 
+.. _Pull Request Style:
+
 Pull Request Style
 ==================
 

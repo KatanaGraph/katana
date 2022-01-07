@@ -97,11 +97,11 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
   // Keep a copy of old destinaton ids and compute number of
   // in-coming edges for the new prefix sum of out_indices.
   katana::do_all(
-      katana::iterate(topology.all_edges()),
+      katana::iterate(topology.OutEdges()),
       [&](Edge e) {
         // Counting outgoing edges in the tranpose graph by
         // counting incoming edges in the original graph
-        auto dest = topology.edge_dest(e);
+        auto dest = topology.OutEdgeDst(e);
         __sync_add_and_fetch(&(out_indices[dest]), 1);
       },
       katana::no_stats());
@@ -125,10 +125,10 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
       [&](auto src) {
         // get all outgoing edges of a particular
         // node and reverse the edges.
-        for (GraphTopology::Edge e : topology.edges(src)) {
+        for (GraphTopology::Edge e : topology.OutEdges(src)) {
           // e = start index into edge array for a particular node
           // Destination node
-          auto dest = topology.edge_dest(e);
+          auto dest = topology.OutEdgeDst(e);
           // Location to save edge
           auto e_new = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
           // Save src as destination
@@ -216,7 +216,7 @@ katana::GraphTopologyTypes::edge_iterator
 katana::EdgeShuffleTopology::find_edge(
     const katana::GraphTopologyTypes::Node& src,
     const katana::GraphTopologyTypes::Node& dst) const noexcept {
-  auto e_range = edges(src);
+  auto e_range = OutEdges(src);
 
   constexpr size_t kBinarySearchThreshold = 64;
 
@@ -230,7 +230,7 @@ katana::EdgeShuffleTopology::find_edge(
   if (e_range.size() <= kBinarySearchThreshold) {
     auto iter = std::find_if(
         e_range.begin(), e_range.end(),
-        [&](const GraphTopology::Edge& e) { return edge_dest(e) == dst; });
+        [&](const GraphTopology::Edge& e) { return OutEdgeDst(e) == dst; });
 
     return iter;
 
@@ -239,7 +239,7 @@ katana::EdgeShuffleTopology::find_edge(
         e_range.begin(), e_range.end(), dst,
         internal::EdgeDestComparator<EdgeShuffleTopology>{this});
 
-    return edge_dest(*iter) == dst ? iter : e_range.end();
+    return OutEdgeDst(*iter) == dst ? iter : e_range.end();
   }
 }
 
@@ -247,7 +247,7 @@ katana::GraphTopologyTypes::edges_range
 katana::EdgeShuffleTopology::find_edges(
     const katana::GraphTopologyTypes::Node& src,
     const katana::GraphTopologyTypes::Node& dst) const noexcept {
-  auto e_range = edges(src);
+  auto e_range = OutEdges(src);
   if (e_range.empty()) {
     return e_range;
   }
@@ -260,14 +260,14 @@ katana::EdgeShuffleTopology::find_edges(
   auto [first_it, last_it] =
       std::equal_range(e_range.begin(), e_range.end(), dst, comp);
 
-  if (first_it == e_range.end() || edge_dest(*first_it) != dst) {
+  if (first_it == e_range.end() || OutEdgeDst(*first_it) != dst) {
     // return empty range
     return MakeStandardRange(e_range.end(), e_range.end());
   }
 
   auto ret_range = MakeStandardRange(first_it, last_it);
   for ([[maybe_unused]] auto e : ret_range) {
-    KATANA_LOG_DEBUG_ASSERT(edge_dest(e) == dst);
+    KATANA_LOG_DEBUG_ASSERT(OutEdgeDst(e) == dst);
   }
   return ret_range;
 }
@@ -275,20 +275,18 @@ katana::EdgeShuffleTopology::find_edges(
 void
 katana::EdgeShuffleTopology::SortEdgesByDestID() noexcept {
   katana::do_all(
-      katana::iterate(Base::all_nodes()),
+      katana::iterate(all_nodes()),
       [&](Node node) {
         // get this node's first and last edge
-        auto e_beg = *Base::edges(node).begin();
-        auto e_end = *Base::edges(node).end();
+        auto e_beg = *OutEdges(node).begin();
+        auto e_end = *OutEdges(node).end();
 
         // get iterators to locations to sort in the vector
         auto begin_sort_iter = katana::make_zip_iterator(
-            edge_prop_indices_.begin() + e_beg,
-            Base::GetDests().begin() + e_beg);
+            edge_prop_indices_.begin() + e_beg, GetDests().begin() + e_beg);
 
         auto end_sort_iter = katana::make_zip_iterator(
-            edge_prop_indices_.begin() + e_end,
-            Base::GetDests().begin() + e_end);
+            edge_prop_indices_.begin() + e_end, GetDests().begin() + e_end);
 
         // rearrange vector indices based on how the destinations of this
         // graph will eventually be sorted sort function not based on vector
@@ -306,8 +304,7 @@ katana::EdgeShuffleTopology::SortEdgesByDestID() noexcept {
             });
 
         KATANA_LOG_DEBUG_ASSERT(std::is_sorted(
-            Base::GetDests().begin() + e_beg,
-            Base::GetDests().begin() + e_end));
+            GetDests().begin() + e_beg, GetDests().begin() + e_end));
       },
       katana::steal(), katana::no_stats());
   // remember to update sort state
@@ -318,20 +315,18 @@ void
 katana::EdgeShuffleTopology::SortEdgesByTypeThenDest(
     const PropertyGraph* pg) noexcept {
   katana::do_all(
-      katana::iterate(Base::all_nodes()),
+      katana::iterate(all_nodes()),
       [&](Node node) {
         // get this node's first and last edge
-        auto e_beg = *Base::edges(node).begin();
-        auto e_end = *Base::edges(node).end();
+        auto e_beg = *OutEdges(node).begin();
+        auto e_end = *OutEdges(node).end();
 
         // get iterators to locations to sort in the vector
         auto begin_sort_iter = katana::make_zip_iterator(
-            edge_prop_indices_.begin() + e_beg,
-            Base::GetDests().begin() + e_beg);
+            edge_prop_indices_.begin() + e_beg, GetDests().begin() + e_beg);
 
         auto end_sort_iter = katana::make_zip_iterator(
-            edge_prop_indices_.begin() + e_end,
-            Base::GetDests().begin() + e_end);
+            edge_prop_indices_.begin() + e_end, GetDests().begin() + e_end);
 
         // rearrange vector indices based on how the destinations of this
         // graph will eventually be sorted sort function not based on vector
@@ -540,7 +535,7 @@ katana::EdgeTypeAwareTopology::CreatePerEdgeTypeAdjacencyIndex(
       [&](Node N) {
         auto offset = N * edge_type_index.num_unique_types();
         uint32_t index = 0;
-        for (auto e : e_topo.edges(N)) {
+        for (auto e : e_topo.OutEdges(N)) {
           // Since we sort the edges, we must use the
           // edge_property_index because EdgeShuffleTopology rearranges the edges
           const auto type =
@@ -551,7 +546,7 @@ katana::EdgeTypeAwareTopology::CreatePerEdgeTypeAdjacencyIndex(
             KATANA_LOG_DEBUG_ASSERT(index < edge_type_index.num_unique_types());
           }
         }
-        auto e = *e_topo.edges(N).end();
+        auto e = *e_topo.OutEdges(N).end();
         while (index < edge_type_index.num_unique_types()) {
           adj_indices[offset + index] = e;
           index++;
@@ -816,8 +811,8 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
         katana::iterate(Node{0}, Node{num_new_nodes}),
         [&](auto src) {
           auto old_src = projected_to_original_nodes_mapping[src];
-          for (Edge e : topology.edges(old_src)) {
-            auto dest = topology.edge_dest(e);
+          for (Edge e : topology.OutEdges(old_src)) {
+            auto dest = topology.OutEdgeDst(e);
             if (bitset_nodes.test(dest)) {
               bitset_edges.set(e);
               out_indices[src] += 1;
@@ -843,8 +838,8 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
         [&](auto src) {
           auto old_src = projected_to_original_nodes_mapping[src];
 
-          for (Edge e : topology.edges(old_src)) {
-            auto dest = topology.edge_dest(e);
+          for (Edge e : topology.OutEdges(old_src)) {
+            auto dest = topology.OutEdgeDst(e);
             if (bitset_nodes.test(dest)) {
               for (auto type : edge_entity_type_ids) {
                 if (pg->DoesEdgeHaveTypeFromTopoIndex(e, type)) {
@@ -899,12 +894,12 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
       [&](Node n) {
         auto src = projected_to_original_nodes_mapping[n];
 
-        for (Edge e : topology.edges(src)) {
+        for (Edge e : topology.OutEdges(src)) {
           if (bitset_edges.test(e)) {
             auto e_new = out_dests_offset[n];
             out_dests_offset[n]++;
 
-            auto dest = topology.edge_dest(e);
+            auto dest = topology.OutEdgeDst(e);
             dest = original_to_projected_nodes_mapping[dest];
             out_dests[e_new] = dest;
 
@@ -915,7 +910,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
       },
       katana::steal());
 
-  katana::do_all(katana::iterate(topology.all_edges()), [&](auto edge) {
+  katana::do_all(katana::iterate(topology.OutEdges()), [&](auto edge) {
     if (!bitset_edges.test(edge)) {
       original_to_projected_edges_mapping[edge] = topology.NumEdges();
     }

@@ -97,8 +97,8 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
           }
 
           for (auto ii : edgeRange(item)) {
-            auto dest = graph->GetEdgeDest(ii);
-            auto& ddist = (*node_data)[*dest];
+            auto dest = graph->OutEdgeDst(ii);
+            auto& ddist = (*node_data)[dest];
             Dist ew = (*edge_data)[ii];
             Dist new_dist = sdata + ew;
             Dist old_dist = katana::atomicMin(ddist, new_dist);
@@ -110,7 +110,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
                 }
                 //! [per-thread contribution of self-defined stats]
               }
-              pushWrap(ctx, *dest, new_dist);
+              pushWrap(ctx, dest, new_dist);
             }
           }
         },
@@ -138,9 +138,9 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
     katana::PerThreadStorage<Buckets> buckets;
 
     auto relax = [&](Node n, Dist sdist, Buckets& b) {
-      for (auto ii : graph->edges(n)) {
-        auto dest = graph->GetEdgeDest(ii);
-        auto& ddist = (*node_data)[*dest];
+      for (auto ii : graph->OutEdges(n)) {
+        auto dest = graph->OutEdgeDst(ii);
+        auto& ddist = (*node_data)[dest];
         Dist ew = (*edge_data)[ii];
         const Dist new_dist = sdist + ew;
 
@@ -150,7 +150,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
           if (idx >= b.size()) {
             b.resize(idx + 1);
           }
-          b[idx].push_back(*dest);
+          b[idx].push_back(dest);
         }
       }
     };
@@ -250,7 +250,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
         }
 
         for (auto e : edgeRange(item)) {
-          auto dest = graph->GetEdgeDest(e);
+          auto dest = graph->OutEdgeDst(e);
           auto& ddata = graph->template GetData<NodeDistance>(dest);
 
           const auto new_dist =
@@ -258,7 +258,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
 
           if (new_dist < ddata) {
             ddata = new_dist;
-            pushWrap(wl, *dest, new_dist);
+            pushWrap(wl, dest, new_dist);
           }
         }
       }
@@ -296,7 +296,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
       }
 
       for (auto e : edgeRange(item)) {
-        auto dest = graph->GetEdgeDest(e);
+        auto dest = graph->OutEdgeDst(e);
         auto& ddata = graph->template GetData<NodeDistance>(dest);
 
         const auto new_dist =
@@ -304,7 +304,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
 
         if (new_dist < ddata) {
           ddata = new_dist;
-          pushWrap(wl, *dest, new_dist);
+          pushWrap(wl, dest, new_dist);
         }
       }
     }
@@ -339,10 +339,10 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
               old_dist[n] = sdata;
               changed.update(true);
 
-              for (auto e : graph->edges(n)) {
+              for (auto e : graph->OutEdges(n)) {
                 const Weight new_dist =
                     sdata + graph->template GetEdgeData<EdgeWeight>(e);
-                auto dest = graph->GetEdgeDest(e);
+                auto dest = graph->OutEdgeDst(e);
                 auto& ddata = graph->template GetData<NodeDistance>(dest);
                 katana::atomicMin(ddata, new_dist);
               }
@@ -387,7 +387,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
               for (auto e = t.beg; e != t.end; ++e) {
                 const Weight new_dist =
                     sdata + graph->template GetEdgeData<EdgeWeight>(e);
-                auto dest = graph->GetEdgeDest(e);
+                auto dest = graph->OutEdgeDst(*e);
                 auto& ddata = graph->template GetData<NodeDistance>(dest);
                 katana::atomicMin(ddata, new_dist);
               }
@@ -428,7 +428,7 @@ public:
     katana::do_all(katana::iterate(graph), [&](const typename Graph::Node& n) {
       graph.template GetData<NodeDistance>(n) = kDistanceInfinity;
       node_data[n] = kDistanceInfinity;
-      for (auto e : graph.edges(n)) {
+      for (auto e : graph.OutEdges(n)) {
         edge_data[e] = graph.template GetEdgeData<EdgeWeight>(e);
       }
     });

@@ -233,9 +233,9 @@ Iterate(katana::TypedPropertyGraph<NodeType, EdgeType> g, size_t limit) {
   size_t result = 0;
   for (const auto& node : g) {
     result += SumNodePropertyV(g, node, limit);
-    for (auto& edge : g.edges(node)) {
+    for (auto& edge : g.OutEdges(node)) {
       result += SumEdgePropertyV(g, edge, limit);
-      result += SumNodePropertyV(g, g.GetEdgeDest(edge), limit);
+      result += SumNodePropertyV(g, g.OutEdgeDst(edge), limit);
     }
   }
 

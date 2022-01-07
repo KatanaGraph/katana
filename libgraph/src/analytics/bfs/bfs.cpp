@@ -111,9 +111,8 @@ struct OneTilePushWrap {
 
   template <typename C>
   void operator()(C& cont, const GNode& n) const {
-    EdgeTile t{graph->edge_begin(n), graph->edge_end(n)};
-
-    cont.push(t);
+    auto rng = graph->OutEdges(n);
+    cont.push(EdgeTile{rng.begin(), rng.end()});
   }
 };
 
@@ -181,8 +180,8 @@ AsynchronousAlgo(
         const Dist new_dist = item.dist;
 
         for (auto ii : edgeRange(item)) {
-          auto dest = graph.GetEdgeDest(ii);
-          Dist& ddata = (*node_data)[*dest];
+          auto dest = graph.OutEdgeDst(ii);
+          Dist& ddata = (*node_data)[dest];
 
           while (true) {
             Dist old_dist = ddata;
@@ -202,7 +201,7 @@ AsynchronousAlgo(
                 }
               }
 
-              pushWrap(ctx, *dest, new_dist + 1);
+              pushWrap(ctx, dest, new_dist + 1);
               break;
             }
           }
@@ -273,8 +272,8 @@ SynchronousDirectOpt(
             [&](const GNode& dst) {
               GNode& ddata = (*node_data)[dst];
               if (ddata == BfsImplementation::kDistanceInfinity) {
-                for (auto e : bidir_view.in_edges(dst)) {
-                  auto src = bidir_view.in_edge_dest(e);
+                for (auto e : bidir_view.InEdges(dst)) {
+                  auto src = bidir_view.InEdgeSrc(e);
 
                   if (front_bitset.test(src)) {
                     // assign parents on the bfs path.
@@ -303,8 +302,8 @@ SynchronousDirectOpt(
       loop(
           katana::iterate(*frontier),
           [&](const GNode& src) {
-            for (auto e : bidir_view.edges(src)) {
-              auto dst = bidir_view.edge_dest(e);
+            for (auto e : bidir_view.OutEdges(src)) {
+              auto dst = bidir_view.OutEdgeDst(e);
               GNode& ddata = (*node_data)[dst];
               if (ddata == BfsImplementation::kDistanceInfinity) {
                 GNode old_parent = ddata;
@@ -356,8 +355,8 @@ ComputeParentFromDistance(
           return;
         }
 
-        for (auto e : bidir_view.in_edges(v)) {
-          GNode u = bidir_view.in_edge_dest(e);
+        for (auto e : bidir_view.InEdges(v)) {
+          GNode u = bidir_view.InEdgeSrc(e);
           if (node_dist[v] == node_dist[u] + 1) {
             v_parent = u;
             break;
@@ -502,8 +501,8 @@ ComputeLevels(
     loop(
         katana::iterate(*curr),
         [&](const GNode& src) {
-          for (auto e : graph.edges(src)) {
-            auto dest = *graph.GetEdgeDest(e);
+          for (auto e : graph.OutEdges(src)) {
+            auto dest = graph.OutEdgeDst(e);
 
             if (levels[dest] == BfsImplementation::kDistanceInfinity) {
               levels[dest] = next_level;
@@ -555,8 +554,8 @@ CheckParentByLevel(
         if (u_parent != kUnvisited && levels[u] != kUnvisited) {
           bool parent_found = false;
 
-          for (auto e : bidir_view.in_edges(u)) {
-            auto v = bidir_view.in_edge_dest(e);
+          for (auto e : bidir_view.InEdges(u)) {
+            auto v = bidir_view.InEdgeSrc(e);
 
             if (v == u_parent) {
               parent_found = true;

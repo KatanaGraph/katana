@@ -438,17 +438,17 @@ TestTopologyAccess() {
 
   for (int i = 0; i < 10; ++i) {
     KATANA_LOG_ASSERT(
-        std::distance(g->edges(i).begin(), g->edges(i).end()) == 3);
-    KATANA_LOG_ASSERT(g->edges(i).size() == 3);
-    KATANA_LOG_ASSERT(g->edges(i));
-    KATANA_LOG_ASSERT(!g->edges(i).empty());
+        std::distance(g->OutEdges(i).begin(), g->OutEdges(i).end()) == 3);
+    KATANA_LOG_ASSERT(g->OutEdges(i).size() == 3);
+    KATANA_LOG_ASSERT(g->OutEdges(i));
+    KATANA_LOG_ASSERT(!g->OutEdges(i).empty());
   }
   int n_nodes = 0;
   for (katana::PropertyGraph::Node i : *g) {
     auto _ignore = g->GetNodeProperty(0)->chunk(0)->GetScalar(i);
     n_nodes++;
     int n_edges = 0;
-    for (auto e : g->edges(i)) {
+    for (auto e : g->OutEdges(i)) {
       auto __ignore = g->GetEdgeProperty(0)->chunk(0)->GetScalar(e);
       n_edges++;
     }

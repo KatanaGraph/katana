@@ -49,8 +49,8 @@ struct Node2VecAlgo {
     double total_wt = degree[n];
 
     uint32_t edge_index = std::floor(prob * total_wt);
-    auto ei = graph.edges(n).begin() + edge_index;
-    return graph.edge_dest(*ei);
+    auto ei = graph.OutEdges(n).begin() + edge_index;
+    return graph.OutEdgeDst(*ei);
   }
 
   void GraphRandomWalk(
@@ -207,9 +207,9 @@ struct Edge2VecAlgo {
     double total_wt = degree[n];
 
     uint32_t edge_index = std::floor(prob * total_wt);
-    auto ei = graph.edges(n).begin() + edge_index;
+    auto ei = graph.OutEdges(n).begin() + edge_index;
     return std::make_pair(
-        graph.edge_dest(*ei), graph.GetEdgeData<EdgeType>(*ei));
+        graph.OutEdgeDst(*ei), graph.GetEdgeData<EdgeType>(*ei));
   }
 
   void GraphRandomWalk(
@@ -473,7 +473,7 @@ InitializeDegrees(const Graph& graph, katana::NUMAArray<uint64_t>* degree) {
   katana::do_all(katana::iterate(graph), [&](typename Graph::Node n) {
     // Treat this as O(1) time because subtracting iterators is just pointer
     // or number subtraction. So don't use steal().
-    (*degree)[n] = graph.edges(n).size();
+    (*degree)[n] = graph.degree(n);
   });
 }
 

@@ -132,15 +132,12 @@ public:
   /**
    * Gets the destination for an edge.
    *
-   * @param edge edge iterator to get the destination of
-   * @returns node iterator to the edge destination
+   * @param edge edge id to get the destination of
+   * @returns node id of the edge destination
    */
-  node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    return pg_->GetEdgeDest(edge);
+  Node OutEdgeDst(Edge e) const noexcept {
+    return pg_->topology().OutEdgeDst(e);
   }
-
-  // TODO(amber): remove edge_dest or GetEdgeDest
-  Node edge_dest(Edge e) const noexcept { return pg_->topology().edge_dest(e); }
 
   size_t degree(Node n) const noexcept { return pg_->topology().degree(n); }
 
@@ -148,12 +145,11 @@ public:
   uint64_t NumEdges() const { return pg_->NumEdges(); }
 
   /**
-   * Gets the edge range of some node.
+   * Gets all out-edges.
    *
-   * @param node node to get the edge range of
-   * @returns iterable edge range for node.
+   * @returns iterable edge range for the entire graph.
    */
-  edges_range edges(Node node) const { return pg_->edges(node); }
+  edges_range OutEdges() const noexcept { return pg_->topology().OutEdges(); }
 
   /**
    * Gets the edge range of some node.
@@ -161,30 +157,9 @@ public:
    * @param node node to get the edge range of
    * @returns iterable edge range for node.
    */
-  edges_range edges(node_iterator node) const { return pg_->edges(*node); }
-  // TODO(amp): [[deprecated("use edges(Node node)")]]
-
-  /**
-   * Gets the first edge of some node.
-   *
-   * @param node node to get the edge of
-   * @returns iterator to first edge of node
-   */
-  edge_iterator edge_begin(Node node) const { return pg_->edges(node).begin(); }
-  // TODO(amp): [[deprecated("use edges(node)")]]
-
-  /**
-   * Gets the end edge boundary of some node.
-   *
-   * @param node node to get the edge of
-   * @returns iterator to the end of the edges of node, i.e. the first edge of
-   *     the next node (or an "end" iterator if there is no next node)
-   */
-  edge_iterator edge_end(Node node) const { return pg_->edges(node).end(); }
-  // TODO(amp): [[deprecated("use edges(node)")]]
+  edges_range OutEdges(Node node) const { return pg_->OutEdges(node); }
 
   nodes_range all_nodes() const noexcept { return pg_->topology().all_nodes(); }
-  edges_range all_edges() const noexcept { return pg_->topology().all_edges(); }
   /**
    * Accessor for the underlying PropertyGraph.
    *

@@ -113,8 +113,8 @@ SyncCascadeKCore(GraphTy* graph, uint32_t k_core_number) {
         katana::iterate(*current),
         [&](const GNode& dead_node) {
           //! Decrement degree of all neighbors.
-          for (auto e : graph->edges(dead_node)) {
-            auto dest = graph->edge_dest(e);
+          for (auto e : OutOrUndirectedEdges(*graph, dead_node)) {
+            auto dest = OutOrUndirectedDst(*graph, e);
             auto& dest_current_degree =
                 graph->template GetData<KCoreNodeCurrentDegree>(dest);
             uint32_t old_degree = katana::atomicSub(dest_current_degree, 1u);
@@ -151,8 +151,8 @@ AsyncCascadeKCore(GraphTy* graph, uint32_t k_core_number) {
       katana::iterate(initial_worklist),
       [&](const GNode& dead_node, auto& ctx) {
         //! Decrement degree of all neighbors.
-        for (auto e : graph->edges(dead_node)) {
-          auto dest = graph->edge_dest(e);
+        for (auto e : OutOrUndirectedEdges(*graph, dead_node)) {
+          auto dest = OutOrUndirectedDst(*graph, e);
           auto& dest_current_degree =
               graph->template GetData<KCoreNodeCurrentDegree>(dest);
           uint32_t old_degree = katana::atomicSub(dest_current_degree, 1u);

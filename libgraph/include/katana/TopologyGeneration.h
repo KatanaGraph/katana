@@ -125,7 +125,7 @@ AddGraphProperties(
       }
     } else {
       KATANA_CHECKED(builder->Reserve(pg->NumEdges()));
-      for (Edge e : pg->all_edges()) {
+      for (Edge e : pg->OutEdges()) {
         KATANA_CHECKED(builder->Append(generator(e)));
       }
     }

@@ -105,17 +105,17 @@ struct K_SSSP {
   template <typename WL, typename TileMaker>
   static void PushEdgeTiles(
       WL& wl, Graph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->edge_begin(src);
-    const auto end = graph->edge_end(src);
+    auto rng = graph->OutEdges(src);
 
-    PushEdgeTiles(wl, beg, end, f);
+    PushEdgeTiles(wl, rng.begin(), rng.end(), f);
   }
 
   template <typename WL, typename TileMaker>
   static void PushEdgeTilesParallel(
       WL& wl, Graph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->edge_begin(src);
-    const auto end = graph->edge_end(src);
+    auto rng = graph->OutEdges(src);
+    auto beg = rng.begin();
+    const auto end = rng.end();
 
     if ((end - beg) > EdgeTileSize) {
       katana::on_each(
@@ -171,10 +171,10 @@ struct K_SSSP {
 
   struct OutEdgeRangeFn {
     Graph* graph;
-    auto operator()(const GNode& n) const { return graph->edges(n); }
+    auto operator()(const GNode& n) const { return graph->OutEdges(n); }
 
     auto operator()(const UpdateRequest& req) const {
-      return graph->edges(req.src);
+      return graph->OutEdges(req.src);
     }
   };
 

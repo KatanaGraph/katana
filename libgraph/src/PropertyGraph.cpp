@@ -986,8 +986,8 @@ katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   katana::do_all(
       katana::iterate(pg->topology().all_nodes()),
       [&](GraphTopology::Node n) {
-        const auto e_beg = *pg->topology().edges(n).begin();
-        const auto e_end = *pg->topology().edges(n).end();
+        const auto e_beg = *pg->topology().OutEdges(n).begin();
+        const auto e_end = *pg->topology().OutEdges(n).end();
 
         auto sort_iter_beg = katana::make_zip_iterator(
             out_dests_data + e_beg, permutation_vec->begin() + e_beg);
@@ -1017,14 +1017,15 @@ katana::FindEdgeSortedByDest(
     const PropertyGraph* graph, const GraphTopology::Node src,
     const GraphTopology::Node dst) {
   const auto& topo = graph->topology();
-  auto e_range = topo.edges(src);
+  auto e_range = topo.OutEdges(src);
 
   constexpr size_t kBinarySearchThreshold = 64;
 
   if (e_range.size() <= kBinarySearchThreshold) {
     auto iter = std::find_if(
-        e_range.begin(), e_range.end(),
-        [&](const GraphTopology::Edge& e) { return topo.edge_dest(e) == dst; });
+        e_range.begin(), e_range.end(), [&](const GraphTopology::Edge& e) {
+          return topo.OutEdgeDst(e) == dst;
+        });
 
     return *iter;
 
@@ -1033,7 +1034,7 @@ katana::FindEdgeSortedByDest(
         e_range.begin(), e_range.end(), dst,
         internal::EdgeDestComparator<GraphTopology>{&topo});
 
-    return topo.edge_dest(*iter) == dst ? *iter : *e_range.end();
+    return topo.OutEdgeDst(*iter) == dst ? *iter : *e_range.end();
   }
 }
 
@@ -1050,7 +1051,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   dn_pairs.allocateInterleaved(num_nodes);
 
   katana::do_all(katana::iterate(topo.all_nodes()), [&](auto node) {
-    size_t node_degree = pg->edges(node).size();
+    size_t node_degree = topo.degree(node);
     dn_pairs[node] = DegreeNodePair(node_degree, node);
   });
 
@@ -1091,7 +1092,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
             (new_node_id == 0) ? 0 : new_prefix_sum[new_node_id - 1];
 
         // construct the graph, reindexing as it goes along
-        for (auto e : topo.edges(old_node_id)) {
+        for (auto e : topo.OutEdges(old_node_id)) {
           // get destination, reindex
           uint32_t old_edge_dest = out_dests_data[e];
           uint32_t new_edge_dest = old_to_new_mapping[old_edge_dest];
@@ -1133,15 +1134,15 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
   out_indices.allocateInterleaved(topology.NumNodes());
   // Store the out-degree of nodes from original graph
   katana::do_all(katana::iterate(topology.all_nodes()), [&](auto n) {
-    out_indices[n] = topology.edges(n).size();
+    out_indices[n] = topology.degree(n);
   });
 
   katana::do_all(
       katana::iterate(topology.all_nodes()),
       [&](auto n) {
         // update the out_indices for the symmetric topology
-        for (auto e : topology.edges(n)) {
-          auto dest = topology.edge_dest(e);
+        for (auto e : topology.OutEdges(n)) {
+          auto dest = topology.OutEdgeDst(e);
           // Do not add reverse edge for self-loops
           if (n != dest) {
             __sync_fetch_and_add(&(out_indices[dest]), 1);
@@ -1173,10 +1174,10 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
       [&](auto src) {
         // get all outgoing edges (excluding self edges) of a particular
         // node and add reverse edges.
-        for (GraphTopology::Edge e : topology.edges(src)) {
+        for (GraphTopology::Edge e : topology.OutEdges(src)) {
           // e = start index into edge array for a particular node
           // destination node
-          auto dest = topology.edge_dest(e);
+          auto dest = topology.OutEdgeDst(e);
 
           // Add original edge
           auto e_new_src = __sync_fetch_and_add(&(out_dests_offset[src]), 1);
@@ -1216,11 +1217,11 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
   // Keep a copy of old destinaton ids and compute number of
   // in-coming edges for the new prefix sum of out_indices.
   katana::do_all(
-      katana::iterate(topology.all_edges()),
+      katana::iterate(topology.OutEdges()),
       [&](auto e) {
         // Counting outgoing edges in the tranpose graph by
         // counting incoming edges in the original graph
-        auto dest = topology.edge_dest(e);
+        auto dest = topology.OutEdgeDst(e);
         __sync_add_and_fetch(&(out_indices[dest]), 1);
       },
       katana::no_stats());
@@ -1247,10 +1248,10 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
       [&](auto src) {
         // get all outgoing edges of a particular
         // node and reverse the edges.
-        for (GraphTopology::Edge e : topology.edges(src)) {
+        for (GraphTopology::Edge e : topology.OutEdges(src)) {
           // e = start index into edge array for a particular node
           // Destination node
-          auto dest = topology.edge_dest(e);
+          auto dest = topology.OutEdgeDst(e);
           // Location to save edge
           auto e_new = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
           // Save src as destination

@@ -837,7 +837,13 @@ public:
 
   nodes_range all_nodes() const noexcept { return topology().all_nodes(); }
 
-  edges_range all_edges() const noexcept { return topology().all_edges(); }
+  edges_range OutEdges() const noexcept { return topology().OutEdges(); }
+
+  /// Gets the edge range of some node.
+  ///
+  /// \param node node to get the edge range of
+  /// \returns iterable edge range for node.
+  edges_range OutEdges(Node node) const { return topology().OutEdges(node); }
 
   /// Return the number of local nodes
   size_t size() const { return topology().size(); }
@@ -850,18 +856,12 @@ public:
   /// Return the number of local edges
   uint64_t NumEdges() const { return topology().NumEdges(); }
 
-  /// Gets the edge range of some node.
-  ///
-  /// \param node node to get the edge range of
-  /// \returns iterable edge range for node.
-  edges_range edges(Node node) const { return topology().edges(node); }
-
   /// Gets the destination for an edge.
   ///
   /// @param edge edge iterator to get the destination of
   /// @returns node iterator to the edge destination
-  node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    auto node_id = topology().edge_dest(*edge);
+  node_iterator OutEdgeDst(const edge_iterator& edge) const {
+    auto node_id = topology().OutEdgeDst(*edge);
     return node_iterator(node_id);
   }
 

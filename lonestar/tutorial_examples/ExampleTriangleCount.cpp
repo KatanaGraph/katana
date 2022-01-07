@@ -90,8 +90,8 @@ CountEqual(
     typename G::edge_iterator bb, typename G::edge_iterator eb) {
   size_t retval = 0;
   while (aa != ea && bb != eb) {
-    typename G::Node a = *g.GetEdgeDest(aa);
-    typename G::Node b = *g.GetEdgeDest(bb);
+    typename G::Node a = g.OutEdgeDst(*aa);
+    typename G::Node b = g.OutEdgeDst(*bb);
     if (a < b) {
       ++aa;
     } else if (b < a) {
@@ -111,7 +111,7 @@ struct LessThan {
   typename G::Node n;
   LessThan(const G& g, typename G::Node n) : g(g), n(n) {}
   bool operator()(typename G::edge_iterator it) {
-    return *g.GetEdgeDest(it) < n;
+    return g.OutEdgeDst(*it) < n;
   }
 };
 
@@ -121,7 +121,7 @@ struct GreaterThanOrEqual {
   typename G::Node n;
   GreaterThanOrEqual(const G& g, typename G::Node n) : g(g), n(n) {}
   bool operator()(typename G::edge_iterator it) {
-    return !(n < *g.GetEdgeDest(it));
+    return !(n < g.OutEdgeDst(*it));
   }
 };
 
@@ -149,22 +149,22 @@ NodeIteratingAlgo(const Graph& graph) {
             [&](const GNode& n) {
               // Partition neighbors
               // [first, ea) [n] [bb, last)
-              Graph::edge_iterator first = graph.edge_begin(n);
-              Graph::edge_iterator last = graph.edge_end(n);
+              Graph::edge_iterator first = graph.OutEdges(n).begin();
+              Graph::edge_iterator last = graph.OutEdges(n).end();
               Graph::edge_iterator ea =
                   LowerBound(first, last, LessThan<Graph>(graph, n));
               Graph::edge_iterator bb =
                   LowerBound(first, last, GreaterThanOrEqual<Graph>(graph, n));
 
               for (; bb != last; ++bb) {
-                GNode B = *graph.GetEdgeDest(bb);
+                GNode B = graph.OutEdgeDst(*bb);
                 for (auto aa = first; aa != ea; ++aa) {
-                  GNode A = *graph.GetEdgeDest(aa);
-                  Graph::edge_iterator vv = graph.edge_begin(A);
-                  Graph::edge_iterator ev = graph.edge_end(A);
+                  GNode A = graph.OutEdgeDst(*aa);
+                  Graph::edge_iterator vv = graph.OutEdges(A).begin();
+                  Graph::edge_iterator ev = graph.OutEdges(A).end();
                   Graph::edge_iterator it =
                       LowerBound(vv, ev, LessThan<Graph>(graph, B));
-                  if (it != ev && *graph.GetEdgeDest(it) == B) {
+                  if (it != ev && graph.OutEdgeDst(*it) == B) {
                     numTriangles += 1;
                   }
                 }
@@ -206,10 +206,10 @@ EdgeIteratingAlgo(const Graph& graph) {
   katana::do_all(
       katana::iterate(graph),
       [&](GNode n) {
-        for (auto edge : graph.edges(n)) {
-          auto dest = graph.GetEdgeDest(edge);
-          if (n < *dest)
-            items.push(WorkItem(n, *dest));
+        for (auto edge : graph.OutEdges(n)) {
+          auto dest = graph.OutEdgeDst(edge);
+          if (n < dest)
+            items.push(WorkItem(n, dest));
         }
       },
       katana::loopname("Initialize"));
@@ -223,10 +223,10 @@ EdgeIteratingAlgo(const Graph& graph) {
             [&](const WorkItem& w) {
               // Compute intersection of range (w.src, w.dst) in neighbors of
               // w.src and w.dst
-              Graph::edge_iterator abegin = graph.edge_begin(w.src);
-              Graph::edge_iterator aend = graph.edge_end(w.src);
-              Graph::edge_iterator bbegin = graph.edge_begin(w.dst);
-              Graph::edge_iterator bend = graph.edge_end(w.dst);
+              Graph::edge_iterator abegin = graph.OutEdges(w.src).begin();
+              Graph::edge_iterator aend = graph.OutEdges(w.src).end();
+              Graph::edge_iterator bbegin = graph.OutEdges(w.dst).begin();
+              Graph::edge_iterator bend = graph.OutEdges(w.dst).end();
 
               Graph::edge_iterator aa = LowerBound(
                   abegin, aend, GreaterThanOrEqual<Graph>(graph, w.src));

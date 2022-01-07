@@ -155,7 +155,7 @@ CheckReachabilityAsync(
       katana::iterate(initBag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edgeRange(item)) {
-          GNode dst = *(graph->GetEdgeDest(ii));
+          GNode dst = graph->OutEdgeDst(ii);
           if (graph->GetData<NodeCount>(dst) == 0) {
             graph->GetData<NodeCount>(dst) = 1;
             pushWrap(ctx, dst, 1);
@@ -188,8 +188,8 @@ CheckReachabilitySync(Graph* graph, const GNode& source) {
     katana::do_all(
         katana::iterate(current_bag),
         [&](GNode n) {
-          for (auto edge : graph->edges(n)) {
-            auto dest = *(graph->GetEdgeDest(edge));
+          for (auto edge : graph->OutEdges(n)) {
+            auto dest = graph->OutEdgeDst(edge);
             if (graph->GetData<NodeCount>(dest) == 0) {
               graph->GetData<NodeCount>(dest) = 1;
               next_bag.push(dest);
@@ -242,7 +242,7 @@ DeltaStepAlgo(
       katana::iterate(init_bag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edgeRange(item)) {
-          GNode dst = *(graph->GetEdgeDest(ii));
+          GNode dst = graph->OutEdgeDst(ii);
           auto& ddata_count = graph->GetData<NodeCount>(dst);
           auto& ddata_max = graph->GetData<NodeMax>(dst);
 

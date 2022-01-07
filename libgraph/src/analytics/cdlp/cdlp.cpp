@@ -81,8 +81,8 @@ struct CdlpSynchronousAlgo : CdlpAlgo<GraphViewTy> {
             using Histogram_type = boost::unordered_map<CommunityType, size_t>;
             Histogram_type histogram;
             // Iterate over all neighbors (this is undirected view)
-            for (auto e : graph->edges(node)) {
-              auto neighbor = graph->edge_dest(e);
+            for (auto e : graph->UndirectedEdges(node)) {
+              auto neighbor = graph->UndirectedEdgeNeighbor(e);
               const auto neighbor_data =
                   graph->template GetData<NodeCommunity>(neighbor);
               histogram[neighbor_data]++;
@@ -139,8 +139,7 @@ CdlpWithWrap(
     katana::PropertyGraph* pg, std::string output_property_name,
     size_t max_iterations, katana::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(
-      2,
-      pg->topology().NumNodes() * sizeof(typename Algorithm::NodeCommunity));
+      2, pg->topology().NumNodes() * sizeof(typename Algorithm::NodeCommunity));
   katana::ReportPageAllocGuard page_alloc;
 
   if (auto r = ConstructNodeProperties<

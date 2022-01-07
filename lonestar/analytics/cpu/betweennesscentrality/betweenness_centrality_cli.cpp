@@ -168,8 +168,7 @@ main(int argc, char** argv) {
     }
     auto results = results_result.value();
 
-    KATANA_LOG_ASSERT(
-        (uint64_t)results->length() == pg->topology().NumNodes());
+    KATANA_LOG_ASSERT((uint64_t)results->length() == pg->topology().NumNodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

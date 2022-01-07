@@ -493,11 +493,11 @@ katana::graphml::ExportGraph(
       sub_indexes[j]++;
     }
 
-    while (!InRange(i, topology.edges(src_node))) {
+    while (!InRange(i, topology.OutEdges(src_node))) {
       src_node++;
     }
     std::string src = boost::lexical_cast<std::string>(src_node);
-    std::string dest = boost::lexical_cast<std::string>(topology.edge_dest(i));
+    std::string dest = boost::lexical_cast<std::string>(topology.OutEdgeDst(i));
     StartGraphmlEdge(
         writer, boost::lexical_cast<std::string>(i), src, dest, labels);
 

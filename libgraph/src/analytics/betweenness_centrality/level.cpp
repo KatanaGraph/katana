@@ -121,8 +121,8 @@ LevelSSSP(
           auto& src_data = (*graph_data)[n];
           KATANA_LOG_ASSERT(src_data.current_dist == current_level);
 
-          for (auto e : graph->edges(n)) {
-            auto dest = graph->edge_dest(e);
+          for (auto e : graph->OutEdges(n)) {
+            auto dest = graph->OutEdgeDst(e);
             auto& dst_data = (*graph_data)[dest];
 
             if (dst_data.current_dist == kInfinity) {
@@ -183,12 +183,12 @@ LevelBackwardBrandes(
             auto& src_data = (*graph_data)[n];
             KATANA_LOG_ASSERT(src_data.current_dist == current_level);
 
-            for (auto e : graph->edges(n)) {
+            for (auto e : graph->OutEdges(n)) {
               if (active_edges->test(e)) {
                 // note: distance check not required because an edge
                 // will never be revisited in a BFS DAG, meaning it
                 // will only ever be activated once
-                auto dest = graph->edge_dest(e);
+                auto dest = graph->OutEdgeDst(e);
                 auto& dst_data = (*graph_data)[dest];
 
                 // grab dependency, add to self

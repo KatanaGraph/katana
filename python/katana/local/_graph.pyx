@@ -200,7 +200,7 @@ cdef class GraphBase:
         if n > self.num_nodes():
             raise IndexError(n)
 
-        edge_range = self.topology().edges(n)
+        edge_range = self.topology().OutEdges(n)
         return range(deref(edge_range.begin()), deref(edge_range.end()))
 
     def get_edge_source(self, uint64_t e):
@@ -248,7 +248,7 @@ cdef class GraphBase:
 
         .. code-block:: Python
 
-            edges = graph.edges()
+            edges = graph.OutEdges()
             print("Number of edges", len(edges))
             print("One destination with at indexing", edges.at[0, "dest"])
             print("One source with columnar indexing", edges["source"][0]) # This is O(log(E)) time
@@ -284,8 +284,8 @@ cdef class GraphBase:
             if node_stop >= self.num_nodes():
                 raise IndexError(node_stop)
 
-            start = deref(self.topology().edges(node_start).begin())
-            stop = deref(self.topology().edges(node_stop-1).end())
+            start = deref(self.topology().OutEdges(node_start).begin())
+            stop = deref(self.topology().OutEdges(node_stop-1).end())
 
             return LazyDataFrame(
                 dict(id=range(0, self.num_edges()),
@@ -332,7 +332,7 @@ cdef class GraphBase:
         """
         if e > self.num_edges():
             raise IndexError(e)
-        return self.topology().edge_dest(e)
+        return self.topology().OutEdgeDst(e)
 
     def get_node_property(self, prop):
         """

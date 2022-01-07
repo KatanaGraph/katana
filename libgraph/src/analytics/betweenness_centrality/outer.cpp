@@ -63,8 +63,8 @@ public:
          ++qq) {
       int src = *qq;
 
-      for (auto edge : graph_.edges(src)) {
-        auto dest = graph_.edge_dest(edge);
+      for (auto edge : graph_.OutEdges(src)) {
+        auto dest = graph_.OutEdgeDst(edge);
 
         if (!distance[dest]) {
           source_queue.push_back(dest);
@@ -236,7 +236,7 @@ struct HasOut {
 
   bool operator()(const OuterGNode& n) const {
     // return *graph.edge_begin(n) != *graph.edge_end(n);
-    auto edge_range = graph.edges(n);
+    auto edge_range = graph.OutEdges(n);
     return !edge_range.empty();
   }
 };

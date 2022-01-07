@@ -8,6 +8,7 @@
 #include <boost/iterator/counting_iterator.hpp>
 
 #include "arrow/util/bitmap.h"
+#include "katana/CompileTimeIntrospection.h"
 #include "katana/DynamicBitset.h"
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
@@ -99,11 +100,16 @@ public:
     return adj_indices_ == that.adj_indices_ && dests_ == that.dests_;
   }
 
-  /// Gets the edge range of some node.
+  /// Gets all out-edges
+  edges_range OutEdges() const noexcept {
+    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{NumEdges()});
+  }
+
+  /// Gets out-edges of some node.
   ///
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
-  edges_range edges(Node node) const noexcept {
+  edges_range OutEdges(Node node) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(node <= adj_indices_.size());
     edge_iterator e_beg{node > 0 ? adj_indices_[node - 1] : 0};
     edge_iterator e_end{adj_indices_[node]};
@@ -111,7 +117,12 @@ public:
     return MakeStandardRange(e_beg, e_end);
   }
 
-  Node edge_source(const Edge& eid) const noexcept {
+  Node OutEdgeDst(Edge edge_id) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
+    return dests_[edge_id];
+  }
+
+  Node GetEdgeSrc(const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
 
     if (eid < adj_indices_[0]) {
@@ -129,11 +140,6 @@ public:
     return static_cast<Node>(d);
   }
 
-  Node edge_dest(Edge edge_id) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
-    return dests_[edge_id];
-  }
-
   nodes_range nodes(Node begin, Node end) const noexcept {
     return MakeStandardRange<node_iterator>(begin, end);
   }
@@ -142,9 +148,6 @@ public:
     return nodes(Node{0}, static_cast<Node>(NumNodes()));
   }
 
-  edges_range all_edges() const noexcept {
-    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{NumEdges()});
-  }
   // Standard container concepts
 
   node_iterator begin() const noexcept { return node_iterator(0); }
@@ -157,7 +160,7 @@ public:
 
   ///@param node node to get degree for
   ///@returns Degree of node N
-  size_t degree(Node node) const noexcept { return edges(node).size(); }
+  size_t degree(Node node) const noexcept { return OutEdges(node).size(); }
 
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
@@ -306,7 +309,7 @@ public:
   edges_range find_edges(const Node& src, const Node& dst) const noexcept;
 
   bool has_edge(const Node& src, const Node& dst) const noexcept {
-    return find_edge(src, dst) != edges(src).end();
+    return find_edge(src, dst) != OutEdges(src).end();
   }
 
 protected:
@@ -472,8 +475,8 @@ private:
           auto new_srd_id = old_to_new_map[old_src_id];
           auto new_out_index = new_srd_id > 0 ? degrees[new_srd_id - 1] : 0;
 
-          for (auto e : seed_topo.edges(old_src_id)) {
-            auto new_edge_dest = old_to_new_map[seed_topo.edge_dest(e)];
+          for (auto e : seed_topo.OutEdges(old_src_id)) {
+            auto new_edge_dest = old_to_new_map[seed_topo.OutEdgeDst(e)];
             KATANA_LOG_DEBUG_ASSERT(new_edge_dest < seed_topo.NumNodes());
 
             auto new_edge_id = new_out_index;
@@ -560,11 +563,16 @@ public:
            dests_ == projected_topo_.dests_;
   }
 
+  /// Gets all out-edges.
+  edges_range OutEdges() const noexcept {
+    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{NumEdges()});
+  }
+
   /// Gets the edge range of some node.
   ///
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
-  edges_range edges(Node node) const noexcept {
+  edges_range OutEdges(Node node) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(node < adj_indices_.size());
     edge_iterator e_beg{node != 0 ? adj_indices_[node - 1] : 0};
     edge_iterator e_end{adj_indices_[node]};
@@ -572,7 +580,12 @@ public:
     return MakeStandardRange(e_beg, e_end);
   }
 
-  Node edge_source(const Edge& eid) const noexcept {
+  Node OutEdgeDst(Edge edge_id) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
+    return dests_[edge_id];
+  }
+
+  Node GetEdgeSrc(const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
 
     if (eid < adj_indices_[0]) {
@@ -592,11 +605,6 @@ public:
     return static_cast<Node>(d);
   }
 
-  Node edge_dest(Edge edge_id) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
-    return dests_[edge_id];
-  }
-
   nodes_range nodes(Node begin, Node end) const noexcept {
     return MakeStandardRange<node_iterator>(begin, end);
   }
@@ -605,9 +613,6 @@ public:
     return nodes(Node{0}, static_cast<Node>(NumNodes()));
   }
 
-  edges_range all_edges() const noexcept {
-    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{NumEdges()});
-  }
   // Standard container concepts
 
   node_iterator begin() const noexcept { return node_iterator(0); }
@@ -620,7 +625,7 @@ public:
 
   ///@param node node to get degree for
   ///@returns Degree of node N
-  size_t degree(Node node) const noexcept { return edges(node).size(); }
+  size_t degree(Node node) const noexcept { return OutEdges(node).size(); }
 
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
@@ -733,12 +738,12 @@ struct EdgeDestComparator {
 
   bool operator()(const typename Topo::Edge& e, const typename Topo::Node& n)
       const noexcept {
-    return topo_->edge_dest(e) < n;
+    return topo_->OutEdgeDst(e) < n;
   }
 
   bool operator()(const typename Topo::Node& n, const typename Topo::Edge& e)
       const noexcept {
-    return n < topo_->edge_dest(e);
+    return n < topo_->OutEdgeDst(e);
   }
 };
 }  // end namespace internal
@@ -852,17 +857,17 @@ public:
 
   using Base::degree;
   using Base::edge_sort_state;
-  using Base::edges;
   using Base::has_transpose_state;
   using Base::invalidate;
   using Base::is_transposed;
   using Base::is_valid;
+  using Base::OutEdges;
   using Base::transpose_state;
 
   /// @param N node to get edges for
   /// @param edge_type edge_type to get edges of
   /// @returns Range to edges of node N that have edge type == edge_type
-  edges_range edges(Node N, const EntityTypeID& edge_type) const noexcept {
+  edges_range OutEdges(Node N, const EntityTypeID& edge_type) const noexcept {
     // per_type_adj_indices_ is expanded so that it stores P prefix sums per node, where
     // P == edge_type_index_->num_unique_types()
     // We pick the prefix sum based on the index of the edge_type provided
@@ -884,7 +889,7 @@ public:
   /// @param edge_type edge_type to get degree of
   /// @returns Degree of node N
   size_t degree(Node N, const EntityTypeID& edge_type) const noexcept {
-    return edges(N, edge_type).size();
+    return OutEdges(N, edge_type).size();
   }
 
   auto GetDistinctEdgeTypes() const noexcept {
@@ -899,7 +904,7 @@ public:
   /// empty range.
   edges_range FindAllEdgesWithType(
       Node node, Node key, const EntityTypeID& edge_type) const noexcept {
-    auto e_range = edges(node, edge_type);
+    auto e_range = OutEdges(node, edge_type);
     if (e_range.empty()) {
       return e_range;
     }
@@ -908,14 +913,14 @@ public:
     auto [first_it, last_it] =
         std::equal_range(e_range.begin(), e_range.end(), key, comp);
 
-    if (first_it == e_range.end() || edge_dest(*first_it) != key) {
+    if (first_it == e_range.end() || OutEdgeDst(*first_it) != key) {
       // return empty range
       return MakeStandardRange(e_range.end(), e_range.end());
     }
 
     auto ret_range = MakeStandardRange(first_it, last_it);
     for ([[maybe_unused]] auto e : ret_range) {
-      KATANA_LOG_DEBUG_ASSERT(edge_dest(e) == key);
+      KATANA_LOG_DEBUG_ASSERT(OutEdgeDst(e) == key);
     }
     return ret_range;
   }
@@ -956,7 +961,7 @@ public:
   /// @returns true iff the edge exists
   bool IsConnectedWithEdgeType(
       Node src, Node dst, const EntityTypeID& edge_type) const {
-    auto e_range = edges(src, edge_type);
+    auto e_range = OutEdges(src, edge_type);
     if (e_range.empty()) {
       return false;
     }
@@ -999,7 +1004,7 @@ public:
     static_assert(std::is_same_v<std::invoke_result_t<TestFunc, Edge>, bool>);
 
     for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      for (auto e : edges(src, edge_type)) {
+      for (auto e : OutEdges(src, edge_type)) {
         if (func(e)) {
           return true;
         }
@@ -1071,18 +1076,21 @@ public:
 
   auto NumEdges() const noexcept { return topo().NumEdges(); }
 
+  /// Gets all out-edges.
+  auto OutEdges() const noexcept { return topo().OutEdges(); }
+
   /// Gets the edge range of some node.
   ///
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
-  auto edges(const Node& N) const noexcept { return topo().edges(N); }
+  auto OutEdges(const Node& N) const noexcept { return topo().OutEdges(N); }
 
-  auto edge_dest(const Edge& eid) const noexcept {
-    return topo().edge_dest(eid);
+  auto OutEdgeDst(const Edge& eid) const noexcept {
+    return topo().OutEdgeDst(eid);
   }
 
-  auto edge_source(const Edge& eid) const noexcept {
-    return topo().edge_source(eid);
+  auto GetEdgeSrc(const Edge& eid) const noexcept {
+    return topo().GetEdgeSrc(eid);
   }
 
   /// @param node node to get degree for
@@ -1094,8 +1102,6 @@ public:
   }
 
   auto all_nodes() const noexcept { return topo().all_nodes(); }
-
-  auto all_edges() const noexcept { return topo().all_edges(); }
 
   // Standard container concepts
 
@@ -1147,14 +1153,14 @@ public:
   ///
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
-  auto edges(const Node& N) const noexcept { return topo().edges(N); }
+  auto OutEdges(const Node& N) const noexcept { return topo().OutEdges(N); }
 
-  auto edge_dest(const Edge& eid) const noexcept {
-    return topo().edge_dest(eid);
+  auto OutEdgeDst(const Edge& eid) const noexcept {
+    return topo().OutEdgeDst(eid);
   }
 
-  auto edge_source(const Edge& eid) const noexcept {
-    return topo().edge_source(eid);
+  auto GetEdgeSrc(const Edge& eid) const noexcept {
+    return topo().GetEdgeSrc(eid);
   }
 
   /// @param node node to get degree for
@@ -1167,7 +1173,7 @@ public:
 
   auto all_nodes() const noexcept { return topo().all_nodes(); }
 
-  auto all_edges() const noexcept { return topo().all_edges(); }
+  auto OutEdges() const noexcept { return topo().OutEdges(); }
 
   // Standard container concepts
 
@@ -1237,16 +1243,16 @@ public:
     KATANA_LOG_DEBUG_ASSERT(out().NumEdges() == in_topo_->NumEdges());
   }
 
-  auto in_edges(const GraphTopologyTypes::Node& node) const noexcept {
-    return in().edges(node);
+  auto InEdges(const GraphTopologyTypes::Node& node) const noexcept {
+    return in().OutEdges(node);
   }
 
   auto in_degree(const GraphTopologyTypes::Node& node) const noexcept {
     return in().degree(node);
   }
 
-  auto in_edge_dest(const GraphTopologyTypes::Edge& edge_id) const noexcept {
-    return in().edge_dest(edge_id);
+  auto InEdgeSrc(const GraphTopologyTypes::Edge& edge_id) const noexcept {
+    return in().OutEdgeDst(edge_id);
   }
 
   auto in_edge_property_index(
@@ -1291,8 +1297,8 @@ public:
   ///
   /// \param node node to get the edge range of
   /// \returns iterable edge range for node.
-  edges_range edges(Node node) const noexcept {
-    return MakeDisjointEdgesRange(out().edges(node), in().edges(node));
+  edges_range UndirectedEdges(Node node) const noexcept {
+    return MakeDisjointEdgesRange(out().OutEdges(node), in().OutEdges(node));
   }
 
   bool is_in_edge(const Edge& eid) const noexcept {
@@ -1300,18 +1306,11 @@ public:
     return eid >= fake_id_offset();
   }
 
-  auto edge_source(const Edge& eid) const noexcept {
+  Node UndirectedEdgeNeighbor(Edge eid) const noexcept {
     if (is_in_edge(eid)) {
-      return in().edge_source(real_in_edge_id(eid));
+      return in().OutEdgeDst(real_in_edge_id(eid));
     }
-    return out().edge_source(eid);
-  }
-
-  Node edge_dest(Edge eid) const noexcept {
-    if (is_in_edge(eid)) {
-      return in().edge_dest(real_in_edge_id(eid));
-    }
-    return out().edge_dest(eid);
+    return out().OutEdgeDst(eid);
   }
 
   nodes_range nodes(Node begin, Node end) const noexcept {
@@ -1322,11 +1321,11 @@ public:
     return nodes(Node{0}, static_cast<Node>(NumNodes()));
   }
 
-  auto all_edges() const noexcept {
+  auto OutEdges() const noexcept {
     // return MakeDisjointEdgesRange(out().all_edges(), in().all_edges());
     // Note: We return edges from  outgoing topology, which is all the edges.
     // Commented line above will returns 2x the Edges.
-    return out().all_edges();
+    return out().OutEdges();
   }
   // Standard container concepts
 
@@ -1340,7 +1339,9 @@ public:
 
   ///@param node node to get degree for
   ///@returns Degree of node N
-  size_t degree(Node node) const noexcept { return edges(node).size(); }
+  size_t degree(Node node) const noexcept {
+    return UndirectedEdges(node).size();
+  }
 
   PropertyIndex edge_property_index(const Edge& eid) const noexcept {
     if (is_in_edge(eid)) {
@@ -1450,17 +1451,19 @@ public:
     return Base::out().DoesEdgeTypeExist(edge_type);
   }
 
-  auto edges(Node N, const EntityTypeID& edge_type) const noexcept {
-    return Base::out().edges(N, edge_type);
+  using Base::OutEdges;
+
+  auto OutEdges(Node N, const EntityTypeID& edge_type) const noexcept {
+    return Base::out().OutEdges(N, edge_type);
   }
 
-  auto edges(Node N) const noexcept { return Base::out().edges(N); }
+  auto OutEdges(Node N) const noexcept { return Base::out().OutEdges(N); }
 
-  auto in_edges(Node N, const EntityTypeID& edge_type) const noexcept {
-    return Base::in().edges(N, edge_type);
+  auto InEdges(Node N, const EntityTypeID& edge_type) const noexcept {
+    return Base::in().OutEdges(N, edge_type);
   }
 
-  auto in_edges(Node N) const noexcept { return Base::in().edges(N); }
+  auto InEdges(Node N) const noexcept { return Base::in().OutEdges(N); }
 
   auto degree(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::out().degree(N, edge_type);
@@ -1566,7 +1569,7 @@ public:
         std::is_same_v<RetTy, bool>);  // ensure that return type is bool.
 
     for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      for (auto e : in_edges(dst, edge_type)) {
+      for (auto e : InEdges(dst, edge_type)) {
         if (func(e)) {
           return true;
         }
@@ -1594,6 +1597,30 @@ public:
     }
   }
 };
+
+template <typename Graph>
+using has_undirected_t =
+    decltype(std::declval<Graph>().UndirectedEdges(typename Graph::Node()));
+
+template <typename Graph, typename GNode = typename Graph::Node>
+auto
+OutOrUndirectedEdges(const Graph& graph, GNode node) {
+  if constexpr (katana::is_detected_v<has_undirected_t, Graph>) {
+    return graph.UndirectedEdges(node);
+  } else {
+    return graph.OutEdges(node);
+  }
+}
+
+template <typename Graph, typename GEdge>
+auto
+OutOrUndirectedDst(const Graph& graph, GEdge edge) {
+  if constexpr (katana::is_detected_v<has_undirected_t, Graph>) {
+    return graph.UndirectedEdgeNeighbor(edge);
+  } else {
+    return graph.OutEdgeDst(edge);
+  }
+}
 
 template <typename Topo>
 class BasicPropGraphViewWrapper : public Topo {

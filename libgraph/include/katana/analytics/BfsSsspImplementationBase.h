@@ -112,8 +112,8 @@ struct BfsSsspImplementationBase {
 
   template <typename WL, typename TileMaker>
   void PushEdgeTiles(WL& wl, Graph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->edge_begin(src);
-    const auto end = graph->edge_end(src);
+    auto beg = graph->OutEdges(src).begin();
+    const auto end = graph->OutEdges(src).end();
 
     PushEdgeTiles(wl, beg, end, f);
   }
@@ -121,8 +121,8 @@ struct BfsSsspImplementationBase {
   template <typename WL, typename TileMaker>
   void PushEdgeTiles(
       WL& wl, katana::PropertyGraph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->edges(src).first;
-    const auto end = graph->edges(src).second;
+    auto beg = graph->OutEdges(src).first;
+    const auto end = graph->OutEdges(src).second;
 
     PushEdgeTiles(wl, beg, end, f);
   }
@@ -130,8 +130,8 @@ struct BfsSsspImplementationBase {
   template <typename WL, typename TileMaker>
   void PushEdgeTilesParallel(
       WL& wl, Graph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->edge_begin(src);
-    const auto end = graph->edge_end(src);
+    auto beg = graph->OutEdges(src).begin();
+    const auto end = graph->OutEdges(src).end();
 
     if ((end - beg) > edge_tile_size) {
       katana::on_each(
@@ -153,8 +153,8 @@ struct BfsSsspImplementationBase {
   template <typename WL, typename TileMaker>
   void PushEdgeTilesParallel(
       WL& wl, katana::PropertyGraph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->edges(src).first;
-    const auto end = graph->edges(src).second;
+    auto beg = graph->OutEdges(src).first;
+    const auto end = graph->OutEdges(src).second;
 
     if ((end - beg) > edge_tile_size) {
       katana::on_each(
@@ -204,10 +204,10 @@ struct BfsSsspImplementationBase {
 
   struct OutEdgeRangeFn {
     Graph* graph;
-    auto operator()(const GNode& n) const { return graph->edges(n); }
+    auto operator()(const GNode& n) const { return graph->OutEdges(n); }
 
     auto operator()(const UpdateRequest& req) const {
-      return graph->edges(req.src);
+      return graph->OutEdges(req.src);
     }
   };
 
@@ -242,15 +242,15 @@ struct BfsSsspImplementationBase {
       if (sd == kDistanceInfinity)
         return;
 
-      for (auto ii : g->edges(node)) {
-        auto dest = g->GetEdgeDest(ii);
-        Dist dd = g->template GetData<NodeProp>(*dest);
+      for (auto ii : g->OutEdges(node)) {
+        auto dest = g->OutEdgeDst(ii);
+        Dist dd = g->template GetData<NodeProp>(dest);
         Dist ew = getEdgeWeight<USE_EDGE_WT>(ii);
         if (dd > sd + ew) {
           KATANA_LOG_DEBUG(
               "Wrong label: {}, on node: {}, correct label from src node {} is "
               "{}",
-              dd, *dest, node, sd + ew);
+              dd, dest, node, sd + ew);
           refb = true;
           // return;
         }

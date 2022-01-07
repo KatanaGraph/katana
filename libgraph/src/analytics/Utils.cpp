@@ -28,8 +28,8 @@ katana::analytics::SourcePicker::PickNext() {
   std::uniform_int_distribution dist({}, graph.size() - 1);
   do {
     source = dist(gen);
-  } while (graph.edges(source).empty());
-  KATANA_LOG_DEBUG_ASSERT(graph.edges(source));
+  } while (graph.OutEdges(source).empty());
+  KATANA_LOG_DEBUG_ASSERT(graph.OutEdges(source));
   return source;
 }
 
@@ -54,7 +54,7 @@ katana::analytics::IsApproximateDegreeDistributionPowerLaw(
   std::vector<uint32_t> samples(num_samples);
   for (uint32_t trial = 0; trial < num_samples; trial++) {
     auto node = sp.PickNext();
-    samples[trial] = graph.edges(node).size();
+    samples[trial] = graph.OutEdges(node).size();
     sample_total += samples[trial];
   }
   std::sort(samples.begin(), samples.end());

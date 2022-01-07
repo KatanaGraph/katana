@@ -518,7 +518,7 @@ AddDefaultEdgeWeight(
       KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
           pg, {}, {edge_weight_property_name})));
   katana::do_all(
-      katana::iterate(typed_graph.all_edges()),
+      katana::iterate(typed_graph.OutEdges()),
       [&](auto e) { typed_graph.template GetEdgeData<EdgeWeightType>(e) = 1; },
       katana::steal(), katana::loopname("InitEdgeWeight"));
   return katana::ResultSuccess();

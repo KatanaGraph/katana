@@ -49,22 +49,22 @@ struct LocalClusteringCoefficientAtomics {
   void OrderedCountFunc(
       const SortedGraphView& graph, Node n, CountVec* count_vec) {
     // TODO(amber): replace with NodeIteratingAlgo for triangle counting
-    for (auto edges_n : graph.edges(n)) {
-      auto v = graph.edge_dest(edges_n);
+    for (auto edges_n : graph.OutEdges(n)) {
+      auto v = graph.OutEdgeDst(edges_n);
       if (v > n) {
         break;
       }
-      auto e_it_n = graph.edges(n).begin();
+      auto e_it_n = graph.OutEdges(n).begin();
 
-      for (auto edges_v : graph.edges(v)) {
-        auto dst_v = graph.edge_dest(edges_v);
+      for (auto edges_v : graph.OutEdges(v)) {
+        auto dst_v = graph.OutEdgeDst(edges_v);
         if (dst_v > v) {
           break;
         }
-        while (graph.edge_dest(*e_it_n) < dst_v) {
+        while (graph.OutEdgeDst(*e_it_n) < dst_v) {
           e_it_n++;
         }
-        if (dst_v == graph.edge_dest(*e_it_n)) {
+        if (dst_v == graph.OutEdgeDst(*e_it_n)) {
           __sync_fetch_and_add(&(*count_vec)[n], uint32_t{1});
           __sync_fetch_and_add(&(*count_vec)[v], uint32_t{1});
           __sync_fetch_and_add(&(*count_vec)[dst_v], uint32_t{1});
@@ -134,22 +134,22 @@ struct LocalClusteringCoefficientPerThread {
   void OrderedCountFunc(
       const SortedGraphView& graph, Node n, IterPair per_thread_count_range) {
     // TODO(amber): replace with NodeIteratingAlgo for triangle counting
-    for (auto edges_n : graph.edges(n)) {
-      auto v = graph.edge_dest(edges_n);
+    for (auto edges_n : graph.OutEdges(n)) {
+      auto v = graph.OutEdgeDst(edges_n);
       if (v > n) {
         break;
       }
-      auto e_it_n = graph.edges(n).begin();
+      auto e_it_n = graph.OutEdges(n).begin();
 
-      for (auto edges_v : graph.edges(v)) {
-        auto dst_v = graph.edge_dest(edges_v);
+      for (auto edges_v : graph.OutEdges(v)) {
+        auto dst_v = graph.OutEdgeDst(edges_v);
         if (dst_v > v) {
           break;
         }
-        while (graph.edge_dest(*e_it_n) < dst_v) {
+        while (graph.OutEdgeDst(*e_it_n) < dst_v) {
           e_it_n++;
         }
-        if (dst_v == graph.edge_dest(*e_it_n)) {
+        if (dst_v == graph.OutEdgeDst(*e_it_n)) {
           *(per_thread_count_range.first + n) += 1;
           *(per_thread_count_range.first + v) += 1;
           *(per_thread_count_range.first + dst_v) += 1;

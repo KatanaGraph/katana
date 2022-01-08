@@ -355,7 +355,7 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
           if (blockEnd > 0) {
             localSums[block] = *(d_first + blockEnd - 1);
           } else {
-            localSums[block] = 0;
+            localSums[block] = ValueType{0};
           }
         });
 
@@ -365,7 +365,7 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
     // set of indices
     // Not using std::exclusive_scan because apparently it doesn't work for
     // some compilers
-    ValueType runningSum = 0;
+    ValueType runningSum = ValueType{0};
     for (size_t i = 0; i < numBlocks; i++) {
       bulkPrefix[i] = runningSum;
       runningSum += localSums[i];

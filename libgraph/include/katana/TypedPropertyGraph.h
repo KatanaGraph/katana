@@ -76,7 +76,8 @@ public:
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_col_index>(node_view_).GetValue(node);
+    return std::get<prop_col_index>(node_view_)
+        .GetValue(pg_->node_property_index(node));
   }
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
@@ -92,7 +93,8 @@ public:
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_col_index>(node_view_).GetValue(node);
+    return std::get<prop_col_index>(node_view_)
+        .GetValue(pg_->node_property_index(node));
   }
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(
@@ -109,7 +111,8 @@ public:
   template <typename EdgeIndex>
   PropertyReferenceType<EdgeIndex> GetEdgeData(const edge_iterator& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_).GetValue(*edge);
+    return std::get<prop_col_index>(edge_view_)
+        .GetValue(pg_->edge_property_index(*edge));
   }
 
   /**
@@ -122,7 +125,8 @@ public:
   PropertyConstReferenceType<EdgeIndex> GetEdgeData(
       const edge_iterator& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_).GetValue(*edge);
+    return std::get<prop_col_index>(edge_view_)
+        .GetValue(pg_->edge_property_index(*edge));
   }
 
   /**

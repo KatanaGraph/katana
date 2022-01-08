@@ -504,7 +504,7 @@ cdef class GraphBase:
         :param e: edge id
         :return: the type id of the edge
         """
-        return self.underlying_property_graph().GetTypeOfEdge(e)
+        return self.underlying_property_graph().GetTypeOfEdgeFromPropertyIndex(e)
 
     def does_edge_have_type(self, uint64_t e, entity_type):
         """
@@ -520,7 +520,7 @@ cdef class GraphBase:
             type_id = entity_type.type_id
         else:
             raise ValueError(f"{entity_type}'s type is not supported")
-        return self.underlying_property_graph().DoesEdgeHaveType(e, type_id)
+        return self.underlying_property_graph().DoesEdgeHaveTypeFromPropertyIndex(e, type_id)
 
     @abstractmethod
     def global_out_degree(self, uint64_t node):

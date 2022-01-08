@@ -17,3 +17,4 @@ Python Library
    katana.local.graph
    katana.local.import_data
    katana.timer
+   katana.bug

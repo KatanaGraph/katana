@@ -359,7 +359,7 @@ def test_leiden_clustering():
 
     leiden_clustering_assert_valid(graph, "value", "output")
 
-    LeidenClusteringStatistics(graph, "value", "output")
+    stats_sym = LeidenClusteringStatistics(graph, "value", "output")
 
     graph = Graph(get_rdg_dataset("rmat10"))
 
@@ -367,7 +367,11 @@ def test_leiden_clustering():
 
     leiden_clustering_assert_valid(graph, "value", "output")
 
-    LeidenClusteringStatistics(graph, "value", "output")
+    stats = LeidenClusteringStatistics(graph, "value", "output")
+
+    assert stats.n_clusters == stats_sym.n_clusters
+    assert stats.n_non_trivial_clusters == stats_sym.n_non_trivial_clusters
+    assert stats.largest_cluster_size == stats_sym.largest_cluster_size
 
     # TODO(amp): Switch to useing deterministic algorithm so we can check results.
     # assert stats.n_clusters == 83

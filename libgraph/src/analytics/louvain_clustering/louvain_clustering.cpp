@@ -29,7 +29,7 @@
 using namespace katana::analytics;
 namespace {
 
-template <typename EdgeWeightType>
+template <typename EdgeWeightType, typename GraphViewTy>
 struct GraphTypes {
   using NodeData = std::tuple<
       PreviousCommunityID, CurrentCommunityID, DegreeWeight<EdgeWeightType>>;
@@ -40,33 +40,27 @@ struct GraphTypes {
       katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 };
 
-template <typename EdgeWeightType>
+template <typename EdgeWeightType, typename GraphViewTy>
 struct LouvainClusteringImplementation
     : public katana::analytics::ClusteringImplementationBase<
-          typename GraphTypes<EdgeWeightType>::Graph, EdgeWeightType,
-          CommunityType<EdgeWeightType>> {
+          typename GraphTypes<EdgeWeightType, GraphViewTy>::Graph,
+          EdgeWeightType, CommunityType<EdgeWeightType>> {
   using CommTy = CommunityType<EdgeWeightType>;
   using CommunityArray = katana::NUMAArray<CommTy>;
 
-  using Graph = typename GraphTypes<EdgeWeightType>::Graph;
-  using NodeData = typename GraphTypes<EdgeWeightType>::NodeData;
-  using EdgeData = typename GraphTypes<EdgeWeightType>::EdgeData;
+  using Graph = typename GraphTypes<EdgeWeightType, GraphViewTy>::Graph;
+  using NodeData = typename GraphTypes<EdgeWeightType, GraphViewTy>::NodeData;
+  using EdgeData = typename GraphTypes<EdgeWeightType, GraphViewTy>::EdgeData;
   using GNode = typename Graph::Node;
 
   using Base = katana::analytics::ClusteringImplementationBase<
       Graph, EdgeWeightType, CommTy>;
 
   katana::Result<double> LouvainWithoutLockingDoAll(
-      katana::PropertyGraph* pg, double lower,
-      double modularity_threshold_per_round, uint32_t& iter) {
+      Graph* graph, double lower, double modularity_threshold_per_round,
+      uint32_t& iter) {
     katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
     TimerClusteringTotal.start();
-
-    auto graph_result = Graph::Make(pg);
-    if (!graph_result) {
-      return graph_result.error();
-    }
-    Graph graph = graph_result.value();
 
     CommunityArray c_info;    // Community info
     CommunityArray c_update;  // Used for updating community
@@ -77,21 +71,21 @@ struct LouvainClusteringImplementation
     uint32_t num_iter = iter;
 
     /*** Initialization ***/
-    c_info.allocateBlocked(graph.num_nodes());
-    c_update.allocateBlocked(graph.num_nodes());
+    c_info.allocateBlocked(graph->num_nodes());
+    c_update.allocateBlocked(graph->num_nodes());
 
     /* Initialization each node to its own cluster */
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      graph.template GetData<CurrentCommunityID>(n) = n;
-      graph.template GetData<PreviousCommunityID>(n) = n;
+    katana::do_all(katana::iterate(*graph), [&](GNode n) {
+      graph->template GetData<CurrentCommunityID>(n) = n;
+      graph->template GetData<PreviousCommunityID>(n) = n;
     });
 
     /* Calculate the weighted degree sum for each vertex */
-    Base::template SumVertexDegreeWeight<EdgeWeightType>(&graph, c_info);
+    Base::template SumVertexDegreeWeight<EdgeWeightType>(graph, c_info);
 
     /* Compute the total weight (2m) and 1/2m terms */
     const double constant_for_second_term =
-        Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
+        Base::template CalConstantForSecondTerm<EdgeWeightType>(*graph);
 
     if (std::isinf(constant_for_second_term)) {
       KATANA_LOG_FATAL("constant_for_second_term is INFINITY\n");
@@ -102,20 +96,20 @@ struct LouvainClusteringImplementation
     while (true) {
       num_iter++;
 
-      katana::do_all(katana::iterate(graph), [&](GNode n) {
+      katana::do_all(katana::iterate(*graph), [&](GNode n) {
         c_update[n].degree_wt = 0;
         c_update[n].size = 0;
       });
 
       katana::do_all(
-          katana::iterate(graph),
+          katana::iterate(*graph),
           [&](GNode n) {
             auto& n_data_curr_comm_id =
-                graph.template GetData<CurrentCommunityID>(n);
+                graph->template GetData<CurrentCommunityID>(n);
             auto& n_data_degree_wt =
-                graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
+                graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-            uint64_t degree = graph.degree(n);
+            uint64_t degree = graph->degree(n);
             uint64_t local_target = Base::UNASSIGNED;
             // TODO(amber): use scalable allocator with these containers
             std::map<uint64_t, uint64_t>
@@ -127,7 +121,7 @@ struct LouvainClusteringImplementation
 
             if (degree > 0) {
               Base::template FindNeighboringClusters<EdgeWeightType>(
-                  graph, n, cluster_local_map, counter, self_loop_wt);
+                  *graph, n, cluster_local_map, counter, self_loop_wt);
               // Find the max gain in modularity
               local_target = Base::MaxModularityWithoutSwaps(
                   cluster_local_map, counter, self_loop_wt, c_info,
@@ -159,7 +153,7 @@ struct LouvainClusteringImplementation
       double a2_x = 0;
 
       curr_mod = Base::template CalModularity<EdgeWeightType>(
-          graph, c_info, e_xx, a2_x, constant_for_second_term);
+          *graph, c_info, e_xx, a2_x, constant_for_second_term);
 
       if (std::isnan(curr_mod)) {
         KATANA_LOG_FATAL("Modulary is NaN. num_iter = {}\n", num_iter);
@@ -191,16 +185,10 @@ struct LouvainClusteringImplementation
   // the non-deterministic one. Need to figure how to
   // do remove duplication
   katana::Result<double> LouvainDeterministic(
-      katana::PropertyGraph* pg, double lower,
-      double modularity_threshold_per_round, uint32_t& iter) {
+      Graph* graph, double lower, double modularity_threshold_per_round,
+      uint32_t& iter) {
     katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
     katana::TimerGuard TimerClusteringGuard(TimerClusteringTotal);
-
-    auto graph_result = Graph::Make(pg);
-    if (!graph_result) {
-      return graph_result.error();
-    }
-    Graph graph = graph_result.value();
 
     CommunityArray c_info;        // Community info
     CommunityArray c_update_add;  // Used for updating community
@@ -213,41 +201,41 @@ struct LouvainClusteringImplementation
     uint32_t num_iter = iter;
 
     /*** Initialization ***/
-    c_info.allocateBlocked(graph.num_nodes());
-    c_update_add.allocateBlocked(graph.num_nodes());
-    c_update_subtract.allocateBlocked(graph.num_nodes());
+    c_info.allocateBlocked(graph->num_nodes());
+    c_update_add.allocateBlocked(graph->num_nodes());
+    c_update_subtract.allocateBlocked(graph->num_nodes());
 
     /* Initialization each node to its own cluster */
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      graph.template GetData<CurrentCommunityID>(n) = n;
-      graph.template GetData<PreviousCommunityID>(n) = n;
+    katana::do_all(katana::iterate(*graph), [&](GNode n) {
+      graph->template GetData<CurrentCommunityID>(n) = n;
+      graph->template GetData<PreviousCommunityID>(n) = n;
     });
 
     /* Calculate the weighted degree sum for each vertex */
-    Base::template SumVertexDegreeWeight<EdgeWeightType>(&graph, c_info);
+    Base::template SumVertexDegreeWeight<EdgeWeightType>(graph, c_info);
 
     /* Compute the total weight (2m) and 1/2m terms */
     constant_for_second_term =
-        Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
+        Base::template CalConstantForSecondTerm<EdgeWeightType>(*graph);
 
     katana::NUMAArray<uint64_t> local_target;
-    local_target.allocateBlocked(graph.num_nodes());
+    local_target.allocateBlocked(graph->num_nodes());
 
     // partition nodes
     std::vector<katana::InsertBag<GNode>> bag(16);
 
     katana::InsertBag<GNode> to_process;
     katana::NUMAArray<bool> in_bag;
-    in_bag.allocateBlocked(graph.num_nodes());
+    in_bag.allocateBlocked(graph->num_nodes());
 
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
+    katana::do_all(katana::iterate(*graph), [&](GNode n) {
       uint64_t idx = n % 16;
       bag[idx].push(n);
       in_bag[n] = false;
       local_target[n] = Base::UNASSIGNED;
     });
 
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
+    katana::do_all(katana::iterate(*graph), [&](GNode n) {
       c_update_add[n].degree_wt = 0;
       c_update_add[n].size = 0;
       c_update_subtract[n].degree_wt = 0;
@@ -267,11 +255,11 @@ struct LouvainClusteringImplementation
             katana::iterate(bag[idx]),
             [&](GNode n) {
               auto& n_data_curr_comm_id =
-                  graph.template GetData<CurrentCommunityID>(n);
+                  graph->template GetData<CurrentCommunityID>(n);
               auto& n_data_degree_wt =
-                  graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
+                  graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-              uint64_t degree = graph.degree(n);
+              uint64_t degree = graph->degree(n);
 
               // TODO(amber): use scalable allocators
               std::map<uint64_t, uint64_t>
@@ -283,7 +271,7 @@ struct LouvainClusteringImplementation
 
               if (degree > 0) {
                 Base::template FindNeighboringClusters<EdgeWeightType>(
-                    graph, n, cluster_local_map, counter, self_loop_wt);
+                    *graph, n, cluster_local_map, counter, self_loop_wt);
                 // Find the max gain in modularity
                 local_target[n] = Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
@@ -321,7 +309,7 @@ struct LouvainClusteringImplementation
             katana::loopname("louvain algo: Phase 1"));
 
         katana::do_all(katana::iterate(bag[idx]), [&](GNode n) {
-          graph.template GetData<CurrentCommunityID>(n) = local_target[n];
+          graph->template GetData<CurrentCommunityID>(n) = local_target[n];
         });
 
         for (auto n : to_process) {
@@ -348,7 +336,7 @@ struct LouvainClusteringImplementation
       double a2_x = 0;
 
       curr_mod = Base::template CalModularity<EdgeWeightType>(
-          graph, c_info, e_xx, a2_x, constant_for_second_term);
+          *graph, c_info, e_xx, a2_x, constant_for_second_term);
 
       if ((curr_mod - prev_mod) < modularity_threshold_per_round) {
         prev_mod = curr_mod;
@@ -451,13 +439,13 @@ public:
         switch (plan.algorithm()) {
         case LouvainClusteringPlan::kDoAll: {
           curr_mod = KATANA_CHECKED(LouvainWithoutLockingDoAll(
-              pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
+              &graph_curr, curr_mod, plan.modularity_threshold_per_round(),
               iter));
           break;
         }
         case LouvainClusteringPlan::kDeterministic: {
           curr_mod = KATANA_CHECKED(LouvainDeterministic(
-              pg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
+              &graph_curr, curr_mod, plan.modularity_threshold_per_round(),
               iter));
           break;
         }
@@ -540,8 +528,8 @@ template <typename EdgeWeightType>
 static katana::Result<void>
 LouvainClusteringWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    const std::string& output_property_name, LouvainClusteringPlan plan,
-    katana::TxnContext* txn_ctx) {
+    const std::string& output_property_name, const bool& is_symmetric,
+    LouvainClusteringPlan plan, katana::TxnContext* txn_ctx) {
   static_assert(
       std::is_integral_v<EdgeWeightType> ||
       std::is_floating_point_v<EdgeWeightType>);
@@ -557,10 +545,6 @@ LouvainClusteringWithWrap(
       temp_node_property_names.begin(),
       [](const TemporaryPropertyGuard& p) { return p.name(); });
 
-  using Impl = LouvainClusteringImplementation<EdgeWeightType>;
-  KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
-      pg, txn_ctx, temp_node_property_names));
-
   /*
    * To keep track of communities for nodes in the original graph.
    * Community will be set to UNASSINED for isolated nodes
@@ -568,10 +552,31 @@ LouvainClusteringWithWrap(
   katana::NUMAArray<uint64_t> clusters_orig;
   clusters_orig.allocateBlocked(pg->num_nodes());
 
-  LouvainClusteringImplementation<EdgeWeightType> impl{};
-  KATANA_CHECKED(impl.LouvainClustering(
-      pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
-      plan, txn_ctx));
+  if (is_symmetric) {
+    using Impl = LouvainClusteringImplementation<
+        EdgeWeightType, katana::PropertyGraphViews::Default>;
+    KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
+        pg, txn_ctx, temp_node_property_names));
+
+    LouvainClusteringImplementation<
+        EdgeWeightType, katana::PropertyGraphViews::Default>
+        impl{};
+    KATANA_CHECKED(impl.LouvainClustering(
+        pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
+        plan, txn_ctx));
+  } else {
+    using Impl = LouvainClusteringImplementation<
+        EdgeWeightType, katana::PropertyGraphViews::Default>;
+    KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
+        pg, txn_ctx, temp_node_property_names));
+
+    LouvainClusteringImplementation<
+        EdgeWeightType, katana::PropertyGraphViews::Default>
+        impl{};
+    KATANA_CHECKED(impl.LouvainClustering(
+        pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
+        plan, txn_ctx));
+  }
 
   KATANA_CHECKED(ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
       pg, txn_ctx, {output_property_name}));
@@ -596,7 +601,7 @@ katana::Result<void>
 katana::analytics::LouvainClustering(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
-    LouvainClusteringPlan plan) {
+    const bool& is_symmetric, LouvainClusteringPlan plan) {
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {
     return KATANA_ERROR(
@@ -612,8 +617,8 @@ katana::analytics::LouvainClustering(
     KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
         pg, temporary_edge_property.name(), txn_ctx));
     return LouvainClusteringWithWrap<int64_t>(
-        pg, temporary_edge_property.name(), output_property_name, plan,
-        txn_ctx);
+        pg, temporary_edge_property.name(), output_property_name, is_symmetric,
+        plan, txn_ctx);
   }
 
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
@@ -621,22 +626,28 @@ katana::analytics::LouvainClustering(
               ->id()) {
   case arrow::UInt32Type::type_id:
     return LouvainClusteringWithWrap<uint32_t>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::Int32Type::type_id:
     return LouvainClusteringWithWrap<int32_t>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::UInt64Type::type_id:
     return LouvainClusteringWithWrap<uint64_t>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::Int64Type::type_id:
     return LouvainClusteringWithWrap<int64_t>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::FloatType::type_id:
     return LouvainClusteringWithWrap<float>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::DoubleType::type_id:
     return LouvainClusteringWithWrap<double>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   default:
     return KATANA_ERROR(
         katana::ErrorCode::TypeError, "Unsupported type: {}",

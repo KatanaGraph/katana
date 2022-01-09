@@ -756,10 +756,14 @@ struct ClusteringImplementationBase {
   static uint64_t GetSubcommunity(
       const Graph& graph, GNode n, CommunityArray& subcomm_info,
       uint64_t comm_id, double constant_for_second_term, double resolution,
-      std::vector<GNode>& subcomms) {
+      std::vector<GNode>& subcomms, std::vector<EdgeWeightType>* counter) {
+    katana::StatTimer TimerSubCommunity("Timer_Sub_total");
+    katana::TimerGuard TImerSubGuard(TimerSubCommunity);
     auto& n_current_subcomm_id =
         graph.template GetData<CurrentSubCommunityID>(n);
-    std::vector<EdgeTy> counter(graph.size(), 0);
+    //std::vector<EdgeTy> counter(graph.size(), 0);
+
+    std::vector<GNode> destinations;
 
     EdgeTy self_loop_wt = 0;
 
@@ -777,7 +781,10 @@ struct ClusteringImplementationBase {
           self_loop_wt += edge_wt;  // Self loop weights is recorded
           continue;
         }
-        counter[n_current_subcomm] += edge_wt;
+
+        (*counter)[n_current_subcomm] += edge_wt;
+        destinations.push_back(n_current_subcomm);
+        //}
       }
     }  // End edge loop
 
@@ -795,7 +802,7 @@ struct ClusteringImplementationBase {
       double subcomm_degree_wt = subcomm_info[subcomm].degree_wt;
 
       quality_value_increment =
-          counter[subcomm] - counter[n_current_subcomm_id] -
+          (*counter)[subcomm] - (*counter)[n_current_subcomm_id] -
           n_degree_wt *
               (subcomm_degree_wt -
                subcomm_info[n_current_subcomm_id].degree_wt + n_degree_wt) *
@@ -806,9 +813,41 @@ struct ClusteringImplementationBase {
         max_quality_value_increment = quality_value_increment;
       }
 
-      counter[subcomm] = 0;
+      (*counter)[subcomm] = 0;
     }
 
+    bool is_dest_subcomm = false;
+
+    for (auto subcomm : destinations) {
+      if (n_current_subcomm_id == subcomm || subcomm_info[subcomm].size == 0) {
+        continue;
+      }
+
+      double subcomm_degree_wt = subcomm_info[subcomm].degree_wt;
+
+      quality_value_increment =
+          (*counter)[subcomm] - (*counter)[n_current_subcomm_id] -
+          n_degree_wt *
+              (subcomm_degree_wt -
+               subcomm_info[n_current_subcomm_id].degree_wt + n_degree_wt) *
+              constant_for_second_term * resolution;
+
+      if (quality_value_increment > max_quality_value_increment) {
+        best_cluster = subcomm;
+        max_quality_value_increment = quality_value_increment;
+        is_dest_subcomm = true;
+      }
+
+      (*counter)[subcomm] = 0;
+    }
+
+    if (is_dest_subcomm) {
+      subcomms.push_back(best_cluster);
+    }
+
+    for (GNode node : destinations) {
+      (*counter)[node] = 0;
+    }
     return best_cluster;
   }
 
@@ -887,11 +926,17 @@ struct ClusteringImplementationBase {
     }
 
     std::vector<GNode> subcomms;
-    for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
+    /*for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
       GNode n = cluster_nodes[i];
 
       subcomms.push_back(graph->template GetData<CurrentSubCommunityID>(n));
-    }
+    }*/
+
+    katana::StatTimer TimerForLast2("Timer_For2_total");
+    TimerForLast2.start();
+
+    katana::StatTimer TimerSub("Timer_Sub2_total");
+    std::vector<EdgeWeightType> counter(graph->size(), 0);
 
     for (GNode n : cluster_nodes) {
       const auto& n_degree_wt =
@@ -903,10 +948,11 @@ struct ClusteringImplementationBase {
      * Only consider singleton communities
      */
       if (subcomm_info[n_current_subcomm_id].size == 1) {
+        TimerSub.start();
         uint64_t new_subcomm_ass = GetSubcommunity<EdgeWeightType>(
             *graph, n, subcomm_info, comm_id, constant_for_second_term[comm_id],
-            resolution, subcomms);
-
+            resolution, subcomms, &counter);
+        TimerSub.stop();
         if (new_subcomm_ass != UNASSIGNED &&
             new_subcomm_ass != n_current_subcomm_id) {
           /*
@@ -958,6 +1004,8 @@ struct ClusteringImplementationBase {
         n_current_subcomm_id = new_subcomm_ass;
       }  // end outer if
     }
+
+    TimerForLast2.stop();
   }
 
   /*
@@ -966,8 +1014,6 @@ struct ClusteringImplementationBase {
  */
   template <typename EdgeWeightType>
   static void RefinePartition(Graph* graph, double resolution) {
-    [[maybe_unused]] double constant_for_second_term =
-        CalConstantForSecondTerm<EdgeWeightType>(*graph);
     // set singleton subcommunities
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
       graph->template GetData<CurrentSubCommunityID>(n) = n;
@@ -985,6 +1031,8 @@ struct ClusteringImplementationBase {
     });
 
     //TODO (gill): Can be parallelized using do_all.
+    katana::StatTimer TimerBag("Timer_Bag_Total");
+    TimerBag.start();
     for (GNode n : *graph) {
       const auto& n_current_comm =
           graph->template GetData<CurrentCommunityID>(n);
@@ -998,6 +1046,7 @@ struct ClusteringImplementationBase {
         katana::atomicAdd(comm_info[n_current_comm].degree_wt, n_degree_wt);
       }
     }
+
     uint64_t total = 0;
     for (size_t n = 0; n < graph->size(); ++n) {
       total += cluster_bags[n].size();
@@ -1029,6 +1078,8 @@ struct ClusteringImplementationBase {
             resolution);
       }
     });
+
+    TimerBag.stop();
 
     subcomm_info.deallocate();
     subcomm_info.destroy();

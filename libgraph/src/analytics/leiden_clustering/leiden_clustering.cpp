@@ -28,11 +28,11 @@
 using namespace katana::analytics;
 namespace {
 
-template <typename EdgeWeightType>
+template <typename EdgeWeightType, typename ViewTy>
 struct LeidenClusteringImplementation
     : public katana::analytics::ClusteringImplementationBase<
           katana::TypedPropertyGraphView<
-              katana::PropertyGraphViews::Undirected,
+              katana::PropertyGraphViews::Default,
               std::tuple<
                   PreviousCommunityID, CurrentCommunityID,
                   DegreeWeight<EdgeWeightType>, CurrentSubCommunityID,
@@ -46,8 +46,8 @@ struct LeidenClusteringImplementation
   using CommTy = LeidenCommunityType<EdgeWeightType>;
   using CommunityArray = katana::NUMAArray<CommTy>;
 
-  using Graph = katana::TypedPropertyGraphView<
-      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraphView<ViewTy, NodeData, EdgeData>;
+  //  katana::PropertyGraphViews::Default, NodeData, EdgeData>;
   using GNode = typename Graph::Node;
 
   using Base = katana::analytics::ClusteringImplementationBase<
@@ -403,6 +403,8 @@ public:
       const std::vector<std::string>& temp_node_property_names,
       katana::NUMAArray<uint64_t>& clusters_orig, LeidenClusteringPlan plan,
       tsuba::TxnContext* txn_ctx) {
+    katana::StatTimer TimerTotal("Timer_Leiden_Total");
+    TimerTotal.start();
     TemporaryPropertyGuard temp_edge_property{pg->EdgeMutablePropertyView()};
     std::vector<std::string> temp_edge_property_names = {
         temp_edge_property.name()};
@@ -514,8 +516,11 @@ public:
       [[maybe_unused]] uint64_t num_unique_clusters =
           Base::template RenumberClustersContiguously<CurrentCommunityID>(
               &graph_curr);
+      katana::StatTimer TimerRefine("Timer_Refine_Total");
+      TimerRefine.start();
       Base::template RefinePartition<EdgeWeightType>(
           &graph_curr, plan.resolution());
+      TimerRefine.stop();
       uint64_t num_unique_subclusters =
           Base::template RenumberClustersContiguously<CurrentSubCommunityID>(
               &graph_curr);
@@ -632,6 +637,7 @@ public:
           graph_curr_tmp.template GetData<CurrentCommunityID>(clusters_orig[n]);
     });
 
+    TimerTotal.stop();
     return katana::ResultSuccess();
   }
 };
@@ -663,8 +669,8 @@ template <typename EdgeWeightType>
 static katana::Result<void>
 LeidenClusteringWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    const std::string& output_property_name, LeidenClusteringPlan plan,
-    tsuba::TxnContext* txn_ctx) {
+    const std::string& output_property_name, const bool& is_symmetric,
+    LeidenClusteringPlan plan, tsuba::TxnContext* txn_ctx) {
   static_assert(
       std::is_integral_v<EdgeWeightType> ||
       std::is_floating_point_v<EdgeWeightType>);
@@ -680,10 +686,6 @@ LeidenClusteringWithWrap(
       temp_node_property_names.begin(),
       [](const TemporaryPropertyGuard& p) { return p.name(); });
 
-  using Impl = LeidenClusteringImplementation<EdgeWeightType>;
-  KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
-      pg, txn_ctx, temp_node_property_names));
-
   /*
    * To keep track of communities for nodes in the original graph.
    * Community will be set to UNASSINED for isolated nodes
@@ -691,10 +693,31 @@ LeidenClusteringWithWrap(
   katana::NUMAArray<uint64_t> clusters_orig;
   clusters_orig.allocateBlocked(pg->num_nodes());
 
-  LeidenClusteringImplementation<EdgeWeightType> impl{};
-  KATANA_CHECKED(impl.LeidenClustering(
-      pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
-      plan, txn_ctx));
+  if (is_symmetric) {
+    using Impl = LeidenClusteringImplementation<
+        EdgeWeightType, katana::PropertyGraphViews::Default>;
+    KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
+        pg, txn_ctx, temp_node_property_names));
+
+    LeidenClusteringImplementation<
+        EdgeWeightType, katana::PropertyGraphViews::Default>
+        impl{};
+    KATANA_CHECKED(impl.LeidenClustering(
+        pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
+        plan, txn_ctx));
+  } else {
+    using Impl = LeidenClusteringImplementation<
+        EdgeWeightType, katana::PropertyGraphViews::Undirected>;
+    KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
+        pg, txn_ctx, temp_node_property_names));
+
+    LeidenClusteringImplementation<
+        EdgeWeightType, katana::PropertyGraphViews::Undirected>
+        impl{};
+    KATANA_CHECKED(impl.LeidenClustering(
+        pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
+        plan, txn_ctx));
+  }
 
   KATANA_CHECKED(ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
       pg, txn_ctx, {output_property_name}));
@@ -719,7 +742,7 @@ katana::Result<void>
 katana::analytics::LeidenClustering(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
-    LeidenClusteringPlan plan) {
+    const bool& is_symmetric, LeidenClusteringPlan plan) {
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {
     return KATANA_ERROR(
@@ -735,8 +758,8 @@ katana::analytics::LeidenClustering(
     KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
         pg, temporary_edge_property.name(), txn_ctx));
     return LeidenClusteringWithWrap<int64_t>(
-        pg, temporary_edge_property.name(), output_property_name, plan,
-        txn_ctx);
+        pg, temporary_edge_property.name(), output_property_name, is_symmetric,
+        plan, txn_ctx);
   }
 
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
@@ -744,22 +767,28 @@ katana::analytics::LeidenClustering(
               ->id()) {
   case arrow::UInt32Type::type_id:
     return LeidenClusteringWithWrap<uint32_t>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::Int32Type::type_id:
     return LeidenClusteringWithWrap<int32_t>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::UInt64Type::type_id:
     return LeidenClusteringWithWrap<uint64_t>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::Int64Type::type_id:
     return LeidenClusteringWithWrap<int64_t>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::FloatType::type_id:
     return LeidenClusteringWithWrap<float>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   case arrow::DoubleType::type_id:
     return LeidenClusteringWithWrap<double>(
-        pg, edge_weight_property_name, output_property_name, plan, txn_ctx);
+        pg, edge_weight_property_name, output_property_name, is_symmetric, plan,
+        txn_ctx);
   default:
     return KATANA_ERROR(
         katana::ErrorCode::TypeError, "Unsupported type: {}",

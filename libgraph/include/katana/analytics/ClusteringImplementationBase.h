@@ -781,7 +781,6 @@ struct ClusteringImplementationBase {
 
         (*counter)[n_current_subcomm] += edge_wt;
         destinations.push_back(n_current_subcomm);
-        //}
       }
     }  // End edge loop
 

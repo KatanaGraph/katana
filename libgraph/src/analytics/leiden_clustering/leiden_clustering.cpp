@@ -32,7 +32,7 @@ template <typename EdgeWeightType, typename ViewTy>
 struct LeidenClusteringImplementation
     : public katana::analytics::ClusteringImplementationBase<
           katana::TypedPropertyGraphView<
-              katana::PropertyGraphViews::Default,
+              ViewTy,
               std::tuple<
                   PreviousCommunityID, CurrentCommunityID,
                   DegreeWeight<EdgeWeightType>, CurrentSubCommunityID,
@@ -47,7 +47,6 @@ struct LeidenClusteringImplementation
   using CommunityArray = katana::NUMAArray<CommTy>;
 
   using Graph = katana::TypedPropertyGraphView<ViewTy, NodeData, EdgeData>;
-  //  katana::PropertyGraphViews::Default, NodeData, EdgeData>;
   using GNode = typename Graph::Node;
 
   using Base = katana::analytics::ClusteringImplementationBase<

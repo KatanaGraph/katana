@@ -84,6 +84,14 @@ main(int argc, char** argv) {
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
+  if (symmetricGraph) {
+    KATANA_LOG_WARN(
+        "This application requires a symmetric graph input;"
+        " Using the -symmetricGraph flag "
+        " indicates that the input is a symmetric graph and can be used as it "
+        "is.");
+  }
+
   std::cout << "Reading from file: " << inputFile << "\n";
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);

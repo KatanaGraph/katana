@@ -355,11 +355,11 @@ def test_louvain_clustering():
 def test_leiden_clustering():
     graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
-    leiden_clustering(graph, "value", "output", True)
+    leiden_clustering(graph, "value", "output_sym", True)
 
-    leiden_clustering_assert_valid(graph, "value", "output")
+    leiden_clustering_assert_valid(graph, "value", "output_sym")
 
-    stats_sym = LeidenClusteringStatistics(graph, "value", "output")
+    stats_sym = LeidenClusteringStatistics(graph, "value", "output_sym")
 
     graph = Graph(get_rdg_dataset("rmat10"))
 

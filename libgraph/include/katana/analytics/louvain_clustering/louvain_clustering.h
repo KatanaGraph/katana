@@ -122,7 +122,7 @@ public:
 KATANA_EXPORT Result<void> LouvainClustering(
     PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
-    LouvainClusteringPlan plan = {});
+    const bool& is_symmetric, LouvainClusteringPlan plan = {});
 
 KATANA_EXPORT Result<void> LouvainClusteringAssertValid(
     PropertyGraph* pg, const std::string& edge_weight_property_name,

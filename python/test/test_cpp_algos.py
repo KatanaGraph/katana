@@ -338,9 +338,17 @@ def test_k_truss_fail():
 
 
 def test_louvain_clustering():
-    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
+    graph_sym = Graph(get_rdg_dataset("rmat10_symmetric"))
 
-    louvain_clustering(graph, "value", "output")
+    louvain_clustering(graph_sym, "value", "output_sym", True)
+
+    louvain_clustering_assert_valid(graph_sym, "value", "output_sym")
+
+    LouvainClusteringStatistics(graph_sym, "value", "output_sym")
+
+    graph = Graph(get_rdg_dataset("rmat10"))
+
+    louvain_clustering(graph, "value", "output", False)
 
     louvain_clustering_assert_valid(graph, "value", "output")
 

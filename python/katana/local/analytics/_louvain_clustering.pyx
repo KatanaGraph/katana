@@ -67,7 +67,7 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
     uint32_t kDefaultMaxIterations "katana::analytics::LouvainClusteringPlan::kDefaultMaxIterations"
     uint32_t kDefaultMinGraphSize "katana::analytics::LouvainClusteringPlan::kDefaultMinGraphSize"
 
-    Result[void] LouvainClustering(_PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, CTxnContext* txn_ctx, _LouvainClusteringPlan plan)
+    Result[void] LouvainClustering(_PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, CTxnContext* txn_ctx, bool is_symmetric, _LouvainClusteringPlan plan)
 
     Result[void] LouvainClusteringAssertValid(_PropertyGraph* pfg,
             const string& edge_weight_property_name,
@@ -167,7 +167,7 @@ cdef class LouvainClusteringPlan(Plan):
         return LouvainClusteringPlan.make(_LouvainClusteringPlan.Deterministic(
             enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size))
 
-def louvain_clustering(Graph pg, str edge_weight_property_name, str output_property_name, LouvainClusteringPlan plan = LouvainClusteringPlan(), *, TxnContext txn_ctx = None):
+def louvain_clustering(Graph pg, str edge_weight_property_name, str output_property_name, bool is_symmetric = False, LouvainClusteringPlan plan = LouvainClusteringPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the Louvain Clustering for pg.
     The edge weights are taken from the property named
@@ -183,6 +183,7 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
     :param edge_weight_property_name: may be a 32- or 64-bit sign or unsigned int
     :type output_property_name: str
     :param output_property_name: The output edge property
+    :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type LouvainClusteringPlan: LouvainClusteringPlan
     :param LouvainClusteringPlan: The Louvain Clustering Plan
     :param txn_ctx: The tranaction context for passing read write sets.
@@ -205,7 +206,7 @@ def louvain_clustering(Graph pg, str edge_weight_property_name, str output_prope
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(LouvainClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
+        handle_result_void(LouvainClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, &txn_ctx._txn_ctx, is_symmetric, plan.underlying_))
 
 
 def louvain_clustering_assert_valid(Graph pg, str edge_weight_property_name, str output_property_name ):

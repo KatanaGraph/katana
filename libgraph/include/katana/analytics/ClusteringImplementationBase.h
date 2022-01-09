@@ -757,11 +757,8 @@ struct ClusteringImplementationBase {
       const Graph& graph, GNode n, CommunityArray& subcomm_info,
       uint64_t comm_id, double constant_for_second_term, double resolution,
       std::vector<GNode>& subcomms, std::vector<EdgeWeightType>* counter) {
-    katana::StatTimer TimerSubCommunity("Timer_Sub_total");
-    katana::TimerGuard TImerSubGuard(TimerSubCommunity);
     auto& n_current_subcomm_id =
         graph.template GetData<CurrentSubCommunityID>(n);
-    //std::vector<EdgeTy> counter(graph.size(), 0);
 
     std::vector<GNode> destinations;
 
@@ -926,16 +923,7 @@ struct ClusteringImplementationBase {
     }
 
     std::vector<GNode> subcomms;
-    /*for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
-      GNode n = cluster_nodes[i];
 
-      subcomms.push_back(graph->template GetData<CurrentSubCommunityID>(n));
-    }*/
-
-    katana::StatTimer TimerForLast2("Timer_For2_total");
-    TimerForLast2.start();
-
-    katana::StatTimer TimerSub("Timer_Sub2_total");
     std::vector<EdgeWeightType> counter(graph->size(), 0);
 
     for (GNode n : cluster_nodes) {
@@ -948,11 +936,9 @@ struct ClusteringImplementationBase {
      * Only consider singleton communities
      */
       if (subcomm_info[n_current_subcomm_id].size == 1) {
-        TimerSub.start();
         uint64_t new_subcomm_ass = GetSubcommunity<EdgeWeightType>(
             *graph, n, subcomm_info, comm_id, constant_for_second_term[comm_id],
             resolution, subcomms, &counter);
-        TimerSub.stop();
         if (new_subcomm_ass != UNASSIGNED &&
             new_subcomm_ass != n_current_subcomm_id) {
           /*
@@ -1004,8 +990,6 @@ struct ClusteringImplementationBase {
         n_current_subcomm_id = new_subcomm_ass;
       }  // end outer if
     }
-
-    TimerForLast2.stop();
   }
 
   /*
@@ -1031,8 +1015,6 @@ struct ClusteringImplementationBase {
     });
 
     //TODO (gill): Can be parallelized using do_all.
-    katana::StatTimer TimerBag("Timer_Bag_Total");
-    TimerBag.start();
     for (GNode n : *graph) {
       const auto& n_current_comm =
           graph->template GetData<CurrentCommunityID>(n);
@@ -1078,8 +1060,6 @@ struct ClusteringImplementationBase {
             resolution);
       }
     });
-
-    TimerBag.stop();
 
     subcomm_info.deallocate();
     subcomm_info.destroy();

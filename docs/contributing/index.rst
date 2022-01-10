@@ -15,3 +15,4 @@ Contributing
    documentation
    releases
    tips-tricks
+   rdg-storage-format

@@ -7,6 +7,7 @@
 #include "PartitionTopologyMetadata.h"
 #include "RDGHandleImpl.h"
 #include "katana/ErrorCode.h"
+#include "katana/Experimental.h"
 #include "katana/FaultTest.h"
 #include "katana/FileView.h"
 #include "katana/Logging.h"
@@ -24,6 +25,7 @@ const char* kEdgePropertyKey = "kg.v1.edge_property";
 const char* kPartPropertyFilesKey = "kg.v1.part_property_files";
 const char* kPartPropertyMetaKey = "kg.v1.part_property_meta";
 const char* kStorageFormatVersionKey = "kg.v1.storage_format_version";
+const char* kUnstableStorageFormatFlagKey = "kg.v1.unstable_storage_format";
 // Array file at path maps from Node ID to EntityTypeID of that Node
 const char* kNodeEntityTypeIDArrayPathKey = "kg.v1.node_entity_type_id_array";
 // Array file at path maps from Edge ID to EntityTypeID of that Edge
@@ -294,12 +296,32 @@ katana::to_json(json& j, const std::vector<katana::PropStorageInfo>& vec_pmd) {
 
 void
 katana::to_json(json& j, const katana::RDGPartHeader& header) {
+  // ensure the part header flag and the env var flag are always in sync to prevent misuse
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
+    if (header.unstable_storage_format_) {
+      KATANA_LOG_WARN("Storing RDG in unstable format");
+    }
+    // else
+    KATANA_LOG_VASSERT(
+        header.unstable_storage_format_,
+        "UnstableRDGStorageFormat env var is set, but "
+        "RDGPartHeader.unstable_storage_format_ is false."
+        "The UnstableRDGStorageFormat env var should only be set when working "
+        "with features which require the unstable storage format");
+  } else {
+    KATANA_LOG_VASSERT(
+        !header.unstable_storage_format_,
+        "UnstableRDGStorageFormat env var is not set, but "
+        "RDGPartHeader.unstable_storage_format_ is true");
+  }
+
   j = json{
       {kNodePropertyKey, header.node_prop_info_list_},
       {kEdgePropertyKey, header.edge_prop_info_list_},
       {kPartPropertyFilesKey, header.part_prop_info_list_},
       {kPartPropertyMetaKey, header.metadata_},
       {kStorageFormatVersionKey, header.storage_format_version_},
+      {kUnstableStorageFormatFlagKey, header.unstable_storage_format_},
       {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
       {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
       {kNodeEntityTypeIDDictionaryKey, header.node_entity_type_id_dictionary_},
@@ -316,11 +338,53 @@ katana::from_json(const json& j, katana::RDGPartHeader& header) {
   j.at(kPartPropertyFilesKey).get_to(header.part_prop_info_list_);
   j.at(kPartPropertyMetaKey).get_to(header.metadata_);
 
+  /// Storage Format Version Handling
+
+  // support loading "storage_format_version=1" RDGs, aka RDGs without
+  // an explicit storage_format_version
   if (auto it = j.find(kStorageFormatVersionKey); it != j.end()) {
     it->get_to(header.storage_format_version_);
   } else {
     header.storage_format_version_ = kPartitionStorageFormatVersion1;
   }
+
+  // load the unstable_storage_format flag if it is present in the RDG
+  // RDGs created before support for unstable_storage_format was added do not have this flag.
+  // If it is not present, the RDG is assumed to *NOT* be stored in an unstable_storage_format since the rdg was created before unstable formats were introduced
+  if (auto it = j.find(kUnstableStorageFormatFlagKey); it != j.end()) {
+    it->get_to(header.unstable_storage_format_);
+  } else {
+    header.unstable_storage_format_ = false;
+  }
+
+  // Ensure unstable_storage_format RDGs are not loaded when the feature flag is not set
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
+    KATANA_LOG_WARN(
+        "UnstableRDGStorageFormat is set. RDGs will be stored in an unstable "
+        "storage format. Loading RDGs stored in an unstable storage format "
+        "will be permitted.");
+    if (header.unstable_storage_format_) {
+      KATANA_LOG_WARN(
+          "Loading an RDG stored in an unstable storage format. If any issues "
+          "are encountered, please regenerate this RDG before filing any bugs, "
+          "as the unstable storage format can change without notice.");
+    }
+  } else {
+    if (header.unstable_storage_format_) {
+      throw std::runtime_error(
+          "Loaded graph is an RDG stored in an unstable storage format, but "
+          "env var KATANA_ENABLE_EXPERIMENTAL='UnstableRDGStorageFormat' is "
+          "not set"
+          "Unstable storage formats can change without notice and are "
+          "unsupported so should not be used outside of development\n"
+          "If you know what you are doing and would like to load this RDG "
+          "anyway, please set "
+          "KATANA_ENABLE_EXPERIMENTAL='UnstableRDGStorageFormat' in your "
+          "environment");
+    }
+  }
+
+  // Handle the different storage_format_versions
 
   if (header.storage_format_version_ == kPartitionStorageFormatVersion2) {
     // Version 2 was found to be buggy,

@@ -354,8 +354,7 @@ def get_extension_options():
     extension_options = load_lang_config("CXX")
     extension_options["include_dirs"].append(numpy.get_include())
     extension_options["include_dirs"].append(pyarrow.get_include())
-    if not extension_options["extra_compile_args"]:
-        extension_options["extra_compile_args"] = ["-std=c++17", "-Werror"]
+    extension_options["extra_compile_args"].append("-std=c++17")
     if extension_options["compiler"]:
         compiler = " ".join(extension_options["compiler"])
         os.environ["CXX"] = compiler

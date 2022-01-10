@@ -463,6 +463,8 @@ function(add_katana_sphinx_target target_name)
   if (BUILD_DOCS STREQUAL "internal")
     set(sphinx_options "-W;${sphinx_options}")
   endif ()
+  # Enable parallel reading / writing, 4 workers gave optimal time reduction
+  set(sphinx_options "-j 4;${sphinx_options}")
 
   add_custom_target(
       ${target_name}_sphinx_docs

@@ -54,11 +54,8 @@ struct ReducibleFunctor {
         "can be used from there.\n");
     cls.def(py::init<>());
     cls.def(
-        py::init([](T v) {
-          auto self = std::make_unique<typename For::template type<T>>();
-          self->update(v);
-          return self;
-        }),
+        "__init__",
+        [](typename For::template type<T>& self, T v) { self.update(v); },
         "Create a new instance with an initial value.");
     katana::RegisterNumbaClass(cls);
     katana::DefWithNumba<py::overload_cast<const T&>(

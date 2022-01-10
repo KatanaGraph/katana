@@ -1,12 +1,12 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_FAULTTEST_H_
-#define KATANA_LIBTSUBA_TSUBA_FAULTTEST_H_
+#ifndef KATANA_LIBTSUBA_KATANA_FAULTTEST_H_
+#define KATANA_LIBTSUBA_KATANA_FAULTTEST_H_
 
 #include <cstdint>
 #include <unordered_map>
 
 #include "katana/config.h"
 
-namespace tsuba::internal {
+namespace katana::internal {
 
 enum class FaultSensitivity { Normal, High };
 enum class FaultMode {
@@ -25,13 +25,13 @@ KATANA_EXPORT void FaultTestReport();
 // PullThePlug (virtually) Compile this out if NDEBUG?
 #define TSUBA_PTP(...)                                                         \
   do {                                                                         \
-    ::tsuba::internal::PtP(__FILE__, __LINE__, ##__VA_ARGS__);                 \
+    ::katana::internal::PtP(__FILE__, __LINE__, ##__VA_ARGS__);                \
   } while (0)
 
 KATANA_EXPORT void PtP(
     const char* file, int line,
     FaultSensitivity sensitivity = FaultSensitivity::Normal);
 
-}  // namespace tsuba::internal
+}  // namespace katana::internal
 
 #endif

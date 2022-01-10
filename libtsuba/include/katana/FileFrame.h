@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_FILEFRAME_H_
-#define KATANA_LIBTSUBA_TSUBA_FILEFRAME_H_
+#ifndef KATANA_LIBTSUBA_KATANA_FILEFRAME_H_
+#define KATANA_LIBTSUBA_KATANA_FILEFRAME_H_
 
 #include <cstdint>
 #include <future>
@@ -11,7 +11,7 @@
 #include "katana/Logging.h"
 #include "katana/Result.h"
 
-namespace tsuba {
+namespace katana {
 
 class KATANA_EXPORT FileFrame : public arrow::io::OutputStream {
   std::string path_;
@@ -115,6 +115,6 @@ public:
   ///// End arrow::io::BufferOutputStream methods ///////
 };
 
-} /* namespace tsuba */
+} /* namespace katana */
 
 #endif

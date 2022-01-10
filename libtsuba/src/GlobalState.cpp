@@ -4,26 +4,26 @@
 #include <cassert>
 
 #include "FileStorage_internal.h"
+#include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
 
-std::unique_ptr<tsuba::GlobalState> tsuba::GlobalState::ref_ = nullptr;
+std::unique_ptr<katana::GlobalState> katana::GlobalState::ref_ = nullptr;
 
 katana::CommBackend*
-tsuba::GlobalState::Comm() const {
+katana::GlobalState::Comm() const {
   KATANA_LOG_DEBUG_ASSERT(comm_ != nullptr);
   return comm_;
 }
 
-tsuba::FileStorage*
-tsuba::GlobalState::GetDefaultFS() const {
+katana::FileStorage*
+katana::GlobalState::GetDefaultFS() const {
   KATANA_LOG_DEBUG_ASSERT(file_stores_.size() > 0);
   return file_stores_[0];
 }
 
-tsuba::FileStorage*
-tsuba::GlobalState::FS(std::string_view uri) const {
+katana::FileStorage*
+katana::GlobalState::FS(std::string_view uri) const {
   for (FileStorage* fs : file_stores_) {
     if (uri.find(fs->uri_scheme()) == 0) {
       return fs;
@@ -33,7 +33,7 @@ tsuba::GlobalState::FS(std::string_view uri) const {
 }
 
 katana::Result<void>
-tsuba::GlobalState::Init(katana::CommBackend* comm) {
+katana::GlobalState::Init(katana::CommBackend* comm) {
   KATANA_LOG_DEBUG_ASSERT(ref_ == nullptr);
 
   // new to access non-public constructor
@@ -61,7 +61,7 @@ tsuba::GlobalState::Init(katana::CommBackend* comm) {
 }
 
 katana::Result<void>
-tsuba::GlobalState::Fini() {
+katana::GlobalState::Fini() {
   for (FileStorage* fs : ref_->file_stores_) {
     KATANA_CHECKED_CONTEXT(
         fs->Fini(), "file storage shutdown ({})", fs->uri_scheme());
@@ -70,8 +70,8 @@ tsuba::GlobalState::Fini() {
   return katana::ResultSuccess();
 }
 
-const tsuba::GlobalState&
-tsuba::GlobalState::Get() {
+const katana::GlobalState&
+katana::GlobalState::Get() {
   // TODO(amp): This assert can trigger if tsuba isn't correctly initialized
   //  making this a user triggerable error and so it shouldn't be an assert.
   KATANA_LOG_DEBUG_ASSERT(ref_ != nullptr);
@@ -79,17 +79,17 @@ tsuba::GlobalState::Get() {
 }
 
 katana::CommBackend*
-tsuba::Comm() {
+katana::Comm() {
   return GlobalState::Get().Comm();
 }
 
-tsuba::FileStorage*
-tsuba::FS(std::string_view uri) {
+katana::FileStorage*
+katana::FS(std::string_view uri) {
   return GlobalState::Get().FS(uri);
 }
 
 katana::Result<void>
-tsuba::OneHostOnly(const std::function<katana::Result<void>()>& cb) {
+katana::OneHostOnly(const std::function<katana::Result<void>()>& cb) {
   // Prevent a race when the callback affects a condition guarding the
   // execution of OneHostOnly
   Comm()->Barrier();

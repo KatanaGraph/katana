@@ -1,4 +1,4 @@
-#include "tsuba/FileView.h"
+#include "katana/FileView.h"
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -7,10 +7,10 @@
 #include <cstdio>
 #include <string>
 
+#include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
-#include "tsuba/file.h"
+#include "katana/file.h"
 
 /*
  * SCB 2020-07-23
@@ -30,16 +30,14 @@
  * somehow and also tell users to not modify our files?
  */
 
-namespace tsuba {
-
-FileView::~FileView() {
+katana::FileView::~FileView() {
   if (auto res = Unbind(); !res) {
     KATANA_LOG_ERROR("Unbind: {}", res.error());
   }
 }
 
 katana::Result<void>
-FileView::Unbind() {
+katana::FileView::Unbind() {
   if (bound_) {
     // Resolve all outstanding reads so they don't write to the memory we are
     // about to unmap
@@ -65,7 +63,7 @@ FileView::Unbind() {
 }
 
 katana::Result<void>
-FileView::Bind(
+katana::FileView::Bind(
     std::string_view filename, uint64_t begin, uint64_t end, bool resolve) {
   StatBuf buf;
   filename_ = filename;
@@ -116,7 +114,7 @@ FileView::Bind(
 }
 
 katana::Result<void>
-FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
+katana::FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
   uint64_t in_end = std::min<uint64_t>(end, file_size_);
   uint64_t in_begin = std::min<uint64_t>(begin, in_end);
   uint64_t first_page = 0;
@@ -169,7 +167,7 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
 }
 
 bool
-FileView::Equals(const FileView& other) const {
+katana::FileView::Equals(const FileView& other) const {
   if (!bound_ || !other.bound_) {
     return false;
   }
@@ -187,7 +185,7 @@ FileView::Equals(const FileView& other) const {
 ////// Begin arrow::io::RandomAccessFile method definitions ////////
 
 arrow::Status
-FileView::Close() {
+katana::FileView::Close() {
   if (auto res = Unbind(); !res) {
     return arrow::Status::UnknownError("Unbind", res.error());
   }
@@ -195,7 +193,7 @@ FileView::Close() {
 }
 
 arrow::Result<int64_t>
-FileView::Tell() const {
+katana::FileView::Tell() const {
   if (!bound_) {
     return arrow::Status(
         arrow::StatusCode::Invalid, "Unbound FileView has no cursor position");
@@ -204,12 +202,12 @@ FileView::Tell() const {
 }
 
 bool
-FileView::closed() const {
+katana::FileView::closed() const {
   return !bound_;
 }
 
 arrow::Status
-FileView::Seek(int64_t seek_to) {
+katana::FileView::Seek(int64_t seek_to) {
   if (!bound_) {
     return arrow::Status(
         arrow::StatusCode::Invalid, "Cannot Seek in unbound FileView");
@@ -225,7 +223,7 @@ FileView::Seek(int64_t seek_to) {
 }
 
 arrow::Result<std::shared_ptr<arrow::Buffer>>
-FileView::Read(int64_t nbytes) {
+katana::FileView::Read(int64_t nbytes) {
   if (!bound_) {
     return arrow::Status(arrow::StatusCode::Invalid, "Unbound FileView");
   }
@@ -261,7 +259,7 @@ FileView::Read(int64_t nbytes) {
 }
 
 arrow::Result<int64_t>
-FileView::Read(int64_t nbytes, void* out) {
+katana::FileView::Read(int64_t nbytes, void* out) {
   // sanitize inputs
   if (nbytes <= 0) {
     return nbytes;
@@ -295,19 +293,19 @@ FileView::Read(int64_t nbytes, void* out) {
 }
 
 arrow::Result<int64_t>
-FileView::GetSize() {
+katana::FileView::GetSize() {
   return size();
 }
 
 ///// End arrow::io::RandomAccessFile method definitions /////////
 
 uint64_t
-FileView::page_number(uint64_t size) {
+katana::FileView::page_number(uint64_t size) {
   return size >> page_shift_;
 }
 
 inline uint64_t
-FileView::FirstPage(
+katana::FileView::FirstPage(
     uint64_t* bitmap, uint64_t block_num, uint64_t start, uint64_t end) {
   uint64_t working = ~bitmap[block_num];
   uint64_t mask = 1UL << (63 - start);
@@ -320,7 +318,7 @@ FileView::FirstPage(
 }
 
 inline uint64_t
-FileView::LastPage(
+katana::FileView::LastPage(
     uint64_t* bitmap, uint64_t block_num, uint64_t start, uint64_t end) {
   uint64_t working = ~bitmap[block_num];
   uint64_t mask = 1UL << (63 - end);
@@ -333,7 +331,7 @@ FileView::LastPage(
 }
 
 std::optional<std::pair<uint64_t, uint64_t>>
-FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
+katana::FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
   /*
    * We want to search for 0 bits in the bit array bitmap.
    *
@@ -434,7 +432,7 @@ FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
 }
 
 katana::Result<void>
-FileView::MarkFilled(uint64_t* bitmap, uint64_t begin, uint64_t end) {
+katana::FileView::MarkFilled(uint64_t* bitmap, uint64_t begin, uint64_t end) {
   uint64_t begin_mask;
   if (begin % 64) {
     begin_mask = (UINT64_C(1) << (64 - begin % 64)) - UINT64_C(1);
@@ -460,7 +458,7 @@ FileView::MarkFilled(uint64_t* bitmap, uint64_t begin, uint64_t end) {
 }
 
 katana::Result<void>
-FileView::Resolve(int64_t start, int64_t size) {
+katana::FileView::Resolve(int64_t start, int64_t size) {
   // This loop could do less work by sorting the vector or storing an
   // interval tree, but that seems like overkill unless this becomes a
   // bottleneck
@@ -483,7 +481,7 @@ FileView::Resolve(int64_t start, int64_t size) {
 }
 
 katana::Result<void>
-FileView::PreFetch(int64_t start, int64_t size) {
+katana::FileView::PreFetch(int64_t start, int64_t size) {
   // Our highly sophisticated prefetching algorithm is to crudely approximate
   // the size of the last read plus 10%. This is largely motivated by parquet
   // files, which consecutively read row groups that are (in theory)
@@ -496,4 +494,3 @@ FileView::PreFetch(int64_t start, int64_t size) {
   KATANA_CHECKED(Fill(begin, end, false));
   return katana::ResultSuccess();
 }
-}  // namespace tsuba

@@ -1,7 +1,7 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_TXNCONTEXT_H_
-#define KATANA_LIBTSUBA_TSUBA_TXNCONTEXT_H_
+#ifndef KATANA_LIBTSUBA_KATANA_TXNCONTEXT_H_
+#define KATANA_LIBTSUBA_KATANA_TXNCONTEXT_H_
 
-namespace tsuba {
+namespace katana {
 
 class KATANA_EXPORT TxnContext {
 public:
@@ -84,6 +84,6 @@ private:
   bool topology_write_{false};
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

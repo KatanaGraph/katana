@@ -1,4 +1,4 @@
-#include "tsuba/RDG.h"
+#include "katana/RDG.h"
 
 #include <cassert>
 #include <exception>
@@ -28,18 +28,17 @@
 #include "RDGHandleImpl.h"
 #include "katana/ArrowInterchange.h"
 #include "katana/ErrorCode.h"
+#include "katana/FaultTest.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
+#include "katana/ParquetWriter.h"
+#include "katana/RDGTopology.h"
+#include "katana/ReadGroup.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/Errors.h"
-#include "tsuba/FaultTest.h"
-#include "tsuba/ParquetWriter.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/ReadGroup.h"
-#include "tsuba/WriteGroup.h"
-#include "tsuba/file.h"
-#include "tsuba/tsuba.h"
+#include "katana/WriteGroup.h"
+#include "katana/file.h"
+#include "katana/tsuba.h"
 
 using json = nlohmann::json;
 
@@ -48,9 +47,9 @@ namespace {
 katana::Result<std::string>
 StoreArrowArrayAtName(
     const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
-    const std::string& name, tsuba::WriteGroup* desc) {
-  std::unique_ptr<tsuba::ParquetWriter> writer =
-      KATANA_CHECKED(tsuba::ParquetWriter::Make(array, name));
+    const std::string& name, katana::WriteGroup* desc) {
+  std::unique_ptr<katana::ParquetWriter> writer =
+      KATANA_CHECKED(katana::ParquetWriter::Make(array, name));
 
   katana::Uri new_path = dir.RandFile(name);
   KATANA_CHECKED_CONTEXT(
@@ -60,8 +59,8 @@ StoreArrowArrayAtName(
 
 katana::Result<void>
 WriteProperties(
-    const arrow::Table& props, std::vector<tsuba::PropStorageInfo*> prop_info,
-    const katana::Uri& dir, tsuba::WriteGroup* desc) {
+    const arrow::Table& props, std::vector<katana::PropStorageInfo*> prop_info,
+    const katana::Uri& dir, katana::WriteGroup* desc) {
   const auto& schema = props.schema();
 
   std::vector<std::string> next_paths;
@@ -76,41 +75,42 @@ WriteProperties(
 
     prop_info[i]->WasWritten(path);
   }
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
+  TSUBA_PTP(katana::internal::FaultSensitivity::Normal);
 
   return katana::ResultSuccess();
 }
 
 katana::Result<void>
 CommitRDG(
-    tsuba::RDGHandle handle, uint32_t policy_id, bool transposed,
-    tsuba::RDG::RDGVersioningPolicy versioning_action,
-    const tsuba::RDGLineage& lineage, std::unique_ptr<tsuba::WriteGroup> desc) {
-  katana::CommBackend* comm = tsuba::Comm();
-  tsuba::RDGManifest new_manifest =
-      (versioning_action == tsuba::RDG::RetainVersion)
+    katana::RDGHandle handle, uint32_t policy_id, bool transposed,
+    katana::RDG::RDGVersioningPolicy versioning_action,
+    const katana::RDGLineage& lineage,
+    std::unique_ptr<katana::WriteGroup> desc) {
+  katana::CommBackend* comm = katana::Comm();
+  katana::RDGManifest new_manifest =
+      (versioning_action == katana::RDG::RetainVersion)
           ? handle.impl_->rdg_manifest().SameVersion(
                 comm->Num, policy_id, transposed, lineage)
           : handle.impl_->rdg_manifest().NextVersion(
                 comm->Num, policy_id, transposed, lineage);
 
   // wait for all the work we queued to finish
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
+  TSUBA_PTP(katana::internal::FaultSensitivity::High);
   KATANA_CHECKED_CONTEXT(desc->Finish(), "at least one async write failed");
 
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
+  TSUBA_PTP(katana::internal::FaultSensitivity::High);
   comm->Barrier();
 
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-  katana::Result<void> ret = tsuba::OneHostOnly([&]() -> katana::Result<void> {
-    TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
+  TSUBA_PTP(katana::internal::FaultSensitivity::High);
+  katana::Result<void> ret = katana::OneHostOnly([&]() -> katana::Result<void> {
+    TSUBA_PTP(katana::internal::FaultSensitivity::High);
 
     std::string curr_s = new_manifest.ToJsonString();
-    auto manifest_file = tsuba::RDGManifest::FileName(
+    auto manifest_file = katana::RDGManifest::FileName(
         handle.impl_->rdg_manifest().dir(),
         handle.impl_->rdg_manifest().viewtype(), new_manifest.version());
     KATANA_CHECKED_CONTEXT(
-        tsuba::FileStore(
+        katana::FileStore(
             manifest_file.string(),
             reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size()),
         "CommitRDG future failed {}", manifest_file);
@@ -125,20 +125,20 @@ CommitRDG(
 }  // namespace
 
 void
-tsuba::RDG::AddLineage(const std::string& command_line) {
+katana::RDG::AddLineage(const std::string& command_line) {
   core_->AddCommandLine(command_line);
 }
 
-tsuba::RDGFile::~RDGFile() {
+katana::RDGFile::~RDGFile() {
   auto result = Close(handle_);
   if (!result) {
     KATANA_LOG_ERROR("closing RDGFile: {}", result.error());
   }
 }
 
-katana::Result<std::vector<tsuba::PropStorageInfo>>
-tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
-  std::vector<tsuba::PropStorageInfo> next_properties;
+katana::Result<std::vector<katana::PropStorageInfo>>
+katana::RDG::WritePartArrays(const katana::Uri& dir, katana::WriteGroup* desc) {
+  std::vector<katana::PropStorageInfo> next_properties;
 
   KATANA_LOG_DEBUG(
       "WritePartArrays master sz: {} mirrors sz: {} h2owned sz : {} "
@@ -159,7 +159,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     std::string path = KATANA_CHECKED_CONTEXT(
         StoreArrowArrayAtName(mirror_nodes()[i], dir, name, desc), "storing {}",
         name);
-    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
+    next_properties.emplace_back(katana::PropStorageInfo(name, path));
   }
 
   for (size_t i = 0; i < master_nodes().size(); ++i) {
@@ -167,7 +167,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     std::string path = KATANA_CHECKED_CONTEXT(
         StoreArrowArrayAtName(master_nodes()[i], dir, name, desc), "storing {}",
         name);
-    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
+    next_properties.emplace_back(katana::PropStorageInfo(name, path));
   }
 
   if (host_to_owned_global_node_ids() != nullptr) {
@@ -175,7 +175,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     std::string path = KATANA_CHECKED_CONTEXT(
         StoreArrowArrayAtName(host_to_owned_global_node_ids(), dir, name, desc),
         "storing {}", name);
-    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
+    next_properties.emplace_back(katana::PropStorageInfo(name, path));
   }
 
   if (host_to_owned_global_edge_ids() != nullptr) {
@@ -183,7 +183,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     std::string path = KATANA_CHECKED_CONTEXT(
         StoreArrowArrayAtName(host_to_owned_global_edge_ids(), dir, name, desc),
         "storing {}", name);
-    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
+    next_properties.emplace_back(katana::PropStorageInfo(name, path));
   }
 
   if (local_to_user_id() != nullptr) {
@@ -191,7 +191,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     std::string path = KATANA_CHECKED_CONTEXT(
         StoreArrowArrayAtName(local_to_user_id(), dir, name, desc),
         "storing {}", name);
-    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
+    next_properties.emplace_back(katana::PropStorageInfo(name, path));
   }
 
   if (local_to_global_id() != nullptr) {
@@ -199,7 +199,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     std::string path = KATANA_CHECKED_CONTEXT(
         StoreArrowArrayAtName(local_to_global_id(), dir, name, desc),
         "storing {}", name);
-    next_properties.emplace_back(tsuba::PropStorageInfo(name, path));
+    next_properties.emplace_back(katana::PropStorageInfo(name, path));
   }
 
   return next_properties;
@@ -208,7 +208,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
 //TODO : emcginnis combine the Edge and Node DoStoreNode/EntityTypeIDArray
 // into a single generalized function.
 katana::Result<void>
-tsuba::RDG::DoStoreNodeEntityTypeIDArray(
+katana::RDG::DoStoreNodeEntityTypeIDArray(
     RDGHandle handle, std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
     std::unique_ptr<WriteGroup>& write_group) {
   if (!node_entity_type_id_array_ff &&
@@ -256,7 +256,7 @@ tsuba::RDG::DoStoreNodeEntityTypeIDArray(
 //TODO : emcginnis combine the Edge and Node DoStoreNode/EntityTypeIDArray
 // into a single generalized function.
 katana::Result<void>
-tsuba::RDG::DoStoreEdgeEntityTypeIDArray(
+katana::RDG::DoStoreEdgeEntityTypeIDArray(
     RDGHandle handle, std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
     std::unique_ptr<WriteGroup>& write_group) {
   if (!edge_entity_type_id_array_ff &&
@@ -302,7 +302,7 @@ tsuba::RDG::DoStoreEdgeEntityTypeIDArray(
 }
 
 katana::Result<void>
-tsuba::RDG::DoStore(
+katana::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
@@ -341,7 +341,7 @@ tsuba::RDG::DoStore(
 
   //If a view type has been set, use it otherwise pass in the default view type
   if (view_type_.empty()) {
-    handle.impl_->set_viewtype(tsuba::kDefaultRDGViewType);
+    handle.impl_->set_viewtype(katana::kDefaultRDGViewType);
   } else {
     handle.impl_->set_viewtype(view_type_);
   }
@@ -360,7 +360,7 @@ tsuba::RDG::DoStore(
 }
 
 katana::Result<void>
-tsuba::RDG::DoMake(
+katana::RDG::DoMake(
     const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
     const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
     const katana::Uri& metadata_dir) {
@@ -453,7 +453,7 @@ tsuba::RDG::DoMake(
     if (local_to_global_id()->length() !=
         core_->part_header().metadata().num_nodes_) {
       return KATANA_ERROR(
-          tsuba::ErrorCode::InvalidArgument,
+          katana::ErrorCode::InvalidArgument,
           "regenerate partitions: number of Global Node IDs {} does not "
           "match the number of master nodes {}",
           local_to_global_id()->length(),
@@ -466,7 +466,7 @@ tsuba::RDG::DoMake(
       (core_->part_header().metadata().num_owned_ +
        local_to_global_id()->length())) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::InvalidArgument,
+        katana::ErrorCode::InvalidArgument,
         "regenerate partitions: number of User Node IDs {} do not match "
         "number of masters nodes {} plus the number of Global Node IDs {}",
         local_to_user_id()->length(),
@@ -491,8 +491,8 @@ tsuba::RDG::DoMake(
   return katana::ResultSuccess();
 }
 
-katana::Result<tsuba::RDG>
-tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
+katana::Result<katana::RDG>
+katana::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   uint32_t partition_id_to_load =
       opts.partition_id_to_load.value_or(Comm()->Rank);
 
@@ -522,28 +522,28 @@ tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
 }
 
 bool
-tsuba::RDG::IsEntityTypeIDsOutsideProperties() const {
+katana::RDG::IsEntityTypeIDsOutsideProperties() const {
   return core_->part_header().IsEntityTypeIDsOutsideProperties();
 }
 
 bool
-tsuba::RDG::IsUint16tEntityTypeIDs() const {
+katana::RDG::IsUint16tEntityTypeIDs() const {
   return core_->part_header().IsUint16tEntityTypeIDs();
 }
 
 katana::Result<void>
-tsuba::RDG::Validate() const {
+katana::RDG::Validate() const {
   KATANA_CHECKED(core_->part_header().Validate());
   return katana::ResultSuccess();
 }
 
 bool
-tsuba::RDG::Equals(const RDG& other) const {
+katana::RDG::Equals(const RDG& other) const {
   return core_->Equals(*other.core_);
 }
 
-katana::Result<tsuba::RDG>
-tsuba::RDG::Make(RDGHandle handle, const RDGLoadOptions& opts) {
+katana::Result<katana::RDG>
+katana::RDG::Make(RDGHandle handle, const RDGLoadOptions& opts) {
   if (!handle.impl_->AllowsRead()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "handle does not allow full read");
@@ -552,7 +552,7 @@ tsuba::RDG::Make(RDGHandle handle, const RDGLoadOptions& opts) {
 }
 
 katana::Result<void>
-tsuba::RDG::Store(
+katana::RDG::Store(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
@@ -569,7 +569,7 @@ tsuba::RDG::Store(
       "RDG::Store manifest.num_hosts: {} manifest.policy_id: {} num_hosts: {} "
       "policy_id: {} versioning_action{}",
       handle.impl_->rdg_manifest().num_hosts(),
-      handle.impl_->rdg_manifest().policy_id(), tsuba::Comm()->Num,
+      handle.impl_->rdg_manifest().policy_id(), katana::Comm()->Num,
       core_->part_header().metadata().policy_id_, versioning_action);
   if (handle.impl_->rdg_manifest().dir() != rdg_dir()) {
     KATANA_CHECKED(core_->part_header().ChangeStorageLocation(
@@ -594,46 +594,46 @@ tsuba::RDG::Store(
 }
 
 katana::Result<void>
-tsuba::RDG::AddNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+katana::RDG::AddNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   return core_->AddNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::AddEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+katana::RDG::AddEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   return core_->AddEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+katana::RDG::UpsertNodeProperties(
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   return core_->UpsertNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx) {
+katana::RDG::UpsertEdgeProperties(
+    const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
   return core_->UpsertEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx) {
+katana::RDG::RemoveNodeProperty(int i, katana::TxnContext* txn_ctx) {
   return core_->RemoveNodeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
-tsuba::RDG::RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx) {
+katana::RDG::RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx) {
   return core_->RemoveEdgeProperty(i, txn_ctx);
 }
 
 void
-tsuba::RDG::UpsertTopology(tsuba::RDGTopology topo) {
+katana::RDG::UpsertTopology(katana::RDGTopology topo) {
   core_->UpsertTopology(std::move(topo));
 }
 
 void
-tsuba::RDG::AddTopology(tsuba::RDGTopology topo) {
+katana::RDG::AddTopology(katana::RDGTopology topo) {
   core_->AddTopology(std::move(topo));
 }
 
@@ -642,7 +642,7 @@ namespace {
 katana::Result<std::shared_ptr<arrow::Table>>
 UnloadProperty(
     const std::shared_ptr<arrow::Table>& props, int i,
-    std::vector<tsuba::PropStorageInfo>* prop_info_list,
+    std::vector<katana::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
   if (i < 0 || i > props->num_columns()) {
     return KATANA_ERROR(
@@ -652,11 +652,11 @@ UnloadProperty(
 
   auto psi_it = std::find_if(
       prop_info_list->begin(), prop_info_list->end(),
-      [&](const tsuba::PropStorageInfo& psi) { return psi.name() == name; });
+      [&](const katana::PropStorageInfo& psi) { return psi.name() == name; });
 
   KATANA_LOG_ASSERT(psi_it != prop_info_list->end());
 
-  tsuba::PropStorageInfo& prop_info = *psi_it;
+  katana::PropStorageInfo& prop_info = *psi_it;
 
   KATANA_LOG_ASSERT(!prop_info.IsAbsent());
 
@@ -674,8 +674,8 @@ UnloadProperty(
 katana::Result<std::shared_ptr<arrow::Table>>
 LoadProperty(
     const std::shared_ptr<arrow::Table>& props, const std::string name, int i,
-    katana::PropertyCache* cache, tsuba::RDG* rdg,
-    std::vector<tsuba::PropStorageInfo>* prop_info_list,
+    katana::PropertyCache* cache, katana::RDG* rdg,
+    std::vector<katana::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
   if (i < 0 || i > props->num_columns()) {
     i = props->num_columns();
@@ -683,25 +683,25 @@ LoadProperty(
 
   auto psi_it = std::find_if(
       prop_info_list->begin(), prop_info_list->end(),
-      [&](const tsuba::PropStorageInfo& psi) { return psi.name() == name; });
+      [&](const katana::PropStorageInfo& psi) { return psi.name() == name; });
 
   if (psi_it == prop_info_list->end()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::PropertyNotFound, "no property named {}",
+        katana::ErrorCode::PropertyNotFound, "no property named {}",
         std::quoted(name));
   }
 
-  tsuba::PropStorageInfo& prop_info = *psi_it;
+  katana::PropStorageInfo& prop_info = *psi_it;
 
   if (!prop_info.IsAbsent()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::InvalidArgument, "property {} already loaded",
+        katana::ErrorCode::InvalidArgument, "property {} already loaded",
         std::quoted(name));
   }
 
   std::shared_ptr<arrow::Table> new_table;
 
-  KATANA_CHECKED(tsuba::AddProperties(
+  KATANA_CHECKED(katana::AddProperties(
       dir, cache, rdg, {&prop_info}, nullptr,
       [&](const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
         if (props->num_columns() > 0) {
@@ -721,7 +721,7 @@ LoadProperty(
 }  // namespace
 
 katana::Result<void>
-tsuba::RDG::UnloadNodeProperty(int i) {
+katana::RDG::UnloadNodeProperty(int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(UnloadProperty(
       node_properties(), i, &core_->part_header().node_prop_info_list(),
       rdg_dir()));
@@ -730,19 +730,19 @@ tsuba::RDG::UnloadNodeProperty(int i) {
 }
 
 katana::Result<void>
-tsuba::RDG::UnloadNodeProperty(const std::string& name) {
+katana::RDG::UnloadNodeProperty(const std::string& name) {
   auto col_names = node_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), name);
   if (pos != col_names.cend()) {
     return UnloadNodeProperty(std::distance(col_names.cbegin(), pos));
   }
   return KATANA_ERROR(
-      tsuba::ErrorCode::PropertyNotFound, "property {} not found",
+      katana::ErrorCode::PropertyNotFound, "property {} not found",
       std::quoted(name));
 }
 
 katana::Result<void>
-tsuba::RDG::UnloadEdgeProperty(int i) {
+katana::RDG::UnloadEdgeProperty(int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(UnloadProperty(
       edge_properties(), i, &core_->part_header().edge_prop_info_list(),
       rdg_dir()));
@@ -751,19 +751,19 @@ tsuba::RDG::UnloadEdgeProperty(int i) {
 }
 
 katana::Result<void>
-tsuba::RDG::UnloadEdgeProperty(const std::string& name) {
+katana::RDG::UnloadEdgeProperty(const std::string& name) {
   auto col_names = edge_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), name);
   if (pos != col_names.cend()) {
     return UnloadEdgeProperty(std::distance(col_names.cbegin(), pos));
   }
   return KATANA_ERROR(
-      tsuba::ErrorCode::PropertyNotFound, "property {} not found",
+      katana::ErrorCode::PropertyNotFound, "property {} not found",
       std::quoted(name));
 }
 
 katana::Result<void>
-tsuba::RDG::LoadNodeProperty(const std::string& name, int i) {
+katana::RDG::LoadNodeProperty(const std::string& name, int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
       node_properties(), name, i, prop_cache_, this,
       &core_->part_header().node_prop_info_list(), rdg_dir()));
@@ -772,7 +772,7 @@ tsuba::RDG::LoadNodeProperty(const std::string& name, int i) {
 }
 
 katana::Result<void>
-tsuba::RDG::LoadEdgeProperty(const std::string& name, int i) {
+katana::RDG::LoadEdgeProperty(const std::string& name, int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
       edge_properties(), name, i, prop_cache_, this,
       &core_->part_header().edge_prop_info_list(), rdg_dir()));
@@ -781,7 +781,7 @@ tsuba::RDG::LoadEdgeProperty(const std::string& name, int i) {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListFullNodeProperties() const {
+katana::RDG::ListFullNodeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().node_prop_info_list()) {
     result.emplace_back(prop.name());
@@ -790,7 +790,7 @@ tsuba::RDG::ListFullNodeProperties() const {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListLoadedNodeProperties() const {
+katana::RDG::ListLoadedNodeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().node_prop_info_list()) {
     if (!prop.IsAbsent()) {
@@ -801,7 +801,7 @@ tsuba::RDG::ListLoadedNodeProperties() const {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListFullEdgeProperties() const {
+katana::RDG::ListFullEdgeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().edge_prop_info_list()) {
     result.emplace_back(prop.name());
@@ -810,7 +810,7 @@ tsuba::RDG::ListFullEdgeProperties() const {
 }
 
 std::vector<std::string>
-tsuba::RDG::ListLoadedEdgeProperties() const {
+katana::RDG::ListLoadedEdgeProperties() const {
   std::vector<std::string> result;
   for (const auto& prop : core_->part_header().edge_prop_info_list()) {
     if (!prop.IsAbsent()) {
@@ -820,125 +820,125 @@ tsuba::RDG::ListLoadedEdgeProperties() const {
   return result;
 }
 
-const tsuba::PartitionMetadata&
-tsuba::RDG::part_metadata() const {
+const katana::PartitionMetadata&
+katana::RDG::part_metadata() const {
   return core_->part_header().metadata();
 }
 
 void
-tsuba::RDG::set_part_metadata(const tsuba::PartitionMetadata& metadata) {
+katana::RDG::set_part_metadata(const katana::PartitionMetadata& metadata) {
   core_->part_header().set_metadata(metadata);
 }
 
 const katana::Uri&
-tsuba::RDG::rdg_dir() const {
+katana::RDG::rdg_dir() const {
   return core_->rdg_dir();
 }
 void
-tsuba::RDG::set_rdg_dir(const katana::Uri& rdg_dir) {
+katana::RDG::set_rdg_dir(const katana::Uri& rdg_dir) {
   return core_->set_rdg_dir(rdg_dir);
 }
 
 uint32_t
-tsuba::RDG::partition_id() const {
+katana::RDG::partition_id() const {
   return core_->partition_id();
 }
 
 const std::shared_ptr<arrow::Table>&
-tsuba::RDG::node_properties() const {
+katana::RDG::node_properties() const {
   return core_->node_properties();
 }
 
 const std::shared_ptr<arrow::Table>&
-tsuba::RDG::edge_properties() const {
+katana::RDG::edge_properties() const {
   return core_->edge_properties();
 }
 
 void
-tsuba::RDG::DropNodeProperties() {
+katana::RDG::DropNodeProperties() {
   core_->drop_node_properties();
 }
 
 void
-tsuba::RDG::DropEdgeProperties() {
+katana::RDG::DropEdgeProperties() {
   core_->drop_edge_properties();
 }
 
 katana::Result<void>
-tsuba::RDG::DropAllTopologies() {
+katana::RDG::DropAllTopologies() {
   return core_->UnbindAllTopologyFile();
 }
 
 std::shared_ptr<arrow::Schema>
-tsuba::RDG::full_node_schema() const {
+katana::RDG::full_node_schema() const {
   return core_->full_node_schema();
 }
 
 std::shared_ptr<arrow::Schema>
-tsuba::RDG::full_edge_schema() const {
+katana::RDG::full_edge_schema() const {
   return core_->full_edge_schema();
 }
 
 const std::vector<std::shared_ptr<arrow::ChunkedArray>>&
-tsuba::RDG::master_nodes() const {
+katana::RDG::master_nodes() const {
   return core_->master_nodes();
 }
 const std::vector<std::shared_ptr<arrow::ChunkedArray>>&
-tsuba::RDG::mirror_nodes() const {
+katana::RDG::mirror_nodes() const {
   return core_->mirror_nodes();
 }
 const std::shared_ptr<arrow::ChunkedArray>&
-tsuba::RDG::host_to_owned_global_node_ids() const {
+katana::RDG::host_to_owned_global_node_ids() const {
   return core_->host_to_owned_global_node_ids();
 }
 const std::shared_ptr<arrow::ChunkedArray>&
-tsuba::RDG::host_to_owned_global_edge_ids() const {
+katana::RDG::host_to_owned_global_edge_ids() const {
   return core_->host_to_owned_global_edge_ids();
 }
 const std::shared_ptr<arrow::ChunkedArray>&
-tsuba::RDG::local_to_user_id() const {
+katana::RDG::local_to_user_id() const {
   return core_->local_to_user_id();
 }
 const std::shared_ptr<arrow::ChunkedArray>&
-tsuba::RDG::local_to_global_id() const {
+katana::RDG::local_to_global_id() const {
   return core_->local_to_global_id();
 }
 
 void
-tsuba::RDG::set_master_nodes(
+katana::RDG::set_master_nodes(
     std::vector<std::shared_ptr<arrow::ChunkedArray>>&& master_nodes) {
   return core_->set_master_nodes(std::move(master_nodes));
 }
 void
-tsuba::RDG::set_mirror_nodes(
+katana::RDG::set_mirror_nodes(
     std::vector<std::shared_ptr<arrow::ChunkedArray>>&& mirror_nodes) {
   return core_->set_mirror_nodes(std::move(mirror_nodes));
 }
 void
-tsuba::RDG::set_host_to_owned_global_node_ids(
+katana::RDG::set_host_to_owned_global_node_ids(
     std::shared_ptr<arrow::ChunkedArray>&& host_to_owned_global_node_ids) {
   return core_->set_host_to_owned_global_node_ids(
       std::move(host_to_owned_global_node_ids));
 }
 void
-tsuba::RDG::set_host_to_owned_global_edge_ids(
+katana::RDG::set_host_to_owned_global_edge_ids(
     std::shared_ptr<arrow::ChunkedArray>&& host_to_owned_global_edge_ids) {
   return core_->set_host_to_owned_global_edge_ids(
       std::move(host_to_owned_global_edge_ids));
 }
 void
-tsuba::RDG::set_local_to_user_id(
+katana::RDG::set_local_to_user_id(
     std::shared_ptr<arrow::ChunkedArray>&& local_to_user_id) {
   return core_->set_local_to_user_id(std::move(local_to_user_id));
 }
 void
-tsuba::RDG::set_local_to_global_id(
+katana::RDG::set_local_to_global_id(
     std::shared_ptr<arrow::ChunkedArray>&& local_to_global_id) {
   return core_->set_local_to_global_id(std::move(local_to_global_id));
 }
 
 katana::Result<void>
-tsuba::RDG::AddCSRTopologyByFile(
+katana::RDG::AddCSRTopologyByFile(
     const katana::Uri& new_top, uint64_t num_nodes, uint64_t num_edges) {
   katana::Uri dir = new_top.DirName();
   if (dir != rdg_dir()) {
@@ -950,8 +950,8 @@ tsuba::RDG::AddCSRTopologyByFile(
       new_top.BaseName(), rdg_dir(), num_nodes, num_edges);
 }
 
-katana::Result<tsuba::RDGTopology*>
-tsuba::RDG::GetTopology(const tsuba::RDGTopology& shadow) {
+katana::Result<katana::RDGTopology*>
+katana::RDG::GetTopology(const katana::RDGTopology& shadow) {
   RDGTopology* topology =
       KATANA_CHECKED(core_->topology_manager().GetTopology(shadow));
   KATANA_CHECKED(topology->Bind(rdg_dir()));
@@ -959,28 +959,29 @@ tsuba::RDG::GetTopology(const tsuba::RDGTopology& shadow) {
   return topology;
 }
 
-const tsuba::FileView&
-tsuba::RDG::node_entity_type_id_array_file_storage() const {
+const katana::FileView&
+katana::RDG::node_entity_type_id_array_file_storage() const {
   return core_->node_entity_type_id_array_file_storage();
 }
 
 katana::Result<katana::EntityTypeManager>
-tsuba::RDG::node_entity_type_manager() const {
+katana::RDG::node_entity_type_manager() const {
   return core_->part_header().GetNodeEntityTypeManager();
 }
 
 katana::Result<katana::EntityTypeManager>
-tsuba::RDG::edge_entity_type_manager() const {
+katana::RDG::edge_entity_type_manager() const {
   return core_->part_header().GetEdgeEntityTypeManager();
 }
 
 katana::Result<void>
-tsuba::RDG::UnbindNodeEntityTypeIDArrayFileStorage() {
+katana::RDG::UnbindNodeEntityTypeIDArrayFileStorage() {
   return core_->node_entity_type_id_array_file_storage().Unbind();
 }
 
 katana::Result<void>
-tsuba::RDG::SetNodeEntityTypeIDArrayFile(const katana::Uri& new_type_id_array) {
+katana::RDG::SetNodeEntityTypeIDArrayFile(
+    const katana::Uri& new_type_id_array) {
   katana::Uri dir = new_type_id_array.DirName();
   if (dir != rdg_dir()) {
     return KATANA_ERROR(
@@ -991,18 +992,19 @@ tsuba::RDG::SetNodeEntityTypeIDArrayFile(const katana::Uri& new_type_id_array) {
   return core_->RegisterNodeEntityTypeIDArrayFile(new_type_id_array.BaseName());
 }
 
-const tsuba::FileView&
-tsuba::RDG::edge_entity_type_id_array_file_storage() const {
+const katana::FileView&
+katana::RDG::edge_entity_type_id_array_file_storage() const {
   return core_->edge_entity_type_id_array_file_storage();
 }
 
 katana::Result<void>
-tsuba::RDG::UnbindEdgeEntityTypeIDArrayFileStorage() {
+katana::RDG::UnbindEdgeEntityTypeIDArrayFileStorage() {
   return core_->edge_entity_type_id_array_file_storage().Unbind();
 }
 
 katana::Result<void>
-tsuba::RDG::SetEdgeEntityTypeIDArrayFile(const katana::Uri& new_type_id_array) {
+katana::RDG::SetEdgeEntityTypeIDArrayFile(
+    const katana::Uri& new_type_id_array) {
   katana::Uri dir = new_type_id_array.DirName();
   if (dir != rdg_dir()) {
     return KATANA_ERROR(
@@ -1013,10 +1015,10 @@ tsuba::RDG::SetEdgeEntityTypeIDArrayFile(const katana::Uri& new_type_id_array) {
   return core_->RegisterEdgeEntityTypeIDArrayFile(new_type_id_array.BaseName());
 }
 
-tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {}
+katana::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {}
 
-tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) {}
+katana::RDG::RDG() : core_(std::make_unique<RDGCore>()) {}
 
-tsuba::RDG::~RDG() = default;
-tsuba::RDG::RDG(tsuba::RDG&& other) noexcept = default;
-tsuba::RDG& tsuba::RDG::operator=(tsuba::RDG&& other) noexcept = default;
+katana::RDG::~RDG() = default;
+katana::RDG::RDG(katana::RDG&& other) noexcept = default;
+katana::RDG& katana::RDG::operator=(katana::RDG&& other) noexcept = default;

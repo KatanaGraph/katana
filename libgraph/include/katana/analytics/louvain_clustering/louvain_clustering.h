@@ -121,7 +121,7 @@ public:
 /// not exist before the call.
 KATANA_EXPORT Result<void> LouvainClustering(
     PropertyGraph* pg, const std::string& edge_weight_property_name,
-    const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
     LouvainClusteringPlan plan = {});
 
 KATANA_EXPORT Result<void> LouvainClusteringAssertValid(
@@ -145,7 +145,7 @@ struct KATANA_EXPORT LouvainClusteringStatistics {
 
   static katana::Result<LouvainClusteringStatistics> Compute(
       PropertyGraph* pg, const std::string& edge_weight_property_name,
-      const std::string& output_property_name, tsuba::TxnContext* txn_ctx);
+      const std::string& output_property_name, katana::TxnContext* txn_ctx);
 };
 
 }  // namespace katana::analytics

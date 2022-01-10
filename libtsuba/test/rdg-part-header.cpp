@@ -1,7 +1,7 @@
 #include "RDGPartHeader.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
 // This test exercises the prop info lists in RDGPartHeader. The three primary
 // operations that RDGPartHeader exposes for those lists are:
@@ -16,8 +16,8 @@ katana::Result<void>
 TestPropInfoLists(const std::string& path_to_header) {
   katana::Uri path_to_header_uri =
       KATANA_CHECKED(katana::Uri::Make(path_to_header));
-  tsuba::RDGPartHeader under_test =
-      KATANA_CHECKED(tsuba::RDGPartHeader::Make(path_to_header_uri));
+  katana::RDGPartHeader under_test =
+      KATANA_CHECKED(katana::RDGPartHeader::Make(path_to_header_uri));
 
   // ---- initial state ----
   // input is rmat15, so no node properties and one edge property
@@ -30,12 +30,12 @@ TestPropInfoLists(const std::string& path_to_header) {
 
   // ---- upserts ----
   // insert
-  tsuba::PropStorageInfo new_edge_prop(
+  katana::PropStorageInfo new_edge_prop(
       "not value", arrow::fixed_size_binary(8));
   under_test.UpsertEdgePropStorageInfo(std::move(new_edge_prop));
 
   // update
-  tsuba::PropStorageInfo updated_edge_prop("value", arrow::large_binary());
+  katana::PropStorageInfo updated_edge_prop("value", arrow::large_binary());
   KATANA_LOG_ASSERT(updated_edge_prop.IsDirty());
   under_test.UpsertEdgePropStorageInfo(std::move(updated_edge_prop));
 
@@ -83,7 +83,7 @@ TestAll(const std::string& path_to_header) {
 
 int
 main(int argc, char* argv[]) {
-  KATANA_LOG_ASSERT(tsuba::Init());
+  KATANA_LOG_ASSERT(katana::InitTsuba());
 
   if (argc <= 1) {
     KATANA_LOG_FATAL("rdg-part-header <rmat15 prefix>");
@@ -99,6 +99,6 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("{}", test_res.error());
   }
 
-  KATANA_LOG_ASSERT(tsuba::Fini());
+  KATANA_LOG_ASSERT(katana::FiniTsuba());
   return 0;
 }

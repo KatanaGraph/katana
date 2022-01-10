@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_FILEVIEW_H_
-#define KATANA_LIBTSUBA_TSUBA_FILEVIEW_H_
+#ifndef KATANA_LIBTSUBA_KATANA_FILEVIEW_H_
+#define KATANA_LIBTSUBA_KATANA_FILEVIEW_H_
 
 #include <cstdint>
 #include <future>
@@ -12,7 +12,7 @@
 #include "katana/Result.h"
 #include "katana/config.h"
 
-namespace tsuba {
+namespace katana {
 
 class KATANA_EXPORT FileView : public arrow::io::RandomAccessFile {
 public:
@@ -172,6 +172,6 @@ private:
   std::vector<uint64_t> filling_;
   std::unique_ptr<std::vector<FillingRange>> fetches_;
 };
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

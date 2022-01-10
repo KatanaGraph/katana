@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_TSUBA_H_
-#define KATANA_LIBTSUBA_TSUBA_TSUBA_H_
+#ifndef KATANA_LIBTSUBA_KATANA_TSUBA_H_
+#define KATANA_LIBTSUBA_KATANA_TSUBA_H_
 
 #include <iterator>
 #include <memory>
@@ -12,7 +12,7 @@
 #include "katana/URI.h"
 #include "katana/config.h"
 
-namespace tsuba {
+namespace katana {
 
 class RDGHandleImpl;
 class RDGManifest;
@@ -127,10 +127,10 @@ KATANA_EXPORT katana::Result<void> CopyRDG(
     std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files);
 
 // Setup and tear down
-KATANA_EXPORT katana::Result<void> Init(katana::CommBackend* comm);
-KATANA_EXPORT katana::Result<void> Init();
+KATANA_EXPORT katana::Result<void> InitTsuba(katana::CommBackend* comm);
+KATANA_EXPORT katana::Result<void> InitTsuba();
 
-KATANA_EXPORT katana::Result<void> Fini();
+KATANA_EXPORT katana::Result<void> FiniTsuba();
 
 /// A set of EntityTypeIDs for use in storage
 using StorageSetOfEntityTypeIDs = std::vector<katana::EntityTypeID>;
@@ -143,6 +143,6 @@ using EntityTypeIDToSetOfEntityTypeIDsStorageMap =
 /// can be increased if required
 constexpr size_t kMaxNumTopologies = 64;
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

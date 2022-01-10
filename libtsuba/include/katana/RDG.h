@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_RDG_H_
-#define KATANA_LIBTSUBA_TSUBA_RDG_H_
+#ifndef KATANA_LIBTSUBA_KATANA_RDG_H_
+#define KATANA_LIBTSUBA_KATANA_RDG_H_
 
 #include <cstdint>
 #include <memory>
@@ -13,21 +13,21 @@
 
 #include "katana/Cache.h"
 #include "katana/EntityTypeManager.h"
+#include "katana/ErrorCode.h"
+#include "katana/FileFrame.h"
+#include "katana/FileView.h"
+#include "katana/PartitionMetadata.h"
+#include "katana/RDGLineage.h"
+#include "katana/RDGTopology.h"
+#include "katana/ReadGroup.h"
 #include "katana/Result.h"
+#include "katana/TxnContext.h"
 #include "katana/URI.h"
+#include "katana/WriteGroup.h"
 #include "katana/config.h"
-#include "tsuba/Errors.h"
-#include "tsuba/FileFrame.h"
-#include "tsuba/FileView.h"
-#include "tsuba/PartitionMetadata.h"
-#include "tsuba/RDGLineage.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/ReadGroup.h"
-#include "tsuba/TxnContext.h"
-#include "tsuba/WriteGroup.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 class RDGManifest;
 class RDGCore;
@@ -139,19 +139,19 @@ public:
   }
 
   katana::Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
   katana::Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
   katana::Result<void> UpsertNodeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
   katana::Result<void> UpsertEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
-  katana::Result<void> RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx);
-  katana::Result<void> RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx);
+  katana::Result<void> RemoveNodeProperty(int i, katana::TxnContext* txn_ctx);
+  katana::Result<void> RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx);
 
   /// Ensure the node property at index `i` was written back to storage
   /// then free its memory
@@ -183,10 +183,10 @@ public:
   void AddLineage(const std::string& command_line);
 
   /// Update a matching RDGTopology or insert a new RDGTopology instance to the RDG
-  void UpsertTopology(tsuba::RDGTopology topo);
+  void UpsertTopology(katana::RDGTopology topo);
 
   /// Add a new RDGTopology instance to the RDG
-  void AddTopology(tsuba::RDGTopology topo);
+  void AddTopology(katana::RDGTopology topo);
 
   /// Load the RDG described by the metadata in handle into memory.
   static katana::Result<RDG> Make(RDGHandle handle, const RDGLoadOptions& opts);
@@ -203,7 +203,7 @@ public:
 
   /// Ask this RDG if it has a topology matching the fields in shadow
   /// If it does, the RDG returns the topology
-  katana::Result<tsuba::RDGTopology*> GetTopology(const RDGTopology& shadow);
+  katana::Result<katana::RDGTopology*> GetTopology(const RDGTopology& shadow);
 
   katana::Result<void> UnbindNodeEntityTypeIDArrayFileStorage();
 
@@ -308,8 +308,8 @@ private:
   static katana::Result<RDG> Make(
       const RDGManifest& manifest, const RDGLoadOptions& opts);
 
-  katana::Result<std::vector<tsuba::PropStorageInfo>> WritePartArrays(
-      const katana::Uri& dir, tsuba::WriteGroup* desc);
+  katana::Result<std::vector<katana::PropStorageInfo>> WritePartArrays(
+      const katana::Uri& dir, katana::WriteGroup* desc);
 
   katana::Result<void> DoStore(
       RDGHandle handle, const std::string& command_line,
@@ -333,6 +333,6 @@ private:
   katana::PropertyCache* prop_cache_{nullptr};
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

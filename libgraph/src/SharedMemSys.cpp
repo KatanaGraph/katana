@@ -21,14 +21,14 @@
 
 #include "katana/CommBackend.h"
 #include "katana/Experimental.h"
+#include "katana/FileStorage.h"
 #include "katana/Galois.h"
 #include "katana/GaloisRuntime.h"
 #include "katana/Logging.h"
 #include "katana/Plugin.h"
 #include "katana/Strings.h"
 #include "katana/TextTracer.h"
-#include "tsuba/FileStorage.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
 namespace {
 
@@ -43,8 +43,8 @@ struct katana::SharedMemSys::Impl {
 katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
     : impl_(std::make_unique<Impl>()) {
   LoadPlugins();
-  if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
-    KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  if (auto init_good = katana::InitTsuba(&comm_backend); !init_good) {
+    KATANA_LOG_FATAL("katana::InitTsuba: {}", init_good.error());
   }
 
   auto features_on = katana::internal::ExperimentalFeature::ReportEnabled();
@@ -67,8 +67,8 @@ katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
 }
 
 katana::SharedMemSys::~SharedMemSys() {
-  if (auto fini_good = tsuba::Fini(); !fini_good) {
-    KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
+  if (auto fini_good = katana::FiniTsuba(); !fini_good) {
+    KATANA_LOG_ERROR("katana::FiniTsuba: {}", fini_good.error());
   }
   katana::GetTracer().Finish();
   // This will finalize plugins irreversibly, reinitialization may not work.

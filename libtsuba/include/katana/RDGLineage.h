@@ -1,11 +1,11 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_RDGLINEAGE_H_
-#define KATANA_LIBTSUBA_TSUBA_RDGLINEAGE_H_
+#ifndef KATANA_LIBTSUBA_KATANA_RDGLINEAGE_H_
+#define KATANA_LIBTSUBA_KATANA_RDGLINEAGE_H_
 
 #include <string>
 
 #include "katana/JSON.h"
 
-namespace tsuba {
+namespace katana {
 
 class RDGLineage {
   std::string command_line_{};
@@ -22,6 +22,6 @@ public:
 void to_json(nlohmann::json& j, const RDGLineage& lineage);
 void from_json(const nlohmann::json& j, RDGLineage& lineage);
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

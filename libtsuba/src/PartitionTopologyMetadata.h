@@ -8,16 +8,16 @@
 #include <unordered_map>
 #include <utility>
 
+#include "katana/ErrorCode.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/config.h"
-#include "tsuba/Errors.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
+namespace katana {
 
 // Definitions
 class KATANA_EXPORT PartitionTopologyMetadataEntry {
@@ -31,10 +31,10 @@ public:
   uint64_t edge_condensed_type_id_map_size_{0};
   bool node_condensed_type_id_map_present_{false};
   uint64_t node_condensed_type_id_map_size_{0};
-  tsuba::RDGTopology::TopologyKind topology_state_{-1};
-  tsuba::RDGTopology::TransposeKind transpose_state_{-1};
-  tsuba::RDGTopology::EdgeSortKind edge_sort_state_{-1};
-  tsuba::RDGTopology::NodeSortKind node_sort_state_{-1};
+  katana::RDGTopology::TopologyKind topology_state_{-1};
+  katana::RDGTopology::TransposeKind transpose_state_{-1};
+  katana::RDGTopology::EdgeSortKind edge_sort_state_{-1};
+  katana::RDGTopology::NodeSortKind node_sort_state_{-1};
 
   // control variables
 
@@ -52,10 +52,10 @@ public:
       bool edge_condensed_type_id_map_present,
       uint64_t node_condensed_type_id_map_size,
       bool node_condensed_type_id_map_present,
-      tsuba::RDGTopology::TopologyKind topology_state,
-      tsuba::RDGTopology::TransposeKind transpose_state,
-      tsuba::RDGTopology::EdgeSortKind edge_sort_state,
-      tsuba::RDGTopology::NodeSortKind node_sort_state) {
+      katana::RDGTopology::TopologyKind topology_state,
+      katana::RDGTopology::TransposeKind transpose_state,
+      katana::RDGTopology::EdgeSortKind edge_sort_state,
+      katana::RDGTopology::NodeSortKind node_sort_state) {
     path_ = path;
     Update(
         num_edges, num_nodes, edge_index_to_property_index_map_present,
@@ -73,10 +73,10 @@ public:
       bool edge_condensed_type_id_map_present,
       uint64_t node_condensed_type_id_map_size,
       bool node_condensed_type_id_map_present,
-      tsuba::RDGTopology::TopologyKind topology_state,
-      tsuba::RDGTopology::TransposeKind transpose_state,
-      tsuba::RDGTopology::EdgeSortKind edge_sort_state,
-      tsuba::RDGTopology::NodeSortKind node_sort_state) {
+      katana::RDGTopology::TopologyKind topology_state,
+      katana::RDGTopology::TransposeKind transpose_state,
+      katana::RDGTopology::EdgeSortKind edge_sort_state,
+      katana::RDGTopology::NodeSortKind node_sort_state) {
     num_edges_ = num_edges;
     num_nodes_ = num_nodes;
     edge_index_to_property_index_map_present_ =
@@ -98,7 +98,7 @@ public:
 
 // set of PartitionTopologyMetadataEntry objects
 using PartitionTopologyMetadataEntries =
-    std::array<PartitionTopologyMetadataEntry, tsuba::kMaxNumTopologies>;
+    std::array<PartitionTopologyMetadataEntry, katana::kMaxNumTopologies>;
 
 class KATANA_EXPORT PartitionTopologyMetadata {
 public:
@@ -141,6 +141,6 @@ private:
 static PartitionTopologyMetadataEntry invalid_metadata_entry =
     PartitionTopologyMetadataEntry();
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

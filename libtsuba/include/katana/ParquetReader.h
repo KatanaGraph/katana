@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_PARQUETREADER_H_
-#define KATANA_LIBTSUBA_TSUBA_PARQUETREADER_H_
+#ifndef KATANA_LIBTSUBA_KATANA_PARQUETREADER_H_
+#define KATANA_LIBTSUBA_KATANA_PARQUETREADER_H_
 
 #include <optional>
 
@@ -14,7 +14,7 @@ class FileReader;
 
 }  // namespace parquet::arrow
 
-namespace tsuba {
+namespace katana {
 
 class KATANA_EXPORT ParquetReader {
 public:
@@ -91,6 +91,6 @@ private:
   bool make_canonical_;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

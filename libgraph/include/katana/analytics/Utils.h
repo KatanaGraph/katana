@@ -52,7 +52,7 @@ DefaultPropertyNames() {
 template <typename NodeProps>
 inline katana::Result<void>
 ConstructNodeProperties(
-    PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
+    PropertyGraph* pg, katana::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
   auto res_table = katana::AllocateTable<NodeProps>(pg->num_nodes(), names);
   if (!res_table) {
@@ -67,7 +67,7 @@ ConstructNodeProperties(
 template <typename PGView, typename NodeProps>
 inline katana::Result<void>
 ConstructNodeProperties(
-    const PGView& pg_view, tsuba::TxnContext* txn_ctx,
+    const PGView& pg_view, katana::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
   auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
   auto bit_mask = pg_view.node_bitmask();
@@ -83,7 +83,7 @@ ConstructNodeProperties(
 template <typename EdgeProps>
 inline katana::Result<void>
 ConstructEdgeProperties(
-    PropertyGraph* pg, tsuba::TxnContext* txn_ctx,
+    PropertyGraph* pg, katana::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
   auto res_table = katana::AllocateTable<EdgeProps>(pg->num_edges(), names);
   if (!res_table) {
@@ -96,7 +96,7 @@ ConstructEdgeProperties(
 template <typename PGView, typename EdgeProps>
 inline katana::Result<void>
 ConstructEdgeProperties(
-    const PGView& pg_view, tsuba::TxnContext* txn_ctx,
+    const PGView& pg_view, katana::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
   auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
   auto bit_mask = pg_view.edge_bitmask();
@@ -115,7 +115,7 @@ class KATANA_EXPORT TemporaryPropertyGuard {
   std::optional<katana::PropertyGraph::MutablePropertyView> property_view_ =
       std::nullopt;
   std::string name_;
-  std::unique_ptr<tsuba::TxnContext> txn_ctx_;  // Temporary TxnContext
+  std::unique_ptr<katana::TxnContext> txn_ctx_;  // Temporary TxnContext
 
   std::string GetPropertyName() {
     // Use a thread local counter and the thread ID to get a unique name.
@@ -156,7 +156,7 @@ public:
   explicit TemporaryPropertyGuard(PropertyGraph::MutablePropertyView pv)
       : property_view_(pv) {
     name_ = GetPropertyName();
-    txn_ctx_ = std::make_unique<tsuba::TxnContext>();
+    txn_ctx_ = std::make_unique<katana::TxnContext>();
   }
 
   const TemporaryPropertyGuard& operator=(const TemporaryPropertyGuard&) =
@@ -165,7 +165,7 @@ public:
 
   TemporaryPropertyGuard(TemporaryPropertyGuard&& rhs) noexcept
       : property_view_(rhs.property_view_), name_(std::move(rhs.name_)) {
-    txn_ctx_ = std::make_unique<tsuba::TxnContext>();
+    txn_ctx_ = std::make_unique<katana::TxnContext>();
     rhs.Clear();
   }
 
@@ -173,7 +173,7 @@ public:
     Deinit();
     property_view_ = rhs.property_view_;
     name_ = std::move(rhs.name_);
-    txn_ctx_ = std::make_unique<tsuba::TxnContext>();
+    txn_ctx_ = std::make_unique<katana::TxnContext>();
     rhs.Clear();
     return *this;
   }

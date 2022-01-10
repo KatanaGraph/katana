@@ -15,11 +15,11 @@
 #include <boost/system/error_code.hpp>
 
 #include "GlobalState.h"
+#include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/Errors.h"
-#include "tsuba/file.h"
+#include "katana/file.h"
 
 namespace fs = boost::filesystem;
 
@@ -44,7 +44,7 @@ EnsureDirectories(const std::string& uri) {
 }  // namespace
 
 void
-tsuba::LocalStorage::CleanUri(std::string* uri) {
+katana::LocalStorage::CleanUri(std::string* uri) {
   if (uri->find(uri_scheme()) != 0) {
     return;
   }
@@ -52,7 +52,7 @@ tsuba::LocalStorage::CleanUri(std::string* uri) {
 }
 
 katana::Result<void>
-tsuba::LocalStorage::WriteFile(
+katana::LocalStorage::WriteFile(
     std::string uri, const uint8_t* data, uint64_t size) {
   CleanUri(&uri);
   KATANA_CHECKED(EnsureDirectories(uri));
@@ -70,7 +70,7 @@ tsuba::LocalStorage::WriteFile(
 }
 
 katana::Result<void>
-tsuba::LocalStorage::RemoteCopyFile(
+katana::LocalStorage::RemoteCopyFile(
     std::string source_uri, std::string dest_uri, uint64_t begin,
     uint64_t size) {
   CleanUri(&source_uri);
@@ -98,7 +98,7 @@ tsuba::LocalStorage::RemoteCopyFile(
 }
 
 katana::Result<void>
-tsuba::LocalStorage::ReadFile(
+katana::LocalStorage::ReadFile(
     std::string uri, uint64_t start, uint64_t size, uint8_t* data) {
   CleanUri(&uri);
   std::ifstream ifile(uri, std::ios_base::binary);
@@ -128,7 +128,7 @@ tsuba::LocalStorage::ReadFile(
 }
 
 katana::Result<void>
-tsuba::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
+katana::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
   std::string filename = uri;
   CleanUri(&filename);
   struct stat local_s_buf;
@@ -142,7 +142,7 @@ tsuba::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
 
 // Current implementation is not async
 std::future<katana::CopyableResult<void>>
-tsuba::LocalStorage::ListAsync(
+katana::LocalStorage::ListAsync(
     const std::string& uri, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
   // Implement with synchronous calls
@@ -213,7 +213,7 @@ tsuba::LocalStorage::ListAsync(
 }
 
 katana::Result<void>
-tsuba::LocalStorage::Delete(
+katana::LocalStorage::Delete(
     const std::string& directory_uri,
     const std::unordered_set<std::string>& files) {
   std::string dir = directory_uri;

@@ -1,4 +1,4 @@
-#include "tsuba/RDGManifest.h"
+#include "katana/RDGManifest.h"
 
 #include <sstream>
 
@@ -6,19 +6,18 @@
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
 #include "RDGPartHeader.h"
+#include "katana/ErrorCode.h"
+#include "katana/FileView.h"
 #include "katana/JSON.h"
+#include "katana/ParquetReader.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
-#include "tsuba/FileView.h"
-#include "tsuba/ParquetReader.h"
-#include "tsuba/tsuba.h"
-template <typename T>
-using Result = katana::Result<T>;
+#include "katana/tsuba.h"
+
 using json = nlohmann::json;
 
 namespace {
 
-Result<uint64_t>
+katana::Result<uint64_t>
 Parse(const std::string& str) {
   uint64_t val = strtoul(str.c_str(), nullptr, 10);
   if (errno == ERANGE) {
@@ -31,9 +30,6 @@ Parse(const std::string& str) {
 const int MANIFEST_MATCH_VERS_INDEX = 1;
 const int MANIFEST_MATCH_VIEW_INDEX = 2;
 
-}  // namespace
-
-namespace {
 const int NODE_ZERO_PADDING_LENGTH = 5;
 const int VERS_ZERO_PADDING_LENGTH = 20;
 std::string
@@ -44,20 +40,20 @@ std::string
 ToNodeString(uint32_t node_id) {
   return fmt::format("node{0:0{1}d}", node_id, NODE_ZERO_PADDING_LENGTH);
 }
-}  // namespace
-namespace tsuba {
 
-const std::regex RDGManifest::kManifestVersion(
+}  // namespace
+
+const std::regex katana::RDGManifest::kManifestVersion(
     "katana_vers(?:([0-9]+))_(?:([0-9A-Za-z-]+))\\.manifest$");
 
-Result<tsuba::RDGManifest>
-RDGManifest::MakeFromStorage(const katana::Uri& uri) {
-  tsuba::FileView fv;
+katana::Result<katana::RDGManifest>
+katana::RDGManifest::MakeFromStorage(const katana::Uri& uri) {
+  katana::FileView fv;
 
   KATANA_CHECKED(fv.Bind(uri.string(), true));
 
-  tsuba::RDGManifest manifest(uri.DirName());
-  auto manifest_res = katana::JsonParse<tsuba::RDGManifest>(fv, &manifest);
+  katana::RDGManifest manifest(uri.DirName());
+  auto manifest_res = katana::JsonParse<katana::RDGManifest>(fv, &manifest);
 
   if (!manifest_res) {
     return manifest_res.error().WithContext("cannot parse {}", uri.string());
@@ -79,25 +75,25 @@ RDGManifest::MakeFromStorage(const katana::Uri& uri) {
   return manifest;
 }
 
-Result<RDGManifest>
-RDGManifest::Make(
+katana::Result<katana::RDGManifest>
+katana::RDGManifest::Make(
     const katana::Uri& uri, const std::string& view_type, uint64_t version) {
   return MakeFromStorage(FileName(uri, view_type, version));
 }
 
-Result<RDGManifest>
-RDGManifest::Make(RDGHandle handle) {
+katana::Result<katana::RDGManifest>
+katana::RDGManifest::Make(RDGHandle handle) {
   return handle.impl_->rdg_manifest();
 }
 
-Result<RDGManifest>
-RDGManifest::Make(const katana::Uri& uri) {
+katana::Result<katana::RDGManifest>
+katana::RDGManifest::Make(const katana::Uri& uri) {
   auto rdg_manifest = MakeFromStorage(uri);
   return rdg_manifest;
 }
 
 std::string
-RDGManifest::PartitionFileName(
+katana::RDGManifest::PartitionFileName(
     const std::string& view_type, uint32_t node_id, uint64_t version) {
   KATANA_LOG_ASSERT(!view_type.empty());
   return fmt::format(
@@ -106,14 +102,14 @@ RDGManifest::PartitionFileName(
 }
 
 katana::Uri
-RDGManifest::PartitionFileName(
+katana::RDGManifest::PartitionFileName(
     const katana::Uri& uri, uint32_t node_id, uint64_t version) {
   return uri.Join(
-      PartitionFileName(tsuba::kDefaultRDGViewType, node_id, version));
+      PartitionFileName(katana::kDefaultRDGViewType, node_id, version));
 }
 
 katana::Uri
-RDGManifest::PartitionFileName(
+katana::RDGManifest::PartitionFileName(
     const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
     uint64_t version) {
   KATANA_LOG_DEBUG_ASSERT(!IsManifestUri(uri));
@@ -121,13 +117,13 @@ RDGManifest::PartitionFileName(
 }
 
 katana::Uri
-RDGManifest::PartitionFileName(uint32_t host_id) const {
+katana::RDGManifest::PartitionFileName(uint32_t host_id) const {
   return RDGManifest::PartitionFileName(
       view_specifier(), dir_, host_id, version());
 }
 
 std::string
-RDGManifest::ToJsonString() const {
+katana::RDGManifest::ToJsonString() const {
   // POSIX specifies that text files end in a newline
   std::string s = json(*this).dump() + '\n';
   return s;
@@ -135,7 +131,7 @@ RDGManifest::ToJsonString() const {
 
 // e.g., rdg_dir == s3://witchel-tests-east2/fault/simple/
 katana::Uri
-RDGManifest::FileName(
+katana::RDGManifest::FileName(
     const katana::Uri& uri, const std::string& view_name, uint64_t version) {
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
@@ -145,26 +141,26 @@ RDGManifest::FileName(
 
 // if it doesn't name a manifest file, assume it's meant to be a managed URI
 bool
-RDGManifest::IsManifestUri(const katana::Uri& uri) {
+katana::RDGManifest::IsManifestUri(const katana::Uri& uri) {
   bool res = std::regex_match(uri.BaseName(), kManifestVersion);
   return res;
 }
 
-Result<uint64_t>
-RDGManifest::ParseVersionFromName(const std::string& file) {
+katana::Result<uint64_t>
+katana::RDGManifest::ParseVersionFromName(const std::string& file) {
   std::smatch sub_match;
   if (!std::regex_match(file, sub_match, kManifestVersion)) {
-    return tsuba::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
   //Manifest file
   return Parse(sub_match[MANIFEST_MATCH_VERS_INDEX]);
 }
 
-Result<std::string>
-RDGManifest::ParseViewNameFromName(const std::string& file) {
+katana::Result<std::string>
+katana::RDGManifest::ParseViewNameFromName(const std::string& file) {
   std::smatch sub_match;
   if (!std::regex_match(file, sub_match, kManifestVersion)) {
-    return tsuba::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
   std::string view_specifier = sub_match[MANIFEST_MATCH_VIEW_INDEX];
   std::istringstream iss(view_specifier);
@@ -183,11 +179,11 @@ RDGManifest::ParseViewNameFromName(const std::string& file) {
   return view_type;
 }
 
-Result<std::vector<std::string>>
-RDGManifest::ParseViewArgsFromName(const std::string& file) {
+katana::Result<std::vector<std::string>>
+katana::RDGManifest::ParseViewArgsFromName(const std::string& file) {
   std::smatch sub_match;
   if (!std::regex_match(file, sub_match, kManifestVersion)) {
-    return tsuba::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
   std::string view_specifier = sub_match[MANIFEST_MATCH_VIEW_INDEX];
   std::istringstream iss(view_specifier);
@@ -206,9 +202,10 @@ RDGManifest::ParseViewArgsFromName(const std::string& file) {
   return view_args;
 }
 
-Result<void>
+namespace {
+katana::Result<void>
 AddPropertySubFiles(std::set<std::string>& fnames, std::string full_path) {
-  auto reader = KATANA_CHECKED(tsuba::ParquetReader::Make());
+  auto reader = KATANA_CHECKED(katana::ParquetReader::Make());
   auto uri_path = KATANA_CHECKED(katana::Uri::Make(full_path));
   auto sub_files = KATANA_CHECKED(reader->GetFiles(uri_path));
   for (const auto& sub_file : sub_files) {
@@ -218,11 +215,12 @@ AddPropertySubFiles(std::set<std::string>& fnames, std::string full_path) {
   }
   return katana::ResultSuccess();
 }
+}  // namespace
 
 // Return the set of file names that hold this RDG's data by reading partition files
 // Useful to garbage collect unused files
-Result<std::set<std::string>>
-RDGManifest::FileNames() {
+katana::Result<std::set<std::string>>
+katana::RDGManifest::FileNames() {
   std::set<std::string> fnames{};
   fnames.emplace(FileName().BaseName());
   for (auto i = 0U; i < num_hosts(); ++i) {
@@ -271,10 +269,8 @@ RDGManifest::FileNames() {
   return fnames;
 }
 
-}  // namespace tsuba
-
 void
-tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
+katana::to_json(json& j, const katana::RDGManifest& manifest) {
   j = json{
       {"magic", kRDGMagicNo},
       {"version", manifest.version_},
@@ -287,7 +283,7 @@ tsuba::to_json(json& j, const tsuba::RDGManifest& manifest) {
 }
 
 void
-tsuba::from_json(const json& j, tsuba::RDGManifest& manifest) {
+katana::from_json(const json& j, katana::RDGManifest& manifest) {
   uint32_t magic;
   j.at("magic").get_to(magic);
   j.at("version").get_to(manifest.version_);

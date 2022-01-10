@@ -23,7 +23,7 @@
 katana::Result<void>
 katana::analytics::Pagerank(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    tsuba::TxnContext* txn_ctx, katana::analytics::PagerankPlan plan) {
+    katana::TxnContext* txn_ctx, katana::analytics::PagerankPlan plan) {
   switch (plan.algorithm()) {
   case PagerankPlan::kPullResidual:
     return PagerankPullResidual(pg, output_property_name, plan, txn_ctx);

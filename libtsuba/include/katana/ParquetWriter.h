@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_PARQUETWRITER_H_
-#define KATANA_LIBTSUBA_TSUBA_PARQUETWRITER_H_
+#ifndef KATANA_LIBTSUBA_KATANA_PARQUETWRITER_H_
+#define KATANA_LIBTSUBA_KATANA_PARQUETWRITER_H_
 
 #include <limits>
 #include <vector>
@@ -9,9 +9,9 @@
 
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/WriteGroup.h"
+#include "katana/WriteGroup.h"
 
-namespace tsuba {
+namespace katana {
 
 class KATANA_EXPORT ParquetWriter {
 public:
@@ -67,16 +67,16 @@ private:
   std::shared_ptr<parquet::ArrowWriterProperties> StandardArrowProperties();
 
   katana::Result<void> StoreParquet(
-      const katana::Uri& uri, tsuba::WriteGroup* desc);
+      const katana::Uri& uri, katana::WriteGroup* desc);
 
   katana::Result<void> StoreParquet(
       std::shared_ptr<arrow::Table> table, const katana::Uri& uri,
-      tsuba::WriteGroup* desc);
+      katana::WriteGroup* desc);
 
   std::vector<std::shared_ptr<arrow::Table>> tables_;
   WriteOpts opts_;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

@@ -6,13 +6,13 @@
 #include "GlobalState.h"
 #include "PartitionTopologyMetadata.h"
 #include "RDGHandleImpl.h"
+#include "katana/ErrorCode.h"
+#include "katana/FaultTest.h"
+#include "katana/FileView.h"
 #include "katana/Logging.h"
+#include "katana/RDGStorageFormatVersion.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
-#include "tsuba/FaultTest.h"
-#include "tsuba/FileView.h"
-#include "tsuba/RDGStorageFormatVersion.h"
-#include "tsuba/RDGTopology.h"
 
 using json = nlohmann::json;
 
@@ -55,33 +55,30 @@ const char* kPartitionTopologyMetadataEntriesSizeKey =
 
 katana::Result<void>
 CopyProperty(
-    tsuba::PropStorageInfo* prop, const katana::Uri& old_location,
+    katana::PropStorageInfo* prop, const katana::Uri& old_location,
     const katana::Uri& new_location) {
   katana::Uri old_path = old_location.Join(prop->path());
   katana::Uri new_path = new_location.Join(prop->path());
-  tsuba::FileView fv;
+  katana::FileView fv;
 
   KATANA_CHECKED(fv.Bind(old_path.string(), true));
-  return tsuba::FileStore(new_path.string(), fv.ptr<uint8_t>(), fv.size());
+  return katana::FileStore(new_path.string(), fv.ptr<uint8_t>(), fv.size());
 }
 
-tsuba::PropStorageInfo*
+katana::PropStorageInfo*
 find_prop_info(
-    const std::string& name, std::vector<tsuba::PropStorageInfo>* prop_infos) {
+    const std::string& name, std::vector<katana::PropStorageInfo>* prop_infos) {
   auto it = std::find_if(
       prop_infos->begin(), prop_infos->end(),
-      [&name](tsuba::PropStorageInfo& psi) { return psi.name() == name; });
+      [&name](katana::PropStorageInfo& psi) { return psi.name() == name; });
   if (it == prop_infos->end()) {
     return nullptr;
   }
 
   return &(*it);
 }
-}  // namespace
 
 // TODO(vkarthik): repetitive code from RDGManifest, try to unify
-namespace {
-
 katana::Result<uint64_t>
 Parse(const std::string& str) {
   uint64_t val = strtoul(str.c_str(), nullptr, 10);
@@ -92,39 +89,37 @@ Parse(const std::string& str) {
   return val;
 }
 
-}  // namespace
-
-namespace tsuba {
-
 // Regex for partition files
 const std::regex kPartitionFile(
     "part_vers([0-9]+)_(rdg[0-9A-Za-z-]*)_node([0-9]+)$");
 const int kPartitionMatchHostIndex = 3;
 
-katana::Result<RDGPartHeader>
-RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
-  tsuba::FileView fv;
+}  // namespace
+
+katana::Result<katana::RDGPartHeader>
+katana::RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
+  katana::FileView fv;
   KATANA_CHECKED(fv.Bind(partition_path.string(), true));
 
   if (fv.size() == 0) {
-    return tsuba::RDGPartHeader();
+    return katana::RDGPartHeader();
   }
 
-  tsuba::RDGPartHeader header;
-  KATANA_CHECKED(katana::JsonParse<tsuba::RDGPartHeader>(fv, &header));
+  katana::RDGPartHeader header;
+  KATANA_CHECKED(katana::JsonParse<katana::RDGPartHeader>(fv, &header));
 
   return header;
 }
 
-katana::Result<RDGPartHeader>
-RDGPartHeader::Make(const katana::Uri& partition_path) {
+katana::Result<katana::RDGPartHeader>
+katana::RDGPartHeader::Make(const katana::Uri& partition_path) {
   return KATANA_CHECKED(MakeJson(partition_path));
 }
 
 katana::Result<void>
-RDGPartHeader::Write(
-    RDGHandle handle, WriteGroup* writes,
-    RDG::RDGVersioningPolicy retain_version) const {
+katana::RDGPartHeader::Write(
+    katana::RDGHandle handle, katana::WriteGroup* writes,
+    katana::RDG::RDGVersioningPolicy retain_version) const {
   std::string serialized = KATANA_CHECKED(katana::JsonDump(*this));
 
   // POSIX files end with newlines
@@ -134,11 +129,11 @@ RDGPartHeader::Write(
   auto ff = std::make_unique<FileFrame>();
   KATANA_CHECKED(ff->Init(serialized.size()));
   if (auto res = ff->Write(serialized.data(), serialized.size()); !res.ok()) {
-    return KATANA_ERROR(ArrowToTsuba(res.code()), "arrow error: {}", res);
+    return KATANA_ERROR(ArrowToKatana(res.code()), "arrow error: {}", res);
   }
 
   auto next_version =
-      (retain_version == tsuba::RDG::RDGVersioningPolicy::RetainVersion)
+      (retain_version == katana::RDG::RDGVersioningPolicy::RetainVersion)
           ? handle.impl_->rdg_manifest().version()
           : (handle.impl_->rdg_manifest().version() + 1);
   KATANA_LOG_DEBUG("Next verison: {}", next_version);
@@ -153,37 +148,37 @@ RDGPartHeader::Write(
 }
 
 katana::Result<uint64_t>
-RDGPartHeader::ParseHostFromPartitionFile(const std::string& file) {
+katana::RDGPartHeader::ParseHostFromPartitionFile(const std::string& file) {
   std::smatch sub_match;
   if (!std::regex_match(file, sub_match, kPartitionFile)) {
-    return tsuba::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
   return Parse(sub_match[kPartitionMatchHostIndex]);
 }
 
 bool
-RDGPartHeader::IsPartitionFileUri(const katana::Uri& uri) {
+katana::RDGPartHeader::IsPartitionFileUri(const katana::Uri& uri) {
   bool res = std::regex_match(uri.BaseName(), kPartitionFile);
   return res;
 }
 
 bool
-RDGPartHeader::IsEntityTypeIDsOutsideProperties() const {
+katana::RDGPartHeader::IsEntityTypeIDsOutsideProperties() const {
   return (storage_format_version_ >= kPartitionStorageFormatVersion2);
 }
 
 bool
-RDGPartHeader::IsUint16tEntityTypeIDs() const {
+katana::RDGPartHeader::IsUint16tEntityTypeIDs() const {
   return (storage_format_version_ >= kPartitionStorageFormatVersion3);
 }
 
 bool
-RDGPartHeader::IsMetadataOutsideTopologyFile() const {
+katana::RDGPartHeader::IsMetadataOutsideTopologyFile() const {
   return (storage_format_version_ >= kPartitionStorageFormatVersion3);
 }
 
 katana::Result<void>
-RDGPartHeader::ValidateEntityTypeIDStructures() const {
+katana::RDGPartHeader::ValidateEntityTypeIDStructures() const {
   if (node_entity_type_id_array_path_.empty()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "node_entity_type_id_array_path is empty");
@@ -218,7 +213,7 @@ RDGPartHeader::ValidateEntityTypeIDStructures() const {
 }
 
 katana::Result<void>
-RDGPartHeader::Validate() const {
+katana::RDGPartHeader::Validate() const {
   for (const auto& md : node_prop_info_list_) {
     if (md.path().find('/') != std::string::npos) {
       return KATANA_ERROR(
@@ -244,7 +239,7 @@ RDGPartHeader::Validate() const {
 }
 
 katana::Result<void>
-RDGPartHeader::ChangeStorageLocation(
+katana::RDGPartHeader::ChangeStorageLocation(
     const katana::Uri& old_location, const katana::Uri& new_location) {
   for (PropStorageInfo& prop : node_prop_info_list_) {
     if (prop.IsAbsent()) {
@@ -275,24 +270,22 @@ RDGPartHeader::ChangeStorageLocation(
   return katana::ResultSuccess();
 }
 
-PropStorageInfo*
-RDGPartHeader::find_node_prop_info(const std::string& name) {
+katana::PropStorageInfo*
+katana::RDGPartHeader::find_node_prop_info(const std::string& name) {
   return find_prop_info(name, &node_prop_info_list());
 }
-PropStorageInfo*
-RDGPartHeader::find_edge_prop_info(const std::string& name) {
+katana::PropStorageInfo*
+katana::RDGPartHeader::find_edge_prop_info(const std::string& name) {
   return find_prop_info(name, &edge_prop_info_list());
 }
-PropStorageInfo*
-RDGPartHeader::find_part_prop_info(const std::string& name) {
+katana::PropStorageInfo*
+katana::RDGPartHeader::find_part_prop_info(const std::string& name) {
   return find_prop_info(name, &part_prop_info_list());
 }
 
-}  // namespace tsuba
-
 // specialized PropStorageInfo vec transformation to avoid nulls in the output
 void
-tsuba::to_json(json& j, const std::vector<tsuba::PropStorageInfo>& vec_pmd) {
+katana::to_json(json& j, const std::vector<katana::PropStorageInfo>& vec_pmd) {
   j = json::array();
   for (const auto& pmd : vec_pmd) {
     j.push_back(pmd);
@@ -300,7 +293,7 @@ tsuba::to_json(json& j, const std::vector<tsuba::PropStorageInfo>& vec_pmd) {
 }
 
 void
-tsuba::to_json(json& j, const tsuba::RDGPartHeader& header) {
+katana::to_json(json& j, const katana::RDGPartHeader& header) {
   j = json{
       {kNodePropertyKey, header.node_prop_info_list_},
       {kEdgePropertyKey, header.edge_prop_info_list_},
@@ -317,7 +310,7 @@ tsuba::to_json(json& j, const tsuba::RDGPartHeader& header) {
 }
 
 void
-tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
+katana::from_json(const json& j, katana::RDGPartHeader& header) {
   j.at(kNodePropertyKey).get_to(header.node_prop_info_list_);
   j.at(kEdgePropertyKey).get_to(header.edge_prop_info_list_);
   j.at(kPartPropertyFilesKey).get_to(header.part_prop_info_list_);
@@ -371,7 +364,7 @@ tsuba::from_json(const json& j, tsuba::RDGPartHeader& header) {
 }
 
 void
-tsuba::to_json(json& j, const tsuba::PartitionMetadata& pmd) {
+katana::to_json(json& j, const katana::PartitionMetadata& pmd) {
   j = json{
       {"magic", kPartitionMagicNo},
       {"policy_id", pmd.policy_id_},
@@ -388,7 +381,7 @@ tsuba::to_json(json& j, const tsuba::PartitionMetadata& pmd) {
 }
 
 void
-tsuba::from_json(const json& j, tsuba::PartitionMetadata& pmd) {
+katana::from_json(const json& j, katana::PartitionMetadata& pmd) {
   uint32_t magic;
   j.at("magic").get_to(magic);
 
@@ -416,20 +409,20 @@ tsuba::from_json(const json& j, tsuba::PartitionMetadata& pmd) {
 }
 
 void
-tsuba::from_json(const nlohmann::json& j, tsuba::PropStorageInfo& propmd) {
+katana::from_json(const nlohmann::json& j, katana::PropStorageInfo& propmd) {
   j.at(0).get_to(propmd.name_);
   j.at(1).get_to(propmd.path_);
   propmd.state_ = PropStorageInfo::State::kAbsent;
 }
 
 void
-tsuba::to_json(json& j, const tsuba::PropStorageInfo& propmd) {
+katana::to_json(json& j, const katana::PropStorageInfo& propmd) {
   j = json{propmd.name(), propmd.path()};
 }
 
 void
-tsuba::from_json(
-    const nlohmann::json& j, tsuba::PartitionTopologyMetadataEntry& topo) {
+katana::from_json(
+    const nlohmann::json& j, katana::PartitionTopologyMetadataEntry& topo) {
   j.at("path").get_to(topo.path_);
   if (topo.path_.empty()) {
     throw std::runtime_error("loaded topology with empty path");
@@ -461,21 +454,21 @@ tsuba::from_json(
 }
 
 void
-tsuba::to_json(json& j, const tsuba::PartitionTopologyMetadataEntry& topo) {
+katana::to_json(json& j, const katana::PartitionTopologyMetadataEntry& topo) {
   KATANA_LOG_VASSERT(
       !topo.path_.empty(), "tried to store topology with empty path");
 
   KATANA_LOG_ASSERT(
-      topo.topology_state_ != tsuba::RDGTopology::TopologyKind::kInvalid);
+      topo.topology_state_ != katana::RDGTopology::TopologyKind::kInvalid);
   KATANA_LOG_ASSERT(
-      topo.transpose_state_ != tsuba::RDGTopology::TransposeKind::kInvalid);
+      topo.transpose_state_ != katana::RDGTopology::TransposeKind::kInvalid);
   KATANA_LOG_VASSERT(
-      topo.transpose_state_ != tsuba::RDGTopology::TransposeKind::kAny,
+      topo.transpose_state_ != katana::RDGTopology::TransposeKind::kAny,
       "Cannot store a TransposeKind::kAny topology");
   KATANA_LOG_ASSERT(
-      topo.edge_sort_state_ != tsuba::RDGTopology::EdgeSortKind::kInvalid);
+      topo.edge_sort_state_ != katana::RDGTopology::EdgeSortKind::kInvalid);
   KATANA_LOG_ASSERT(
-      topo.node_sort_state_ != tsuba::RDGTopology::NodeSortKind::kInvalid);
+      topo.node_sort_state_ != katana::RDGTopology::NodeSortKind::kInvalid);
 
   j = json{
       {"path", topo.path_},
@@ -508,8 +501,8 @@ tsuba::to_json(json& j, const tsuba::PartitionTopologyMetadataEntry& topo) {
 }
 
 void
-tsuba::from_json(
-    const nlohmann::json& j, tsuba::PartitionTopologyMetadata& topomd) {
+katana::from_json(
+    const nlohmann::json& j, katana::PartitionTopologyMetadata& topomd) {
   uint32_t tmp_num;
 
   // initally parse json into vector so we can verify the number of elements
@@ -528,7 +521,7 @@ tsuba::from_json(
 }
 
 void
-tsuba::to_json(json& j, const tsuba::PartitionTopologyMetadata& topomd) {
+katana::to_json(json& j, const katana::PartitionTopologyMetadata& topomd) {
   KATANA_LOG_ASSERT(topomd.num_entries_ >= 1);
   KATANA_LOG_VERBOSE(
       "storing {} PartitionTopologyMetadata entries", topomd.num_entries_);

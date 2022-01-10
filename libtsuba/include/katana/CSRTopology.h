@@ -1,11 +1,11 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_CSRTOPOLOGY_H_
-#define KATANA_LIBTSUBA_TSUBA_CSRTOPOLOGY_H_
+#ifndef KATANA_LIBTSUBA_KATANA_CSRTOPOLOGY_H_
+#define KATANA_LIBTSUBA_KATANA_CSRTOPOLOGY_H_
 
 #include <cstdint>
 
 #include "katana/BitMath.h"
 
-namespace tsuba {
+namespace katana {
 
 /// The file format for RDG topologies is CSR (Compressed Sparse Row). These
 /// files used to have the file extension .gr (a name tradition continued here)
@@ -35,6 +35,6 @@ CSRTopologyFileSize(const CSRTopologyHeader& header) {
          (header.num_edges * header.edge_type_size);
 }
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

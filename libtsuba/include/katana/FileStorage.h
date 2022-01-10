@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_FILESTORAGE_H_
-#define KATANA_LIBTSUBA_TSUBA_FILESTORAGE_H_
+#ifndef KATANA_LIBTSUBA_KATANA_FILESTORAGE_H_
+#define KATANA_LIBTSUBA_KATANA_FILESTORAGE_H_
 
 #include <cstdint>
 #include <future>
@@ -10,7 +10,7 @@
 #include "katana/Result.h"
 #include "katana/config.h"
 
-namespace tsuba {
+namespace katana {
 
 struct StatBuf;
 
@@ -63,10 +63,10 @@ public:
 };
 
 /// RegisterFileStorage adds a file storage backend to the tsuba library. File
-/// storage backends must be registered before tsuba::Init. Backends need to be
-/// registered for each tsuba::Init call.
+/// storage backends must be registered before katana::InitTsuba. Backends need to be
+/// registered for each katana::InitTsuba call.
 KATANA_EXPORT void RegisterFileStorage(FileStorage* fs);
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

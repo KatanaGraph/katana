@@ -244,7 +244,7 @@ main(int argc, char** argv) {
     }
 
     std::string node_distance_prop = "distance-" + std::to_string(startNode);
-    tsuba::TxnContext txn_ctx;
+    katana::TxnContext txn_ctx;
     auto pg_result = Sssp(
         pg.get(), startNode, edge_property_name, node_distance_prop, &txn_ctx,
         plan);

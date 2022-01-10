@@ -1,12 +1,12 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_ASYNCOPGROUP_H_
-#define KATANA_LIBTSUBA_TSUBA_ASYNCOPGROUP_H_
+#ifndef KATANA_LIBTSUBA_KATANA_ASYNCOPGROUP_H_
+#define KATANA_LIBTSUBA_KATANA_ASYNCOPGROUP_H_
 
 #include <future>
 #include <list>
 
 #include "katana/Result.h"
 
-namespace tsuba {
+namespace katana {
 
 class AsyncOpGroup {
 public:
@@ -34,6 +34,6 @@ private:
   katana::CopyableErrorInfo last_error_;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

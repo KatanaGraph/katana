@@ -110,7 +110,7 @@ public:
 /// not exist before the call.
 KATANA_EXPORT Result<void> Pagerank(
     PropertyGraph* pg, const std::string& output_property_name,
-    tsuba::TxnContext* txn_ctx, PagerankPlan plan = {});
+    katana::TxnContext* txn_ctx, PagerankPlan plan = {});
 
 KATANA_EXPORT Result<void> PagerankAssertValid(
     PropertyGraph* pg, const std::string& property_name);

@@ -388,7 +388,7 @@ public:
       katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
       const std::vector<std::string>& temp_node_property_names,
       katana::NUMAArray<uint64_t>& clusters_orig, LeidenClusteringPlan plan,
-      tsuba::TxnContext* txn_ctx) {
+      katana::TxnContext* txn_ctx) {
     katana::StatTimer TimerTotal("Timer_Leiden_Total");
     TimerTotal.start();
     TemporaryPropertyGuard temp_edge_property{pg->EdgeMutablePropertyView()};
@@ -632,7 +632,7 @@ template <typename EdgeWeightType>
 static katana::Result<void>
 AddDefaultEdgeWeight(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   using EdgeData = std::tuple<EdgeWeightType>;
 
   if (auto res = katana::analytics::ConstructEdgeProperties<EdgeData>(
@@ -656,7 +656,7 @@ static katana::Result<void>
 LeidenClusteringWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, const bool& is_symmetric,
-    LeidenClusteringPlan plan, tsuba::TxnContext* txn_ctx) {
+    LeidenClusteringPlan plan, katana::TxnContext* txn_ctx) {
   static_assert(
       std::is_integral_v<EdgeWeightType> ||
       std::is_floating_point_v<EdgeWeightType>);
@@ -727,7 +727,7 @@ LeidenClusteringWithWrap(
 katana::Result<void>
 katana::analytics::LeidenClustering(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
     const bool& is_symmetric, LeidenClusteringPlan plan) {
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {
@@ -831,7 +831,7 @@ CalModularityWrap(
 katana::Result<katana::analytics::LeidenClusteringStatistics>
 katana::analytics::LeidenClusteringStatistics::Compute(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    const std::string& property_name, tsuba::TxnContext* txn_ctx) {
+    const std::string& property_name, katana::TxnContext* txn_ctx) {
   auto graph_result = katana::
       TypedPropertyGraph<std::tuple<PreviousCommunityID>, std::tuple<>>::Make(
           pg, {property_name}, {});

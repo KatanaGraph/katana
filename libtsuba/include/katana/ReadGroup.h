@@ -1,14 +1,14 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_READGROUP_H_
-#define KATANA_LIBTSUBA_TSUBA_READGROUP_H_
+#ifndef KATANA_LIBTSUBA_KATANA_READGROUP_H_
+#define KATANA_LIBTSUBA_KATANA_READGROUP_H_
 
 #include <future>
 #include <list>
 #include <memory>
 
+#include "katana/AsyncOpGroup.h"
 #include "katana/Result.h"
-#include "tsuba/AsyncOpGroup.h"
 
-namespace tsuba {
+namespace katana {
 
 /// Track multiple, outstanding async writes and provide a mechanism to ensure
 /// that they have all completed
@@ -59,6 +59,6 @@ private:
   AsyncOpGroup async_op_group_;
 };
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

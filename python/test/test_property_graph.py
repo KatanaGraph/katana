@@ -5,7 +5,7 @@ import pandas
 import pyarrow
 import pytest
 
-from katana import TsubaError, do_all, do_all_operator
+from katana import GaloisError, do_all, do_all_operator
 from katana.local import Graph
 from katana.local.import_data import from_csr
 
@@ -274,12 +274,12 @@ def test_from_csr_k3():
 
 
 def test_load_invalid_path():
-    with pytest.raises(TsubaError):
+    with pytest.raises(GaloisError):
         Graph("non-existent")
 
 
 def test_load_directory():
-    with pytest.raises(TsubaError):
+    with pytest.raises(GaloisError):
         Graph("/tmp")
 
 
@@ -287,7 +287,7 @@ def test_load_garbage_file():
     with NamedTemporaryFile(delete=True) as fi:
         fi.write(b"Test")
         fi.flush()
-        with pytest.raises(TsubaError):
+        with pytest.raises(GaloisError):
             Graph(fi.name)
 
 

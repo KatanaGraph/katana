@@ -124,7 +124,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("invalid algorithm");
   }
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto pg_result = LeidenClustering(
       pg.get(), edge_property_name, "clusterId", &txn_ctx, symmetricGraph,
       plan);

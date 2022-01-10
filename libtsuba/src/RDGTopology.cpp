@@ -1,4 +1,4 @@
-#include "tsuba/RDGTopology.h"
+#include "katana/RDGTopology.h"
 
 #include <memory>
 #include <string>
@@ -12,21 +12,18 @@
 #include "RDGPartHeader.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/ErrorCode.h"
+#include "katana/FaultTest.h"
+#include "katana/FileFrame.h"
+#include "katana/FileView.h"
 #include "katana/Logging.h"
+#include "katana/RDG.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/config.h"
-#include "tsuba/Errors.h"
-#include "tsuba/FaultTest.h"
-#include "tsuba/FileFrame.h"
-#include "tsuba/FileView.h"
-#include "tsuba/RDG.h"
-#include "tsuba/tsuba.h"
-
-namespace tsuba {
+#include "katana/tsuba.h"
 
 std::string
-RDGTopology::path() const {
+katana::RDGTopology::path() const {
   if (metadata_entry_valid()) {
     return metadata_entry_->path_;
   }
@@ -38,7 +35,7 @@ RDGTopology::path() const {
 }
 
 void
-RDGTopology::set_path(const std::string& path) {
+katana::RDGTopology::set_path(const std::string& path) {
   KATANA_LOG_VASSERT(
       metadata_entry_valid(),
       "metadata_entry_->must be set before we can set the topology path");
@@ -46,7 +43,7 @@ RDGTopology::set_path(const std::string& path) {
 }
 
 void
-RDGTopology::set_invalid() {
+katana::RDGTopology::set_invalid() {
   invalid_ = true;
   if (metadata_entry_valid()) {
     metadata_entry_->set_invalid();
@@ -54,19 +51,20 @@ RDGTopology::set_invalid() {
 }
 
 void
-RDGTopology::set_metadata_entry(PartitionTopologyMetadataEntry* entry) {
+katana::RDGTopology::set_metadata_entry(
+    katana::PartitionTopologyMetadataEntry* entry) {
   KATANA_LOG_ASSERT(entry != nullptr);
   metadata_entry_ = entry;
   KATANA_LOG_ASSERT(metadata_entry_valid());
 }
 
 bool
-RDGTopology::metadata_entry_valid() const {
+katana::RDGTopology::metadata_entry_valid() const {
   return (metadata_entry_ != nullptr);
 }
 
 katana::Result<void>
-RDGTopology::Bind(const katana::Uri& metadata_dir, bool resolve) {
+katana::RDGTopology::Bind(const katana::Uri& metadata_dir, bool resolve) {
   if (file_store_bound_) {
     KATANA_LOG_WARN("topology already bound, nothing to do");
     return katana::ResultSuccess();
@@ -88,7 +86,7 @@ RDGTopology::Bind(const katana::Uri& metadata_dir, bool resolve) {
 }
 
 katana::Result<void>
-RDGTopology::Bind(
+katana::RDGTopology::Bind(
     const katana::Uri& metadata_dir, uint64_t begin, uint64_t end,
     bool resolve) {
   if (path().empty()) {
@@ -108,7 +106,7 @@ RDGTopology::Bind(
 }
 
 katana::Result<void>
-RDGTopology::Map() {
+katana::RDGTopology::Map() {
   if (file_store_mapped_) {
     return katana::ResultSuccess();
   }
@@ -158,7 +156,7 @@ RDGTopology::Map() {
   uint64_t adj_indices_size = num_nodes_;
   // EdgeTypeAwareTopologies have a larger adj_indices array than usual topologies
   if (topology_state_ ==
-      tsuba::RDGTopology::TopologyKind::kEdgeTypeAwareTopology) {
+      katana::RDGTopology::TopologyKind::kEdgeTypeAwareTopology) {
     adj_indices_size =
         std::max(num_nodes_, num_nodes_ * edge_condensed_type_id_map_size_);
   }
@@ -236,7 +234,7 @@ RDGTopology::Map() {
 }
 
 katana::Result<void>
-RDGTopology::MapMetadataExtract(
+katana::RDGTopology::MapMetadataExtract(
     uint64_t num_nodes, uint64_t num_edges, bool storage_valid) {
   if (file_store_mapped_) {
     KATANA_LOG_WARN(
@@ -303,9 +301,9 @@ RDGTopology::MapMetadataExtract(
 }
 
 katana::Result<void>
-tsuba::RDGTopology::DoStore(
+katana::RDGTopology::DoStore(
     RDGHandle handle, const katana::Uri& current_rdg_dir,
-    std::unique_ptr<tsuba::WriteGroup>& write_group) {
+    std::unique_ptr<katana::WriteGroup>& write_group) {
   KATANA_LOG_VASSERT(!invalid_, "tried to store an invalid RDGTopology");
 
   if (!storage_valid_) {
@@ -316,13 +314,13 @@ tsuba::RDGTopology::DoStore(
         "EdgeSortKind={}, NodeSortKind={}",
         topology_state_, transpose_state_, edge_sort_state_, node_sort_state_);
 
-    auto ff = std::make_unique<tsuba::FileFrame>();
+    auto ff = std::make_unique<katana::FileFrame>();
     KATANA_CHECKED(ff->Init());
 
     uint64_t data[4] = {1, 0, num_nodes_, num_edges_};
     arrow::Status aro_sts = ff->Write(&data, 4 * sizeof(uint64_t));
     if (!aro_sts.ok()) {
-      return tsuba::ArrowToTsuba(aro_sts.code());
+      return katana::ArrowToKatana(aro_sts.code());
     }
 
     if (num_nodes_) {
@@ -337,7 +335,7 @@ tsuba::RDGTopology::DoStore(
 
       // EdgeTypeAwareTopologies have a larger adj_indices array than usual topologies
       if (topology_state_ ==
-          tsuba::RDGTopology::TopologyKind::kEdgeTypeAwareTopology) {
+          katana::RDGTopology::TopologyKind::kEdgeTypeAwareTopology) {
         adj_indices_size = num_nodes_ * edge_condensed_type_id_map_size_;
       }
 
@@ -349,7 +347,7 @@ tsuba::RDGTopology::DoStore(
         auto buf = arrow::Buffer::Wrap(raw, adj_indices_size);
         aro_sts = ff->Write(buf);
         if (!aro_sts.ok()) {
-          return tsuba::ArrowToTsuba(aro_sts.code());
+          return katana::ArrowToKatana(aro_sts.code());
         }
       }
     }
@@ -379,7 +377,7 @@ tsuba::RDGTopology::DoStore(
       uint64_t data[1] = {num_nodes_ + num_edges_};
       arrow::Status aro_sts = ff->Write(&data, 1 * sizeof(uint64_t));
       if (!aro_sts.ok()) {
-        return tsuba::ArrowToTsuba(aro_sts.code());
+        return katana::ArrowToKatana(aro_sts.code());
       }
 
       // edge property index map is uint64_t map[num_edges]
@@ -388,7 +386,7 @@ tsuba::RDGTopology::DoStore(
       auto buf = arrow::Buffer::Wrap(raw, num_edges_);
       aro_sts = ff->Write(buf);
       if (!aro_sts.ok()) {
-        return tsuba::ArrowToTsuba(aro_sts.code());
+        return katana::ArrowToKatana(aro_sts.code());
       }
     }
 
@@ -402,7 +400,7 @@ tsuba::RDGTopology::DoStore(
       uint64_t data[1] = {num_nodes_ + num_edges_};
       arrow::Status aro_sts = ff->Write(&data, 1 * sizeof(uint64_t));
       if (!aro_sts.ok()) {
-        return tsuba::ArrowToTsuba(aro_sts.code());
+        return katana::ArrowToKatana(aro_sts.code());
       }
 
       // node property index map is uint64_t map[num_nodes]
@@ -411,7 +409,7 @@ tsuba::RDGTopology::DoStore(
       auto buf = arrow::Buffer::Wrap(raw, num_nodes_);
       aro_sts = ff->Write(buf);
       if (!aro_sts.ok()) {
-        return tsuba::ArrowToTsuba(aro_sts.code());
+        return katana::ArrowToKatana(aro_sts.code());
       }
     }
 
@@ -425,7 +423,7 @@ tsuba::RDGTopology::DoStore(
       uint64_t data[1] = {num_nodes_ + num_edges_};
       arrow::Status aro_sts = ff->Write(&data, 1 * sizeof(uint64_t));
       if (!aro_sts.ok()) {
-        return tsuba::ArrowToTsuba(aro_sts.code());
+        return katana::ArrowToKatana(aro_sts.code());
       }
 
       // node property index map is uint64_t map[num_nodes]
@@ -449,7 +447,7 @@ tsuba::RDGTopology::DoStore(
       uint64_t data[1] = {num_nodes_ + num_edges_};
       arrow::Status aro_sts = ff->Write(&data, 1 * sizeof(uint64_t));
       if (!aro_sts.ok()) {
-        return tsuba::ArrowToTsuba(aro_sts.code());
+        return katana::ArrowToKatana(aro_sts.code());
       }
 
       // node property index map is uint64_t map[num_nodes]
@@ -543,7 +541,7 @@ tsuba::RDGTopology::DoStore(
 }
 
 bool
-tsuba::RDGTopology::Equals(const RDGTopology& other) const {
+katana::RDGTopology::Equals(const RDGTopology& other) const {
   return (
       file_storage_.size() == other.file_storage_.size() &&
       !memcmp(
@@ -555,10 +553,12 @@ tsuba::RDGTopology::Equals(const RDGTopology& other) const {
       node_sort_state_ == other.node_sort_state_);
 }
 
-tsuba::RDGTopology
-tsuba::RDGTopology::MakeShadow(
-    TopologyKind topology_state, TransposeKind transpose_state,
-    EdgeSortKind edge_sort_state, NodeSortKind node_sort_state) {
+katana::RDGTopology
+katana::RDGTopology::MakeShadow(
+    katana::RDGTopology::TopologyKind topology_state,
+    katana::RDGTopology::TransposeKind transpose_state,
+    katana::RDGTopology::EdgeSortKind edge_sort_state,
+    katana::RDGTopology::NodeSortKind node_sort_state) {
   RDGTopology topo = RDGTopology();
 
   topo.topology_state_ = topology_state;
@@ -568,20 +568,22 @@ tsuba::RDGTopology::MakeShadow(
   return RDGTopology(std::move(topo));
 }
 
-tsuba::RDGTopology
-tsuba::RDGTopology::MakeShadowCSR() {
+katana::RDGTopology
+katana::RDGTopology::MakeShadowCSR() {
   // Match on a CSR topology transposed or not transposed, and no sorting
   return MakeShadow(
       TopologyKind::kCSR, TransposeKind::kAny, EdgeSortKind::kAny,
       NodeSortKind::kAny);
 }
 
-katana::Result<tsuba::RDGTopology>
-tsuba::RDGTopology::DoMake(
-    tsuba::RDGTopology topo, const uint64_t* adj_indices, uint64_t num_nodes,
-    const uint32_t* dests, uint64_t num_edges, TopologyKind topology_state,
-    TransposeKind transpose_state, EdgeSortKind edge_sort_state,
-    NodeSortKind node_sort_state) {
+katana::Result<katana::RDGTopology>
+katana::RDGTopology::DoMake(
+    katana::RDGTopology topo, const uint64_t* adj_indices, uint64_t num_nodes,
+    const uint32_t* dests, uint64_t num_edges,
+    katana::RDGTopology::TopologyKind topology_state,
+    katana::RDGTopology::TransposeKind transpose_state,
+    katana::RDGTopology::EdgeSortKind edge_sort_state,
+    katana::RDGTopology::NodeSortKind node_sort_state) {
   topo.num_edges_ = num_edges;
   topo.adj_indices_ = std::move(adj_indices);
   topo.num_nodes_ = num_nodes;
@@ -594,12 +596,13 @@ tsuba::RDGTopology::DoMake(
   return RDGTopology(std::move(topo));
 }
 
-katana::Result<tsuba::RDGTopology>
-tsuba::RDGTopology::Make(
+katana::Result<katana::RDGTopology>
+katana::RDGTopology::Make(
     const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
-    uint64_t num_edges, TopologyKind topology_state,
-    TransposeKind transpose_state, EdgeSortKind edge_sort_state,
-    NodeSortKind node_sort_state) {
+    uint64_t num_edges, katana::RDGTopology::TopologyKind topology_state,
+    katana::RDGTopology::TransposeKind transpose_state,
+    katana::RDGTopology::EdgeSortKind edge_sort_state,
+    katana::RDGTopology::NodeSortKind node_sort_state) {
   RDGTopology topo = RDGTopology();
 
   // when we make from in memory objects, mark storage as invalid
@@ -609,11 +612,12 @@ tsuba::RDGTopology::Make(
       transpose_state, edge_sort_state, node_sort_state);
 }
 
-katana::Result<tsuba::RDGTopology>
-tsuba::RDGTopology::Make(
+katana::Result<katana::RDGTopology>
+katana::RDGTopology::Make(
     const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
-    uint64_t num_edges, TopologyKind topology_state,
-    TransposeKind transpose_state, EdgeSortKind edge_sort_state,
+    uint64_t num_edges, katana::RDGTopology::TopologyKind topology_state,
+    katana::RDGTopology::TransposeKind transpose_state,
+    katana::RDGTopology::EdgeSortKind edge_sort_state,
     const uint64_t* edge_index_to_property_index_map) {
   RDGTopology topo = RDGTopology();
   topo.edge_index_to_property_index_map_ =
@@ -626,11 +630,12 @@ tsuba::RDGTopology::Make(
       transpose_state, edge_sort_state, NodeSortKind::kAny);
 }
 
-katana::Result<tsuba::RDGTopology>
-tsuba::RDGTopology::Make(
+katana::Result<katana::RDGTopology>
+katana::RDGTopology::Make(
     const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
-    uint64_t num_edges, TopologyKind topology_state,
-    TransposeKind transpose_state, EdgeSortKind edge_sort_state,
+    uint64_t num_edges, katana::RDGTopology::TopologyKind topology_state,
+    katana::RDGTopology::TransposeKind transpose_state,
+    katana::RDGTopology::EdgeSortKind edge_sort_state,
     const uint64_t* edge_index_to_property_index_map,
     uint64_t edge_condensed_type_id_map_size,
     const katana::EntityTypeID* edge_condensed_type_id_map) {
@@ -648,12 +653,13 @@ tsuba::RDGTopology::Make(
       transpose_state, edge_sort_state, NodeSortKind::kAny);
 }
 
-katana::Result<tsuba::RDGTopology>
-tsuba::RDGTopology::Make(
+katana::Result<katana::RDGTopology>
+katana::RDGTopology::Make(
     const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
-    uint64_t num_edges, TopologyKind topology_state,
-    TransposeKind transpose_state, EdgeSortKind edge_sort_state,
-    NodeSortKind node_sort_state,
+    uint64_t num_edges, katana::RDGTopology::TopologyKind topology_state,
+    katana::RDGTopology::TransposeKind transpose_state,
+    katana::RDGTopology::EdgeSortKind edge_sort_state,
+    katana::RDGTopology::NodeSortKind node_sort_state,
     const uint64_t* edge_index_to_property_index_map,
     const uint64_t* node_index_to_property_index_map) {
   RDGTopology topo = RDGTopology();
@@ -669,12 +675,13 @@ tsuba::RDGTopology::Make(
       transpose_state, edge_sort_state, node_sort_state);
 }
 
-katana::Result<tsuba::RDGTopology>
-tsuba::RDGTopology::Make(
+katana::Result<katana::RDGTopology>
+katana::RDGTopology::Make(
     const uint64_t* adj_indices, uint64_t num_nodes, const uint32_t* dests,
-    uint64_t num_edges, TopologyKind topology_state,
-    TransposeKind transpose_state, EdgeSortKind edge_sort_state,
-    NodeSortKind node_sort_state,
+    uint64_t num_edges, katana::RDGTopology::TopologyKind topology_state,
+    katana::RDGTopology::TransposeKind transpose_state,
+    katana::RDGTopology::EdgeSortKind edge_sort_state,
+    katana::RDGTopology::NodeSortKind node_sort_state,
     const uint64_t* edge_index_to_property_index_map,
     const uint64_t* node_index_to_property_index_map,
     uint64_t edge_condensed_type_id_map_size,
@@ -698,8 +705,8 @@ tsuba::RDGTopology::Make(
       transpose_state, edge_sort_state, node_sort_state);
 }
 
-katana::Result<tsuba::RDGTopology>
-tsuba::RDGTopology::Make(PartitionTopologyMetadataEntry* entry) {
+katana::Result<katana::RDGTopology>
+katana::RDGTopology::Make(katana::PartitionTopologyMetadataEntry* entry) {
   RDGTopology topo = RDGTopology(entry);
   topo.set_metadata_entry(entry);
   topo.num_edges_ = topo.metadata_entry_->num_edges_;
@@ -716,11 +723,11 @@ tsuba::RDGTopology::Make(PartitionTopologyMetadataEntry* entry) {
   // when we make from storage primitives, we can say the storage is up to date
   topo.storage_valid_ = true;
 
-  return katana::Result<tsuba::RDGTopology>(std::move(topo));
+  return katana::Result<katana::RDGTopology>(std::move(topo));
 }
 
 size_t
-tsuba::RDGTopology::GetGraphSize() const {
+katana::RDGTopology::GetGraphSize() const {
   /// version, sizeof_edge_data, num_nodes, num_edges
   constexpr int mandatory_fields = 4;
   size_t graphsize = (mandatory_fields + num_nodes_) * sizeof(uint64_t) +
@@ -762,9 +769,7 @@ tsuba::RDGTopology::GetGraphSize() const {
   return graphsize;
 }
 
-RDGTopology::RDGTopology(PartitionTopologyMetadataEntry* metadata_entry)
+katana::RDGTopology::RDGTopology(PartitionTopologyMetadataEntry* metadata_entry)
     : metadata_entry_(metadata_entry) {}
 
-RDGTopology::RDGTopology() = default;
-
-}  // namespace tsuba
+katana::RDGTopology::RDGTopology() = default;

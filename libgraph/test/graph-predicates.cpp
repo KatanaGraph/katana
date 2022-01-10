@@ -3,9 +3,9 @@
 #include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
+#include "katana/RDG.h"
 #include "katana/SharedMemSys.h"
 #include "katana/analytics/Utils.h"
-#include "tsuba/RDG.h"
 
 namespace cll = llvm::cl;
 
@@ -14,7 +14,7 @@ static cll::opt<std::string> rmat10InputFile(
 
 void
 TestIsApproximateDegreeDistributionPowerLaw() {
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   {
     LinePolicy policy{11};
     auto g = MakeFileGraph<uint32_t>(100, 1, &policy, &txn_ctx);
@@ -27,7 +27,7 @@ TestIsApproximateDegreeDistributionPowerLaw() {
   }
   {
     auto g = katana::PropertyGraph::Make(
-        rmat10InputFile, &txn_ctx, tsuba::RDGLoadOptions());
+        rmat10InputFile, &txn_ctx, katana::RDGLoadOptions());
 
     KATANA_LOG_ASSERT(
         katana::analytics::IsApproximateDegreeDistributionPowerLaw(

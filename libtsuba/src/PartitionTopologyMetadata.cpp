@@ -3,20 +3,19 @@
 #include <string>
 
 #include "katana/Logging.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
-#include "tsuba/RDGTopology.h"
-#include "tsuba/tsuba.h"
+#include "katana/tsuba.h"
 
-namespace tsuba {
-
-PartitionTopologyMetadataEntry*
-PartitionTopologyMetadata::GetEntry(uint32_t index) {
+katana::PartitionTopologyMetadataEntry*
+katana::PartitionTopologyMetadata::GetEntry(uint32_t index) {
   KATANA_LOG_ASSERT(index < num_entries_);
   return &(entries_.at(index));
 }
 
-PartitionTopologyMetadataEntry*
-PartitionTopologyMetadata::Append(PartitionTopologyMetadataEntry entry) {
+katana::PartitionTopologyMetadataEntry*
+katana::PartitionTopologyMetadata::Append(
+    katana::PartitionTopologyMetadataEntry entry) {
   KATANA_LOG_VASSERT(
       num_entries_ < kMaxNumTopologies,
       "cannot add more than kMaxNumTopologies entries");
@@ -27,7 +26,7 @@ PartitionTopologyMetadata::Append(PartitionTopologyMetadataEntry entry) {
 }
 
 katana::Result<void>
-PartitionTopologyMetadata::Validate() const {
+katana::PartitionTopologyMetadata::Validate() const {
   // basic validation, a CSR topology must be present
   if (entries_.empty()) {
     return KATANA_ERROR(
@@ -50,8 +49,8 @@ PartitionTopologyMetadata::Validate() const {
 }
 
 std::string
-PartitionTopologyMetadata::EntryToString(
-    const PartitionTopologyMetadataEntry& entry) const {
+katana::PartitionTopologyMetadata::EntryToString(
+    const katana::PartitionTopologyMetadataEntry& entry) const {
   return fmt::format(
       "transpose_{}_node_sort_{}_edge_sort_{}_num_nodes_{}_num_edges_{}",
       entry.transpose_state_, entry.node_sort_state_, entry.edge_sort_state_,
@@ -59,8 +58,8 @@ PartitionTopologyMetadata::EntryToString(
 }
 
 katana::Result<void>
-PartitionTopologyMetadata::ValidateEntry(
-    const PartitionTopologyMetadataEntry& entry) const {
+katana::PartitionTopologyMetadata::ValidateEntry(
+    const katana::PartitionTopologyMetadataEntry& entry) const {
   if (entry.path_.empty()) {
     std::string name = EntryToString(entry);
     return KATANA_ERROR(
@@ -77,5 +76,3 @@ PartitionTopologyMetadata::ValidateEntry(
   }
   return katana::ResultSuccess();
 }
-
-}  // namespace tsuba

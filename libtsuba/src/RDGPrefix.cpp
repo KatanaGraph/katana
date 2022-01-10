@@ -1,17 +1,15 @@
-#include "tsuba/RDGPrefix.h"
+#include "katana/RDGPrefix.h"
 
 #include "RDGHandleImpl.h"
 #include "RDGPartHeader.h"
+#include "katana/ErrorCode.h"
+#include "katana/RDGManifest.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
-#include "tsuba/RDGManifest.h"
-#include "tsuba/file.h"
+#include "katana/file.h"
 
-namespace tsuba {
-
-katana::Result<tsuba::RDGPrefix>
-RDGPrefix::DoMakePrefix(
-    const tsuba::RDGManifest& manifest, uint32_t partition_id) {
+katana::Result<katana::RDGPrefix>
+katana::RDGPrefix::DoMakePrefix(
+    const katana::RDGManifest& manifest, uint32_t partition_id) {
   auto part_header = KATANA_CHECKED(
       RDGPartHeader::Make(manifest.PartitionFileName(partition_id)));
 
@@ -36,9 +34,7 @@ RDGPrefix::DoMakePrefix(
   return RDGPrefix(std::move(fv), offset);
 }
 
-katana::Result<tsuba::RDGPrefix>
-RDGPrefix::Make(RDGHandle handle, uint32_t partition_id) {
+katana::Result<katana::RDGPrefix>
+katana::RDGPrefix::Make(katana::RDGHandle handle, uint32_t partition_id) {
   return DoMakePrefix(handle.impl_->rdg_manifest(), partition_id);
 }
-
-}  // namespace tsuba

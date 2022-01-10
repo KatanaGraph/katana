@@ -1,9 +1,9 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_RDGSTORAGEFORMATVERSION_H_
-#define KATANA_LIBTSUBA_TSUBA_RDGSTORAGEFORMATVERSION_H_
+#ifndef KATANA_LIBTSUBA_KATANA_RDGSTORAGEFORMATVERSION_H_
+#define KATANA_LIBTSUBA_KATANA_RDGSTORAGEFORMATVERSION_H_
 
 #include <string_view>
 
-namespace tsuba {
+namespace katana {
 
 /// list of known storage format version
 static const uint32_t kPartitionStorageFormatVersion1 = 1;
@@ -15,6 +15,6 @@ static const uint32_t kPartitionStorageFormatVersion3 = 3;
 static const uint32_t kLatestPartitionStorageFormatVersion =
     kPartitionStorageFormatVersion3;
 
-};  // namespace tsuba
+};  // namespace katana
 
 #endif

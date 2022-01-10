@@ -17,10 +17,10 @@
 #include "katana/Logging.h"
 #include "katana/NUMAArray.h"
 #include "katana/PropertyIndex.h"
+#include "katana/RDG.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
 #include "katana/config.h"
-#include "tsuba/RDG.h"
-#include "tsuba/RDGTopology.h"
 
 namespace katana {
 
@@ -67,12 +67,12 @@ private:
   Result<void> DoWriteTopologies();
 
   Result<void> DoWrite(
-      tsuba::RDGHandle handle, const std::string& command_line,
-      tsuba::RDG::RDGVersioningPolicy versioning_action);
+      katana::RDGHandle handle, const std::string& command_line,
+      katana::RDG::RDGVersioningPolicy versioning_action);
 
   Result<void> ConductWriteOp(
       const std::string& uri, const std::string& command_line,
-      tsuba::RDG::RDGVersioningPolicy versioning_action);
+      katana::RDG::RDGVersioningPolicy versioning_action);
 
   Result<void> WriteGraph(
       const std::string& uri, const std::string& command_line);
@@ -80,8 +80,8 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
-  tsuba::RDG rdg_;
-  std::unique_ptr<tsuba::RDGFile> file_;
+  katana::RDG rdg_;
+  std::unique_ptr<katana::RDGFile> file_;
 
   /// Manages the relations between the node entity types
   EntityTypeManager node_entity_type_manager_;
@@ -99,9 +99,9 @@ private:
 
   PGViewCache pg_view_cache_;
 
-  katana::Result<tsuba::RDGTopology*> LoadTopology(
-      const tsuba::RDGTopology& shadow) {
-    tsuba::RDGTopology* topo = KATANA_CHECKED(rdg_.GetTopology(shadow));
+  katana::Result<katana::RDGTopology*> LoadTopology(
+      const katana::RDGTopology& shadow) {
+    katana::RDGTopology* topo = KATANA_CHECKED(rdg_.GetTopology(shadow));
     if (num_edges() != topo->num_edges() || num_nodes() != topo->num_nodes()) {
       KATANA_LOG_WARN(
           "RDG found topology matching description, but num_edge/num_node does "
@@ -166,13 +166,15 @@ public:
     PropertyGraph* g;
 
     Result<void> (PropertyGraph::*add_properties_fn)(
-        const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+        const std::shared_ptr<arrow::Table>& props,
+        katana::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*upsert_properties_fn)(
-        const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+        const std::shared_ptr<arrow::Table>& props,
+        katana::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*remove_property_int)(
-        int i, tsuba::TxnContext* txn_ctx);
+        int i, katana::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*remove_property_str)(
-        const std::string& str, tsuba::TxnContext* txn_ctx);
+        const std::string& str, katana::TxnContext* txn_ctx);
     Result<void> (PropertyGraph::*ensure_loaded_property_fn)(
         const std::string& str);
     Result<void> (PropertyGraph::*unload_property_fn)(const std::string& str);
@@ -199,21 +201,21 @@ public:
 
     Result<void> AddProperties(
         const std::shared_ptr<arrow::Table>& props,
-        tsuba::TxnContext* txn_ctx) const {
+        katana::TxnContext* txn_ctx) const {
       return (g->*add_properties_fn)(props, txn_ctx);
     }
 
     Result<void> UpsertProperties(
         const std::shared_ptr<arrow::Table>& props,
-        tsuba::TxnContext* txn_ctx) const {
+        katana::TxnContext* txn_ctx) const {
       return (g->*upsert_properties_fn)(props, txn_ctx);
     }
 
-    Result<void> RemoveProperty(int i, tsuba::TxnContext* txn_ctx) const {
+    Result<void> RemoveProperty(int i, katana::TxnContext* txn_ctx) const {
       return (g->*remove_property_int)(i, txn_ctx);
     }
     Result<void> RemoveProperty(
-        const std::string& str, tsuba::TxnContext* txn_ctx) const {
+        const std::string& str, katana::TxnContext* txn_ctx) const {
       return (g->*remove_property_str)(str, txn_ctx);
     }
 
@@ -230,7 +232,7 @@ public:
 
   // XXX: WARNING: do not add new constructors. Add Make Functions
   PropertyGraph(
-      std::unique_ptr<tsuba::RDGFile>&& rdg_file, tsuba::RDG&& rdg,
+      std::unique_ptr<katana::RDGFile>&& rdg_file, katana::RDG&& rdg,
       GraphTopology&& topo, EntityTypeIDArray&& node_entity_type_ids,
       EntityTypeIDArray&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
@@ -261,13 +263,13 @@ public:
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
-      tsuba::TxnContext* txn_ctx);
+      std::unique_ptr<katana::RDGFile> rdg_file, katana::RDG&& rdg,
+      katana::TxnContext* txn_ctx);
 
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name, tsuba::TxnContext* txn_ctx,
-      const tsuba::RDGLoadOptions& opts = tsuba::RDGLoadOptions());
+      const std::string& rdg_name, katana::TxnContext* txn_ctx,
+      const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
   /// Make a property graph from topology
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -281,12 +283,13 @@ public:
       EntityTypeManager&& edge_type_manager);
 
   static Result<std::unique_ptr<katana::PropertyGraph>> Make(
-      const tsuba::RDGManifest& rdg_manifest, const tsuba::RDGLoadOptions& opts,
-      tsuba::TxnContext* txn_ctx);
+      const katana::RDGManifest& rdg_manifest,
+      const katana::RDGLoadOptions& opts, katana::TxnContext* txn_ctx);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.
-  Result<std::unique_ptr<PropertyGraph>> Copy(tsuba::TxnContext* txn_ctx) const;
+  Result<std::unique_ptr<PropertyGraph>> Copy(
+      katana::TxnContext* txn_ctx) const;
 
   /// \param node_properties The node properties to copy.
   /// \param edge_properties The edge properties to copy.
@@ -295,13 +298,13 @@ public:
   Result<std::unique_ptr<PropertyGraph>> Copy(
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties,
-      tsuba::TxnContext* txn_ctx) const;
+      katana::TxnContext* txn_ctx) const;
 
   /// Construct node & edge EntityTypeIDs from node & edge properties
   /// Also constructs metadata to convert between atomic types and EntityTypeIDs
   /// Assumes all boolean or uint8 properties are atomic types
   /// TODO(roshan) move this to be a part of Make()
-  Result<void> ConstructEntityTypeIDs(tsuba::TxnContext* txn_ctx);
+  Result<void> ConstructEntityTypeIDs(katana::TxnContext* txn_ctx);
 
   size_t node_entity_type_ids_size() const noexcept {
     return node_entity_type_ids_.size();
@@ -701,24 +704,24 @@ public:
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// Add Edge properties that do not exist in the current graph
   Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// If property name exists, replace it, otherwise insert it
   Result<void> UpsertNodeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// If property name exists, replace it, otherwise insert it
   Result<void> UpsertEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props, tsuba::TxnContext* txn_ctx);
+      const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
-  Result<void> RemoveNodeProperty(int i, tsuba::TxnContext* txn_ctx);
+  Result<void> RemoveNodeProperty(int i, katana::TxnContext* txn_ctx);
   Result<void> RemoveNodeProperty(
-      const std::string& prop_name, tsuba::TxnContext* txn_ctx);
+      const std::string& prop_name, katana::TxnContext* txn_ctx);
 
-  Result<void> RemoveEdgeProperty(int i, tsuba::TxnContext* txn_ctx);
+  Result<void> RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx);
   Result<void> RemoveEdgeProperty(
-      const std::string& prop_name, tsuba::TxnContext* txn_ctx);
+      const std::string& prop_name, katana::TxnContext* txn_ctx);
 
   /// Write a node property column out to storage and de-allocate the memory
   /// it was using

@@ -1,6 +1,6 @@
+#include "katana/RDGManifest.h"
+#include "katana/RDGSlice.h"
 #include "katana/Result.h"
-#include "tsuba/RDGManifest.h"
-#include "tsuba/RDGSlice.h"
 
 namespace {
 // This test tests the following:
@@ -10,16 +10,16 @@ namespace {
 // 4. loading/unloading non-existent properties behaves as expected
 katana::Result<void>
 TestPropertyLoading(const std::string& path_to_manifest) {
-  tsuba::RDGManifest manifest =
-      KATANA_CHECKED(tsuba::FindManifest(path_to_manifest));
-  tsuba::RDGHandle rdg_handle =
-      KATANA_CHECKED(tsuba::Open(std::move(manifest), tsuba::kReadOnly));
+  katana::RDGManifest manifest =
+      KATANA_CHECKED(katana::FindManifest(path_to_manifest));
+  katana::RDGHandle rdg_handle =
+      KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadOnly));
   // RDGFile will close the handle on destroy
-  tsuba::RDGFile handle(rdg_handle);
+  katana::RDGFile handle(rdg_handle);
 
   // this arg doesn't load any useful topology, but we are only testing property
   // loading and unloading, so this should be fine
-  tsuba::RDGSlice::SliceArg slice_arg{
+  katana::RDGSlice::SliceArg slice_arg{
       .node_range = std::make_pair(0, 1),
       .edge_range = std::make_pair(0, 1),
       .topo_off = 0,
@@ -27,7 +27,7 @@ TestPropertyLoading(const std::string& path_to_manifest) {
 
   std::vector<std::string> no_props;
   auto rdg_slice = KATANA_CHECKED(
-      tsuba::RDGSlice::Make(rdg_handle, slice_arg, 0, no_props, no_props));
+      katana::RDGSlice::Make(rdg_handle, slice_arg, 0, no_props, no_props));
 
   // input is ldbc 003
   int64_t expected_num_node_props = 17;
@@ -80,13 +80,13 @@ TestPropertyLoading(const std::string& path_to_manifest) {
 
   // load and unload some non-existent properties
   auto res = rdg_slice.load_node_property("does not exist");
-  KATANA_LOG_ASSERT(!res && res.error() == tsuba::ErrorCode::PropertyNotFound);
+  KATANA_LOG_ASSERT(!res && res.error() == katana::ErrorCode::PropertyNotFound);
   res = rdg_slice.unload_node_property("does not exist");
-  KATANA_LOG_ASSERT(!res && res.error() == tsuba::ErrorCode::PropertyNotFound);
+  KATANA_LOG_ASSERT(!res && res.error() == katana::ErrorCode::PropertyNotFound);
   res = rdg_slice.load_edge_property("does not exist");
-  KATANA_LOG_ASSERT(!res && res.error() == tsuba::ErrorCode::PropertyNotFound);
+  KATANA_LOG_ASSERT(!res && res.error() == katana::ErrorCode::PropertyNotFound);
   res = rdg_slice.unload_edge_property("does not exist");
-  KATANA_LOG_ASSERT(!res && res.error() == tsuba::ErrorCode::PropertyNotFound);
+  KATANA_LOG_ASSERT(!res && res.error() == katana::ErrorCode::PropertyNotFound);
 
   KATANA_LOG_ASSERT(
       rdg_slice.full_node_schema()->num_fields() == expected_num_node_props);
@@ -107,7 +107,7 @@ TestAll(const std::string& path_to_manifest) {
 
 int
 main(int argc, char* argv[]) {
-  KATANA_LOG_ASSERT(tsuba::Init());
+  KATANA_LOG_ASSERT(katana::InitTsuba());
 
   if (argc <= 1) {
     KATANA_LOG_FATAL("rdg-part-header <ldbc003 prefix>");
@@ -123,6 +123,6 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("{}", test_res.error());
   }
 
-  KATANA_LOG_ASSERT(tsuba::Fini());
+  KATANA_LOG_ASSERT(katana::FiniTsuba());
   return 0;
 }

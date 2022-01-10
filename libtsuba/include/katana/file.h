@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBTSUBA_TSUBA_FILE_H_
-#define KATANA_LIBTSUBA_TSUBA_FILE_H_
+#ifndef KATANA_LIBTSUBA_KATANA_FILE_H_
+#define KATANA_LIBTSUBA_KATANA_FILE_H_
 
 #include <cstdint>
 #include <future>
@@ -11,7 +11,7 @@
 #include "katana/Result.h"
 #include "katana/config.h"
 
-namespace tsuba {
+namespace katana {
 
 constexpr uint64_t kBlockSize = UINT64_C(4) << 10; /* 4K */
 constexpr uint64_t kBlockOffsetMask = kBlockSize - 1;
@@ -113,6 +113,6 @@ KATANA_EXPORT std::future<katana::CopyableResult<void>> FileListAsync(
 KATANA_EXPORT katana::Result<void> FileDelete(
     const std::string& directory, const std::unordered_set<std::string>& files);
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

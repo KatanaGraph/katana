@@ -226,7 +226,7 @@ KCoreImpl(
 katana::Result<void>
 katana::analytics::KCore(
     katana::PropertyGraph* pg, uint32_t k_core_number,
-    const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
     KCorePlan algo) {
   katana::analytics::TemporaryPropertyGuard temporary_property{
       pg->NodeMutablePropertyView()};

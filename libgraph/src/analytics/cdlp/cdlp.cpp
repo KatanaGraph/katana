@@ -130,7 +130,7 @@ template <typename Algorithm>
 static katana::Result<void>
 CdlpWithWrap(
     katana::PropertyGraph* pg, std::string output_property_name,
-    size_t max_iterations, tsuba::TxnContext* txn_ctx) {
+    size_t max_iterations, katana::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(
       2,
       pg->topology().num_nodes() * sizeof(typename Algorithm::NodeCommunity));
@@ -164,7 +164,7 @@ CdlpWithWrap(
 katana::Result<void>
 katana::analytics::Cdlp(
     PropertyGraph* pg, const std::string& output_property_name,
-    size_t max_iterations, tsuba::TxnContext* txn_ctx, CdlpPlan plan) {
+    size_t max_iterations, katana::TxnContext* txn_ctx, CdlpPlan plan) {
   switch (plan.algorithm()) {
   case CdlpPlan::kSynchronous:
     return CdlpWithWrap<CdlpSynchronousAlgo>(

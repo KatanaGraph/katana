@@ -36,7 +36,7 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   constexpr size_t test_length = 10;
   using PropertyType = uint8_t;
   using ThrowAwayType = int64_t;
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   RandomPolicy policy{1};
   auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy, &txn_ctx);
@@ -103,7 +103,7 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, katana::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -136,7 +136,7 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   constexpr size_t test_length = 10;
   using PropertyType = uint8_t;
   using ThrowAwayType = int64_t;
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   RandomPolicy policy{1};
   auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy, &txn_ctx);
@@ -222,7 +222,7 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, katana::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -248,7 +248,7 @@ TestRoundTrip() {
   constexpr size_t test_length = 10;
   using ValueType = int32_t;
   using ThrowAwayType = int64_t;
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   RandomPolicy policy{1};
   auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy, &txn_ctx);
@@ -302,7 +302,7 @@ TestRoundTrip() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, katana::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -362,9 +362,9 @@ TestGarbageMetadata() {
   out << "garbage to make the file non-empty";
   out.close();
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto no_dir_result =
-      katana::PropertyGraph::Make(rdg_file, &txn_ctx, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, katana::RDGLoadOptions());
   fs::remove_all(temp_dir);
   KATANA_LOG_ASSERT(!no_dir_result.has_value());
 }
@@ -377,7 +377,7 @@ MakePFGFile(const std::string& n1name) {
   const std::string n0name = "n0";
   const std::string e0name = "e0";
   const std::string e1name = "e1";
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   RandomPolicy policy{1};
   auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy, &txn_ctx);
@@ -419,9 +419,9 @@ TestSimplePGs() {
   auto rdg_file = MakePFGFile("n0");
   KATANA_LOG_ASSERT(rdg_file.empty());
   rdg_file = MakePFGFile("n1");
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_file, &txn_ctx, tsuba::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, katana::RDGLoadOptions());
   fs::remove_all(rdg_file);
   KATANA_LOG_ASSERT(make_result);
 }
@@ -429,7 +429,7 @@ TestSimplePGs() {
 void
 TestTopologyAccess() {
   RandomPolicy policy{3};
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   auto g = MakeFileGraph<uint32_t>(10, 1, &policy, &txn_ctx);
 
   KATANA_LOG_ASSERT(g->size() == 10);

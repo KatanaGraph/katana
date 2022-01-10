@@ -1,10 +1,10 @@
 #include <boost/filesystem.hpp>
 
+#include "katana/FileView.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/FileView.h"
-#include "tsuba/file.h"
-#include "tsuba/tsuba.h"
+#include "katana/file.h"
+#include "katana/tsuba.h"
 
 namespace fs = boost::filesystem;
 
@@ -21,8 +21,8 @@ TestEmpty(const std::string& path) {
   auto uri = KATANA_CHECKED(katana::Uri::MakeFromFile(path));
   auto empty_uri = uri.Join("empty_file");
 
-  KATANA_CHECKED(tsuba::FileStore(empty_uri.string(), std::string("")));
-  tsuba::FileView fv;
+  KATANA_CHECKED(katana::FileStore(empty_uri.string(), std::string("")));
+  katana::FileView fv;
 
   KATANA_CHECKED(fv.Bind(empty_uri.string(), true));
 
@@ -40,8 +40,8 @@ TestAll(const std::string& path) {
 
 int
 main(int argc, char* argv[]) {
-  if (auto init_good = tsuba::Init(); !init_good) {
-    KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  if (auto init_good = katana::InitTsuba(); !init_good) {
+    KATANA_LOG_FATAL("katana::InitTsuba: {}", init_good.error());
   }
 
   if (argc <= 1) {
@@ -53,8 +53,8 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("test failed: {}", res.error());
   }
 
-  if (auto fini_good = tsuba::Fini(); !fini_good) {
-    KATANA_LOG_FATAL("tsuba::Fini: {}", fini_good.error());
+  if (auto fini_good = katana::FiniTsuba(); !fini_good) {
+    KATANA_LOG_FATAL("katana::FiniTsuba: {}", fini_good.error());
   }
 
   return 0;

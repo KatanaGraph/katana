@@ -1,10 +1,10 @@
-#include "tsuba/ParquetWriter.h"
+#include "katana/ParquetWriter.h"
 
 #include "katana/ArrowInterchange.h"
+#include "katana/ErrorCode.h"
+#include "katana/FaultTest.h"
 #include "katana/JSON.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
-#include "tsuba/FaultTest.h"
 
 template <typename T>
 using Result = katana::Result<T>;
@@ -63,8 +63,8 @@ DoStoreParquet(
     const std::string& path, std::shared_ptr<arrow::Table> table,
     const std::shared_ptr<parquet::WriterProperties>& writer_props,
     const std::shared_ptr<parquet::ArrowWriterProperties>& arrow_props,
-    tsuba::WriteGroup* desc) {
-  auto ff = std::make_shared<tsuba::FileFrame>();
+    katana::WriteGroup* desc) {
+  auto ff = std::make_shared<katana::FileFrame>();
   KATANA_CHECKED(ff->Init());
   ff->Bind(path);
 
@@ -79,13 +79,13 @@ DoStoreParquet(
 
         if (!write_result.ok()) {
           return KATANA_ERROR(
-              tsuba::ErrorCode::ArrowError, "arrow error: {}", write_result);
+              katana::ErrorCode::ArrowError, "arrow error: {}", write_result);
         }
         if (desc) {
           desc->AddToOutstanding(ff->map_size());
         }
 
-        TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
+        TSUBA_PTP(katana::internal::FaultSensitivity::Normal);
         KATANA_CHECKED(ff->Persist());
 
         return katana::CopyableResultSuccess();
@@ -102,8 +102,8 @@ DoStoreParquet(
 
 }  // namespace
 
-Result<std::unique_ptr<tsuba::ParquetWriter>>
-tsuba::ParquetWriter::Make(
+Result<std::unique_ptr<katana::ParquetWriter>>
+katana::ParquetWriter::Make(
     const std::shared_ptr<arrow::ChunkedArray>& array, const std::string& name,
     WriteOpts opts) {
   return Make(
@@ -112,8 +112,8 @@ tsuba::ParquetWriter::Make(
       opts);
 }
 
-Result<std::unique_ptr<tsuba::ParquetWriter>>
-tsuba::ParquetWriter::Make(
+Result<std::unique_ptr<katana::ParquetWriter>>
+katana::ParquetWriter::Make(
     std::shared_ptr<arrow::Table> table, WriteOpts opts) {
   if (!opts.write_blocked) {
     return std::unique_ptr<ParquetWriter>(
@@ -124,17 +124,17 @@ tsuba::ParquetWriter::Make(
 }
 
 katana::Result<void>
-tsuba::ParquetWriter::WriteToUri(const katana::Uri& uri, WriteGroup* group) {
+katana::ParquetWriter::WriteToUri(const katana::Uri& uri, WriteGroup* group) {
   try {
     return StoreParquet(uri, group);
   } catch (const std::exception& exp) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow exception: {}", exp.what());
+        katana::ErrorCode::ArrowError, "arrow exception: {}", exp.what());
   }
 }
 
 std::shared_ptr<parquet::WriterProperties>
-tsuba::ParquetWriter::StandardWriterProperties() {
+katana::ParquetWriter::StandardWriterProperties() {
   return parquet::WriterProperties::Builder()
       .version(opts_.parquet_version)
       ->data_page_version(opts_.data_page_version)
@@ -142,15 +142,15 @@ tsuba::ParquetWriter::StandardWriterProperties() {
 }
 
 std::shared_ptr<parquet::ArrowWriterProperties>
-tsuba::ParquetWriter::StandardArrowProperties() {
+katana::ParquetWriter::StandardArrowProperties() {
   return parquet::ArrowWriterProperties::Builder().build();
 }
 
 /// Store the arrow table in a file
 katana::Result<void>
-tsuba::ParquetWriter::StoreParquet(
+katana::ParquetWriter::StoreParquet(
     std::shared_ptr<arrow::Table> table, const katana::Uri& uri,
-    tsuba::WriteGroup* desc) {
+    katana::WriteGroup* desc) {
   auto writer_props = StandardWriterProperties();
   auto arrow_props = StandardArrowProperties();
   std::string prefix = uri.string();
@@ -186,14 +186,14 @@ tsuba::ParquetWriter::StoreParquet(
 }
 
 katana::Result<void>
-tsuba::ParquetWriter::StoreParquet(
-    const katana::Uri& uri, tsuba::WriteGroup* desc) {
+katana::ParquetWriter::StoreParquet(
+    const katana::Uri& uri, katana::WriteGroup* desc) {
   if (!opts_.write_blocked) {
     KATANA_LOG_ASSERT(tables_.size() == 1);
     return StoreParquet(tables_[0], uri, desc);
   }
 
-  std::unique_ptr<tsuba::WriteGroup> our_desc;
+  std::unique_ptr<katana::WriteGroup> our_desc;
   if (!desc) {
     our_desc = KATANA_CHECKED(WriteGroup::Make());
     desc = our_desc.get();

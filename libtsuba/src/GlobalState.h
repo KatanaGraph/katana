@@ -6,11 +6,11 @@
 
 #include "LocalStorage.h"
 #include "katana/CommBackend.h"
+#include "katana/FileStorage.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
-#include "tsuba/FileStorage.h"
 
-namespace tsuba {
+namespace katana {
 
 class GlobalState {
   static std::unique_ptr<GlobalState> ref_;
@@ -18,7 +18,7 @@ class GlobalState {
   std::vector<FileStorage*> file_stores_;
   katana::CommBackend* comm_;
 
-  tsuba::LocalStorage local_storage_;
+  katana::LocalStorage local_storage_;
 
   GlobalState(katana::CommBackend* comm) : comm_(comm) {
     file_stores_.emplace_back(&local_storage_);
@@ -59,6 +59,6 @@ FileStorage* FS(std::string_view uri);
 KATANA_EXPORT katana::Result<void> OneHostOnly(
     const std::function<katana::Result<void>()>& cb);
 
-}  // namespace tsuba
+}  // namespace katana
 
 #endif

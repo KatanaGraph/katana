@@ -49,7 +49,6 @@ __all__ = [
     "OrderedByIntegerMetric",
     "PerSocketChunkFIFO",
     "QueryError",
-    "TsubaError",
     "UserContext",
     "do_all",
     "do_all_operator",
@@ -102,10 +101,6 @@ def reset_runtime_sys():
     _runtime_sys = None
 
 
-class TsubaError(IOError):
-    pass
-
-
 class GaloisError(RuntimeError):
     pass
 
@@ -115,7 +110,6 @@ class QueryError(RuntimeError):
 
 
 error_category_to_exception_class: Dict[str, Type[Exception]] = {
-    "TsubaError": TsubaError,
     "GaloisError": GaloisError,
     "QueryError": QueryError,
 }

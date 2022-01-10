@@ -1833,7 +1833,7 @@ ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::ConvertToPropertyGraph(
-    katana::GraphComponents&& graph_comps, tsuba::TxnContext* txn_ctx) {
+    katana::GraphComponents&& graph_comps, katana::TxnContext* txn_ctx) {
   auto pg_result = katana::PropertyGraph::Make(std::move(graph_comps.topology));
   if (!pg_result) {
     return pg_result.error().WithContext("adding topology");
@@ -1874,7 +1874,7 @@ katana::ConvertToPropertyGraph(
 katana::Result<void>
 katana::WritePropertyGraph(
     katana::GraphComponents&& graph_comps, const std::string& dir,
-    tsuba::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx) {
   auto graph_ptr = ConvertToPropertyGraph(std::move(graph_comps), txn_ctx);
   if (!graph_ptr) {
     return graph_ptr.error();

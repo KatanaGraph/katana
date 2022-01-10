@@ -4,6 +4,8 @@
 #include <string>
 #include <system_error>
 
+#include <arrow/api.h>
+
 #include "katana/config.h"
 
 /// The STL provides a general mechanism for defining error codes that is
@@ -53,21 +55,31 @@ enum class ErrorCode {
   //
   // Success = 0,
   InvalidArgument = 1,
-  NotImplemented = 2,
-  NotFound = 3,
-  ArrowError = 4,
-  JSONParseFailed = 5,
-  JSONDumpFailed = 6,
-  HTTPError = 7,
-  TODO = 8,
-  PropertyNotFound = 9,
-  AlreadyExists = 10,
-  TypeError = 11,
-  AssertionFailed = 12,
-  GraphUpdateFailed = 13,
-  FeatureNotEnabled = 14,
+  NotImplemented,
+  NotFound,
+  ArrowError,
+  JSONParseFailed,
+  JSONDumpFailed,
+  HTTPError,
+  TODO,
+  PropertyNotFound,
+  AlreadyExists,
+  TypeError,
+  AssertionFailed,
+  GraphUpdateFailed,
+  FeatureNotEnabled,
+  OutOfMemory,
+  S3Error,
+  AWSWrongRegion,
+  LocalStorageError,
+  NoCredentials,
+  AzureError,
+  MpiError,
+  BadVersion,
+  GSError,
 };
 
+KATANA_EXPORT ErrorCode ArrowToKatana(arrow::StatusCode);
 }  // namespace katana
 
 namespace katana::internal {
@@ -108,6 +120,22 @@ public:
       return "graph update failed";
     case ErrorCode::FeatureNotEnabled:
       return "not built with this feature";
+    case ErrorCode::S3Error:
+      return "S3 error";
+    case ErrorCode::AWSWrongRegion:
+      return "AWS op may succeed in other region";
+    case ErrorCode::LocalStorageError:
+      return "local storage error";
+    case ErrorCode::NoCredentials:
+      return "credentials not configured";
+    case ErrorCode::AzureError:
+      return "Azure error";
+    case ErrorCode::BadVersion:
+      return "previous version expectation violated";
+    case ErrorCode::MpiError:
+      return "some MPI process reported an error";
+    case ErrorCode::GSError:
+      return "Google storage error";
     default:
       return "unknown error";
     }
@@ -123,6 +151,8 @@ public:
     case ErrorCode::TypeError:
     case ErrorCode::AssertionFailed:
     case ErrorCode::GraphUpdateFailed:
+    case ErrorCode::NoCredentials:
+    case ErrorCode::BadVersion:
       return make_error_condition(std::errc::invalid_argument);
     case ErrorCode::AlreadyExists:
       return make_error_condition(std::errc::file_exists);
@@ -133,6 +163,13 @@ public:
     case ErrorCode::PropertyNotFound:
       return make_error_condition(std::errc::no_such_file_or_directory);
     case ErrorCode::HTTPError:
+      return make_error_condition(std::errc::io_error);
+    case ErrorCode::AWSWrongRegion:
+    case ErrorCode::S3Error:
+    case ErrorCode::LocalStorageError:
+    case ErrorCode::AzureError:
+    case ErrorCode::MpiError:
+    case ErrorCode::GSError:
       return make_error_condition(std::errc::io_error);
     default:
       return std::error_condition(c, *this);

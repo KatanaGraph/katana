@@ -22,7 +22,7 @@ public:
           ResolveValue) {
     pgb.AddValue(id, ProcessElement, ResolveValue);
   }
-  void CreateRDG(tsuba::TxnContext* txn_ctx) {
+  void CreateRDG(katana::TxnContext* txn_ctx) {
     auto uri_res = katana::Uri::MakeRand("/tmp/oplog");
     KATANA_LOG_ASSERT(uri_res);
     std::string dest_dir(uri_res.value().string());
@@ -41,7 +41,7 @@ public:
 };
 
 void
-ReadLog(tsuba::TxnContext* txn_ctx) {
+ReadLog(katana::TxnContext* txn_ctx) {
   LogPlay lp;
 
   std::string prop_id = "n0";
@@ -94,7 +94,7 @@ int
 main() {  //int argc, char* argv[]) {
   katana::SharedMemSys sys;
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
   ReadLog(&txn_ctx);
 
   return 0;

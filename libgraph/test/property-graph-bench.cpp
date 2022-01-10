@@ -93,7 +93,7 @@ IterateProperty(benchmark::State& state) {
 
   RandomPolicy policy{4};
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
@@ -119,7 +119,7 @@ IterateBaseline(benchmark::State& state) {
 
   RandomPolicy policy{4};
 
-  tsuba::TxnContext txn_ctx;
+  katana::TxnContext txn_ctx;
 
   std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);

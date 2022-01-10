@@ -10,11 +10,11 @@
 #include "../test-rdg.h"
 #include "katana/EntityTypeManager.h"
 #include "katana/Logging.h"
+#include "katana/RDG.h"
+#include "katana/RDGManifest.h"
+#include "katana/RDGTopology.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
-#include "tsuba/RDG.h"
-#include "tsuba/RDGManifest.h"
-#include "tsuba/RDGTopology.h"
 
 /*
  * Tests to validate uint16_t EntityTypeIDs added in storage_format_version=3
@@ -32,7 +32,7 @@ TestEntityTypeManagerRoundTrip(const std::string& rdg_name) {
 
   KATANA_LOG_ASSERT(!rdg_name.empty());
 
-  tsuba::RDG rdg_orig = KATANA_CHECKED(LoadRDG(rdg_name));
+  katana::RDG rdg_orig = KATANA_CHECKED(LoadRDG(rdg_name));
 
   // Ensure we are working on a graph that already has EntityTypeIDs
   // libgalois is required to generate EntityTypeIDs, so tests for generation/storage
@@ -47,7 +47,7 @@ TestEntityTypeManagerRoundTrip(const std::string& rdg_name) {
   // write back the converted RDG
   std::string rdg_dir_converted = KATANA_CHECKED(WriteRDG(std::move(rdg_orig)));
 
-  tsuba::RDG rdg_converted = KATANA_CHECKED(LoadRDG(rdg_dir_converted));
+  katana::RDG rdg_converted = KATANA_CHECKED(LoadRDG(rdg_dir_converted));
 
   katana::EntityTypeManager edge_manager_converted =
       KATANA_CHECKED(rdg_converted.edge_entity_type_manager());
@@ -78,7 +78,7 @@ TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
   KATANA_LOG_ASSERT(!rdg_name.empty());
 
   // conversion of properties from uint8_t -> uint16_t in memory happens in load
-  tsuba::RDG rdg_orig = KATANA_CHECKED(LoadRDG(rdg_name));
+  katana::RDG rdg_orig = KATANA_CHECKED(LoadRDG(rdg_name));
 
   // Ensure we are working on a graph that already has EntityTypeIDs
   // libgalois is required to generate EntityTypeIDs, so tests for generation/storage
@@ -171,7 +171,7 @@ TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
   std::string rdg_dir = KATANA_CHECKED(
       WriteRDG(std::move(rdg_orig), node_manager_orig, edge_manager_orig));
 
-  tsuba::RDG rdg_full_entity_type_managers = KATANA_CHECKED(LoadRDG(rdg_dir));
+  katana::RDG rdg_full_entity_type_managers = KATANA_CHECKED(LoadRDG(rdg_dir));
 
   katana::EntityTypeManager edge_manager =
       KATANA_CHECKED(rdg_full_entity_type_managers.edge_entity_type_manager());
@@ -207,8 +207,8 @@ TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
 
 int
 main(int argc, char* argv[]) {
-  if (auto init_good = tsuba::Init(); !init_good) {
-    KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  if (auto init_good = katana::InitTsuba(); !init_good) {
+    KATANA_LOG_FATAL("katana::InitTsuba: {}", init_good.error());
   }
 
   if (argc <= 1) {
@@ -225,8 +225,8 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("test failed: {}", res.error());
   }
 
-  if (auto fini_good = tsuba::Fini(); !fini_good) {
-    KATANA_LOG_FATAL("tsuba::Fini: {}", fini_good.error());
+  if (auto fini_good = katana::FiniTsuba(); !fini_good) {
+    KATANA_LOG_FATAL("katana::FiniTsuba: {}", fini_good.error());
   }
 
   return 0;

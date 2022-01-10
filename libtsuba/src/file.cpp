@@ -1,10 +1,10 @@
 //
-// @file libtsuba/srce/file.cpp
+// @file libkatana/srce/file.cpp
 //
 // Contains the unstructured entry points for interfacing with the tsuba storage
 // server
 //
-#include "tsuba/file.h"
+#include "katana/file.h"
 
 #include <sys/mman.h>
 
@@ -15,23 +15,24 @@
 #include <unordered_map>
 
 #include "GlobalState.h"
+#include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Platform.h"
 #include "katana/Result.h"
-#include "tsuba/Errors.h"
 
 katana::Result<void>
-tsuba::FileStore(const std::string& uri, const void* data, uint64_t size) {
+katana::FileStore(const std::string& uri, const void* data, uint64_t size) {
   return FS(uri)->PutMultiSync(uri, static_cast<const uint8_t*>(data), size);
 }
 
 std::future<katana::CopyableResult<void>>
-tsuba::FileStoreAsync(const std::string& uri, const void* data, uint64_t size) {
+katana::FileStoreAsync(
+    const std::string& uri, const void* data, uint64_t size) {
   return FS(uri)->PutAsync(uri, static_cast<const uint8_t*>(data), size);
 }
 
 katana::Result<void>
-tsuba::FileGet(
+katana::FileGet(
     const std::string& uri, void* result_buffer, uint64_t begin,
     uint64_t size) {
   return FS(uri)->GetMultiSync(
@@ -39,7 +40,7 @@ tsuba::FileGet(
 }
 
 std::future<katana::CopyableResult<void>>
-tsuba::FileGetAsync(
+katana::FileGetAsync(
     const std::string& uri, void* result_buffer, uint64_t begin,
     uint64_t size) {
   return FS(uri)->GetAsync(
@@ -47,7 +48,7 @@ tsuba::FileGetAsync(
 }
 
 katana::Result<void>
-tsuba::FileRemoteCopy(
+katana::FileRemoteCopy(
     const std::string& source_uri, const std::string& dest_uri, uint64_t begin,
     uint64_t size) {
   auto source_fs = FS(source_uri);
@@ -62,19 +63,19 @@ tsuba::FileRemoteCopy(
 }
 
 katana::Result<void>
-tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
+katana::FileStat(const std::string& uri, StatBuf* s_buf) {
   return FS(uri)->Stat(uri, s_buf);
 }
 
 std::future<katana::CopyableResult<void>>
-tsuba::FileListAsync(
+katana::FileListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
   return FS(directory)->ListAsync(directory, list, size);
 }
 
 katana::Result<void>
-tsuba::FileDelete(
+katana::FileDelete(
     const std::string& directory,
     const std::unordered_set<std::string>& files) {
   return FS(directory)->Delete(directory, files);

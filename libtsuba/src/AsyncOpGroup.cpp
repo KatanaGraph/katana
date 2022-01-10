@@ -1,7 +1,7 @@
-#include "tsuba/AsyncOpGroup.h"
+#include "katana/AsyncOpGroup.h"
 
 bool
-tsuba::AsyncOpGroup::FinishOne() {
+katana::AsyncOpGroup::FinishOne() {
   auto op_it = pending_ops_.begin();
   if (op_it == pending_ops_.end()) {
     return false;
@@ -25,7 +25,7 @@ tsuba::AsyncOpGroup::FinishOne() {
 }
 
 katana::Result<void>
-tsuba::AsyncOpGroup::Finish() {
+katana::AsyncOpGroup::Finish() {
   while (FinishOne()) {
     // Wait for all ops
   }
@@ -39,7 +39,7 @@ tsuba::AsyncOpGroup::Finish() {
 }
 
 void
-tsuba::AsyncOpGroup::AddOp(
+katana::AsyncOpGroup::AddOp(
     std::future<katana::CopyableResult<void>> future, std::string file,
     const std::function<katana::CopyableResult<void>()>& on_complete) {
   pending_ops_.emplace_back(AsyncOp{

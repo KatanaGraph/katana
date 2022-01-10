@@ -407,22 +407,22 @@ def cythonize(module_list, *, source_root, **kwargs):
 
     extension_options = get_extension_options()
 
-    test_extension_options = extension_options.copy()
-    test_extension_options.setdefault("extra_link_args", [])
-    if not any(s.endswith("/libkatana_graph.so") for s in test_extension_options["extra_link_args"]):
-        test_extension_options["extra_link_args"].append("-lkatana_graph")
-    if not any(s.endswith("/libkatana_galois.so") for s in test_extension_options["extra_link_args"]):
-        test_extension_options["extra_link_args"].append("-lkatana_galois")
-    check_cython_module(
-        "libkatana_graph",
-        """
-# distutils: language=c++
-from katana.cpp.libgalois.Galois cimport setActiveThreads, SharedMemSys
-cdef SharedMemSys _katana_runtime
-setActiveThreads(1)
-    """,
-        extension_options=test_extension_options,
-    )
+    #     test_extension_options = extension_options.copy()
+    #     test_extension_options.setdefault("extra_link_args", [])
+    #     if not any(s.endswith("/libkatana_graph.so") for s in test_extension_options["extra_link_args"]):
+    #         test_extension_options["extra_link_args"].append("-lkatana_graph")
+    #     if not any(s.endswith("/libkatana_galois.so") for s in test_extension_options["extra_link_args"]):
+    #         test_extension_options["extra_link_args"].append("-lkatana_galois")
+    #     check_cython_module(
+    #         "libkatana_graph",
+    #         """
+    # # distutils: language=c++
+    # from katana.cpp.libgalois.Galois cimport setActiveThreads, SharedMemSys
+    # cdef SharedMemSys _katana_runtime
+    # setActiveThreads(1)
+    #     """,
+    #         extension_options=test_extension_options,
+    #     )
 
     source_root = Path(source_root)
     source_root_name = source_root.name

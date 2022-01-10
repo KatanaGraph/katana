@@ -8,32 +8,18 @@ namespace katana {
 template <typename T, typename Enable = void>
 struct PythonTypeTraits {};
 
-template <typename T>
-struct PythonTypeTraits<T, std::void_t<decltype(pybind11::type::of<T>())>> {
-  /// All pybind11 types use void* at the ctypes level.
-  static pybind11::object ctypes_type() {
-    pybind11::module_ ctypes = pybind11::module_::import("ctypes");
-    return ctypes.attr("c_void_p");
-  }
-
-  /// Get a Python object which represents the type in Python for purposes of
-  /// numba or type checking.
-  static pybind11::object representation() { return pybind11::type::of<T>(); }
-};
-
 #define PYTHON_TYPE_TRAITS(T, numpy_name, ctypes_name)                         \
   template <>                                                                  \
   struct PythonTypeTraits<T> {                                                 \
     static constexpr const char* name = numpy_name;                            \
     static pybind11::object default_dtype() {                                  \
-      pybind11::module_ numpy = pybind11::module_::import("numpy");            \
+      pybind11::module numpy = pybind11::module::import("numpy");              \
       return numpy.attr(numpy_name);                                           \
     }                                                                          \
     static pybind11::object ctypes_type() {                                    \
-      pybind11::module_ ctypes = pybind11::module_::import("ctypes");          \
+      pybind11::module ctypes = pybind11::module::import("ctypes");            \
       return ctypes.attr(ctypes_name);                                         \
     }                                                                          \
-    static pybind11::object representation() { return ctypes_type(); }         \
   }
 
 #define PYTHON_TYPE_TRAITS_BY_PREFIX(prefix)                                   \
@@ -61,17 +47,15 @@ template <>
 struct PythonTypeTraits<bool> {
   static constexpr const char* name = "bool";
   static pybind11::object ctypes_type() {
-    pybind11::module_ ctypes = pybind11::module_::import("ctypes");
+    pybind11::module ctypes = pybind11::module::import("ctypes");
     return ctypes.attr("c_bool");
   }
-  static pybind11::object representation() { return ctypes_type(); }
 };
 
 template <>
 struct PythonTypeTraits<void> {
   static constexpr const char* name = "void";
   static pybind11::object ctypes_type() { return pybind11::none(); }
-  static pybind11::object representation() { return pybind11::none(); }
 };
 
 }  // namespace katana

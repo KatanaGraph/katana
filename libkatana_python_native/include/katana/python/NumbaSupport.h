@@ -31,10 +31,10 @@ struct StaticFunctionBinderImpl {
   /// Define an actual python method and numba wrapper using @p func.
   template <StaticFunctionPointer func, typename... Extra>
   static void def_method(
-      pybind11::module_& m, const char* name, const Extra&... extra) {
+      pybind11::module& m, const char* name, const Extra&... extra) {
     m.def(name, func, extra...);
     auto numba_support =
-        pybind11::module_::import("katana.native_interfacing.numba_support");
+        pybind11::module::import("katana.native_interfacing.numba_support");
     numba_support.attr("register_function")(
         m.attr(name), (uintptr_t)&call<func>,
         PythonTypeTraits<remove_cvref_t<Return>>::ctypes_type(),
@@ -82,7 +82,7 @@ struct MemberFunctionBinderImpl {
       pybind11::class_<SelfCls>& cls, const char* name, const Extra&... extra) {
     cls.def(name, member_func, extra...);
     auto numba_support =
-        pybind11::module_::import("katana.native_interfacing.numba_support");
+        pybind11::module::import("katana.native_interfacing.numba_support");
     numba_support.attr("register_method")(
         cls, cls.attr(name), (uintptr_t)&call<member_func>,
         PythonTypeTraits<remove_cvref_t<Return>>::ctypes_type(),
@@ -120,7 +120,7 @@ struct ConstMemberFunctionBinderImpl {
       pybind11::class_<SelfCls>& cls, const char* name, const Extra&... extra) {
     cls.def(name, member_func, extra...);
     auto numba_support =
-        pybind11::module_::import("katana.native_interfacing.numba_support");
+        pybind11::module::import("katana.native_interfacing.numba_support");
     numba_support.attr("register_method")(
         cls, cls.attr(name), (uintptr_t)&call<member_func>,
         PythonTypeTraits<remove_cvref_t<Return>>::ctypes_type(),
@@ -167,7 +167,7 @@ using MemberFunctionBinder = decltype(MemberFunctionBinderInferer(member_func));
 /// \param extra Extra arguments as you would pass to pybind11::class_::def().
 template <auto func, typename... Extra>
 constexpr void
-DefWithNumba(pybind11::module_& m, const char* name, const Extra&... extra) {
+DefWithNumba(pybind11::module& m, const char* name, const Extra&... extra) {
   static_assert(
       std::is_same_v<
           typename detail::StaticFunctionBinder<func>::StaticFunctionPointer,
@@ -221,7 +221,7 @@ RegisterNumbaClass(pybind11::class_<T>& cls) {
   cls.def_property_readonly(
       "__katana_address__", [](T* self) { return (uintptr_t)self; });
   auto numba_support =
-      pybind11::module_::import("katana.native_interfacing.numba_support");
+      pybind11::module::import("katana.native_interfacing.numba_support");
   numba_support.attr("register_class")(cls);
 }
 

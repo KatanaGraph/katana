@@ -44,7 +44,7 @@ struct ForReduceLogicalAnd {
 template <typename For>
 struct ReducibleFunctor {
   template <typename T>
-  py::object instantiate(py::module_& m, const char* name) {
+  py::object instantiate(py::module& m, const char* name) {
     py::class_<typename For::template type<T>> cls(
         m, name,
         "A reducer object that can be updated with new values and combines the "
@@ -86,7 +86,7 @@ struct ReducibleFunctor {
 
 /// Add reduction classes to the module @p m.
 void
-katana::python::InitReductions(py::module_& m) {
+katana::python::InitReductions(py::module& m) {
   katana::InstantiateForStandardTypes(
       m, "ReduceSum", ReducibleFunctor<ForGAccumulator>());
   katana::InstantiateForStandardTypes(

@@ -3,12 +3,12 @@ import subprocess
 import sys
 import tempfile
 import traceback
-from distutils.extension import Extension
 from pathlib import Path
 from typing import Optional, Set
 
 import generate_from_jinja
 import setuptools
+from setuptools.extension import Extension
 
 __all__ = ["setup"]
 
@@ -474,6 +474,9 @@ def setup(*, source_dir, package_name, additional_requires=None, package_data=No
 
     pxd_files, pyx_files = collect_cython_files(source_root=source_dir / package_name)
 
+    ext_modules = kwargs.get("ext_modules", []) + cythonize(pyx_files, source_root=source_dir)
+    print(ext_modules)
+
     options = dict(
         version=get_katana_version(),
         name=package_name + "_python",
@@ -483,7 +486,7 @@ def setup(*, source_dir, package_name, additional_requires=None, package_data=No
         # NOTE: Do not use setup_requires. It doesn't work properly for our needs because it doesn't install the
         # packages in the overall build environment. (It installs them in .eggs in the source tree.)
         requires=requires,
-        ext_modules=kwargs.get("ext_modules", []) + cythonize(pyx_files, source_root=source_dir),
+        ext_modules=ext_modules,
         include_package_data=True,
         zip_safe=False,
     )

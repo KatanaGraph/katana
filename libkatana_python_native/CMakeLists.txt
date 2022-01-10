@@ -24,7 +24,9 @@ set_common_katana_library_options(katana_python_native)
 
 # Pybind11 dependencies to enable the way it wants to be built.
 target_link_libraries(katana_python_native PUBLIC pybind11::module)
-target_link_libraries(katana_python_native PRIVATE pybind11::lto)
+if (TARGET pybind11::lto)
+  target_link_libraries(katana_python_native PRIVATE pybind11::lto)
+endif()
 
 # Do not install headers since we do not support third-party C++ Python integration (at least yet)
 

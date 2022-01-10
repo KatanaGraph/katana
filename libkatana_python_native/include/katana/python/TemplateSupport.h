@@ -20,7 +20,7 @@ namespace katana {
 template <typename T, typename F>
 pybind11::object
 InstantiateForType(
-    pybind11::module_ m, const std::string& basename, F f,
+    pybind11::module m, const std::string& basename, F f,
     pybind11::dict types) {
   pybind11::object dtype = katana::PythonTypeTraits<T>::default_dtype();
   pybind11::object cls = f.template instantiate<T>(
@@ -40,10 +40,10 @@ InstantiateForType(
 template <typename F>
 void
 InstantiateForStandardTypes(
-    pybind11::module_ m, const std::string& basename, F f) {
-  pybind11::module_ builtins = pybind11::module_::import("builtins");
+    pybind11::module m, const std::string& basename, F f) {
+  pybind11::module builtins = pybind11::module::import("builtins");
   auto make_template_type1 = pybind11::cast<pybind11::function>(
-      pybind11::module_::import("katana.native_interfacing.template_type")
+      pybind11::module::import("katana.native_interfacing.template_type")
           .attr("make_template_type1"));
   pybind11::dict types;
   InstantiateForType<uint8_t>(m, basename, f, types);

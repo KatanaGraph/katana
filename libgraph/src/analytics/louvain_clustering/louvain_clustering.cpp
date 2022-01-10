@@ -36,8 +36,7 @@ struct GraphTypes {
 
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
 
-  using Graph = katana::TypedPropertyGraphView<
-      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData>;
 };
 
 template <typename EdgeWeightType, typename GraphViewTy>
@@ -553,26 +552,22 @@ LouvainClusteringWithWrap(
   clusters_orig.allocateBlocked(pg->num_nodes());
 
   if (is_symmetric) {
-    using Impl = LouvainClusteringImplementation<
-        EdgeWeightType, katana::PropertyGraphViews::Default>;
+    using GraphViewTy = katana::PropertyGraphViews::Default;
+    using Impl = LouvainClusteringImplementation<EdgeWeightType, GraphViewTy>;
     KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
         pg, txn_ctx, temp_node_property_names));
 
-    LouvainClusteringImplementation<
-        EdgeWeightType, katana::PropertyGraphViews::Default>
-        impl{};
+    LouvainClusteringImplementation<EdgeWeightType, GraphViewTy> impl{};
     KATANA_CHECKED(impl.LouvainClustering(
         pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
         plan, txn_ctx));
   } else {
-    using Impl = LouvainClusteringImplementation<
-        EdgeWeightType, katana::PropertyGraphViews::Default>;
+    using GraphViewTy = katana::PropertyGraphViews::Undirected;
+    using Impl = LouvainClusteringImplementation<EdgeWeightType, GraphViewTy>;
     KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
         pg, txn_ctx, temp_node_property_names));
 
-    LouvainClusteringImplementation<
-        EdgeWeightType, katana::PropertyGraphViews::Default>
-        impl{};
+    LouvainClusteringImplementation<EdgeWeightType, GraphViewTy> impl{};
     KATANA_CHECKED(impl.LouvainClustering(
         pg, edge_weight_property_name, temp_node_property_names, clusters_orig,
         plan, txn_ctx));

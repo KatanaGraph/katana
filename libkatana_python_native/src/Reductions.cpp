@@ -53,13 +53,12 @@ struct ReducibleFunctor {
         "This class can be passed into numba compiled code and it's methods "
         "can be used from there.\n");
     cls.def(py::init<>());
-    // TODO(amp): Remove once we drop support for older pybind11 on ubuntu 18.04
     cls.def(
-        "__init__",
-        [](typename For::template type<T>& self, T v) {
-          new (&self) typename For::template type<T>();
-          self.update(v);
-        },
+        py::init([](T v) {
+          auto self = std::make_unique<typename For::template type<T>>();
+          self->update(v);
+          return self;
+        }),
         "Create a new instance with an initial value.");
     katana::RegisterNumbaClass(cls);
     katana::DefWithNumba<py::overload_cast<const T&>(

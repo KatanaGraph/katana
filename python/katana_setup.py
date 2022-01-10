@@ -474,7 +474,6 @@ def setup(*, source_dir, package_name, additional_requires=None, package_data=No
     pxd_files, pyx_files = collect_cython_files(source_root=source_dir / package_name)
 
     ext_modules = kwargs.get("ext_modules", []) + cythonize(pyx_files, source_root=source_dir)
-    print(ext_modules)
 
     options = dict(
         version=get_katana_version(),

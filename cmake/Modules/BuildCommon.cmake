@@ -63,6 +63,7 @@ set(KATANA_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a singl
 set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: min(number of physical cores, 8))")
 set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
+set(KATANA_NUM_DOC_THREADS "" CACHE STRING "Maximum number of threads to use when reading / writing with Sphinx (default: min(number of physical cores, 4))")
 
 ###### Configure (users don't need to go beyond here) ######
 
@@ -83,6 +84,18 @@ if (KATANA_NUM_TEST_THREADS GREATER ${KATANA_NUM_PHYSICAL_CORES})
   message(WARNING "KATANA_NUM_TEST_THREADS more than the physical cores; please set it to ${KATANA_NUM_PHYSICAL_CORES} to avoid oversubscription.")
 elseif (KATANA_NUM_TEST_THREADS LESS_EQUAL 0)
   set(KATANA_NUM_TEST_THREADS 1)
+endif ()
+
+if (NOT KATANA_NUM_DOC_THREADS)
+  set(KATANA_NUM_DOC_THREADS ${KATANA_NUM_PHYSICAL_CORES})
+  if (KATANA_NUM_DOC_THREADS GREATER 4)
+    set(KATANA_NUM_DOC_THREADS 4)
+  endif ()
+endif ()
+if (KATANA_NUM_DOC_THREADS GREATER ${KATANA_NUM_PHYSICAL_CORES})
+  message(WARNING "KATANA_NUM_DOC_THREADS more than the physical cores; please set it to ${KATANA_NUM_PHYSICAL_CORES} to avoid oversubscription.")
+elseif (KATANA_NUM_DOC_THREADS LESS_EQUAL 0)
+  set(KATANA_NUM_DOC_THREADS 1)
 endif ()
 
 if (NOT KATANA_NUM_TEST_GPUS)
@@ -463,6 +476,8 @@ function(add_katana_sphinx_target target_name)
   if (BUILD_DOCS STREQUAL "internal")
     set(sphinx_options "-W;${sphinx_options}")
   endif ()
+  # Enable parallel reading / writing, 4 workers gave optimal time reduction in testing
+  set(sphinx_options "-j;${KATANA_NUM_DOC_THREADS};${sphinx_options}")
 
   add_custom_target(
       ${target_name}_sphinx_docs

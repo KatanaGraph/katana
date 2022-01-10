@@ -145,7 +145,7 @@ public:
 KATANA_EXPORT Result<void> LeidenClustering(
     PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, tsuba::TxnContext* txn_ctx,
-    LeidenClusteringPlan plan = {});
+    const bool& is_symmetric = false, LeidenClusteringPlan plan = {});
 
 KATANA_EXPORT Result<void> LeidenClusteringAssertValid(
     PropertyGraph* pg, const std::string& edge_weight_property_name,

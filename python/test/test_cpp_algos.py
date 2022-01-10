@@ -355,11 +355,23 @@ def test_louvain_clustering():
 def test_leiden_clustering():
     graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
-    leiden_clustering(graph, "value", "output")
+    leiden_clustering(graph, "value", "output_sym", True)
+
+    leiden_clustering_assert_valid(graph, "value", "output_sym")
+
+    stats_sym = LeidenClusteringStatistics(graph, "value", "output_sym")
+
+    graph = Graph(get_rdg_dataset("rmat10"))
+
+    leiden_clustering(graph, "value", "output", False)
 
     leiden_clustering_assert_valid(graph, "value", "output")
 
-    LeidenClusteringStatistics(graph, "value", "output")
+    stats = LeidenClusteringStatistics(graph, "value", "output")
+
+    assert stats.n_clusters == stats_sym.n_clusters
+    assert stats.n_non_trivial_clusters == stats_sym.n_non_trivial_clusters
+    assert stats.largest_cluster_size == stats_sym.largest_cluster_size
 
     # TODO(amp): Switch to useing deterministic algorithm so we can check results.
     # assert stats.n_clusters == 83

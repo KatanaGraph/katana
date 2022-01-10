@@ -99,13 +99,6 @@ main(int argc, char** argv) {
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  if (!symmetricGraph) {
-    KATANA_LOG_FATAL(
-        "This application requires a symmetric graph input;"
-        " please use the -symmetricGraph flag "
-        " to indicate the input is a symmetric graph.");
-  }
-
   std::cout << "Reading from file: " << inputFile << "\n";
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
@@ -133,7 +126,8 @@ main(int argc, char** argv) {
 
   tsuba::TxnContext txn_ctx;
   auto pg_result = LeidenClustering(
-      pg.get(), edge_property_name, "clusterId", &txn_ctx, plan);
+      pg.get(), edge_property_name, "clusterId", &txn_ctx, symmetricGraph,
+      plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run LeidenClustering: {}", pg_result.error());
   }

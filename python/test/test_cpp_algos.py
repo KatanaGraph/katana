@@ -291,7 +291,7 @@ def test_independent_set():
 
 
 def test_cdlp():
-    graph = Graph(get_input("propertygraphs/rmat10"))
+    graph = Graph(get_rdg_dataset("propertygraphs/rmat10"))
 
     cdlp(graph, "output")
 

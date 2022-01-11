@@ -39,6 +39,8 @@ JsonParse(U& obj, T* val) {
 
 /// Dump to string, but catch errors
 KATANA_EXPORT katana::Result<std::string> JsonDump(const nlohmann::json& obj);
+KATANA_EXPORT katana::Result<std::string> JsonDump(
+    const nlohmann::ordered_json& obj);
 
 template <typename T>
 katana::Result<std::string>

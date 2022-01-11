@@ -12,7 +12,8 @@ RunCdlp(
   Plan plan = Plan::Synchronous();
   const std::string property_name = "community";
 
-  auto cdlp = Cdlp(pg.get(), property_name, 10, plan);
+  katana::TxnContext txn_ctx;
+  auto cdlp = Cdlp(pg.get(), property_name, 10, &txn_ctx, plan);
   KATANA_LOG_VASSERT(cdlp, " CDLP failed and returned error {}", cdlp.error());
 
   auto stats_result = CdlpStatistics::Compute(pg.get(), property_name);

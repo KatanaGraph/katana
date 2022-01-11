@@ -39,6 +39,6 @@ add_test(NAME arrow-bench COMMAND arrow-bench --benchmark_filter=/1024)
 set_tests_properties(arrow-bench PROPERTIES LABELS quick)
 
 add_executable(result-bench result-bench.cpp)
-target_link_libraries(result-bench katana_support benchmark::benchmark)
+target_link_libraries(result-bench katana_support benchmark::benchmark Threads::Threads)
 add_test(NAME result-bench COMMAND result-bench --benchmark_filter=KatanaResultWithContext/1/1024/3/16)
 set_tests_properties(result-bench PROPERTIES LABELS quick)

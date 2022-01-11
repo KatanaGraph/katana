@@ -96,7 +96,7 @@ target_include_directories(katana_galois PUBLIC
 )
 
 target_link_libraries(katana_galois PUBLIC tsuba)
-target_link_libraries(katana_galois PRIVATE Threads::Threads)
+target_link_libraries(katana_galois PUBLIC Threads::Threads)
 target_link_libraries(katana_galois PUBLIC katana_support)
 target_link_libraries(katana_galois PUBLIC LibXml2::LibXml2)
 

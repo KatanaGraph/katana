@@ -10,7 +10,13 @@ from packaging.version import Version
 from . import CONFIG_VERSION_PATH, SUBMODULE_PATH, Configuration, Repo, git
 from .commands import CommandError, capture_command
 
-__all__ = ["get_version", "format_version_pep440", "format_version_debian"]
+__all__ = [
+    "get_version",
+    "format_version_pep440",
+    "format_version_debian",
+    "format_version_semantic",
+    "add_dev_to_version",
+]
 
 logger = logging.getLogger(__name__)
 

@@ -688,7 +688,7 @@ katana::ProjectedTopology::CreateEmptyEdgeProjectedTopology(
   FillBitMask(topology.NumNodes(), bitset, &node_bitmask);
 
   NUMAArray<uint8_t> edge_bitmask;
-  edge_bitmask.allocateInterleaved((topology.NumNodes() + 7) / 8);
+  edge_bitmask.allocateInterleaved((topology.NumEdges() + 7) / 8);
 
   return std::make_shared<katana::ProjectedTopology>(katana::ProjectedTopology{
       std::move(out_indices), std::move(out_dests),
@@ -796,7 +796,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
 
   // calculate number of new edges
   katana::DynamicBitset bitset_edges;
-  bitset_edges.resize(topology.NumNodes());
+  bitset_edges.resize(topology.NumEdges());
 
   NUMAArray<Edge> out_indices;
   out_indices.allocateInterleaved(num_new_nodes);

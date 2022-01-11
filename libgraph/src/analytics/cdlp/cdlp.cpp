@@ -81,14 +81,14 @@ struct CdlpSynchronousAlgo : CdlpAlgo<GraphViewTy> {
             using Histogram_type = boost::unordered_map<CommunityType, size_t>;
             Histogram_type histogram;
             // Iterate over all neighbors (this is undirected view)
-            for (auto e : graph->UndirectedEdges(node)) {
-              auto neighbor = graph->UndirectedEdgeNeighbor(e);
+            for (auto e : OutOrUndirectedEdges(*graph, node)) {
+              auto neighbor = OutOrUndirectedDst(*graph, e);
               const auto neighbor_data =
                   graph->template GetData<NodeCommunity>(neighbor);
               histogram[neighbor_data]++;
             }
 
-            // Pick the most frequent communtiy as the new community for node
+            // Pick the most frequent community as the new community for node
             // pick the smallest one if more than one max frequent exist.
             auto ndata_new_comm = ndata_current_comm;
             size_t best_freq = 0;

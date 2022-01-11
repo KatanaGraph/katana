@@ -121,8 +121,8 @@ struct BfsSsspImplementationBase {
   template <typename WL, typename TileMaker>
   void PushEdgeTiles(
       WL& wl, katana::PropertyGraph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->OutEdges(src).first;
-    const auto end = graph->OutEdges(src).second;
+    auto beg = graph->OutEdges(src).begin();
+    const auto end = graph->OutEdges(src).end();
 
     PushEdgeTiles(wl, beg, end, f);
   }

@@ -159,7 +159,7 @@ public:
 /// not exist before the call.
 KATANA_EXPORT Result<void> ConnectedComponents(
     PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx,
+    katana::TxnContext* txn_ctx, const bool& is_symmetric = false,
     ConnectedComponentsPlan plan = ConnectedComponentsPlan());
 
 KATANA_EXPORT Result<void> ConnectedComponentsAssertValid(

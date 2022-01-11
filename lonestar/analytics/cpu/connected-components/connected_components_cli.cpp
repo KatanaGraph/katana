@@ -128,11 +128,12 @@ main(int argc, char** argv) {
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  if (!symmetricGraph) {
-    KATANA_LOG_FATAL(
+  if (symmetricGraph) {
+    KATANA_LOG_WARN(
         "This application requires a symmetric graph input;"
-        " please use the -symmetricGraph flag "
-        " to indicate the input is a symmetric graph.");
+        " Using the -symmetricGraph flag "
+        " indicates that the input is a symmetric graph and can be used as it "
+        "is.");
   }
 
   std::cout << "Reading from file: " << inputFile << "\n";
@@ -205,7 +206,8 @@ main(int argc, char** argv) {
   }
 
   katana::TxnContext txn_ctx;
-  auto pg_result = ConnectedComponents(pg.get(), "component", &txn_ctx, plan);
+  auto pg_result = ConnectedComponents(
+      pg.get(), "component", &txn_ctx, symmetricGraph, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL(
         "Failed to run ConnectedComponents: {}", pg_result.error());

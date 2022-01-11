@@ -27,30 +27,34 @@
 using namespace katana::analytics;
 
 namespace {
-/// Limited number of iterations to limit the oscillation of the label
-/// in Synchronous algorithm. We dont need to limit it in Asynchronous algorithm.
-/// Set to 10 same as Graphalytics benchmark.
-const unsigned int kMaxIterations = 10;
 
+const unsigned int kMaxIterations = CdlpPlan::kMaxIterations;
+
+template <typename GraphViewTy>
 struct CdlpAlgo {
   using CommunityType = uint64_t;
   struct NodeCommunity : public katana::PODProperty<CommunityType> {};
 
   using NodeData = std::tuple<NodeCommunity>;
   using EdgeData = std::tuple<>;
-  using Graph = katana::TypedPropertyGraphView<
-      katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData>;
   using GNode = typename Graph::Node;
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeCommunity>(node) = node;
+      graph->template GetData<NodeCommunity>(node) = node;
     });
   }
   virtual void operator()(Graph* graph, size_t max_iterations) = 0;
 };
 
-struct CdlpSynchronousAlgo : CdlpAlgo {
+template <typename GraphViewTy>
+struct CdlpSynchronousAlgo : CdlpAlgo<GraphViewTy> {
+  using Graph = typename CdlpAlgo<GraphViewTy>::Graph;
+  using GNode = typename CdlpAlgo<GraphViewTy>::GNode;
+  using CommunityType = typename CdlpAlgo<GraphViewTy>::CommunityType;
+  using NodeCommunity = typename CdlpAlgo<GraphViewTy>::NodeCommunity;
+
   void operator()(Graph* graph, size_t max_iterations = kMaxIterations) {
     if (max_iterations == 0)
       return;
@@ -72,14 +76,15 @@ struct CdlpSynchronousAlgo : CdlpAlgo {
       katana::do_all(
           katana::iterate(*graph),
           [&](const GNode& node) {
-            const auto ndata_current_comm = graph->GetData<NodeCommunity>(node);
+            const auto ndata_current_comm =
+                graph->template GetData<NodeCommunity>(node);
             using Histogram_type = boost::unordered_map<CommunityType, size_t>;
             Histogram_type histogram;
             // Iterate over all neighbors (this is undirected view)
             for (auto e : graph->edges(node)) {
               auto neighbor = graph->edge_dest(e);
               const auto neighbor_data =
-                  graph->GetData<NodeCommunity>(neighbor);
+                  graph->template GetData<NodeCommunity>(neighbor);
               histogram[neighbor_data]++;
             }
 
@@ -109,7 +114,7 @@ struct CdlpSynchronousAlgo : CdlpAlgo {
           katana::iterate(apply_bag),
           [&](const NodeDataPair node_data) {
             GNode node = node_data.node;
-            graph->GetData<NodeCommunity>(node) = node_data.data;
+            graph->template GetData<NodeCommunity>(node) = node_data.data;
           },
           katana::loopname("CDLP_Apply"));
 
@@ -120,7 +125,9 @@ struct CdlpSynchronousAlgo : CdlpAlgo {
   }
 };
 
-struct CdlpAsynchronousAlgo : CdlpAlgo {
+template <typename GraphViewTy>
+struct CdlpAsynchronousAlgo : CdlpAlgo<GraphViewTy> {
+  using Graph = typename CdlpAlgo<GraphViewTy>::Graph;
   void operator()(Graph*, size_t) {}
 };
 
@@ -164,11 +171,18 @@ CdlpWithWrap(
 katana::Result<void>
 katana::analytics::Cdlp(
     PropertyGraph* pg, const std::string& output_property_name,
-    size_t max_iterations, katana::TxnContext* txn_ctx, CdlpPlan plan) {
+    size_t max_iterations, katana::TxnContext* txn_ctx,
+    const bool& is_symmetric, CdlpPlan plan) {
   switch (plan.algorithm()) {
   case CdlpPlan::kSynchronous:
-    return CdlpWithWrap<CdlpSynchronousAlgo>(
-        pg, output_property_name, max_iterations, txn_ctx);
+    if (is_symmetric)
+      return CdlpWithWrap<
+          CdlpSynchronousAlgo<katana::PropertyGraphViews::Default>>(
+          pg, output_property_name, max_iterations, txn_ctx);
+    else
+      return CdlpWithWrap<
+          CdlpSynchronousAlgo<katana::PropertyGraphViews::Undirected>>(
+          pg, output_property_name, max_iterations, txn_ctx);
   /// TODO (Yasin): Asynchronous Algorithm will be implemented later after Synchronous
   /// is done for both shared and distributed versions.
   /*

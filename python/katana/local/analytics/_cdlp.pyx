@@ -23,6 +23,7 @@ Community Detection using Label Propagation (CDLP)
 """
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t
+from libcpp cimport bool
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -51,8 +52,10 @@ cdef extern from "katana/analytics/cdlp/cdlp.h" namespace "katana::analytics" no
         #@staticmethod
         #_CdlpPlan Asynchronous()
 
+    uint32_t kMaxIterations "katana::analytics::CdlpPlan::kMaxIterations"
+
     Result[void] Cdlp(_PropertyGraph*pg, string output_property_name, int max_iteration,
-                                     CTxnContext* txn_ctx, _CdlpPlan plan)
+                                     CTxnContext* txn_ctx, const bool& is_symmetric, _CdlpPlan plan)
 
     cppclass _CdlpStatistics "katana::analytics::CdlpStatistics":
         uint64_t total_communities
@@ -118,7 +121,7 @@ cdef class CdlpPlan(Plan):
         #return CdlpPlan.make(_CdlpPlan.Asynchronous())
 
 def cdlp(Graph pg, str output_property_name,
-                         int max_iteration = 10 ,CdlpPlan plan = CdlpPlan(),
+                         int max_iteration = kMaxIterations , bool is_symmetric = False, CdlpPlan plan = CdlpPlan(),
                          *, TxnContext txn_ctx = None) -> int:
     """
     Compute the CDLP for `pg`.
@@ -127,6 +130,7 @@ def cdlp(Graph pg, str output_property_name,
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
+    :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type plan: CdlpPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
     :param txn_ctx: The tranaction context for passing read write sets.
@@ -153,7 +157,7 @@ def cdlp(Graph pg, str output_property_name,
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(Cdlp(pg.underlying_property_graph(), output_property_name_str, max_iteration, &txn_ctx._txn_ctx, plan.underlying_))
+        v = handle_result_void(Cdlp(pg.underlying_property_graph(), output_property_name_str, max_iteration, &txn_ctx._txn_ctx, is_symmetric, plan.underlying_))
     return v
 
 cdef _CdlpStatistics handle_result_CdlpStatistics(

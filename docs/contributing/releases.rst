@@ -123,8 +123,17 @@ The state of master after branching for 0.1.11:
 Conda Packages
 ==============
 
-Conda packages are uploaded to ``katanagraph`` Conda channel by CI on each
-merge to master. You can install the latest development release with
+Conda packages are uploaded to the ``katanagraph`` Conda channel by CI on each
+merge to master.
+
+First, configure Conda to prefer higher priority channels even if a library
+with a newer version exists in a lower priority channel.
+
+.. code-block:: bash
+
+   conda config --set channel_priority strict
+
+Then, you can install the latest development release with
 
 .. code-block:: bash
 
@@ -162,7 +171,7 @@ You can install the Conda packages with
 .. code-block:: bash
 
    conda install <path/to/package>
-   conda install -c conda-forge -c katanagraph katana katana-python
+   conda install -c katanagraph -c conda-forge katana katana-python
 
 where the ``<path/to/package>`` is the path printed by ``conda build``.
 ``katana`` is the C++ library and applications, ``katana-python`` is the Python

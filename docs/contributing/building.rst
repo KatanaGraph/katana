@@ -57,6 +57,10 @@ configured. Then, create and activate the development environment:
 
    SRC_DIR=<repo/root>
    conda config --add channels conda-forge
+   # For library compatibility reasons, prefer taking dependencies from
+   # higher priority channels even if newer versions exist in lower priority
+   # channels.
+   conda config --set channel_priority strict
    # Create the environment
    conda create --name katana-dev
    # Install the dependencies

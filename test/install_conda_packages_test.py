@@ -29,7 +29,7 @@ def main():
 
     args = parser.parse_args()
 
-    channels = ["katanagraph"]
+    channels = ["katanagraph", "conda-forge", "defaults"]
 
     if args.override_channels:
         channels = []

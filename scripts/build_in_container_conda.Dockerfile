@@ -20,6 +20,7 @@ RUN set -eux; \
     rm /mambaforge.sh; \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh; \
     echo "conda activate base" >> /etc/profile.d/z-conda-activate.sh; \
+    /opt/conda/bin/conda config --set channel_priority strict; \
     /opt/conda/bin/mamba update --quiet --yes --name base --all; \
     /opt/conda/bin/conda clean --quiet --all --force-pkgs-dirs --yes
 

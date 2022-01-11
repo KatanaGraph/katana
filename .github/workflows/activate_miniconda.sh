@@ -2,6 +2,11 @@
 
 if [ '!' -d "$HOME/miniconda/bin" ]; then
   bash "$HOME/.cache/miniconda/mambaforge.sh" -f -b -p "$HOME/miniconda"
+
+  # For library compatibility reasons, prefer taking dependencies from
+  # higher priority channels even if newer versions exist in lower priority
+  # channels.
+  $HOME/miniconda/bin/conda config --set channel_priority strict
 fi
 export PATH="$HOME/miniconda/bin:$PATH"
 

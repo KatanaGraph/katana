@@ -17,7 +17,14 @@ from packaging.version import InvalidVersion
 from . import CONFIG_VERSION_PATH, SUBMODULE_PATH, Configuration, Repo, StateError, git
 from .commands import CommandError, capture_command
 from .github import GithubFacade
-from .version import add_dev_to_version, format_version_debian, format_version_pep440, get_explicit_version, get_version
+from .version import (
+    add_dev_to_version,
+    format_version_debian,
+    format_version_pep440,
+    format_version_semantic,
+    get_explicit_version,
+    get_version,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,16 +87,6 @@ def setup_show_subcommand(subparsers):
         action="store_const",
         const="local",
     )
-    # group_component.add_argument(
-    #     "--dev-tag",
-    #     help="Output the development tag (the commit counts and hashes)",
-    #     dest="component",
-    #     action="store_const",
-    #     const="dev_tag",
-    # )
-    # group_component.add_argument(
-    #     "--variant", help="Output the variant", dest="component", action="store_const", const="variant"
-    # )
     group_component.add_argument(
         "--full",
         help="Output the full version including all components [default]",
@@ -143,6 +140,87 @@ def setup_show_subcommand(subparsers):
     setup_global_repo_arguments(parser)
 
     parser.set_defaults(subcommand_impl=show_subcommand)
+
+
+def parse_subcommand(args):
+    if not args.version:
+        version_str = sys.stdin.read()
+    else:
+        version_str = args.version
+
+    # Coerce debian versions into pep440 versions
+    version_str = version_str.replace("~", ".")
+
+    v = version.Version(version_str)
+
+    if v.local:
+        local_components = v.local.split(".")
+    else:
+        local_components = []
+
+    if args.component == "semantic":
+        print(format_version_semantic(v))
+    elif args.component == "all":
+        print(format_version_pep440(v))
+    elif args.component == "open":
+        if len(local_components) >= 4:
+            print(local_components[3])
+    elif args.component == "enterprise":
+        if len(local_components) >= 3:
+            print(local_components[2])
+    else:
+        print(getattr(v, args.component))
+
+
+def setup_parse_subcommand(subparsers):
+    parser = subparsers.add_parser("parse", help="Parses a katana version and prints information about it.")
+
+    group_component = parser.add_mutually_exclusive_group()
+    group_component.add_argument(
+        "--semantic", help="Output the full semantic version", dest="component", action="store_const", const="semantic"
+    )
+    group_component.add_argument(
+        "--major", help="Output the major version", dest="component", action="store_const", const="major"
+    )
+    group_component.add_argument(
+        "--minor", help="Output the minor version", dest="component", action="store_const", const="minor"
+    )
+    group_component.add_argument(
+        "--patch",
+        "--micro",
+        help="Output the patch (a.k.a. micro) version",
+        dest="component",
+        action="store_const",
+        const="micro",
+    )
+    group_component.add_argument(
+        "--local",
+        help="Output the local version (variant and development tag)",
+        dest="component",
+        action="store_const",
+        const="local",
+    )
+    group_component.add_argument(
+        "--open", help="Output open repository commit hash", dest="component", action="store_const", const="open",
+    )
+    group_component.add_argument(
+        "--enterprise",
+        help="Output enterprise repository commit hash",
+        dest="component",
+        action="store_const",
+        const="enterprise",
+    )
+    parser.set_defaults(component="all")
+
+    parser.add_argument(
+        "version",
+        type=str,
+        nargs="?",
+        help="A version number to parse. If not provided, read a version from stdin.",
+        default=None,
+    )
+
+    parser.set_defaults(subcommand_impl=parse_subcommand)
 
 
 def provenance_subcommand(args):
@@ -638,19 +716,6 @@ def tag_subcommand(args):
             g.create_tag(repo.upstream_url, git.get_hash(commit, repo, pretend_clean=True), tag_name, message=title)
         else:
             raise NotImplementedError("To tag a release commit, the commit must already be in the upstream branch")
-            # TODO(amp): This is complex and requires additional support. It's not clear we need it, so just disable it
-            #  for now.
-            # message_suffix = f"\n\nTag: {tag_name}"
-            # git.amend_commit_message(
-            #     git.get_commit_message(commit, repo_path).rstrip() + message_suffix, repo_path, dry_run=config.dry_run
-            # )
-            # branch_name = git.get_branch_checked_out(repo_path)
-            # git.push(config.upstream_remote, branch_name, repo_path, dry_run=config.dry_run)
-            # pr = g.get_pr(upstream_url, branch_name)
-            # if pr:
-            #     print(f"Review and merge {pr.url} as soon as possible.")
-            # else:
-            #     print(f"Create a PR for {repo_path.name}:{branch_name} and merge it as soon as possible.")
 
     tag_repo(config.open)
     if config.has_enterprise:
@@ -923,6 +988,7 @@ This program assumes that your checkouts have the same name as the github reposi
     subparsers = parser.add_subparsers(title="subcommands")
 
     setup_show_subcommand(subparsers)
+    setup_parse_subcommand(subparsers)
     setup_provenance_subcommand(subparsers)
     setup_bump_subcommand(subparsers)
     setup_tag_subcommand(subparsers)

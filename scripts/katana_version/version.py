@@ -354,7 +354,7 @@ def katana_version(
     return v
 
 
-def format_version_pep440(ver: version.Version) -> str:
+def format_version_semantic(ver: version.Version, pre_separator: str = "", dev_separator: str = ".") -> str:
     parts = []
 
     # Epoch
@@ -366,7 +366,7 @@ def format_version_pep440(ver: version.Version) -> str:
 
     # Pre-release
     if ver.pre is not None:
-        parts.append("".join(str(x) for x in ver.pre))
+        parts.append(pre_separator + "".join(str(x) for x in ver.pre))
 
     # Post-release
     if ver.post is not None:
@@ -374,7 +374,13 @@ def format_version_pep440(ver: version.Version) -> str:
 
     # Development release
     if ver.dev is not None:
-        parts.append(".dev{0}".format(ver.dev or ""))
+        parts.append("{0}dev{1}".format(dev_separator, ver.dev or ""))
+
+    return "".join(parts)
+
+
+def format_version_pep440(ver: version.Version) -> str:
+    parts = [format_version_semantic(ver)]
 
     # Local version segment
     if ver.local is not None:
@@ -384,26 +390,7 @@ def format_version_pep440(ver: version.Version) -> str:
 
 
 def format_version_debian(ver: version.Version) -> str:
-    parts = []
-
-    # Epoch
-    if ver.epoch != 0:
-        parts.append("{0}:".format(ver.epoch))
-
-    # Release segment
-    parts.append(".".join(str(x) for x in ver.release))
-
-    # Pre-release
-    if ver.pre is not None:
-        parts.append("~" + "".join(str(x) for x in ver.pre))
-
-    # Post-release
-    if ver.post is not None:
-        parts.append(".post{0}".format(ver.post))
-
-    # Development release
-    if ver.dev is not None:
-        parts.append("~dev{0}".format(ver.dev or ""))
+    parts = [format_version_semantic(ver, "~", "~")]
 
     # Local version segment
     if ver.local is not None:

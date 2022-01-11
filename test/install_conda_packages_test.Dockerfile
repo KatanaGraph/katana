@@ -41,7 +41,13 @@ FROM pre_install AS test_python
 ARG CHANNELS
 
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"
-ARG MAMBA_INSTALL="mamba install --quiet --yes --channel /packages  ${CHANNELS}"
+# TODO(ddn): --no-channel-priority disables the the effect of "conda config
+# --set channel_priority strict" in activate_miniconda.sh. Strict priority (aka
+# --strict-channel-priority) will be the default in Conda 5.0 and avoids
+# dependency errors when pulling libraries from incompatible channels;
+# unfortunately, strict priority renders some package/channel sets
+# unsatisfiable.
+ARG MAMBA_INSTALL="mamba install --quiet --yes --override-channels --no-channel-priority --channel /packages ${CHANNELS}"
 ARG PYTHON_PACKAGE="katana-python"
 
 RUN set -eu ; . /activate_miniconda.sh; set -x ; \
@@ -55,7 +61,7 @@ FROM pre_install AS test_tools
 ARG CHANNELS
 
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"
-ARG MAMBA_INSTALL="mamba install --quiet --yes --channel /packages ${CHANNELS}"
+ARG MAMBA_INSTALL="mamba install --quiet --yes --override-channels --no-channel-priority --channel /packages ${CHANNELS}"
 ARG TOOLS_PACKAGE="katana-tools"
 ARG TOOLS_TEST_COMMAND="graph-convert --version"
 

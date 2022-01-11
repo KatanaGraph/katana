@@ -28,8 +28,8 @@ const int ConnectedComponentsPlan::kChunkSize = 1;
 
 namespace {
 
-// TODO(amber): Switch to Undirected View after comparing performance changes
-using PropGraphView = katana::PropertyGraphViews::Default;
+// // TODO(amber): Switch to Undirected View after comparing performance changes
+// using PropGraphView = katana::PropertyGraphViews::Default;
 
 const unsigned int kInfinity = std::numeric_limits<unsigned int>::max();
 struct ConnectedComponentsNode
@@ -51,14 +51,14 @@ struct ConnectedComponentsNode
   bool isRepComp(unsigned int) { return false; }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsSerialAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent : katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   const ConnectedComponentsPlan& plan_;
@@ -67,13 +67,14 @@ struct ConnectedComponentsSerialAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      graph->template GetData<NodeComponent>(node) =
+          new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
       sdata = component_ptr;
@@ -82,29 +83,29 @@ struct ConnectedComponentsSerialAlgo {
 
   void operator()(Graph* graph) {
     for (const GNode& src : *graph) {
-      auto& sdata = graph->GetData<NodeComponent>(src);
+      auto& sdata = graph->template GetData<NodeComponent>(src);
       for (const auto& ii : graph->edges(src)) {
         auto dest = graph->edge_dest(ii);
-        auto& ddata = graph->GetData<NodeComponent>(dest);
+        auto& ddata = graph->template GetData<NodeComponent>(dest);
         sdata->merge(ddata);
       }
     }
 
     for (const GNode& src : *graph) {
-      auto& sdata = graph->GetData<NodeComponent>(src);
+      auto& sdata = graph->template GetData<NodeComponent>(src);
       sdata->compress();
     }
   }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsLabelPropAlgo {
   using ComponentType = uint64_t;
   struct NodeComponent : public katana::AtomicPODProperty<ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   katana::NUMAArray<ComponentType> old_component_;
@@ -115,7 +116,7 @@ struct ConnectedComponentsLabelPropAlgo {
   void Initialize(Graph* graph) {
     old_component_.allocateBlocked(graph->size());
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node).store(node);
+      graph->template GetData<NodeComponent>(node).store(node);
       old_component_[node] = kInfinity;
     });
   }
@@ -129,7 +130,8 @@ struct ConnectedComponentsLabelPropAlgo {
       katana::do_all(
           katana::iterate(*graph),
           [&](const GNode& src) {
-            auto& sdata_current_comp = graph->GetData<NodeComponent>(src);
+            auto& sdata_current_comp =
+                graph->template GetData<NodeComponent>(src);
             auto& sdata_old_comp = old_component_[src];
             if (sdata_old_comp > sdata_current_comp) {
               sdata_old_comp = sdata_current_comp;
@@ -138,7 +140,8 @@ struct ConnectedComponentsLabelPropAlgo {
 
               for (auto e : graph->edges(src)) {
                 auto dest = graph->edge_dest(e);
-                auto& ddata_current_comp = graph->GetData<NodeComponent>(dest);
+                auto& ddata_current_comp =
+                    graph->template GetData<NodeComponent>(dest);
                 ComponentType label_new = sdata_current_comp;
                 katana::atomicMin(ddata_current_comp, label_new);
               }
@@ -150,14 +153,14 @@ struct ConnectedComponentsLabelPropAlgo {
   }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsSynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   struct Edge {
@@ -174,13 +177,14 @@ struct ConnectedComponentsSynchronousAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      graph->template GetData<NodeComponent>(node) =
+          new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
       sdata = component_ptr;
@@ -203,7 +207,7 @@ struct ConnectedComponentsSynchronousAlgo {
         auto dest = graph->edge_dest(e);
         if (src >= dest)
           continue;
-        auto& ddata = graph->GetData<NodeComponent>(dest);
+        auto& ddata = graph->template GetData<NodeComponent>(dest);
         current_bag->push(Edge(src, ddata, 0));
         break;
       }
@@ -213,7 +217,7 @@ struct ConnectedComponentsSynchronousAlgo {
       katana::do_all(
           katana::iterate(*current_bag),
           [&](const Edge& edge) {
-            auto& sdata = graph->GetData<NodeComponent>(edge.src);
+            auto& sdata = graph->template GetData<NodeComponent>(edge.src);
             if (!sdata->merge(edge.ddata))
               empty_merges += 1;
           },
@@ -223,17 +227,17 @@ struct ConnectedComponentsSynchronousAlgo {
           katana::iterate(*current_bag),
           [&](const Edge& edge) {
             GNode src = edge.src;
-            auto& sdata = graph->GetData<NodeComponent>(src);
+            auto& sdata = graph->template GetData<NodeComponent>(src);
             ConnectedComponentsNode* src_component = sdata->findAndCompress();
-            Graph::edge_iterator ii = graph->edges(src).begin();
-            Graph::edge_iterator ei = graph->edges(src).end();
+            typename Graph::edge_iterator ii = graph->edges(src).begin();
+            typename Graph::edge_iterator ei = graph->edges(src).end();
             int count = edge.count + 1;
             std::advance(ii, count);
             for (; ii != ei; ++ii, ++count) {
               auto dest = graph->edge_dest(*ii);
               if (src >= dest)
                 continue;
-              auto& ddata = graph->GetData<NodeComponent>(dest);
+              auto& ddata = graph->template GetData<NodeComponent>(dest);
               ConnectedComponentsNode* dest_component =
                   ddata->findAndCompress();
               if (src_component != dest_component) {
@@ -252,7 +256,7 @@ struct ConnectedComponentsSynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("Compress"));
@@ -263,14 +267,14 @@ struct ConnectedComponentsSynchronousAlgo {
   }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
@@ -279,13 +283,14 @@ struct ConnectedComponentsAsynchronousAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      graph->template GetData<NodeComponent>(node) =
+          new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
       sdata = component_ptr;
@@ -298,11 +303,11 @@ struct ConnectedComponentsAsynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
 
           for (const auto& ii : graph->edges(src)) {
             auto dest = graph->edge_dest(ii);
-            auto& ddata = graph->GetData<NodeComponent>(dest);
+            auto& ddata = graph->template GetData<NodeComponent>(dest);
 
             if (src >= dest)
               continue;
@@ -316,7 +321,7 @@ struct ConnectedComponentsAsynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("CC-Asynchronous-Compress"));
@@ -326,14 +331,14 @@ struct ConnectedComponentsAsynchronousAlgo {
   }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsEdgeAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   // TODO(amber): 2nd element was Graph::edge_iterator
   using Edge = std::pair<GNode, typename Graph::Edge>;
@@ -344,13 +349,14 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      graph->template GetData<NodeComponent>(node) =
+          new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
       sdata = component_ptr;
@@ -376,9 +382,9 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
     katana::do_all(
         katana::iterate(works),
         [&](Edge& e) {
-          auto& sdata = graph->GetData<NodeComponent>(e.first);
+          auto& sdata = graph->template GetData<NodeComponent>(e.first);
           auto dest = graph->edge_dest(e.second);
-          auto& ddata = graph->GetData<NodeComponent>(dest);
+          auto& ddata = graph->template GetData<NodeComponent>(dest);
 
           if (e.first > dest)
             // continue;
@@ -392,7 +398,7 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("CC-Asynchronous-Compress"));
@@ -402,14 +408,14 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
   }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsBlockedAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
@@ -419,13 +425,14 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      graph->template GetData<NodeComponent>(node) =
+          new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
       sdata = component_ptr;
@@ -434,21 +441,21 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
 
   struct WorkItem {
     GNode src;
-    Graph::edge_iterator start;
+    typename Graph::edge_iterator start;
   };
 
   //! Add the next edge between components to the worklist
   template <bool MakeContinuation, int Limit, typename Pusher>
   static void process(
-      Graph* graph, const GNode& src, const Graph::edge_iterator& start,
-      Pusher& pusher) {
-    auto& sdata = graph->GetData<NodeComponent>(src);
+      Graph* graph, const GNode& src,
+      const typename Graph::edge_iterator& start, Pusher& pusher) {
+    auto& sdata = graph->template GetData<NodeComponent>(src);
     int count = 1;
 
-    for (Graph::edge_iterator ii = start, ei = graph->edges(src).end();
+    for (typename Graph::edge_iterator ii = start, ei = graph->edges(src).end();
          ii != ei; ++ii, ++count) {
       auto dest = graph->edge_dest(*ii);
-      auto& ddata = graph->GetData<NodeComponent>(dest);
+      auto& ddata = graph->template GetData<NodeComponent>(dest);
 
       if (src >= dest)
         continue;
@@ -492,21 +499,21 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("CC-Asynchronous-Compress"));
   }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
 
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
@@ -517,13 +524,14 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      graph->template GetData<NodeComponent>(node) =
+          new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
       sdata = component_ptr;
@@ -533,13 +541,13 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
   struct EdgeTile {
     // ConnectedComponentsNode* sData;
     GNode src;
-    Graph::edge_iterator beg;
-    Graph::edge_iterator end;
+    typename Graph::edge_iterator beg;
+    typename Graph::edge_iterator end;
   };
 
   /*struct EdgeTileMaker {
-      EdgeTile operator() (ConnectedComponentsNode* sdata, Graph::edge_iterator beg,
-  Graph::edge_iterator end) const{ return EdgeTile{sdata, beg, end};
+      EdgeTile operator() (ConnectedComponentsNode* sdata, typename Graph::edge_iterator beg,
+  typename Graph::edge_iterator end) const{ return EdgeTile{sdata, beg, end};
       }
   };*/
 
@@ -573,14 +581,14 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
         katana::iterate(works),
         [&](const EdgeTile& tile) {
           const auto& src = tile.src;
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
 
           for (auto ii = tile.beg; ii != tile.end; ++ii) {
             auto dest = graph->edge_dest(*ii);
             if (src >= dest)
               continue;
 
-            auto& ddata = graph->GetData<NodeComponent>(dest);
+            auto& ddata = graph->template GetData<NodeComponent>(dest);
             if (!sdata->merge(ddata))
               empty_merges += 1;
           }
@@ -592,7 +600,7 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("CC-Asynchronous-Compress"));
@@ -666,6 +674,7 @@ approxLargestComponent(
   return most_frequent->first;
 }
 
+template <typename GraphViewTy>
 struct ConnectedComponentsAfforestAlgo {
   struct NodeAfforest : public katana::UnionFindNode<NodeAfforest> {
     using ComponentType = NodeAfforest*;
@@ -680,7 +689,7 @@ struct ConnectedComponentsAfforestAlgo {
 
   public:
     void link(NodeAfforest* b) {
-      NodeAfforest* a = m_component.load(std::memory_order_relaxed);
+      NodeAfforest* a = this->m_component.load(std::memory_order_relaxed);
       b = b->m_component.load(std::memory_order_relaxed);
       while (a != b) {
         if (a < b)
@@ -697,13 +706,12 @@ struct ConnectedComponentsAfforestAlgo {
     }
   };
 
-  struct NodeComponent
-      : public katana::PODProperty<uint64_t, NodeAfforest::ComponentType> {};
+  struct NodeComponent : public katana::PODProperty<
+                             uint64_t, typename NodeAfforest::ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
@@ -717,7 +725,7 @@ struct ConnectedComponentsAfforestAlgo {
     // parent_array_.allocateInterleaved(graph->size());
 
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& snode = graph->GetData<NodeComponent>(node);
+      auto& snode = graph->template GetData<NodeComponent>(node);
       new (&snode) NodeAfforest();
       new (&parent_array_[node]) NodeAfforest();
       //snode = reinterpret_cast<ComponentType>(&snode);
@@ -726,14 +734,14 @@ struct ConnectedComponentsAfforestAlgo {
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto& dataFromArr = parent_array_[node];
       // auto component_ptr = sdata->component();
       auto component_ptr = dataFromArr.component();
       sdata = component_ptr;
     });
   }
-  using ComponentType = NodeAfforest::ComponentType;
+  using ComponentType = typename NodeAfforest::ComponentType;
 
   void operator()(Graph* graph) {
     // (bozhi) should NOT go through single direction in sampling step: nodes
@@ -742,8 +750,8 @@ struct ConnectedComponentsAfforestAlgo {
       katana::do_all(
           katana::iterate(*graph),
           [&](const GNode& src) {
-            Graph::edge_iterator ii = graph->edges(src).begin();
-            Graph::edge_iterator ei = graph->edges(src).end();
+            typename Graph::edge_iterator ii = graph->edges(src).begin();
+            typename Graph::edge_iterator ei = graph->edges(src).end();
 
             for (std::advance(ii, r); ii < ei; ii++) {
               auto dest = graph->edge_dest(*ii);
@@ -782,8 +790,8 @@ struct ConnectedComponentsAfforestAlgo {
           auto& sdata = parent_array_[src];
           if (sdata.component() == c)
             return;
-          Graph::edge_iterator ii = graph->edges(src).begin();
-          Graph::edge_iterator ei = graph->edges(src).end();
+          typename Graph::edge_iterator ii = graph->edges(src).begin();
+          typename Graph::edge_iterator ei = graph->edges(src).end();
           for (std::advance(ii, plan_.neighbor_sample_size()); ii < ei; ++ii) {
             auto dest = graph->edge_dest(*ii);
             // auto& ddata = graph->GetData<NodeComponent>(dest);
@@ -806,6 +814,7 @@ struct ConnectedComponentsAfforestAlgo {
   }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsEdgeAfforestAlgo {
   struct NodeAfforestEdge : public katana::UnionFindNode<NodeAfforestEdge> {
     using ComponentType = NodeAfforestEdge*;
@@ -821,7 +830,7 @@ struct ConnectedComponentsEdgeAfforestAlgo {
 
   public:
     NodeAfforestEdge* hook_min(NodeAfforestEdge* b, NodeAfforestEdge* c = 0) {
-      NodeAfforestEdge* a = m_component.load(std::memory_order_relaxed);
+      NodeAfforestEdge* a = this->m_component.load(std::memory_order_relaxed);
       b = b->m_component.load(std::memory_order_relaxed);
       while (a != b) {
         if (a < b)
@@ -844,15 +853,14 @@ struct ConnectedComponentsEdgeAfforestAlgo {
     }
   };
 
-  using ComponentType = NodeAfforestEdge::ComponentType;
+  using ComponentType = typename NodeAfforestEdge::ComponentType;
   struct NodeComponent
-      : public katana::PODProperty<uint64_t, NodeAfforestEdge::ComponentType> {
-  };
+      : public katana::PODProperty<
+            uint64_t, typename NodeAfforestEdge::ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   using Edge = std::pair<GNode, GNode>;
@@ -863,13 +871,13 @@ struct ConnectedComponentsEdgeAfforestAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new NodeAfforestEdge();
+      graph->template GetData<NodeComponent>(node) = new NodeAfforestEdge();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
       sdata = component_ptr;
@@ -882,13 +890,13 @@ struct ConnectedComponentsEdgeAfforestAlgo {
       katana::do_all(
           katana::iterate(*graph),
           [&](const GNode& src) {
-            Graph::edge_iterator ii = graph->edges(src).begin();
-            Graph::edge_iterator ei = graph->edges(src).end();
+            typename Graph::edge_iterator ii = graph->edges(src).begin();
+            typename Graph::edge_iterator ei = graph->edges(src).end();
             std::advance(ii, r);
             if (ii < ei) {
               auto dest = graph->edge_dest(*ii);
-              auto& sdata = graph->GetData<NodeComponent>(src);
-              auto& ddata = graph->GetData<NodeComponent>(dest);
+              auto& sdata = graph->template GetData<NodeComponent>(src);
+              auto& ddata = graph->template GetData<NodeComponent>(dest);
               sdata->hook_min(ddata);
             }
           },
@@ -897,7 +905,7 @@ struct ConnectedComponentsEdgeAfforestAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("EdgeAfforest-VNS-Compress"));
@@ -908,14 +916,14 @@ struct ConnectedComponentsEdgeAfforestAlgo {
         approxLargestComponent<ComponentType, Graph, NodeComponent>(
             graph, plan_.component_sample_frequency());
     StatTimer_Sampling.stop();
-    const ComponentType c0 = (graph->GetData<NodeComponent>(0));
+    const ComponentType c0 = (graph->template GetData<NodeComponent>(0));
 
     katana::InsertBag<Edge> works;
 
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           if (sdata->component() == c)
             return;
           auto beg = graph->edges(src).begin();
@@ -924,7 +932,7 @@ struct ConnectedComponentsEdgeAfforestAlgo {
           for (std::advance(beg, plan_.neighbor_sample_size()); beg < end;
                beg++) {
             auto dest = graph->edge_dest(*beg);
-            auto& ddata = graph->GetData<NodeComponent>(dest);
+            auto& ddata = graph->template GetData<NodeComponent>(dest);
             if (src < dest || c == ddata->component()) {
               works.push_back(std::make_pair(src, dest));
             }
@@ -935,10 +943,10 @@ struct ConnectedComponentsEdgeAfforestAlgo {
     katana::for_each(
         katana::iterate(works),
         [&](const Edge& e, auto& ctx) {
-          auto& sdata = graph->GetData<NodeComponent>(e.first);
+          auto& sdata = graph->template GetData<NodeComponent>(e.first);
           if (sdata->component() == c)
             return;
-          auto& ddata = graph->GetData<NodeComponent>(e.second);
+          auto& ddata = graph->template GetData<NodeComponent>(e.second);
           ComponentType victim = sdata->hook_min(ddata, c);
           if (victim) {
             auto src = victim - c0;  // TODO (bozhi) tricky!
@@ -954,13 +962,14 @@ struct ConnectedComponentsEdgeAfforestAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("EdgeAfforest-LCS-Compress"));
   }
 };
 
+template <typename GraphViewTy>
 struct ConnectedComponentsEdgeTiledAfforestAlgo {
   struct NodeAfforest : public katana::UnionFindNode<NodeAfforest> {
     using ComponentType = NodeAfforest*;
@@ -976,7 +985,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 
   public:
     void link(NodeAfforest* b) {
-      NodeAfforest* a = m_component.load(std::memory_order_relaxed);
+      NodeAfforest* a = this->m_component.load(std::memory_order_relaxed);
       b = b->m_component.load(std::memory_order_relaxed);
       while (a != b) {
         if (a < b)
@@ -993,13 +1002,12 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
     }
   };
 
-  struct NodeComponent
-      : public katana::PODProperty<uint64_t, NodeAfforest::ComponentType> {};
+  struct NodeComponent : public katana::PODProperty<
+                             uint64_t, typename NodeAfforest::ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
@@ -1008,25 +1016,25 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new NodeAfforest();
+      graph->template GetData<NodeComponent>(node) = new NodeAfforest();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      auto& sdata = graph->GetData<NodeComponent>(node);
+      auto& sdata = graph->template GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
       sdata = component_ptr;
     });
   }
 
-  using ComponentType = NodeAfforest::ComponentType;
+  using ComponentType = typename NodeAfforest::ComponentType;
 
   struct EdgeTile {
     GNode src;
-    Graph::edge_iterator beg;
-    Graph::edge_iterator end;
+    typename Graph::edge_iterator beg;
+    typename Graph::edge_iterator end;
   };
 
   void operator()(Graph* graph) {
@@ -1040,8 +1048,8 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
           for (uint32_t r = 0; r < plan_.neighbor_sample_size() && ii < end;
                ++r, ++ii) {
             auto dest = graph->edge_dest(*ii);
-            auto& sdata = graph->GetData<NodeComponent>(src);
-            auto& ddata = graph->GetData<NodeComponent>(dest);
+            auto& sdata = graph->template GetData<NodeComponent>(src);
+            auto& ddata = graph->template GetData<NodeComponent>(dest);
             sdata->link(ddata);
           }
         },
@@ -1050,7 +1058,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("EdgetiledAfforest-VNS-Compress"));
@@ -1066,7 +1074,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           if (sdata->component() == c)
             return;
           auto beg = graph->edges(src).begin();
@@ -1089,12 +1097,12 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
     katana::do_all(
         katana::iterate(works),
         [&](const EdgeTile& tile) {
-          auto& sdata = graph->GetData<NodeComponent>(tile.src);
+          auto& sdata = graph->template GetData<NodeComponent>(tile.src);
           if (sdata->component() == c)
             return;
           for (auto ii = tile.beg; ii < tile.end; ++ii) {
             auto dest = graph->edge_dest(*ii);
-            auto& ddata = graph->GetData<NodeComponent>(dest);
+            auto& ddata = graph->template GetData<NodeComponent>(dest);
             sdata->link(ddata);
           }
         },
@@ -1105,7 +1113,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = graph->template GetData<NodeComponent>(src);
           sdata->compress();
         },
         katana::steal(), katana::loopname("EdgetiledAfforest-LCS-Compress"));
@@ -1118,7 +1126,7 @@ template <typename Algorithm>
 static katana::Result<void>
 ConnectedComponentsWithWrap(
     katana::PropertyGraph* pg, std::string output_property_name,
-    ConnectedComponentsPlan plan, katana::TxnContext* txn_ctx) {
+    katana::TxnContext* txn_ctx, ConnectedComponentsPlan plan) {
   katana::EnsurePreallocated(
       2,
       pg->topology().num_nodes() * sizeof(typename Algorithm::NodeComponent));
@@ -1151,46 +1159,71 @@ ConnectedComponentsWithWrap(
   return katana::ResultSuccess();
 }
 
+template <typename GraphViewTy>
 katana::Result<void>
-katana::analytics::ConnectedComponents(
-    PropertyGraph* pg, const std::string& output_property_name,
+ConnectedComponentsSelectAlgorithm(
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::TxnContext* txn_ctx, ConnectedComponentsPlan plan) {
   switch (plan.algorithm()) {
   case ConnectedComponentsPlan::kSerial:
-    return ConnectedComponentsWithWrap<ConnectedComponentsSerialAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsSerialAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kLabelProp:
-    return ConnectedComponentsWithWrap<ConnectedComponentsLabelPropAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsLabelPropAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kSynchronous:
-    return ConnectedComponentsWithWrap<ConnectedComponentsSynchronousAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsSynchronousAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kAsynchronous:
-    return ConnectedComponentsWithWrap<ConnectedComponentsAsynchronousAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsAsynchronousAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kEdgeAsynchronous:
-    return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAsynchronousAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsEdgeAsynchronousAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kEdgeTiledAsynchronous:
     return ConnectedComponentsWithWrap<
-        ConnectedComponentsEdgeTiledAsynchronousAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+        ConnectedComponentsEdgeTiledAsynchronousAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kBlockedAsynchronous:
     return ConnectedComponentsWithWrap<
-        ConnectedComponentsBlockedAsynchronousAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+        ConnectedComponentsBlockedAsynchronousAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kAfforest:
-    return ConnectedComponentsWithWrap<ConnectedComponentsAfforestAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsAfforestAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kEdgeAfforest:
-    return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAfforestAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsEdgeAfforestAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   case ConnectedComponentsPlan::kEdgeTiledAfforest:
     return ConnectedComponentsWithWrap<
-        ConnectedComponentsEdgeTiledAfforestAlgo>(
-        pg, output_property_name, plan, txn_ctx);
+        ConnectedComponentsEdgeTiledAfforestAlgo<GraphViewTy>>(
+        pg, output_property_name, txn_ctx, plan);
   default:
-    return ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
+  }
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+katana::analytics::ConnectedComponents(
+    PropertyGraph* pg, const std::string& output_property_name,
+    katana::TxnContext* txn_ctx, const bool& is_symmetric,
+    ConnectedComponentsPlan plan) {
+  if (is_symmetric) {
+    using GraphView = katana::PropertyGraphViews::Default;
+    return ConnectedComponentsSelectAlgorithm<GraphView>(
+        pg, output_property_name, txn_ctx, plan);
+  } else {
+    using GraphView = katana::PropertyGraphViews::Undirected;
+    return ConnectedComponentsSelectAlgorithm<GraphView>(
+        pg, output_property_name, txn_ctx, plan);
   }
 }
 
@@ -1200,10 +1233,11 @@ katana::analytics::ConnectedComponentsAssertValid(
   using ComponentType = uint64_t;
   struct NodeComponent : public katana::PODProperty<ComponentType> {};
 
+  using GraphView = katana::PropertyGraphViews::Default;
+
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::TypedPropertyGraphView<PropGraphView, NodeData, EdgeData>
-      Graph;
+  typedef katana::TypedPropertyGraphView<GraphView, NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   auto pg_result = Graph::Make(pg, {property_name}, {});

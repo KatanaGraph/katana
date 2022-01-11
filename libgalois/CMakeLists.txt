@@ -56,7 +56,7 @@ target_include_directories(katana_galois PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(katana_galois PRIVATE Threads::Threads)
+target_link_libraries(katana_galois PUBLIC Threads::Threads)
 target_link_libraries(katana_galois PUBLIC katana_support)
 
 set_common_katana_library_options(katana_galois)

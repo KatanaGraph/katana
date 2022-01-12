@@ -27,11 +27,7 @@ using namespace katana::analytics;
 
 namespace cll = llvm::cl;
 
-/// Limited number of iterations to limit the oscillation of the label
-/// in Synchronous algorithm. We dont need to limit it in Asynchronous algorithm.
-/// Set to 10 same as Graphalytics benchmark.
-/// TODO (Yasin): duplicated from cdlp.cpp; needs to defnied in one place. maybe in cdlp.hpp.
-const unsigned int kMaxIterations = 10;
+const unsigned int kMaxIterations = CdlpPlan::kMaxIterations;
 
 const std::string property_name = "community";
 const char* name = "CDLP";
@@ -84,6 +80,14 @@ main(int argc, char** argv) {
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
+  if (symmetricGraph) {
+    KATANA_LOG_WARN(
+        "This application requires a symmetric graph input;"
+        " Using the -symmetricGraph flag "
+        " indicates that the input is a symmetric graph and can be used as it "
+        "is.");
+  }
+
   std::cout << "Reading from file: " << inputFile << "\n";
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
@@ -111,7 +115,8 @@ main(int argc, char** argv) {
   }
 
   katana::TxnContext txn_ctx;
-  auto pg_result = Cdlp(pg.get(), property_name, maxIterations, &txn_ctx, plan);
+  auto pg_result = Cdlp(
+      pg.get(), property_name, maxIterations, &txn_ctx, symmetricGraph, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run Cdlp: {}", pg_result.error());
   }

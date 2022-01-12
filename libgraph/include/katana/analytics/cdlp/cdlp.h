@@ -20,6 +20,11 @@ public:
     kAsynchronous,
   };
 
+  /// Limited number of iterations to limit the oscillation of the label
+  /// in Synchronous algorithm. We dont need to limit it in Asynchronous algorithm.
+  /// Set to 10 same as Graphalytics benchmark.
+  static const unsigned int kMaxIterations = 10;
+
   // Don't allow people to directly construct these, so as to have only one
   // consistent way to configure.
 private:
@@ -95,7 +100,7 @@ public:
 KATANA_EXPORT Result<void> Cdlp(
     PropertyGraph* pg, const std::string& output_property_name,
     size_t max_iterations, katana::TxnContext* txn_ctx,
-    CdlpPlan plan = CdlpPlan());
+    const bool& is_symmetric = false, CdlpPlan plan = CdlpPlan());
 
 /// TODO (Yasin): This Struct (Compute function) is now being used by louvain,
 /// cc, and cdlp, basically everything which is calculating communities. Explore

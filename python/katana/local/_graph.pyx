@@ -7,7 +7,6 @@ import pyarrow
 from pyarrow.lib cimport pyarrow_unwrap_table, pyarrow_wrap_chunked_array, pyarrow_wrap_schema, to_shared
 
 from katana.cpp.libgalois.graphs cimport Graph as CGraph
-from katana.cpp.libsupport.EntityTypeManager cimport EntityTypeManager as CEntityTypeManager
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
 
 from katana.native_interfacing._pyarrow_wrappers import unchunked
@@ -24,9 +23,9 @@ from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from katana.dataframe import DataFrame, LazyDataAccessor, LazyDataFrame
+from katana.local_native import EntityTypeManager
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
-from .entity_type_manager cimport EntityType, EntityTypeManager
 
 from abc import abstractmethod
 
@@ -463,7 +462,7 @@ cdef class GraphBase:
         """
         :return: the node type manager
         """
-        return EntityTypeManager.make(&self.underlying_property_graph().GetNodeTypeManager())
+        return EntityTypeManager._make_from_address(<uint64_t>&self.underlying_property_graph().GetNodeTypeManager(), self)
 
     def get_type_of_node(self, uint64_t n):
         """
@@ -472,7 +471,7 @@ cdef class GraphBase:
         :param n: node id
         :return: the type id of the node
         """
-        return self.underlying_property_graph().GetTypeOfNode(n)
+        return self.node_types.type_from_id(self.underlying_property_graph().GetTypeOfNode(n))
 
     def does_node_have_type(self, uint64_t n, entity_type):
         """
@@ -484,8 +483,8 @@ cdef class GraphBase:
         """
         if isinstance(entity_type, int):
             type_id = entity_type
-        elif isinstance(entity_type, EntityType):
-            type_id = entity_type.type_id
+        elif hasattr(entity_type, "id"):
+            type_id = entity_type.id
         else:
             raise ValueError(f"{entity_type}'s type is not supported")
         return self.underlying_property_graph().DoesNodeHaveType(n, type_id)
@@ -495,7 +494,7 @@ cdef class GraphBase:
         """
         :return: the edge type manager
         """
-        return EntityTypeManager.make(&self.underlying_property_graph().GetEdgeTypeManager())
+        return EntityTypeManager._make_from_address(<uint64_t>&self.underlying_property_graph().GetEdgeTypeManager(), self)
 
     def get_type_of_edge(self, uint64_t e):
         """
@@ -504,7 +503,7 @@ cdef class GraphBase:
         :param e: edge id
         :return: the type id of the edge
         """
-        return self.underlying_property_graph().GetTypeOfEdgeFromPropertyIndex(e)
+        return self.edge_types.type_from_id(self.underlying_property_graph().GetTypeOfEdgeFromPropertyIndex(e))
 
     def does_edge_have_type(self, uint64_t e, entity_type):
         """
@@ -516,8 +515,8 @@ cdef class GraphBase:
         """
         if isinstance(entity_type, int):
             type_id = entity_type
-        elif isinstance(entity_type, EntityType):
-            type_id = entity_type.type_id
+        elif hasattr(entity_type, "id"):
+            type_id = entity_type.id
         else:
             raise ValueError(f"{entity_type}'s type is not supported")
         return self.underlying_property_graph().DoesEdgeHaveTypeFromPropertyIndex(e, type_id)

@@ -6,6 +6,7 @@ add_dependencies(lib katana_python_native)
 
 set(sources
     src/Reductions.cpp
+    src/EntityTypeManager.cpp
     )
 
 target_sources(katana_python_native PRIVATE ${sources})

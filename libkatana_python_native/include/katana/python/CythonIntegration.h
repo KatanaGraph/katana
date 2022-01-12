@@ -92,6 +92,22 @@ CYTHON_REFERENCE_SUPPORT(katana::PropertyGraph, "katana.local", "Graph");
 
 #undef CYTHON_REFERENCE_SUPPORT
 
+template <typename T>
+pybind11::class_<T>
+CythonConstructor(pybind11::class_<T> cls) {
+  cls.template def_static(
+      "_make_from_address",
+      [](uintptr_t addr, pybind11::handle owner [[maybe_unused]]) {
+        T* ptr = reinterpret_cast<T*>(addr);
+        return ptr;
+      },
+      pybind11::keep_alive<0, 2>(), pybind11::return_value_policy::reference);
+  // keep_alive<0, 2> causes the owner argument to be kept alive as long as the
+  // returned object exists. See
+  // https://pybind11.readthedocs.io/en/stable/advanced/functions.html#keep-alive
+  return cls;
+}
+
 }  // namespace katana
 
 #endif

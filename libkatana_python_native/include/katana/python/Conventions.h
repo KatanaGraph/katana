@@ -122,7 +122,7 @@ struct DefCopy<T, std::void_t<decltype(T((const T&)std::declval<T>()))>> {
 /// \return @p cls to allow chaining.
 template <typename T>
 pybind11::class_<T>
-DefConventions(pybind11::class_<T>& cls) {
+DefConventions(pybind11::class_<T> cls) {
   detail::DefRepr<T>{}(cls);
   detail::DefEquals<T>{}(cls);
   detail::DefComparison<T>{}(cls);

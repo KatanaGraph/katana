@@ -7,13 +7,13 @@ using namespace katana::analytics;
 void
 RunCdlp(
     std::unique_ptr<katana::PropertyGraph>&& pg,
-    const CdlpStatistics cdlp_expected_statistics) noexcept {
+    const bool& is_symmetric, const CdlpStatistics cdlp_expected_statistics) noexcept {
   using Plan = CdlpPlan;
   Plan plan = Plan::Synchronous();
   const std::string property_name = "community";
 
   katana::TxnContext txn_ctx;
-  auto cdlp = Cdlp(pg.get(), property_name, 10, &txn_ctx, plan);
+  auto cdlp = Cdlp(pg.get(), property_name, 10, &txn_ctx, is_symmetric, plan);
   KATANA_LOG_VASSERT(cdlp, " CDLP failed and returned error {}", cdlp.error());
 
   auto stats_result = CdlpStatistics::Compute(pg.get(), property_name);
@@ -54,12 +54,15 @@ int
 main() {
   katana::SharedMemSys S;
 
+  // Pass true as the third argument to RunCdlp if the generated
+  // graph is already symmetric
+
   // Grid tests
-  RunCdlp(katana::MakeGrid(2, 2, true), CdlpStatistics{1, 1, 4, 1});
-  RunCdlp(katana::MakeGrid(2, 2, false), CdlpStatistics{2, 2, 2, 0.5});
+  RunCdlp(katana::MakeGrid(2, 2, true), true, CdlpStatistics{1, 1, 4, 1});
+  RunCdlp(katana::MakeGrid(2, 2, false), true, CdlpStatistics{2, 2, 2, 0.5});
 
   // Triangular array tests
-  RunCdlp(katana::MakeTriangle(1), CdlpStatistics{1, 1, 3, 1});
+  RunCdlp(katana::MakeTriangle(1), true, CdlpStatistics{1, 1, 3, 1});
 
   return 0;
 }

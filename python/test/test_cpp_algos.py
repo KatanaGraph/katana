@@ -291,17 +291,21 @@ def test_independent_set():
 
 
 def test_cdlp():
-    graph = Graph(get_rdg_dataset("propertygraphs/rmat10"))
-
-    cdlp(graph, "output")
-
+    graph = Graph(get_rdg_dataset("rmat10"))
+    cdlp(graph, "output", False)
     stats = CdlpStatistics(graph, "output")
-
     assert stats.total_communities == 69
     assert stats.total_non_trivial_communities == 1
     assert stats.largest_community_size == 956
     assert stats.largest_community_ratio == approx(0.933594)
 
+    graph = Graph(get_rdg_dataset("rmat10_symmetric"))
+    cdlp(graph, "output", True)
+    stats = CdlpStatistics(graph, "output")
+    assert stats.total_communities == 69
+    assert stats.total_non_trivial_communities == 1
+    assert stats.largest_community_size == 956
+    assert stats.largest_community_ratio == approx(0.933594)
 
 def test_connected_components():
     graph = Graph(get_rdg_dataset("rmat10_symmetric"))

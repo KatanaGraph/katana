@@ -46,7 +46,7 @@ target_include_directories(katana_support PUBLIC
 
 set_common_katana_library_options(katana_support ALWAYS_SHARED)
 
-target_link_libraries(katana_support PUBLIC arrow::arrow arrow::parquet)
+target_link_libraries(katana_support PUBLIC arrow::arrow arrow::parquet pthread)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   MESSAGE("CMAKE_CXX_COMPILER_ID: GNU")

@@ -77,7 +77,7 @@ public:
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_col_index>(node_view_)
-        .GetValue(pg_->node_property_index(node));
+        .GetValue(pg_->GetNodePropertyIndex(node));
   }
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
@@ -94,7 +94,7 @@ public:
   PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_col_index>(node_view_)
-        .GetValue(pg_->node_property_index(node));
+        .GetValue(pg_->GetNodePropertyIndex(node));
   }
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(
@@ -112,7 +112,7 @@ public:
   PropertyReferenceType<EdgeIndex> GetEdgeData(const edge_iterator& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     return std::get<prop_col_index>(edge_view_)
-        .GetValue(pg_->edge_property_index(*edge));
+        .GetValue(pg_->GetOutEdgePropertyIndex(*edge));
   }
 
   /**
@@ -126,7 +126,7 @@ public:
       const edge_iterator& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     return std::get<prop_col_index>(edge_view_)
-        .GetValue(pg_->edge_property_index(*edge));
+        .GetValue(pg_->GetOutEdgePropertyIndex(*edge));
   }
 
   /**
@@ -139,7 +139,9 @@ public:
     return pg_->topology().OutEdgeDst(e);
   }
 
-  size_t degree(Node n) const noexcept { return pg_->topology().degree(n); }
+  size_t OutDegree(Node n) const noexcept {
+    return pg_->topology().OutDegree(n);
+  }
 
   uint64_t NumNodes() const { return pg_->NumNodes(); }
   uint64_t NumEdges() const { return pg_->NumEdges(); }
@@ -159,7 +161,7 @@ public:
    */
   edges_range OutEdges(Node node) const { return pg_->OutEdges(node); }
 
-  nodes_range all_nodes() const noexcept { return pg_->topology().all_nodes(); }
+  nodes_range Nodes() const noexcept { return pg_->topology().Nodes(); }
   /**
    * Accessor for the underlying PropertyGraph.
    *
@@ -209,7 +211,7 @@ public:
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_col_index>(node_view_)
-        .GetValue(PGView::node_property_index(node));
+        .GetValue(PGView::GetNodePropertyIndex(node));
   }
 
   /**
@@ -222,7 +224,7 @@ public:
   PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_col_index>(node_view_)
-        .GetValue(PGView::node_property_index(node));
+        .GetValue(PGView::GetNodePropertyIndex(node));
   }
 
   /**
@@ -234,8 +236,14 @@ public:
   template <typename EdgeIndex>
   PropertyReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_)
-        .GetValue(PGView::edge_property_index(edge));
+
+    if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
+      return std::get<prop_col_index>(edge_view_)
+          .GetValue(PGView::GetUndirectedEdgePropertyIndex(edge));
+    } else {
+      return std::get<prop_col_index>(edge_view_)
+          .GetValue(PGView::GetOutEdgePropertyIndex(edge));
+    }
   }
 
   /**
@@ -247,8 +255,14 @@ public:
   template <typename EdgeIndex>
   PropertyConstReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_)
-        .GetValue(PGView::edge_property_index(edge));
+
+    if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
+      return std::get<prop_col_index>(edge_view_)
+          .GetValue(PGView::GetUndirectedEdgePropertyIndex(edge));
+    } else {
+      return std::get<prop_col_index>(edge_view_)
+          .GetValue(PGView::GetOutEdgePropertyIndex(edge));
+    }
   }
 
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(

@@ -139,7 +139,7 @@ struct ClusteringImplementationBase {
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
       auto& n_data_curr_comm_id =
           graph->template GetData<CurrentCommunityID>(n);
-      uint64_t degree = graph->degree(n);
+      uint64_t degree = Degree(*graph, n);
       if (degree == 0) {
         isolated_nodes += 1;
         n_data_curr_comm_id = UNASSIGNED;
@@ -148,7 +148,7 @@ struct ClusteringImplementationBase {
           // Check if the destination has degree greater than one
           auto edge = Edges(*graph, n).begin();
           auto dst = EdgeDst(*graph, *edge);
-          uint64_t dst_degree = graph->degree(dst);
+          uint64_t dst_degree = Degree(*graph, dst);
           if ((dst_degree > 1 || (n > dst))) {
             isolated_nodes += 1;
             n_data_curr_comm_id =
@@ -440,7 +440,7 @@ struct ClusteringImplementationBase {
     uint64_t num_unique_clusters = 0;
 
     // TODO(amber): parallelize
-    for (GNode n : graph->all_nodes()) {
+    for (GNode n : graph->Nodes()) {
       auto& n_data_curr_comm_id = graph->template GetData<CommunityIDType>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         auto stored_already = cluster_local_map.find(n_data_curr_comm_id);

@@ -108,7 +108,7 @@ struct LouvainClusteringImplementation
             auto& n_data_degree_wt =
                 graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-            uint64_t degree = graph->degree(n);
+            uint64_t degree = Degree(*graph, n);
             uint64_t local_target = Base::UNASSIGNED;
             // TODO(amber): use scalable allocator with these containers
             std::map<uint64_t, uint64_t>
@@ -259,7 +259,7 @@ struct LouvainClusteringImplementation
               auto& n_data_degree_wt =
                   graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-              uint64_t degree = graph->degree(n);
+              uint64_t degree = Degree(*graph, n);
 
               // TODO(amber): use scalable allocators
               std::map<uint64_t, uint64_t>

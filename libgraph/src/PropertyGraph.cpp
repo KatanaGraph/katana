@@ -978,7 +978,7 @@ katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   auto* out_dests_data = const_cast<GraphTopology::Node*>(topo.DestData());
 
   katana::do_all(
-      katana::iterate(pg->topology().all_nodes()),
+      katana::iterate(pg->topology().Nodes()),
       [&](GraphTopology::Node n) {
         const auto e_beg = *pg->topology().OutEdges(n).begin();
         const auto e_end = *pg->topology().OutEdges(n).end();
@@ -1044,8 +1044,8 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   katana::NUMAArray<DegreeNodePair> dn_pairs;
   dn_pairs.allocateInterleaved(num_nodes);
 
-  katana::do_all(katana::iterate(topo.all_nodes()), [&](auto node) {
-    size_t node_degree = topo.degree(node);
+  katana::do_all(katana::iterate(topo.Nodes()), [&](auto node) {
+    size_t node_degree = topo.OutDegree(node);
     dn_pairs[node] = DegreeNodePair(node_degree, node);
   });
 
@@ -1077,7 +1077,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   auto* out_indices_data = const_cast<GraphTopology::Edge*>(topo.AdjData());
 
   katana::do_all(
-      katana::iterate(topo.all_nodes()),
+      katana::iterate(topo.Nodes()),
       [&](auto old_node_id) {
         uint32_t new_node_id = old_to_new_mapping[old_node_id];
 
@@ -1127,12 +1127,12 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
 
   out_indices.allocateInterleaved(topology.NumNodes());
   // Store the out-degree of nodes from original graph
-  katana::do_all(katana::iterate(topology.all_nodes()), [&](auto n) {
-    out_indices[n] = topology.degree(n);
+  katana::do_all(katana::iterate(topology.Nodes()), [&](auto n) {
+    out_indices[n] = topology.OutDegree(n);
   });
 
   katana::do_all(
-      katana::iterate(topology.all_nodes()),
+      katana::iterate(topology.Nodes()),
       [&](auto n) {
         // update the out_indices for the symmetric topology
         for (auto e : topology.OutEdges(n)) {
@@ -1164,7 +1164,7 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
   out_dests.allocateInterleaved(num_edges_symmetric);
   // Update graph topology with the original edges + reverse edges
   katana::do_all(
-      katana::iterate(topology.all_nodes()),
+      katana::iterate(topology.Nodes()),
       [&](auto src) {
         // get all outgoing edges (excluding self edges) of a particular
         // node and add reverse edges.
@@ -1238,7 +1238,7 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
   // Update out_dests with the new destination ids
   // of the transposed graphs
   katana::do_all(
-      katana::iterate(topology.all_nodes()),
+      katana::iterate(topology.Nodes()),
       [&](auto src) {
         // get all outgoing edges of a particular
         // node and reverse the edges.

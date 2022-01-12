@@ -54,7 +54,7 @@ DegreeCounting(GraphTy* graph) {
       [&](const GNode& node) {
         auto& node_current_degree =
             graph->template GetData<KCoreNodeCurrentDegree>(node);
-        node_current_degree.store(graph->degree(node));
+        node_current_degree.store(Degree(*graph, node));
       },
       katana::loopname("DegreeCounting"), katana::no_stats());
 }

@@ -139,7 +139,7 @@ struct Node2VecAlgo {
                 if (nbr == prev) {
                   alpha = prob_backward;
                 }  //check if nbr is also a neighbor of the previous node on this walk
-                else if (graph.has_edge(prev, nbr)) {
+                else if (graph.HasEdge(prev, nbr)) {
                   alpha = 1.0;
                 } else {
                   alpha = prob_forward;
@@ -298,7 +298,7 @@ struct Edge2VecAlgo {
               if (nbr == prev) {
                 alpha = prob_backward;
               }  //check if nbr is also a neighbor of the previous node on this walk
-              else if (graph.has_edge(prev, nbr)) {
+              else if (graph.HasEdge(prev, nbr)) {
                 alpha = 1.0;
               } else {
                 alpha = prob_forward;
@@ -473,7 +473,7 @@ InitializeDegrees(const Graph& graph, katana::NUMAArray<uint64_t>* degree) {
   katana::do_all(katana::iterate(graph), [&](typename Graph::Node n) {
     // Treat this as O(1) time because subtracting iterators is just pointer
     // or number subtraction. So don't use steal().
-    (*degree)[n] = graph.degree(n);
+    (*degree)[n] = graph.OutDegree(n);
   });
 }
 

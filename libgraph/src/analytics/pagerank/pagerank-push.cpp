@@ -84,7 +84,7 @@ PagerankPushAsynchronous(
           PRTy old_residual = src_residual.exchange(0.0);
           auto& src_value = graph.GetData<NodeValue>(src);
           src_value += old_residual;
-          int src_nout = graph.degree(src);
+          int src_nout = graph.OutDegree(src);
           if (src_nout > 0) {
             PRTy delta = old_residual * plan.alpha() / src_nout;
             //! For each out-going neighbors.

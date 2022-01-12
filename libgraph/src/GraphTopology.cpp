@@ -121,7 +121,7 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
   // Update out_dests with the new destination ids
   // of the transposed graphs
   katana::do_all(
-      katana::iterate(topology.all_nodes()),
+      katana::iterate(topology.Nodes()),
       [&](auto src) {
         // get all outgoing edges of a particular
         // node and reverse the edges.
@@ -213,7 +213,7 @@ katana::EdgeShuffleTopology::ToRDGTopology() const {
 }
 
 katana::GraphTopologyTypes::edge_iterator
-katana::EdgeShuffleTopology::find_edge(
+katana::EdgeShuffleTopology::FindEdge(
     const katana::GraphTopologyTypes::Node& src,
     const katana::GraphTopologyTypes::Node& dst) const noexcept {
   auto e_range = OutEdges(src);
@@ -224,7 +224,7 @@ katana::EdgeShuffleTopology::find_edge(
       !has_edges_sorted_by(
           katana::RDGTopology::EdgeSortKind::kSortedByDestID)) {
     KATANA_WARN_ONCE(
-        "find_edge(): expect poor performance. Edges not sorted by Dest ID");
+        "FindEdge(): expect poor performance. Edges not sorted by Dest ID");
   }
 
   if (e_range.size() <= kBinarySearchThreshold) {
@@ -244,7 +244,7 @@ katana::EdgeShuffleTopology::find_edge(
 }
 
 katana::GraphTopologyTypes::edges_range
-katana::EdgeShuffleTopology::find_edges(
+katana::EdgeShuffleTopology::FindAllEdges(
     const katana::GraphTopologyTypes::Node& src,
     const katana::GraphTopologyTypes::Node& dst) const noexcept {
   auto e_range = OutEdges(src);
@@ -275,7 +275,7 @@ katana::EdgeShuffleTopology::find_edges(
 void
 katana::EdgeShuffleTopology::SortEdgesByDestID() noexcept {
   katana::do_all(
-      katana::iterate(all_nodes()),
+      katana::iterate(Nodes()),
       [&](Node node) {
         // get this node's first and last edge
         auto e_beg = *OutEdges(node).begin();
@@ -315,7 +315,7 @@ void
 katana::EdgeShuffleTopology::SortEdgesByTypeThenDest(
     const PropertyGraph* pg) noexcept {
   katana::do_all(
-      katana::iterate(all_nodes()),
+      katana::iterate(Nodes()),
       [&](Node node) {
         // get this node's first and last edge
         auto e_beg = *OutEdges(node).begin();
@@ -377,8 +377,8 @@ katana::ShuffleTopology::MakeSortedByDegree(
     const PropertyGraph*,
     const katana::EdgeShuffleTopology& seed_topo) noexcept {
   auto cmp = [&](const auto& i1, const auto& i2) {
-    auto d1 = seed_topo.degree(i1);
-    auto d2 = seed_topo.degree(i2);
+    auto d1 = seed_topo.OutDegree(i1);
+    auto d2 = seed_topo.OutDegree(i2);
     // TODO(amber): Triangle-Counting needs degrees sorted in descending order. I
     // need to think of a way to specify in the interface whether degrees should be
     // sorted in ascending or descending order.
@@ -531,15 +531,15 @@ katana::EdgeTypeAwareTopology::CreatePerEdgeTypeAdjacencyIndex(
   adj_indices.allocateInterleaved(sz);
 
   katana::do_all(
-      katana::iterate(e_topo.all_nodes()),
+      katana::iterate(e_topo.Nodes()),
       [&](Node N) {
         auto offset = N * edge_type_index.num_unique_types();
         uint32_t index = 0;
         for (auto e : e_topo.OutEdges(N)) {
           // Since we sort the edges, we must use the
           // edge_property_index because EdgeShuffleTopology rearranges the edges
-          const auto type =
-              pg.GetTypeOfEdgeFromPropertyIndex(e_topo.edge_property_index(e));
+          const auto type = pg.GetTypeOfEdgeFromPropertyIndex(
+              e_topo.GetOutEdgePropertyIndex(e));
           while (type != edge_type_index.GetType(index)) {
             adj_indices[offset + index] = e;
             index++;
@@ -729,7 +729,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   if (node_types.empty()) {
     num_new_nodes = topology.NumNodes();
     // set all nodes
-    katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
+    katana::do_all(katana::iterate(topology.Nodes()), [&](auto src) {
       bitset_nodes.set(src);
       original_to_projected_nodes_mapping[src] = 1;
     });
@@ -747,7 +747,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
 
     katana::GAccumulator<uint32_t> accum_num_new_nodes;
 
-    katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
+    katana::do_all(katana::iterate(topology.Nodes()), [&](auto src) {
       for (auto type : node_entity_type_ids) {
         if (pg->DoesNodeHaveType(src, type)) {
           accum_num_new_nodes += 1;
@@ -782,7 +782,7 @@ katana::ProjectedTopology::MakeTypeProjectedTopology(
   NUMAArray<uint8_t> node_bitmask;
   node_bitmask.allocateInterleaved(num_nodes_bytes);
 
-  katana::do_all(katana::iterate(topology.all_nodes()), [&](auto src) {
+  katana::do_all(katana::iterate(topology.Nodes()), [&](auto src) {
     if (bitset_nodes.test(src)) {
       original_to_projected_nodes_mapping[src]--;
       projected_to_original_nodes_mapping

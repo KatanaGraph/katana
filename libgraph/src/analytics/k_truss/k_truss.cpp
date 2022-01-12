@@ -185,11 +185,11 @@ BSPTrussJacobiAlgo(SortedGraphView* g, uint32_t k) {
     katana::do_all(
         katana::iterate(unsupported),
         [&](Edge e) {
-          KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.first, e.second));
-          KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.second, e.first));
-          g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.first, e.second)) =
+          KATANA_LOG_DEBUG_ASSERT(g->HasEdge(e.first, e.second));
+          KATANA_LOG_DEBUG_ASSERT(g->HasEdge(e.second, e.first));
+          g->template GetEdgeData<EdgeFlag>(*g->FindEdge(e.first, e.second)) =
               removed;
-          g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.second, e.first)) =
+          g->template GetEdgeData<EdgeFlag>(*g->FindEdge(e.second, e.first)) =
               removed;
         },
         katana::steal());
@@ -210,11 +210,11 @@ struct KeepSupportedEdges {
     if (IsSupportNoLessThanJ(*g, e.first, e.second, j)) {
       s.push_back(e);
     } else {
-      KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.first, e.second));
-      KATANA_LOG_DEBUG_ASSERT(g->has_edge(e.second, e.first));
-      g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.first, e.second)) =
+      KATANA_LOG_DEBUG_ASSERT(g->HasEdge(e.first, e.second));
+      KATANA_LOG_DEBUG_ASSERT(g->HasEdge(e.second, e.first));
+      g->template GetEdgeData<EdgeFlag>(*g->FindEdge(e.first, e.second)) =
           removed;
-      g->template GetEdgeData<EdgeFlag>(*g->find_edge(e.second, e.first)) =
+      g->template GetEdgeData<EdgeFlag>(*g->FindEdge(e.second, e.first)) =
           removed;
     }
   }
@@ -279,11 +279,11 @@ struct KeepValidNodes {
     } else {
       for (auto e : g->OutEdges(n)) {
         auto dest = g->OutEdgeDst(e);
-        KATANA_LOG_DEBUG_ASSERT(g->has_edge(n, dest));
-        KATANA_LOG_DEBUG_ASSERT(g->has_edge(dest, n));
+        KATANA_LOG_DEBUG_ASSERT(g->HasEdge(n, dest));
+        KATANA_LOG_DEBUG_ASSERT(g->HasEdge(dest, n));
 
-        g->template GetEdgeData<EdgeFlag>(*g->find_edge(n, dest)) = removed;
-        g->template GetEdgeData<EdgeFlag>(*g->find_edge(dest, n)) = removed;
+        g->template GetEdgeData<EdgeFlag>(*g->FindEdge(n, dest)) = removed;
+        g->template GetEdgeData<EdgeFlag>(*g->FindEdge(dest, n)) = removed;
       }
     }
   }

@@ -307,6 +307,7 @@ def test_cdlp():
     assert stats.largest_community_size == 956
     assert stats.largest_community_ratio == approx(0.933594)
 
+
 def test_connected_components():
     graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 

@@ -77,12 +77,14 @@ public:
 
   /// This is exposed because type id mappings change sometimes.
   void ReplaceNodeTypeManager(EntityTypeManager&& manager) {
-    pg_->node_entity_type_manager_ = std::move(manager);
+    pg_->node_entity_type_manager_ =
+        std::make_shared<EntityTypeManager>(std::move(manager));
   }
 
   /// This is exposed because type id mappings change sometimes.
   void ReplaceEdgeTypeManager(EntityTypeManager&& manager) {
-    pg_->edge_entity_type_manager_ = std::move(manager);
+    pg_->edge_entity_type_manager_ =
+        std::make_shared<EntityTypeManager>(std::move(manager));
   }
 
   /// RDGs need a storage location, which can be accessed via the PGRetractor

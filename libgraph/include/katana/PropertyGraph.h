@@ -81,17 +81,26 @@ private:
       const std::string& uri, const std::string& command_line);
 
   katana::RDG rdg_;
-  std::unique_ptr<katana::RDGFile> file_;
+  std::shared_ptr<katana::RDGFile> file_;
 
   /// Manages the relations between the node entity types
-  EntityTypeManager node_entity_type_manager_;
+  std::shared_ptr<EntityTypeManager> node_entity_type_manager_{
+      std::make_shared<EntityTypeManager>()};
   /// Manages the relations between the edge entity types
-  EntityTypeManager edge_entity_type_manager_;
+  std::shared_ptr<EntityTypeManager> edge_entity_type_manager_{
+      std::make_shared<EntityTypeManager>()};
 
   /// The node EntityTypeID for each node's most specific type
-  EntityTypeIDArray node_entity_type_ids_;
+  std::shared_ptr<EntityTypeIDArray> node_entity_type_ids_;
+
+  // Optimization to avoid shared_ptr indirection when indexing into node_entity_type_ids_
+  EntityTypeID* node_entity_data_;
+
   /// The edge EntityTypeID for each edge's most specific type
-  EntityTypeIDArray edge_entity_type_ids_;
+  std::shared_ptr<EntityTypeIDArray> edge_entity_type_ids_;
+
+  // Optimization to avoid shared_ptr indirection when indexing into edge_entity_type_ids_
+  EntityTypeID* edge_entity_data_;
 
   // List of node and edge indexes on this graph.
   std::vector<std::unique_ptr<EntityIndex<Node>>> node_indexes_;
@@ -239,13 +248,20 @@ public:
       EntityTypeManager&& edge_type_manager) noexcept
       : rdg_(std::move(rdg)),
         file_(std::move(rdg_file)),
-        node_entity_type_manager_(std::move(node_type_manager)),
-        edge_entity_type_manager_(std::move(edge_type_manager)),
-        node_entity_type_ids_(std::move(node_entity_type_ids)),
-        edge_entity_type_ids_(std::move(edge_entity_type_ids)),
+        node_entity_type_manager_(
+            std::make_shared<EntityTypeManager>(std::move(node_type_manager))),
+        edge_entity_type_manager_(
+            std::make_shared<EntityTypeManager>(std::move(edge_type_manager))),
+        node_entity_type_ids_(std::make_shared<EntityTypeIDArray>(
+            std::move(node_entity_type_ids))),
+        node_entity_data_(node_entity_type_ids_->data()),
+        edge_entity_type_ids_(std::make_shared<EntityTypeIDArray>(
+            std::move(edge_entity_type_ids))),
+        edge_entity_data_(edge_entity_type_ids_->data()),
+
         pg_view_cache_(std::move(topo)) {
-    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == NumNodes());
-    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == NumEdges());
+    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_->size() == NumNodes());
+    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_->size() == NumEdges());
   }
 
   template <typename PGView>
@@ -253,6 +269,7 @@ public:
     return pg_view_cache_.BuildView<PGView>(this);
   }
 
+  //TODO(yan): remove this once the ProjectedGraph has been refactored.
   template <typename PGView>
   PGView BuildView(
       const std::vector<std::string>& node_types,
@@ -311,35 +328,27 @@ public:
   /// TODO(roshan) move this to be a part of Make()
   Result<void> ConstructEntityTypeIDs(katana::TxnContext* txn_ctx);
 
-  size_t node_entity_type_ids_size() const noexcept {
-    return node_entity_type_ids_.size();
-  }
-
-  size_t edge_entity_type_ids_size() const noexcept {
-    return edge_entity_type_ids_.size();
-  }
-
   /// This is an unfortunate hack. Due to some technical debt, we need a way to
   /// modify these arrays in place from outside this class. This style mirrors a
   /// similar hack in GraphTopology and hopefully makes it clear that these
   /// functions should not be used lightly.
   const EntityTypeID* node_type_data() const noexcept {
-    return node_entity_type_ids_.data();
+    return node_entity_data_;
   }
   /// This is an unfortunate hack. Due to some technical debt, we need a way to
   /// modify these arrays in place from outside this class. This style mirrors a
   /// similar hack in GraphTopology and hopefully makes it clear that these
   /// functions should not be used lightly.
   const EntityTypeID* edge_type_data() const noexcept {
-    return edge_entity_type_ids_.data();
+    return edge_entity_data_;
   }
 
   const EntityTypeManager& GetNodeTypeManager() const {
-    return node_entity_type_manager_;
+    return *node_entity_type_manager_;
   }
 
   const EntityTypeManager& GetEdgeTypeManager() const {
-    return edge_entity_type_manager_;
+    return *edge_entity_type_manager_;
   }
 
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
@@ -397,74 +406,74 @@ public:
 
   /// \returns the number of node atomic types
   size_t GetNumNodeAtomicTypes() const {
-    return node_entity_type_manager_.GetNumAtomicTypes();
+    return GetNodeTypeManager().GetNumAtomicTypes();
   }
 
   /// \returns the number of edge atomic types
   size_t GetNumEdgeAtomicTypes() const {
-    return edge_entity_type_manager_.GetNumAtomicTypes();
+    return GetEdgeTypeManager().GetNumAtomicTypes();
   }
 
   /// \returns the number of node entity types (including kUnknownEntityType)
   size_t GetNumNodeEntityTypes() const {
-    return node_entity_type_manager_.GetNumEntityTypes();
+    return GetNodeTypeManager().GetNumEntityTypes();
   }
 
   /// \returns the number of edge entity types (including kUnknownEntityType)
   size_t GetNumEdgeEntityTypes() const {
-    return edge_entity_type_manager_.GetNumEntityTypes();
+    return GetEdgeTypeManager().GetNumEntityTypes();
   }
 
   /// \returns true iff a node atomic type @param name exists
   /// NB: no node may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of nodes with the type
   bool HasAtomicNodeType(const std::string& name) const {
-    return node_entity_type_manager_.HasAtomicType(name);
+    return GetNodeTypeManager().HasAtomicType(name);
   }
 
   /// \returns all atomic node types
   std::vector<std::string> ListAtomicNodeTypes() const {
-    return node_entity_type_manager_.ListAtomicTypes();
+    return GetNodeTypeManager().ListAtomicTypes();
   }
 
   /// \returns true iff an edge atomic type with @param name exists
   /// NB: no edge may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of edges with the type
   bool HasAtomicEdgeType(const std::string& name) const {
-    return edge_entity_type_manager_.HasAtomicType(name);
+    return GetEdgeTypeManager().HasAtomicType(name);
   }
 
   /// \returns all atomic edge types
   std::vector<std::string> ListAtomicEdgeTypes() const {
-    return edge_entity_type_manager_.ListAtomicTypes();
+    return GetEdgeTypeManager().ListAtomicTypes();
   }
 
   /// \returns true iff a node entity type @param node_entity_type_id exists
   /// NB: even if it exists, it may not be the most specific type for any node
   /// (returns true for kUnknownEntityType)
   bool HasNodeEntityType(EntityTypeID node_entity_type_id) const {
-    return node_entity_type_manager_.HasEntityType(node_entity_type_id);
+    return GetNodeTypeManager().HasEntityType(node_entity_type_id);
   }
 
   /// \returns true iff an edge entity type @param node_entity_type_id exists
   /// NB: even if it exists, it may not be the most specific type for any edge
   /// (returns true for kUnknownEntityType)
   bool HasEdgeEntityType(EntityTypeID edge_entity_type_id) const {
-    return edge_entity_type_manager_.HasEntityType(edge_entity_type_id);
+    return GetEdgeTypeManager().HasEntityType(edge_entity_type_id);
   }
 
   /// \returns the node EntityTypeID for an atomic node type with name
   /// @param name
   /// (assumes that the node type exists)
   EntityTypeID GetNodeEntityTypeID(const std::string& name) const {
-    return node_entity_type_manager_.GetEntityTypeID(name);
+    return GetNodeTypeManager().GetEntityTypeID(name);
   }
 
   /// \returns the edge EntityTypeID for an atomic edge type with name
   /// @param name
   /// (assumes that the edge type exists)
   EntityTypeID GetEdgeEntityTypeID(const std::string& name) const {
-    return edge_entity_type_manager_.GetEntityTypeID(name);
+    return GetEdgeTypeManager().GetEntityTypeID(name);
   }
 
   /// \returns the name of the atomic type if the node EntityTypeID
@@ -472,7 +481,7 @@ public:
   /// nullopt otherwise
   std::optional<std::string> GetNodeAtomicTypeName(
       EntityTypeID node_entity_type_id) const {
-    return node_entity_type_manager_.GetAtomicTypeName(node_entity_type_id);
+    return GetNodeTypeManager().GetAtomicTypeName(node_entity_type_id);
   }
 
   /// \returns the name of the atomic type if the edge EntityTypeID
@@ -480,7 +489,7 @@ public:
   /// nullopt otherwise
   std::optional<std::string> GetEdgeAtomicTypeName(
       EntityTypeID edge_entity_type_id) const {
-    return edge_entity_type_manager_.GetAtomicTypeName(edge_entity_type_id);
+    return GetEdgeTypeManager().GetAtomicTypeName(edge_entity_type_id);
   }
 
   /// \returns the set of node entity types that intersect
@@ -488,7 +497,7 @@ public:
   /// (assumes that the node atomic type exists)
   const SetOfEntityTypeIDs& GetNodeSupertypes(
       EntityTypeID node_entity_type_id) const {
-    return node_entity_type_manager_.GetSupertypes(node_entity_type_id);
+    return GetNodeTypeManager().GetSupertypes(node_entity_type_id);
   }
 
   /// \returns the set of edge entity types that intersect
@@ -496,7 +505,7 @@ public:
   /// (assumes that the edge atomic type exists)
   const SetOfEntityTypeIDs& GetEdgeSupertypes(
       EntityTypeID edge_entity_type_id) const {
-    return edge_entity_type_manager_.GetSupertypes(edge_entity_type_id);
+    return GetEdgeTypeManager().GetSupertypes(edge_entity_type_id);
   }
 
   /// \returns the set of atomic node types that are intersected
@@ -504,7 +513,7 @@ public:
   /// (assumes that the node entity type exists)
   const SetOfEntityTypeIDs& GetNodeAtomicSubtypes(
       EntityTypeID node_entity_type_id) const {
-    return node_entity_type_manager_.GetAtomicSubtypes(node_entity_type_id);
+    return GetNodeTypeManager().GetAtomicSubtypes(node_entity_type_id);
   }
 
   /// \returns the set of atomic edge types that are intersected
@@ -512,27 +521,27 @@ public:
   /// (assumes that the edge entity type exists)
   const SetOfEntityTypeIDs& GetEdgeAtomicSubtypes(
       EntityTypeID edge_entity_type_id) const {
-    return edge_entity_type_manager_.GetAtomicSubtypes(edge_entity_type_id);
+    return GetEdgeTypeManager().GetAtomicSubtypes(edge_entity_type_id);
   }
 
   /// \returns true iff the node type @param sub_type is a
   /// sub-type of the node type @param super_type
   /// (assumes that the sub_type and super_type EntityTypeIDs exists)
   bool IsNodeSubtypeOf(EntityTypeID sub_type, EntityTypeID super_type) const {
-    return node_entity_type_manager_.IsSubtypeOf(sub_type, super_type);
+    return GetNodeTypeManager().IsSubtypeOf(sub_type, super_type);
   }
 
   /// \returns true iff the edge type @param sub_type is a
   /// sub-type of the edge type @param super_type
   /// (assumes that the sub_type and super_type EntityTypeIDs exists)
   bool IsEdgeSubtypeOf(EntityTypeID sub_type, EntityTypeID super_type) const {
-    return edge_entity_type_manager_.IsSubtypeOf(sub_type, super_type);
+    return GetEdgeTypeManager().IsSubtypeOf(sub_type, super_type);
   }
 
   /// \return returns the most specific node entity type for @param node
   EntityTypeID GetTypeOfNode(Node node) const {
     auto idx = GetNodePropertyIndex(node);
-    return node_entity_type_ids_[idx];
+    return node_entity_data_[idx];
   }
 
   /// \return returns the most specific edge entity type for @param edge
@@ -544,7 +553,7 @@ public:
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdgeFromPropertyIndex(
       GraphTopology::PropertyIndex prop_index) const {
-    return edge_entity_type_ids_[prop_index];
+    return edge_entity_data_[prop_index];
   }
 
   /// \return true iff the node @param node has the given entity type
@@ -687,14 +696,6 @@ public:
 
   const GraphTopology& topology() const noexcept {
     return pg_view_cache_.GetDefaultTopologyRef();
-  }
-
-  const EntityTypeManager& node_entity_type_manager() const noexcept {
-    return node_entity_type_manager_;
-  }
-
-  const EntityTypeManager& edge_entity_type_manager() const noexcept {
-    return edge_entity_type_manager_;
   }
 
   GraphTopology::PropertyIndex GetEdgePropertyIndexFromOutEdge(

@@ -1046,19 +1046,22 @@ struct ClusteringImplementationBase {
     CalConstantForSecondTerm<EdgeWeightType>(*graph, &comm_constant_term);
 
     // call MergeNodesSubset for each community in parallel
-    katana::do_all(katana::iterate(size_t{0}, graph->size()), [&](size_t c) {
-      /*
+    katana::do_all(
+        katana::iterate(size_t{0}, graph->size()),
+        [&](size_t c) {
+          /*
                     * Only nodes belonging to singleton clusters can be moved to
                     * a different cluster. This guarantees that clusters will
                     * never be split up.
                     */
-      comm_info[c].num_sub_communities = 0;
-      if (cluster_bags[c].size() > 1) {
-        MergeNodesSubset<EdgeWeightType>(
-            graph, cluster_bags[c], c, subcomm_info, comm_constant_term,
-            resolution);
-      }
-    });
+          comm_info[c].num_sub_communities = 0;
+          if (cluster_bags[c].size() > 1) {
+            MergeNodesSubset<EdgeWeightType>(
+                graph, cluster_bags[c], c, subcomm_info, comm_constant_term,
+                resolution);
+          }
+        },
+        katana::steal());
 
     subcomm_info.deallocate();
     subcomm_info.destroy();

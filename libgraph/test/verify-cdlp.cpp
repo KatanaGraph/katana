@@ -6,8 +6,8 @@ using namespace katana::analytics;
 
 void
 RunCdlp(
-    std::unique_ptr<katana::PropertyGraph>&& pg,
-    const bool& is_symmetric, const CdlpStatistics cdlp_expected_statistics) noexcept {
+    std::unique_ptr<katana::PropertyGraph>&& pg, const bool& is_symmetric,
+    const CdlpStatistics cdlp_expected_statistics) noexcept {
   using Plan = CdlpPlan;
   Plan plan = Plan::Synchronous();
   const std::string property_name = "community";

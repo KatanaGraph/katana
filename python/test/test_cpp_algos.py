@@ -292,7 +292,7 @@ def test_independent_set():
 
 def test_cdlp():
     graph = Graph(get_rdg_dataset("rmat10"))
-    cdlp(graph, "output", False)
+    cdlp(graph, "output", 10, False)
     stats = CdlpStatistics(graph, "output")
     assert stats.total_communities == 69
     assert stats.total_non_trivial_communities == 1
@@ -300,7 +300,7 @@ def test_cdlp():
     assert stats.largest_community_ratio == approx(0.933594)
 
     graph = Graph(get_rdg_dataset("rmat10_symmetric"))
-    cdlp(graph, "output", True)
+    cdlp(graph, "output", 10, True)
     stats = CdlpStatistics(graph, "output")
     assert stats.total_communities == 69
     assert stats.total_non_trivial_communities == 1

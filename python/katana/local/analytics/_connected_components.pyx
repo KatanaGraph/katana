@@ -21,6 +21,7 @@ Connected Components
 """
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t
+from libcpp cimport bool
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -90,7 +91,7 @@ cdef extern from "katana/analytics/connected_components/connected_components.h" 
     uint32_t kDefaultComponentSampleFrequency "katana::analytics::ConnectedComponentsPlan::kDefaultComponentSampleFrequency"
 
     Result[void] ConnectedComponents(_PropertyGraph*pg, string output_property_name,
-                                     CTxnContext* txn_ctx, _ConnectedComponentsPlan plan)
+                                     CTxnContext* txn_ctx, bool is_symmetric, _ConnectedComponentsPlan plan)
 
     Result[void] ConnectedComponentsAssertValid(_PropertyGraph*pg, string output_property_name)
 
@@ -241,7 +242,7 @@ cdef class ConnectedComponentsPlan(Plan):
             edge_tile_size, neighbor_sample_size, component_sample_frequency))
 
 
-def connected_components(Graph pg, str output_property_name,
+def connected_components(Graph pg, str output_property_name, bool is_symmetric = False,
                          ConnectedComponentsPlan plan = ConnectedComponentsPlan(), *, TxnContext txn_ctx = None) -> int:
     """
     Compute the Connected-components for `pg`. `pg` must be symmetric.
@@ -250,6 +251,7 @@ def connected_components(Graph pg, str output_property_name,
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
+    :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type plan: ConnectedComponentsPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
     :param txn_ctx: The tranaction context for passing read write sets.
@@ -276,7 +278,7 @@ def connected_components(Graph pg, str output_property_name,
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(ConnectedComponents(pg.underlying_property_graph(), output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
+        v = handle_result_void(ConnectedComponents(pg.underlying_property_graph(), output_property_name_str, &txn_ctx._txn_ctx, is_symmetric, plan.underlying_))
     return v
 
 def connected_components_assert_valid(Graph pg, str output_property_name):

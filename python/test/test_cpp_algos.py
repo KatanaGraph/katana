@@ -311,16 +311,32 @@ def test_cdlp():
 def test_connected_components():
     graph = Graph(get_rdg_dataset("rmat10_symmetric"))
 
-    connected_components(graph, "output")
+    # Graph is already symmetric. Last bool argument (True)
+    # indicates that.
+    connected_components(graph, "output_sym", True)
+
+    stats_sym = ConnectedComponentsStatistics(graph, "output_sym")
+
+    assert stats_sym.total_components == 69
+    assert stats_sym.total_non_trivial_components == 1
+    assert stats_sym.largest_component_size == 956
+    assert stats_sym.largest_component_ratio == approx(0.933594)
+
+    connected_components_assert_valid(graph, "output_sym")
+
+    # Graph is not symmetric. Last bool argument (False)
+    # indicates that. Connected components routine will create
+    # undirected view for computation.
+    graph = Graph(get_rdg_dataset("rmat10"))
+
+    connected_components(graph, "output", False)
 
     stats = ConnectedComponentsStatistics(graph, "output")
 
-    assert stats.total_components == 69
-    assert stats.total_non_trivial_components == 1
-    assert stats.largest_component_size == 956
-    assert stats.largest_component_ratio == approx(0.933594)
-
-    connected_components_assert_valid(graph, "output")
+    assert stats.total_components == stats_sym.total_components
+    assert stats.total_non_trivial_components == stats_sym.total_non_trivial_components
+    assert stats.largest_component_size == stats_sym.largest_component_size
+    assert stats.largest_component_ratio == stats_sym.largest_component_ratio
 
 
 def test_k_core():

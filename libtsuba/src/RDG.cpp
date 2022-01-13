@@ -531,6 +531,16 @@ katana::RDG::IsUint16tEntityTypeIDs() const {
   return core_->part_header().IsUint16tEntityTypeIDs();
 }
 
+bool
+katana::RDG::IsUnstableStorageFormat() const {
+  return core_->part_header().unstable_storage_format();
+}
+
+void
+katana::RDG::SetUnstableStorageFormat() {
+  core_->part_header().set_unstable_storage_format();
+}
+
 katana::Result<void>
 katana::RDG::Validate() const {
   KATANA_CHECKED(core_->part_header().Validate());

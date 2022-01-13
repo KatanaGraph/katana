@@ -38,6 +38,7 @@ If Katana software is executed *with* the `KATANA_ENABLE_EXPERIMENTAL="UnstableR
 
 If Katana software is executed *without* the `KATANA_ENABLE_EXPERIMENTAL="UnstableRDGStorageFormat"` environment variable:
 #. katana software stores RDGs:
+
    #. with `storage_format_version = latest_storage_format_version`
    #. with `unstable_storage_format = false`
 

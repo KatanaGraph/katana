@@ -91,7 +91,7 @@ endfunction()
 # reimplemented in katana_setup.py when the JSON file is read.
 function(_generate_build_configuration_txt)
   set(no_value_options)
-  set(one_value_options FILE_PREFIX)
+  set(one_value_options FILE_PREFIX TARGET_NAME)
   set(multi_value_options DEPENDS)
 
   cmake_parse_arguments(X "${no_value_options}" "${one_value_options}" "${multi_value_options}" ${ARGN})
@@ -136,29 +136,29 @@ function(_generate_build_configuration_txt)
     endif()
     get_target_property(IS_IMPORTED ${TARGET_NAME} IMPORTED)
 
-    list(APPEND INCLUDE_DIRECTORIES "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_INCLUDE_DIRECTORIES>>")
-    list(APPEND COMPILE_DEFINITIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_COMPILE_DEFINITIONS>>")
+    list(APPEND INCLUDE_DIRECTORIES "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_INCLUDE_DIRECTORIES>>")
+    list(APPEND COMPILE_DEFINITIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_COMPILE_DEFINITIONS>>")
     # TODO(amp): Including INTERFACE_LINK_OPTIONS causes an unavoidable cmake generation failure in cmake 3.20+ due to the use of $<HOST_LINK:...>.
     #  INTERFACE_LINK_OPTIONS doesn't seem to be required for the dependencies we are using right now, so just skip it for the moment.
-    # list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_LINK_OPTIONS>>")
+    # list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_LINK_OPTIONS>>")
     if (NOT IS_IMPORTED)
       # Imported libraries (pybind11 specifically) do not support these generator expressions.
       # TODO(amp): This may prevent imported binary libraries from working in some corner cases. Who really knows with cmake.
-      list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},LINKER:-rpath=$<TARGET_LINKER_FILE_DIR:${TARGET_NAME}>>")
-      list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},LINKER:-rpath=$<JOIN:$<TARGET_PROPERTY:${TARGET_NAME},BUILD_RPATH>,;LINKER:-rpath=>>")
-      list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_LINKER_FILE:${TARGET_NAME}>>")
+      list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},LINKER:-rpath=$<TARGET_LINKER_FILE_DIR:${TARGET_NAME}>>")
+      list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},LINKER:-rpath=$<JOIN:$<TARGET_PROPERTY:${TARGET_NAME},BUILD_RPATH>,;LINKER:-rpath=>>")
+      list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},$<TARGET_LINKER_FILE:${TARGET_NAME}>>")
     endif()
-    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},LINKER:-rpath=$<JOIN:$<TARGET_PROPERTY:${TARGET_NAME},INSTALL_RPATH>,;LINKER:-rpath=>>")
-    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_LINK_DEPENDS>>")
-    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},LINK_DEPENDS>>")
-    list(APPEND COMPILE_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_COMPILE_OPTIONS>>")
+    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},LINKER:-rpath=$<JOIN:$<TARGET_PROPERTY:${TARGET_NAME},INSTALL_RPATH>,;LINKER:-rpath=>>")
+    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_LINK_DEPENDS>>")
+    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},LINK_DEPENDS>>")
+    # TODO(amp): Including INTERFACE_COMPILE_OPTIONS and using pybind11 causes LTO to be enabled, but only the compiler
+    #  option is actually passed to the setuptools compilers. So just disable this for the moment.
+    # list(APPEND COMPILE_OPTIONS "$<TARGET_GENEX_EVAL:${X_TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_COMPILE_OPTIONS>>")
   endforeach()
 
   set(COMPILER
       "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_COMPILER_LAUNCHER};${CMAKE_CXX_COMPILER}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_COMPILER_LAUNCHER};${CMAKE_C_COMPILER}>")
 
-  # TODO(amp): It might should be possible to use generator expressions to build actual JSON lists instead of string
-  #  containing cmake lists. However it's not clear this is actually better.
   file(GENERATE OUTPUT ${X_FILE_PREFIX}$<COMPILE_LANGUAGE>.txt
        CONTENT "
 COMPILER=${COMPILER}
@@ -284,7 +284,7 @@ function(add_python_setuptools_target TARGET_NAME)
     add_dependencies(${TARGET_NAME} ${X_DEPENDS})
   endif()
 
-  _generate_build_configuration_txt(FILE_PREFIX ${TARGET_NAME}_ DEPENDS ${X_DEPENDS})
+  _generate_build_configuration_txt(TARGET_NAME ${TARGET_NAME} FILE_PREFIX ${TARGET_NAME}_ DEPENDS ${X_DEPENDS})
 
   # TODO(amp): The RPATH of the installed python modules will contain a reference to the build
   # directory. This is not ideal and could cause confusion, but without depending on an

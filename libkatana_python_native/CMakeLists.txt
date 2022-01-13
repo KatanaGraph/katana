@@ -2,7 +2,6 @@ find_package(pybind11 REQUIRED)
 
 add_library(katana_python_native SHARED)
 add_library(Katana::python_native ALIAS katana_python_native)
-set_target_properties(katana_python_native PROPERTIES EXPORT_NAME python)
 add_dependencies(lib katana_python_native)
 
 set(sources
@@ -23,10 +22,11 @@ target_link_libraries(katana_python_native PUBLIC katana_support)
 set_common_katana_library_options(katana_python_native)
 
 # Pybind11 dependencies to enable the way it wants to be built.
-target_link_libraries(katana_python_native PUBLIC pybind11::module)
-if (TARGET pybind11::lto)
-  target_link_libraries(katana_python_native PRIVATE pybind11::lto)
+target_link_libraries(katana_python_native PRIVATE pybind11::headers pybind11::python_headers)
+if (TARGET pybind11::thin_lto)
+  target_link_libraries(katana_python_native PRIVATE pybind11::thin_lto)
 endif()
+
 
 # Do not install headers since we do not support third-party C++ Python integration (at least yet)
 

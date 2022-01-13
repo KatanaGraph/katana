@@ -148,7 +148,8 @@ struct ToArrayVisitor : public katana::ArrowVisitor {
 
   using ResultType = katana::Result<std::shared_ptr<arrow::Array>>;
 
-  using AcceptTypes = std::tuple<katana::AcceptAllArrowTypes>;
+  using AcceptTypes = std::tuple<katana::tuple_cat_t<
+      katana::AcceptAllArrowTypes, std::tuple<arrow::FixedSizeBinaryType>>>;
 
   template <typename ArrowType, typename BuilderType>
   arrow::enable_if_null<ArrowType, ResultType> Call(BuilderType* builder) {
@@ -211,6 +212,22 @@ struct ToArrayVisitor : public katana::ArrowVisitor {
             (visitor.Call<ArrowType, ArrowType>(*typed_scalar, builder)));
       } else {
         KATANA_CHECKED(builder->AppendNull());
+      }
+    }
+    return KATANA_CHECKED(builder->Finish());
+  }
+
+  template <typename ArrowType, typename BuilderType>
+  arrow::enable_if_fixed_size_binary<ArrowType, ResultType> Call(
+      BuilderType* builder) {
+    using ScalarType = typename arrow::TypeTraits<ArrowType>::ScalarType;
+    KATANA_CHECKED(builder->Reserve(scalars.size()));
+    for (const auto& scalar : scalars) {
+      if (scalar != nullptr && scalar->is_valid) {
+        const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
+        builder->UnsafeAppend(typed_scalar->value);
+      } else {
+        builder->UnsafeAppendNull();
       }
     }
     return KATANA_CHECKED(builder->Finish());

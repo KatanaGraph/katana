@@ -102,8 +102,8 @@ struct ClusteringImplementationBase {
     num_unique_clusters++;
 
     // Assuming we have grabbed lock on all the neighbors
-    for (auto e : OutOrUndirectedEdges(graph, n)) {
-      auto dst = OutOrUndirectedDst(graph, e);
+    for (auto e : Edges(graph, n)) {
+      auto dst = EdgeDst(graph, e);
       // Self loop weights is recorded
       auto edge_wt = graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       if (dst == n) {
@@ -146,8 +146,8 @@ struct ClusteringImplementationBase {
       } else {
         if (degree == 1) {
           // Check if the destination has degree greater than one
-          auto edge = OutOrUndirectedEdges(*graph, n).begin();
-          auto dst = OutOrUndirectedDst(*graph, *edge);
+          auto edge = Edges(*graph, n).begin();
+          auto dst = EdgeDst(*graph, *edge);
           uint64_t dst_degree = graph->degree(dst);
           if ((dst_degree > 1 || (n > dst))) {
             isolated_nodes += 1;
@@ -171,7 +171,7 @@ struct ClusteringImplementationBase {
       EdgeTy total_weight = 0;
       auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
-      for (auto e : OutOrUndirectedEdges(*graph, n)) {
+      for (auto e : Edges(*graph, n)) {
         total_weight +=
             graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
@@ -194,8 +194,8 @@ struct ClusteringImplementationBase {
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
       auto comm_id = graph->template GetData<CurrentCommunityID>(n);
 
-      for (auto e : OutOrUndirectedEdges(*graph, n)) {
-        auto dst = OutOrUndirectedDst(*graph, e);
+      for (auto e : Edges(*graph, n)) {
+        auto dst = EdgeDst(*graph, e);
 
         if (graph->template GetData<CurrentCommunityID>(dst) != comm_id) {
           continue;
@@ -341,9 +341,9 @@ struct ClusteringImplementationBase {
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       auto n_data_current_comm = graph.template GetData<CommunityIDType>(n);
-      for (auto e : OutOrUndirectedEdges(graph, n)) {
-        if (graph.template GetData<CommunityIDType>(
-                OutOrUndirectedDst(graph, e)) == n_data_current_comm) {
+      for (auto e : Edges(graph, n)) {
+        if (graph.template GetData<CommunityIDType>(EdgeDst(graph, e)) ==
+            n_data_current_comm) {
           cluster_wt_internal[n] +=
               graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
         }
@@ -385,7 +385,7 @@ struct ClusteringImplementationBase {
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       EdgeTy total_weight = 0;
-      for (auto e : OutOrUndirectedEdges(graph, n)) {
+      for (auto e : Edges(graph, n)) {
         total_weight +=
             graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
@@ -586,8 +586,8 @@ struct ClusteringImplementationBase {
                 graph.template GetData<CommunityIDType>(node) ==
                 c);  // All nodes in this bag must have same cluster id
 
-            for (auto e : OutOrUndirectedEdges(graph, node)) {
-              auto dst = OutOrUndirectedDst(graph, e);
+            for (auto e : Edges(graph, node)) {
+              auto dst = EdgeDst(graph, e);
               auto dst_data_curr_comm_id =
                   graph.template GetData<CommunityIDType>(dst);
               KATANA_LOG_DEBUG_ASSERT(dst_data_curr_comm_id != UNASSIGNED);
@@ -733,7 +733,7 @@ struct ClusteringImplementationBase {
       auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-      for (auto e : OutOrUndirectedEdges(*graph, n)) {
+      for (auto e : Edges(*graph, n)) {
         total_weight +=
             graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
@@ -765,8 +765,8 @@ struct ClusteringImplementationBase {
 
     EdgeTy self_loop_wt = 0;
 
-    for (auto e : OutOrUndirectedEdges(graph, n)) {
-      auto dst = OutOrUndirectedDst(graph, e);
+    for (auto e : Edges(graph, n)) {
+      auto dst = EdgeDst(graph, e);
       // Self loop weights is recorded
       EdgeWeightType edge_wt =
           graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
@@ -891,8 +891,8 @@ struct ClusteringImplementationBase {
       EdgeWeightType node_edge_weight_within_cluster = 0;
       uint64_t num_edges_within_cluster = 0;
 
-      for (auto e : OutOrUndirectedEdges(*graph, n)) {
-        auto dst = OutOrUndirectedDst(*graph, e);
+      for (auto e : Edges(*graph, n)) {
+        auto dst = EdgeDst(*graph, e);
         EdgeWeightType edge_wt =
             graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
         /*
@@ -957,8 +957,8 @@ struct ClusteringImplementationBase {
           katana::atomicSub(
               subcomm_info[n_current_subcomm_id].degree_wt, n_degree_wt);
 
-          for (auto e : OutOrUndirectedEdges(*graph, n)) {
-            auto dst = OutOrUndirectedDst(*graph, e);
+          for (auto e : Edges(*graph, n)) {
+            auto dst = EdgeDst(*graph, e);
             auto edge_wt =
                 graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
             if (dst != n &&

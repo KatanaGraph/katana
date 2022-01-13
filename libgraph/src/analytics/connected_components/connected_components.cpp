@@ -84,8 +84,8 @@ struct ConnectedComponentsSerialAlgo {
   void operator()(Graph* graph) {
     for (const GNode& src : *graph) {
       auto& sdata = graph->template GetData<NodeComponent>(src);
-      for (const auto& ii : OutOrUndirectedEdges(*graph, src)) {
-        auto dest = OutOrUndirectedDst(*graph, ii);
+      for (const auto& ii : Edges(*graph, src)) {
+        auto dest = EdgeDst(*graph, ii);
         auto& ddata = graph->template GetData<NodeComponent>(dest);
         sdata->merge(ddata);
       }
@@ -138,8 +138,8 @@ struct ConnectedComponentsLabelPropAlgo {
 
               changed.update(true);
 
-              for (auto e : OutOrUndirectedEdges(*graph, src)) {
-                auto dest = OutOrUndirectedDst(*graph, e);
+              for (auto e : Edges(*graph, src)) {
+                auto dest = EdgeDst(*graph, e);
                 auto& ddata_current_comp =
                     graph->template GetData<NodeComponent>(dest);
                 ComponentType label_new = sdata_current_comp;
@@ -203,8 +203,8 @@ struct ConnectedComponentsSynchronousAlgo {
     next_bag = &wls[1];
 
     katana::do_all(katana::iterate(*graph), [&](const GNode& src) {
-      for (auto e : OutOrUndirectedEdges(*graph, src)) {
-        auto dest = OutOrUndirectedDst(*graph, e);
+      for (auto e : Edges(*graph, src)) {
+        auto dest = EdgeDst(*graph, e);
         if (src >= dest)
           continue;
         auto& ddata = graph->template GetData<NodeComponent>(dest);
@@ -229,13 +229,13 @@ struct ConnectedComponentsSynchronousAlgo {
             GNode src = edge.src;
             auto& sdata = graph->template GetData<NodeComponent>(src);
             ConnectedComponentsNode* src_component = sdata->findAndCompress();
-            auto edges = OutOrUndirectedEdges(*graph, src);
+            auto edges = Edges(*graph, src);
             auto ii = edges.begin();
             auto ei = edges.end();
             int count = edge.count + 1;
             std::advance(ii, count);
             for (; ii != ei; ++ii, ++count) {
-              auto dest = OutOrUndirectedDst(*graph, *ii);
+              auto dest = EdgeDst(*graph, *ii);
               if (src >= dest)
                 continue;
               auto& ddata = graph->template GetData<NodeComponent>(dest);
@@ -306,8 +306,8 @@ struct ConnectedComponentsAsynchronousAlgo {
         [&](const GNode& src) {
           auto& sdata = graph->template GetData<NodeComponent>(src);
 
-          for (const auto& ii : OutOrUndirectedEdges(*graph, src)) {
-            auto dest = OutOrUndirectedDst(*graph, ii);
+          for (const auto& ii : Edges(*graph, src)) {
+            auto dest = EdgeDst(*graph, ii);
             auto& ddata = graph->template GetData<NodeComponent>(dest);
 
             if (src >= dest)
@@ -372,8 +372,8 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          for (const auto& ii : OutOrUndirectedEdges(*graph, src)) {
-            if (src < OutOrUndirectedDst(*graph, ii)) {
+          for (const auto& ii : Edges(*graph, src)) {
+            if (src < EdgeDst(*graph, ii)) {
               works.push_back(std::make_pair(src, ii));
             }
           }
@@ -384,7 +384,7 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
         katana::iterate(works),
         [&](Edge& e) {
           auto& sdata = graph->template GetData<NodeComponent>(e.first);
-          auto dest = OutOrUndirectedDst(*graph, e.second);
+          auto dest = EdgeDst(*graph, e.second);
           auto& ddata = graph->template GetData<NodeComponent>(dest);
 
           if (e.first > dest)
@@ -453,9 +453,9 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
     auto& sdata = graph->template GetData<NodeComponent>(src);
     int count = 1;
 
-    for (auto ii = start, ei = OutOrUndirectedEdges(*graph, src).end();
-         ii != ei; ++ii, ++count) {
-      auto dest = OutOrUndirectedDst(*graph, *ii);
+    for (auto ii = start, ei = Edges(*graph, src).end(); ii != ei;
+         ++ii, ++count) {
+      auto dest = EdgeDst(*graph, *ii);
       auto& ddata = graph->template GetData<NodeComponent>(dest);
 
       if (src >= dest)
@@ -480,7 +480,7 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto start = OutOrUndirectedEdges(*graph, src).begin();
+          auto start = Edges(*graph, src).begin();
           if (katana::ThreadPool::getSocket() == 0) {
             process<true, 0>(graph, src, start, items);
           } else {
@@ -559,7 +559,7 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto edges = OutOrUndirectedEdges(*graph, src);
+          auto edges = Edges(*graph, src);
           auto beg = edges.begin();
           const auto end = edges.end();
 
@@ -586,7 +586,7 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
           auto& sdata = graph->template GetData<NodeComponent>(src);
 
           for (auto ii = tile.beg; ii != tile.end; ++ii) {
-            auto dest = OutOrUndirectedDst(*graph, *ii);
+            auto dest = EdgeDst(*graph, *ii);
             if (src >= dest)
               continue;
 
@@ -752,12 +752,12 @@ struct ConnectedComponentsAfforestAlgo {
       katana::do_all(
           katana::iterate(*graph),
           [&](const GNode& src) {
-            auto edges = OutOrUndirectedEdges(*graph, src);
+            auto edges = Edges(*graph, src);
             auto ii = edges.begin();
             auto ei = edges.end();
 
             for (std::advance(ii, r); ii < ei; ii++) {
-              auto dest = OutOrUndirectedDst(*graph, *ii);
+              auto dest = EdgeDst(*graph, *ii);
               // auto& sdata = graph->GetData<NodeComponent>(src);
               // ComponentType ddata = graph->GetData<NodeComponent>(dest);
               // sdata->link(ddata);
@@ -794,11 +794,11 @@ struct ConnectedComponentsAfforestAlgo {
           if (sdata.component() == c) {
             return;
           }
-          auto edges = OutOrUndirectedEdges(*graph, src);
+          auto edges = Edges(*graph, src);
           auto ii = edges.begin();
           auto ei = edges.end();
           for (std::advance(ii, plan_.neighbor_sample_size()); ii < ei; ++ii) {
-            auto dest = OutOrUndirectedDst(*graph, *ii);
+            auto dest = EdgeDst(*graph, *ii);
             // auto& ddata = graph->GetData<NodeComponent>(dest);
             auto& ddata = parent_array_[dest];
             // sdata->link(ddata);
@@ -895,12 +895,12 @@ struct ConnectedComponentsEdgeAfforestAlgo {
       katana::do_all(
           katana::iterate(*graph),
           [&](const GNode& src) {
-            auto edges = OutOrUndirectedEdges(*graph, src);
+            auto edges = Edges(*graph, src);
             auto ii = edges.begin();
             auto ei = edges.end();
             std::advance(ii, r);
             if (ii < ei) {
-              auto dest = OutOrUndirectedDst(*graph, *ii);
+              auto dest = EdgeDst(*graph, *ii);
               auto& sdata = graph->template GetData<NodeComponent>(src);
               auto& ddata = graph->template GetData<NodeComponent>(dest);
               sdata->hook_min(ddata);
@@ -933,13 +933,13 @@ struct ConnectedComponentsEdgeAfforestAlgo {
           if (sdata->component() == c) {
             return;
           }
-          auto edges = OutOrUndirectedEdges(*graph, src);
+          auto edges = Edges(*graph, src);
           auto beg = edges.begin();
           const auto end = edges.end();
 
           for (std::advance(beg, plan_.neighbor_sample_size()); beg < end;
                beg++) {
-            auto dest = OutOrUndirectedDst(*graph, *beg);
+            auto dest = EdgeDst(*graph, *beg);
             auto& ddata = graph->template GetData<NodeComponent>(dest);
             if (src < dest || c == ddata->component()) {
               works.push_back(std::make_pair(src, dest));
@@ -958,8 +958,8 @@ struct ConnectedComponentsEdgeAfforestAlgo {
           ComponentType victim = sdata->hook_min(ddata, c);
           if (victim) {
             auto src = victim - c0;  // TODO (bozhi) tricky!
-            for (auto ii : OutOrUndirectedEdges(*graph, src)) {
-              auto dest = OutOrUndirectedDst(*graph, ii);
+            for (auto ii : Edges(*graph, src)) {
+              auto dest = EdgeDst(*graph, ii);
               ctx.push_back(std::make_pair(dest, src));
             }
           }
@@ -1051,12 +1051,12 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto edges = OutOrUndirectedEdges(*graph, src);
+          auto edges = Edges(*graph, src);
           auto ii = edges.begin();
           const auto end = edges.end();
           for (uint32_t r = 0; r < plan_.neighbor_sample_size() && ii < end;
                ++r, ++ii) {
-            auto dest = OutOrUndirectedDst(*graph, *ii);
+            auto dest = EdgeDst(*graph, *ii);
             auto& sdata = graph->template GetData<NodeComponent>(src);
             auto& ddata = graph->template GetData<NodeComponent>(dest);
             sdata->link(ddata);
@@ -1088,7 +1088,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
             return;
           }
 
-          auto edges = OutOrUndirectedEdges(*graph, src);
+          auto edges = Edges(*graph, src);
           auto beg = edges.begin();
           const auto end = edges.end();
 
@@ -1113,7 +1113,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
           if (sdata->component() == c)
             return;
           for (auto ii = tile.beg; ii < tile.end; ++ii) {
-            auto dest = OutOrUndirectedDst(*graph, *ii);
+            auto dest = EdgeDst(*graph, *ii);
             auto& ddata = graph->template GetData<NodeComponent>(dest);
             sdata->link(ddata);
           }

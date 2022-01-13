@@ -1604,7 +1604,7 @@ using has_undirected_t =
 
 template <typename Graph, typename GNode = typename Graph::Node>
 auto
-OutOrUndirectedEdges(const Graph& graph, GNode node) {
+Edges(const Graph& graph, GNode node) {
   if constexpr (katana::is_detected_v<has_undirected_t, Graph>) {
     return graph.UndirectedEdges(node);
   } else {
@@ -1614,7 +1614,7 @@ OutOrUndirectedEdges(const Graph& graph, GNode node) {
 
 template <typename Graph, typename GEdge>
 auto
-OutOrUndirectedDst(const Graph& graph, GEdge edge) {
+EdgeDst(const Graph& graph, GEdge edge) {
   if constexpr (katana::is_detected_v<has_undirected_t, Graph>) {
     return graph.UndirectedEdgeNeighbor(edge);
   } else {

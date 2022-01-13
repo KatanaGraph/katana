@@ -81,8 +81,8 @@ struct CdlpSynchronousAlgo : CdlpAlgo<GraphViewTy> {
             using Histogram_type = boost::unordered_map<CommunityType, size_t>;
             Histogram_type histogram;
             // Iterate over all neighbors (this is undirected view)
-            for (auto e : OutOrUndirectedEdges(*graph, node)) {
-              auto neighbor = OutOrUndirectedDst(*graph, e);
+            for (auto e : Edges(*graph, node)) {
+              auto neighbor = EdgeDst(*graph, e);
               const auto neighbor_data =
                   graph->template GetData<NodeCommunity>(neighbor);
               histogram[neighbor_data]++;

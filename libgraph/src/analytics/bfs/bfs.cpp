@@ -111,8 +111,8 @@ struct OneTilePushWrap {
 
   template <typename C>
   void operator()(C& cont, const GNode& n) const {
-    auto rng = graph->OutEdges(n);
-    cont.push(EdgeTile{rng.begin(), rng.end()});
+    auto edges = graph->OutEdges(n);
+    cont.push(EdgeTile{edges.begin(), edges.end()});
   }
 };
 

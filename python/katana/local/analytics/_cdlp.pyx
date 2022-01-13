@@ -130,6 +130,7 @@ def cdlp(Graph pg, str output_property_name,
     :param pg: The graph to analyze.
     :type output_property_name: str
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
+    :param max_iteration: indicates the maximum number of iteration for cdlp to run.
     :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type plan: CdlpPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
@@ -144,7 +145,7 @@ def cdlp(Graph pg, str output_property_name,
 
         graph = Graph(get_rdg_dataset("ldbc_003"))
         from katana.analytics import cdlp, CdlpStatistics
-        cdlp(graph, "output")
+        cdlp(graph, "output", 10, False)
 
         stats = CdlpStatistics(graph, "output")
 

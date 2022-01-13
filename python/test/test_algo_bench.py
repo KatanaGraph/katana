@@ -146,6 +146,16 @@ def test_triangle_count():
     assert stats == 282617
 
 
+def test_cdlp():
+    arguments = get_default_args()
+    arguments["app"] = "cdlp"
+    stats = run_single_test(arguments)[0]
+    assert stats.total_communities == 3417
+    assert stats.total_non_trivial_communities == 1
+    assert stats.largest_community_size == 29352
+    assert stats.largest_community_ratio == approx(0.895752)
+
+
 def test_connected_components():
     arguments = get_default_args()
     arguments["app"] = "cc"

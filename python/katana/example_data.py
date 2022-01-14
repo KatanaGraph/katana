@@ -149,16 +149,20 @@ def _get_test_datasets_directory(invalidate_cache=False) -> Path:
     def find_path() -> Path:
         found_path = None
         # If SRC_DIR or KATANA_SOURCE_DIR environment is set, just use it
+        env_path = []
         if "SRC_DIR" in os.environ:
-            paths_to_check = [Path(os.environ["SRC_DIR"])]
+            env_path = [Path(os.environ["SRC_DIR"])]
         elif "KATANA_SOURCE_DIR" in os.environ:
-            paths_to_check = [Path(os.environ["KATANA_SOURCE_DIR"])]
-        else:
-            paths_to_check = list(Path(__file__).parents) + list(Path.cwd().parents)
-            for path in paths_to_check:
-                tmp_path = path / "external" / "test-datasets"
-                if validate_path(tmp_path, validate_sha=True):
-                    found_path = tmp_path
+            env_path = [Path(os.environ["KATANA_SOURCE_DIR"])]
+
+        paths_to_check = list(Path(__file__).parents) + list(Path.cwd().parents) + env_path
+        for path in paths_to_check:
+            katana_path = path / "external" / "test-datasets"
+            enterprise_path = path / "external" / "katana" / "external" / "test-datasets"
+            if validate_path(katana_path, validate_sha=True):
+                found_path = katana_path
+            elif validate_path(enterprise_path, validate_sha=True):
+                found_path = enterprise_path
 
         return found_path
 

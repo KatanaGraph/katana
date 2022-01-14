@@ -218,10 +218,9 @@ DefWithNumba(
 template <typename T>
 void
 RegisterNumbaClass(pybind11::class_<T>& cls) {
-  cls.def_property_readonly(
-      "__katana_address__", [](T* self) { return (uintptr_t)self; });
   auto numba_support =
       pybind11::module::import("katana.native_interfacing.numba_support");
+  DefKatanaAddress(cls);
   numba_support.attr("register_class")(cls);
 }
 

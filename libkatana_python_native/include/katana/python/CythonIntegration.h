@@ -1,3 +1,23 @@
+/// @warning This code is temporary and will be removed once all Cython wrappers
+///          are removed.
+///
+/// The utilities in this module allow pybind11 and Cython to access and
+/// construct each others objects. The implementation has some performance
+/// issues (repeated python function calls), and it cannot be used within numba
+/// compiled code.
+///
+/// The interface provided by both pybind11 and Cython objects entirely call
+/// via Python to avoid the need to have an ABI between pybind11 and Cython
+/// code. The interface is:
+///
+/// * an instance property __katana_address__ which returns the address of the
+///   underlying C++ object as an int.
+/// * a static method _make_from_address which takes the C++ object pointer as
+///   an int, and returns a new Python object wrapping it.
+///
+/// Any other interaction between pybind11 and Cython must happen via the
+/// existing C++ or Python interfaces. Either can of course call methods in
+/// either langauge.
 #ifndef KATANA_LIBKATANAPYTHONNATIVE_KATANA_PYTHON_CYTHONINTEGRATION_H_
 #define KATANA_LIBKATANAPYTHONNATIVE_KATANA_PYTHON_CYTHONINTEGRATION_H_
 
@@ -7,9 +27,17 @@
 
 namespace katana {
 
+/// A trait class used to mark classes @p $ that can be translated from Cython.
+/// Specializations should derive from std::true_type and provide a static
+/// method pybind11::object python_class() which returns the Python class object
+/// of the Cython class associated with @p T.
 template <typename T>
 struct CythonReferenceSupported : std::false_type {};
 
+/// A reference to a Cython class instance wrapping an instance of @p T.
+/// This class should be used like a smart-pointer. It always owns the
+/// underlying instance, so the raw pointer should not be allowed to outlive
+/// this.
 template <
     typename T,
     std::enable_if_t<CythonReferenceSupported<T>::value, bool> = true>
@@ -49,7 +77,6 @@ public:
 namespace pybind11 {
 namespace detail {
 /// Automatic cast from/to Python for Cython types which support it.
-// std::enable_if_t<std::is_integral<Integer>::value, bool> = true
 template <typename T>
 struct type_caster<katana::CythonReference<T> > {
 public:
@@ -77,8 +104,9 @@ public:
 
 namespace katana {
 
-// Cython types which we support.
-
+/// CYTHON_REFERENCE_SUPPORT(C++ type,
+///      the name of the module holding the Cython class object as a string,
+///      the name of the Cython class as a string);
 #define CYTHON_REFERENCE_SUPPORT(type, python_module_name, python_type_name)   \
   template <>                                                                  \
   struct CythonReferenceSupported<type> : std::true_type {                     \
@@ -88,13 +116,17 @@ namespace katana {
     }                                                                          \
   }
 
+// Add Cython classes here as needed. Remove them when they are moved to
+// pybind11.
 CYTHON_REFERENCE_SUPPORT(katana::PropertyGraph, "katana.local", "Graph");
 
 #undef CYTHON_REFERENCE_SUPPORT
 
+/// Define utilities on @p cls which allow Cython to access and construct
+/// instances of the pybind11 wrapper of @p T.
 template <typename T>
 pybind11::class_<T>
-CythonConstructor(pybind11::class_<T> cls) {
+DefCythonSupport(pybind11::class_<T> cls) {
   cls.template def_static(
       "_make_from_address",
       [](uintptr_t addr, pybind11::handle owner [[maybe_unused]]) {
@@ -105,6 +137,7 @@ CythonConstructor(pybind11::class_<T> cls) {
   // keep_alive<0, 2> causes the owner argument to be kept alive as long as the
   // returned object exists. See
   // https://pybind11.readthedocs.io/en/stable/advanced/functions.html#keep-alive
+  DefKatanaAddress(cls);
   return cls;
 }
 

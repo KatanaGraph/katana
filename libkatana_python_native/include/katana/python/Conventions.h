@@ -130,6 +130,20 @@ DefConventions(pybind11::class_<T> cls) {
   return cls;
 }
 
+/// Define the __katana_address__ property used by Numba and Cython
+/// integrations.
+///
+/// This is idempotent.
+template <typename T>
+pybind11::class_<T>
+DefKatanaAddress(pybind11::class_<T>& cls) {
+  if (!hasattr(cls, "__katana_address__")) {
+    cls.def_property_readonly(
+        "__katana_address__", [](T* self) { return (uintptr_t)self; });
+  }
+  return cls;
+}
+
 }  // namespace katana
 
 #endif

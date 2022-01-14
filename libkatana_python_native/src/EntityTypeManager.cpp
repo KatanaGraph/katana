@@ -49,7 +49,7 @@ katana::python::InitEntityTypeManager(py::module_& m) {
       m, "EntityTypeManager");
 
   katana::DefConventions(entity_type_manager_cls);
-  katana::CythonConstructor(entity_type_manager_cls);
+  katana::DefCythonSupport(entity_type_manager_cls);
   entity_type_manager_cls.def(py::init<>())
       .def_property_readonly(
           "atomic_types",

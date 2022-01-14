@@ -32,7 +32,7 @@ public:
         auto katana_module = pybind11::module_::import("katana");
         error_type = katana_module.attr(code.category().name());
         PyErr_SetString(error_type.ptr(), ss.str().c_str());
-      } catch (pybind11::error_already_set eas) {
+      } catch (pybind11::error_already_set& eas) {
         ss << " (error code category is " << code.category().name()
            << " which does not have a custom exception class)";
         error_type = pybind11::reinterpret_borrow<object>(PyExc_RuntimeError);

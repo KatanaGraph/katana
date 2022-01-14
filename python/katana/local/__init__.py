@@ -10,9 +10,17 @@ from katana.local._shared_mem_sys import initialize
 from katana.local.barrier import Barrier, SimpleBarrier, get_fast_barrier
 from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.local.dynamic_bitset import DynamicBitset
-from katana.local.entity_type_manager import AtomicEntityType, EntityType, EntityTypeManager
 from katana.local.graph import Graph, TxnContext
-from katana.local_native import ReduceAnd, ReduceMax, ReduceMin, ReduceOr, ReduceSum
+from katana.local_native import (
+    AtomicEntityType,
+    EntityType,
+    EntityTypeManager,
+    ReduceAnd,
+    ReduceMax,
+    ReduceMin,
+    ReduceOr,
+    ReduceSum,
+)
 from katana.native_interfacing.numpy_atomic import atomic_add, atomic_max, atomic_min, atomic_sub
 
 __all__ = [

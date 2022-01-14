@@ -3,8 +3,7 @@ import pyarrow
 from numba import jit
 
 from katana import do_all, do_all_operator
-from katana.local import Graph
-from katana.local.atomic import ReduceMax, ReduceSum
+from katana.local import Graph, ReduceMax, ReduceSum
 from katana.local.datastructures import InsertBag
 from katana.timer import StatTimer
 

@@ -62,6 +62,7 @@ dependencies:
  - pexpect>=4.8,<5a0
  - pkg-config>=0.29
  - pyarrow>=4,<5a0
+ - pybind11>=2.6.1,<3a0
  - pydata-sphinx-theme>=0.6.3
  - pygithub>=1.54,<2a0
  - pylint>=2.8.3,<2.9a0

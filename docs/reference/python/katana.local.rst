@@ -2,6 +2,8 @@
 Katana Local API
 ================
 
+.. py:module:: katana.local
+
 The local or single-host API, :py:mod:`katana.local`, provides graph data
 access, local graph loading, and shared-memory analytics. This API supports
 writing new graph algorithms using high-performance parallel loops. This API

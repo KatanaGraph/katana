@@ -29,6 +29,7 @@ requirements:
     - sphinx {{ sphinx }}
     - sphinx-copybutton {{ sphinx_copybutton }}
     - sphinx-tabs {{ sphinx_tabs }}
+    - pybind11 {{ pybind11 }}
   host:
     - jinja2 {{ jinja2 }}
     - cython {{ cython }}
@@ -107,6 +108,7 @@ outputs:
     about:
       summary: Python library for parallel and distributed graph analytics and processing. (Open-source)
     files:
+      - lib/libkatana_python_native.so*
       - lib/python*/site-packages/katana_python-*/**
     requirements:
       build:

@@ -7,6 +7,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 include(BuildCommon)
 include(AddUnitTest)
 
+if("gpu" IN_LIST KATANA_COMPONENTS)
+  if("${CMAKE_CUDA_ARCHITECTURES}" STREQUAL "")
+    set(CMAKE_CUDA_ARCHITECTURES "52;60;70;80")
+  endif()
+endif()
 string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_USE_GPU)
 
 ###### Documentation ######

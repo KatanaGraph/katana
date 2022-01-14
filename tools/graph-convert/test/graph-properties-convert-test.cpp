@@ -59,11 +59,11 @@ CheckTopology(
     const katana::GraphComponents& graph, const std::string& indices_expected,
     const std::string& dests_expected) {
   auto indices = katana::ProjectAsArrowArray(
-      graph.topology.adj_data(), graph.topology.num_nodes());
+      graph.topology.AdjData(), graph.topology.NumNodes());
   KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = katana::ProjectAsArrowArray(
-      graph.topology.dest_data(), graph.topology.num_edges());
+      graph.topology.DestData(), graph.topology.NumEdges());
   KATANA_LOG_ASSERT(dests->ToString() == dests_expected);
 }
 
@@ -79,8 +79,8 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
   KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_LOG_ASSERT(graph.topology.num_nodes() == 9);
-  KATANA_LOG_ASSERT(graph.topology.num_edges() == 8);
+  KATANA_LOG_ASSERT(graph.topology.NumNodes() == 9);
+  KATANA_LOG_ASSERT(graph.topology.NumEdges() == 8);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -361,8 +361,8 @@ VerifyTypesSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
   KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_LOG_ASSERT(graph.topology.num_nodes() == 9);
-  KATANA_LOG_ASSERT(graph.topology.num_edges() == 8);
+  KATANA_LOG_ASSERT(graph.topology.NumNodes() == 9);
+  KATANA_LOG_ASSERT(graph.topology.NumEdges() == 8);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -717,8 +717,8 @@ VerifyChunksSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
   KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_LOG_ASSERT(graph.topology.num_nodes() == 9);
-  KATANA_LOG_ASSERT(graph.topology.num_edges() == 8);
+  KATANA_LOG_ASSERT(graph.topology.NumNodes() == 9);
+  KATANA_LOG_ASSERT(graph.topology.NumEdges() == 8);
 
   // test node properties
   auto names = graph.nodes.properties->GetColumnByName("name");
@@ -1196,8 +1196,8 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 1);
   KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 1);
 
-  KATANA_LOG_ASSERT(graph.topology.num_nodes() == 2);
-  KATANA_LOG_ASSERT(graph.topology.num_edges() == 1);
+  KATANA_LOG_ASSERT(graph.topology.NumNodes() == 2);
+  KATANA_LOG_ASSERT(graph.topology.NumEdges() == 1);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(

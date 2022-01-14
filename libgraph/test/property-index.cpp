@@ -58,13 +58,13 @@ Edge::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
 template <>
 size_t
 Node::num_entities(katana::PropertyGraph* pg) {
-  return pg->num_nodes();
+  return pg->NumNodes();
 }
 
 template <>
 size_t
 Edge::num_entities(katana::PropertyGraph* pg) {
-  return pg->num_edges();
+  return pg->NumEdges();
 }
 
 template <>

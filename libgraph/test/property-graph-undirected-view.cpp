@@ -37,8 +37,8 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
 
   for (Node src : graph.all_nodes()) {
     uint32_t deg_sum = 0u;
-    for (Edge e : graph.edges(src)) {
-      Node dst = graph.edge_dest(e);
+    for (Edge e : graph.UndirectedEdges(src)) {
+      Node dst = graph.UndirectedEdgeNeighbor(e);
       deg_sum += graph.GetData<NodeLabel>(dst);
     }
 
@@ -53,8 +53,7 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   }
 
   KATANA_LOG_VASSERT(
-      tot_deg_sum == 2 * graph.all_edges().size(),
-      "Total Degree Sum Mismatched");
+      tot_deg_sum == 2 * graph.NumEdges(), "Total Degree Sum Mismatched");
 }
 
 int

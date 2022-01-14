@@ -83,8 +83,8 @@ struct SerialAlgo {
       return false;
     }
     return std::all_of(
-        graph.edges(src).begin(), graph.edges(src).end(), [&](auto ii) {
-          auto dest = graph.GetEdgeDest(ii);
+        graph.OutEdges(src).begin(), graph.OutEdges(src).end(), [&](auto ii) {
+          auto dest = graph.OutEdgeDst(ii);
           auto& dest_flag = graph.GetData<NodeFlag>(dest);
           return dest_flag != MatchFlag::kMatched;
         });
@@ -92,8 +92,8 @@ struct SerialAlgo {
 
   void Match(Graph* graph, GNode src) {
     auto& src_flag = graph->GetData<NodeFlag>(src);
-    for (auto ii : graph->edges(src)) {
-      auto dest = graph->GetEdgeDest(ii);
+    for (auto ii : graph->OutEdges(src)) {
+      auto dest = graph->OutEdgeDst(ii);
       auto& dest_flag = graph->GetData<NodeFlag>(dest);
       dest_flag = MatchFlag::KOtherMatched;
     }
@@ -127,8 +127,8 @@ struct TransactionalAlgo {
       return false;
     }
 
-    for (auto ii : graph.edges(src)) {
-      auto dest = graph.GetEdgeDest(ii);
+    for (auto ii : graph.OutEdges(src)) {
+      auto dest = graph.OutEdgeDst(ii);
       auto& dest_flag = graph.template GetData<NodeFlag>(dest);
       if (dest_flag == MatchFlag::kMatched) {
         return false;
@@ -139,8 +139,8 @@ struct TransactionalAlgo {
 
   void modify(Graph* graph, GNode src) {
     auto& src_flag = graph->template GetData<NodeFlag>(src);
-    for (auto ii : graph->edges(src)) {
-      auto dest = graph->GetEdgeDest(ii);
+    for (auto ii : graph->OutEdges(src)) {
+      auto dest = graph->OutEdgeDst(ii);
       auto& dest_flag = graph->template GetData<NodeFlag>(dest);
       dest_flag = MatchFlag::KOtherMatched;
     }
@@ -223,9 +223,9 @@ struct PullAlgo {
           }
 
           MatchFlag flag = MatchFlag::kMatched;
-          for (auto edge : graph.edges(src)) {
-            auto dest = graph.GetEdgeDest(edge);
-            if (*dest >= src) {
+          for (auto edge : graph.OutEdges(src)) {
+            auto dest = graph.OutEdgeDst(edge);
+            if (dest >= src) {
               continue;
             }
 
@@ -342,7 +342,7 @@ struct PrioAlgo {
     katana::GReduceLogicalOr unmatched;
     katana::PerThreadStorage<std::mt19937*> generator;
 
-    float avg_degree = graph->num_edges() / graph->size();
+    float avg_degree = graph->NumEdges() / graph->size();
     uint8_t in = ~1;
     float scale_avg = ((in / 2) - 1) * avg_degree;
 
@@ -350,7 +350,7 @@ struct PrioAlgo {
         katana::iterate(*graph),
         [&](const GNode& src) {
           auto& src_flag = graph->GetData<NodeFlag>(src);
-          float degree = graph->edges(src).size();
+          float degree = graph->OutEdges(src).size();
           float x = degree - hash(src) * kHashScale;
           int res = round(scale_avg / (avg_degree + x));
           uint8_t val = (res + res) | 1;
@@ -369,8 +369,8 @@ struct PrioAlgo {
               return;
             }
 
-            for (auto edge : graph->edges(src)) {
-              auto dest = graph->GetEdgeDest(edge);
+            for (auto edge : graph->OutEdges(src)) {
+              auto dest = graph->OutEdgeDst(edge);
 
               auto dest_flag = graph->GetData<NodeFlag>(dest);
 
@@ -384,9 +384,9 @@ struct PrioAlgo {
                 continue;
               }
               if (src_flag == dest_flag) {
-                if (src > *dest) {
+                if (src > dest) {
                   continue;
-                } else if (src == *dest) {
+                } else if (src == dest) {
                   src_flag = kPermanentNo;  // other_matched
                   return;
                 } else {
@@ -439,7 +439,7 @@ struct EdgeTiledPrioAlgo {
     katana::InsertBag<EdgeTile> works;
     constexpr int kEdgeTileSize = 64;
 
-    float avg_degree = graph->num_edges() / float(graph->size());
+    float avg_degree = graph->NumEdges() / float(graph->size());
     uint8_t in = ~1;
     float scale_avg = ((in / 2) - 1) * avg_degree;
 
@@ -447,10 +447,11 @@ struct EdgeTiledPrioAlgo {
         katana::iterate(*graph),
         [&](const GNode& src) {
           auto& src_flag = graph->GetData<NodeFlag>(src);
-          auto beg = graph->edge_begin(src);
-          const auto end = graph->edge_end(src);
+          auto rng = graph->OutEdges(src);
+          auto beg = rng.begin();
+          const auto end = rng.end();
 
-          float degree = float(graph->edges(src).size());
+          float degree = float(graph->degree(src));
           float x = degree - hash(src) * kHashScale;
           int res = round(scale_avg / (avg_degree + x));
           uint8_t val = (res + res) | 0x03;
@@ -483,7 +484,7 @@ struct EdgeTiledPrioAlgo {
             if ((src_flag & kUndecided)) {  // is undecided
 
               for (auto edge = tile.beg; edge != tile.end; ++edge) {
-                auto dest = graph->GetEdgeDest(edge);
+                auto dest = graph->OutEdgeDst(*edge);
 
                 auto& dest_flag = graph->GetData<NodeFlag>(dest);
 
@@ -496,9 +497,9 @@ struct EdgeTiledPrioAlgo {
                 if (src_flag > dest_flag) {
                   continue;
                 } else if (src_flag == dest_flag) {
-                  if (src > *dest) {
+                  if (src > dest) {
                     continue;
-                  } else if (src == *dest) {
+                  } else if (src == dest) {
                     src_flag = kPermanentNo;  // other_matched
                     tile.flag = false;
                     return;
@@ -538,8 +539,8 @@ struct EdgeTiledPrioAlgo {
             if ((src_flag & kUndecided) != 0) {       // undecided
               if ((src_flag & kTemporaryYes) != 0) {  // temporary yes
                 src_flag = kPermanentYes;  // 0x1111 1110, permanent yes
-                for (auto edge : graph->edges(src)) {
-                  auto dest = graph->GetEdgeDest(edge);
+                for (auto edge : graph->OutEdges(src)) {
+                  auto dest = graph->OutEdgeDst(edge);
 
                   auto& dest_flag = graph->GetData<NodeFlag>(dest);
                   dest_flag =
@@ -582,11 +583,11 @@ struct IsBad {
       return true;
     }
     if (src_flag) {
-      for (auto ii : graph_.edges(n)) {
-        auto dest = graph_.GetEdgeDest(ii);
+      for (auto ii : graph_.OutEdges(n)) {
+        auto dest = graph_.OutEdgeDst(ii);
         const auto& dest_flag = graph_.template GetData<NodeFlag>(dest);
 
-        if (*dest != n && dest_flag) {
+        if (dest != n && dest_flag) {
           // Fail if two set members are connected by an egde.
           return true;
         }

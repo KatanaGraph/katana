@@ -20,7 +20,7 @@ TestIsApproximateDegreeDistributionPowerLaw() {
     auto g = MakeFileGraph<uint32_t>(100, 1, &policy, &txn_ctx);
 
     KATANA_LOG_ASSERT(g->size() == 100);
-    KATANA_LOG_ASSERT(g->num_edges() == 11 * 100);
+    KATANA_LOG_ASSERT(g->NumEdges() == 11 * 100);
 
     KATANA_LOG_ASSERT(
         !katana::analytics::IsApproximateDegreeDistributionPowerLaw(*g.get()));

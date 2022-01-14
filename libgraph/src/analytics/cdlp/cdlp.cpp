@@ -81,14 +81,14 @@ struct CdlpSynchronousAlgo : CdlpAlgo<GraphViewTy> {
             using Histogram_type = boost::unordered_map<CommunityType, size_t>;
             Histogram_type histogram;
             // Iterate over all neighbors (this is undirected view)
-            for (auto e : graph->edges(node)) {
-              auto neighbor = graph->edge_dest(e);
+            for (auto e : Edges(*graph, node)) {
+              auto neighbor = EdgeDst(*graph, e);
               const auto neighbor_data =
                   graph->template GetData<NodeCommunity>(neighbor);
               histogram[neighbor_data]++;
             }
 
-            // Pick the most frequent communtiy as the new community for node
+            // Pick the most frequent community as the new community for node
             // pick the smallest one if more than one max frequent exist.
             auto ndata_new_comm = ndata_current_comm;
             size_t best_freq = 0;
@@ -139,8 +139,7 @@ CdlpWithWrap(
     katana::PropertyGraph* pg, std::string output_property_name,
     size_t max_iterations, katana::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(
-      2,
-      pg->topology().num_nodes() * sizeof(typename Algorithm::NodeCommunity));
+      2, pg->topology().NumNodes() * sizeof(typename Algorithm::NodeCommunity));
   katana::ReportPageAllocGuard page_alloc;
 
   if (auto r = ConstructNodeProperties<

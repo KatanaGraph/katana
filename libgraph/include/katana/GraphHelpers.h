@@ -35,7 +35,7 @@ namespace internal {
 template <typename GraphTy>
 inline GraphTopology::edge_iterator
 edge_begin(GraphTy& graph, uint32_t N) {
-  return graph.topology().edges(N).begin();
+  return graph.topology().OutEdges(N).begin();
 }
 
 /**
@@ -48,7 +48,7 @@ edge_begin(GraphTy& graph, uint32_t N) {
 template <typename GraphTy>
 inline GraphTopology::edge_iterator
 edge_end(GraphTy& graph, uint32_t N) {
-  return graph.topology().edges(N).end();
+  return graph.topology().OutEdges(N).end();
 }
 
 template <typename Ty>
@@ -435,7 +435,7 @@ std::vector<uint32_t>
 determineUnitRangesFromGraph(
     GraphTy& graph, uint32_t unitsToSplit, uint32_t nodeAlpha = 0) {
   // uint32_t totalNodes = graph.size();
-  uint32_t totalNodes = graph.topology().num_nodes();
+  uint32_t totalNodes = graph.topology().NumNodes();
 
   std::vector<uint32_t> returnRanges;
   returnRanges.resize(unitsToSplit + 1);

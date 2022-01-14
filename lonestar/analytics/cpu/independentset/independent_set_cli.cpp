@@ -84,7 +84,7 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pg->num_nodes() << " nodes, " << pg->num_edges()
+  std::cout << "Read " << pg->NumNodes() << " nodes, " << pg->NumEdges()
             << " edges\n";
 
   IndependentSetPlan plan = IndependentSetPlan::FromAlgorithm(algo);

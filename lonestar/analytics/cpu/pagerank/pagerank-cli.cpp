@@ -67,8 +67,8 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
-            << pg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
+            << pg->topology().NumEdges() << " edges\n";
 
   PagerankPlan plan{kCPU, algo, tolerance, maxIterations, kAlpha};
 
@@ -99,7 +99,7 @@ main(int argc, char** argv) {
     }
     auto results = r.value();
     KATANA_LOG_DEBUG_ASSERT(
-        uint64_t(results->length()) == pg->topology().num_nodes());
+        uint64_t(results->length()) == pg->topology().NumNodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

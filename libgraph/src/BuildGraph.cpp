@@ -1755,11 +1755,11 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
 
   if (verbose) {
     std::cout << "Finished mongodb conversion to arrow\n";
-    std::cout << "Nodes: " << pg_topo.num_nodes() << "\n";
+    std::cout << "Nodes: " << pg_topo.NumNodes() << "\n";
     std::cout << "Node Properties: " << nodes_tables.properties->num_columns()
               << "\n";
     std::cout << "Node Labels: " << nodes_tables.labels->num_columns() << "\n";
-    std::cout << "Edges: " << pg_topo.num_edges() << "\n";
+    std::cout << "Edges: " << pg_topo.NumEdges() << "\n";
     std::cout << "Edge Properties: " << edges_tables.properties->num_columns()
               << "\n";
     std::cout << "Edge Types: " << edges_tables.labels->num_columns() << "\n";

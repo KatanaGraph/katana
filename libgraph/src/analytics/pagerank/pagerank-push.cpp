@@ -56,7 +56,7 @@ katana::Result<void>
 PagerankPushAsynchronous(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan, katana::TxnContext* txn_ctx) {
-  katana::EnsurePreallocated(5, 5 * pg->num_nodes() * sizeof(NodeData));
+  katana::EnsurePreallocated(5, 5 * pg->NumNodes() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
   katana::analytics::TemporaryPropertyGuard temporary_property{
@@ -84,12 +84,12 @@ PagerankPushAsynchronous(
           PRTy old_residual = src_residual.exchange(0.0);
           auto& src_value = graph.GetData<NodeValue>(src);
           src_value += old_residual;
-          int src_nout = graph.edges(src).size();
+          int src_nout = graph.degree(src);
           if (src_nout > 0) {
             PRTy delta = old_residual * plan.alpha() / src_nout;
             //! For each out-going neighbors.
-            for (const auto& jj : graph.edges(src)) {
-              auto dest = graph.edge_dest(jj);
+            for (const auto& jj : graph.OutEdges(src)) {
+              auto dest = graph.OutEdgeDst(jj);
               auto& dest_residual = graph.GetData<NodeResidual>(dest);
               if (delta > 0) {
                 auto old = atomicAdd(dest_residual, delta);
@@ -112,7 +112,7 @@ katana::Result<void>
 PagerankPushSynchronous(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan, katana::TxnContext* txn_ctx) {
-  katana::EnsurePreallocated(5, 5 * pg->num_nodes() * sizeof(NodeData));
+  katana::EnsurePreallocated(5, 5 * pg->NumNodes() * sizeof(NodeData));
   katana::ReportPageAllocGuard page_alloc;
 
   katana::analytics::TemporaryPropertyGuard temporary_property{
@@ -156,11 +156,11 @@ PagerankPushSynchronous(
             graph.GetData<NodeValue>(src) += old_residual;
             sdata_residual = 0.0;
 
-            int src_nout = graph.edges(src).size();
+            int src_nout = graph.OutEdges(src).size();
             PRTy delta = old_residual * plan.alpha() / src_nout;
 
-            auto beg = graph.edges(src).begin();
-            const auto end = graph.edges(src).end();
+            auto beg = graph.OutEdges(src).begin();
+            const auto end = graph.OutEdges(src).end();
 
             KATANA_LOG_ASSERT(beg <= end);
 
@@ -189,7 +189,7 @@ PagerankPushSynchronous(
         [&](const Update& up) {
           //! For each out-going neighbors.
           for (auto jj = up.beg; jj != up.end; ++jj) {
-            auto dest = graph.edge_dest(*jj);
+            auto dest = graph.OutEdgeDst(*jj);
             auto& ddata_residual = graph.GetData<NodeResidual>(dest);
             auto old = atomicAdd(ddata_residual, up.delta);
             //! If fabs(old) is greater than tolerance, then it would

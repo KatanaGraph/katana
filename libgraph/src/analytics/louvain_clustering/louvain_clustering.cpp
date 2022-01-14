@@ -70,8 +70,8 @@ struct LouvainClusteringImplementation
     uint32_t num_iter = iter;
 
     /*** Initialization ***/
-    c_info.allocateBlocked(graph->num_nodes());
-    c_update.allocateBlocked(graph->num_nodes());
+    c_info.allocateBlocked(graph->NumNodes());
+    c_update.allocateBlocked(graph->NumNodes());
 
     /* Initialization each node to its own cluster */
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
@@ -200,9 +200,9 @@ struct LouvainClusteringImplementation
     uint32_t num_iter = iter;
 
     /*** Initialization ***/
-    c_info.allocateBlocked(graph->num_nodes());
-    c_update_add.allocateBlocked(graph->num_nodes());
-    c_update_subtract.allocateBlocked(graph->num_nodes());
+    c_info.allocateBlocked(graph->NumNodes());
+    c_update_add.allocateBlocked(graph->NumNodes());
+    c_update_subtract.allocateBlocked(graph->NumNodes());
 
     /* Initialization each node to its own cluster */
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
@@ -218,14 +218,15 @@ struct LouvainClusteringImplementation
         Base::template CalConstantForSecondTerm<EdgeWeightType>(*graph);
 
     katana::NUMAArray<uint64_t> local_target;
-    local_target.allocateBlocked(graph->num_nodes());
+    local_target.allocateBlocked(graph->NumNodes());
 
     // partition nodes
     std::vector<katana::InsertBag<GNode>> bag(16);
 
     katana::InsertBag<GNode> to_process;
     katana::NUMAArray<bool> in_bag;
-    in_bag.allocateBlocked(graph->num_nodes());
+
+    in_bag.allocateBlocked(graph->NumNodes());
 
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
       uint64_t idx = n % 16;
@@ -434,7 +435,7 @@ public:
       phase++;
 
       Graph graph_curr = KATANA_CHECKED(Graph::Make(pg_curr.get()));
-      if (graph_curr.num_nodes() > plan.min_graph_size()) {
+      if (graph_curr.NumNodes() > plan.min_graph_size()) {
         switch (plan.algorithm()) {
         case LouvainClusteringPlan::kDoAll: {
           curr_mod = KATANA_CHECKED(LouvainWithoutLockingDoAll(
@@ -463,7 +464,7 @@ public:
       if (iter < plan.max_iterations() &&
           (curr_mod - prev_mod) > plan.modularity_threshold_total()) {
         if (!plan.enable_vf() && phase == 1) {
-          KATANA_LOG_DEBUG_ASSERT(num_nodes_orig == graph_curr.num_nodes());
+          KATANA_LOG_DEBUG_ASSERT(num_nodes_orig == graph_curr.NumNodes());
           katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
             clusters_orig[n] =
                 graph_curr.template GetData<CurrentCommunityID>(n);
@@ -473,7 +474,7 @@ public:
               katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
                 if (clusters_orig[n] != Base::UNASSIGNED) {
                   KATANA_LOG_DEBUG_ASSERT(
-                      clusters_orig[n] < graph_curr.num_nodes());
+                      clusters_orig[n] < graph_curr.NumNodes());
                   clusters_orig[n] =
                       graph_curr.template GetData<CurrentCommunityID>(
                           clusters_orig[n]);
@@ -517,7 +518,7 @@ AddDefaultEdgeWeight(
       KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
           pg, {}, {edge_weight_property_name})));
   katana::do_all(
-      katana::iterate(typed_graph.all_edges()),
+      katana::iterate(typed_graph.OutEdges()),
       [&](auto e) { typed_graph.template GetEdgeData<EdgeWeightType>(e) = 1; },
       katana::steal(), katana::loopname("InitEdgeWeight"));
   return katana::ResultSuccess();
@@ -549,7 +550,7 @@ LouvainClusteringWithWrap(
    * Community will be set to UNASSINED for isolated nodes
    */
   katana::NUMAArray<uint64_t> clusters_orig;
-  clusters_orig.allocateBlocked(pg->num_nodes());
+  clusters_orig.allocateBlocked(pg->NumNodes());
 
   if (is_symmetric) {
     using GraphViewTy = katana::PropertyGraphViews::Default;

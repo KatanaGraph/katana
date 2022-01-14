@@ -92,9 +92,9 @@ main(int argc, char** argv) {
 
   auto subgraph = std::move(subgraph_result.value());
   std::cout << "Number of nodes in subgraph: "
-            << subgraph->topology().num_nodes() << "\n";
+            << subgraph->topology().NumNodes() << "\n";
   std::cout << "Number of edges in subgraph: "
-            << subgraph->topology().num_edges() << "\n";
+            << subgraph->topology().NumEdges() << "\n";
 
   totalTime.stop();
 

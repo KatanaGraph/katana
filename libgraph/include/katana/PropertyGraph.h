@@ -102,7 +102,7 @@ private:
   katana::Result<katana::RDGTopology*> LoadTopology(
       const katana::RDGTopology& shadow) {
     katana::RDGTopology* topo = KATANA_CHECKED(rdg_.GetTopology(shadow));
-    if (num_edges() != topo->num_edges() || num_nodes() != topo->num_nodes()) {
+    if (NumEdges() != topo->num_edges() || NumNodes() != topo->num_nodes()) {
       KATANA_LOG_WARN(
           "RDG found topology matching description, but num_edge/num_node does "
           "not match csr topology");
@@ -244,8 +244,8 @@ public:
         node_entity_type_ids_(std::move(node_entity_type_ids)),
         edge_entity_type_ids_(std::move(edge_entity_type_ids)),
         pg_view_cache_(std::move(topo)) {
-    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == num_nodes());
-    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == num_edges());
+    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == NumNodes());
+    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == NumEdges());
   }
 
   template <typename PGView>
@@ -577,7 +577,7 @@ public:
     return loaded_edge_schema()->num_fields();
   }
 
-  // num_rows() == num_nodes() (all local nodes)
+  // num_rows() == NumNodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
     if (i >= rdg_.node_properties()->num_columns()) {
       return nullptr;
@@ -837,7 +837,13 @@ public:
 
   nodes_range all_nodes() const noexcept { return topology().all_nodes(); }
 
-  edges_range all_edges() const noexcept { return topology().all_edges(); }
+  edges_range OutEdges() const noexcept { return topology().OutEdges(); }
+
+  /// Gets the edge range of some node.
+  ///
+  /// \param node node to get the edge range of
+  /// \returns iterable edge range for node.
+  edges_range OutEdges(Node node) const { return topology().OutEdges(node); }
 
   /// Return the number of local nodes
   size_t size() const { return topology().size(); }
@@ -846,22 +852,16 @@ public:
 
   /// Return the number of local nodes
   ///  num_nodes in repartitioner is of type LocalNodeID
-  uint64_t num_nodes() const { return topology().num_nodes(); }
+  uint64_t NumNodes() const { return topology().NumNodes(); }
   /// Return the number of local edges
-  uint64_t num_edges() const { return topology().num_edges(); }
-
-  /// Gets the edge range of some node.
-  ///
-  /// \param node node to get the edge range of
-  /// \returns iterable edge range for node.
-  edges_range edges(Node node) const { return topology().edges(node); }
+  uint64_t NumEdges() const { return topology().NumEdges(); }
 
   /// Gets the destination for an edge.
   ///
   /// @param edge edge iterator to get the destination of
   /// @returns node iterator to the edge destination
-  node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    auto node_id = topology().edge_dest(*edge);
+  node_iterator OutEdgeDst(const edge_iterator& edge) const {
+    auto node_id = topology().OutEdgeDst(*edge);
     return node_iterator(node_id);
   }
 

@@ -104,7 +104,7 @@ main(int argc, char** argv) {
       BetweennessCentralityPlan::FromAlgorithm(algo);
 
   BetweennessCentralitySources sources = kBetweennessCentralityAllNodes;
-  uint32_t num_sources = pg->num_nodes();
+  uint32_t num_sources = pg->NumNodes();
 
   if (!allSources) {
     if (!startNodesFile.getValue().empty()) {
@@ -168,8 +168,7 @@ main(int argc, char** argv) {
     }
     auto results = results_result.value();
 
-    KATANA_LOG_ASSERT(
-        (uint64_t)results->length() == pg->topology().num_nodes());
+    KATANA_LOG_ASSERT((uint64_t)results->length() == pg->topology().NumNodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

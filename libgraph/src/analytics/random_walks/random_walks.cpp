@@ -44,13 +44,13 @@ struct Node2VecAlgo {
       const SortedGraphView& graph, const GNode& n,
       const katana::NUMAArray<uint64_t>& degree, const double prob) {
     if (degree[n] == 0) {
-      return graph.num_nodes();
+      return graph.NumNodes();
     }
     double total_wt = degree[n];
 
     uint32_t edge_index = std::floor(prob * total_wt);
-    auto ei = graph.edges(n).begin() + edge_index;
-    return graph.edge_dest(*ei);
+    auto ei = graph.OutEdges(n).begin() + edge_index;
+    return graph.OutEdgeDst(*ei);
   }
 
   void GraphRandomWalk(
@@ -102,7 +102,7 @@ struct Node2VecAlgo {
 
           //Assumption: All edges have weight 1
           auto nbr = FindSampleNeighbor(graph, n, degree, prob);
-          KATANA_LOG_ASSERT(nbr < graph.num_nodes());
+          KATANA_LOG_ASSERT(nbr < graph.NumNodes());
 
           walk.push_back(std::move(nbr));
 
@@ -121,7 +121,7 @@ struct Node2VecAlgo {
               double prob = (*dist)(*generator.getLocal());
 
               auto nbr = FindSampleNeighbor(graph, curr, degree, prob);
-              KATANA_LOG_ASSERT(nbr < graph.num_nodes());
+              KATANA_LOG_ASSERT(nbr < graph.NumNodes());
 
               //sample y
               double y = (*dist)(*generator.getLocal());
@@ -202,14 +202,14 @@ struct Edge2VecAlgo {
       const SortedGraphView& graph, const GNode& n,
       const katana::NUMAArray<uint64_t>& degree, const double prob) {
     if (degree[n] == 0) {
-      return std::make_pair(graph.num_nodes(), 1);
+      return std::make_pair(graph.NumNodes(), 1);
     }
     double total_wt = degree[n];
 
     uint32_t edge_index = std::floor(prob * total_wt);
-    auto ei = graph.edges(n).begin() + edge_index;
+    auto ei = graph.OutEdges(n).begin() + edge_index;
     return std::make_pair(
-        graph.edge_dest(*ei), graph.GetEdgeData<EdgeType>(*ei));
+        graph.OutEdgeDst(*ei), graph.GetEdgeData<EdgeType>(*ei));
   }
 
   void GraphRandomWalk(
@@ -259,7 +259,7 @@ struct Edge2VecAlgo {
 
           //Assumption: All edges have weight 1
           auto nbr_pair = FindSampleNeighbor(graph, n, degree, prob);
-          KATANA_LOG_ASSERT(nbr_pair.first < graph.num_nodes());
+          KATANA_LOG_ASSERT(nbr_pair.first < graph.NumNodes());
 
           walk.push_back(std::move(nbr_pair.first));
           types_vec.push_back(nbr_pair.second);
@@ -282,7 +282,7 @@ struct Edge2VecAlgo {
 
               auto nbr_type_pair =
                   FindSampleNeighbor(graph, curr, degree, prob);
-              KATANA_LOG_ASSERT(nbr_pair.first < graph.num_nodes());
+              KATANA_LOG_ASSERT(nbr_pair.first < graph.NumNodes());
 
               GNode nbr = nbr_type_pair.first;
               EdgeType::ViewType::value_type p2 = nbr_type_pair.second;
@@ -473,7 +473,7 @@ InitializeDegrees(const Graph& graph, katana::NUMAArray<uint64_t>* degree) {
   katana::do_all(katana::iterate(graph), [&](typename Graph::Node n) {
     // Treat this as O(1) time because subtracting iterators is just pointer
     // or number subtraction. So don't use steal().
-    (*degree)[n] = graph.edges(n).size();
+    (*degree)[n] = graph.degree(n);
   });
 }
 

@@ -167,9 +167,9 @@ struct KATANA_EXPORT GraphComponents {
     std::cout << edges.labels->ToString() << "\n";
 
     auto indices_array =
-        katana::ProjectAsArrowArray(topology.adj_data(), topology.num_nodes());
+        katana::ProjectAsArrowArray(topology.AdjData(), topology.NumNodes());
     auto dests_array =
-        katana::ProjectAsArrowArray(topology.dest_data(), topology.num_edges());
+        katana::ProjectAsArrowArray(topology.DestData(), topology.NumEdges());
 
     std::cout << indices_array->ToString() << "\n";
     std::cout << dests_array->ToString() << "\n";

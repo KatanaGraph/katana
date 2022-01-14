@@ -49,7 +49,7 @@ KTrussInitialization(SortedGraphView* g) {
   katana::do_all(
       katana::iterate(*g),
       [&g](typename SortedGraphView::Node N) {
-        for (auto e : g->edges(N)) {
+        for (auto e : g->OutEdges(N)) {
           g->template GetEdgeData<EdgeFlag>(e) = valid;
         }
       },
@@ -71,7 +71,7 @@ KTrussInitialization(SortedGraphView* g) {
 bool
 IsValidDegreeNoLessThanJ(const SortedGraphView& g, GNode n, unsigned int j) {
   size_t numValid = 0;
-  for (auto e : g.edges(n)) {
+  for (auto e : g.OutEdges(n)) {
     if (!(g.GetEdgeData<EdgeFlag>(e) & removed)) {
       numValid += 1;
       if (numValid >= j) {
@@ -96,8 +96,8 @@ bool
 IsSupportNoLessThanJ(
     const SortedGraphView& g, GNode src, GNode dest, unsigned int j) {
   size_t numValidEqual = 0;
-  auto srcI = g.edges(src).begin(), srcE = g.edges(src).end(),
-       dstI = g.edges(dest).begin(), dstE = g.edges(dest).end();
+  auto srcI = g.OutEdges(src).begin(), srcE = g.OutEdges(src).end(),
+       dstI = g.OutEdges(dest).begin(), dstE = g.OutEdges(dest).end();
 
   while (true) {
     //! Find the first valid edge.
@@ -113,7 +113,7 @@ IsSupportNoLessThanJ(
     }
 
     //! Check for intersection.
-    auto sN = g.edge_dest(*srcI), dN = g.edge_dest(*dstI);
+    auto sN = g.OutEdgeDst(*srcI), dN = g.OutEdgeDst(*dstI);
     if (sN < dN) {
       ++srcI;
     } else if (dN < sN) {
@@ -163,8 +163,8 @@ BSPTrussJacobiAlgo(SortedGraphView* g, uint32_t k) {
   katana::do_all(
       katana::iterate(*g),
       [&](GNode n) {
-        for (auto e : g->edges(n)) {
-          auto dest = g->edge_dest(e);
+        for (auto e : g->OutEdges(n)) {
+          auto dest = g->OutEdgeDst(e);
           if (dest > n) {
             cur->push_back(std::make_pair(n, dest));
           }
@@ -239,8 +239,8 @@ BSPTrussAlgo(SortedGraphView* g, unsigned int k) {
   katana::do_all(
       katana::iterate(*g),
       [&g, &cur](GNode n) {
-        for (auto e : g->edges(n)) {
-          auto dest = g->edge_dest(e);
+        for (auto e : g->OutEdges(n)) {
+          auto dest = g->OutEdgeDst(e);
           if (dest > n) {
             cur->push_back(std::make_pair(n, dest));
           }
@@ -277,8 +277,8 @@ struct KeepValidNodes {
     if (IsValidDegreeNoLessThanJ(*g, n, j)) {
       s.push_back(n);
     } else {
-      for (auto e : g->edges(n)) {
-        auto dest = g->edge_dest(e);
+      for (auto e : g->OutEdges(n)) {
+        auto dest = g->OutEdgeDst(e);
         KATANA_LOG_DEBUG_ASSERT(g->has_edge(n, dest));
         KATANA_LOG_DEBUG_ASSERT(g->has_edge(dest, n));
 
@@ -297,7 +297,7 @@ katana::Result<void>
 BSPCoreAlgo(SortedGraphView* g, uint32_t k) {
   auto cur = std::make_unique<NodeVec>();
   auto next = std::make_unique<NodeVec>();
-  size_t curSize = g->num_nodes(), nextSize;
+  size_t curSize = g->NumNodes(), nextSize;
 
   katana::do_all(
       katana::iterate(*g), KeepValidNodes{g, k, *next}, katana::steal());
@@ -398,9 +398,9 @@ katana::analytics::KTrussStatistics::Compute(
   katana::do_all(
       katana::iterate(graph),
       [&](const GNode& node) {
-        for (auto e : graph.edges(node)) {
-          auto dest = graph.GetEdgeDest(e);
-          if (node < *dest &&
+        for (auto e : graph.OutEdges(node)) {
+          auto dest = graph.OutEdgeDst(e);
+          if (node < dest &&
               (graph.GetEdgeData<EdgeFlag>(e) & 0x1) != removed) {
             alive_edges += 1;
           }

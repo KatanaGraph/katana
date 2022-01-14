@@ -69,8 +69,8 @@ CountEqual(
     typename G::edge_iterator bb, typename G::edge_iterator eb) {
   size_t retval = 0;
   while (aa != ea && bb != eb) {
-    typename G::Node a = g.edge_dest(*aa);
-    typename G::Node b = g.edge_dest(*bb);
+    typename G::Node a = g.OutEdgeDst(*aa);
+    typename G::Node b = g.OutEdgeDst(*bb);
     if (a < b) {
       ++aa;
     } else if (b < a) {
@@ -89,7 +89,9 @@ struct LessThan {
   const G& g;
   typename G::Node n;
   LessThan(const G& g, typename G::Node n) : g(g), n(n) {}
-  bool operator()(typename G::edge_iterator it) { return g.edge_dest(*it) < n; }
+  bool operator()(typename G::edge_iterator it) {
+    return g.OutEdgeDst(*it) < n;
+  }
 };
 
 template <typename G>
@@ -98,7 +100,7 @@ struct GreaterThanOrEqual {
   typename G::Node n;
   GreaterThanOrEqual(const G& g, typename G::Node n) : g(g), n(n) {}
   bool operator()(typename G::edge_iterator it) {
-    return n >= g.edge_dest(*it);
+    return n >= g.OutEdgeDst(*it);
   }
 };
 
@@ -123,22 +125,22 @@ NodeIteratingAlgo(const SortedGraphView* graph) {
       [&](const Node& n) {
         // Partition neighbors
         // [first, ea) [n] [bb, last)
-        edge_iterator first = graph->edges(n).begin();
-        edge_iterator last = graph->edges(n).end();
+        edge_iterator first = graph->OutEdges(n).begin();
+        edge_iterator last = graph->OutEdges(n).end();
         edge_iterator ea =
             LowerBound(first, last, LessThan<SortedGraphView>(*graph, n));
         edge_iterator bb = LowerBound(
             first, last, GreaterThanOrEqual<SortedGraphView>(*graph, n));
 
         for (; bb != last; ++bb) {
-          Node B = graph->edge_dest(*bb);
+          Node B = graph->OutEdgeDst(*bb);
           for (auto aa = first; aa != ea; ++aa) {
-            Node A = graph->edge_dest(*aa);
-            edge_iterator vv = graph->edges(A).begin();
-            edge_iterator ev = graph->edges(A).end();
+            Node A = graph->OutEdgeDst(*aa);
+            edge_iterator vv = graph->OutEdges(A).begin();
+            edge_iterator ev = graph->OutEdges(A).end();
             edge_iterator it =
                 LowerBound(vv, ev, LessThan<SortedGraphView>(*graph, B));
-            if (it != ev && graph->edge_dest(*it) == B) {
+            if (it != ev && graph->OutEdgeDst(*it) == B) {
               numTriangles += 1;
             }
           }
@@ -158,22 +160,22 @@ OrderedCountFunc(
     const SortedGraphView* graph, Node n,
     katana::GAccumulator<size_t>& numTriangles) {
   size_t numTriangles_local = 0;
-  for (auto edges_n : graph->edges(n)) {
-    Node v = graph->edge_dest(edges_n);
+  for (auto edges_n : graph->OutEdges(n)) {
+    Node v = graph->OutEdgeDst(edges_n);
     if (v > n) {
       break;
     }
-    edge_iterator it_n = graph->edges(n).begin();
+    edge_iterator it_n = graph->OutEdges(n).begin();
 
-    for (auto edges_v : graph->edges(v)) {
-      auto dst_v = graph->edge_dest(edges_v);
+    for (auto edges_v : graph->OutEdges(v)) {
+      auto dst_v = graph->OutEdgeDst(edges_v);
       if (dst_v > v) {
         break;
       }
-      while (graph->edge_dest(*it_n) < dst_v) {
+      while (graph->OutEdgeDst(*it_n) < dst_v) {
         it_n++;
       }
-      if (dst_v == graph->edge_dest(*it_n)) {
+      if (dst_v == graph->OutEdgeDst(*it_n)) {
         numTriangles_local += 1;
       }
     }
@@ -223,8 +225,8 @@ EdgeIteratingAlgo(const SortedGraphView* graph) {
   katana::do_all(
       katana::iterate(*graph),
       [&](Node n) {
-        for (auto edge : graph->edges(n)) {
-          auto dest = graph->edge_dest(edge);
+        for (auto edge : graph->OutEdges(n)) {
+          auto dest = graph->OutEdgeDst(edge);
           if (n < dest) {
             items.push(WorkItem(n, dest));
           }
@@ -237,10 +239,10 @@ EdgeIteratingAlgo(const SortedGraphView* graph) {
       [&](const WorkItem& w) {
         // Compute intersection of range (w.src, w.dst) in neighbors of
         // w.src and w.dst
-        edge_iterator abegin = graph->edges(w.src).begin();
-        edge_iterator aend = graph->edges(w.src).end();
-        edge_iterator bbegin = graph->edges(w.dst).begin();
-        edge_iterator bend = graph->edges(w.dst).end();
+        edge_iterator abegin = graph->OutEdges(w.src).begin();
+        edge_iterator aend = graph->OutEdges(w.src).end();
+        edge_iterator bbegin = graph->OutEdges(w.dst).begin();
+        edge_iterator bend = graph->OutEdges(w.dst).end();
 
         edge_iterator aa = LowerBound(
             abegin, aend, GreaterThanOrEqual<SortedGraphView>(*graph, w.src));
@@ -323,7 +325,7 @@ katana::analytics::TriangleCount(
   timer_graph_read.stop();
 #endif
 
-  katana::EnsurePreallocated(1, 16 * (pg->num_nodes() + pg->num_edges()));
+  katana::EnsurePreallocated(1, 16 * (pg->NumNodes() + pg->NumEdges()));
   katana::ReportPageAllocGuard page_alloc;
 
   KATANA_LOG_VERBOSE("Done relabeling. Starting TriangleCount");

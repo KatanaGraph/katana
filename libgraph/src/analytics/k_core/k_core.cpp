@@ -113,8 +113,8 @@ SyncCascadeKCore(GraphTy* graph, uint32_t k_core_number) {
         katana::iterate(*current),
         [&](const GNode& dead_node) {
           //! Decrement degree of all neighbors.
-          for (auto e : graph->edges(dead_node)) {
-            auto dest = graph->edge_dest(e);
+          for (auto e : Edges(*graph, dead_node)) {
+            auto dest = EdgeDst(*graph, e);
             auto& dest_current_degree =
                 graph->template GetData<KCoreNodeCurrentDegree>(dest);
             uint32_t old_degree = katana::atomicSub(dest_current_degree, 1u);
@@ -151,8 +151,8 @@ AsyncCascadeKCore(GraphTy* graph, uint32_t k_core_number) {
       katana::iterate(initial_worklist),
       [&](const GNode& dead_node, auto& ctx) {
         //! Decrement degree of all neighbors.
-        for (auto e : graph->edges(dead_node)) {
-          auto dest = graph->edge_dest(e);
+        for (auto e : Edges(*graph, dead_node)) {
+          auto dest = EdgeDst(*graph, e);
           auto& dest_current_degree =
               graph->template GetData<KCoreNodeCurrentDegree>(dest);
           uint32_t old_degree = katana::atomicSub(dest_current_degree, 1u);
@@ -198,7 +198,7 @@ KCoreMarkAliveNodes(GraphTy* graph, uint32_t k_core_number) {
 template <typename GraphTy>
 static katana::Result<void>
 KCoreImpl(GraphTy* graph, KCorePlan algo, uint32_t k_core_number) {
-  size_t approxNodeData = 4 * (graph->num_nodes() + graph->num_edges());
+  size_t approxNodeData = 4 * (graph->NumNodes() + graph->NumEdges());
   katana::EnsurePreallocated(8, approxNodeData);
   katana::ReportPageAllocGuard page_alloc;
 

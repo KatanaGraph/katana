@@ -71,16 +71,11 @@ AssertLRUElements(
   KATANA_LOG_ASSERT(cache.LRUPosition(*outofboundsit) == -1L);
 }
 
-void
-TestLRUBytes(const std::vector<katana::Uri>& keys) {
-  size_t byte_size = 4;
-  katana::Cache<CacheValue> cache(
-      byte_size, [](const CacheValue& value) { return BytesInValue(value); });
-
-  KATANA_LOG_VASSERT(
-      cache.capacity() == byte_size, "capacity {} allocated {}",
-      cache.capacity(), byte_size);
-
+// NB: The code that runs after this function assumes that exactly 4 size 1 elements
+// have been inserted.
+std::vector<katana::Uri>::const_iterator
+TestBasicLRU(
+    const std::vector<katana::Uri>& keys, katana::Cache<CacheValue>& cache) {
   auto uri_res = katana::Uri::Make("not gonna happen");
   KATANA_LOG_ASSERT(uri_res);
   katana::Uri badKey = uri_res.value();
@@ -100,18 +95,85 @@ TestLRUBytes(const std::vector<katana::Uri>& keys) {
   cache.Insert(*keyit--, SizeOneValue());
   KATANA_LOG_ASSERT(cache.LRUPosition(*(keyit + 1)) == 0);
 
-  KATANA_LOG_ASSERT((byte_size + 1) < keys.size());
-  AssertLRUElements(keys.end(), byte_size, cache);
+  auto key_count = std::distance(keyit, keys.end()) - 1;
+  AssertLRUElements(keys.end(), key_count, cache);
+  return keyit;
+}
+
+void
+TestLRUExplicit(const std::vector<katana::Uri>& keys) {
+  katana::Cache<CacheValue> cache(
+      [](const CacheValue& value) { return BytesInValue(value); });
+
+  auto keyit = TestBasicLRU(keys, cache);
 
   KATANA_LOG_ASSERT(keyit != keys.begin());
   cache.Insert(*keyit--, SizeOneValue());
+  size_t key_count = std::distance(keyit, keys.end()) - 1;
+  KATANA_LOG_ASSERT(cache.size() == key_count);
+
+  KATANA_LOG_ASSERT(keyit != keys.begin());
+  auto fiveit = keyit;
+  cache.Insert(*keyit--, SizeFiveValue());
+  KATANA_LOG_ASSERT(cache.size() == key_count + 5);
+
+  // GetAndEvict the least recently used
+  auto firstkey = *--keys.end();
+  auto val = cache.GetAndEvict(firstkey);
+  KATANA_LOG_ASSERT(val.has_value());
+  KATANA_LOG_ASSERT(val.value().a == 0);
+  KATANA_LOG_ASSERT(cache.LRUPosition(*fiveit) == 0L);
+
+  // Reclaim from the end of the LRU list
+  auto reclaim = cache.Reclaim(1);
+  KATANA_LOG_ASSERT(reclaim == 1);
+  KATANA_LOG_ASSERT(cache.size() == key_count + 3);
+  KATANA_LOG_ASSERT(cache.LRUPosition(*fiveit) == 0L);
+  reclaim = cache.Reclaim(1);
+  KATANA_LOG_ASSERT(reclaim == 1);
+  KATANA_LOG_ASSERT(cache.size() == key_count + 2);
+  KATANA_LOG_ASSERT(cache.LRUPosition(*fiveit) == 0L);
+  // Relcaims remaining 2 size 1, but also the size 5
+  reclaim = cache.Reclaim(3);
+  KATANA_LOG_VASSERT(reclaim == 7, "reclaim {}", reclaim);
+  KATANA_LOG_ASSERT(cache.size() == 0);
+
+  // Insert two, GetAndEvict the most recently used
+  keyit = --keys.end();
+  cache.Insert(*keyit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*(keyit + 1)) == 0);
+  cache.Insert(*keyit, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.LRUPosition(*keyit) == 0);
+  val = cache.GetAndEvict(*keyit);
+  KATANA_LOG_ASSERT(val.has_value());
+  KATANA_LOG_ASSERT(val.value().a == 0);
+  KATANA_LOG_ASSERT(cache.LRUPosition(*--keys.end()) == 0L);
+}
+
+void
+TestLRUBytes(const std::vector<katana::Uri>& keys) {
+  size_t byte_size = 4;
+  KATANA_LOG_ASSERT((byte_size + 1) < keys.size());
+  katana::Cache<CacheValue> cache(
+      byte_size, [](const CacheValue& value) { return BytesInValue(value); });
+
+  KATANA_LOG_VASSERT(
+      cache.capacity() == byte_size, "capacity {} allocated {}",
+      cache.capacity(), byte_size);
+
+  auto keyit = TestBasicLRU(keys, cache);
+
+  KATANA_LOG_ASSERT(keyit != keys.begin());
+  cache.Insert(*keyit--, SizeOneValue());
+  KATANA_LOG_ASSERT(cache.size() == 4);
 
   cache.Insert(*keyit--, SizeFiveValue());
-  KATANA_LOG_ASSERT(cache.size() == 5);
+  // Does not cache it, it is too big
+  KATANA_LOG_ASSERT(cache.size() == 4);
 
   cache.Insert(*keyit--, SizeOneValue());
   KATANA_LOG_ASSERT(cache.LRUPosition(*(keyit + 1)) == 0);
-  KATANA_LOG_ASSERT(cache.size() == 1);
+  KATANA_LOG_ASSERT(cache.size() == 4);
 
   cache.clear();
   KATANA_LOG_VASSERT(
@@ -171,6 +233,8 @@ main(int argc, char** argv) {
   TestLRUSize(lru_size, keys);
 
   TestLRUBytes(keys);
+
+  TestLRUExplicit(keys);
 
   return 0;
 }

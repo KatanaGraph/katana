@@ -15,7 +15,7 @@ sys.path.append(str(SCRIPTS_DIR_PATH))
 
 import katana_requirements
 import katana_version.version
-from katana_requirements import OutputFormat, Requirements
+from katana_requirements import OutputFormat
 
 
 def find_default_repo_root():

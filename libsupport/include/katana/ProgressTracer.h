@@ -184,9 +184,9 @@ class KATANA_EXPORT [[nodiscard]] ProgressScope {
 public:
   ~ProgressScope();
   ProgressScope(const ProgressScope&) = delete;
-  ProgressScope(ProgressScope&&) = delete;
+  ProgressScope(ProgressScope&&) = default;
   ProgressScope& operator=(const ProgressScope&) = delete;
-  ProgressScope& operator=(ProgressScope&&) = delete;
+  ProgressScope& operator=(ProgressScope&&) = default;
 
   /// Get the scope’s underlying span to add tagging/logging,
   /// span relationships, and handle multiple active spans at a time

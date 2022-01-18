@@ -31,9 +31,9 @@ pin_run_as_build:
   nlohmann_json:
     max_pin: x
   numba:
-    max_pin: x
+    max_pin: x.x
   numpy:
-    max_pin: x
+    max_pin: x.x
   pyarrow:
     max_pin: x
   bliss:

@@ -122,11 +122,25 @@ struct DefCopy<T, std::void_t<decltype(T((const T&)std::declval<T>()))>> {
 /// \return @p cls to allow chaining.
 template <typename T>
 pybind11::class_<T>
-DefConventions(pybind11::class_<T>& cls) {
+DefConventions(pybind11::class_<T> cls) {
   detail::DefRepr<T>{}(cls);
   detail::DefEquals<T>{}(cls);
   detail::DefComparison<T>{}(cls);
   detail::DefCopy<T>{}(cls);
+  return cls;
+}
+
+/// Define the __katana_address__ property used by Numba and Cython
+/// integrations.
+///
+/// This is idempotent.
+template <typename T>
+pybind11::class_<T>
+DefKatanaAddress(pybind11::class_<T>& cls) {
+  if (!hasattr(cls, "__katana_address__")) {
+    cls.def_property_readonly(
+        "__katana_address__", [](T* self) { return (uintptr_t)self; });
+  }
   return cls;
 }
 

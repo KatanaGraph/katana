@@ -36,7 +36,7 @@ WriteRDG(
   auto res = rdg_.Store(
       *new_file, command_line,
       katana::RDG::RDGVersioningPolicy::IncrementVersion, nullptr, nullptr,
-      node_entity_type_manager, edge_entity_type_manager);
+      node_entity_type_manager, edge_entity_type_manager, true);
 
   if (!res) {
     return res.error();

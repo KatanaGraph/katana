@@ -26,7 +26,7 @@ StoreGraph(katana::PropertyGraph* g) {
 
   // Store graph. If there is a new storage format then storing it is enough to bump the version up.
   KATANA_LOG_WARN("writing graph at temp file {}", tmp_rdg_dir);
-  auto write_result = g->Write(tmp_rdg_dir, command_line);
+  auto write_result = g->Write(tmp_rdg_dir, command_line, true);
   if (!write_result) {
     KATANA_LOG_FATAL("writing result failed: {}", write_result.error());
   }

@@ -18,6 +18,7 @@ from . import datastructures
 
 from cython.operator cimport dereference as deref
 from libc.stdint cimport uint16_t, uint32_t
+from libcpp cimport bool
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
 from libcpp.utility cimport move
@@ -96,7 +97,7 @@ cdef class GraphBase:
         with gil:
             raise NotImplementedError()
 
-    def write(self, path = None, str command_line = "katana.local.Graph"):
+    def write(self, path = None, str command_line = "katana.local.Graph", bool commit_manifest = True):
         """
         Write the property graph to the specified path or URL (or the original path it was loaded from if path is
         not provided). Provide lineage information in the form of a command line.
@@ -109,10 +110,10 @@ cdef class GraphBase:
         command_line_str = <string>bytes(command_line, "utf-8")
         if path is None:
             with nogil:
-                handle_result_void(self.underlying_property_graph().Commit(command_line_str))
+                handle_result_void(self.underlying_property_graph().Commit(command_line_str, commit_manifest))
         path_str = <string>bytes(str(path), "utf-8")
         with nogil:
-            handle_result_void(self.underlying_property_graph().Write(path_str, command_line_str))
+            handle_result_void(self.underlying_property_graph().Write(path_str, command_line_str, commit_manifest))
 
     cdef const GraphTopology* topology(Graph self):
         return &self.underlying_property_graph().topology()

@@ -93,7 +93,7 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
       g->GetNumEdgeEntityTypes() == 2, "found {} edge entity types.",
       g->GetNumEdgeEntityTypes());
 
-  auto write_result = g->Write(rdg_dir, command_line);
+  auto write_result = g->Write(rdg_dir, command_line, true);
 
   KATANA_LOG_WARN("creating temp file {}", rdg_dir);
 
@@ -212,7 +212,7 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
       g->GetNumNodeEntityTypes());
   KATANA_LOG_ASSERT(g->GetNumEdgeEntityTypes() == 4);
 
-  auto write_result = g->Write(rdg_dir, command_line);
+  auto write_result = g->Write(rdg_dir, command_line, true);
 
   KATANA_LOG_WARN("creating temp file {}", rdg_dir);
 
@@ -292,7 +292,7 @@ TestRoundTrip() {
       g->RemoveEdgeProperty("edge-throw-away", &txn_ctx);
   KATANA_LOG_ASSERT(remove_edge_throw_away_res);
 
-  auto write_result = g->Write(rdg_dir, command_line);
+  auto write_result = g->Write(rdg_dir, command_line, true);
 
   KATANA_LOG_WARN("creating temp file {}", rdg_dir);
 
@@ -403,7 +403,7 @@ MakePFGFile(const std::string& n1name) {
   std::string rdg_file(
       std::move(unique_result.value().path()));  // path() for local
 
-  auto write_result = g->Write(rdg_file, command_line);
+  auto write_result = g->Write(rdg_file, command_line, true);
 
   KATANA_LOG_WARN("creating temp file {}", rdg_file);
 

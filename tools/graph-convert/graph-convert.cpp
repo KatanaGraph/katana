@@ -2962,7 +2962,7 @@ struct Gr2Kg : public Conversion {
 
     return rdg.Store(
         handle, kCommandLine, std::move(node_types), std::move(edge_types),
-        node_type_manager, edge_type_manager);
+        node_type_manager, edge_type_manager, true);
   }
 
   template <typename EdgeTy>
@@ -3038,7 +3038,7 @@ struct Gr2Kg : public Conversion {
     katana::gPrint(
         "Node Schema : ", pg->loaded_node_schema()->ToString(), "\n");
 
-    if (auto r = pg->Write(out_file_name, "cmd"); !r) {
+    if (auto r = pg->Write(out_file_name, "cmd", true); !r) {
       KATANA_LOG_FATAL("Failed to write property file graph: {}", r.error());
     }
     printStatus(graph.size(), graph.sizeEdges());

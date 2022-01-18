@@ -201,26 +201,20 @@ katana::PropertyGraph::Make(
     const std::string& rdg_name, katana::TxnContext* txn_ctx,
     const katana::RDGLoadOptions& opts) {
   katana::RDGManifest manifest = KATANA_CHECKED(katana::FindManifest(rdg_name));
-  katana::RDGFile rdg_file{
-      KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite))};
-  katana::RDG rdg = KATANA_CHECKED(katana::RDG::Make(rdg_file, opts));
+  auto rdg_handle =
+      KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
+  auto new_file = std::make_unique<katana::RDGFile>(rdg_handle);
 
-  return katana::PropertyGraph::Make(
-      std::make_unique<katana::RDGFile>(std::move(rdg_file)), std::move(rdg),
-      txn_ctx);
+  return Make(std::move(new_file), txn_ctx, opts);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const katana::RDGManifest& rdg_manifest, const katana::RDGLoadOptions& opts,
-    katana::TxnContext* txn_ctx) {
-  katana::RDGFile rdg_file{KATANA_CHECKED(
-      katana::Open(std::move(rdg_manifest), katana::kReadWrite))};
-  katana::RDG rdg = KATANA_CHECKED(katana::RDG::Make(rdg_file, opts));
-
+    std::unique_ptr<RDGFile> rdg_file, katana::TxnContext* txn_ctx,
+    const katana::RDGLoadOptions& opts) {
+  auto rdg = KATANA_CHECKED(RDG::Make(*rdg_file, opts));
   return katana::PropertyGraph::Make(
-      std::make_unique<katana::RDGFile>(std::move(rdg_file)), std::move(rdg),
-      txn_ctx);
+      std::move(rdg_file), std::move(rdg), txn_ctx);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>

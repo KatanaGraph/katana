@@ -17,7 +17,7 @@ namespace internal {
 /// below
 class KATANA_EXPORT ExperimentalFeature {
 public:
-  static ExperimentalFeature* Register(
+  static const ExperimentalFeature* Register(
       const std::string& feature_name, const std::string& filename,
       int line_number);
 
@@ -31,7 +31,7 @@ public:
   /// report the feature flags that were provided but did not match any registered flag
   static std::vector<std::string> ReportUnrecognized();
 
-  bool IsEnabled() { return is_enabled_; }
+  bool IsEnabled() const { return is_enabled_; }
 
   ExperimentalFeature(const ExperimentalFeature& no_copy) = delete;
   ExperimentalFeature& operator=(const ExperimentalFeature& no_copy) = delete;
@@ -105,7 +105,7 @@ private:
 #define KATANA_EXPERIMENTAL_FEATURE(feature_name)                              \
   namespace katana::internal {                                                 \
   class ExperimentalFeature;                                                   \
-  static auto* katana_experimental_feature_ptr_##feature_name =                \
+  static const auto* const katana_experimental_feature_ptr_##feature_name =    \
       ::katana::internal::ExperimentalFeature::Register(                       \
           #feature_name, __FILE__, __LINE__);                                  \
   }                                                                            \

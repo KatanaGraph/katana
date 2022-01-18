@@ -271,6 +271,11 @@ public:
       const std::string& rdg_name, katana::TxnContext* txn_ctx,
       const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
+  /// Make a property graph from an RDG handle
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      std::unique_ptr<RDGFile> rdg_hanlde, katana::TxnContext* txn_ctx,
+      const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
+
   /// Make a property graph from topology
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign);

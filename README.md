@@ -87,7 +87,9 @@ Here are the dependencies for the optional features:
 Documentation
 =============
 
-To build documentation for this project, see the documentation
+Documentation is available at [https://katanagraph.github.io/katana/](https://katanagraph.github.io/katana/).
+
+You can also build the documentation for this project using these
 [instructions](docs/contributing/documentation.rst).
 
 Using Katana as a Library

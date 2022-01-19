@@ -8,12 +8,25 @@
 ///
 /// The interface provided by both pybind11 and Cython objects entirely call
 /// via Python to avoid the need to have an ABI between pybind11 and Cython
-/// code. The interface is:
+/// code. The interface is (not every class will implement every method):
 ///
-/// * an instance property __katana_address__ which returns the address of the
+/// - an instance property __katana_address__ which returns the address of the
 ///   underlying C++ object as an int.
-/// * a static method _make_from_address which takes the C++ object pointer as
-///   an int, and returns a new Python object wrapping it.
+/// - a static method _make_from_address which takes T* as
+///   an int and an owner object, and returns a new Python object wrapping it.
+///   Does not take ownership, but will attempt to keep the owner alive as long
+///   as the wrapper is alive.
+/// - a static method _make_from_address_shared which takes shared_ptr<T>*
+///   as an int, and returns a new Python object wrapping it. The caller keeps
+//    ownership of the shared_ptr (so it can be on the stack). The referenced
+///   object is shared as per normal shared_ptr semantics.
+/// - a static method _make_from_address_unique which takes unique_ptr<T>*
+///   as an int, and returns a new Python object wrapping it. Takes ownership
+///   of the referenced object and clears the unique_ptr.
+///
+/// Each class will implement one or two of these. This will be ad-hoc and will
+/// require testing to validate that the expected methods are available.
+/// pybind11 classes implement all four methods.
 ///
 /// Any other interaction between pybind11 and Cython must happen via the
 /// existing C++ or Python interfaces. Either can of course call methods in
@@ -64,6 +77,8 @@ public:
 
   T* get() { return ptr_; }
   const T* get() const { return ptr_; }
+
+  explicit operator bool() { return ptr_ != nullptr; }
 
   pybind11::object wrapper() const { return wrapper_; }
 
@@ -119,6 +134,7 @@ namespace katana {
 // Add Cython classes here as needed. Remove them when they are moved to
 // pybind11.
 CYTHON_REFERENCE_SUPPORT(katana::PropertyGraph, "katana.local", "Graph");
+CYTHON_REFERENCE_SUPPORT(katana::TxnContext, "katana.local", "TxnContext");
 
 #undef CYTHON_REFERENCE_SUPPORT
 
@@ -137,8 +153,58 @@ DefCythonSupport(pybind11::class_<T> cls) {
   // keep_alive<0, 2> causes the owner argument to be kept alive as long as the
   // returned object exists. See
   // https://pybind11.readthedocs.io/en/stable/advanced/functions.html#keep-alive
+  cls.template def_static("_make_from_address_shared", [](uintptr_t addr) {
+    auto* ptr = reinterpret_cast<std::shared_ptr<T>*>(addr);
+    return *ptr;
+  });
+  cls.template def_static("_make_from_address_unique", [](uintptr_t addr) {
+    auto* ptr = reinterpret_cast<std::unique_ptr<T>*>(addr);
+    return std::move(*ptr);
+  });
   DefKatanaAddress(cls);
   return cls;
+}
+
+/// Create a Cython wrapper for @p obj. Requires _make_from_address.
+/// This does not take ownership of obj. However, owner will be kept alive as
+/// long as obj is still needed.
+///
+/// To have Cython take ownership use the unique_ptr overload.
+template <
+    typename T,
+    std::enable_if_t<CythonReferenceSupported<T>::value, bool> = true>
+pybind11::object
+MakeCythonWrapper(T* obj, pybind11::handle owner) {
+  return (CythonReference<T>::python_class().attr("_make_from_address"))(
+      (uintptr_t)&obj, owner);
+}
+
+/// Create a Cython wrapper for @p ptr. Requires _make_from_address_shared.
+template <
+    typename T,
+    std::enable_if_t<CythonReferenceSupported<T>::value, bool> = true>
+pybind11::object
+MakeCythonWrapper(const std::shared_ptr<T>& ptr) {
+  return (CythonReference<T>::python_class().attr("_make_from_address_shared"))(
+      (uintptr_t)&ptr);
+}
+
+/// Create a Cython wrapper for @p ptr. This takes ownership of the referenced
+/// object. Requires _make_from_address_unique.
+template <
+    typename T,
+    std::enable_if_t<CythonReferenceSupported<T>::value, bool> = true>
+pybind11::object
+MakeCythonWrapper(std::unique_ptr<T>&& ptr) {
+  return (CythonReference<T>::python_class().attr("_make_from_address_unique"))(
+      (uintptr_t)&ptr);
+}
+
+/// Unwrap CythonReference returning the existing wrapper.
+template <typename T, bool = true>
+pybind11::object
+MakeCythonWrapper(CythonReference<T> v) {
+  return v.wrapper();
 }
 
 }  // namespace katana

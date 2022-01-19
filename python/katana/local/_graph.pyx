@@ -579,6 +579,16 @@ cdef class Graph(GraphBase):
         f._underlying_property_graph = u
         return f
 
+    @staticmethod
+    def _make_from_address_shared(uint64_t u):
+        cdef shared_ptr[_PropertyGraph]* ptr = <shared_ptr[_PropertyGraph]*>u
+        return Graph.make(deref(ptr))
+
+    @staticmethod
+    def _make_from_address_unique(uint64_t u):
+        cdef unique_ptr[_PropertyGraph]* ptr = <unique_ptr[_PropertyGraph]*>u
+        return Graph.make(to_shared(deref(ptr)))
+
     @property
     def __katana_address__(self):
         """
@@ -592,3 +602,12 @@ cdef class Graph(GraphBase):
     def global_in_degree(self, uint64_t node):
         # TODO(loc) needs shared-memory bi-directional view
         raise NotImplementedError()
+
+
+cdef class TxnContext:
+    @property
+    def __katana_address__(self):
+        """
+        Internal.
+        """
+        return <uint64_t>&self._txn_ctx

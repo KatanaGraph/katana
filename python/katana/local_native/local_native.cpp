@@ -4,4 +4,5 @@
 PYBIND11_MODULE(local_native, m) {
   katana::python::InitReductions(m);
   katana::python::InitEntityTypeManager(m);
+  katana::python::InitImportData(m);
 }

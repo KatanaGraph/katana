@@ -389,12 +389,20 @@ jobs:
 
       # Upload path is relative to work directory and "~" and "${{env.HOME}}" do
       # not seem to be expanded, so hard code HOME for now.
-      - name: Upload documentation (C++ and Python)
+      - name: Upload documentation artifact (C++ and Python)
         uses: actions/upload-artifact@v1
         if: startsWith(matrix.os, 'ubuntu-')
         with:
           name: katana-docs-${{matrix.os}}
           path: /home/runner/build/docs
+      
+      - name: Publish documentation
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' && github.repository == 'KatanaGraph/katana' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: documentation
+          publish_dir: /home/runner/build/docs/katana_python
 
       - name: Test python_env.sh
         if: startsWith(matrix.os, 'ubuntu-')

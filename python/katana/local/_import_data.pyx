@@ -46,25 +46,3 @@ def from_csr(edge_indices, edge_destinations):
              CGraph.GraphTopology(move(edge_indices_numa.underlying), move(edge_destinations_numa.underlying))
              ))
     return Graph.make(pg)
-
-
-def from_graphml(path, uint64_t chunk_size=25000, *, TxnContext txn_ctx=None):
-    """
-    Load a GraphML file into Katana form.
-
-    :param path: Path to source GraphML file.
-    :type path: Union[str, Path]
-    :param chunk_size: Chunk size for in memory representations during conversion. Generally this value can be
-        ignored, but it can be decreased to reduce memory usage when converting large inputs.
-    :param txn_ctx: The tranaction context for passing read write sets.
-    :type chunk_size: int
-    :returns: the new :py:class:`~katana.local.Graph`
-    """
-    path_str = <string>bytes(str(path), "utf-8")
-    txn_ctx = txn_ctx or TxnContext()
-    with nogil:
-        pg = handle_result_PropertyGraph(
-            CGraph.ConvertToPropertyGraph(
-            move(handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False))), &txn_ctx._txn_ctx
-            ))
-    return Graph.make(pg)

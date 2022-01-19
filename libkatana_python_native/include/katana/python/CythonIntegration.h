@@ -78,6 +78,8 @@ public:
   T* get() { return ptr_; }
   const T* get() const { return ptr_; }
 
+  explicit operator bool() { return ptr_ != nullptr; }
+
   pybind11::object wrapper() const { return wrapper_; }
 
   static pybind11::object python_class() {
@@ -132,6 +134,7 @@ namespace katana {
 // Add Cython classes here as needed. Remove them when they are moved to
 // pybind11.
 CYTHON_REFERENCE_SUPPORT(katana::PropertyGraph, "katana.local", "Graph");
+CYTHON_REFERENCE_SUPPORT(katana::TxnContext, "katana.local", "TxnContext");
 
 #undef CYTHON_REFERENCE_SUPPORT
 

@@ -2,14 +2,15 @@
 The :py:mod:`~katana.local.import_data` module provides a several graph conversion routines which take external data
 and convert it into a Katana :py:class:`~katana.local.Graph` object.
 """
-
+import pathlib
 from typing import Collection, Dict, Optional, Union
 
 import numba
 import numpy as np
 
-from katana.local._graph import Graph
-from katana.local._import_data import from_csr, from_graphml
+from katana.local._graph import Graph, TxnContext
+from katana.local._import_data import from_csr
+from katana.local_native import from_graphml_native
 from katana.native_interfacing.buffer_access import to_numpy
 
 __all__ = [
@@ -163,3 +164,18 @@ def from_edge_list_dataframe(
 
     edge_properties = {col_name: df[col_name] for col_name in property_columns}
     return from_edge_list_arrays(df[source_column], df[destination_column], **edge_properties)
+
+
+def from_graphml(path: Union[str, pathlib.Path], chunk_size: int = 25000, *, txn_ctx=None):
+    """
+    Load a GraphML file into Katana form.
+
+    :param path: Path to source GraphML file.
+    :type path: Union[str, Path]
+    :param chunk_size: Chunk size for in memory representations during conversion. Generally this value can be ignored,
+        but it can be decreased to reduce memory usage when converting large inputs.
+    :param txn_ctx: The tranaction context for passing read write sets.
+    :type chunk_size: int
+    :returns: the new :py:class:`~katana.local.Graph`
+    """
+    return from_graphml_native(str(path), chunk_size, txn_ctx or TxnContext())

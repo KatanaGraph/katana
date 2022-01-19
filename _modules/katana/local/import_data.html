@@ -159,14 +159,15 @@
 <span class="sd">The :py:mod:`~katana.local.import_data` module provides a several graph conversion routines which take external data</span>
 <span class="sd">and convert it into a Katana :py:class:`~katana.local.Graph` object.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-
+<span class="kn">import</span> <span class="nn">pathlib</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Collection</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">numba</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">katana.local._graph</span> <span class="kn">import</span> <span class="n">Graph</span>
-<span class="kn">from</span> <span class="nn">katana.local._import_data</span> <span class="kn">import</span> <span class="n">from_csr</span><span class="p">,</span> <span class="n">from_graphml</span>
+<span class="kn">from</span> <span class="nn">katana.local._graph</span> <span class="kn">import</span> <span class="n">Graph</span><span class="p">,</span> <span class="n">TxnContext</span>
+<span class="kn">from</span> <span class="nn">katana.local._import_data</span> <span class="kn">import</span> <span class="n">from_csr</span>
+<span class="kn">from</span> <span class="nn">katana.local_native</span> <span class="kn">import</span> <span class="n">from_graphml_native</span>
 <span class="kn">from</span> <span class="nn">katana.native_interfacing.buffer_access</span> <span class="kn">import</span> <span class="n">to_numpy</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
@@ -320,6 +321,21 @@
 
     <span class="n">edge_properties</span> <span class="o">=</span> <span class="p">{</span><span class="n">col_name</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">col_name</span> <span class="ow">in</span> <span class="n">property_columns</span><span class="p">}</span>
     <span class="k">return</span> <span class="n">from_edge_list_arrays</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">source_column</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">destination_column</span><span class="p">],</span> <span class="o">**</span><span class="n">edge_properties</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="from_graphml"><a class="viewcode-back" href="../../../reference/python/katana.local.import_data.html#katana.local.import_data.from_graphml">[docs]</a><span class="k">def</span> <span class="nf">from_graphml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">],</span> <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">txn_ctx</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load a GraphML file into Katana form.</span>
+
+<span class="sd">    :param path: Path to source GraphML file.</span>
+<span class="sd">    :type path: Union[str, Path]</span>
+<span class="sd">    :param chunk_size: Chunk size for in memory representations during conversion. Generally this value can be ignored,</span>
+<span class="sd">        but it can be decreased to reduce memory usage when converting large inputs.</span>
+<span class="sd">    :param txn_ctx: The tranaction context for passing read write sets.</span>
+<span class="sd">    :type chunk_size: int</span>
+<span class="sd">    :returns: the new :py:class:`~katana.local.Graph`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">from_graphml_native</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">chunk_size</span><span class="p">,</span> <span class="n">txn_ctx</span> <span class="ow">or</span> <span class="n">TxnContext</span><span class="p">())</span></div>
 </pre></div>
 
               </div>

@@ -1,0 +1,435 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Logging &#8212; Katana</title>
+    
+    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Property Graph" href="property-graph.html" />
+    <link rel="prev" title="Error Handling" href="error-handling.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../index.html">
+  <img src="../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="../index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   C++ Library
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="arrow.html">
+     Arrow
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="error-handling.html">
+     Error Handling
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Logging
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="property-graph.html">
+     Property Graph
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="strings.html">
+     Strings
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tracing.html">
+     Tracing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../python/index.html">
+   Python Library
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.html">
+     Katana
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../python/katana.local.html">
+     Katana Local API
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.graph.html">
+       Graphs
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.analytics.html">
+       Analytics
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.import_data.html">
+       Import Data
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.atomic.html">
+       Atomic Operations
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.datastructures.html">
+       Data Structures
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.analytics.html">
+     Analytics
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.atomic.html">
+     Atomic Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.datastructures.html">
+     Data Structures
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.graph.html">
+     Graphs
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.import_data.html">
+     Import Data
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.timer.html">
+     Performance Timers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.bug.html">
+     Bug Reporting Tools
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+
+<nav id="bd-toc-nav">
+    
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="logging">
+<h1>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h1>
+<p>Write debug, warning and error messages to standard error. </p>
+<p>Warnings are for situations where code can proceed but in a suboptimal way.</p>
+<p>Errors are for situations where code cannot proceed. If it is possible for the caller to make progress, instead of using the log functions here, it is preferable to return an explicit error via Result.h and let callers determine what to do.</p>
+<p>Messages at the debug level are only emitted in debug builds.</p>
+<p>Messages at the warning and error level are commonly read by people not familiar with the component producing the message, so at these levels, avoid jargon and express error conditions using the general terms of the system first (e.g., graphs, RDGs, properties) and add implementation details afterwards if needed.</p>
+<p>Could be better: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;type_class is null&quot;</span>
+
+<span class="s2">&quot;type class ID </span><span class="si">{}</span><span class="s2"> &gt; 3&quot;</span>
+</pre></div>
+</div>
+ Preferred: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;cannot load graph </span><span class="si">{}</span><span class="s2">: type class ID </span><span class="si">{}</span><span class="s2"> &gt; 3&quot;</span>
+</pre></div>
+</div>
+ Most of the logging functions take a format string, a C++20 STL feature, that is implemented in our C++17 codebase with the fmt library.</p>
+<p>An example of a format string: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">KATANA_LOG_VERBOSE</span><span class="p">(</span><span class="s2">&quot;hello </span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">);</span>
+</pre></div>
+</div>
+ In order to print a user-defined type, you can define the appropriate ostream overload: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">struct</span> <span class="n">MyType</span> <span class="p">{};</span>
+
+<span class="n">std</span><span class="p">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">std</span><span class="p">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">out</span><span class="p">,</span> <span class="n">MyType</span> <span class="n">item</span><span class="p">);</span>
+</pre></div>
+</div>
+ It is also possible to directly specialize a user-defined type in the fmt library, but this should be avoided because it is not compliant with the C++20 STL interface and does not support traditional ostream usage.</p>
+<p>There is a bug in fmt&lt;8 with fmt::join(format_string, args…) when elements of args only overload operator&lt;&lt;. This manifests as a compilation error. To work around this, use <a class="reference internal" href="strings.html#namespacekatana_1adfaf0670c864c74e4399080b7551f8ff"><span class="std std-ref">katana::Join</span></a> instead of fmt::join. </p>
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_FATAL">
+<span class="target" id="Logging_8h_1a3d9e8d454a446d5957f608e961ed6900"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_FATAL</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_FATAL" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_FATAL logs a message at the error log level and aborts the application. </p>
+<p>Use sparingly. It is usually preferable to return a <a class="reference internal" href="error-handling.html#namespacekatana_1a7ef5f54fe30dfc7b2cf9294ac744d6bb"><span class="std std-ref">katana::Result</span></a>. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_ERROR">
+<span class="target" id="Logging_8h_1a7a5af46474829208364916794caadf90"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_ERROR</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_ERROR" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_ERROR logs a message at the error log level. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_WARN">
+<span class="target" id="Logging_8h_1a1789ba1c34a4cd29c24e7054eb15bcd6"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_WARN</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_WARN" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_WARN logs a message at the warning log level. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_WARN_ONCE">
+<span class="target" id="Logging_8h_1ad1ae9b133d52a5712bb0224c5a8039f5"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_WARN_ONCE</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_WARN_ONCE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_WARN_ONCE logs a message at the warning log level. </p>
+<p>The output of subsequent invocations of KATANA_WARN_ONCE will be suppressed. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_VERBOSE">
+<span class="target" id="Logging_8h_1aea0f3539e7184012ca5d3640ccc70dfa"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_VERBOSE</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_VERBOSE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_VERBOSE logs a message at the verbose log level. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_ASSERT">
+<span class="target" id="Logging_8h_1aac3581cf054b81227d8601b5ea30bcb0"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_ASSERT</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">cond</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_ASSERT" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_ASSERT asserts that a condition is true, and if it is not, aborts the application. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_VASSERT">
+<span class="target" id="Logging_8h_1a2dfb32286565528adfcfc19aea494237"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_VASSERT</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">cond</span></span>, <span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_VASSERT" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_VASSERT asserts that a condition is true, and if it is not, logs an error and aborts the application. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_DEBUG">
+<span class="target" id="Logging_8h_1af2a6a8160cd243d6a36f3ffafe0c7893"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_DEBUG</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_DEBUG" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_DEBUG logs a message at the debug log level. </p>
+<p>Debug messages are only produced in debug builds. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_DEBUG_ASSERT">
+<span class="target" id="Logging_8h_1acb4f5b0dd598df41573616f8f1e2da3f"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_DEBUG_ASSERT</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">cond</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_DEBUG_ASSERT" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_ASSERT asserts that a condition is true, and if it is not, aborts the application only in debug builds. </p>
+<p>This is a replacement for std::assert. </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_LOG_DEBUG_VASSERT">
+<span class="target" id="Logging_8h_1a93a17c6c05ace962186d52e1a899612f"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_LOG_DEBUG_VASSERT</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">cond</span></span>, <span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_LOG_DEBUG_VASSERT" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_LOG_VASSERT asserts that a condition is true, and if it is not, logs an error and aborts the application only in debug builds. </p>
+<p>This is a </p>
+</dd></dl>
+
+<dl class="cpp macro">
+<dt class="sig sig-object cpp" id="c.KATANA_DEBUG_WARN_ONCE">
+<span class="target" id="Logging_8h_1a1a5ea106cf48e3ac4dce13be823c1a6a"></span><span class="sig-name descname"><span class="n"><span class="pre">KATANA_DEBUG_WARN_ONCE</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">fmt_string</span></span>, <span class="p"><span class="pre">...</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.KATANA_DEBUG_WARN_ONCE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>KATANA_DEBUG_WARN_ONCE logs a message at the warning log level only in debug builds. </p>
+<p>The output of subsequent invocations of KATANA_WARN_ONCE will be suppressed. </p>
+</dd></dl>
+
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

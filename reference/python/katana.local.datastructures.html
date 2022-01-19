@@ -1,0 +1,499 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Data Structures &#8212; Katana</title>
+    
+    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Performance Timers" href="katana.timer.html" />
+    <link rel="prev" title="Atomic Operations" href="katana.local.atomic.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../index.html">
+  <img src="../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="../index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../cxx/index.html">
+   C++ Library
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/arrow.html">
+     Arrow
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/error-handling.html">
+     Error Handling
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/logging.html">
+     Logging
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/property-graph.html">
+     Property Graph
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/strings.html">
+     Strings
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/tracing.html">
+     Tracing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   Python Library
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.html">
+     Katana
+    </a>
+   </li>
+   <li class="toctree-l2 current active has-children">
+    <a class="reference internal" href="katana.local.html">
+     Katana Local API
+    </a>
+    <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul class="current">
+     <li class="toctree-l3">
+      <a class="reference internal" href="katana.local.graph.html">
+       Graphs
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="katana.local.analytics.html">
+       Analytics
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="katana.local.import_data.html">
+       Import Data
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="katana.local.atomic.html">
+       Atomic Operations
+      </a>
+     </li>
+     <li class="toctree-l3 current active">
+      <a class="current reference internal" href="#">
+       Data Structures
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.local.analytics.html">
+     Analytics
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.local.atomic.html">
+     Atomic Operations
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Data Structures
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.local.graph.html">
+     Graphs
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.local.import_data.html">
+     Import Data
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.timer.html">
+     Performance Timers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.bug.html">
+     Bug Reporting Tools
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+
+<nav id="bd-toc-nav">
+    
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="module-katana.local.datastructures">
+<span id="data-structures"></span><h1>Data Structures<a class="headerlink" href="#module-katana.local.datastructures" title="Permalink to this headline">¶</a></h1>
+<p>This module contains data structures designed for use with Galois’ parallel loops.
+They are instantiated for several element types, but cannot support custom element types.</p>
+<p>The instantiations are:</p>
+<ul class="simple">
+<li><p><cite>np.uint64</cite> (with C element type uint64_t)</p></li>
+<li><p><cite>int</cite> (with C element type int64_t)</p></li>
+<li><p><cite>np.uint32</cite> (with C element type uint32_t)</p></li>
+<li><p><cite>np.int32</cite> (with C element type int32_t)</p></li>
+<li><p><cite>float</cite> (with C element type double)</p></li>
+<li><p><cite>np.float32</cite> (with C element type float)</p></li>
+</ul>
+<p>The instantiation is selected by indexing the type, for example <cite>InsertBag[int]</cite> or <cite>NUMAArray[np.uint64]</cite>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="katana.local.datastructures.AllocationPolicy">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.datastructures.</span></span><span class="sig-name descname"><span class="pre">AllocationPolicy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.AllocationPolicy" title="Permalink to this definition">¶</a></dt>
+<dd><p>NUMA allocation policies.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.datastructures.AllocationPolicy.BLOCKED">
+<span class="sig-name descname"><span class="pre">BLOCKED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#katana.local.datastructures.AllocationPolicy.BLOCKED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.datastructures.AllocationPolicy.INTERLEAVED">
+<span class="sig-name descname"><span class="pre">INTERLEAVED</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#katana.local.datastructures.AllocationPolicy.INTERLEAVED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.datastructures.</span></span><span class="sig-name descname"><span class="pre">InsertBag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.InsertBag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unordered collection of elements. This data structure supports scalable
+concurrent pushes but reading the bag can only be done serially.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.InsertBag.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag.__iter__">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.InsertBag.__iter__" title="Permalink to this definition">¶</a></dt>
+<dd><p>iter(self)</p>
+<p>Iterate over the elements of the collection. Must be called from single threaded code.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.InsertBag.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Discard the contents of this collection. Must be called from single threaded code.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag.empty">
+<span class="sig-name descname"><span class="pre">empty</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.InsertBag.empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return true of the collection is empty.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag.push">
+<span class="sig-name descname"><span class="pre">push</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.InsertBag.push" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an element to the collection. This may be called from numba compiled code.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag.swap">
+<span class="sig-name descname"><span class="pre">swap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">InsertBag</span> <span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.InsertBag.swap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Swap the contents of this collection with another efficiently. Must be called from single threaded code.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag.dtype">
+<span class="sig-name descname"><span class="pre">dtype</span></span><a class="headerlink" href="#katana.local.datastructures.InsertBag.dtype" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.datastructures.InsertBag.storage_size">
+<span class="sig-name descname"><span class="pre">storage_size</span></span><a class="headerlink" href="#katana.local.datastructures.InsertBag.storage_size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.datastructures.</span></span><span class="sig-name descname"><span class="pre">NUMAArray</span></span><a class="headerlink" href="#katana.local.datastructures.NUMAArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>An array of elements of the same type that are allocated using NUMA aware policies.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.__getitem__">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.__getitem__" title="Permalink to this definition">¶</a></dt>
+<dd><p>self[i]</p>
+<p>Get an element of the array. This may be called from numba code and is not bounds check in that context.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">policy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a new array.</p>
+<p>If <cite>size</cite> and <cite>policy</cite> are provided, the array is allocated with the specified size and policy.
+Otherwise,  the underlying array must be allocated with <cite>allocateBlocked</cite> or <cite>allocateInterleaved</cite> after
+construction.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.__iter__">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.__iter__" title="Permalink to this definition">¶</a></dt>
+<dd><p>iter(self)</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>Iterate over the elements of the collection. This may be called from numba code.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.__len__">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.__len__" title="Permalink to this definition">¶</a></dt>
+<dd><p>len(self)</p>
+<p>Get the size of the array. This may be called from numba code.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.__setitem__">
+<span class="sig-name descname"><span class="pre">__setitem__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.__setitem__" title="Permalink to this definition">¶</a></dt>
+<dd><p><cite>self[i] = v</cite></p>
+<p>Set an element of the array. This may be called from numba code and is not bounds check in that context.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.allocateBlocked">
+<span class="sig-name descname"><span class="pre">allocateBlocked</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.allocateBlocked" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocate the array with a specific <cite>size</cite> using blocked memory policy.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.allocateInterleaved">
+<span class="sig-name descname"><span class="pre">allocateInterleaved</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.allocateInterleaved" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocate the array with a specific <cite>size</cite> using a NUMA interleaved memory policy.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.as_numpy">
+<span class="sig-name descname"><span class="pre">as_numpy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.as_numpy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a numpy array that is a view on self.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">i</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.set" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.datastructures.NUMAArray.dtype">
+<span class="sig-name descname"><span class="pre">dtype</span></span><a class="headerlink" href="#katana.local.datastructures.NUMAArray.dtype" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

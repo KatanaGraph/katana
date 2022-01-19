@@ -1,0 +1,335 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>katana.loop_operators &#8212; Katana</title>
+    
+    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script src="../../_static/tabs.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../index.html">
+  <img src="../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <h1>Source code for katana.loop_operators</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+
+<span class="kn">import</span> <span class="nn">numba</span>
+<span class="kn">import</span> <span class="nn">numba.core.ccallback</span>
+<span class="kn">import</span> <span class="nn">numba.types</span>
+
+<span class="kn">from</span> <span class="nn">katana.native_interfacing.closure</span> <span class="kn">import</span> <span class="n">Closure</span><span class="p">,</span> <span class="n">ClosureBuilder</span>
+<span class="kn">from</span> <span class="nn">katana.native_interfacing.katana_compiler</span> <span class="kn">import</span> <span class="n">OperatorCompiler</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;do_all_operator&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;for_each_operator&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obim_metric&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="c1"># Parallel loops</span>
+
+
+<div class="viewcode-block" id="do_all_operator"><a class="viewcode-back" href="../../reference/python/katana.html#katana.do_all_operator">[docs]</a><span class="k">def</span> <span class="nf">do_all_operator</span><span class="p">(</span><span class="n">typ</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &gt;&gt;&gt; @do_all_operator()</span>
+<span class="sd">    ... def f(arg0, ..., argn, element): ...</span>
+
+<span class="sd">    Decorator to declare an operator for use with a `do_all`.</span>
+<span class="sd">    The operators have some restructions; see below.</span>
+<span class="sd">    If the operator has any arguments other than the element argument expected from the loop, those arguments must be</span>
+<span class="sd">    bound by calling the function to create a closure:</span>
+
+<span class="sd">    &gt;&gt;&gt; f(arg0, ..., argn)</span>
+
+<span class="sd">    The operator is compiled using numba.</span>
+<span class="sd">    Its argument types are inferred automatically based on the binding call.</span>
+<span class="sd">    Multiple uses of the same operator with same type will reuse the same cached compiled copy of the function.</span>
+
+<span class="sd">    Operators have some restrictions:</span>
+
+<span class="sd">    * The operator may not create new references to arrays or other dynamically allocated values. For example, an</span>
+<span class="sd">      operator may not add a numpy array to a global list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="n">n_args</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">f_jit</span> <span class="o">=</span> <span class="n">numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">typ</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="n">nopython</span><span class="p">,</span> <span class="n">pipeline_class</span><span class="o">=</span><span class="n">OperatorCompiler</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">)(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">builder</span> <span class="o">=</span> <span class="n">wraps</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="n">ClosureBuilder</span><span class="p">(</span><span class="n">f_jit</span><span class="p">,</span> <span class="n">n_unbound_arguments</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">n_args</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">builder</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">builder</span>
+
+    <span class="k">return</span> <span class="n">decorator</span></div>
+
+
+<span class="k">def</span> <span class="nf">is_do_all_operator_cfunc</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">numba</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ccallback</span><span class="o">.</span><span class="n">CFunc</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">__wrapped__</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">is_do_all_operator_closure</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">Closure</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">unbound_argument_types</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+
+
+<div class="viewcode-block" id="for_each_operator"><a class="viewcode-back" href="../../reference/python/katana.html#katana.for_each_operator">[docs]</a><span class="k">def</span> <span class="nf">for_each_operator</span><span class="p">(</span><span class="n">typ</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &gt;&gt;&gt; @for_each_operator()</span>
+<span class="sd">    ... def f(arg0, ..., argn, element, ctx): ...</span>
+
+<span class="sd">    Decorator to declare an operator for use with a `for_each`.</span>
+<span class="sd">    The operators have some restructions; see below.</span>
+<span class="sd">    If the operator has any arguments other than the element and context arguments expected from the loop, those</span>
+<span class="sd">    arguments must be bound by calling the function to create a closure:</span>
+
+<span class="sd">    &gt;&gt;&gt; f(arg0, ..., argn)</span>
+
+<span class="sd">    The operator is compiled using numba.</span>
+<span class="sd">    Its argument types are inferred automatically based on the binding call.</span>
+<span class="sd">    Multiple uses of the same operator with same type will reuse the same cached compiled copy of the function.</span>
+
+<span class="sd">    Operators have some restrictions:</span>
+
+<span class="sd">    * The operator may not create new references to arrays or other dynamically allocated values. For example, an</span>
+<span class="sd">      operator may not add a numpy array to a global list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="n">n_args</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="n">f_jit</span> <span class="o">=</span> <span class="n">numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">typ</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="n">nopython</span><span class="p">,</span> <span class="n">pipeline_class</span><span class="o">=</span><span class="n">OperatorCompiler</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">)(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">builder</span> <span class="o">=</span> <span class="n">wraps</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="n">ClosureBuilder</span><span class="p">(</span><span class="n">f_jit</span><span class="p">,</span> <span class="n">n_unbound_arguments</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">n_args</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">builder</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">builder</span>
+
+    <span class="k">return</span> <span class="n">decorator</span></div>
+
+
+<span class="k">def</span> <span class="nf">is_for_each_operator_cfunc</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">numba</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ccallback</span><span class="o">.</span><span class="n">CFunc</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">__wrapped__</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span> <span class="o">==</span> <span class="mi">3</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">is_for_each_operator_closure</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">Closure</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">unbound_argument_types</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+
+
+<span class="c1"># Ordered By Integer Metric</span>
+
+
+<div class="viewcode-block" id="obim_metric"><a class="viewcode-back" href="../../reference/python/katana.html#katana.obim_metric">[docs]</a><span class="k">def</span> <span class="nf">obim_metric</span><span class="p">(</span><span class="n">typ</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &gt;&gt;&gt; @obim_metric()</span>
+<span class="sd">    ... def f(arg0, ..., argn, element): ...</span>
+
+<span class="sd">    Decorator to declare a metric for use with `OrderedByIntegerMetric`.</span>
+
+<span class="sd">    Metrics have some restrictions:</span>
+
+<span class="sd">    * The metric may not create new references to arrays or other dynamically allocated values. For example, a</span>
+<span class="sd">      metric may not add a numpy array to a global list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="n">n_args</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">f_jit</span> <span class="o">=</span> <span class="n">numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">typ</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="n">nopython</span><span class="p">,</span> <span class="n">pipeline_class</span><span class="o">=</span><span class="n">OperatorCompiler</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">)(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">builder</span> <span class="o">=</span> <span class="n">wraps</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="n">ClosureBuilder</span><span class="p">(</span><span class="n">f_jit</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="n">numba</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">n_unbound_arguments</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">n_args</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">builder</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">builder</span>
+
+    <span class="k">return</span> <span class="n">decorator</span></div>
+
+
+<span class="k">def</span> <span class="nf">is_obim_metric_cfunc</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">numba</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">ccallback</span><span class="o">.</span><span class="n">CFunc</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">__wrapped__</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span> <span class="o">==</span> <span class="mi">3</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">is_obim_metric_closure</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">Closure</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">return_type</span> <span class="o">==</span> <span class="n">numba</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">int64</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">unbound_argument_types</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+
+
+<span class="c1"># Import the numba wrappers people are likely to need.</span>
+<span class="c1"># TODO: This imports should probably be elsewhere, but this will work for now.</span>
+</pre></div>
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

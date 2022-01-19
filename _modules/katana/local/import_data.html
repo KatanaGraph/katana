@@ -1,0 +1,353 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>katana.local.import_data &#8212; Katana</title>
+    
+    <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/clipboard.min.js"></script>
+    <script src="../../../_static/copybutton.js"></script>
+    <script src="../../../_static/tabs.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../../index.html">
+  <img src="../../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <h1>Source code for katana.local.import_data</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The :py:mod:`~katana.local.import_data` module provides a several graph conversion routines which take external data</span>
+<span class="sd">and convert it into a Katana :py:class:`~katana.local.Graph` object.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Collection</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">numba</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">katana.local._graph</span> <span class="kn">import</span> <span class="n">Graph</span>
+<span class="kn">from</span> <span class="nn">katana.local._import_data</span> <span class="kn">import</span> <span class="n">from_csr</span><span class="p">,</span> <span class="n">from_graphml</span>
+<span class="kn">from</span> <span class="nn">katana.native_interfacing.buffer_access</span> <span class="kn">import</span> <span class="n">to_numpy</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;from_graphml&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;from_csr&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;from_adjacency_matrix&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;from_edge_list_matrix&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;from_edge_list_arrays&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;from_edge_list_dataframe&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<div class="viewcode-block" id="from_adjacency_matrix"><a class="viewcode-back" href="../../../reference/python/katana.local.import_data.html#katana.local.import_data.from_adjacency_matrix">[docs]</a><span class="k">def</span> <span class="nf">from_adjacency_matrix</span><span class="p">(</span><span class="n">adjacency</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">property_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;weight&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Graph</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert an adjacency matrix with shape (n_nodes, n_nodes) into a :py:class:`~katana.local.Graph` with the</span>
+<span class="sd">    non-zero values as an edge weight property.</span>
+
+<span class="sd">    This preserves node IDs, but not edge IDs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sources</span><span class="p">,</span> <span class="n">destinations</span> <span class="o">=</span> <span class="n">adjacency</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">adjacency</span><span class="p">[</span><span class="n">sources</span><span class="p">,</span> <span class="n">destinations</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">from_edge_list_arrays</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">destinations</span><span class="p">,</span> <span class="p">{</span><span class="n">property_name</span><span class="p">:</span> <span class="n">weights</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="from_edge_list_matrix"><a class="viewcode-back" href="../../../reference/python/katana.local.import_data.html#katana.local.import_data.from_edge_list_matrix">[docs]</a><span class="k">def</span> <span class="nf">from_edge_list_matrix</span><span class="p">(</span><span class="n">edges</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Graph</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert an edge list with shape (n_edges, 2) into a :py:class:`~katana.local.Graph`.</span>
+
+<span class="sd">    This preserves node IDs, but not edge IDs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">edges</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">edges</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;edges must have shape (n_edges, 2).&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">from_edge_list_arrays</span><span class="p">(</span><span class="n">edges</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">edges</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span></div>
+
+
+<span class="nd">@numba</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">_fill_indices</span><span class="p">(</span><span class="n">sort_order</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="n">last_source</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1"># Code is duplicated because numba cannot perform type based cloning within a function and cannot pass ranges</span>
+    <span class="c1"># into a function.</span>
+    <span class="k">if</span> <span class="n">sort_order</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">edge_index</span><span class="p">,</span> <span class="n">source</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sources</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">source</span> <span class="o">!=</span> <span class="n">last_source</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">last_source</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
+                    <span class="n">indices</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_index</span>
+                <span class="n">last_source</span> <span class="o">=</span> <span class="n">source</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">edge_index</span><span class="p">,</span> <span class="n">source_index</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sort_order</span><span class="p">):</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">sources</span><span class="p">[</span><span class="n">source_index</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">source</span> <span class="o">!=</span> <span class="n">last_source</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">last_source</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
+                    <span class="n">indices</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_index</span>
+                <span class="n">last_source</span> <span class="o">=</span> <span class="n">source</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">last_source</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)):</span>
+        <span class="n">indices</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="from_edge_list_arrays"><a class="viewcode-back" href="../../../reference/python/katana.local.import_data.html#katana.local.import_data.from_edge_list_arrays">[docs]</a><span class="k">def</span> <span class="nf">from_edge_list_arrays</span><span class="p">(</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">properties</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Graph</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.</span>
+
+<span class="sd">    This preserves node IDs, but **not** edge IDs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_from_edge_list_arrays_impl</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">destinations</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">,</span> <span class="n">edges_sorted</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="n">properties</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">from_sorted_edge_list_arrays</span><span class="p">(</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">properties</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Graph</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert an **sorted** edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`. The</span>
+<span class="sd">    ``sources`` array must be sorted or the resulting graph will be incorrect.</span>
+
+<span class="sd">    This preserves node IDs and edge IDs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_from_edge_list_arrays_impl</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">destinations</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">,</span> <span class="n">edges_sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="n">properties</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_from_edge_list_arrays_impl</span><span class="p">(</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">edges_sorted</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">properties</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Graph</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.</span>
+
+<span class="sd">    This preserves node IDs, but not edge IDs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sources</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+    <span class="n">destinations</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="p">(</span><span class="n">destinations</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;sources must be a 1-d array&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">destinations</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;destinations must be a 1-d array&quot;</span><span class="p">)</span>
+
+    <span class="n">n_edges</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">n_edges</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must have at least one edge&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">destinations</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_edges</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Sources and destinations must have the same length&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">property_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">properties</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">property_dict</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">prop</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_edges</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> does not have length equal to sources.&quot;</span><span class="p">)</span>
+
+    <span class="n">n_nodes</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sources</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">destinations</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">edges_sorted</span><span class="p">:</span>
+        <span class="n">sort_order</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span>
+        <span class="n">csr_destinations</span> <span class="o">=</span> <span class="n">destinations</span><span class="p">[</span><span class="n">sort_order</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sort_order</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">csr_destinations</span> <span class="o">=</span> <span class="n">destinations</span>
+
+    <span class="n">csr_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">)</span>
+    <span class="n">_fill_indices</span><span class="p">(</span><span class="n">sort_order</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">csr_indices</span><span class="p">)</span>
+
+    <span class="n">graph</span> <span class="o">=</span> <span class="n">from_csr</span><span class="p">(</span><span class="n">csr_indices</span><span class="p">,</span> <span class="n">csr_destinations</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">properties</span><span class="p">:</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">add_edge_property</span><span class="p">(</span><span class="n">properties</span> <span class="k">if</span> <span class="n">edges_sorted</span> <span class="k">else</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">p</span><span class="p">[</span><span class="n">sort_order</span><span class="p">]</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+    <span class="k">return</span> <span class="n">graph</span>
+
+
+<div class="viewcode-block" id="from_edge_list_dataframe"><a class="viewcode-back" href="../../../reference/python/katana.local.import_data.html#katana.local.import_data.from_edge_list_dataframe">[docs]</a><span class="k">def</span> <span class="nf">from_edge_list_dataframe</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">,</span>
+    <span class="n">source_column</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span>
+    <span class="n">destination_column</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;destination&quot;</span><span class="p">,</span>
+    <span class="n">property_columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Collection</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert an edge list in the form of a dataframe-like object into a :py:class:`~katana.local.Graph` with edge</span>
+<span class="sd">    properties.</span>
+
+<span class="sd">    :param df: The edge list and edge properties.</span>
+<span class="sd">    :type df: A data frame like type, such as a `pandas.DataFrame` or even a dict of numpy arrays.</span>
+<span class="sd">    :param source_column: The name or ID of the column which holds edge sources.</span>
+<span class="sd">    :param destination_column: The name or ID of the column which holds edge destinations.</span>
+<span class="sd">    :param property_columns: The names or IDs of columns which should be used as edge properties. If this is ``None``,</span>
+<span class="sd">        use all columns other than sources and destinations specified above.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">property_columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">property_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-</span> <span class="p">{</span><span class="n">source_column</span><span class="p">,</span> <span class="n">destination_column</span><span class="p">}</span>
+
+    <span class="n">edge_properties</span> <span class="o">=</span> <span class="p">{</span><span class="n">col_name</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">col_name</span> <span class="ow">in</span> <span class="n">property_columns</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">from_edge_list_arrays</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">source_column</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">destination_column</span><span class="p">],</span> <span class="o">**</span><span class="n">edge_properties</span><span class="p">)</span></div>
+</pre></div>
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

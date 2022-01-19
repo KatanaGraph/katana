@@ -1,0 +1,423 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Git Style &#8212; Katana</title>
+    
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Code Style" href="code-style.html" />
+    <link rel="prev" title="Building" href="building.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="history.html">
+   History
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="codebase-overview.html">
+   Quick Overview of the Codebase
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="building.html">
+   Building
+  </a>
+ </li>
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   Git Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="code-style.html">
+   Code Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="testing.html">
+   Testing
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="performance.html">
+   Performance
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="documentation.html">
+   Documentation
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="releases.html">
+   Releases
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="tips-tricks.html">
+   Helpful Tips and Tricks
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="rdg-storage-format.html">
+   Katana RDG Storage Format
+  </a>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+<div class="tocsection onthispage pt-5 pb-3">
+    <i class="fas fa-list"></i> On this page
+</div>
+
+<nav id="bd-toc-nav">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#submitting-changes">
+   Submitting Changes
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#merging-changes">
+   Merging Changes
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#pull-request-style">
+   Pull Request Style
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#commit-message-style">
+   Commit Message Style
+  </a>
+ </li>
+</ul>
+
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="git-style">
+<h1>Git Style<a class="headerlink" href="#git-style" title="Permalink to this headline">¶</a></h1>
+<p>The main development branch <code class="docutils literal notranslate"><span class="pre">master</span></code> should build and pass tests, but may be
+unstable at times. Regressions may be introduced post-merge or a PR may be more
+clearly expressed with intermediate commits that do not pass all tests. We
+prefer a clear history over “atomic” commits. During our release process, we
+specifically address stability and regression issues.</p>
+<section id="submitting-changes">
+<h2>Submitting Changes<a class="headerlink" href="#submitting-changes" title="Permalink to this headline">¶</a></h2>
+<p>The way to contribute code to the Katana project is to make a fork of this
+repository and create a pull request with your desired changes. For a general
+overview of this process, this
+<a class="reference external" href="https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow">description</a>
+from Atlassian.</p>
+</section>
+<section id="merging-changes">
+<h2>Merging Changes<a class="headerlink" href="#merging-changes" title="Permalink to this headline">¶</a></h2>
+<p>If you are an external contributor (i.e., someone who does not have write
+access to this repo), the main reviewer of your pull request is responsible for
+finally merging your code after it has been reviewed.</p>
+<p>If you are an internal contributor (e.g., a member of Katana Graph), you are
+responsible for merging your code after it has been reviewed.</p>
+<p>When writing your change and during the review process, it is common to just
+append commits to your pull request branch, but prior to merging, these process
+commits should be reorganized with the interest of future developers in mind.
+This usually means structuring commits to be less about your process and more
+about the logical outcomes.</p>
+<p>A common pattern is a refactoring commit followed by the actual new feature.
+Each commit is usually buildable and testable on its own but altogether they
+comprise the work done. You can look at the git history of this repo for
+inspiration, but if you have any doubts, squashing all your commits into one is
+usually a safe choice.</p>
+<p>You can use <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">rebase</span> <span class="pre">--interactive</span></code> to reorganize your commits and  <code class="docutils literal notranslate"><span class="pre">git</span>
+<span class="pre">push</span> <span class="pre">--force</span></code>  to update your branch. Depending on your IDE, there are various
+features or plugins to streamline this process (e.g.,
+<a class="reference external" href="https://github.com/tpope/vim-fugitive">vim-fugitive</a>,
+<a class="reference external" href="https://magit.vc/">magit</a>). Git also provides <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">commit</span> <span class="pre">--fixup</span></code> and
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">rebase</span> <span class="pre">--autosquash</span></code> which can streamline this process.</p>
+<p>It is also possible to ask GitHub to squash your commits for you. This is the
+“squash and merge” option when merging your PR.</p>
+</section>
+<section id="pull-request-style">
+<span id="id1"></span><h2>Pull Request Style<a class="headerlink" href="#pull-request-style" title="Permalink to this headline">¶</a></h2>
+<p>Include the Jira issue keys that are being addressed at the end of the pull
+request title as a comma separated list in brackets.</p>
+<p>Example PR title:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reduce</span> <span class="n">memory</span> <span class="n">usage</span> <span class="n">of</span> <span class="n">Foo</span> <span class="p">[</span><span class="n">KAT</span><span class="o">-</span><span class="mi">1000</span><span class="p">,</span> <span class="n">KAT</span><span class="o">-</span><span class="mi">1001</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>If you squash and merge your PR, by default, the PR description and title are
+turned into the commit message for your squashed PR, so apply the
+recommendations about commit message style below to your PR description instead.</p>
+<p>Jira issue keys referenced in the description of the PR do not get picked up by
+the Jira-GitHub integration, but do get automatically converted into a link by
+GitHub’s Jira bot. This is helpful for reviewers to quickly navigate to the
+related Jira issue.</p>
+</section>
+<section id="commit-message-style">
+<h2>Commit Message Style<a class="headerlink" href="#commit-message-style" title="Permalink to this headline">¶</a></h2>
+<p>If you intend to rebase and merge, please still include Jira issue keys as described in
+pull request style above.</p>
+<p>If you intend to squash and merge, apply the recommendations in this section to your
+pull request message instead of your commit message.</p>
+<p>There are three main things we accomplish with commit messages:</p>
+<ol class="arabic simple">
+<li><p>Facilitate review of our changes by reviewers</p></li>
+<li><p>Provide context to future readers about our changes</p></li>
+<li><p>Ground the scope of our changes to ourselves.</p></li>
+</ol>
+<p>If we struggle to write a simple explanation of why we made a change, it is a
+sign that the underlying code changes are also not as clear as they could be.</p>
+<p>Commit messages are part of the repository in the same way as the files in a
+repository are. And as developers may use <code class="docutils literal notranslate"><span class="pre">grep</span></code> to orient themselves around
+the repository, developers may also use <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">log</span></code> and <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">blame</span></code> to
+understand more of the history of a file and its context. So, it pays to be
+mindful of the content and structure of commits and their messages.</p>
+<p>Messages should be written with your reviewers in mind as well as future
+developers (or generally the codebase itself). Changes to the repository are
+already included in a commit so use your commit message to focus on things that
+would not readily be apparent from just looking at the textual changes.</p>
+<p>Here are some examples of useful things to note for your reviewers and future
+developers:</p>
+<ul class="simple">
+<li><p>Why was this change made?</p></li>
+<li><p>What plausible alternative implementations did you consider but rule out?</p></li>
+<li><p>What general thing or abstraction is this change in furtherance of?</p></li>
+<li><p>If this change fixes a bug, what was the original bug or its symptoms?</p></li>
+<li><p>Are there any notable API changes? Call them out specifically so that other
+developers browsing <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">log</span></code> or resolving a conflict can adjust their
+current work accordingly.</p></li>
+<li><p>If you did some additional changes along the way to facilitate the main
+thrust of your work, explain the rational behind any non-obvious but required
+changes.</p></li>
+</ul>
+<p>At the same time, there is no reason to agonize over the content of a commit
+message or be overly verbose. Applying an automatic formatter changes a lot of
+files but doesn’t require a lot of context, while a one-line change might merit
+several paragraphs of context if the rationale is subtle or non-obvious.</p>
+<p>The subject line (i.e., the first line) of a commit message should be short,
+generally less than 80 characters long, and start with a verb in the imperative
+mood (present tense, second person). You can think of the message as directing
+the codebase itself to do something. Optionally, the subject line may begin
+with a component followed by a colon if the change is specific to a commonly
+known component or library.</p>
+<p>Examples:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Apply</span> <span class="pre">clang-format</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tsuba:</span> <span class="pre">Support</span> <span class="pre">compressed</span> <span class="pre">and</span> <span class="pre">uncompressed</span> <span class="pre">files</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">support:</span> <span class="pre">Fix</span> <span class="pre">release</span> <span class="pre">order</span> <span class="pre">when</span> <span class="pre">handling</span> <span class="pre">errors</span></code></p></li>
+</ul>
+<p>Commit messages are traditionally viewed in a terminal. Hard wrap your lines to
+some reasonable column width (e.g., 80 or 120 characters) and use a blank line
+to separate paragraphs. Avoid markup or excessive decoration on text. A commit
+message is plain text.</p>
+<p>Refrain from using external links unless you are sure they will be valid
+indefinitely. Assume that readers do not have access to external links and
+summarize relevant details in the commit message itself. This includes
+references to issue and work trackers.</p>
+<p>An example of a typical commit message:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">support</span><span class="p">:</span> <span class="n">Reduce</span> <span class="n">memory</span> <span class="n">usage</span> <span class="n">of</span> <span class="n">Foo</span>
+
+<span class="n">A</span> <span class="n">Foo</span> <span class="n">instance</span> <span class="n">maintains</span> <span class="n">references</span> <span class="n">to</span> <span class="n">Bar</span> <span class="n">objects</span><span class="o">.</span> <span class="n">The</span> <span class="n">number</span> <span class="n">of</span> <span class="n">Bar</span>
+<span class="n">objects</span> <span class="n">can</span> <span class="n">grow</span> <span class="n">when</span> <span class="n">a</span> <span class="n">Foo</span> <span class="ow">is</span> <span class="n">used</span> <span class="n">multiple</span> <span class="n">times</span><span class="o">.</span> <span class="n">This</span> <span class="n">can</span> <span class="n">reach</span> <span class="mi">10</span><span class="n">GB</span> <span class="ow">in</span>
+<span class="n">typical</span> <span class="n">usage</span><span class="o">.</span>
+
+<span class="n">In</span> <span class="n">practice</span><span class="p">,</span> <span class="n">once</span> <span class="n">a</span> <span class="n">Foo</span> <span class="ow">is</span> <span class="n">reused</span> <span class="n">only</span> <span class="n">some</span> <span class="n">Bar</span> <span class="n">objects</span> <span class="n">need</span> <span class="n">to</span> <span class="n">be</span> <span class="n">retained</span><span class="o">.</span>
+<span class="n">So</span><span class="p">,</span> <span class="n">add</span> <span class="n">a</span> <span class="n">dispose</span> <span class="n">API</span> <span class="n">that</span> <span class="n">allows</span> <span class="n">Foo</span> <span class="n">users</span> <span class="n">to</span> <span class="n">indicate</span> <span class="n">which</span> <span class="n">Bar</span> <span class="n">objects</span> <span class="n">to</span>
+<span class="n">release</span> <span class="n">on</span> <span class="n">reuse</span><span class="o">.</span> <span class="n">The</span> <span class="n">default</span> <span class="n">behavior</span> <span class="ow">is</span> <span class="n">to</span> <span class="n">retain</span> <span class="nb">all</span> <span class="n">Bars</span><span class="o">.</span>
+
+<span class="n">In</span> <span class="n">most</span> <span class="n">cases</span><span class="p">,</span> <span class="n">it</span> <span class="ow">is</span> <span class="n">easy</span> <span class="n">to</span> <span class="n">infer</span> <span class="n">which</span> <span class="n">Bar</span> <span class="n">objects</span> <span class="n">to</span> <span class="n">dispose</span> <span class="n">of</span> <span class="n">by</span>
+<span class="n">inspecting</span> <span class="n">the</span> <span class="n">code</span><span class="o">.</span> <span class="n">The</span> <span class="n">few</span> <span class="n">remaining</span> <span class="n">cases</span> <span class="n">where</span> <span class="n">it</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">possible</span> <span class="n">to</span> <span class="n">use</span>
+<span class="n">the</span> <span class="n">dispose</span> <span class="n">API</span> <span class="n">are</span> <span class="n">on</span> <span class="n">less</span> <span class="n">frequently</span> <span class="n">executed</span> <span class="n">recovery</span> <span class="n">paths</span><span class="o">.</span>
+
+<span class="n">After</span> <span class="n">this</span> <span class="n">change</span><span class="p">,</span> <span class="n">typical</span> <span class="n">memory</span> <span class="n">usage</span> <span class="n">reduces</span> <span class="n">to</span> <span class="n">a</span> <span class="n">few</span> <span class="n">KB</span><span class="o">.</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

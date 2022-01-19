@@ -1,0 +1,611 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Documentation &#8212; Katana</title>
+    
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Releases" href="releases.html" />
+    <link rel="prev" title="Performance" href="performance.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="history.html">
+   History
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="codebase-overview.html">
+   Quick Overview of the Codebase
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="building.html">
+   Building
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="git-style.html">
+   Git Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="code-style.html">
+   Code Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="testing.html">
+   Testing
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="performance.html">
+   Performance
+  </a>
+ </li>
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   Documentation
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="releases.html">
+   Releases
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="tips-tricks.html">
+   Helpful Tips and Tricks
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="rdg-storage-format.html">
+   Katana RDG Storage Format
+  </a>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+<div class="tocsection onthispage pt-5 pb-3">
+    <i class="fas fa-list"></i> On this page
+</div>
+
+<nav id="bd-toc-nav">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#overview">
+   Overview
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#building-documentation">
+   Building Documentation
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#annotating-internal-or-draft-only-content">
+   Annotating Internal or Draft only Content
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#restructured-text">
+   Restructured Text
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#jupyter-notebooks">
+   Jupyter Notebooks
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#orphaned-notebooks">
+     Orphaned Notebooks
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#api-documentation">
+   API Documentation
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#c">
+     C++
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#python">
+     Python
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#go">
+     Go
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="documentation">
+<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>People turn to documentation for many different reasons, so it is important to
+consider the audience and what their needs are. What a person wants out of
+documentation depends on their background, what they want to do and their
+experience with the Katana system.</p>
+<p>The initial experience for users will be focused around answering questions like
+“what does this system do?”, “how can I test drive it?”, “how can I install
+it?”, while a developer looking to modify the Katana system itself, will be more
+interested in how the code is organized. And once someone gains experience,
+their focus will shift from tutorials and getting started guides, which help
+explain new concepts, to reference information, which serves as a reminder about
+details once a concept is known.</p>
+<p>The documentation for the Katana system is organized in major groups, which
+answer specific questions:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../getting-started/index.html#getting-started"><span class="std std-ref">Getting Started</span></a>: How do I install the system? What are its basic
+requirements?</p></li>
+<li><p><a class="reference internal" href="../user-guides/index.html#user-guides"><span class="std std-ref">User Guides</span></a>: After I’ve installed Katana, how do I do common
+activities?</p></li>
+<li><p><a class="reference internal" href="../reference/index.html#reference"><span class="std std-ref">Reference</span></a>: If I know the concept but am a little fuzzy on the details,
+can you give me a refresher?</p></li>
+<li><p><a class="reference internal" href="index.html#contributing"><span class="std std-ref">Contributing</span></a>: I’d like to improve to Katana itself. What should I
+know?</p></li>
+</ul>
+</section>
+<section id="building-documentation">
+<h2>Building Documentation<a class="headerlink" href="#building-documentation" title="Permalink to this headline">¶</a></h2>
+<p>To build the documentation, set the <code class="docutils literal notranslate"><span class="pre">-DBUILD_DOCS=</span></code> option to either
+<code class="docutils literal notranslate"><span class="pre">internal</span></code> or <code class="docutils literal notranslate"><span class="pre">external</span></code> and <code class="docutils literal notranslate"><span class="pre">-DKATANA_LANG_BINDINGS=python</span></code> <code class="docutils literal notranslate"><span class="pre">cmake</span></code>
+options and then make the <code class="docutils literal notranslate"><span class="pre">docs</span></code> build target.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># internal documentation</span>
+cmake -S <span class="nv">$SRC_DIR</span> -B <span class="nv">$BUILD_DIR</span> -DKATANA_LANG_BINDINGS<span class="o">=</span>python <span class="se">\</span>
+   -DBUILD_DOCS<span class="o">=</span>internal
+
+<span class="c1"># external documentation</span>
+cmake -S <span class="nv">$SRC_DIR</span> -B <span class="nv">$BUILD_DIR</span> -DKATANA_LANG_BINDINGS<span class="o">=</span>python <span class="se">\</span>
+   -DBUILD_DOCS<span class="o">=</span>external
+
+<span class="nb">cd</span> <span class="nv">$BUILD_DIR</span>
+make docs
+</pre></div>
+</div>
+</section>
+<section id="annotating-internal-or-draft-only-content">
+<h2>Annotating Internal or Draft only Content<a class="headerlink" href="#annotating-internal-or-draft-only-content" title="Permalink to this headline">¶</a></h2>
+<p>Files ending in <code class="docutils literal notranslate"><span class="pre">-draft.[rst/ipynb]</span></code> or <code class="docutils literal notranslate"><span class="pre">-internal.[rst/ipynb]</span></code> will not be
+included in external facing documentation.</p>
+<p>Whole directories ending in <code class="docutils literal notranslate"><span class="pre">-draft/</span></code> or <code class="docutils literal notranslate"><span class="pre">-internal/</span></code> will be omitted when
+building external documentation.</p>
+</section>
+<section id="restructured-text">
+<h2>Restructured Text<a class="headerlink" href="#restructured-text" title="Permalink to this headline">¶</a></h2>
+<p>Most documentation is written in Restructured Text (<code class="docutils literal notranslate"><span class="pre">.rst</span></code>) format, which is
+similar to Markdown (<code class="docutils literal notranslate"><span class="pre">.md</span></code>) in spirit but has a slightly different syntax.</p>
+<table class="table" id="id1">
+<caption><span class="caption-text">Summary of differences between Restructured Text and Markdown</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Restructured Text</p></td>
+<td><p>Markdown</p></td>
+</tr>
+<tr class="row-even"><td><p>Inline code</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>The ``Foo`` function
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>The `Foo` function
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Code blocks</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">code</span><span class="o">-</span><span class="n">block</span><span class="p">::</span> <span class="n">python</span>
+
+   <span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+     <span class="k">pass</span>
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>```
+def foo():
+  pass
+```
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>External links</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Visit `my link &lt;https://invalid/&gt;`_
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Visit</span> <span class="p">[</span><span class="n">my</span> <span class="n">link</span><span class="p">](</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">invalid</span><span class="o">/</span><span class="p">)</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Internal links</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.. _label:
+
+See :ref:`label`
+</pre></div>
+</div>
+</td>
+<td><p>(Not applicable)</p></td>
+</tr>
+<tr class="row-even"><td><p>Sections</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====</span>
+<span class="n">Part</span>
+<span class="o">====</span>
+
+<span class="o">*******</span>
+<span class="n">Chapter</span>
+<span class="o">*******</span>
+
+<span class="n">Section</span>
+<span class="o">=======</span>
+
+<span class="n">Subsection</span>
+<span class="o">----------</span>
+
+<span class="n">Subsubsection</span>
+<span class="o">^^^^^^^^^^^^^</span>
+
+<span class="n">Paragraphs</span>
+<span class="sd">&quot;&quot;&quot;&quot;&quot;&quot;</span><span class="s2">&quot;&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Level 1</span>
+
+<span class="c1">## Level 2</span>
+
+<span class="c1">### Level 3</span>
+
+<span class="c1">#### Level 4</span>
+
+<span class="c1">##### Level 5</span>
+
+<span class="c1">###### Level 6</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Conditional Include</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">only</span><span class="p">::</span> <span class="n">internal</span>
+
+   <span class="n">Text</span> <span class="n">to</span> <span class="n">only</span> <span class="n">include</span> <span class="n">when</span> <span class="n">internal</span> <span class="ow">is</span> <span class="nb">set</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>The only condition currently defined is <code class="docutils literal notranslate"><span class="pre">internal</span></code>. Conditional
+including has limited scope as it cannot include other directives nor
+alter the section structure. The body of the directive is always parsed,
+so references must be valid regardless of the condition.</p>
+</td>
+<td><p>(Not applicable)</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html">https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html</a></p></li>
+</ul>
+</section>
+<section id="jupyter-notebooks">
+<h2>Jupyter Notebooks<a class="headerlink" href="#jupyter-notebooks" title="Permalink to this headline">¶</a></h2>
+<p>Guides on how to use Katana Graph in Python should be written as Jupyter
+Notebooks. They will be parsed similar to Restructured Text (<code class="docutils literal notranslate"><span class="pre">.rst</span></code>) files.</p>
+<section id="orphaned-notebooks">
+<h3>Orphaned Notebooks<a class="headerlink" href="#orphaned-notebooks" title="Permalink to this headline">¶</a></h3>
+<p>This means that it doesn’t appear in a toctree (see <code class="docutils literal notranslate"><span class="pre">index.rst</span></code>),
+but other pages can still link to it.</p>
+<p>Orphaned notebookes require the following to be added to the notebook’s JSON
+metadata:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;nbsphinx&quot;</span><span class="o">:</span> <span class="p">{</span>
+   <span class="s2">&quot;orphan&quot;</span><span class="o">:</span> <span class="kc">true</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="api-documentation">
+<h2>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h2>
+<p>API documentation is a form of reference information, usually embedded in code
+files, and is targeted towards people who know the general concepts in question
+but need some help with details or specifics, e.g., I have a <code class="docutils literal notranslate"><span class="pre">Foo</span></code> object but
+what can I do with it?</p>
+<p>The Katana codebase spans three languages: C++, Python and Go, but the
+principles of good API documentation are common regardless of language.</p>
+<ol class="arabic simple">
+<li><p>Be precise. Good documentation is correct documentation. If the name of a
+function captures its semantics, there is no need to add more text. If a
+function has a simple name but subtle semantics, it probably deserves a
+better name and extensive documentation.</p></li>
+<li><p>Be humble. API documentation is written by the author of the code, but the
+author’s assumptions are usually different than users’ assumptions.</p></li>
+</ol>
+<p>While it is possible to use markup in documentation text, e.g., C++ (Doxygen)
+supports a form of Markdown and Python (Sphinx) supports Restructured Text, it
+is best to keep text simple and communicate using basic text that can be read
+easily without being rendered by a separate documentation tool.</p>
+<section id="c">
+<h3>C++<a class="headerlink" href="#c" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">/// Foo returns the sum of a and b.</span>
+<span class="c1">///</span>
+<span class="c1">/// Foo rounds the result away from zero. That is: if the sum is negative,</span>
+<span class="c1">/// Foo rounds towards negative infinity, and if sum is positive, Foo rounds</span>
+<span class="c1">/// towards positive infinity.</span>
+<span class="c1">///</span>
+<span class="c1">/// As a side-effect, Foo updates an internal table of cached sums.</span>
+<span class="c1">///</span>
+<span class="c1">/// Foo can be used to simulate arithmetic on older processors like the Bar</span>
+<span class="c1">/// M3000, which uses this uncommon rounding mode.</span>
+<span class="c1">///</span>
+<span class="c1">/// This function is not safe to call concurrently.</span>
+<span class="c1">///</span>
+<span class="c1">/// \param a The first addend</span>
+<span class="c1">/// \param b The second addend</span>
+<span class="c1">/// \return The sum of a and b</span>
+<span class="kt">int32_t</span><span class="w"> </span><span class="nf">Foo</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>API documentation should begin with <code class="docutils literal notranslate"><span class="pre">///</span></code> and should appear only once per
+symbol. If a symbol has a separate declaration and definition, put the API
+documentation on the declaration.</p>
+<p>In some cases, underlying Doxygen C++ parser may issues with parsing valid C++.
+You can use the Doxygen macro <code class="docutils literal notranslate"><span class="pre">DO_NOT_DOCUMENT</span></code> to skip parsing of that
+particular code block.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">/// \cond DO_NOT_DOCUMENT</span>
+<span class="n">WeirdCXXSyntax</span><span class="p">();</span><span class="w"></span>
+<span class="c1">/// \endcode DO_NOT_DOCUMENT</span>
+</pre></div>
+</div>
+</section>
+<section id="python">
+<h3>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+   <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">   foo returns the sum of a and b.</span>
+
+<span class="sd">   Foo rounds the result away from zero. That is: if the sum is negative,</span>
+<span class="sd">   foo rounds towards negative infinity, and if sum is positive, foo rounds</span>
+<span class="sd">   towards positive infinity.</span>
+
+<span class="sd">   As a side-effect, foo updates an internal table of cached sums.</span>
+
+<span class="sd">   Foo can be used to simulate arithmetic on older processors like the Bar</span>
+<span class="sd">   M3000, which uses this uncommon rounding mode.</span>
+
+<span class="sd">   This function is not safe to call concurrently.</span>
+
+<span class="sd">   :param a: The first addend</span>
+<span class="sd">   :param b: The second addend</span>
+<span class="sd">   :return: The sum of a and b</span>
+<span class="sd">   &quot;&quot;&quot;</span>
+   <span class="o">...</span>
+</pre></div>
+</div>
+</section>
+<section id="go">
+<h3>Go<a class="headerlink" href="#go" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="c1">// Foo returns the sum of a and b.</span><span class="w"></span>
+<span class="c1">//</span><span class="w"></span>
+<span class="c1">// Foo rounds the result away from zero. That is: if the sum is negative,</span><span class="w"></span>
+<span class="c1">// foo rounds towards negative infinity, and if sum is positive, foo rounds</span><span class="w"></span>
+<span class="c1">// towards positive infinity.</span><span class="w"></span>
+<span class="c1">//</span><span class="w"></span>
+<span class="c1">// As a side-effect, Foo updates an internal table of cached sums.</span><span class="w"></span>
+<span class="c1">//</span><span class="w"></span>
+<span class="c1">// Foo can be used to simulate arithmetic on older processors like the Bar</span><span class="w"></span>
+<span class="c1">// M3000, which uses this uncommon rounding mode.</span><span class="w"></span>
+<span class="c1">//</span><span class="w"></span>
+<span class="c1">// This function is not safe to call concurrently.</span><span class="w"></span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">Foo</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span><span class="w"> </span><span class="nx">b</span><span class="w"> </span><span class="kt">float</span><span class="p">)</span><span class="w"> </span><span class="kt">int32</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="o">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The <a class="reference external" href="https://golang.org/doc/effective_go#commentary">Effective Go Guide</a> has
+further discussion on best practices for comments.</p>
+</section>
+</section>
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

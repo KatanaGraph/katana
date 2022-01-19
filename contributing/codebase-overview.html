@@ -1,0 +1,285 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Quick Overview of the Codebase &#8212; Katana</title>
+    
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Building" href="building.html" />
+    <link rel="prev" title="History" href="history.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="history.html">
+   History
+  </a>
+ </li>
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   Quick Overview of the Codebase
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="building.html">
+   Building
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="git-style.html">
+   Git Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="code-style.html">
+   Code Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="testing.html">
+   Testing
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="performance.html">
+   Performance
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="documentation.html">
+   Documentation
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="releases.html">
+   Releases
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="tips-tricks.html">
+   Helpful Tips and Tricks
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="rdg-storage-format.html">
+   Katana RDG Storage Format
+  </a>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+
+<nav id="bd-toc-nav">
+    
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="quick-overview-of-the-codebase">
+<h1>Quick Overview of the Codebase<a class="headerlink" href="#quick-overview-of-the-codebase" title="Permalink to this headline">¶</a></h1>
+<p>The code is organized as several C++ and Python libraries. Important C++ libraries
+are as follows:</p>
+<dl class="simple">
+<dt>libsupport</dt><dd><p>Contains common utility APIs and configuration headers. Serial code with no runtime state</p>
+</dd>
+<dt>libgalois</dt><dd><p>Contains the parallel runtime and parallel programming interfaces. Parallel
+runtime consists of a thread pool and concurrent allocators. Parallel programming
+interfaces consist of parallel loop constructs and concurrent data structures. It
+depends only on <code class="docutils literal notranslate"><span class="pre">libsupport</span></code></p>
+</dd>
+<dt>libtsuba</dt><dd><p>Contains storage layer APIs, including the RDG abstraction. It depends on
+<code class="docutils literal notranslate"><span class="pre">libgalois</span></code>.</p>
+</dd>
+<dt>libgraph</dt><dd><p>Contains APIs and classes that create the in-memory representation of Graphs,
+and, various Graph Analytics routines. It depends on <code class="docutils literal notranslate"><span class="pre">libtsuba</span></code>.</p>
+</dd>
+<dt>lonestar</dt><dd><p>Contains command line invokable analytics programs. It depends on <code class="docutils literal notranslate"><span class="pre">libgraph</span></code></p>
+</dd>
+<dt>tools</dt><dd><p>Contains graph file format conversion and inspection tools. It depends on
+<code class="docutils literal notranslate"><span class="pre">libgraph</span></code></p>
+</dd>
+</dl>
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

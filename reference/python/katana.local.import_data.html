@@ -1,0 +1,421 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Import Data &#8212; Katana</title>
+    
+    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Atomic Operations" href="katana.local.atomic.html" />
+    <link rel="prev" title="Analytics" href="katana.local.analytics.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../index.html">
+  <img src="../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="../index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../cxx/index.html">
+   C++ Library
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/arrow.html">
+     Arrow
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/error-handling.html">
+     Error Handling
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/logging.html">
+     Logging
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/property-graph.html">
+     Property Graph
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/strings.html">
+     Strings
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../cxx/tracing.html">
+     Tracing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   Python Library
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.html">
+     Katana
+    </a>
+   </li>
+   <li class="toctree-l2 current active has-children">
+    <a class="reference internal" href="katana.local.html">
+     Katana Local API
+    </a>
+    <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul class="current">
+     <li class="toctree-l3">
+      <a class="reference internal" href="katana.local.graph.html">
+       Graphs
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="katana.local.analytics.html">
+       Analytics
+      </a>
+     </li>
+     <li class="toctree-l3 current active">
+      <a class="current reference internal" href="#">
+       Import Data
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="katana.local.atomic.html">
+       Atomic Operations
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="katana.local.datastructures.html">
+       Data Structures
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.local.analytics.html">
+     Analytics
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.local.atomic.html">
+     Atomic Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.local.datastructures.html">
+     Data Structures
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.local.graph.html">
+     Graphs
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Import Data
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.timer.html">
+     Performance Timers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="katana.bug.html">
+     Bug Reporting Tools
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+
+<nav id="bd-toc-nav">
+    
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="import-data">
+<h1>Import Data<a class="headerlink" href="#import-data" title="Permalink to this headline">¶</a></h1>
+<p>This page lists all of the available data import routines through the Katana
+Local API. Import routines return a new <a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><code class="xref py py-class docutils literal notranslate"><span class="pre">Graph</span></code></a> object.</p>
+<span class="target" id="module-katana.local.import_data"></span><p>The <a class="reference internal" href="#module-katana.local.import_data" title="katana.local.import_data"><code class="xref py py-mod docutils literal notranslate"><span class="pre">import_data</span></code></a> module provides a several graph conversion routines which take external data
+and convert it into a Katana <a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><code class="xref py py-class docutils literal notranslate"><span class="pre">Graph</span></code></a> object.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="katana.local.import_data.from_adjacency_matrix">
+<span class="sig-prename descclassname"><span class="pre">katana.local.import_data.</span></span><span class="sig-name descname"><span class="pre">from_adjacency_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adjacency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">property_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'weight'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local._graph.Graph"><span class="pre">katana.local._graph.Graph</span></a></span></span><a class="reference internal" href="../../_modules/katana/local/import_data.html#from_adjacency_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.local.import_data.from_adjacency_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert an adjacency matrix with shape (n_nodes, n_nodes) into a <a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><code class="xref py py-class docutils literal notranslate"><span class="pre">Graph</span></code></a> with the
+non-zero values as an edge weight property.</p>
+<p>This preserves node IDs, but not edge IDs.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="katana.local.import_data.from_csr">
+<span class="sig-prename descclassname"><span class="pre">katana.local.import_data.</span></span><span class="sig-name descname"><span class="pre">from_csr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_destinations</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.import_data.from_csr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new <cite>Graph</cite> from a raw Compressed Sparse Row representation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>edge_indices</strong> (<cite>numpy.ndarray</cite> or another type supporting the buffer protocol. Element type must be an
+integer.) – The indicies of the first edge for each node in the destinations vector.</p></li>
+<li><p><strong>edge_destinations</strong> (<cite>numpy.ndarray</cite> or another type supporting the buffer protocol. Element type must be an
+integer.) – The destinations of edges in the new graph.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the new <a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><code class="xref py py-class docutils literal notranslate"><span class="pre">Graph</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="katana.local.import_data.from_edge_list_arrays">
+<span class="sig-prename descclassname"><span class="pre">katana.local.import_data.</span></span><span class="sig-name descname"><span class="pre">from_edge_list_arrays</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sources</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destinations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">property_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">properties</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local._graph.Graph"><span class="pre">katana.local._graph.Graph</span></a></span></span><a class="reference internal" href="../../_modules/katana/local/import_data.html#from_edge_list_arrays"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.local.import_data.from_edge_list_arrays" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert an edge list represented as two parallel arrays into a <a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><code class="xref py py-class docutils literal notranslate"><span class="pre">Graph</span></code></a>.</p>
+<p>This preserves node IDs, but <strong>not</strong> edge IDs.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="katana.local.import_data.from_edge_list_dataframe">
+<span class="sig-prename descclassname"><span class="pre">katana.local.import_data.</span></span><span class="sig-name descname"><span class="pre">from_edge_list_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'source'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'destination'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">property_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Collection</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/local/import_data.html#from_edge_list_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.local.import_data.from_edge_list_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert an edge list in the form of a dataframe-like object into a <a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><code class="xref py py-class docutils literal notranslate"><span class="pre">Graph</span></code></a> with edge
+properties.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (A data frame like type, such as a <cite>pandas.DataFrame</cite> or even a dict of numpy arrays.) – The edge list and edge properties.</p></li>
+<li><p><strong>source_column</strong> – The name or ID of the column which holds edge sources.</p></li>
+<li><p><strong>destination_column</strong> – The name or ID of the column which holds edge destinations.</p></li>
+<li><p><strong>property_columns</strong> – The names or IDs of columns which should be used as edge properties. If this is <code class="docutils literal notranslate"><span class="pre">None</span></code>,
+use all columns other than sources and destinations specified above.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="katana.local.import_data.from_edge_list_matrix">
+<span class="sig-prename descclassname"><span class="pre">katana.local.import_data.</span></span><span class="sig-name descname"><span class="pre">from_edge_list_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local._graph.Graph"><span class="pre">katana.local._graph.Graph</span></a></span></span><a class="reference internal" href="../../_modules/katana/local/import_data.html#from_edge_list_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.local.import_data.from_edge_list_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert an edge list with shape (n_edges, 2) into a <a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><code class="xref py py-class docutils literal notranslate"><span class="pre">Graph</span></code></a>.</p>
+<p>This preserves node IDs, but not edge IDs.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="katana.local.import_data.from_graphml">
+<span class="sig-prename descclassname"><span class="pre">katana.local.import_data.</span></span><span class="sig-name descname"><span class="pre">from_graphml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">25000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.import_data.from_graphml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a GraphML file into Katana form.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>Path</em><em>]</em>) – Path to source GraphML file.</p></li>
+<li><p><strong>chunk_size</strong> (<em>int</em>) – Chunk size for in memory representations during conversion. Generally this value can be
+ignored, but it can be decreased to reduce memory usage when converting large inputs.</p></li>
+<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the new <a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><code class="xref py py-class docutils literal notranslate"><span class="pre">Graph</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

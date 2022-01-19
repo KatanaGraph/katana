@@ -1,0 +1,453 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Performance &#8212; Katana</title>
+    
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Documentation" href="documentation.html" />
+    <link rel="prev" title="Testing" href="testing.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="history.html">
+   History
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="codebase-overview.html">
+   Quick Overview of the Codebase
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="building.html">
+   Building
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="git-style.html">
+   Git Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="code-style.html">
+   Code Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="testing.html">
+   Testing
+  </a>
+ </li>
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   Performance
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="documentation.html">
+   Documentation
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="releases.html">
+   Releases
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="tips-tricks.html">
+   Helpful Tips and Tricks
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="rdg-storage-format.html">
+   Katana RDG Storage Format
+  </a>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+<div class="tocsection onthispage pt-5 pb-3">
+    <i class="fas fa-list"></i> On this page
+</div>
+
+<nav id="bd-toc-nav">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#arrays-and-vectors">
+   Arrays and Vectors
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#profiling">
+   Profiling
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#cpu">
+     CPU
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#memory">
+     Memory
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="performance">
+<h1>Performance<a class="headerlink" href="#performance" title="Permalink to this headline">¶</a></h1>
+<section id="arrays-and-vectors">
+<h2>Arrays and Vectors<a class="headerlink" href="#arrays-and-vectors" title="Permalink to this headline">¶</a></h2>
+<p>We have different specializations or types for arrays/vectors of
+objects/elements that are efficient in different use cases. These types can be
+differentiated along these dimensions:</p>
+<dl class="simple">
+<dt>Array/Vector</dt><dd><p>the abstraction that the type provides - a <em>vector</em> can be resized
+dynamically and its allocation grows in powers-of-2, whereas an <em>array</em>
+cannot be resized (i.e., its allocation size must be known at runtime).</p>
+</dd>
+<dt>Concurrent/Scalable Allocation</dt><dd><p>whether the type supports efficient concurrent allocation in a parallel
+region.</p>
+</dd>
+<dt>NUMA-aware Allocation</dt><dd><p>whether the type supports allocation of objects in different NUMA
+sockets/regions.</p>
+</dd>
+<dt>Uninitialized Allocation</dt><dd><p>whether the type does not initialize the objects during allocation.</p>
+</dd>
+<dt>Object Construction/Destruction</dt><dd><p>whether the type supports calling each object’s constructor/destructor.</p>
+</dd>
+<dt>Parallel Construction/Destruction</dt><dd><p>whether the type uses threads during its construction and destruction.</p>
+</dd>
+</dl>
+<table class="table">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>Name</p></td>
+<td><p>Array/Vector</p></td>
+<td><p>Concurrent/Scalable Allocation</p></td>
+<td><p>NUMA-aware Allocation</p></td>
+<td><p>Uninitialized Allocation</p></td>
+<td><p>Object Construction/Destruction</p></td>
+<td><p>Parallel Construction/Destruction</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">std::vector</span></code></p></td>
+<td><p>Vector</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">katana::gstl::Vector</span></code></p></td>
+<td><p>Vector</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">katana::PODVector</span></code></p></td>
+<td><p>Vector</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">katana::NUMAArray</span></code></p></td>
+<td><p>Array</p></td>
+<td><p>No</p></td>
+<td><p>Yes</p></td>
+<td><p>Yes</p></td>
+<td><p>Yes</p></td>
+<td><p>Yes</p></td>
+</tr>
+</tbody>
+</table>
+<p>Here is a brief description of the specializations:</p>
+<dl class="simple">
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">katana::gstl::Vector</span></code></dt><dd><p>A specialization of <code class="docutils literal notranslate"><span class="pre">std::vector</span></code> that uses a concurrent, scalable
+allocator: the allocator is composed of thread-local allocators that manage
+thread-local pages and only use a global lock to get allocation in chunks of
+(huge) pages. When a <code class="docutils literal notranslate"><span class="pre">katana::gstl::Vector</span></code> is destroyed, its memory is
+reclaimed by the thread that destroys it.</p>
+</dd>
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">katana::PODVector</span></code></dt><dd><p>A specialization of <code class="docutils literal notranslate"><span class="pre">std::vector</span></code> of plain-old-datatype (POD) objects that
+does not initialize/construct or destruct the objects. It does not support
+concurrent/scalable or NUMA-aware allocation.</p>
+</dd>
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">katana::NUMAArray</span></code></dt><dd><p>An array of objects that is distributed among NUMA sockets/regions but
+cannot be resized. Different NUMA-aware allocation policies are supported.
+The allocation is uninitialized but objects of any type can be constructed
+after allocation using member functions. Allocations and deallocations are
+parallel operations because threads are used to allocate pages in each
+thread’s NUMA region and destroy objects in parallel respectively.</p>
+</dd>
+</dl>
+<p>Here is a rule of thumb to choose among these different options:</p>
+<ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">katana::gstl::Vector</span></code> when allocations and deallocations can occur in
+a parallel region. As the memory allocated can be reused for another
+allocation only by the thread that deallocated it, this is not suitable for
+use cases where the main thread always does the deallocation (after the
+parallel region).</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">katana::PODVector</span></code> when the object type is a POD and when the
+allocation is done in a serial region but the assignment/construction is done
+in a parallel region. In other words, when <code class="docutils literal notranslate"><span class="pre">resize()</span></code> is done on the main
+thread and values are assigned in parallel (instead of the typical
+<code class="docutils literal notranslate"><span class="pre">reserve()</span></code> and <code class="docutils literal notranslate"><span class="pre">emplace_back()</span></code> on the main thread).</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">katana::NUMAArray</span></code> when the allocation size is large (in the order of
+nodes/edges). Allocation size must be known at runtime (allocation cannot
+grow dynamically). Allocations and deallocations must occur on the main
+thread.</p></li>
+</ul>
+<p>Note the design space of the different dimensions is not yet fully explored. We
+may create more specializations in the future when the need arises.</p>
+</section>
+<section id="profiling">
+<h2>Profiling<a class="headerlink" href="#profiling" title="Permalink to this headline">¶</a></h2>
+<section id="cpu">
+<h3>CPU<a class="headerlink" href="#cpu" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">perf</span></code> is a commonly available tool for profiling execution on Linux. You can
+collect samples from any execution with <code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">record</span> <span class="pre">&lt;command</span> <span class="pre">line</span> <span class="pre">to</span>
+<span class="pre">profile&gt;</span></code> and then use <code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">report</span></code> to view the report.</p>
+<p>See <a class="reference external" href="https://www.brendangregg.com/perf.html">perf examples by Brendan Gregg</a>
+for more.</p>
+</section>
+<section id="memory">
+<h3>Memory<a class="headerlink" href="#memory" title="Permalink to this headline">¶</a></h3>
+<p>If you want to profile memory usage, you can enable <code class="docutils literal notranslate"><span class="pre">jemalloc</span></code> in the build
+with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake -DKATANA_USE_JEMALLOC<span class="o">=</span>on &lt;other cmake options&gt;
+</pre></div>
+</div>
+<p>This will replace the system <code class="docutils literal notranslate"><span class="pre">malloc</span></code> implementation with <code class="docutils literal notranslate"><span class="pre">jemalloc</span></code>, and
+with <code class="docutils literal notranslate"><span class="pre">jemalloc</span></code>, you can produce heap profiles.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The standard conda package for jemalloc does not enable profiling. You need
+to use a conan build instead.</p>
+</div>
+<p>To enable profiles, you must also put <code class="docutils literal notranslate"><span class="pre">prof:true</span></code> in the environment variable
+<code class="docutils literal notranslate"><span class="pre">MALLOC_CONF</span></code>. Additional options can be passed to <code class="docutils literal notranslate"><span class="pre">jemalloc</span></code> by separating
+options with a comma.</p>
+<p>By default, heap profiles are produced only when explicitly requested like with
+<a class="reference internal" href="../reference/cxx/tracing.html#_CPPv4N6katana12ProgressSpan10LogProfileEv" title="katana::ProgressSpan::LogProfile"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">katana::ProgressSpan::LogProfile()</span></code></a>.</p>
+<p>Alternatively, you can ask <code class="docutils literal notranslate"><span class="pre">jemalloc</span></code> to produce a heap profile every <strong>k</strong>
+bytes of allocation. For example, the following configuration will produce a
+profile every 1GB of allocation.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># log2(1GB) = 30</span>
+<span class="nb">export</span> <span class="nv">MALLOC_CONF</span><span class="o">=</span>prof:true,lg_prof_interval:30
+&lt;<span class="nb">command</span> line&gt;
+</pre></div>
+</div>
+<p>Heap profiles (<code class="docutils literal notranslate"><span class="pre">jeprof.*</span></code>) are written to the current working directory of
+the executable.</p>
+<p>You can analyze a profile with <code class="docutils literal notranslate"><span class="pre">jeprof</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>jeprof --web &lt;executable&gt; &lt;heap profile&gt;
+</pre></div>
+</div>
+<p>The <a class="reference external" href="https://github.com/jemalloc/jemalloc/wiki">jemalloc wiki</a> contains more
+information.</p>
+</section>
+</section>
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

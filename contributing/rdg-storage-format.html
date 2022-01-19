@@ -1,0 +1,341 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Katana RDG Storage Format &#8212; Katana</title>
+    
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Helpful Tips and Tricks" href="tips-tricks.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="history.html">
+   History
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="codebase-overview.html">
+   Quick Overview of the Codebase
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="building.html">
+   Building
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="git-style.html">
+   Git Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="code-style.html">
+   Code Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="testing.html">
+   Testing
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="performance.html">
+   Performance
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="documentation.html">
+   Documentation
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="releases.html">
+   Releases
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="tips-tricks.html">
+   Helpful Tips and Tricks
+  </a>
+ </li>
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   Katana RDG Storage Format
+  </a>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+<div class="tocsection onthispage pt-5 pb-3">
+    <i class="fas fa-list"></i> On this page
+</div>
+
+<nav id="bd-toc-nav">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#unstable-rdg-storage-format">
+   Unstable RDG Storage Format
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#developing-a-new-revision-of-the-rdg-storage-format">
+   Developing a new revision of the RDG Storage Format
+  </a>
+ </li>
+</ul>
+
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="katana-rdg-storage-format">
+<h1>Katana RDG Storage Format<a class="headerlink" href="#katana-rdg-storage-format" title="Permalink to this headline">¶</a></h1>
+<p>Katana persists its graphs on disk in a format called <cite>RDG: Resilient Distributed Graph</cite>. This <cite>RDG</cite> is a directory filled with files that define the graph.
+The <cite>storage_format_version</cite> of an RDG determines the layout of the RDG
+An example of an RDG can be found here
+<a class="reference external" href="https://github.com/KatanaGraph/test-datasets/tree/master/rdg_datasets/ldbc_003/storage_format_version_3">https://github.com/KatanaGraph/test-datasets/tree/master/rdg_datasets/ldbc_003/storage_format_version_3</a></p>
+<p>Katana software uses the <cite>storage_format_version</cite> of a loaded RDG to determine some of the features it supports</p>
+<p>Katana software always stores the RDG as the latest <cite>storage_format_version</cite>, sometimes with the <cite>unstable_storage_format</cite> modifier (covered below)
+RDGs stored in a newer <cite>storage_format_versions</cite> are incompatible with older software.
+All versions of Katana after a <cite>storage_format_version</cite> is introduced should support loading/reading RDGs stores as that <cite>storage_format_version</cite>.</p>
+<p>Early RDGs from before <cite>storage_format_version</cite> was introduced are assumed to be <cite>storage_format_version=1</cite></p>
+<p>Rarely, <cite>storage_format_versions</cite> can be deprecated. When this occurs tooling will be provided to convert all RDGs stored in that <cite>storage_format_version</cite> to the next supported <cite>storage_format_version</cite>.</p>
+<section id="unstable-rdg-storage-format">
+<h2>Unstable RDG Storage Format<a class="headerlink" href="#unstable-rdg-storage-format" title="Permalink to this headline">¶</a></h2>
+<p>Developers should use the unstable storage format while developing features for Katana software which alter, add, or remove, RDG data structures to avoid disturbing everyone else that relies on the RDG format to be stable.</p>
+<p>Katana software executed <em>with</em> the <cite>KATANA_ENABLE_EXPERIMENTAL=”UnstableRDGStorageFormat”</cite> environment variable supports loading/storing RDGs in the unstable RDG storage format.
+Katana software executed <em>without</em> the <cite>KATANA_ENABLE_EXPERIMENTAL=”UnstableRDGStorageFormat”</cite> environment variable <em>does not</em> support loading/storing RDGs in the unstable RDG storage format.</p>
+<p>Katana software uses the boolean flag <cite>unstable_storage_format</cite> in the RDGs part header to identify unstable format RDGs</p>
+<p>If Katana software is executed <em>with</em> the <cite>KATANA_ENABLE_EXPERIMENTAL=”UnstableRDGStorageFormat”</cite> environment variable:
+#. katana software stores RDGs:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>with <cite>storage_format_version = latest_storage_format_version</cite></p></li>
+<li><p>with <cite>unstable_storage_format = true</cite></p></li>
+</ol>
+</div></blockquote>
+<ol class="arabic simple">
+<li><p>RDGs with the “unstable_storage_format” are loaded</p></li>
+</ol>
+<p>If Katana software is executed <em>without</em> the <cite>KATANA_ENABLE_EXPERIMENTAL=”UnstableRDGStorageFormat”</cite> environment variable:
+#. katana software stores RDGs:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>with <cite>storage_format_version = latest_storage_format_version</cite></p></li>
+<li><p>with <cite>unstable_storage_format = false</cite></p></li>
+</ol>
+</div></blockquote>
+<ol class="arabic simple">
+<li><p>RDGs with the “unstable_storage_format” are not loaded, and an error is thrown</p></li>
+</ol>
+<p>In Katana software the feature flag can be checked by using
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat);</span>
+<span class="pre">`</span></code></p>
+</section>
+<section id="developing-a-new-revision-of-the-rdg-storage-format">
+<h2>Developing a new revision of the RDG Storage Format<a class="headerlink" href="#developing-a-new-revision-of-the-rdg-storage-format" title="Permalink to this headline">¶</a></h2>
+<p>This process will be largely determined by what new data structures are being persisted in the RDG, but the following are some guidelines.</p>
+<ol class="arabic simple">
+<li><p>Figure out the in-memory representation of the feature. Figure out how the in-memory representation will be generated from when an RDG without the new data structures is loaded.</p></li>
+<li><p>Add support for persisting the in-memory representation on disk in the RDG. Gate persisting these new data structures behind <cite>KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat);</cite>. When <cite>UnstableRDGStorageFormat</cite> is not set, the persisted RDG should look exactly like an RDG without support for the new data structures.</p></li>
+<li><p>Add support for loading the new data structures. Gate loading these new data structures behind <cite>KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat);</cite>. When <cite>UnstableRDGStorageFormat</cite> is not set, the code should behave like it loaded an RDG without the new data structures.</p></li>
+<li><p>Write tests for storing/load the new feature.</p></li>
+<li><p>Stabilize the features in-memory representation</p></li>
+<li><p>Stabilize the features on-disk representation</p></li>
+<li><p>When the representations are sufficiently stable</p>
+<ol class="arabic simple">
+<li><p>increase the <cite>kLatestPartitionStorageFormatVersion</cite> in <cite>RDGStorageFormatVersion.h</cite>.</p></li>
+<li><p>Mirror this change for <cite>KATANA_RDG_STORAGE_FORMAT_VERSION</cite> in <cite>TestDatasets.cmake</cite></p></li>
+<li><p>uprev the rdgs in the <cite>test-datasets</cite> repo <a class="reference external" href="https://github.com/KatanaGraph/test-datasets">https://github.com/KatanaGraph/test-datasets</a></p></li>
+<li><p>update the version of <cite>test-datasets</cite> used by Katana</p></li>
+<li><p>update the <cite>DATASETS_SHA</cite> with the newest master sha from <cite>test-datasets</cite> in <cite>example_data.py</cite></p></li>
+</ol>
+</li>
+</ol>
+</section>
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

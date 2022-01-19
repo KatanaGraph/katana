@@ -1,0 +1,448 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Releases &#8212; Katana</title>
+    
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Helpful Tips and Tricks" href="tips-tricks.html" />
+    <link rel="prev" title="Documentation" href="documentation.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="history.html">
+   History
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="codebase-overview.html">
+   Quick Overview of the Codebase
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="building.html">
+   Building
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="git-style.html">
+   Git Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="code-style.html">
+   Code Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="testing.html">
+   Testing
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="performance.html">
+   Performance
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="documentation.html">
+   Documentation
+  </a>
+ </li>
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   Releases
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="tips-tricks.html">
+   Helpful Tips and Tricks
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="rdg-storage-format.html">
+   Katana RDG Storage Format
+  </a>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+<div class="tocsection onthispage pt-5 pb-3">
+    <i class="fas fa-list"></i> On this page
+</div>
+
+<nav id="bd-toc-nav">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#build-and-release-versions">
+   Build and Release Versions
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#version-management-tool">
+   Version Management Tool
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#example">
+     Example
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#conda-packages">
+   Conda Packages
+  </a>
+ </li>
+</ul>
+
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="releases">
+<h1>Releases<a class="headerlink" href="#releases" title="Permalink to this headline">¶</a></h1>
+<section id="build-and-release-versions">
+<h2>Build and Release Versions<a class="headerlink" href="#build-and-release-versions" title="Permalink to this headline">¶</a></h2>
+<p>Release versions of Katana are semantic versions with an release candidate tag
+(<code class="docutils literal notranslate"><span class="pre">rc#</span></code>) appended for release candidates.</p>
+<p>Build/development versions of Katana are of the form:
+<code class="docutils literal notranslate"><span class="pre">[release].dev+N.0.######</span></code>.</p>
+<ul class="simple">
+<li><p>a release version</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.dev</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">+</span></code></p></li>
+<li><p>the number of commits on the nearest major branch (e.g., <code class="docutils literal notranslate"><span class="pre">master</span></code> or <code class="docutils literal notranslate"><span class="pre">release/v*</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></li>
+<li><p>an abbreviated commit id</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">0</span></code> is a placeholder for the enterprise commit count in enterprise builds
+(enterprise builds also add an enterprise commit hash). The commit hashes are
+replaced with <code class="docutils literal notranslate"><span class="pre">dirty</span></code> if the tree is dirty. For example,
+<code class="docutils literal notranslate"><span class="pre">0.1.10rc1.dev+40.0.04ac6f</span></code>.</p>
+<p>The version number of a commit is computed from the content of the repository.
+The process is:</p>
+<ul class="simple">
+<li><p>If the commit has a tag in the form <code class="docutils literal notranslate"><span class="pre">v{version</span> <span class="pre">number}</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">v0.1.10rc1</span></code>)
+then that is the version regardless of other information.</p></li>
+<li><p>Otherwise, the content of <code class="docutils literal notranslate"><span class="pre">config/version.txt</span></code> specifies the upcoming release
+and the version of the commit is computed based on the commit history and
+branches.</p></li>
+</ul>
+</section>
+<section id="version-management-tool">
+<h2>Version Management Tool<a class="headerlink" href="#version-management-tool" title="Permalink to this headline">¶</a></h2>
+<p>The tool <code class="docutils literal notranslate"><span class="pre">scripts/version</span></code> performs a number of tasks related to version
+management. Day to day uses are mentioned here and a full list of commands and
+options is available from: <code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">--help</span></code> (and <code class="docutils literal notranslate"><span class="pre">--help</span></code> on each
+subcommand). Because of the dramatic action this script can take, it runs in
+“dry run” mode by default: it takes no actions, just prints what it would have
+done. To actually perform the action once you are comfortable with the actions
+it will take, call the script with <code class="docutils literal notranslate"><span class="pre">--really</span></code>.</p>
+<p><strong>To show the current version</strong>, run <code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">show</span></code>. This will print out
+the version of the working tree. To see the version of a specific commit run
+<code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">show</span> <span class="pre">{commit}</span></code>. This will print out the version of a clean
+checkout of that commit.</p>
+<p><strong>To create a release branch</strong>, run <code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">release_branch</span> <span class="pre">{next</span> <span class="pre">version}</span></code>
+and merge the PRs it creates as soon as possible (to limit the number of commits
+assigned incorrectly ordered version numbers). This will create a new release
+branch: <code class="docutils literal notranslate"><span class="pre">release/v{current</span> <span class="pre">version}</span></code>. The first commit on that branch suffixes
+the version number stored in <code class="docutils literal notranslate"><span class="pre">config/version.txt</span></code> with <code class="docutils literal notranslate"><span class="pre">rc1</span></code> (e.g.,
+<code class="docutils literal notranslate"><span class="pre">0.1.11rc1</span></code>). The commit on master immediately after the branch changes the
+version number to <code class="docutils literal notranslate"><span class="pre">{next</span> <span class="pre">version}</span></code>. The release branch should never be rebased
+as it represents a permanent history of the release process. We can stabilize
+the code as needed on the release branch before releasing the first release
+candidate (e.g., <code class="docutils literal notranslate"><span class="pre">0.1.11rc1</span></code>).</p>
+<p><strong>To create a release</strong>, run <code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">release</span> <span class="pre">{next</span> <span class="pre">version}</span></code> and merge
+the PRs it creates as soon as possible. This tags the current <code class="docutils literal notranslate"><span class="pre">HEAD</span></code> commit
+with <code class="docutils literal notranslate"><span class="pre">v{current</span> <span class="pre">version}</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">v0.1.10rc1</span></code>) and creates commits to increase
+the version number to <code class="docutils literal notranslate"><span class="pre">{next</span> <span class="pre">version}</span></code>. The release tags should be annotated
+tags to store who created the tag and the date. The same commands are used
+regardless of the kind of release: final release (semantic version only),
+release candidate (<code class="docutils literal notranslate"><span class="pre">rc</span></code>), or post-release (<code class="docutils literal notranslate"><span class="pre">.post</span></code>).</p>
+<p><strong>To tag an existing version as a release</strong> (e.g., to tag a release candidate as
+the final release), run <code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">tag</span> <span class="pre">{version}</span></code>. This tags the current
+<code class="docutils literal notranslate"><span class="pre">HEAD</span></code> commit with <code class="docutils literal notranslate"><span class="pre">v{version}</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">v0.1.10</span></code>) to mark it as the <code class="docutils literal notranslate"><span class="pre">{version}</span></code>
+release.</p>
+<p><strong>To begin work on a post-release</strong> (a maintenance release for a previous final
+release), switch to the release branch (<code class="docutils literal notranslate"><span class="pre">release/v{version}</span></code>) and run
+<code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">bump</span> <span class="pre">{version}.post1</span></code> and merge the PRs it creates. This will
+update the version number to <code class="docutils literal notranslate"><span class="pre">release/v{version</span> <span class="pre">number}</span></code> in preparation for
+work on a post release. After development on the first post-release is
+complete, create and tag post-releases just like any other release.
+Post-release development is entirely on the original release branch.
+Post-releases should be avoided if possible. Master can be merged into the
+release branch if needed, or commits from master can be cherry picked into the
+release. Changes should not be developed on the release branch. The exception
+is for maintenance on code that has been removed permanently from master, but
+this should be avoided whenever possible.</p>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<p>Let us walk through a development example showing the steps and commands used.
+The following tables have alternating rows: the state of the repositories and
+the computed version, and the actions taken by the development team. Commit
+hashes are replaced with # for brevity.</p>
+<p>The steps leading up to branching for the 0.1.11 release:</p>
+<ol class="arabic simple">
+<li><p>Developer steps</p></li>
+<li><p>Computed version: <code class="docutils literal notranslate"><span class="pre">0.1.11.dev+1.1.#.#</span></code>; Repository status:  <code class="docutils literal notranslate"><span class="pre">version.txt</span> <span class="pre">=</span> <span class="pre">0.1.11</span></code></p></li>
+<li><p>10 commits in katana and 20 commits in katana-enterprise.</p></li>
+<li><p>Computed version: <code class="docutils literal notranslate"><span class="pre">0.1.11.dev+11.21.#.#</span></code>; Repository status:  <code class="docutils literal notranslate"><span class="pre">version.txt</span> <span class="pre">=</span> <span class="pre">0.1.11</span></code></p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">release_branch</span> <span class="pre">0.1.12</span></code> and merge the created PRs on
+both master and the release branch release/v0.1.11.</p></li>
+</ol>
+<p>The steps on the release branch release/v0.1.11 to release 0.1.11:</p>
+<ol class="arabic simple">
+<li><p>Computed version: <code class="docutils literal notranslate"><span class="pre">0.1.11rc1.dev+1.1.#.#</span></code>; Repository status:  <code class="docutils literal notranslate"><span class="pre">version.txt</span> <span class="pre">=</span> <span class="pre">0.1.11rc1</span></code></p></li>
+<li><p>1 commit in katana and 1 commit in katana-enterprise.</p></li>
+<li><p>Computed version: <code class="docutils literal notranslate"><span class="pre">0.1.11rc1.dev+2.2.#.#</span></code>; Repository status:  <code class="docutils literal notranslate"><span class="pre">version.txt</span> <span class="pre">=</span> <span class="pre">0.1.11rc1</span></code></p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">release</span> <span class="pre">0.1.11rc2</span></code> and merge the created PR on the
+release branch release/v0.1.11. Once this commit is tagged v0.1.11rc1 it is
+also version 0.1.11rc1 and can be released.</p></li>
+<li><p>Once 0.1.11rc1 passes QC, run <code class="docutils literal notranslate"><span class="pre">scripts/version</span> <span class="pre">tag</span> <span class="pre">0.1.11</span></code> to tag the same
+commit as the final release 0.1.11. Once this commit is tagged v0.1.11 it is
+also version 0.1.11 and can be released. At this point the commit will have
+3 versions: 0.1.11rc1.dev+2.2.#.#, 0.1.11rc1, and 0.1.11.</p></li>
+</ol>
+<p>The state of master after branching for 0.1.11:</p>
+<ol class="arabic simple">
+<li><p>Computed version: <code class="docutils literal notranslate"><span class="pre">0.1.12.dev+1.1.#.#</span></code>; Repository status: <code class="docutils literal notranslate"><span class="pre">version.txt</span> <span class="pre">=</span> <span class="pre">0.1.12</span></code></p></li>
+<li><p>Continue development</p></li>
+</ol>
+</section>
+</section>
+<section id="conda-packages">
+<h2>Conda Packages<a class="headerlink" href="#conda-packages" title="Permalink to this headline">¶</a></h2>
+<p>Conda packages are uploaded to the <code class="docutils literal notranslate"><span class="pre">katanagraph</span></code> Conda channel by CI on each
+merge to master.</p>
+<p>First, configure Conda to prefer higher priority channels even if a library
+with a newer version exists in a lower priority channel.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda config --set channel_priority strict
+</pre></div>
+</div>
+<p>Then, you can install the latest development release with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda install -c katanagraph/label/dev -c conda-forge katana-python
+</pre></div>
+</div>
+<p>Each PR also creates Conda packages. You can find them as an artifact
+associated with each build (<code class="docutils literal notranslate"><span class="pre">conda-pkgs-*</span></code>). You can install these packages
+by downloading the build artifact, unzipping it, and then pointing <code class="docutils literal notranslate"><span class="pre">conda</span>
+<span class="pre">install</span></code> to the package (<code class="docutils literal notranslate"><span class="pre">.tar.bz2</span></code>) you want to install. This will be in
+a subdirectory like <code class="docutils literal notranslate"><span class="pre">linux-64</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda install &lt;path/to/package&gt;
+</pre></div>
+</div>
+<p>If you instead want to build Conda packages locally, make sure you have a
+working Conda build (<a class="reference internal" href="building.html#building"><span class="std std-ref">Building</span></a>), then activate your Conda environment and
+run <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">build</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda activate katana-dev
+conda build -c conda-forge <span class="nv">$SRC_DIR</span>/conda_recipe/
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">build</span></code> commands will run some simple tests on the packages and
+will fail if the tests fail. After each package builds successfully, <code class="docutils literal notranslate"><span class="pre">conda</span>
+<span class="pre">build</span></code> will print the path to the package.</p>
+<p>You can install the Conda packages with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda install &lt;path/to/package&gt;
+conda install -c katanagraph -c conda-forge katana katana-python
+</pre></div>
+</div>
+<p>where the <code class="docutils literal notranslate"><span class="pre">&lt;path/to/package&gt;</span></code> is the path printed by <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">build</span></code>.
+<code class="docutils literal notranslate"><span class="pre">katana</span></code> is the C++ library and applications, <code class="docutils literal notranslate"><span class="pre">katana-python</span></code> is the Python
+library, which depends on the C++ library.</p>
+<p>The second <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span></code> works around a bug in conda by forcing the installation of dependencies;
+Conda fails to install dependencies when a package is installed from a local path.
+This second command will eventually no longer be needed, but should be harmless.</p>
+<p>You can upload development Conda packages (i.e., release candidates or testing packages) to your Anaconda channel using the anaconda client (install <cite>anaconda-client</cite>):</p>
+<p><code class="docutils literal notranslate"><span class="pre">`Shell</span>
+<span class="pre">anaconda</span> <span class="pre">upload</span> <span class="pre">--label</span> <span class="pre">dev</span> <span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">package&gt;</span>
+<span class="pre">`</span></code></p>
+<p>To upload a non-development packages remove <cite>–label dev</cite>.
+The same commands can be used to upload to the <cite>katanagraph</cite> channel if you have the credentials.</p>
+</section>
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

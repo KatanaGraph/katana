@@ -1,0 +1,606 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Building &#8212; Katana</title>
+    
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Git Style" href="git-style.html" />
+    <link rel="prev" title="Quick Overview of the Codebase" href="codebase-overview.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="history.html">
+   History
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="codebase-overview.html">
+   Quick Overview of the Codebase
+  </a>
+ </li>
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   Building
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="git-style.html">
+   Git Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="code-style.html">
+   Code Style
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="testing.html">
+   Testing
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="performance.html">
+   Performance
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="documentation.html">
+   Documentation
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="releases.html">
+   Releases
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="tips-tricks.html">
+   Helpful Tips and Tricks
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="rdg-storage-format.html">
+   Katana RDG Storage Format
+  </a>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+<div class="tocsection onthispage pt-5 pb-3">
+    <i class="fas fa-list"></i> On this page
+</div>
+
+<nav id="bd-toc-nav">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#setting-up-a-build">
+   Setting up a Build
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#building-with-conda">
+     Building with Conda
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#conda-performance">
+       Conda Performance
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#building-with-conan">
+     Building with Conan
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#compiling-with-clang">
+       Compiling with
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         clang
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#python">
+   Python
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#resolving-common-build-issues">
+   Resolving Common Build Issues
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#specifying-and-resolving-c-dependencies">
+   Specifying and Resolving C++ Dependencies
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#adding-new-e-x-ternal-dependencies">
+   Adding New E(x)ternal Dependencies
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#building-in-docker">
+   Building in Docker
+  </a>
+ </li>
+</ul>
+
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="building">
+<span id="id1"></span><h1>Building<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h1>
+<p>If you are building katana-enterprise make sure to also read the <a class="reference internal" href="index.html"><span class="doc">enterprise build addenda</span></a>.</p>
+<section id="setting-up-a-build">
+<h2>Setting up a Build<a class="headerlink" href="#setting-up-a-build" title="Permalink to this headline">¶</a></h2>
+<p>The Katana repo supports both Conan and Conda for installing additional library
+dependencies. The quickest way to start hacking on Katana is to follow the
+Conda instructions below.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Conan and conda builds are incompatible. If you mix artifacts, build
+directories, configuration, etc. from one system to the other, you will get
+build and linker errors, and possibly, dynamic library loading errors.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The repository may contain git submodules. When checking out a commit, use
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">submodule</span> <span class="pre">update</span> <span class="pre">--recursive</span> <span class="pre">--init</span></code> to make sure all submodules are
+initialized and reflect their checked-in state.</p>
+</div>
+<section id="building-with-conda">
+<span id="id2"></span><h3>Building with Conda<a class="headerlink" href="#building-with-conda" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Install conda</a> if needed.
+See the <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html">Conda User Guide</a> for more details.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>To avoid subtle dependency issues, make sure you download Miniconda instead of Anaconda.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you plan to use Conda do <strong>not</strong> run <code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code> as
+it will install a conflicting version of pyarrow. Conda can handle all
+required dependencies itself.</p>
+</div>
+<p>You will need to log out and back in again to ensure conda is properly
+configured. Then, create and activate the development environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">SRC_DIR</span><span class="o">=</span>&lt;repo/root&gt;
+conda config --add channels conda-forge
+<span class="c1"># For library compatibility reasons, prefer taking dependencies from</span>
+<span class="c1"># higher priority channels even if newer versions exist in lower priority</span>
+<span class="c1"># channels.</span>
+conda config --set channel_priority strict
+<span class="c1"># Create the environment</span>
+conda create --name katana-dev
+<span class="c1"># Install the dependencies</span>
+conda env update --name katana-dev --file <span class="nv">$SRC_DIR</span>/conda_recipe/environment.yml
+conda activate katana-dev
+conda install numactl-devel-cos6-x86_64 <span class="c1"># For x86_64 builds</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">env</span> <span class="pre">update</span></code> line can be run later to update your environment. Deactivate your environment
+<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">deactivate</span></code>, then run the update commands, then reactivate <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">katana-dev</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Not all conda installation scripts are well-behaved. In particular, the default behavior of the <code class="docutils literal notranslate"><span class="pre">cudatoolkit-dev</span></code> package’s post-installation script is to write a log to the hard-coded path <code class="docutils literal notranslate"><span class="pre">/tmp/cuda-installer.log</span></code> and not delete it. Once one user on a system has written this file all other users will fail to install the package because they won’t be able to write the log file. The only known workaround is to manually delete the log file. It is best practice to delete your own log file immediately after you have updated your environment. If you are on a system where someone else has written the log file and you can’t overwrite it please contact that user to delete it. You may also contact a user with root privileges.</p>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># If you are sharing a system with other users,</span>
+<span class="c1"># please perform the following manual clean-up:</span>
+conda env update --name katana-dev --file <span class="nv">$SRC_DIR</span>/conda_recipe/environment.yml
+rm /tmp/cuda-installer.log
+</pre></div>
+</div>
+<p>Now, run <code class="docutils literal notranslate"><span class="pre">cmake</span></code> to configure your build directory and <code class="docutils literal notranslate"><span class="pre">make</span></code> to build Katana.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BUILD_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/build
+mkdir -p <span class="nv">$BUILD_DIR</span>
+<span class="nb">cd</span> <span class="nv">$BUILD_DIR</span>
+cmake -S <span class="nv">$SRC_DIR</span> -B <span class="nv">$BUILD_DIR</span> -DKATANA_LANG_BINDINGS<span class="o">=</span>python
+make
+</pre></div>
+</div>
+<p>This will build Katana and place the built libraries and executables in
+<code class="docutils literal notranslate"><span class="pre">$BUILD_DIR</span></code>.</p>
+<section id="conda-performance">
+<h4>Conda Performance<a class="headerlink" href="#conda-performance" title="Permalink to this headline">¶</a></h4>
+<p>Conda is slow to install packages.
+This makes installing a new development take a few minutes.
+More importantly, it makes conda package building very slow (~40 minutes for this repository), because the build process installs at least 7 conda environments.
+This can be mitigated by using <a class="reference external" href="https://github.com/mamba-org/mamba#the-fast-cross-platform-package-manager">Mamba</a>.
+Mamba is a (mostly) drop-in replacement for the <code class="docutils literal notranslate"><span class="pre">conda</span></code> command that uses a native dependency solver and reduces installation time by 2x in many cases.
+However, Mamba is not as stable or well tested as Conda and does not have the same level of support.</p>
+<p>To use Mamba, install it in your conda environment with <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">mamba</span></code>.
+Then you can use <code class="docutils literal notranslate"><span class="pre">mamba</span> <span class="pre">install</span></code> as a drop-in replacement for <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span></code>, and similarly for <code class="docutils literal notranslate"><span class="pre">mamba</span> <span class="pre">env</span> <span class="pre">create</span></code> and <code class="docutils literal notranslate"><span class="pre">mamba</span> <span class="pre">env</span> <span class="pre">update</span></code>.
+To use Mamba during conda package builds, install <a class="reference external" href="https://github.com/mamba-org/boa#the-fast-conda-and-mamba-package-builder">Boa</a> with <code class="docutils literal notranslate"><span class="pre">mamba</span> <span class="pre">install</span> <span class="pre">boa</span></code>.
+Then you can use <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">mambabuild</span></code> (<em>note:</em> the top level command is <code class="docutils literal notranslate"><span class="pre">conda</span></code>, <em>not</em> <code class="docutils literal notranslate"><span class="pre">mamba</span></code>) as a replacement for <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">build</span></code>.
+(We are not using Boa proper as the package builder.)</p>
+<p>To get a leaner, Mamba using environment in a fresh install, use <a class="reference external" href="https://github.com/conda-forge/miniforge#mambaforge">Mambaforge</a>.
+It is an installer, similar to miniconda, which installs an environment with conda-forge packages and mamba pre-installed (boa must still be installed separately).</p>
+</section>
+</section>
+<section id="building-with-conan">
+<span id="id3"></span><h3>Building with Conan<a class="headerlink" href="#building-with-conan" title="Permalink to this headline">¶</a></h3>
+<p>For the Conan build you must run <code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code>, as Conan
+build depends on system level packages that it does not install itself.</p>
+<p>If you have issues with missing system level dependencies, look at
+<code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code> and use that as the basis for installing a
+development environment on your own machine.</p>
+<p>After running <code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code>, run the following commands from
+the project source directory to build the system:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conan profile update settings.compiler.libcxx<span class="o">=</span>libstdc++11 default
+
+<span class="nv">BUILD_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/build
+<span class="nv">SRC_DIR</span><span class="o">=</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>
+
+mkdir -p <span class="nv">$BUILD_DIR</span>
+<span class="nb">cd</span> <span class="nv">$BUILD_DIR</span>
+conan install <span class="nv">$SRC_DIR</span>/config --build<span class="o">=</span>missing
+cmake -S <span class="nv">$SRC_DIR</span> -B <span class="nv">$BUILD_DIR</span> -DCMAKE_TOOLCHAIN_FILE<span class="o">=</span>conan_paths.cmake -DKATANA_LANG_BINDINGS<span class="o">=</span>python
+make
+</pre></div>
+</div>
+<section id="compiling-with-clang">
+<h4>Compiling with <code class="docutils literal notranslate"><span class="pre">clang</span></code><a class="headerlink" href="#compiling-with-clang" title="Permalink to this headline">¶</a></h4>
+<p>If you want to compile with <code class="docutils literal notranslate"><span class="pre">clang</span></code> instead of <code class="docutils literal notranslate"><span class="pre">gcc</span></code>, make sure <code class="docutils literal notranslate"><span class="pre">libstdc++-dev</span></code> is present in your system, e.g.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo apt-get install libstdc++-11-dev
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="python">
+<h2>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h2>
+<p>To use the Python libraries from the build directory, use
+<code class="docutils literal notranslate"><span class="pre">$BUILD_DIR/python_env.sh</span></code>. You can either use this script as a launcher,</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">$BUILD_DIR</span>/python_env.sh python
+</pre></div>
+</div>
+<p>or source it into your shell,</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>. <span class="nv">$BUILD_DIR</span>/python_env.sh
+</pre></div>
+</div>
+</section>
+<section id="resolving-common-build-issues">
+<h2>Resolving Common Build Issues<a class="headerlink" href="#resolving-common-build-issues" title="Permalink to this headline">¶</a></h2>
+<p>If you have having issues from a clean build directory (i.e., empty directory),</p>
+<ol class="arabic simple">
+<li><p>Make sure you have also checked out any git submodules: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">submodule</span>
+<span class="pre">update</span> <span class="pre">--recursive</span> <span class="pre">--init</span></code></p></li>
+<li><p>If you are using Conda, make sure that you have installed Miniconda and not
+Anaconda.</p></li>
+<li><p>If you are using Conda, make sure that you have activated your environment
+for both the <code class="docutils literal notranslate"><span class="pre">cmake</span></code> and <code class="docutils literal notranslate"><span class="pre">make</span></code> steps: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">katana-dev</span></code></p></li>
+</ol>
+<p>If you were previously successful building but now you are seeing <code class="docutils literal notranslate"><span class="pre">cmake</span></code> or
+unexpected build errors after updating your source directory,</p>
+<ol class="arabic">
+<li><p>Make sure you have also checked out any git submodules: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">submodule</span>
+<span class="pre">update</span> <span class="pre">--recursive</span> <span class="pre">--init</span></code></p></li>
+<li><p>Check if there were any system build environment changes since the last time
+you successfully built. If you are <a class="reference internal" href="#building-with-conda"><span class="std std-ref">Building with Conda</span></a>, you can skip
+this step as all dependences are managed through Conda.</p>
+<p>To update your environment, run <code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code>.</p>
+<p>This requires root privileges, if you don’t have root, it is likely that
+your system administrator has already updated your build environment.</p>
+</li>
+<li><p>Check if there were any build environment changes since the last time you
+successfully built.</p>
+<p>When <a class="reference internal" href="#building-with-conda"><span class="std std-ref">Building with Conda</span></a>, run <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">env</span> <span class="pre">update</span> <span class="pre">--name</span> <span class="pre">katana-dev</span>
+<span class="pre">--file</span> <span class="pre">$SRC_DIR/conda_recipe/environment.yml</span></code>. If you have submodules, you
+will have to run the previous command for the
+<code class="docutils literal notranslate"><span class="pre">conda_recipe/environment.yml</span></code> in each submodule. Afterwards, logout and
+login.</p>
+<p>When <a class="reference internal" href="#building-with-conan"><span class="std std-ref">Building with Conan</span></a>, run <code class="docutils literal notranslate"><span class="pre">conan</span> <span class="pre">install</span> <span class="pre">$SRC_DIR/config</span>
+<span class="pre">--build=missing</span></code>. If you have submodules, you only have to run this command
+for the main source directory.</p>
+</li>
+<li><p>Clean out your build directory: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">clean</span></code>. If you are using <code class="docutils literal notranslate"><span class="pre">ccache</span></code>,
+clean out your cache: <code class="docutils literal notranslate"><span class="pre">ccache</span> <span class="pre">-C</span></code>.</p></li>
+<li><p>Remove your cached build variables to pick up on any build environment
+changes (system or otherwise): <code class="docutils literal notranslate"><span class="pre">rm</span> <span class="pre">${BUILD_DIR}/CMakeCache.txt</span></code></p></li>
+<li><p>Run your <code class="docutils literal notranslate"><span class="pre">cmake</span></code> command.</p>
+<p>If you are using Conda, make sure you have activated your environment before
+running <code class="docutils literal notranslate"><span class="pre">cmake</span></code>.</p>
+</li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">make</span></code></p></li>
+</ol>
+<p>Careful readers may notice that the above sequence of commands is roughly the
+same as creating a new build directory and configuring from scratch. As you
+gain familiarity with the build, you will learn that you can skip certain steps
+above.</p>
+<p>If you still have issues, you should delete your build directory and follow the
+instructions for setting up from scratch.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Install <code class="docutils literal notranslate"><span class="pre">ccache</span></code> and use the cmake option
+<code class="docutils literal notranslate"><span class="pre">-DCMAKE_CXX_COMPILER_LAUNCHER=ccache</span></code> if you tend to switch between
+branches. This allows object files to be reused between compilations.</p>
+</div>
+</section>
+<section id="specifying-and-resolving-c-dependencies">
+<h2>Specifying and Resolving C++ Dependencies<a class="headerlink" href="#specifying-and-resolving-c-dependencies" title="Permalink to this headline">¶</a></h2>
+<p>The above instructions should work if you have installed the C++ library
+dependencies in <code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code> (e.g., llvm-dev, arrow) in their
+standard system locations (typically <code class="docutils literal notranslate"><span class="pre">/usr/lib</span></code> or <code class="docutils literal notranslate"><span class="pre">/usr/local/lib</span></code>). If you
+need to tell <code class="docutils literal notranslate"><span class="pre">cmake</span></code> about additional library locations, you can use the CMake
+option <code class="docutils literal notranslate"><span class="pre">CMAKE_PREFIX_PATH</span></code>, as in:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake -DCMAKE_TOOLCHAIN_FILE<span class="o">=</span>conan_paths.cmake <span class="se">\</span>
+  -DCMAKE_PREFIX_PATH<span class="o">=</span>&lt;path/to/cmakefiles/for/library&gt;<span class="p">;</span>&lt;another/path&gt; ..
+</pre></div>
+</div>
+<p>As a sidenote, CMake toolchain file is simply a method for initially defining
+<code class="docutils literal notranslate"><span class="pre">CMAKE_PREFIX_PATH</span></code> and other CMake options. You can verify this by looking at
+the contents of <code class="docutils literal notranslate"><span class="pre">conan_paths.cmake</span></code>.</p>
+<p>A common issue is that you have multiple versions of the same dependency,
+located in different directories, and CMake picks the wrong version.</p>
+<p>The process by which CMake finds packages is involved, and the
+<a class="reference external" href="https://cmake.org/cmake/help/latest/command/find_package.html#search-procedure">CMake documentation</a>
+contains all the gory details. One implication, though, is that CMake adds
+directories in your path to its set of search locations.</p>
+<p>Thus, if the LLVM C++ compiler (clang++) is in your path, CMake will attempt to
+use the LLVM support libraries (e.g., libLLVMSupport.a, libclang.so) associated
+with your compiler installation by default, even though your compiler and the
+version of the LLVM support libraries you use are not strictly related to each
+other.</p>
+<p>You can work around this by putting the location of the LLVM support libraries
+in <code class="docutils literal notranslate"><span class="pre">CMAKE_PREFIX_PATH</span></code> because that takes precedence over locations in your
+path. Alternatively, you can indicate the location of the LLVM libraries
+directly with <code class="docutils literal notranslate"><span class="pre">LLVM_DIR</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake -DCMAKE_TOOLCHAIN_FILE<span class="o">=</span>conan_paths.cmake <span class="se">\</span>
+  -DLLVM_DIR<span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>llvm-config-X --cmakedir<span class="k">)</span><span class="s2">&quot;</span> ..
+</pre></div>
+</div>
+</section>
+<section id="adding-new-e-x-ternal-dependencies">
+<h2>Adding New E(x)ternal Dependencies<a class="headerlink" href="#adding-new-e-x-ternal-dependencies" title="Permalink to this headline">¶</a></h2>
+<p>Adding new dependencies should generally be avoided since it makes it more
+likely that satisfying local development requirements, conda build requirements,
+production library requirements, etc. will become impossible. If you do choose
+to require a new 3rd party library for a good reason you should:</p>
+<ol class="arabic simple" start="0">
+<li><p>Choose a version of the library that is available both in <a class="reference external" href="https://anaconda.org/conda-forge/repo">conda-forge</a> and in <a class="reference external" href="https://conan.io/center/">ConanCenter</a>. If it is not available in both places, Ubuntu
+package managers like <cite>apt</cite> or <cite>snap</cite> can work but adding it will be
+different (and you should consider picking another library since this puts
+an extra burden on developers).</p></li>
+<li><p>Add the dependency to the <code class="docutils literal notranslate"><span class="pre">config/conanfile.py</span></code> in the style of the
+dependencies that are already there.</p></li>
+<li><p>Add the dependency to the <code class="docutils literal notranslate"><span class="pre">conda_recipe/meta.yaml</span></code> in the style of what’s
+there. There are two sections; <cite>host</cite> and <cite>run</cite>. Any runtime dependencies
+need to be added to both sections. But dependencies which are totally
+compiled into Katana (i.e., they are not exposed in our API and don’t
+require a shared library at run time), can be in <cite>host</cite> only.</p></li>
+<li><p>It is possible that you may have to modify the
+<code class="docutils literal notranslate"><span class="pre">cmake/KatanaConfig.cmake.in</span></code> as well so <cite>cmake</cite> will find your dependency
+during the Conda build (again the best advice is to look at how other
+dependencies handle this). This should only be necessary if the new
+dependency is a runtime or user-code dependency. For instance, this should
+not be necessary for header-only libraries that are not used in public
+headers.</p></li>
+</ol>
+<p>If you do end up choosing a library that is not in conda-forge and ConanCenter
+(really?) make sure to update the dependency list in <code class="docutils literal notranslate"><span class="pre">README.md</span></code>, and make
+sure the script for setting up a dev environment,
+<code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code>, is updated as well. There will likely also be
+changes to the CI scripts that are needed.</p>
+<p>You should be particularly weary of libraries that are not in conda-forge. If
+absolutely necessary, discuss it with the current Conda package maintainer
+(currently &#64;arthurp). Not handling them correctly there will totally break the
+Conda packages.</p>
+</section>
+<section id="building-in-docker">
+<h2>Building in Docker<a class="headerlink" href="#building-in-docker" title="Permalink to this headline">¶</a></h2>
+<p>Instead of setting up a development environment explicitly you can build Katana
+in docker.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>scripts/build_in_container.py -B <span class="nv">$BUILD_DIR</span> --type conda
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">$BUILD_DIR</span></code> is a path at which to place the resulting build directory.
+Build types other than <code class="docutils literal notranslate"><span class="pre">conda</span></code> may be supported in the future.
+You can also pass build targets to the command.</p>
+<p>For example,</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>scripts/build_in_container.py -B ~/katana-build --type conda docs
+</pre></div>
+</div>
+<p>will build the documentation (C++ and Python). The documentation will be in
+<code class="docutils literal notranslate"><span class="pre">~/katana-build/docs/*_python</span></code>.</p>
+</section>
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

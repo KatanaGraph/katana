@@ -1,0 +1,464 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>katana.bug.environment &#8212; Katana</title>
+    
+    <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/clipboard.min.js"></script>
+    <script src="../../../_static/copybutton.js"></script>
+    <script src="../../../_static/tabs.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../../index.html">
+  <img src="../../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <h1>Source code for katana.bug.environment</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">zipfile</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="n">_environment_capture_routines</span> <span class="o">=</span> <span class="p">[]</span>
+
+
+<span class="k">def</span> <span class="nf">register_capture_routine</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+    <span class="n">_environment_capture_routines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">f</span>
+
+
+<span class="nd">@register_capture_routine</span>
+<span class="k">def</span> <span class="nf">_capture_system</span><span class="p">(</span><span class="n">zipout</span><span class="p">:</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">katana</span>  <span class="c1"># Imported here to avoid cyclical import</span>
+
+    <span class="n">capture_string</span><span class="p">(</span>
+        <span class="n">zipout</span><span class="p">,</span>
+        <span class="s2">&quot;os.txt&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            host: </span><span class="si">{</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">()</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            uname: </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">uname</span><span class="p">()</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            date: </span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">}</span><span class="s2"></span>
+
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;lsb_release&#39;</span><span class="p">,</span> <span class="s1">&#39;-a&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">capture_string</span><span class="p">(</span>
+        <span class="n">zipout</span><span class="p">,</span>
+        <span class="s2">&quot;katana.txt&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            __file__: </span><span class="si">{</span><span class="vm">__file__</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            version: </span><span class="si">{</span><span class="n">katana</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">capture_string</span><span class="p">(</span><span class="n">zipout</span><span class="p">,</span> <span class="s2">&quot;apt.txt&quot;</span><span class="p">,</span> <span class="n">capture_command</span><span class="p">(</span><span class="s2">&quot;apt&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;--installed&quot;</span><span class="p">))</span>
+
+    <span class="n">capture_string</span><span class="p">(</span>
+        <span class="n">zipout</span><span class="p">,</span>
+        <span class="s2">&quot;python.txt&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            python: </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;which&#39;</span><span class="p">,</span> <span class="s1">&#39;python&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="s1">&#39;--version&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            python3: </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;which&#39;</span><span class="p">,</span> <span class="s1">&#39;python3&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;python3&#39;</span><span class="p">,</span> <span class="s1">&#39;--version&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            this_python: </span><span class="si">{</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2"></span>
+
+<span class="s2">            pip:</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;pip&#39;</span><span class="p">,</span> <span class="s1">&#39;list&#39;</span><span class="p">,</span> <span class="s1">&#39;--format=columns&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+
+<span class="s2">            pip3:</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;pip3&#39;</span><span class="p">,</span> <span class="s1">&#39;list&#39;</span><span class="p">,</span> <span class="s1">&#39;--format=columns&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="n">capture_string</span><span class="p">(</span><span class="n">zipout</span><span class="p">,</span> <span class="s2">&quot;env.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">get_filtered_environ</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+    <span class="n">conda_exist</span> <span class="o">=</span> <span class="s2">&quot;CONDA_EXE&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span>
+    <span class="n">capture_string</span><span class="p">(</span>
+        <span class="n">zipout</span><span class="p">,</span>
+        <span class="s2">&quot;conda.txt&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            CONDA_PREFIX: </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CONDA_PREFIX&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+
+<span class="s2">            </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CONDA_EXE&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">conda_exist</span> <span class="k">else</span> <span class="s1">&#39;no CONDA_EXE env var&#39;</span><span class="si">}</span><span class="s2">:</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CONDA_EXE&#39;</span><span class="p">],</span> <span class="s1">&#39;info&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">conda_exist</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CONDA_EXE&#39;</span><span class="p">],</span> <span class="s1">&#39;list&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">conda_exist</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2"></span>
+
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;which&#39;</span><span class="p">,</span> <span class="s1">&#39;conda&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">:</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;conda&#39;</span><span class="p">,</span> <span class="s1">&#39;info&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;conda&#39;</span><span class="p">,</span> <span class="s1">&#39;list&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">capture_string</span><span class="p">(</span>
+        <span class="n">zipout</span><span class="p">,</span>
+        <span class="s2">&quot;cmake.txt&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;which&#39;</span><span class="p">,</span> <span class="s1">&#39;cmake&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">:</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">capture_command</span><span class="p">(</span><span class="s1">&#39;cmake&#39;</span><span class="p">,</span> <span class="s1">&#39;--version&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">capture_files</span><span class="p">(</span><span class="n">zipout</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;/etc/ld.so.conf&quot;</span><span class="p">,</span> <span class="s2">&quot;/etc/ld.so.conf.d/&quot;</span><span class="p">])</span>
+
+
+<span class="nd">@register_capture_routine</span>
+<span class="k">def</span> <span class="nf">_capture_build</span><span class="p">(</span><span class="n">zipout</span><span class="p">:</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Capture build related files into zip.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># The number of parent steps needed to go from __file__ to the root of the open repo.</span>
+    <span class="n">PARENT_STEPS_TO_ROOT_FOR_OPEN</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="c1"># Similarly, for the root of the enterprise repo.</span>
+    <span class="n">PARENT_STEPS_TO_ROOT_FOR_ENTERPRISE</span> <span class="o">=</span> <span class="mi">5</span>
+
+    <span class="n">already_added</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="p">[</span>
+        <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="n">PARENT_STEPS_TO_ROOT_FOR_OPEN</span><span class="p">],</span>
+        <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="n">PARENT_STEPS_TO_ROOT_FOR_ENTERPRISE</span><span class="p">],</span>
+        <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">(),</span>
+    <span class="p">]:</span>
+        <span class="k">for</span> <span class="n">target_filename</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="s2">&quot;CMakeCache.txt&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;CMakeError.log&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;CMakeOutput.log&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;graph-convert.dir/link.txt&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;graph-worker.dir/link.txt&quot;</span><span class="p">,</span>
+        <span class="p">]:</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="n">target_filename</span><span class="p">))</span>
+            <span class="n">capture_files</span><span class="p">(</span><span class="n">zipout</span><span class="p">,</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">already_added</span><span class="p">])</span>
+            <span class="n">already_added</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">capture_command</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="c1"># pylint: disable=subprocess-run-check</span>
+    <span class="c1"># Not using check=True because I want to capture both success and failure the same way.</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;error executing </span><span class="si">{</span><span class="n">args</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span> <span class="nf">capture_files</span><span class="p">(</span><span class="n">zipout</span><span class="p">:</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">,</span> <span class="n">paths</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add files and/or directory trees to the zip file.</span>
+
+<span class="sd">    :param zipout: The zip file to add files to.</span>
+<span class="sd">    :param paths: The paths to add to the zip file. And directories are added along with all their contents.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+        <span class="c1"># Convert the path to an actual Path instance in case it was a str representation of the path.</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
+            <span class="n">zipout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">p</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="n">capture_files</span><span class="p">(</span><span class="n">zipout</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">iterdir</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># ignore other kinds of files</span>
+            <span class="k">pass</span>
+
+
+<span class="k">def</span> <span class="nf">capture_string</span><span class="p">(</span><span class="n">zipout</span><span class="p">:</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write content to a file in the zip file.</span>
+
+<span class="sd">    :param zipout: The zip file to write to.</span>
+<span class="sd">    :param filename: The file name to create in the archive. This will be prefixed with ``info/`` to separate it from</span>
+<span class="sd">        directly added files.</span>
+<span class="sd">    :param content: The string to write into the file. All white space at the beginning and ends of lines will be</span>
+<span class="sd">        stripped. This makes triple-quoted strings easier to use.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">zipout</span><span class="o">.</span><span class="n">writestr</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;info/</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">content</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()))</span>
+
+
+<span class="k">def</span> <span class="nf">get_filtered_environ</span><span class="p">():</span>
+    <span class="n">environment_to_capture</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;CONDA_.*&quot;</span><span class="p">),</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;KATANA.*&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;CXX&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;CC&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;LD&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;CXXFLAGS&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;CFLAGS&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;LDFLAGS&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;SHELL&quot;</span><span class="p">,</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;CMAKE_.*&quot;</span><span class="p">),</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;.*PATH&quot;</span><span class="p">),</span>
+    <span class="p">}</span>
+
+    <span class="n">environment_to_exclude</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;([^a-z0-9]|^)(key|token|password|secret)&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">environment_to_capture</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">):</span>
+            <span class="nb">vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="k">if</span> <span class="n">var</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">environment_to_exclude</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">var</span><span class="p">):</span>
+                <span class="c1"># Don&#39;t capture variables which might have secrets.</span>
+                <span class="k">continue</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">var</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="s2">&quot;&lt;unset&gt;&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">is_interactive</span><span class="p">():</span>
+    <span class="k">return</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="s2">&quot;ps1&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="capture_environment"><a class="viewcode-back" href="../../../reference/python/katana.bug.html#katana.bug.capture_environment">[docs]</a><span class="k">def</span> <span class="nf">capture_environment</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Capture the execution and build environment in as much detail as reasonably possible</span>
+<span class="sd">    and store it to a file. This is used for bug reporting.</span>
+
+<span class="sd">    :param filename: The file name for the captured environment information.</span>
+<span class="sd">        (Default: an auto generated file in the system temporary directory)</span>
+<span class="sd">    :type filename: str or Path or a file-like object or None</span>
+<span class="sd">    :return: A file path where the captured environment information is stored.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=consider-using-with</span>
+    <span class="c1"># with is used, but not on the same line, and pylint does not do flow analysis.</span>
+
+    <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;environment_information_&quot;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.zip&quot;</span><span class="p">)</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Assume it&#39;s file-like</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">zipfile</span><span class="o">.</span><span class="n">ZIP_BZIP2</span><span class="p">)</span> <span class="k">as</span> <span class="n">zipout</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">_environment_capture_routines</span><span class="p">:</span>
+                <span class="n">f</span><span class="p">(</span><span class="n">zipout</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">is_interactive</span><span class="p">()</span> <span class="ow">and</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># This is an interactive shell, but might not be IPython</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">IPython</span> <span class="kn">import</span> <span class="n">get_ipython</span>
+            <span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">HTML</span><span class="p">,</span> <span class="n">display</span>
+
+            <span class="k">if</span> <span class="n">get_ipython</span><span class="p">():</span>
+                <span class="c1"># If IPython is importable and actually loaded, display the link.</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Path.readlink doesn&#39;t exist before Python 3.9, so that cannot be used quite yet.</span>
+                    <span class="n">ipython_root_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">readlink</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;/proc/</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;JPY_PARENT_PID&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">/cwd&quot;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                        <span class="s2">&quot;Could not determine Jupyter root path. Guessing that it is the current working &quot;</span>
+                        <span class="s2">&quot;directory. The download link may be incorrect.&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">ipython_root_directory</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span>
+
+                <span class="n">environment_information_directory</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;environment_information&quot;</span>
+                <span class="n">environment_information_directory</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">download_path</span> <span class="o">=</span> <span class="n">environment_information_directory</span> <span class="o">/</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span>
+                <span class="n">download_path</span><span class="o">.</span><span class="n">symlink_to</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+                <span class="c1"># IPython.display.FileLink cannot be used since it creates a link that tries to open the file as text.</span>
+                <span class="n">display</span><span class="p">(</span>
+                    <span class="n">HTML</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    Environment information file download link:</span>
+<span class="s2">                    &lt;a href=&quot;/files/</span><span class="si">{</span><span class="n">download_path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">ipython_root_directory</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot; target=&quot;_blank&quot;&gt;</span>
+<span class="s2">                        </span><span class="si">{</span><span class="n">download_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"></span>
+<span class="s2">                    &lt;/a&gt;</span>
+<span class="s2">                    &quot;&quot;&quot;</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># Fail silently if we don&#39;t have IPython. The output of the function is still useful.</span>
+
+    <span class="k">return</span> <span class="n">filename</span></div>
+</pre></div>
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

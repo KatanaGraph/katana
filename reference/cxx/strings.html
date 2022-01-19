@@ -1,0 +1,429 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Strings &#8212; Katana</title>
+    
+    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Tracing" href="tracing.html" />
+    <link rel="prev" title="Property Graph" href="property-graph.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../index.html">
+  <img src="../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="../index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   C++ Library
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="arrow.html">
+     Arrow
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="error-handling.html">
+     Error Handling
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="logging.html">
+     Logging
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="property-graph.html">
+     Property Graph
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Strings
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tracing.html">
+     Tracing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../python/index.html">
+   Python Library
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.html">
+     Katana
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../python/katana.local.html">
+     Katana Local API
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.graph.html">
+       Graphs
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.analytics.html">
+       Analytics
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.import_data.html">
+       Import Data
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.atomic.html">
+       Atomic Operations
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.datastructures.html">
+       Data Structures
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.analytics.html">
+     Analytics
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.atomic.html">
+     Atomic Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.datastructures.html">
+     Data Structures
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.graph.html">
+     Graphs
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.import_data.html">
+     Import Data
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.timer.html">
+     Performance Timers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.bug.html">
+     Bug Reporting Tools
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+
+<nav id="bd-toc-nav">
+    
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="strings">
+<h1>Strings<a class="headerlink" href="#strings" title="Permalink to this headline">¶</a></h1>
+<p>Basic string manipulation functions for situations where you can tolerate some string copies in exchange for a clear API. </p>
+<p>Some of these functions can eventually be replaced with updated libraries:</p>
+<p><ul class="simple">
+<li><p><a class="reference internal" href="#namespacekatana_1af4ef08536637ab910e7c23b078da24a1"><span class="std std-ref">katana::HasPrefix</span></a> and <a class="reference internal" href="#namespacekatana_1ad08c0136825589df6d59573f93953365"><span class="std std-ref">katana::HasSuffix</span></a> can be replaced with (C++20) std::string.starts_with and std::string.ends_with.</p></li>
+<li><p><a class="reference internal" href="#namespacekatana_1adfaf0670c864c74e4399080b7551f8ff"><span class="std std-ref">katana::Join</span></a> can be replaced with (fmt&gt;=8) fmt::join </p></li>
+</ul>
+</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10FromBase64ERKNSt6stringE">
+<span class="target" id="namespacekatana_1a1f43dc294f927fd963e5cc73ea7c6c8c"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">FromBase64</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">input</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana10FromBase64ERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>FromBase64 converts from base64 string into a binary encoded string. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>input</strong> – base64 encoded input string </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana8ToBase64ERKNSt6stringEb">
+<span class="target" id="namespacekatana_1ab57755b7f0fcee27d8b27ac5d545ae0c"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ToBase64</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">message</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">url_safe</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">false</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana8ToBase64ERKNSt6stringEb" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>ToBase64 encodes message string into a Base64 string. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url_safe</strong> – forces URL-safe encoding of result base64 result (replacing +/ with -_) </p></li>
+<li><p><strong>message</strong> – binary string input </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10TrimPrefixERKNSt6stringERKNSt6stringE">
+<span class="target" id="namespacekatana_1ab373cd02635e0ba3153c168b92a8ce89"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">TrimPrefix</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">s</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">prefix</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana10TrimPrefixERKNSt6stringERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>TrimPrefix returns a string without the given prefix. </p>
+<p>If the string does not have the prefix, return the string unchanged. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana9HasPrefixERKNSt6stringERKNSt6stringE">
+<span class="target" id="namespacekatana_1af4ef08536637ab910e7c23b078da24a1"></span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">HasPrefix</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">s</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">prefix</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana9HasPrefixERKNSt6stringERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10TrimSuffixERKNSt6stringERKNSt6stringE">
+<span class="target" id="namespacekatana_1aa7da63c6791373f48b3c01162fd04717"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">TrimSuffix</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">s</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">suffix</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana10TrimSuffixERKNSt6stringERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>TrimSuffix returns a string without the given suffix. </p>
+<p>If the string does not have the suffix, return the string unchanged. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana9HasSuffixERKNSt6stringERKNSt6stringE">
+<span class="target" id="namespacekatana_1ad08c0136825589df6d59573f93953365"></span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">HasSuffix</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">s</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">suffix</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana9HasSuffixERKNSt6stringERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana9SplitViewENSt11string_viewENSt11string_viewE8uint64_t">
+<span class="target" id="namespacekatana_1a336314b6e1f2c87c6d536b8f240c0297"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">SplitView</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">s</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">sep</span></span>, <span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">max</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">numeric_limits</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">uint64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">max</span></span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">)</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana9SplitViewENSt11string_viewENSt11string_viewE8uint64_t" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>SplitView returns a list of words in. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s</strong> – using</p></li>
+<li><p><strong>sep</strong> – as the delimiter string. Splits at most</p></li>
+<li><p><strong>max</strong> – times (so there will be at most max + 1 entries in the output) </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN6katana4JoinENSt6stringE2It2ItNSt11string_viewE">
+<span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">It</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="namespacekatana_1adfaf0670c864c74e4399080b7551f8ff"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">Join</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0EN6katana4JoinENSt6stringE2It2ItNSt11string_viewE" title="katana::Join::It"><span class="n"><span class="pre">It</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">begin</span></span>, <a class="reference internal" href="#_CPPv4I0EN6katana4JoinENSt6stringE2It2ItNSt11string_viewE" title="katana::Join::It"><span class="n"><span class="pre">It</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">end</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">sep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN6katana4JoinENSt6stringE2It2ItNSt11string_viewE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Join returns a string that is the concatenation of every item from begin to end with items separated by sep. </p>
+<p>Join mirrors the functionality of fmt::join at the expense of an additional copy but works around a bug in fmt::join (fmt&lt;8) where items that only overload operator&lt;&lt;(ostream, T) cannot be joined. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN6katana4JoinENSt6stringERK5RangeNSt11string_viewE">
+<span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Range</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="namespacekatana_1ad1250de942c3e0a2d90b13843be30e69"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">Join</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I0EN6katana4JoinENSt6stringERK5RangeNSt11string_viewE" title="katana::Join::Range"><span class="n"><span class="pre">Range</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">items</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">sep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN6katana4JoinENSt6stringERK5RangeNSt11string_viewE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Join returns a string that is the concatenation of every item in items with items separated by sep. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN6katana4JoinENSt6stringERKNSt16initializer_listI1TEENSt11string_viewE">
+<span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="namespacekatana_1a2ec9e7f90a4a8bdc205d5d3f186c1d22"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">Join</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">initializer_list</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0EN6katana4JoinENSt6stringERKNSt16initializer_listI1TEENSt11string_viewE" title="katana::Join::T"><span class="n"><span class="pre">T</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">items</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string_view</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">sep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN6katana4JoinENSt6stringERKNSt16initializer_listI1TEENSt11string_viewE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Join returns a string that is the concatenation of every item in items with items separated by sep. </p>
+</dd></dl>
+
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>katana &#8212; Katana</title>
+    
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script src="../_static/tabs.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <h1>Source code for katana</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Galois Python is a Python library designed to simplify parallel programming. It is especially</span>
+<span class="sd">focused on computations that are difficult to parallelize efficiently, such as</span>
+<span class="sd">loops with</span>
+
+<span class="sd">* irregular amount of work per iteration</span>
+<span class="sd">* irregular memory accesses and branching patterns</span>
+<span class="sd">* dependencies between iterations</span>
+<span class="sd">* dynamic work creation</span>
+
+<span class="sd">A typical Galois user is a Python programmer who understands parallelism in his/her</span>
+<span class="sd">algorithm and wishes to express it using high-level constructs such as parallel</span>
+<span class="sd">loops and concurrent data structures, without having to deal with low-level</span>
+<span class="sd">parallel programming details such as threads, mutexes, barriers, condition</span>
+<span class="sd">variables, work stealing, etc.</span>
+
+<span class="sd">Galois Python utilizes the underlying Galois C++ library for most operations.</span>
+<span class="sd">Galois Python also leverages numba to compile the &quot;operators&quot; which are run</span>
+<span class="sd">by Galois C++.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">atexit</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Type</span>
+
+<span class="kn">import</span> <span class="nn">katana.plugin</span>
+<span class="kn">from</span> <span class="nn">katana.dataframe</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+<span class="kn">from</span> <span class="nn">katana.plugin</span> <span class="kn">import</span> <span class="n">installed_plugins</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">katana.globals</span>
+    <span class="kn">from</span> <span class="nn">katana.globals</span> <span class="kn">import</span> <span class="n">get_active_threads</span><span class="p">,</span> <span class="n">set_active_threads</span><span class="p">,</span> <span class="n">set_busy_wait</span>
+
+    <span class="n">__version__</span> <span class="o">=</span> <span class="n">katana</span><span class="o">.</span><span class="n">globals</span><span class="o">.</span><span class="n">get_version</span><span class="p">()</span>
+
+    <span class="kn">from</span> <span class="nn">katana._loops</span> <span class="kn">import</span> <span class="n">OrderedByIntegerMetric</span><span class="p">,</span> <span class="n">PerSocketChunkFIFO</span><span class="p">,</span> <span class="n">UserContext</span><span class="p">,</span> <span class="n">do_all</span><span class="p">,</span> <span class="n">for_each</span>
+    <span class="kn">from</span> <span class="nn">katana.loop_operators</span> <span class="kn">import</span> <span class="n">do_all_operator</span><span class="p">,</span> <span class="n">for_each_operator</span><span class="p">,</span> <span class="n">obim_metric</span>
+<span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">if</span> <span class="s2">&quot;libkatana&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+            <span class="s2">&quot;The native libraries required by katana are missing or incorrectly installed. NOTE: The native libraries &quot;</span>
+            <span class="s2">&quot;are not included in pip packages and must be installed separately (e.g., with `conda install katana-cpp`).&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+    <span class="k">raise</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;GaloisError&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;OrderedByIntegerMetric&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;PerSocketChunkFIFO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;QueryError&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UserContext&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;do_all&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;do_all_operator&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;for_each&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;for_each_operator&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;installed_plugins&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;obim_metric&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get_active_threads&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;set_active_threads&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;set_busy_wait&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;DataFrame&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="c1"># A global variable to hold the Katana runtime &quot;Sys&quot;. The type will vary and has no methods. None means no Katana</span>
+<span class="c1"># runtime is initializes. Otherwise, the type can be used to determine which runtime is in use.</span>
+<span class="n">_runtime_sys</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">set_runtime_sys</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create and register a runtime sys. The runtime sys will be deallocated at python exit. It can be explicitly</span>
+<span class="sd">    deallocated by calling :py:func:`reset_runtime_sys`.</span>
+
+<span class="sd">    Once this is called with a given runtime type, it can be called repeatedly with that type idempotently.</span>
+<span class="sd">    However, a call with a different runtime type will raise an exception.</span>
+
+<span class="sd">    :param cls:  The type to use as the runtime sys.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=global-statement</span>
+    <span class="k">global</span> <span class="n">_runtime_sys</span>
+    <span class="k">if</span> <span class="n">_runtime_sys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_runtime_sys</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_runtime_sys</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># The initialized runtime is already of the correct type.</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Katana runtime </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">_runtime_sys</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> is already initialized&quot;</span><span class="p">)</span>
+
+
+<span class="nd">@atexit</span><span class="o">.</span><span class="n">register</span>
+<span class="k">def</span> <span class="nf">reset_runtime_sys</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Clear the runtime reference to trigger deallocation and shutdown. This is called automatically at interpreter exit.</span>
+
+<span class="sd">    This function is idempotent.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=global-statement</span>
+    <span class="k">global</span> <span class="n">_runtime_sys</span>
+    <span class="n">_runtime_sys</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="GaloisError"><a class="viewcode-back" href="../reference/python/katana.html#katana.GaloisError">[docs]</a><span class="k">class</span> <span class="nc">GaloisError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="QueryError"><a class="viewcode-back" href="../reference/python/katana.html#katana.QueryError">[docs]</a><span class="k">class</span> <span class="nc">QueryError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<span class="n">error_category_to_exception_class</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Type</span><span class="p">[</span><span class="ne">Exception</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;GaloisError&quot;</span><span class="p">:</span> <span class="n">GaloisError</span><span class="p">,</span>
+    <span class="s2">&quot;QueryError&quot;</span><span class="p">:</span> <span class="n">QueryError</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

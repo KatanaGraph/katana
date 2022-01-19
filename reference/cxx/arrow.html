@@ -1,0 +1,454 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Arrow &#8212; Katana</title>
+    
+    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Error Handling" href="error-handling.html" />
+    <link rel="prev" title="C++ Library" href="index.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../index.html">
+  <img src="../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="../index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   C++ Library
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Arrow
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="error-handling.html">
+     Error Handling
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="logging.html">
+     Logging
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="property-graph.html">
+     Property Graph
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="strings.html">
+     Strings
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tracing.html">
+     Tracing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../python/index.html">
+   Python Library
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.html">
+     Katana
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../python/katana.local.html">
+     Katana Local API
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.graph.html">
+       Graphs
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.analytics.html">
+       Analytics
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.import_data.html">
+       Import Data
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.atomic.html">
+       Atomic Operations
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.datastructures.html">
+       Data Structures
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.analytics.html">
+     Analytics
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.atomic.html">
+     Atomic Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.datastructures.html">
+     Data Structures
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.graph.html">
+     Graphs
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.import_data.html">
+     Import Data
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.timer.html">
+     Performance Timers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.bug.html">
+     Bug Reporting Tools
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+<div class="tocsection onthispage pt-5 pb-3">
+    <i class="fas fa-list"></i> On this page
+</div>
+
+<nav id="bd-toc-nav">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#inspecting-arrow-data">
+   Inspecting Arrow Data
+  </a>
+ </li>
+</ul>
+
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="arrow">
+<h1>Arrow<a class="headerlink" href="#arrow" title="Permalink to this headline">¶</a></h1>
+<section id="inspecting-arrow-data">
+<h2>Inspecting Arrow Data<a class="headerlink" href="#inspecting-arrow-data" title="Permalink to this headline">¶</a></h2>
+<p>In addition to the Arrow API, there are some support functions in the Katana
+library to help inspect Arrow data in a type-safe way.</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args">
+<span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Visitor</span></span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="sig-name descname"><span class="n"><span class="pre">Args</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="namespacekatana_1a7c8b39ddbf3a122a0d5e22d5318b5f31"></span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">VisitArrow</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="katana::VisitArrow::Visitor"><span class="n"><span class="pre">Visitor</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">visitor</span></span>, <a class="reference internal" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="katana::VisitArrow::Args"><span class="n"><span class="pre">Args</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">...</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">args</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>VisitArrow downcasts or specializes its arguments to their specific runtime types and then invokes Visitor::Call. </p>
+<p>For example, <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">VisitArrow</span><span class="p">(</span><span class="n">visitor</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Scalar</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Array</span><span class="p">)</span>
+</pre></div>
+</div>
+ may invoke <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">visitor</span><span class="o">.</span><span class="n">Call</span><span class="o">&lt;</span><span class="n">arrow</span><span class="p">::</span><span class="n">Int32Type</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Int64Type</span><span class="o">&gt;</span><span class="p">(</span><span class="n">arrow</span><span class="p">::</span><span class="n">Int32Scalar</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Int64Array</span><span class="p">)</span>
+</pre></div>
+</div>
+ depending on the runtime types of the arguments to VisitArrow.</p>
+<p>A typical visitor looks like: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Visitor</span> <span class="p">:</span> <span class="n">public</span> <span class="n">ArrowVisitor</span> <span class="p">{</span>
+<span class="n">public</span><span class="p">:</span>
+  <span class="n">using</span> <span class="n">ResultType</span> <span class="o">=</span> <span class="n">Result</span><span class="o">&lt;</span><span class="nb">int</span><span class="o">&gt;</span><span class="p">;</span>
+  <span class="n">using</span> <span class="n">AcceptTypes</span> <span class="o">=</span> <span class="n">std</span><span class="p">::</span><span class="nb">tuple</span><span class="o">&lt;</span><span class="n">AcceptNumericArrowTypes</span><span class="o">&gt;</span><span class="p">;</span>
+
+  <span class="n">template</span> <span class="o">&lt;</span><span class="n">typename</span> <span class="n">ArrowType</span><span class="p">,</span> <span class="n">typename</span> <span class="n">ScalarType</span><span class="o">&gt;</span>
+  <span class="n">ResultType</span>
+  <span class="n">Call</span><span class="p">(</span><span class="n">const</span> <span class="n">ScalarType</span><span class="o">&amp;</span> <span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+    <span class="o">//</span> <span class="k">return</span> <span class="n">something</span> <span class="k">for</span> <span class="n">numeric</span> <span class="n">scalar</span> <span class="n">types</span>
+  <span class="p">}</span>
+
+  <span class="n">ResultType</span>
+  <span class="n">AcceptFailed</span><span class="p">(</span><span class="n">const</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Scalar</span><span class="o">&amp;</span> <span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+    <span class="o">//</span> <span class="n">perhaps</span> <span class="k">return</span> <span class="n">an</span> <span class="n">error</span> <span class="n">when</span> <span class="n">we</span> <span class="n">receive</span> <span class="n">an</span> <span class="n">unexpected</span> <span class="nb">type</span>
+  <span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+ VisitArrow accepts arrow::Scalar, arrow::Array and arrow::ArrayBuilder*. To extend the set of valid parameter types, see GetArrowTypeID and VisitArrowCast. </p>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ArrowVisitorE">
+<span class="target" id="classkatana_1_1ArrowVisitor"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ArrowVisitor</span></span></span><a class="headerlink" href="#_CPPv4N6katana12ArrowVisitorE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Concept for visitors for VisitArrow. </p>
+<p>A visitor for VisitArrow should model the following behavior.</p>
+<p>Users can optionally subclass <a class="reference internal" href="#classkatana_1_1ArrowVisitor"><span class="std std-ref">ArrowVisitor</span></a> to signal they intend to follow the <a class="reference internal" href="#classkatana_1_1ArrowVisitor"><span class="std std-ref">ArrowVisitor</span></a> protocol but this is not required.</p>
+<p>Example: <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyVisitor</span> <span class="p">{</span>
+<span class="n">public</span><span class="p">:</span>
+  <span class="o">///</span> <span class="n">Return</span> <span class="nb">type</span> <span class="n">of</span> <span class="n">Call</span> <span class="ow">and</span> <span class="n">AcceptFailed</span><span class="o">.</span>
+  <span class="n">using</span> <span class="n">ResultType</span> <span class="o">=</span> <span class="n">void</span><span class="p">;</span>
+
+  <span class="o">///</span> <span class="n">AcceptTypes</span> <span class="n">gives</span> <span class="n">the</span> <span class="n">types</span> <span class="n">accepted</span> <span class="n">by</span> <span class="n">Call</span> <span class="k">as</span> <span class="n">a</span> <span class="nb">tuple</span> <span class="n">of</span> <span class="n">tuples</span> <span class="n">of</span>
+  <span class="o">///</span> <span class="n">arrow</span> <span class="n">types</span><span class="o">.</span> <span class="n">The</span> <span class="n">ith</span> <span class="nb">tuple</span> <span class="n">are</span> <span class="n">the</span> <span class="n">types</span> <span class="n">accepted</span> <span class="n">by</span> <span class="n">the</span> <span class="n">ith</span> <span class="n">parameter</span> <span class="n">to</span>
+  <span class="o">///</span> <span class="n">Call</span><span class="o">.</span>
+  <span class="o">///</span>
+  <span class="o">///</span> <span class="n">Some</span> <span class="n">care</span> <span class="n">should</span> <span class="n">be</span> <span class="n">taken</span> <span class="k">for</span> <span class="n">visitors</span> <span class="n">that</span> <span class="n">accept</span> <span class="n">more</span> <span class="n">than</span> <span class="n">one</span>
+  <span class="o">///</span> <span class="n">parameter</span> <span class="k">as</span> <span class="n">the</span> <span class="n">number</span> <span class="n">of</span> <span class="n">template</span> <span class="n">instantiations</span> <span class="n">grows</span> <span class="n">exponentially</span>
+  <span class="o">///</span> <span class="k">with</span> <span class="n">the</span> <span class="n">number</span> <span class="n">of</span> <span class="n">arguments</span><span class="o">.</span>
+  <span class="o">///</span>
+  <span class="o">///</span> <span class="n">Prefer</span> <span class="n">placing</span> <span class="n">the</span> <span class="n">most</span> <span class="n">constrained</span> <span class="n">parameters</span> <span class="n">first</span> <span class="ow">in</span> <span class="n">AcceptTypes</span> <span class="ow">and</span>
+  <span class="o">///</span> <span class="n">consider</span> <span class="n">currying</span> <span class="n">a</span> <span class="n">visitor</span> <span class="n">that</span> <span class="n">takes</span> <span class="n">k</span> <span class="n">parameters</span> <span class="n">into</span> <span class="n">k</span> <span class="n">visitors</span> <span class="n">that</span>
+  <span class="o">///</span> <span class="n">take</span> <span class="mi">1</span> <span class="n">parameter</span><span class="o">.</span>
+  <span class="n">using</span> <span class="n">AcceptTypes</span> <span class="o">=</span> <span class="n">std</span><span class="p">::</span><span class="nb">tuple</span><span class="o">&lt;</span><span class="n">katana</span><span class="p">::</span><span class="n">AcceptNumericArrowTypes</span><span class="o">&gt;</span><span class="p">;</span>
+
+  <span class="o">///</span> <span class="n">Call</span> <span class="ow">is</span> <span class="n">invoked</span> <span class="n">by</span> <span class="n">VisitArrow</span> <span class="k">with</span> <span class="n">the</span> <span class="n">runtime</span> <span class="n">arrow</span> <span class="n">types</span> <span class="n">lifted</span> <span class="n">to</span>
+  <span class="o">///</span> <span class="n">ArrowTypes</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Int32Type</span><span class="p">)</span> <span class="ow">and</span> <span class="n">the</span> <span class="n">parameters</span> <span class="n">downcasted</span> <span class="ow">or</span>
+  <span class="o">///</span> <span class="n">specialized</span> <span class="kn">from</span> <span class="nn">their</span> <span class="n">static</span> <span class="n">parameter</span> <span class="n">types</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Scalar</span><span class="p">)</span> <span class="n">to</span>
+  <span class="o">///</span> <span class="n">their</span> <span class="n">specific</span> <span class="n">runtime</span> <span class="n">types</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Int32Scalar</span><span class="p">)</span><span class="o">.</span>
+  <span class="n">template</span> <span class="o">&lt;</span><span class="n">typename</span> <span class="n">ArrowType</span><span class="p">,</span> <span class="n">typename</span> <span class="n">ArrayType</span><span class="o">&gt;</span>
+  <span class="n">ResultType</span> <span class="n">Call</span><span class="p">(</span><span class="n">const</span> <span class="n">ArrayType</span><span class="o">&amp;</span> <span class="n">array</span><span class="p">)</span> <span class="p">{</span>
+    <span class="o">//</span> <span class="n">Due</span> <span class="n">to</span> <span class="n">AcceptTypes</span><span class="p">,</span> <span class="n">VisitArrow</span> <span class="n">will</span> <span class="n">only</span> <span class="n">invoke</span> <span class="n">Call</span> <span class="n">on</span> <span class="n">numeric</span> <span class="n">types</span><span class="o">.</span>
+    <span class="o">//</span> <span class="n">In</span> <span class="nb">all</span> <span class="n">other</span> <span class="n">cases</span><span class="p">,</span> <span class="n">AcceptFailed</span> <span class="n">will</span> <span class="n">be</span> <span class="n">used</span> <span class="n">instead</span><span class="o">.</span>
+  <span class="p">}</span>
+
+  <span class="o">///</span> <span class="n">AcceptFailed</span> <span class="ow">is</span> <span class="n">called</span> <span class="n">by</span> <span class="n">VisitArrow</span> <span class="n">when</span> <span class="n">there</span> <span class="ow">is</span> <span class="n">no</span> <span class="n">matching</span> <span class="n">call</span><span class="o">.</span> <span class="n">This</span>
+  <span class="o">///</span> <span class="n">happens</span> <span class="k">if</span> <span class="n">the</span> <span class="n">runtime</span> <span class="nb">type</span> <span class="n">does</span> <span class="ow">not</span> <span class="n">match</span> <span class="n">one</span> <span class="n">known</span> <span class="n">by</span> <span class="n">VisitArrow</span> <span class="ow">or</span> <span class="k">if</span>
+  <span class="o">///</span> <span class="n">the</span> <span class="n">runtime</span> <span class="nb">type</span> <span class="n">does</span> <span class="ow">not</span> <span class="n">match</span> <span class="n">AcceptTypes</span><span class="o">.</span> <span class="n">AcceptFailed</span> <span class="ow">is</span> <span class="n">invoked</span> <span class="k">with</span>
+  <span class="o">///</span> <span class="n">the</span> <span class="n">original</span> <span class="n">arguments</span> <span class="n">to</span> <span class="n">VisitArrow</span><span class="o">.</span>
+  <span class="n">ResultType</span> <span class="n">AcceptFailed</span><span class="p">(</span><span class="n">const</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Array</span><span class="o">&amp;</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+ </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14GetArrowTypeIDERKN5arrow6ScalarE">
+<span class="target" id="namespacekatana_1ad657d2f28ce2a719ecb1ae9e823f4e07"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Scalar</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">scalar</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDERKN5arrow6ScalarE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>GetArrowTypeID returns the arrow type ID for a parameter. </p>
+<p>This is an extension point for VisitArrow. Overload this and VisitArrowCast for custom parameter types. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14GetArrowTypeIDERKN5arrow5ArrayE">
+<span class="target" id="namespacekatana_1a882e3c65a2de1f34def1e7ee0330bd40"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Array</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">array</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDERKN5arrow5ArrayE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14GetArrowTypeIDEPKN5arrow12ArrayBuilderE">
+<span class="target" id="namespacekatana_1a856afb2726d5df3e800751bf4279061c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrayBuilder</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">builder</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDEPKN5arrow12ArrayBuilderE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana16ArrayFromScalarsERKNSt6vectorINSt10shared_ptrIN5arrow6ScalarEEEEERKNSt10shared_ptrIN5arrow8DataTypeEEE">
+<span class="target" id="namespacekatana_1a66deb4f354002392f38957e1f495c06a"></span><a class="reference internal" href="error-handling.html#_CPPv4I0EN6katana6ResultE" title="katana::Result"><span class="n"><span class="pre">Result</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Array</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ArrayFromScalars</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Scalar</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">scalars</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">DataType</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana16ArrayFromScalarsERKNSt6vectorINSt10shared_ptrIN5arrow6ScalarEEEEERKNSt10shared_ptrIN5arrow8DataTypeEEE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Take a vector of scalars of type data_type and return an Array scalars vector can contain nullptr entries. </p>
+</dd></dl>
+
+</section>
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,751 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Tracing &#8212; Katana</title>
+    
+    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  
+    
+    <link rel="stylesheet"
+      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+  
+    
+      
+  
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
+    
+    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Python Library" href="../python/index.html" />
+    <link rel="prev" title="Strings" href="strings.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+    <nav class="navbar navbar-light navbar-expand-lg bg-light fixed-top bd-navbar" id="navbar-main"><div class="container-xl">
+
+  <div id="navbar-start">
+    
+    
+
+<a class="navbar-brand" href="../../index.html">
+  <img src="../../_static/logo.png" class="logo" alt="logo">
+</a>
+
+
+    
+  </div>
+
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapsible" aria-controls="navbar-collapsible" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  
+  <div id="navbar-collapsible" class="col-lg-9 collapse navbar-collapse">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <ul id="navbar-main-elements" class="navbar-nav">
+    <li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../getting-started/index.html">
+  Getting Started
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../user-guides/index.html">
+  User Guides
+ </a>
+</li>
+
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="../index.html">
+  Reference
+ </a>
+</li>
+
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../../contributing/index.html">
+  Contributing
+ </a>
+</li>
+
+    
+</ul>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+    </nav>
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+            
+            <!-- Only show if we have sidebars configured, else just a small margin  -->
+            <div class="col-12 col-md-3 bd-sidebar">
+              <div class="sidebar-start-items"><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+  <div class="bd-toc-item active">
+    <ul class="current nav bd-sidenav">
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   C++ Library
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="arrow.html">
+     Arrow
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="error-handling.html">
+     Error Handling
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="logging.html">
+     Logging
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="property-graph.html">
+     Property Graph
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="strings.html">
+     Strings
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Tracing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../python/index.html">
+   Python Library
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.html">
+     Katana
+    </a>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../python/katana.local.html">
+     Katana Local API
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.graph.html">
+       Graphs
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.analytics.html">
+       Analytics
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.import_data.html">
+       Import Data
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.atomic.html">
+       Atomic Operations
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../python/katana.local.datastructures.html">
+       Data Structures
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.analytics.html">
+     Analytics
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.atomic.html">
+     Atomic Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.datastructures.html">
+     Data Structures
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.graph.html">
+     Graphs
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.local.import_data.html">
+     Import Data
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.timer.html">
+     Performance Timers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../python/katana.bug.html">
+     Bug Reporting Tools
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+  </div>
+</nav>
+              </div>
+              <div class="sidebar-end-items">
+              </div>
+            </div>
+            
+          
+
+          
+          <div class="d-none d-xl-block col-xl-2 bd-toc">
+            
+              
+              <div class="toc-item">
+                
+
+<nav id="bd-toc-nav">
+    
+</nav>
+              </div>
+              
+              <div class="toc-item">
+                
+              </div>
+              
+            
+          </div>
+          
+
+          
+          
+            
+          
+          <main class="col-12 col-md-9 col-xl-7 py-md-5 pl-md-5 pr-md-4 bd-content" role="main">
+              
+              <div>
+                
+  <section id="tracing">
+<h1>Tracing<a class="headerlink" href="#tracing" title="Permalink to this headline">¶</a></h1>
+<p>Tracers do not currently support thread-local tracers or concurrency controls. </p>
+<p>Starting/Finishing span functions should only be used in a single-threaded context. However, logging and tagging existing spans are thread-safe.</p>
+<p>The tracing classes are based on the OpenTracing specifications, which can be found here: <a class="reference external" href="https://opentracing.io/docs/overview/what-is-tracing/">https://opentracing.io/docs/overview/what-is-tracing/</a></p>
+<p>Spans are units of work with a defined start and stop point. Spans may have associated log messages as well as tags.</p>
+<p>A scope owns a span for its lifetime, and it closes the span when it goes out of scope or the developer calls Close on it. Whenever possible scopes should be used instead of raw spans</p>
+<p>Tracers are used to control span logic. They create spans and maintain the active span for ease of use for the developer.</p>
+<p>Contexts are typically used to pass spans across process/thread boundaries</p>
+<p>Best Practices:</p>
+<p><ul class="simple">
+<li><p>If possible always avoid creating raw ProgressSpans from ProgressTracer</p></li>
+<li><p>If possible always use ProgressScopes to handle ProgressSpans</p></li>
+<li><p>Only use 1 ProgressTracer in an execution. They should be created at entry points.</p></li>
+<li><p>Use ProgressScope’s RAII to handle early returns (e.g., due to errors)</p></li>
+<li><p>Raw ProgressSpans should be used for special scenarios like tracing asynchronous calls</p></li>
+</ul>
+</p>
+<p>Notes:</p>
+<p>SharedMemSys and DistMemSys will initialize the global ProgressTracer to a JsonTracer. Later, it will be set to a no-op tracer. On Fini or the destructor, SharedMemSys or DistMemSys will call Close on the global ProgressTracer. This prevents GetProgressTracer() from returning nullptr and ensures tracers are closed</p>
+<p>ProgressScopes will only close their ProgressSpan when their ProgressSpan is the active span. This means that if a user exclusively uses ProgressScopes, then parent ProgressSpans will not be closed until their child ProgressSpan’s close.</p>
+<p>For example, in the following, <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+   <span class="n">auto</span> <span class="n">scope1</span> <span class="o">=</span> <span class="n">tracer</span><span class="o">.</span><span class="n">StartActiveSpan</span><span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">);</span>
+   <span class="n">auto</span> <span class="n">scope2</span> <span class="o">=</span> <span class="n">tracer</span><span class="o">.</span><span class="n">StartActiveSpan</span><span class="p">(</span><span class="s2">&quot;2&quot;</span><span class="p">);</span>
+   <span class="k">if</span> <span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span><span class="p">;</span> <span class="p">}</span>
+   <span class="n">scope2</span><span class="o">.</span><span class="n">Close</span><span class="p">();</span>
+   <span class="n">auto</span> <span class="n">scope3</span> <span class="o">=</span> <span class="n">tracer</span><span class="o">.</span><span class="n">StartActiveSpan</span><span class="p">(</span><span class="s2">&quot;3&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+ Scope2’s ProgressSpan will finish before scope1’s ProgressSpan. If there is no error, scope3’s ProgressSpan will finish before scope1’s ProgressSpan. </p>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracerE">
+<span class="target" id="classkatana_1_1ProgressTracer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressTracer</span></span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracerE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Subclassed by <a class="reference internal" href="#classkatana_1_1JSONTracer"><span class="std std-ref">katana::JSONTracer</span></a>, katana::NoopTracer, <a class="reference internal" href="#classkatana_1_1TextTracer"><span class="std std-ref">katana::TextTracer</span></a></p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracerD0Ev">
+<span class="target" id="classkatana_1_1ProgressTracer_1aaecca58e0a07891202bf822cf3e8c845"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~ProgressTracer</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracerD0Ev" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer14ProgressTracerERK14ProgressTracer">
+<span class="target" id="classkatana_1_1ProgressTracer_1a8ddfe659a211924cf2390115d194566d"></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressTracer</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracer14ProgressTracerERK14ProgressTracer" title="katana::ProgressTracer::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer14ProgressTracerERK14ProgressTracer" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer14ProgressTracerERR14ProgressTracer">
+<span class="target" id="classkatana_1_1ProgressTracer_1ad7c77ddf64422269c8581740a1669e61"></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressTracer</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracer14ProgressTracerERR14ProgressTracer" title="katana::ProgressTracer::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer14ProgressTracerERR14ProgressTracer" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTraceraSERK14ProgressTracer">
+<span class="target" id="classkatana_1_1ProgressTracer_1a17075f8da66ee847977ceb54fb9b6885"></span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTraceraSERK14ProgressTracer" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTraceraSERR14ProgressTracer">
+<span class="target" id="classkatana_1_1ProgressTracer_1a49af5abd79522bfbcfd35725c50713df"></span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTraceraSERR14ProgressTracer" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer15StartActiveSpanERKNSt6stringE">
+<span class="target" id="classkatana_1_1ProgressTracer_1a7b5305006e51b64ea290bda484174e87"></span><a class="reference internal" href="#_CPPv4N6katana13ProgressScopeE" title="katana::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartActiveSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer15StartActiveSpanERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer15StartActiveSpanERKNSt6stringERK15ProgressContext">
+<span class="target" id="classkatana_1_1ProgressTracer_1aed8f9ef6ec1ce505b03dfff20e9bab15"></span><a class="reference internal" href="#_CPPv4N6katana13ProgressScopeE" title="katana::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartActiveSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">child_of</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer15StartActiveSpanERKNSt6stringERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer9StartSpanERKNSt6stringERK15ProgressContext">
+<span class="target" id="classkatana_1_1ProgressTracer_1af7bbfcbd95012c709ad87ab41f655489"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">child_of</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer9StartSpanERKNSt6stringERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Create a new top level span if ignore_active_span=true and no child_of value is given Otherwise creates a child span of the child_of span or active span Should only be used to handle multiple active spans simultaneously. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer16FinishActiveSpanEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1a9f107255d3542c08ace4901e227e82cb"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FinishActiveSpan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer16FinishActiveSpanEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Calls finish on the active span, its parent is set to be active Primarily for internal use only, preferred to use <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a>’s Finish function. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer6InjectERK15ProgressContext">
+<span class="target" id="classkatana_1_1ProgressTracer_1afff98612693a3d59acdd8a3132681ec5"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Inject</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">ctx</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer6InjectERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer7ExtractERKNSt6stringE">
+<span class="target" id="classkatana_1_1ProgressTracer_1ab90c9f6d5a6883d7b50634dd43c3ff55"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Extract</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">carrier</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer7ExtractERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer13GetActiveSpanEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1a9a7e7b0ebc68e5da69a5698fbc22e6e6"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetActiveSpan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer13GetActiveSpanEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Get the current scope’s span to add tagging/logging without having to pass around scopes/spans as parameters If there is no active span, an unnamed root span of a new trace is created (in this case the program is probably not using tracing) </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer13HasActiveSpanEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1af85255d5f8419bcd1c7965a23c7d1628"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">HasActiveSpan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer13HasActiveSpanEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6katana14ProgressTracer9GetHostIDEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1a5dca86f16236cf58d38aca1a9b99165e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetHostID</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6katana14ProgressTracer9GetHostIDEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6katana14ProgressTracer11GetNumHostsEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1ad553ae95533b46a00ef0fb439646be6c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetNumHosts</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6katana14ProgressTracer11GetNumHostsEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer6FinishEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1ad5bb52ce485831b7ce96f14f1bc85020"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer6FinishEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Finish closes the active span and its parent spans if present and resets the active span to the unnamed root span Handles end of program logic and calls Close. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer3GetEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1a24416b609d669d6bb4a58b4dc6f2f5a7"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">Get</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer3GetEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer3SetENSt10unique_ptrI14ProgressTracerEE">
+<span class="target" id="classkatana_1_1ProgressTracer_1a85de0330c0e854c07fcab5ba33a1dd3c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Set</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">tracer</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer3SetENSt10unique_ptrI14ProgressTracerEE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer21ParseProcSelfRssBytesEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1abc7a35979f7f0b958edd5bb66b006fd4"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ParseProcSelfRssBytes</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer21ParseProcSelfRssBytesEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer12GetHostStatsEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1a0ed3b1a2319306369932c5843f34f9ee"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">HostStats</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetHostStats</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer12GetHostStatsEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer9GetMaxMemEv">
+<span class="target" id="classkatana_1_1ProgressTracer_1ae5c18ec768dcb893b68a1a30df257551"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetMaxMem</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer9GetMaxMemEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer8GetValueERK5Value">
+<span class="target" id="classkatana_1_1ProgressTracer_1a01539e35eae61a24e31718bb16765c29"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetValue</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">Value</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer8GetValueERK5Value" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana9GetTracerEv">
+<span class="target" id="namespacekatana_1a8758ade14c8474decffbf76eb14fc6f1"></span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetTracer</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana9GetTracerEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10TextTracerE">
+<span class="target" id="classkatana_1_1TextTracer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">TextTracer</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><a class="headerlink" href="#_CPPv4N6katana10TextTracerE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10TextTracer9StartSpanERKNSt6stringERK15ProgressContext">
+<span class="target" id="classkatana_1_1TextTracer_1a0d9d160c1aa7aead47d8e0752adc097c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">child_of</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10TextTracer9StartSpanERKNSt6stringERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Create a new top level span if ignore_active_span=true and no child_of value is given Otherwise creates a child span of the child_of span or active span Should only be used to handle multiple active spans simultaneously. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10TextTracer6InjectERK15ProgressContext">
+<span class="target" id="classkatana_1_1TextTracer_1ae02450f568a33b6f662695751771eb37"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Inject</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">ctx</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10TextTracer6InjectERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10TextTracer7ExtractERKNSt6stringE">
+<span class="target" id="classkatana_1_1TextTracer_1a66eef3d292ba23404f3eaf1fd4012cdc"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Extract</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">carrier</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10TextTracer7ExtractERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10TextTracer4MakeE8uint32_t8uint32_t">
+<span class="target" id="classkatana_1_1TextTracer_1a490073ffa8aa60b6817e7db7cddf2f68"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana10TextTracerE" title="katana::TextTracer"><span class="n"><span class="pre">TextTracer</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Make</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">host_id</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span>, <span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">num_hosts</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">1</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana10TextTracer4MakeE8uint32_t8uint32_t" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracerE">
+<span class="target" id="classkatana_1_1JSONTracer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">JSONTracer</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4N6katana14ProgressTracerE" title="katana::ProgressTracer"><span class="n"><span class="pre">ProgressTracer</span></span></a><a class="headerlink" href="#_CPPv4N6katana10JSONTracerE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracer9StartSpanERKNSt6stringERK15ProgressContext">
+<span class="target" id="classkatana_1_1JSONTracer_1ad14b90cbbd896d8a2887a14dd94fd4f2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">child_of</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10JSONTracer9StartSpanERKNSt6stringERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Create a new top level span if ignore_active_span=true and no child_of value is given Otherwise creates a child span of the child_of span or active span Should only be used to handle multiple active spans simultaneously. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracer6InjectERK15ProgressContext">
+<span class="target" id="classkatana_1_1JSONTracer_1ad934d5628521156819d764a769f4cc6a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Inject</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">ctx</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10JSONTracer6InjectERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracer7ExtractERKNSt6stringE">
+<span class="target" id="classkatana_1_1JSONTracer_1a8e3753cb0a662b8382516e4c8b21e3ee"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Extract</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">carrier</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10JSONTracer7ExtractERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracer4MakeE8uint32_t8uint32_t">
+<span class="target" id="classkatana_1_1JSONTracer_1a129d44d52405683ef49f8d0fcd986c0b"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana10JSONTracerE" title="katana::JSONTracer"><span class="n"><span class="pre">JSONTracer</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Make</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">host_id</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span>, <span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">num_hosts</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">1</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana10JSONTracer4MakeE8uint32_t8uint32_t" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracer4MakeE8uint32_t8uint32_t8OutputCB">
+<span class="target" id="classkatana_1_1JSONTracer_1a1152f81f58bdfa51df23ee292bd1acff"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana10JSONTracerE" title="katana::JSONTracer"><span class="n"><span class="pre">JSONTracer</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Make</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">host_id</span></span>, <span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">num_hosts</span></span>, <span class="n"><span class="pre">OutputCB</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">out_callback</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana10JSONTracer4MakeE8uint32_t8uint32_t8OutputCB" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScopeE">
+<span class="target" id="classkatana_1_1ProgressScope"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressScope</span></span></span><a class="headerlink" href="#_CPPv4N6katana13ProgressScopeE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScopeD0Ev">
+<span class="target" id="classkatana_1_1ProgressScope_1ad65989ec639a359cf951bcc9959f6ca7"></span><span class="sig-name descname"><span class="n"><span class="pre">~ProgressScope</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana13ProgressScopeD0Ev" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScope13ProgressScopeERK13ProgressScope">
+<span class="target" id="classkatana_1_1ProgressScope_1a8db2261a17cdcb04795beb2c84068ea0"></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressScope</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana13ProgressScope13ProgressScopeERK13ProgressScope" title="katana::ProgressScope::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana13ProgressScope13ProgressScopeERK13ProgressScope" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScope13ProgressScopeERR13ProgressScope">
+<span class="target" id="classkatana_1_1ProgressScope_1a34c6531f9b1a7369d45a6a41714598e6"></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressScope</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6katana13ProgressScope13ProgressScopeERR13ProgressScope" title="katana::ProgressScope::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana13ProgressScope13ProgressScopeERR13ProgressScope" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScopeaSERK13ProgressScope">
+<span class="target" id="classkatana_1_1ProgressScope_1af3e59e988a4645589d2eeb76fc7bcba1"></span><a class="reference internal" href="#_CPPv4N6katana13ProgressScopeE" title="katana::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana13ProgressScopeE" title="katana::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana13ProgressScopeaSERK13ProgressScope" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScopeaSERR13ProgressScope">
+<span class="target" id="classkatana_1_1ProgressScope_1a360c41db4dd6578058e89c0b0f7ff9d0"></span><a class="reference internal" href="#_CPPv4N6katana13ProgressScopeE" title="katana::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6katana13ProgressScopeE" title="katana::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana13ProgressScopeaSERR13ProgressScope" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScope4spanEv">
+<span class="target" id="classkatana_1_1ProgressScope_1a14658983a3f747353971aa907b774840"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">span</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana13ProgressScope4spanEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Get the scope’s underlying span to add tagging/logging, span relationships, and handle multiple active spans at a time. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScope5CloseEv">
+<span class="target" id="classkatana_1_1ProgressScope_1a226476fcb4258aa2da16dc0234b6cf44"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Close</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana13ProgressScope5CloseEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Closes the underlying <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> if the <a class="reference internal" href="#classkatana_1_1ProgressScope"><span class="std std-ref">ProgressScope</span></a> was created with the flag finish_on_close=true Note that this will only close the underlying <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> when all of its active children ProgressSpans have been finished This will be called by RAII if it has not already been called. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana15ProgressContextE">
+<span class="target" id="classkatana_1_1ProgressContext"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressContext</span></span></span><a class="headerlink" href="#_CPPv4N6katana15ProgressContextE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Subclassed by katana::JSONContext, katana::NoopContext, katana::TextContext</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana15ProgressContextD0Ev">
+<span class="target" id="classkatana_1_1ProgressContext_1a5457c2ac79f8e028b8f500033842102a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~ProgressContext</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6katana15ProgressContextD0Ev" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6katana15ProgressContext5CloneEv">
+<span class="target" id="classkatana_1_1ProgressContext_1a65728c71caf41107cc2518bbe73223d8"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Clone</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6katana15ProgressContext5CloneEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6katana15ProgressContext10GetTraceIDEv">
+<span class="target" id="classkatana_1_1ProgressContext_1a4b55b0df2add37b0877b67cb2b6e7529"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetTraceID</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4NK6katana15ProgressContext10GetTraceIDEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6katana15ProgressContext9GetSpanIDEv">
+<span class="target" id="classkatana_1_1ProgressContext_1ad6003112bc8c3f05d4ab0e290a4da80a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetSpanID</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4NK6katana15ProgressContext9GetSpanIDEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpanE">
+<span class="target" id="classkatana_1_1ProgressSpan"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressSpan</span></span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpanE" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Subclassed by katana::JSONSpan, katana::NoopSpan, katana::TextSpan</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpanD0Ev">
+<span class="target" id="classkatana_1_1ProgressSpan_1a835527ddc764f3cdbf6cf67a3c2a357b"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~ProgressSpan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpanD0Ev" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>If Finish has not already been called for the <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a>, it’s destructor must do so. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan12ProgressSpanERK12ProgressSpan">
+<span class="target" id="classkatana_1_1ProgressSpan_1a6bd95f37b14b3c1776f92a668a3ffc97"></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpan12ProgressSpanERK12ProgressSpan" title="katana::ProgressSpan::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan12ProgressSpanERK12ProgressSpan" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan12ProgressSpanERR12ProgressSpan">
+<span class="target" id="classkatana_1_1ProgressSpan_1a304c409ef16cb87f85075930e52eb871"></span><span class="sig-name descname"><span class="n"><span class="pre">ProgressSpan</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpan12ProgressSpanERR12ProgressSpan" title="katana::ProgressSpan::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan12ProgressSpanERR12ProgressSpan" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpanaSERK12ProgressSpan">
+<span class="target" id="classkatana_1_1ProgressSpan_1aacd204054e3640596e71e7904b3715ad"></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpanaSERK12ProgressSpan" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpanaSERR12ProgressSpan">
+<span class="target" id="classkatana_1_1ProgressSpan_1add68b79a1cd1711afd17d5e5ae254fa7"></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpanaSERR12ProgressSpan" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan7SetTagsERK4Tags">
+<span class="target" id="classkatana_1_1ProgressSpan_1aaea35b9df4c7e31a3abf885153a03b14"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SetTags</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">Tags</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tags</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan7SetTagsERK4Tags" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Adds a tag to the span. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan8SetErrorEv">
+<span class="target" id="classkatana_1_1ProgressSpan_1a51f2ce6ab149c27d5439f7b6fbb842b2"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SetError</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan8SetErrorEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan3LogERKNSt6stringERK4Tags">
+<span class="target" id="classkatana_1_1ProgressSpan_1ad82ae6c4f620c118d725ccab2329a780"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Log</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">message</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">Tags</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tags</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan3LogERKNSt6stringERK4Tags" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Output logging as well as standard metrics and extra stats Current standard metrics: max_mem, mem, host, and timestamp. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan3LogERKNSt6stringE">
+<span class="target" id="classkatana_1_1ProgressSpan_1ae570bb652d6c23c1e5ce7cc1a1f515a2"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Log</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">message</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan3LogERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan8LogErrorERKNSt6stringE">
+<span class="target" id="classkatana_1_1ProgressSpan_1a8ed921715391ef33cd226b6c43a2c399"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">LogError</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">message</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan8LogErrorERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan8LogErrorERKNSt6stringERK9ErrorInfo">
+<span class="target" id="classkatana_1_1ProgressSpan_1a1a0f02e4a0ae10742348b38d0402be6a"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">LogError</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">message</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="error-handling.html#_CPPv4N6katana9ErrorInfoE" title="katana::ErrorInfo"><span class="n"><span class="pre">ErrorInfo</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">error</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan8LogErrorERKNSt6stringERK9ErrorInfo" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan10LogProfileEv">
+<span class="target" id="classkatana_1_1ProgressSpan_1a6415c8d279eba711449f63088e3a1afd"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">LogProfile</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan10LogProfileEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Optionally output detailed memory profiling information. </p>
+<p>This is a noop unless KATANA_USE_JEMALLOC is enabled and the environment variable MALLOC_CONF contains prof:true. See docs/contributing/performance.rst for more details. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6katana12ProgressSpan10GetContextEv">
+<span class="target" id="classkatana_1_1ProgressSpan_1a6286c0fac75517dda2ffac558ab85ca9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetContext</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6katana12ProgressSpan10GetContextEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Get span’s context for propagating across process boundaries. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan15MarkScopeClosedEv">
+<span class="target" id="classkatana_1_1ProgressSpan_1a5e9d93c95272ae8ac9c9794af010d29c"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MarkScopeClosed</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan15MarkScopeClosedEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Primarily for internal class use only. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan11ScopeClosedEv">
+<span class="target" id="classkatana_1_1ProgressSpan_1a53cb64c439607e6940df94b850150afb"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ScopeClosed</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan11ScopeClosedEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6katana12ProgressSpan10IsFinishedEv">
+<span class="target" id="classkatana_1_1ProgressSpan_1a436f964ab73af47ba8689b264e3adc9f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsFinished</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6katana12ProgressSpan10IsFinishedEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan13GetParentSpanEv">
+<span class="target" id="classkatana_1_1ProgressSpan_1a5842d42607e931f909cc4439f24dc907"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetParentSpan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan13GetParentSpanEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan6FinishEv">
+<span class="target" id="classkatana_1_1ProgressSpan_1ac841f401c5c972242d47ef6ae8a70312"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan6FinishEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>Every <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> started must be finished. </p>
+<p>If the <a class="reference internal" href="#classkatana_1_1ProgressScope"><span class="std std-ref">ProgressScope</span></a> for this <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> was created with finish_on_close=true then this will be called via the ProgressScope’s RAII if Close() has not already been called</p>
+<p>If there is an unclosed <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> at the end of execution then a warning will be given Note that this immediately finishes the span regardless of it having unfinished children ProgressSpans </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+
+
+              </div>
+              
+              
+          </main>
+          
+
+      </div>
+    </div>
+  
+    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  <footer class="footer mt-5 mt-md-0">
+  <div class="container">
+    
+    <div class="footer-item">
+      <p class="copyright">
+    &copy; Copyright Katana Graph, Inc. 2021.<br>
+</p>
+    </div>
+    
+    <div class="footer-item">
+      <p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.4.0.<br>
+</p>
+    </div>
+    
+  </div>
+</footer>
+  </body>
+</html>

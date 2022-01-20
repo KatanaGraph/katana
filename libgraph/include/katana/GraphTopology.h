@@ -140,8 +140,8 @@ public:
     return static_cast<Node>(d);
   }
 
-  ///@param node node to get degree for
-  ///@returns Degree of node N
+  /// @param node node to get degree for
+  /// @returns Degree of node N
   size_t OutDegree(Node node) const noexcept { return OutEdges(node).size(); }
 
   nodes_range Nodes() const noexcept {
@@ -161,7 +161,8 @@ public:
 
   // TODO(yan): This will become GetEdgePropertyIndex(OutEdgeHandle) once we
   // introduce new opaque indexing types.
-  PropertyIndex GetOutEdgePropertyIndex(const Edge& eid) const noexcept {
+  PropertyIndex GetEdgePropertyIndexFromOutEdge(
+      const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
     return edge_prop_indices_[eid];
   }
@@ -176,8 +177,8 @@ public:
     return static_cast<Node>(GetNodePropertyIndex(nid));
   }
 
-  Edge GetLocalOutEdgeID(const Edge& eid) const noexcept {
-    return GetOutEdgePropertyIndex(eid);
+  Edge GetLocalEdgeIDFromOutEdge(const Edge& eid) const noexcept {
+    return GetEdgePropertyIndexFromOutEdge(eid);
   }
 
   // We promote these methods to the base topology to make it easier to search among all
@@ -272,7 +273,7 @@ public:
            (kind == edge_sort_state());
   }
 
-  using Base::GetLocalOutEdgeID;
+  using Base::GetLocalEdgeIDFromOutEdge;
 
   static std::shared_ptr<EdgeShuffleTopology> MakeTransposeCopy(
       const PropertyGraph* pg);
@@ -486,7 +487,7 @@ private:
 
             // copy over edge_property_index mapping from old edge to new edge
             edge_prop_indices[new_edge_id] =
-                seed_topo.GetOutEdgePropertyIndex(e);
+                seed_topo.GetEdgePropertyIndexFromOutEdge(e);
           }
           KATANA_LOG_DEBUG_ASSERT(new_out_index == degrees[new_srd_id]);
         },
@@ -605,8 +606,8 @@ public:
     return static_cast<Node>(d);
   }
 
-  ///@param node node to get degree for
-  ///@returns Degree of node N
+  /// @param node node to get degree for
+  /// @returns Degree of node N
   size_t OutDegree(Node node) const noexcept { return OutEdges(node).size(); }
 
   nodes_range Nodes() const noexcept {
@@ -624,14 +625,15 @@ public:
 
   bool empty() const noexcept { return NumNodes() == 0; }
 
-  PropertyIndex GetOutEdgePropertyIndex(const Edge& eid) const noexcept {
+  PropertyIndex GetEdgePropertyIndexFromOutEdge(
+      const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
     return projected_to_original_edges_mapping_[eid];
   }
 
   /// @param eid the input eid (must be projected edge id)
   Edge projected_to_original_edge_id(const Edge& eid) const noexcept {
-    return GetOutEdgePropertyIndex(eid);
+    return GetEdgePropertyIndexFromOutEdge(eid);
   }
 
   /// @param eid the input eid (must be original edge id)
@@ -956,7 +958,7 @@ public:
   /// @param dst destination node of the edge
   /// @param edge_type edge_type of the edge
   /// @returns true iff the edge exists
-  bool IsConnected(Node src, Node dst, const EntityTypeID& edge_type) const {
+  bool HasEdge(Node src, Node dst, const EntityTypeID& edge_type) const {
     auto e_range = OutEdges(src, edge_type);
     if (e_range.empty()) {
       return false;
@@ -1014,7 +1016,7 @@ public:
   /// @param src source node of the edge
   /// @param dst destination node of the edge
   /// @returns true iff the edge exists
-  bool IsConnected(Node src, Node dst) const {
+  bool HasEdge(Node src, Node dst) const {
     // trivial check; can't be connected if degree is 0
 
     if (OutDegree(src) == 0ul) {
@@ -1022,7 +1024,7 @@ public:
     }
 
     for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      if (IsConnected(src, dst, edge_type)) {
+      if (HasEdge(src, dst, edge_type)) {
         return true;
       }
     }
@@ -1107,8 +1109,8 @@ public:
 
   auto empty() const noexcept { return topo().empty(); }
 
-  auto GetOutEdgePropertyIndex(const Edge& e) const noexcept {
-    return topo().GetOutEdgePropertyIndex(e);
+  auto GetEdgePropertyIndexFromOutEdge(const Edge& e) const noexcept {
+    return topo().GetEdgePropertyIndexFromOutEdge(e);
   }
 
   auto GetNodePropertyIndex(const Node& nid) const noexcept {
@@ -1118,8 +1120,8 @@ public:
     return topo().GetLocalNodeID(nid);
   }
 
-  auto GetLocalOutEdgeID(const Edge& eid) const noexcept {
-    return topo().GetLocalOutEdgeID(eid);
+  auto GetLocalEdgeIDFromOutEdge(const Edge& eid) const noexcept {
+    return topo().GetLocalEdgeIDFromOutEdge(eid);
   }
   void Print() const noexcept { topo_ptr_->Print(); }
 
@@ -1177,8 +1179,8 @@ public:
 
   auto empty() const noexcept { return topo().empty(); }
 
-  auto GetOutEdgePropertyIndex(const Edge& e) const noexcept {
-    return topo().GetOutEdgePropertyIndex(e);
+  auto GetEdgePropertyIndexFromOutEdge(const Edge& e) const noexcept {
+    return topo().GetEdgePropertyIndexFromOutEdge(e);
   }
 
   auto GetNodePropertyIndex(const Node& nid) const noexcept {
@@ -1249,13 +1251,14 @@ public:
 
   // TODO(yan): This will become GetEdgePropertyIndex(InEdgeHandle) once we
   // introduce new opaque indexing types.
-  auto GetInEdgePropertyIndex(
+  auto GetEdgePropertyIndexFromInEdge(
       const GraphTopologyTypes::Edge& eid) const noexcept {
-    return in().GetOutEdgePropertyIndex(eid);
+    return in().GetEdgePropertyIndexFromOutEdge(eid);
   }
 
-  auto GetLocalInEdgeID(const GraphTopologyTypes::Edge& eid) const noexcept {
-    return in().GetLocalOutEdgeID(eid);
+  auto GetLocalEdgeIDFromInEdge(
+      const GraphTopologyTypes::Edge& eid) const noexcept {
+    return in().GetLocalEdgeIDFromOutEdge(eid);
   }
 
 protected:
@@ -1323,19 +1326,20 @@ public:
 
   bool empty() const noexcept { return NumNodes() == 0; }
 
-  ///@param node node to get degree for
-  ///@returns Degree of node N
+  /// @param node node to get degree for
+  /// @returns Degree of node N
   size_t UndirectedDegree(Node node) const noexcept {
     return UndirectedEdges(node).size();
   }
 
   // TODO(yan): This will become GetEdgePropertyIndex(UndirectedEdgeHandle) once we
   // introduce new opaque indexing types.
-  PropertyIndex GetUndirectedEdgePropertyIndex(const Edge& eid) const noexcept {
+  PropertyIndex GetEdgePropertyIndexFromUndirectedEdge(
+      const Edge& eid) const noexcept {
     if (is_in_edge(eid)) {
-      return in().GetOutEdgePropertyIndex(real_in_edge_id(eid));
+      return in().GetEdgePropertyIndexFromOutEdge(real_in_edge_id(eid));
     }
-    return out().GetOutEdgePropertyIndex(eid);
+    return out().GetEdgePropertyIndexFromOutEdge(eid);
   }
 
   PropertyIndex GetNodePropertyIndex(const Node& nid) const noexcept {
@@ -1350,8 +1354,8 @@ public:
     return static_cast<Node>(GetNodePropertyIndex(nid));
   }
 
-  Edge GetLocalUndirectedEdgeID(const Edge& eid) const noexcept {
-    return GetUndirectedEdgePropertyIndex(eid);
+  Edge GetLocalEdgeIDFromUndirectedEdge(const Edge& eid) const noexcept {
+    return GetEdgePropertyIndexFromUndirectedEdge(eid);
   }
 
 protected:
@@ -1497,7 +1501,7 @@ public:
   /// @param dst destination node of the edge
   /// @param edge_type edge_type of the edge
   /// @returns true iff the edge exists
-  bool IsConnected(Node src, Node dst, const EntityTypeID& edge_type) const {
+  bool HasEdge(Node src, Node dst, const EntityTypeID& edge_type) const {
     const auto d_out = OutDegree(src, edge_type);
     const auto d_in = InDegree(dst, edge_type);
     if (d_out == 0 || d_in == 0) {
@@ -1505,9 +1509,9 @@ public:
     }
 
     if (d_out < d_in) {
-      return Base::out().IsConnected(src, dst, edge_type);
+      return Base::out().HasEdge(src, dst, edge_type);
     } else {
-      return Base::in().IsConnected(dst, src, edge_type);
+      return Base::in().HasEdge(dst, src, edge_type);
     }
   }
 
@@ -1569,7 +1573,7 @@ public:
   /// @param src source node of the edge
   /// @param dst destination node of the edge
   /// @returns true iff the edge exists
-  bool IsConnected(Node src, Node dst) const {
+  bool HasEdge(Node src, Node dst) const {
     const auto d_out = OutDegree(src);
     const auto d_in = InDegree(dst);
     if (d_out == 0 || d_in == 0) {
@@ -1577,9 +1581,9 @@ public:
     }
 
     if (d_out < d_in) {
-      return Base::out().IsConnected(src, dst);
+      return Base::out().HasEdge(src, dst);
     } else {
-      return Base::in().IsConnected(dst, src);
+      return Base::in().HasEdge(dst, src);
     }
   }
 };

@@ -537,7 +537,7 @@ public:
 
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdgeFromTopoIndex(Edge edge) const {
-    auto idx = GetOutEdgePropertyIndex(edge);
+    auto idx = GetEdgePropertyIndexFromOutEdge(edge);
     return GetTypeOfEdgeFromPropertyIndex(idx);
   }
 
@@ -697,9 +697,9 @@ public:
     return edge_entity_type_manager_;
   }
 
-  GraphTopology::PropertyIndex GetOutEdgePropertyIndex(
+  GraphTopology::PropertyIndex GetEdgePropertyIndexFromOutEdge(
       const Edge& eid) const noexcept {
-    return topology().GetOutEdgePropertyIndex(eid);
+    return topology().GetEdgePropertyIndexFromOutEdge(eid);
   }
 
   GraphTopology::PropertyIndex GetNodePropertyIndex(

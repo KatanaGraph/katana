@@ -112,7 +112,7 @@ public:
   PropertyReferenceType<EdgeIndex> GetEdgeData(const edge_iterator& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     return std::get<prop_col_index>(edge_view_)
-        .GetValue(pg_->GetOutEdgePropertyIndex(*edge));
+        .GetValue(pg_->GetEdgePropertyIndexFromOutEdge(*edge));
   }
 
   /**
@@ -126,7 +126,7 @@ public:
       const edge_iterator& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     return std::get<prop_col_index>(edge_view_)
-        .GetValue(pg_->GetOutEdgePropertyIndex(*edge));
+        .GetValue(pg_->GetEdgePropertyIndexFromOutEdge(*edge));
   }
 
   /**
@@ -239,10 +239,10 @@ public:
 
     if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
       return std::get<prop_col_index>(edge_view_)
-          .GetValue(PGView::GetUndirectedEdgePropertyIndex(edge));
+          .GetValue(PGView::GetEdgePropertyIndexFromUndirectedEdge(edge));
     } else {
       return std::get<prop_col_index>(edge_view_)
-          .GetValue(PGView::GetOutEdgePropertyIndex(edge));
+          .GetValue(PGView::GetEdgePropertyIndexFromOutEdge(edge));
     }
   }
 
@@ -258,10 +258,10 @@ public:
 
     if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
       return std::get<prop_col_index>(edge_view_)
-          .GetValue(PGView::GetUndirectedEdgePropertyIndex(edge));
+          .GetValue(PGView::GetEdgePropertyIndexFromUndirectedEdge(edge));
     } else {
       return std::get<prop_col_index>(edge_view_)
-          .GetValue(PGView::GetOutEdgePropertyIndex(edge));
+          .GetValue(PGView::GetEdgePropertyIndexFromOutEdge(edge));
     }
   }
 

@@ -539,7 +539,7 @@ katana::EdgeTypeAwareTopology::CreatePerEdgeTypeAdjacencyIndex(
           // Since we sort the edges, we must use the
           // edge_property_index because EdgeShuffleTopology rearranges the edges
           const auto type = pg.GetTypeOfEdgeFromPropertyIndex(
-              e_topo.GetOutEdgePropertyIndex(e));
+              e_topo.GetEdgePropertyIndexFromOutEdge(e));
           while (type != edge_type_index.GetType(index)) {
             adj_indices[offset + index] = e;
             index++;

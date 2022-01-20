@@ -280,21 +280,21 @@ katana::PropertyGraph::Validate() {
   //}
 
   uint64_t num_node_rows =
-      static_cast<uint64_t>(rdg_.node_properties()->num_rows());
+      static_cast<uint64_t>(rdg_->node_properties()->num_rows());
   if (num_node_rows == 0) {
-    if ((rdg_.node_properties()->num_columns() != 0) && (NumNodes() != 0)) {
+    if ((rdg_->node_properties()->num_columns() != 0) && (NumNodes() != 0)) {
       return KATANA_ERROR(
           ErrorCode::AssertionFailed,
           "number of rows in node properties is 0 but "
           "the number of node properties is {} and the number of nodes is {}",
-          rdg_.node_properties()->num_columns(), NumNodes());
+          rdg_->node_properties()->num_columns(), NumNodes());
     }
   } else if (num_node_rows != NumNodes()) {
     return KATANA_ERROR(
         ErrorCode::AssertionFailed,
         "number of rows in node properties {} differs "
         "from the number of nodes {}",
-        rdg_.node_properties()->num_rows(), NumNodes());
+        rdg_->node_properties()->num_rows(), NumNodes());
   }
 
   if (NumNodes() != node_entity_type_ids_->size()) {
@@ -314,21 +314,21 @@ katana::PropertyGraph::Validate() {
   }
 
   uint64_t num_edge_rows =
-      static_cast<uint64_t>(rdg_.edge_properties()->num_rows());
+      static_cast<uint64_t>(rdg_->edge_properties()->num_rows());
   if (num_edge_rows == 0) {
-    if ((rdg_.edge_properties()->num_columns() != 0) && (NumEdges() != 0)) {
+    if ((rdg_->edge_properties()->num_columns() != 0) && (NumEdges() != 0)) {
       return KATANA_ERROR(
           ErrorCode::AssertionFailed,
           "number of rows in edge properties is 0 but "
           "the number of edge properties is {} and the number of edges is {}",
-          rdg_.edge_properties()->num_columns(), NumEdges());
+          rdg_->edge_properties()->num_columns(), NumEdges());
     }
   } else if (num_edge_rows != NumEdges()) {
     return KATANA_ERROR(
         ErrorCode::AssertionFailed,
         "number of rows in edge properties {} differs "
         "from the number of edges {}",
-        rdg_.edge_properties()->num_rows(), NumEdges());
+        rdg_->edge_properties()->num_rows(), NumEdges());
   }
 
   return katana::ResultSuccess();
@@ -356,7 +356,7 @@ katana::PropertyGraph::ConstructEntityTypeIDs(katana::TxnContext* txn_ctx) {
   node_entity_data_ = node_entity_type_ids_->data();
   auto node_props_to_remove =
       KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
-          NumNodes(), rdg_.node_properties(), node_entity_type_manager_.get(),
+          NumNodes(), rdg_->node_properties(), node_entity_type_manager_.get(),
           node_entity_type_ids_.get()));
   for (const auto& node_prop : node_props_to_remove) {
     KATANA_CHECKED(RemoveNodeProperty(node_prop, txn_ctx));
@@ -377,7 +377,7 @@ katana::PropertyGraph::ConstructEntityTypeIDs(katana::TxnContext* txn_ctx) {
   edge_entity_data_ = edge_entity_type_ids_->data();
   auto edge_props_to_remove =
       KATANA_CHECKED(EntityTypeManager::AssignEntityTypeIDsFromProperties(
-          NumEdges(), rdg_.edge_properties(), edge_entity_type_manager_.get(),
+          NumEdges(), rdg_->edge_properties(), edge_entity_type_manager_.get(),
           edge_entity_type_ids_.get()));
   for (const auto& edge_prop : edge_props_to_remove) {
     KATANA_CHECKED(RemoveEdgeProperty(edge_prop, txn_ctx));
@@ -396,12 +396,12 @@ katana::PropertyGraph::DoWriteTopologies() {
       katana::RDGTopology::EdgeSortKind::kAny,
       katana::RDGTopology::NodeSortKind::kAny));
 
-  rdg_.UpsertTopology(std::move(shadow));
+  rdg_->UpsertTopology(std::move(shadow));
 
   std::vector<katana::RDGTopology> topologies =
       KATANA_CHECKED(pg_view_cache_.ToRDGTopology());
   for (size_t i = 0; i < topologies.size(); i++) {
-    rdg_.UpsertTopology(std::move(topologies.at(i)));
+    rdg_->UpsertTopology(std::move(topologies.at(i)));
   }
   return katana::ResultSuccess();
 }
@@ -412,8 +412,8 @@ katana::PropertyGraph::DoWrite(
     katana::RDG::RDGVersioningPolicy versioning_action) {
   KATANA_LOG_DEBUG(
       " node array valid: {}, edge array valid: {}",
-      rdg_.node_entity_type_id_array_file_storage().Valid(),
-      rdg_.edge_entity_type_id_array_file_storage().Valid());
+      rdg_->node_entity_type_id_array_file_storage().Valid(),
+      rdg_->edge_entity_type_id_array_file_storage().Valid());
 
   KATANA_CHECKED(DoWriteTopologies());
 
@@ -427,7 +427,7 @@ katana::PropertyGraph::DoWrite(
   std::unique_ptr<katana::FileFrame> edge_entity_type_id_array_res =
       KATANA_CHECKED(WriteEntityTypeIDsArray(*edge_entity_type_ids_));
 
-  return rdg_.Store(
+  return rdg_->Store(
       handle, command_line, versioning_action,
       std::move(node_entity_type_id_array_res),
       std::move(edge_entity_type_id_array_res), GetNodeTypeManager(),
@@ -469,11 +469,11 @@ katana::PropertyGraph::WriteGraph(
 katana::Result<void>
 katana::PropertyGraph::Commit(const std::string& command_line) {
   if (file_ == nullptr) {
-    if (rdg_.rdg_dir().empty()) {
+    if (rdg_->rdg_dir().empty()) {
       return KATANA_ERROR(
           ErrorCode::InvalidArgument, "RDG commit but rdg_dir_ is empty");
     }
-    return WriteGraph(rdg_.rdg_dir().string(), command_line);
+    return WriteGraph(rdg_->rdg_dir().string(), command_line);
   }
   return DoWrite(
       *file_, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion);
@@ -483,7 +483,7 @@ katana::Result<void>
 katana::PropertyGraph::WriteView(const std::string& command_line) {
   // WriteView occurs once, and only before any Commit/Write operation
   KATANA_LOG_DEBUG_ASSERT(file_ == nullptr);
-  return WriteView(rdg_.rdg_dir().string(), command_line);
+  return WriteView(rdg_->rdg_dir().string(), command_line);
 }
 
 bool
@@ -528,10 +528,10 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
     }
   }
 
-  const auto& node_props = rdg_.node_properties();
-  const auto& edge_props = rdg_.edge_properties();
-  const auto& other_node_props = other->rdg_.node_properties();
-  const auto& other_edge_props = other->rdg_.edge_properties();
+  const auto& node_props = rdg_->node_properties();
+  const auto& edge_props = rdg_->edge_properties();
+  const auto& other_node_props = other->rdg_->node_properties();
+  const auto& other_edge_props = other->rdg_->edge_properties();
   if (node_props->num_columns() != other_node_props->num_columns()) {
     return false;
   }
@@ -651,10 +651,10 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
     fmt::format_to(std::back_inserter(buf), "edge_entity_type_ids Match!\n");
   }
 
-  const auto& node_props = rdg_.node_properties();
-  const auto& edge_props = rdg_.edge_properties();
-  const auto& other_node_props = other->rdg_.node_properties();
-  const auto& other_edge_props = other->rdg_.edge_properties();
+  const auto& node_props = rdg_->node_properties();
+  const auto& edge_props = rdg_->edge_properties();
+  const auto& other_node_props = other->rdg_->node_properties();
+  const auto& other_edge_props = other->rdg_->edge_properties();
   if (node_props->num_columns() != other_node_props->num_columns()) {
     fmt::format_to(
         std::back_inserter(buf), "Number of node properties differ {} vs. {}\n",
@@ -719,7 +719,7 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
 
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 katana::PropertyGraph::GetNodeProperty(const std::string& name) const {
-  auto ret = rdg_.node_properties()->GetColumnByName(name);
+  auto ret = rdg_->node_properties()->GetColumnByName(name);
   if (ret) {
     return MakeResult(std::move(ret));
   }
@@ -729,7 +729,7 @@ katana::PropertyGraph::GetNodeProperty(const std::string& name) const {
 
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 katana::PropertyGraph::GetEdgeProperty(const std::string& name) const {
-  auto ret = rdg_.edge_properties()->GetColumnByName(name);
+  auto ret = rdg_->edge_properties()->GetColumnByName(name);
   if (ret) {
     return MakeResult(std::move(ret));
   }
@@ -746,6 +746,29 @@ katana::PropertyGraph::Write(
   return WriteGraph(rdg_name, command_line);
 }
 
+// We do this to avoid a virtual call, since this method is often on a hot path.
+katana::GraphTopology::PropertyIndex
+katana::PropertyGraph::GetEdgePropertyIndexFromOutEdge(
+    const Edge& eid) const noexcept {
+  auto idx = topology().GetEdgePropertyIndexFromOutEdge(eid);
+  if (transformation_.transformed_to_original_edges_.empty()) {
+    return idx;
+  } else {
+    return transformation_.transformed_to_original_edges_[idx];
+  }
+}
+
+// We do this to avoid a virtual call, since this method is often on a hot path.
+katana::GraphTopology::PropertyIndex
+katana::PropertyGraph::GetNodePropertyIndex(const Node& nid) const noexcept {
+  auto idx = topology().GetNodePropertyIndex(nid);
+  if (transformation_.transformed_to_original_nodes_.empty()) {
+    return idx;
+  } else {
+    return transformation_.transformed_to_original_nodes_[idx];
+  }
+}
+
 katana::Result<void>
 katana::PropertyGraph::AddNodeProperties(
     const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx) {
@@ -758,7 +781,7 @@ katana::PropertyGraph::AddNodeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().NumNodes(), props->num_rows());
   }
-  return rdg_.AddNodeProperties(props, txn_ctx);
+  return rdg_->AddNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
@@ -773,21 +796,21 @@ katana::PropertyGraph::UpsertNodeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().NumNodes(), props->num_rows());
   }
-  return rdg_.UpsertNodeProperties(props, txn_ctx);
+  return rdg_->UpsertNodeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
 katana::PropertyGraph::RemoveNodeProperty(int i, katana::TxnContext* txn_ctx) {
-  return rdg_.RemoveNodeProperty(i, txn_ctx);
+  return rdg_->RemoveNodeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
 katana::PropertyGraph::RemoveNodeProperty(
     const std::string& prop_name, katana::TxnContext* txn_ctx) {
-  auto col_names = rdg_.node_properties()->ColumnNames();
+  auto col_names = rdg_->node_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {
-    return rdg_.RemoveNodeProperty(
+    return rdg_->RemoveNodeProperty(
         std::distance(col_names.cbegin(), pos), txn_ctx);
   }
   return katana::ErrorCode::PropertyNotFound;
@@ -795,7 +818,7 @@ katana::PropertyGraph::RemoveNodeProperty(
 
 katana::Result<void>
 katana::PropertyGraph::LoadNodeProperty(const std::string& name, int i) {
-  return rdg_.LoadNodeProperty(name, i);
+  return rdg_->LoadNodeProperty(name, i);
 }
 /// Load a node property by name if it is absent and append its column to
 /// the table do nothing otherwise
@@ -809,7 +832,7 @@ katana::PropertyGraph::EnsureNodePropertyLoaded(const std::string& name) {
 
 katana::Result<void>
 katana::PropertyGraph::UnloadNodeProperty(const std::string& prop_name) {
-  return rdg_.UnloadNodeProperty(prop_name);
+  return rdg_->UnloadNodeProperty(prop_name);
 }
 
 katana::Result<void>
@@ -824,7 +847,7 @@ katana::PropertyGraph::AddEdgeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().NumEdges(), props->num_rows());
   }
-  return rdg_.AddEdgeProperties(props, txn_ctx);
+  return rdg_->AddEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
@@ -839,21 +862,21 @@ katana::PropertyGraph::UpsertEdgeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().NumEdges(), props->num_rows());
   }
-  return rdg_.UpsertEdgeProperties(props, txn_ctx);
+  return rdg_->UpsertEdgeProperties(props, txn_ctx);
 }
 
 katana::Result<void>
 katana::PropertyGraph::RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx) {
-  return rdg_.RemoveEdgeProperty(i, txn_ctx);
+  return rdg_->RemoveEdgeProperty(i, txn_ctx);
 }
 
 katana::Result<void>
 katana::PropertyGraph::RemoveEdgeProperty(
     const std::string& prop_name, katana::TxnContext* txn_ctx) {
-  auto col_names = rdg_.edge_properties()->ColumnNames();
+  auto col_names = rdg_->edge_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {
-    return rdg_.RemoveEdgeProperty(
+    return rdg_->RemoveEdgeProperty(
         std::distance(col_names.cbegin(), pos), txn_ctx);
   }
   return katana::ErrorCode::PropertyNotFound;
@@ -861,12 +884,12 @@ katana::PropertyGraph::RemoveEdgeProperty(
 
 katana::Result<void>
 katana::PropertyGraph::UnloadEdgeProperty(const std::string& prop_name) {
-  return rdg_.UnloadEdgeProperty(prop_name);
+  return rdg_->UnloadEdgeProperty(prop_name);
 }
 
 katana::Result<void>
 katana::PropertyGraph::LoadEdgeProperty(const std::string& name, int i) {
-  return rdg_.LoadEdgeProperty(name, i);
+  return rdg_->LoadEdgeProperty(name, i);
 }
 
 /// Load an edge property by name if it is absent and append its column to

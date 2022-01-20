@@ -80,9 +80,6 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
-  katana::RDG rdg_;
-  std::shared_ptr<katana::RDGFile> file_;
-
   /// Manages the relations between the node entity types
   std::shared_ptr<EntityTypeManager> node_entity_type_manager_{
       std::make_shared<EntityTypeManager>()};
@@ -110,7 +107,7 @@ private:
 
   katana::Result<katana::RDGTopology*> LoadTopology(
       const katana::RDGTopology& shadow) {
-    katana::RDGTopology* topo = KATANA_CHECKED(rdg_.GetTopology(shadow));
+    katana::RDGTopology* topo = KATANA_CHECKED(rdg_->GetTopology(shadow));
     if (NumEdges() != topo->num_edges() || NumNodes() != topo->num_nodes()) {
       KATANA_LOG_WARN(
           "RDG found topology matching description, but num_edge/num_node does "
@@ -125,7 +122,40 @@ private:
 
   friend class PropertyGraphRetractor;
 
+protected:
+  struct Transformation {
+    NUMAArray<Node> original_to_transformed_nodes_;
+    NUMAArray<Node> transformed_to_original_nodes_;
+    NUMAArray<Edge> original_to_transformed_edges_;
+    NUMAArray<Edge> transformed_to_original_edges_;
+    NUMAArray<uint8_t> node_bitmask_data_;
+    NUMAArray<uint8_t> edge_bitmask_data_;
+  };
+
+  Transformation transformation_{};
+
+  std::shared_ptr<katana::RDG> rdg_;
+  std::shared_ptr<katana::RDGFile> file_;
+
+  // This constructor is meant to be used by transformation views to share
+  // state with the original graph.
+  PropertyGraph(
+      const PropertyGraph& parent, GraphTopology&& topo,
+      Transformation&& transformation) noexcept
+      : node_entity_type_manager_(parent.node_entity_type_manager_),
+        edge_entity_type_manager_(parent.edge_entity_type_manager_),
+        node_entity_type_ids_(parent.node_entity_type_ids_),
+        node_entity_data_(node_entity_type_ids_->data()),
+        edge_entity_type_ids_(parent.edge_entity_type_ids_),
+        edge_entity_data_(edge_entity_type_ids_->data()),
+        pg_view_cache_(std::move(topo)),
+        transformation_{std::move(transformation)},
+        rdg_(parent.rdg_),
+        file_(parent.file_) {}
+
 public:
+  virtual ~PropertyGraph() = default;
+  PropertyGraph(PropertyGraph&& other) = default;
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
   struct ReadOnlyPropertyView {
@@ -241,14 +271,12 @@ public:
 
   // XXX: WARNING: do not add new constructors. Add Make Functions
   PropertyGraph(
-      std::unique_ptr<katana::RDGFile>&& rdg_file, katana::RDG&& rdg,
-      GraphTopology&& topo, EntityTypeIDArray&& node_entity_type_ids,
+      std::unique_ptr<RDGFile>&& rdg_file, RDG&& rdg, GraphTopology&& topo,
+      EntityTypeIDArray&& node_entity_type_ids,
       EntityTypeIDArray&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager) noexcept
-      : rdg_(std::move(rdg)),
-        file_(std::move(rdg_file)),
-        node_entity_type_manager_(
+      : node_entity_type_manager_(
             std::make_shared<EntityTypeManager>(std::move(node_type_manager))),
         edge_entity_type_manager_(
             std::make_shared<EntityTypeManager>(std::move(edge_type_manager))),
@@ -258,8 +286,9 @@ public:
         edge_entity_type_ids_(std::make_shared<EntityTypeIDArray>(
             std::move(edge_entity_type_ids))),
         edge_entity_data_(edge_entity_type_ids_->data()),
-
-        pg_view_cache_(std::move(topo)) {
+        pg_view_cache_(std::move(topo)),
+        rdg_(std::make_shared<RDG>(std::move(rdg))),
+        file_(std::move(rdg_file)) {
     KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_->size() == NumNodes());
     KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_->size() == NumEdges());
   }
@@ -290,7 +319,7 @@ public:
 
   /// Make a property graph from an RDG handle
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      std::unique_ptr<RDGFile> rdg_hanlde, katana::TxnContext* txn_ctx,
+      std::unique_ptr<RDGFile> rdg_handle, katana::TxnContext* txn_ctx,
       const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
   /// Make a property graph from topology
@@ -351,9 +380,9 @@ public:
     return *edge_entity_type_manager_;
   }
 
-  const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
+  const std::string& rdg_dir() const { return rdg_->rdg_dir().string(); }
 
-  uint32_t partition_id() const { return rdg_.partition_id(); }
+  uint32_t partition_id() const { return rdg_->partition_id(); }
 
   /// Create a new storage location for a graph and write everything into it.
   ///
@@ -386,22 +415,22 @@ public:
 
   /// get the schema for loaded node properties
   std::shared_ptr<arrow::Schema> loaded_node_schema() const {
-    return rdg_.node_properties()->schema();
+    return rdg_->node_properties()->schema();
   }
 
   /// get the schema for all node properties (includes unloaded properties)
   std::shared_ptr<arrow::Schema> full_node_schema() const {
-    return rdg_.full_node_schema();
+    return rdg_->full_node_schema();
   }
 
   /// get the schema for loaded edge properties
   std::shared_ptr<arrow::Schema> loaded_edge_schema() const {
-    return rdg_.edge_properties()->schema();
+    return rdg_->edge_properties()->schema();
   }
 
   /// get the schema for all edge properties (includes unloaded properties)
   std::shared_ptr<arrow::Schema> full_edge_schema() const {
-    return rdg_.full_edge_schema();
+    return rdg_->full_edge_schema();
   }
 
   /// \returns the number of node atomic types
@@ -593,18 +622,18 @@ public:
 
   // num_rows() == NumNodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
-    if (i >= rdg_.node_properties()->num_columns()) {
+    if (i >= rdg_->node_properties()->num_columns()) {
       return nullptr;
     }
-    return rdg_.node_properties()->column(i);
+    return rdg_->node_properties()->column(i);
   }
 
   // num_rows() == num_edges() (all local edges)
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(int i) const {
-    if (i >= rdg_.edge_properties()->num_columns()) {
+    if (i >= rdg_->edge_properties()->num_columns()) {
       return nullptr;
     }
-    return rdg_.edge_properties()->column(i);
+    return rdg_->edge_properties()->column(i);
   }
 
   /// \returns true if a node property/type with @param name exists
@@ -699,26 +728,22 @@ public:
   }
 
   GraphTopology::PropertyIndex GetEdgePropertyIndexFromOutEdge(
-      const Edge& eid) const noexcept {
-    return topology().GetEdgePropertyIndexFromOutEdge(eid);
-  }
+      const Edge& eid) const noexcept;
 
   GraphTopology::PropertyIndex GetNodePropertyIndex(
-      const Node& nid) const noexcept {
-    return topology().GetNodePropertyIndex(nid);
-  }
+      const Node& nid) const noexcept;
 
   /// Add Node properties that do not exist in the current graph
-  Result<void> AddNodeProperties(
+  virtual Result<void> AddNodeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// Add Edge properties that do not exist in the current graph
-  Result<void> AddEdgeProperties(
+  virtual Result<void> AddEdgeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// If property name exists, replace it, otherwise insert it
-  Result<void> UpsertNodeProperties(
+  virtual Result<void> UpsertNodeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// If property name exists, replace it, otherwise insert it
-  Result<void> UpsertEdgeProperties(
+  virtual Result<void> UpsertEdgeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
   Result<void> RemoveNodeProperty(int i, katana::TxnContext* txn_ctx);
@@ -754,22 +779,22 @@ public:
   Result<void> EnsureEdgePropertyLoaded(const std::string& name);
 
   std::vector<std::string> ListFullNodeProperties() const {
-    return rdg_.ListFullNodeProperties();
+    return rdg_->ListFullNodeProperties();
   }
   std::vector<std::string> ListLoadedNodeProperties() const {
-    return rdg_.ListLoadedNodeProperties();
+    return rdg_->ListLoadedNodeProperties();
   }
   std::vector<std::string> ListFullEdgeProperties() const {
-    return rdg_.ListFullEdgeProperties();
+    return rdg_->ListFullEdgeProperties();
   }
   std::vector<std::string> ListLoadedEdgeProperties() const {
-    return rdg_.ListLoadedEdgeProperties();
+    return rdg_->ListLoadedEdgeProperties();
   }
 
   /// Remove all node properties
-  void DropNodeProperties() { rdg_.DropNodeProperties(); }
+  void DropNodeProperties() { rdg_->DropNodeProperties(); }
   /// Remove all edge properties
-  void DropEdgeProperties() { rdg_.DropEdgeProperties(); }
+  void DropEdgeProperties() { rdg_->DropEdgeProperties(); }
 
   MutablePropertyView NodeMutablePropertyView() {
     return MutablePropertyView{

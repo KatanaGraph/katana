@@ -22,14 +22,14 @@ public:
       : pg_(std::move(pg)) {}
 
   const katana::PartitionMetadata& partition_metadata() const {
-    return pg_->rdg_.part_metadata();
+    return pg_->rdg_->part_metadata();
   }
   void set_partition_metadata(const katana::PartitionMetadata& meta) {
-    pg_->rdg_.set_part_metadata(meta);
+    pg_->rdg_->set_part_metadata(meta);
   }
 
   void update_rdg_metadata(const std::string& part_policy, uint32_t num_hosts) {
-    pg_->rdg_.set_view_name(
+    pg_->rdg_->set_view_name(
         fmt::format("rdg-{}-part{}", part_policy, num_hosts));
   }
 
@@ -40,10 +40,10 @@ public:
   //    for which host_i has a mirror
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
       const {
-    return pg_->rdg_.master_nodes();
+    return pg_->rdg_->master_nodes();
   }
   void set_master_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
-    pg_->rdg_.set_master_nodes(std::move(a));
+    pg_->rdg_->set_master_nodes(std::move(a));
   }
 
   /// Per-host vector of mirror nodes
@@ -53,26 +53,26 @@ public:
   ///   that have a master on host_i
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes()
       const {
-    return pg_->rdg_.mirror_nodes();
+    return pg_->rdg_->mirror_nodes();
   }
   void set_mirror_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
-    pg_->rdg_.set_mirror_nodes(std::move(a));
+    pg_->rdg_->set_mirror_nodes(std::move(a));
   }
 
   /// Return the node property table for local nodes
   const std::shared_ptr<arrow::Table>& node_properties() const {
-    return pg_->rdg_.node_properties();
+    return pg_->rdg_->node_properties();
   }
 
   /// Return the edge property table for local edges
   const std::shared_ptr<arrow::Table>& edge_properties() const {
-    return pg_->rdg_.edge_properties();
+    return pg_->rdg_->edge_properties();
   }
 
   /// Return false if type information has been loaded separate from properties.
   /// Return true otherwise.
   bool NeedsEntityTypeIDInference() {
-    return !pg_->rdg_.IsEntityTypeIDsOutsideProperties();
+    return !pg_->rdg_->IsEntityTypeIDsOutsideProperties();
   }
 
   /// This is exposed because type id mappings change sometimes.
@@ -95,47 +95,47 @@ public:
   /// Vector from storage mapping host to global node ID ranges
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_node_ids()
       const {
-    return pg_->rdg_.host_to_owned_global_node_ids();
+    return pg_->rdg_->host_to_owned_global_node_ids();
   }
   void set_host_to_owned_global_node_ids(
       std::shared_ptr<arrow::ChunkedArray>&& a) {
-    pg_->rdg_.set_host_to_owned_global_node_ids(std::move(a));
+    pg_->rdg_->set_host_to_owned_global_node_ids(std::move(a));
   }
 
   /// Vector from storage mapping host to global edge ID ranges
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_edge_ids()
       const {
-    return pg_->rdg_.host_to_owned_global_edge_ids();
+    return pg_->rdg_->host_to_owned_global_edge_ids();
   }
   void set_host_to_owned_global_edge_ids(
       std::shared_ptr<arrow::ChunkedArray>&& a) {
-    pg_->rdg_.set_host_to_owned_global_edge_ids(std::move(a));
+    pg_->rdg_->set_host_to_owned_global_edge_ids(std::move(a));
   }
 
   /// Vector from storage mapping local node ID to UserID
   const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const {
-    return pg_->rdg_.local_to_user_id();
+    return pg_->rdg_->local_to_user_id();
   }
   void set_local_to_user_id(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    pg_->rdg_.set_local_to_user_id(std::move(a));
+    pg_->rdg_->set_local_to_user_id(std::move(a));
   }
 
   /// Vector from storage mapping local node ID to global node ID
   const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const {
-    return pg_->rdg_.local_to_global_id();
+    return pg_->rdg_->local_to_global_id();
   }
   void set_local_to_global_id(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    pg_->rdg_.set_local_to_global_id(std::move(a));
+    pg_->rdg_->set_local_to_global_id(std::move(a));
   }
 
   const katana::PropertyCache* prop_cache() const {
-    return pg_->rdg_.prop_cache();
+    return pg_->rdg_->prop_cache();
   }
 
-  katana::PropertyCache* prop_cache() { return pg_->rdg_.prop_cache(); }
+  katana::PropertyCache* prop_cache() { return pg_->rdg_->prop_cache(); }
 
   void set_prop_cache(katana::PropertyCache* prop_cache) {
-    pg_->rdg_.set_prop_cache(prop_cache);
+    pg_->rdg_->set_prop_cache(prop_cache);
   }
 
   /// Deallocate and forget about all topology information associated with the

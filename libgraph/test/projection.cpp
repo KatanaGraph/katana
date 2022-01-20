@@ -4,9 +4,9 @@
 
 #include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
-#include "katana/PropertyGraph.h"
 #include "katana/RDG.h"
 #include "katana/SharedMemSys.h"
+#include "katana/TransformationView.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
@@ -23,15 +23,12 @@ static cll::opt<std::string> nodeTypes(
 static cll::opt<std::string> edgeTypes(
     cll::Positional, cll::desc("<edge types to project>"), cll::init(""));
 
-using ProjectedPropertyGraphView = katana::PropertyGraphViews::ProjectedGraph;
-
 struct TempNodeProp : public katana::PODProperty<uint64_t> {};
 using NodeData = std::tuple<TempNodeProp>;
 using EdgeData = std::tuple<>;
 
-using ProjectedGraphView = katana::TypedPropertyGraphView<
-    ProjectedPropertyGraphView, NodeData, EdgeData>;
-using GNode = typename ProjectedGraphView::Node;
+using ProjectedGraph = katana::TypedPropertyGraph<NodeData, EdgeData>;
+using GNode = typename ProjectedGraph::Node;
 
 katana::PropertyGraph
 LoadGraph(const std::string& rdg_file) {
@@ -71,8 +68,8 @@ main(int argc, char** argv) {
   std::vector<std::string> edge_types;
   SplitString(edgeTypes, &edge_types);
 
-  auto pg_view =
-      full_graph.BuildView<ProjectedPropertyGraphView>(node_types, edge_types);
+  auto pg_view = katana::TransformationView::MakeProjectedGraph(
+      full_graph, node_types, edge_types);
 
   katana::analytics::TemporaryPropertyGuard temp_node_property{
       full_graph.NodeMutablePropertyView()};
@@ -80,14 +77,15 @@ main(int argc, char** argv) {
   std::vector<std::string> node_props;
   node_props.emplace_back(temp_node_property.name());
   katana::TxnContext txn_ctx;
-  auto res_node_prop = katana::analytics::ConstructNodeProperties<
-      ProjectedPropertyGraphView, NodeData>(pg_view, &txn_ctx, node_props);
+  auto res_node_prop = katana::analytics::ConstructNodeProperties<NodeData>(
+      pg_view.get(), &txn_ctx, node_props);
 
   if (!res_node_prop) {
     KATANA_LOG_FATAL(
         "Failed to Construct Properties: {}", res_node_prop.error());
   }
-  auto res_projected_graph = ProjectedGraphView::Make(pg_view, node_props, {});
+  auto res_projected_graph =
+      ProjectedGraph::Make(pg_view.get(), node_props, {});
 
   auto projected_graph = res_projected_graph.value();
 

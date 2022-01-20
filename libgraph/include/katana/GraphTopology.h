@@ -47,7 +47,6 @@ struct KATANA_EXPORT GraphTopologyTypes {
 
 class KATANA_EXPORT EdgeShuffleTopology;
 class KATANA_EXPORT EdgeTypeAwareTopology;
-class KATANA_EXPORT ProjectedTopology;
 
 /********************/
 /* Topology classes */
@@ -627,13 +626,13 @@ public:
 
   PropertyIndex GetEdgePropertyIndexFromOutEdge(
       const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
-    return projected_to_original_edges_mapping_[eid];
+    return projected_to_original_edge_id(eid);
   }
 
   /// @param eid the input eid (must be projected edge id)
   Edge projected_to_original_edge_id(const Edge& eid) const noexcept {
-    return GetEdgePropertyIndexFromOutEdge(eid);
+    KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
+    return projected_to_original_edges_mapping_[eid];
   }
 
   /// @param eid the input eid (must be original edge id)
@@ -642,13 +641,13 @@ public:
   }
 
   PropertyIndex GetNodePropertyIndex(const Node& nid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(nid < NumNodes());
-    return projected_to_original_nodes_mapping_[nid];
+    return projected_to_original_node_id(nid);
   }
 
   /// @param nid the input node id (must be projected node id)
   Node projected_to_original_node_id(const Node& nid) const noexcept {
-    return GetNodePropertyIndex(nid);
+    KATANA_LOG_DEBUG_ASSERT(nid < NumNodes());
+    return projected_to_original_nodes_mapping_[nid];
   }
 
   /// @param nid the input node id (must be original node id)

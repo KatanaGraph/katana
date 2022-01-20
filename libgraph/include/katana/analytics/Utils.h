@@ -10,8 +10,8 @@
 #include "arrow/util/bitmap.h"
 #include "katana/ErrorCode.h"
 #include "katana/Properties.h"
-#include "katana/PropertyGraph.h"
 #include "katana/Result.h"
+#include "katana/TransformationView.h"
 
 namespace katana::analytics {
 
@@ -62,6 +62,21 @@ ConstructNodeProperties(
   return pg->AddNodeProperties(res_table.value(), txn_ctx);
 }
 
+template <typename NodeProps>
+inline katana::Result<void>
+ConstructNodeProperties(
+    TransformationView* pg, katana::TxnContext* txn_ctx,
+    const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
+  auto bit_mask = pg->NodeBitmask();
+  auto res_table =
+      katana::AllocateTable<NodeProps>(pg->NumOriginalNodes(), names, bit_mask);
+  if (!res_table) {
+    return res_table.error();
+  }
+
+  return pg->AddNodeProperties(res_table.value(), txn_ctx);
+}
+
 /// TODO(udit) here pg_view which is a const object
 /// is modified to add properties
 template <typename PGView, typename NodeProps>
@@ -86,6 +101,21 @@ ConstructEdgeProperties(
     PropertyGraph* pg, katana::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
   auto res_table = katana::AllocateTable<EdgeProps>(pg->NumEdges(), names);
+  if (!res_table) {
+    return res_table.error();
+  }
+
+  return pg->AddEdgeProperties(res_table.value(), txn_ctx);
+}
+
+template <typename EdgeProps>
+inline katana::Result<void>
+ConstructEdgeProperties(
+    TransformationView* pg, katana::TxnContext* txn_ctx,
+    const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
+  auto bit_mask = pg->EdgeBitmask();
+  auto res_table =
+      katana::AllocateTable<EdgeProps>(pg->NumOriginalEdges(), names, bit_mask);
   if (!res_table) {
     return res_table.error();
   }

@@ -95,8 +95,7 @@ namespace detail {
 template <typename T>
 struct type_caster<katana::CythonReference<T> > {
 public:
-  PYBIND11_TYPE_CASTER(
-      katana::CythonReference<T>, _<T>());
+  PYBIND11_TYPE_CASTER(katana::CythonReference<T>, _<T>());
 
   bool load(handle wrapper, bool) {
     if (pybind11::isinstance(

@@ -20,13 +20,14 @@ set(sources
         src/gIO.cpp
         src/HWTopo.cpp
         src/Mem.cpp
-        src/MemoryManager.cpp
+        src/MemorySupervisor.cpp
         src/NumaMem.cpp
         src/PageAlloc.cpp
         src/PagePool.cpp
         src/ParaMeter.cpp
         src/PerThreadStorage.cpp
         src/Profile.cpp
+        src/PropertyManager.cpp
         src/PtrLock.cpp
         src/SimpleLock.cpp
         src/Statistics.cpp

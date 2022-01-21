@@ -1,7 +1,9 @@
-#include "katana/MemoryManager.h"
+#include "katana/MemorySupervisor.h"
 
 #include "katana/ProgressTracer.h"
 #include "katana/Time.h"
+
+using katana::count_t;
 
 namespace {
 uint64_t
@@ -17,7 +19,7 @@ const std::string unregister_str = "memory manager unregister";
 }  // anonymous namespace
 
 void
-katana::MemoryManager::LogState(const std::string& str) {
+katana::MemorySupervisor::LogState(const std::string& str) {
   katana::GetTracer().GetActiveSpan().Log(
       str, {
                {"active", active_},
@@ -26,7 +28,7 @@ katana::MemoryManager::LogState(const std::string& str) {
 }
 
 void
-katana::MemoryManager::Sanity() {
+katana::MemorySupervisor::Sanity() {
   count_t manager_active{};
   count_t manager_standby{};
   bool logit = false;
@@ -51,7 +53,7 @@ katana::MemoryManager::Sanity() {
   }
 }
 
-katana::MemoryManager::MemoryManager() {
+katana::MemorySupervisor::MemorySupervisor() {
   physical_ = getTotalSystemMemory();
   // Let's consider our limit a little conservatively
   auto os_and_overhead = std::min(
@@ -74,28 +76,28 @@ katana::MemoryManager::MemoryManager() {
 }
 
 void
-katana::MemoryManager::StandbyMinus(ManagerInfo& info, count_t bytes) {
+katana::MemorySupervisor::StandbyMinus(ManagerInfo& info, count_t bytes) {
   info.standby -= bytes;
   standby_ -= bytes;
 }
 void
-katana::MemoryManager::StandbyPlus(ManagerInfo& info, count_t bytes) {
+katana::MemorySupervisor::StandbyPlus(ManagerInfo& info, count_t bytes) {
   info.standby += bytes;
   standby_ += bytes;
 }
 void
-katana::MemoryManager::ActiveMinus(ManagerInfo& info, count_t bytes) {
+katana::MemorySupervisor::ActiveMinus(ManagerInfo& info, count_t bytes) {
   info.active -= bytes;
   active_ -= bytes;
 }
 void
-katana::MemoryManager::ActivePlus(ManagerInfo& info, count_t bytes) {
+katana::MemorySupervisor::ActivePlus(ManagerInfo& info, count_t bytes) {
   info.active += bytes;
   active_ += bytes;
 }
 
 bool
-katana::MemoryManager::CheckRegistered(Manager* manager) {
+katana::MemorySupervisor::CheckRegistered(Manager* manager) {
   auto it = managers_.find(manager);
   if (it == managers_.end()) {
     KATANA_LOG_WARN(
@@ -106,12 +108,12 @@ katana::MemoryManager::CheckRegistered(Manager* manager) {
 }
 
 void
-katana::MemoryManager::Register(Manager* manager) {
+katana::MemorySupervisor::Register(Manager* manager) {
   managers_[manager] = ManagerInfo();
 }
 
 void
-katana::MemoryManager::Unregister(Manager* manager) {
+katana::MemorySupervisor::Unregister(Manager* manager) {
   if (!CheckRegistered(manager)) {
     return;
   }
@@ -128,7 +130,7 @@ katana::MemoryManager::Unregister(Manager* manager) {
 }
 
 void
-katana::MemoryManager::ReclaimMemory(count_t goal) {
+katana::MemorySupervisor::ReclaimMemory(count_t goal) {
   count_t reclaimed = 0;
   // TODO(witchel) reclaim in proportion to current use
   for (auto& [manager, info] : managers_) {
@@ -141,7 +143,7 @@ katana::MemoryManager::ReclaimMemory(count_t goal) {
 }
 
 void
-katana::MemoryManager::BorrowActive(Manager* manager, count_t bytes) {
+katana::MemorySupervisor::BorrowActive(Manager* manager, count_t bytes) {
   if (!CheckRegistered(manager)) {
     return;
   }
@@ -157,7 +159,7 @@ katana::MemoryManager::BorrowActive(Manager* manager, count_t bytes) {
 }
 
 count_t
-katana::MemoryManager::BorrowStandby(Manager* manager, count_t goal) {
+katana::MemorySupervisor::BorrowStandby(Manager* manager, count_t goal) {
   if (!CheckRegistered(manager)) {
     return 0;
   }
@@ -173,7 +175,7 @@ katana::MemoryManager::BorrowStandby(Manager* manager, count_t goal) {
 }
 
 void
-katana::MemoryManager::ReturnActive(Manager* manager, count_t bytes) {
+katana::MemorySupervisor::ReturnActive(Manager* manager, count_t bytes) {
   if (!CheckRegistered(manager)) {
     return;
   }
@@ -182,7 +184,7 @@ katana::MemoryManager::ReturnActive(Manager* manager, count_t bytes) {
 }
 
 void
-katana::MemoryManager::ReturnStandby(Manager* manager, count_t bytes) {
+katana::MemorySupervisor::ReturnStandby(Manager* manager, count_t bytes) {
   if (!CheckRegistered(manager)) {
     return;
   }
@@ -191,7 +193,7 @@ katana::MemoryManager::ReturnStandby(Manager* manager, count_t bytes) {
 }
 
 count_t
-katana::MemoryManager::ActiveToStandby(Manager* manager, count_t bytes) {
+katana::MemorySupervisor::ActiveToStandby(Manager* manager, count_t bytes) {
   if (!CheckRegistered(manager)) {
     return 0;
   }
@@ -206,7 +208,7 @@ katana::MemoryManager::ActiveToStandby(Manager* manager, count_t bytes) {
 }
 
 void
-katana::MemoryManager::StandbyToActive(Manager* manager, count_t bytes) {
+katana::MemorySupervisor::StandbyToActive(Manager* manager, count_t bytes) {
   if (!CheckRegistered(manager)) {
     return;
   }

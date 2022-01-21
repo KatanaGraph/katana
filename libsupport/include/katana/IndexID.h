@@ -7,7 +7,8 @@ namespace katana {
 
 /// A numeric ID type suitable for indexing. IndexIDs support:
 ///
-/// - Addition and subtraction of other IDs (the result of which is an ID)
+/// - Arithmetic operations with other IDs (the result of which is an ID)
+/// - Bitwise operations with other IDs (the result of which is an ID)
 /// - Increment and decrement
 /// - Dereference
 ///
@@ -51,26 +52,100 @@ public:
   }
 
   _IDType& operator+=(const _IDType& rhs) { return *this += rhs.value(); }
-
   _IDType& operator+=(_Value val) {
     this->value_ += val;
     return *static_cast<_IDType*>(this);
   }
 
   _IDType& operator-=(const _IDType& rhs) { return *this -= rhs.value(); }
-
   _IDType& operator-=(_Value val) {
     this->value_ -= val;
     return *static_cast<_IDType*>(this);
   }
 
-  _IDType operator+(const _IDType& rhs) const { return *this + rhs.value(); }
+  _IDType& operator*=(const _IDType& rhs) { return *this *= rhs.value(); }
+  _IDType& operator*=(_Value val) {
+    this->value_ *= val;
+    return *static_cast<_IDType*>(this);
+  }
 
+  _IDType& operator/=(const _IDType& rhs) { return *this /= rhs.value(); }
+  _IDType& operator/=(_Value val) {
+    this->value_ /= val;
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType& operator%=(const _IDType& rhs) { return *this %= rhs.value(); }
+  _IDType& operator%=(_Value val) {
+    this->value_ %= val;
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType& operator>>=(const _IDType& rhs) { return *this >>= rhs.value(); }
+  _IDType& operator>>=(_Value val) {
+    this->value_ >>= val;
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType& operator<<=(const _IDType& rhs) { return *this <<= rhs.value(); }
+  _IDType& operator<<=(_Value val) {
+    this->value_ <<= val;
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType& operator&=(const _IDType& rhs) { return *this &= rhs.value(); }
+  _IDType& operator&=(_Value val) {
+    this->value_ &= val;
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType& operator|=(const _IDType& rhs) { return *this |= rhs.value(); }
+  _IDType& operator|=(_Value val) {
+    this->value_ |= val;
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType& operator^=(const _IDType& rhs) { return *this ^= rhs.value(); }
+  _IDType& operator^=(_Value val) {
+    this->value_ ^= val;
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType operator+() const { return _IDType(+this->value_); }
+
+  _IDType operator-() const { return _IDType(-this->value_); }
+
+  _IDType operator~() const { return _IDType(~this->value_); }
+
+  _IDType operator+(const _IDType& rhs) const { return *this + rhs.value(); }
   _IDType operator+(_Value val) const { return _IDType(this->value() + val); }
 
   _IDType operator-(const _IDType& rhs) const { return *this - rhs.value(); }
-
   _IDType operator-(_Value val) const { return _IDType(this->value() - val); }
+
+  _IDType operator*(const _IDType& rhs) const { return *this * rhs.value(); }
+  _IDType operator*(_Value val) const { return _IDType(this->value() * val); }
+
+  _IDType operator/(const _IDType& rhs) const { return *this / rhs.value(); }
+  _IDType operator/(_Value val) const { return _IDType(this->value() / val); }
+
+  _IDType operator%(const _IDType& rhs) const { return *this % rhs.value(); }
+  _IDType operator%(_Value val) const { return _IDType(this->value() % val); }
+
+  _IDType operator>>(const _IDType& rhs) const { return *this >> rhs.value(); }
+  _IDType operator>>(_Value val) const { return _IDType(this->value() >> val); }
+
+  _IDType operator<<(const _IDType& rhs) const { return *this << rhs.value(); }
+  _IDType operator<<(_Value val) const { return _IDType(this->value() << val); }
+
+  _IDType operator&(const _IDType& rhs) const { return *this & rhs.value(); }
+  _IDType operator&(_Value val) const { return _IDType(this->value() & val); }
+
+  _IDType operator|(const _IDType& rhs) const { return *this | rhs.value(); }
+  _IDType operator|(_Value val) const { return _IDType(this->value() | val); }
+
+  _IDType operator^(const _IDType& rhs) const { return *this ^ rhs.value(); }
+  _IDType operator^(_Value val) const { return _IDType(this->value() ^ val); }
 };
 
 }  // namespace katana

@@ -63,7 +63,7 @@ CheckTopology(
 /// favor of this method.
 katana::Result<katana::PropertyGraph::EntityTypeIDArray>
 MapEntityTypeIDsArray(
-    const katana::FileView& file_view, bool is_uint16_t_entity_type_ids) {
+    const katana::FileView& file_view) {
   const auto* data = file_view.ptr<katana::EntityTypeIDArrayHeader>();
   const auto header = data[0];
 
@@ -75,25 +75,14 @@ MapEntityTypeIDsArray(
   katana::PropertyGraph::EntityTypeIDArray entity_type_id_array;
   entity_type_id_array.allocateInterleaved(header.size);
 
-  if (is_uint16_t_entity_type_ids) {
-    const katana::EntityTypeID* type_IDs_array =
-        reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
+  const katana::EntityTypeID* type_IDs_array =
+    reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
 
-    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+  KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
 
-    katana::ParallelSTL::copy(
-        &type_IDs_array[0], &type_IDs_array[header.size],
-        entity_type_id_array.begin());
-  } else {
-    // On disk format is still uint8_t EntityTypeIDs
-    const uint8_t* type_IDs_array = reinterpret_cast<const uint8_t*>(&data[1]);
-
-    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
-
-    katana::ParallelSTL::copy(
-        &type_IDs_array[0], &type_IDs_array[header.size],
-        entity_type_id_array.begin());
-  }
+  katana::ParallelSTL::copy(
+                            &type_IDs_array[0], &type_IDs_array[header.size],
+                            entity_type_id_array.begin());
 
   return katana::MakeResult(std::move(entity_type_id_array));
 }
@@ -162,12 +151,10 @@ katana::PropertyGraph::Make(
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 
     EntityTypeIDArray node_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
-        rdg.node_entity_type_id_array_file_storage(),
-        rdg.IsUint16tEntityTypeIDs()));
+                                                                           rdg.node_entity_type_id_array_file_storage()));
 
     EntityTypeIDArray edge_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
-        rdg.edge_entity_type_id_array_file_storage(),
-        rdg.IsUint16tEntityTypeIDs()));
+                                                                           rdg.edge_entity_type_id_array_file_storage()));
 
     KATANA_ASSERT(topo.NumNodes() == node_type_ids.size());
     KATANA_ASSERT(topo.NumEdges() == edge_type_ids.size());

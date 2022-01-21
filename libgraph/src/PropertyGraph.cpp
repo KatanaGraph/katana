@@ -92,9 +92,7 @@ WriteEntityTypeIDsArray(
     const katana::NUMAArray<katana::EntityTypeID>& entity_type_id_array) {
   auto ff = std::make_unique<katana::FileFrame>();
 
-  if (auto res = ff->Init(); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(ff->Init());
 
   katana::EntityTypeIDArrayHeader data[1] = {
       {.size = entity_type_id_array.size()}};

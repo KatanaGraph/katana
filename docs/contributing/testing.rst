@@ -101,7 +101,7 @@ To run all quick tests,
    ctest -L quick
 
 To run tests whose names match ``regex``, with verbose output, and with ``4``
-tests runnning in parallel at a time,
+tests running in parallel at a time,
 
 .. code-block:: bash
 

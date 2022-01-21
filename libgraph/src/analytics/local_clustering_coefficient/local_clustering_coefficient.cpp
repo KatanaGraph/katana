@@ -92,7 +92,7 @@ struct LocalClusteringCoefficientAtomics {
     katana::do_all(
         katana::iterate(*graph),
         [&](Node n) {
-          auto degree = graph->degree(n);
+          auto degree = graph->OutDegree(n);
 
           graph->template GetData<NodeClusteringCoefficient>(n) =
               static_cast<double>(2 * per_node_triangles[n]) /
@@ -205,7 +205,7 @@ struct LocalClusteringCoefficientPerThread {
 
   void ComputeLocalClusteringCoefficient(SortedGraphView* graph) {
     katana::do_all(katana::iterate(*graph), [&](Node n) {
-      auto degree = graph->degree(n);
+      auto degree = graph->OutDegree(n);
       if (degree > 1) {
         graph->template GetData<NodeClusteringCoefficient>(n) =
             static_cast<double>(2 * node_triangle_count_[n]) /

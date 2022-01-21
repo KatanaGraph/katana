@@ -54,7 +54,7 @@ SubGraphNodeSet(
         for (Node m = 0; m < num_nodes; ++m) {
           auto dest = node_set[m];
           // Binary search on the edges sorted by destination id
-          for (auto edge_it = graph.find_edge(src, dest);
+          for (auto edge_it = graph.FindEdge(src, dest);
                edge_it != last && graph.OutEdgeDst(*edge_it) == dest;
                ++edge_it) {
             subgraph_edges[n].push_back(m);

@@ -110,14 +110,14 @@ JaccardImpl(Graph& graph, size_t compare_node, JaccardPlan /*plan*/) {
   std::advance(it, compare_node);
   Graph::Node base = *it;
 
-  uint32_t base_size = graph.degree(base);
+  uint32_t base_size = graph.OutDegree(base);
 
   IntersectAlgorithm intersect_with_base{graph, base};
 
   // Compute the similarity for each node
   katana::do_all(katana::iterate(graph), [&](const GNode& n2) {
     double& n2_data = graph.GetData<JaccardSimilarity>(n2);
-    uint32_t n2_size = graph.degree(n2);
+    uint32_t n2_size = graph.OutDegree(n2);
     // Count the number of neighbors of n2 and the number that are shared
     // with base
     uint32_t intersection_size = intersect_with_base(n2);

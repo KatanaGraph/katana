@@ -35,7 +35,7 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
 
   size_t i = 0;
-  for (Node n : pg->all_nodes()) {
+  for (Node n : pg->Nodes()) {
     int32_t expected_age = static_cast<int32_t>(n) * 2;
     std::string expected_name = fmt::format("Node {}", n);
 

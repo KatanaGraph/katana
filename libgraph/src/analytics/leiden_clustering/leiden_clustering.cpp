@@ -112,7 +112,7 @@ struct LeidenClusteringImplementation
                 graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
             auto& n_data_node_wt = graph->template GetData<NodeWeight>(n);
 
-            uint64_t degree = graph->degree(n);
+            uint64_t degree = Degree(*graph, n);
             uint64_t local_target = Base::UNASSIGNED;
             std::map<uint64_t, uint64_t>
                 cluster_local_map;  // Map each neighbor's cluster to local number:
@@ -273,7 +273,7 @@ struct LeidenClusteringImplementation
                   graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
               auto& n_data_node_wt = graph->template GetData<NodeWeight>(n);
 
-              uint64_t degree = graph->degree(n);
+              uint64_t degree = Degree(*graph, n);
 
               std::map<uint64_t, uint64_t>
                   cluster_local_map;  // Map each neighbor's cluster to local number:

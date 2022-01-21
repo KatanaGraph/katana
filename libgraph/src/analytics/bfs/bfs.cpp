@@ -250,7 +250,7 @@ SynchronousDirectOpt(
   work_items += 1;
 
   int64_t edges_to_check = num_edges;
-  int64_t scout_count = bidir_view.degree(source);
+  int64_t scout_count = bidir_view.OutDegree(source);
   uint64_t old_num_work_items{0};
 
   katana::GAccumulator<uint64_t> writes_pull;
@@ -309,7 +309,7 @@ SynchronousDirectOpt(
                 GNode old_parent = ddata;
                 if (__sync_bool_compare_and_swap(&ddata, old_parent, src)) {
                   next_frontier->push(dst);
-                  work_items += bidir_view.degree(dst);
+                  work_items += bidir_view.OutDegree(dst);
                 }
               }
             }
@@ -343,7 +343,7 @@ ComputeParentFromDistance(
     const katana::NUMAArray<Dist>& node_dist, const GNode source) {
   (*node_parent)[source] = source;
   katana::do_all(
-      katana::iterate(bidir_view.all_nodes()),
+      katana::iterate(bidir_view.Nodes()),
       [&](const GNode v) {
         GNode& v_parent = (*node_parent)[v];
         Dist v_dist = node_dist[v];

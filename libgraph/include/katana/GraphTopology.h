@@ -140,12 +140,13 @@ public:
     return static_cast<Node>(d);
   }
 
-  nodes_range nodes(Node begin, Node end) const noexcept {
-    return MakeStandardRange<node_iterator>(begin, end);
-  }
+  /// @param node node to get degree for
+  /// @returns Degree of node N
+  size_t OutDegree(Node node) const noexcept { return OutEdges(node).size(); }
 
-  nodes_range all_nodes() const noexcept {
-    return nodes(Node{0}, static_cast<Node>(NumNodes()));
+  nodes_range Nodes() const noexcept {
+    return MakeStandardRange<node_iterator>(
+        Node{0}, static_cast<Node>(NumNodes()));
   }
 
   // Standard container concepts
@@ -158,27 +159,26 @@ public:
 
   bool empty() const noexcept { return NumNodes() == 0; }
 
-  ///@param node node to get degree for
-  ///@returns Degree of node N
-  size_t degree(Node node) const noexcept { return OutEdges(node).size(); }
-
-  PropertyIndex edge_property_index(const Edge& eid) const noexcept {
+  // TODO(yan): This will become GetEdgePropertyIndex(OutEdgeHandle) once we
+  // introduce new opaque indexing types.
+  PropertyIndex GetEdgePropertyIndexFromOutEdge(
+      const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
     return edge_prop_indices_[eid];
   }
 
-  PropertyIndex node_property_index(const Node& nid) const noexcept {
+  PropertyIndex GetNodePropertyIndex(const Node& nid) const noexcept {
     return nid;
   }
 
   // TODO(amber): These two methods are a short term fix. The nature of
   // PropertyIndex is expected to change post grouping of properties.
-  Node original_node_id(const Node& nid) const noexcept {
-    return static_cast<Node>(node_property_index(nid));
+  Node GetLocalNodeID(const Node& nid) const noexcept {
+    return static_cast<Node>(GetNodePropertyIndex(nid));
   }
 
-  Edge original_edge_id(const Edge& eid) const noexcept {
-    return edge_property_index(eid);
+  Edge GetLocalEdgeIDFromOutEdge(const Edge& eid) const noexcept {
+    return GetEdgePropertyIndexFromOutEdge(eid);
   }
 
   // We promote these methods to the base topology to make it easier to search among all
@@ -273,7 +273,7 @@ public:
            (kind == edge_sort_state());
   }
 
-  using Base::original_edge_id;
+  using Base::GetLocalEdgeIDFromOutEdge;
 
   static std::shared_ptr<EdgeShuffleTopology> MakeTransposeCopy(
       const PropertyGraph* pg);
@@ -304,12 +304,12 @@ public:
 
   katana::Result<katana::RDGTopology> ToRDGTopology() const;
 
-  edge_iterator find_edge(const Node& src, const Node& dst) const noexcept;
+  edge_iterator FindEdge(const Node& src, const Node& dst) const noexcept;
 
-  edges_range find_edges(const Node& src, const Node& dst) const noexcept;
+  edges_range FindAllEdges(const Node& src, const Node& dst) const noexcept;
 
-  bool has_edge(const Node& src, const Node& dst) const noexcept {
-    return find_edge(src, dst) != OutEdges(src).end();
+  bool HasEdge(const Node& src, const Node& dst) const noexcept {
+    return FindEdge(src, dst) != OutEdges(src).end();
   }
 
 protected:
@@ -370,7 +370,7 @@ public:
 
   virtual ~ShuffleTopology();
 
-  PropertyIndex node_property_index(const Node& nid) const noexcept {
+  PropertyIndex GetNodePropertyIndex(const Node& nid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(nid < NumNodes());
     return node_prop_indices_[nid];
   }
@@ -453,7 +453,7 @@ private:
         [&](auto i) {
           // node_prop_indices[i] gives old node id
           old_to_new_map[node_prop_indices[i]] = i;
-          degrees[i] = seed_topo.degree(node_prop_indices[i]);
+          degrees[i] = seed_topo.OutDegree(node_prop_indices[i]);
         },
         katana::no_stats());
 
@@ -470,7 +470,7 @@ private:
     edge_prop_indices.allocateInterleaved(seed_topo.NumEdges());
 
     katana::do_all(
-        katana::iterate(seed_topo.all_nodes()),
+        katana::iterate(seed_topo.Nodes()),
         [&](auto old_src_id) {
           auto new_srd_id = old_to_new_map[old_src_id];
           auto new_out_index = new_srd_id > 0 ? degrees[new_srd_id - 1] : 0;
@@ -486,7 +486,8 @@ private:
             new_dest_vec[new_edge_id] = new_edge_dest;
 
             // copy over edge_property_index mapping from old edge to new edge
-            edge_prop_indices[new_edge_id] = seed_topo.edge_property_index(e);
+            edge_prop_indices[new_edge_id] =
+                seed_topo.GetEdgePropertyIndexFromOutEdge(e);
           }
           KATANA_LOG_DEBUG_ASSERT(new_out_index == degrees[new_srd_id]);
         },
@@ -605,12 +606,13 @@ public:
     return static_cast<Node>(d);
   }
 
-  nodes_range nodes(Node begin, Node end) const noexcept {
-    return MakeStandardRange<node_iterator>(begin, end);
-  }
+  /// @param node node to get degree for
+  /// @returns Degree of node N
+  size_t OutDegree(Node node) const noexcept { return OutEdges(node).size(); }
 
-  nodes_range all_nodes() const noexcept {
-    return nodes(Node{0}, static_cast<Node>(NumNodes()));
+  nodes_range Nodes() const noexcept {
+    return MakeStandardRange<node_iterator>(
+        Node{0}, static_cast<Node>(NumNodes()));
   }
 
   // Standard container concepts
@@ -623,18 +625,15 @@ public:
 
   bool empty() const noexcept { return NumNodes() == 0; }
 
-  ///@param node node to get degree for
-  ///@returns Degree of node N
-  size_t degree(Node node) const noexcept { return OutEdges(node).size(); }
-
-  PropertyIndex edge_property_index(const Edge& eid) const noexcept {
+  PropertyIndex GetEdgePropertyIndexFromOutEdge(
+      const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
     return projected_to_original_edges_mapping_[eid];
   }
 
   /// @param eid the input eid (must be projected edge id)
   Edge projected_to_original_edge_id(const Edge& eid) const noexcept {
-    return edge_property_index(eid);
+    return GetEdgePropertyIndexFromOutEdge(eid);
   }
 
   /// @param eid the input eid (must be original edge id)
@@ -642,14 +641,14 @@ public:
     return original_to_projected_edges_mapping_[eid];
   }
 
-  PropertyIndex node_property_index(const Node& nid) const noexcept {
+  PropertyIndex GetNodePropertyIndex(const Node& nid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(nid < NumNodes());
     return projected_to_original_nodes_mapping_[nid];
   }
 
   /// @param nid the input node id (must be projected node id)
   Node projected_to_original_node_id(const Node& nid) const noexcept {
-    return node_property_index(nid);
+    return GetNodePropertyIndex(nid);
   }
 
   /// @param nid the input node id (must be original node id)
@@ -855,12 +854,12 @@ public:
       std::shared_ptr<const CondensedTypeIDMap> edge_type_index,
       EdgeShuffleTopology&& e_topo);
 
-  using Base::degree;
   using Base::edge_sort_state;
   using Base::has_transpose_state;
   using Base::invalidate;
   using Base::is_transposed;
   using Base::is_valid;
+  using Base::OutDegree;
   using Base::OutEdges;
   using Base::transpose_state;
 
@@ -888,7 +887,7 @@ public:
   /// @param N node to get degree for
   /// @param edge_type edge_type to get degree of
   /// @returns Degree of node N
-  size_t degree(Node N, const EntityTypeID& edge_type) const noexcept {
+  size_t OutDegree(Node N, const EntityTypeID& edge_type) const noexcept {
     return OutEdges(N, edge_type).size();
   }
 
@@ -902,7 +901,7 @@ public:
 
   /// Returns all edges from src to dst with some edge_type.  If not found, returns
   /// empty range.
-  edges_range FindAllEdgesWithType(
+  edges_range FindAllEdges(
       Node node, Node key, const EntityTypeID& edge_type) const noexcept {
     auto e_range = OutEdges(node, edge_type);
     if (e_range.empty()) {
@@ -930,18 +929,18 @@ public:
   /// If not found, returns nothing.
   // TODO(amber): Assess the usefulness of this method. This method cannot return
   // edges of all types. Only the first found type. We should however support
-  // find_edges(src, dst) or find_edge(src, dst) that doesn't care about edge type
-  edges_range FindAllEdgesSingleType(Node src, Node dst) const {
+  // FindAllEdges(src, dst) or FindEdge(src, dst) that doesn't care about edge type
+  edges_range FindAllEdges(Node src, Node dst) const {
     // trivial check; can't be connected if degree is 0
     auto empty_range = MakeStandardRange<edge_iterator>(Edge{0}, Edge{0});
-    if (degree(src) == 0) {
+    if (OutDegree(src) == 0) {
       return empty_range;
     }
 
     // loop through all type_ids
     for (const EntityTypeID& edge_type : GetDistinctEdgeTypes()) {
       // always use out edges (we want an id to the out edge returned)
-      edges_range r = FindAllEdgesWithType(src, dst, edge_type);
+      edges_range r = FindAllEdges(src, dst, edge_type);
 
       // return if something was found
       if (r) {
@@ -959,8 +958,7 @@ public:
   /// @param dst destination node of the edge
   /// @param edge_type edge_type of the edge
   /// @returns true iff the edge exists
-  bool IsConnectedWithEdgeType(
-      Node src, Node dst, const EntityTypeID& edge_type) const {
+  bool HasEdge(Node src, Node dst, const EntityTypeID& edge_type) const {
     auto e_range = OutEdges(src, edge_type);
     if (e_range.empty()) {
       return false;
@@ -983,7 +981,7 @@ public:
     static_assert(std::is_same_v<std::invoke_result_t<TestFunc, Edge>, bool>);
 
     for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      for (auto e : FindAllEdgesWithType(src, dst, edge_type)) {
+      for (auto e : FindAllEdges(src, dst, edge_type)) {
         if (func(e)) {
           return true;
         }
@@ -1018,15 +1016,15 @@ public:
   /// @param src source node of the edge
   /// @param dst destination node of the edge
   /// @returns true iff the edge exists
-  bool IsConnected(Node src, Node dst) const {
+  bool HasEdge(Node src, Node dst) const {
     // trivial check; can't be connected if degree is 0
 
-    if (degree(src) == 0ul) {
+    if (OutDegree(src) == 0ul) {
       return false;
     }
 
     for (const auto& edge_type : GetDistinctEdgeTypes()) {
-      if (IsConnectedWithEdgeType(src, dst, edge_type)) {
+      if (HasEdge(src, dst, edge_type)) {
         return true;
       }
     }
@@ -1095,13 +1093,11 @@ public:
 
   /// @param node node to get degree for
   /// @returns Degree of node N
-  auto degree(const Node& node) const noexcept { return topo().degree(node); }
-
-  auto nodes(const Node& begin, const Node& end) const noexcept {
-    return topo().nodes(begin, end);
+  auto OutDegree(const Node& node) const noexcept {
+    return topo().OutDegree(node);
   }
 
-  auto all_nodes() const noexcept { return topo().all_nodes(); }
+  auto Nodes() const noexcept { return topo().Nodes(); }
 
   // Standard container concepts
 
@@ -1113,19 +1109,19 @@ public:
 
   auto empty() const noexcept { return topo().empty(); }
 
-  auto edge_property_index(const Edge& e) const noexcept {
-    return topo().edge_property_index(e);
+  auto GetEdgePropertyIndexFromOutEdge(const Edge& e) const noexcept {
+    return topo().GetEdgePropertyIndexFromOutEdge(e);
   }
 
-  auto node_property_index(const Node& nid) const noexcept {
-    return topo().node_property_index(nid);
+  auto GetNodePropertyIndex(const Node& nid) const noexcept {
+    return topo().GetNodePropertyIndex(nid);
   }
-  auto original_node_id(const Node& nid) const noexcept {
-    return topo().original_node_id(nid);
+  auto GetLocalNodeID(const Node& nid) const noexcept {
+    return topo().GetLocalNodeID(nid);
   }
 
-  auto original_edge_id(const Edge& eid) const noexcept {
-    return topo().original_edge_id(eid);
+  auto GetLocalEdgeIDFromOutEdge(const Edge& eid) const noexcept {
+    return topo().GetLocalEdgeIDFromOutEdge(eid);
   }
   void Print() const noexcept { topo_ptr_->Print(); }
 
@@ -1165,13 +1161,11 @@ public:
 
   /// @param node node to get degree for
   /// @returns Degree of node N
-  auto degree(const Node& node) const noexcept { return topo().degree(node); }
-
-  auto nodes(const Node& begin, const Node& end) const noexcept {
-    return topo().nodes(begin, end);
+  auto OutDegree(const Node& node) const noexcept {
+    return topo().OutDegree(node);
   }
 
-  auto all_nodes() const noexcept { return topo().all_nodes(); }
+  auto Nodes() const noexcept { return topo().Nodes(); }
 
   auto OutEdges() const noexcept { return topo().OutEdges(); }
 
@@ -1185,12 +1179,12 @@ public:
 
   auto empty() const noexcept { return topo().empty(); }
 
-  auto edge_property_index(const Edge& e) const noexcept {
-    return topo().edge_property_index(e);
+  auto GetEdgePropertyIndexFromOutEdge(const Edge& e) const noexcept {
+    return topo().GetEdgePropertyIndexFromOutEdge(e);
   }
 
-  auto node_property_index(const Node& nid) const noexcept {
-    return topo().node_property_index(nid);
+  auto GetNodePropertyIndex(const Node& nid) const noexcept {
+    return topo().GetNodePropertyIndex(nid);
   }
   auto projected_to_original_node_id(const Node& nid) const noexcept {
     return topo().projected_to_original_node_id(nid);
@@ -1247,21 +1241,24 @@ public:
     return in().OutEdges(node);
   }
 
-  auto in_degree(const GraphTopologyTypes::Node& node) const noexcept {
-    return in().degree(node);
+  auto InDegree(const GraphTopologyTypes::Node& node) const noexcept {
+    return in().OutDegree(node);
   }
 
   auto InEdgeSrc(const GraphTopologyTypes::Edge& edge_id) const noexcept {
     return in().OutEdgeDst(edge_id);
   }
 
-  auto in_edge_property_index(
+  // TODO(yan): This will become GetEdgePropertyIndex(InEdgeHandle) once we
+  // introduce new opaque indexing types.
+  auto GetEdgePropertyIndexFromInEdge(
       const GraphTopologyTypes::Edge& eid) const noexcept {
-    return in().edge_property_index(eid);
+    return in().GetEdgePropertyIndexFromOutEdge(eid);
   }
 
-  auto original_in_edge_id(const GraphTopologyTypes::Edge& eid) const noexcept {
-    return in().original_edge_id(eid);
+  auto GetLocalEdgeIDFromInEdge(
+      const GraphTopologyTypes::Edge& eid) const noexcept {
+    return in().GetLocalEdgeIDFromOutEdge(eid);
   }
 
 protected:
@@ -1301,11 +1298,6 @@ public:
     return MakeDisjointEdgesRange(out().OutEdges(node), in().OutEdges(node));
   }
 
-  bool is_in_edge(const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(out().NumEdges() > 0);
-    return eid >= fake_id_offset();
-  }
-
   Node UndirectedEdgeNeighbor(Edge eid) const noexcept {
     if (is_in_edge(eid)) {
       return in().OutEdgeDst(real_in_edge_id(eid));
@@ -1313,12 +1305,9 @@ public:
     return out().OutEdgeDst(eid);
   }
 
-  nodes_range nodes(Node begin, Node end) const noexcept {
-    return MakeStandardRange<node_iterator>(begin, end);
-  }
-
-  nodes_range all_nodes() const noexcept {
-    return nodes(Node{0}, static_cast<Node>(NumNodes()));
+  nodes_range Nodes() const noexcept {
+    return MakeStandardRange<node_iterator>(
+        Node{0}, static_cast<Node>(NumNodes()));
   }
 
   auto OutEdges() const noexcept {
@@ -1337,33 +1326,36 @@ public:
 
   bool empty() const noexcept { return NumNodes() == 0; }
 
-  ///@param node node to get degree for
-  ///@returns Degree of node N
-  size_t degree(Node node) const noexcept {
+  /// @param node node to get degree for
+  /// @returns Degree of node N
+  size_t UndirectedDegree(Node node) const noexcept {
     return UndirectedEdges(node).size();
   }
 
-  PropertyIndex edge_property_index(const Edge& eid) const noexcept {
+  // TODO(yan): This will become GetEdgePropertyIndex(UndirectedEdgeHandle) once we
+  // introduce new opaque indexing types.
+  PropertyIndex GetEdgePropertyIndexFromUndirectedEdge(
+      const Edge& eid) const noexcept {
     if (is_in_edge(eid)) {
-      return in().edge_property_index(real_in_edge_id(eid));
+      return in().GetEdgePropertyIndexFromOutEdge(real_in_edge_id(eid));
     }
-    return out().edge_property_index(eid);
+    return out().GetEdgePropertyIndexFromOutEdge(eid);
   }
 
-  PropertyIndex node_property_index(const Node& nid) const noexcept {
+  PropertyIndex GetNodePropertyIndex(const Node& nid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(
-        out().node_property_index(nid) == in().node_property_index(nid));
-    return out().node_property_index(nid);
+        out().GetNodePropertyIndex(nid) == in().GetNodePropertyIndex(nid));
+    return out().GetNodePropertyIndex(nid);
   }
 
   // TODO(amber): These two methods are a short term fix. The nature of
   // PropertyIndex is expected to change post grouping of properties.
-  Node original_node_id(const Node& nid) const noexcept {
-    return static_cast<Node>(node_property_index(nid));
+  Node GetLocalNodeID(const Node& nid) const noexcept {
+    return static_cast<Node>(GetNodePropertyIndex(nid));
   }
 
-  Edge original_edge_id(const Edge& eid) const noexcept {
-    return edge_property_index(eid);
+  Edge GetLocalEdgeIDFromUndirectedEdge(const Edge& eid) const noexcept {
+    return GetEdgePropertyIndexFromUndirectedEdge(eid);
   }
 
 protected:
@@ -1371,6 +1363,11 @@ protected:
   const InTopo& in() const noexcept { return *in_topo_; }
 
 private:
+  bool is_in_edge(const Edge& eid) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(out().NumEdges() > 0);
+    return eid >= fake_id_offset();
+  }
+
   Edge fake_id_offset() const noexcept {
     return out().NumEdges() +
            1;  // +1 so that last edge iterator of out() is different from first edge of in()
@@ -1418,16 +1415,16 @@ public:
         katana::RDGTopology::EdgeSortKind::kSortedByDestID));
   }
 
-  auto find_edge(const Node& src, const Node& dst) const noexcept {
-    return Base::topo().find_edge(src, dst);
+  auto FindEdge(const Node& src, const Node& dst) const noexcept {
+    return Base::topo().FindEdge(src, dst);
   }
 
-  auto has_edge(const Node& src, const Node& dst) const noexcept {
-    return Base::topo().has_edge(src, dst);
+  auto HasEdge(const Node& src, const Node& dst) const noexcept {
+    return Base::topo().HasEdge(src, dst);
   }
 
-  auto find_edges(const Node& src, const Node& dst) const noexcept {
-    return Base::topo().find_edges(src, dst);
+  auto FindAllEdges(const Node& src, const Node& dst) const noexcept {
+    return Base::topo().FindAllEdges(src, dst);
   }
 };
 
@@ -1465,43 +1462,37 @@ public:
 
   auto InEdges(Node N) const noexcept { return Base::in().OutEdges(N); }
 
-  auto degree(Node N, const EntityTypeID& edge_type) const noexcept {
-    return Base::out().degree(N, edge_type);
+  auto OutDegree(Node N, const EntityTypeID& edge_type) const noexcept {
+    return Base::out().OutDegree(N, edge_type);
   }
 
-  auto degree(Node N) const noexcept { return Base::out().degree(N); }
+  auto OutDegree(Node N) const noexcept { return Base::out().OutDegree(N); }
 
-  auto in_degree(Node N, const EntityTypeID& edge_type) const noexcept {
-    return Base::in().degree(N, edge_type);
+  auto InDegree(Node N, const EntityTypeID& edge_type) const noexcept {
+    return Base::in().OutDegree(N, edge_type);
   }
 
-  auto in_degree(Node N) const noexcept { return Base::in().degree(N); }
+  auto InDegree(Node N) const noexcept { return Base::in().OutDegree(N); }
 
-  auto FindAllEdgesWithType(
+  auto FindAllEdges(
       const Node& src, const Node& dst,
       const EntityTypeID& edge_type) const noexcept {
-    return Base::out().FindAllEdgesWithType(src, dst, edge_type);
-  }
-
-  auto FindAllInEdgesWithType(
-      const Node& src, const Node& dst,
-      const EntityTypeID& edge_type) const noexcept {
-    return Base::in().FindAllEdgesWithType(src, dst, edge_type);
+    return Base::out().FindAllEdges(src, dst, edge_type);
   }
 
   /// Returns an edge iterator to an edge with some node and key by
   /// searching for the key via the node's outgoing or incoming edges.
   /// If not found, returns nothing.
-  edges_range FindAllEdgesSingleType(Node src, Node dst) const {
+  edges_range FindAllEdges(Node src, Node dst) const {
     // TODO(amber): Similar to IsConnectedWithEdgeType, we should be able to switch
-    // between searching out going topology or incoming topology. However, incoming
+    // between searching outgoing topology or incoming topology. However, incoming
     // topology will return a different range of incoming edges instead of outgoing
     // edges. Can we convert easily between outing and incoming edge range
-    if (Base::out().degree(src) == 0 || Base::in().degree(dst) == 0) {
+    if (Base::out().OutDegree(src) == 0 || Base::in().OutDegree(dst) == 0) {
       return MakeStandardRange<edge_iterator>(Edge{0}, Edge{0});
     }
 
-    return Base::out().FindAllEdgesSingleType(src, dst);
+    return Base::out().FindAllEdges(src, dst);
   }
 
   /// Check if vertex src is connected to vertex dst with the given edge edge_type
@@ -1510,18 +1501,17 @@ public:
   /// @param dst destination node of the edge
   /// @param edge_type edge_type of the edge
   /// @returns true iff the edge exists
-  bool IsConnectedWithEdgeType(
-      Node src, Node dst, const EntityTypeID& edge_type) const {
-    const auto d_out = Base::out().degree(src, edge_type);
-    const auto d_in = Base::in().degree(dst, edge_type);
+  bool HasEdge(Node src, Node dst, const EntityTypeID& edge_type) const {
+    const auto d_out = OutDegree(src, edge_type);
+    const auto d_in = InDegree(dst, edge_type);
     if (d_out == 0 || d_in == 0) {
       return false;
     }
 
     if (d_out < d_in) {
-      return Base::out().IsConnectedWithEdgeType(src, dst, edge_type);
+      return Base::out().HasEdge(src, dst, edge_type);
     } else {
-      return Base::in().IsConnectedWithEdgeType(dst, src, edge_type);
+      return Base::in().HasEdge(dst, src, edge_type);
     }
   }
 
@@ -1534,8 +1524,8 @@ public:
   template <typename TestFunc>
   bool HasEdgeSatisfyingPredicate(
       Node src, Node dst, const TestFunc& func) const {
-    const auto d_out = Base::out().degree(src);
-    const auto d_in = Base::in().degree(dst);
+    const auto d_out = OutDegree(src);
+    const auto d_in = InDegree(dst);
     if (d_out == 0 || d_in == 0) {
       return false;
     }
@@ -1583,17 +1573,17 @@ public:
   /// @param src source node of the edge
   /// @param dst destination node of the edge
   /// @returns true iff the edge exists
-  bool IsConnected(Node src, Node dst) const {
-    const auto d_out = Base::out().degree(src);
-    const auto d_in = Base::in().degree(dst);
+  bool HasEdge(Node src, Node dst) const {
+    const auto d_out = OutDegree(src);
+    const auto d_in = InDegree(dst);
     if (d_out == 0 || d_in == 0) {
       return false;
     }
 
     if (d_out < d_in) {
-      return Base::out().IsConnected(src, dst);
+      return Base::out().HasEdge(src, dst);
     } else {
-      return Base::in().IsConnected(dst, src);
+      return Base::in().HasEdge(dst, src);
     }
   }
 };
@@ -1602,9 +1592,9 @@ template <typename Graph>
 using has_undirected_t =
     decltype(std::declval<Graph>().UndirectedEdges(typename Graph::Node()));
 
-template <typename Graph, typename GNode = typename Graph::Node>
+template <typename Graph>
 auto
-Edges(const Graph& graph, GNode node) {
+Edges(const Graph& graph, typename Graph::Node node) {
   if constexpr (katana::is_detected_v<has_undirected_t, Graph>) {
     return graph.UndirectedEdges(node);
   } else {
@@ -1612,13 +1602,23 @@ Edges(const Graph& graph, GNode node) {
   }
 }
 
-template <typename Graph, typename GEdge>
+template <typename Graph>
 auto
-EdgeDst(const Graph& graph, GEdge edge) {
+EdgeDst(const Graph& graph, typename Graph::Edge edge) {
   if constexpr (katana::is_detected_v<has_undirected_t, Graph>) {
     return graph.UndirectedEdgeNeighbor(edge);
   } else {
     return graph.OutEdgeDst(edge);
+  }
+}
+
+template <typename Graph>
+auto
+Degree(const Graph& graph, typename Graph::Node node) {
+  if constexpr (katana::is_detected_v<has_undirected_t, Graph>) {
+    return graph.UndirectedDegree(node);
+  } else {
+    return graph.OutDegree(node);
   }
 }
 

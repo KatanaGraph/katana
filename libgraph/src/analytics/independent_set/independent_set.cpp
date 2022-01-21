@@ -451,7 +451,7 @@ struct EdgeTiledPrioAlgo {
           auto beg = rng.begin();
           const auto end = rng.end();
 
-          float degree = float(graph->degree(src));
+          float degree = float(graph->OutDegree(src));
           float x = degree - hash(src) * kHashScale;
           int res = round(scale_avg / (avg_degree + x));
           uint8_t val = (res + res) | 0x03;

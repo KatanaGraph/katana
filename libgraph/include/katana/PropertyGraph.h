@@ -531,13 +531,13 @@ public:
 
   /// \return returns the most specific node entity type for @param node
   EntityTypeID GetTypeOfNode(Node node) const {
-    auto idx = node_property_index(node);
+    auto idx = GetNodePropertyIndex(node);
     return node_entity_type_ids_[idx];
   }
 
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdgeFromTopoIndex(Edge edge) const {
-    auto idx = edge_property_index(edge);
+    auto idx = GetEdgePropertyIndexFromOutEdge(edge);
     return GetTypeOfEdgeFromPropertyIndex(idx);
   }
 
@@ -697,14 +697,14 @@ public:
     return edge_entity_type_manager_;
   }
 
-  GraphTopology::PropertyIndex edge_property_index(
+  GraphTopology::PropertyIndex GetEdgePropertyIndexFromOutEdge(
       const Edge& eid) const noexcept {
-    return topology().edge_property_index(eid);
+    return topology().GetEdgePropertyIndexFromOutEdge(eid);
   }
 
-  GraphTopology::PropertyIndex node_property_index(
+  GraphTopology::PropertyIndex GetNodePropertyIndex(
       const Node& nid) const noexcept {
-    return topology().node_property_index(nid);
+    return topology().GetNodePropertyIndex(nid);
   }
 
   /// Add Node properties that do not exist in the current graph
@@ -840,7 +840,7 @@ public:
 
   node_iterator end() const { return topology().end(); }
 
-  nodes_range all_nodes() const noexcept { return topology().all_nodes(); }
+  nodes_range Nodes() const noexcept { return topology().Nodes(); }
 
   edges_range OutEdges() const noexcept { return topology().OutEdges(); }
 

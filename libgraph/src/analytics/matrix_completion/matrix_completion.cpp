@@ -235,7 +235,7 @@ struct MatrixCompletionImplementation
 
       largest_node_id_per_thread[tid] = 0;
       for (GNode i = start; i < end; ++i) {
-        if (graph.degree(i)) {
+        if (graph.OutDegree(i)) {
           if (largest_node_id_per_thread[tid] < i)
             largest_node_id_per_thread[tid] = i;
         }

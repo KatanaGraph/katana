@@ -21,9 +21,9 @@ verify_view(View generated_view, View loaded_view) {
   }
 
   auto beg_node = katana::make_zip_iterator(
-      generated_view.all_nodes().begin(), loaded_view.all_nodes().begin());
+      generated_view.Nodes().begin(), loaded_view.Nodes().begin());
   auto end_node = katana::make_zip_iterator(
-      generated_view.all_nodes().end(), loaded_view.all_nodes().end());
+      generated_view.Nodes().end(), loaded_view.Nodes().end());
 
   for (auto i = beg_node; i != end_node; i++) {
     KATANA_LOG_ASSERT(std::get<0>(*i) == std::get<1>(*i));

@@ -18,6 +18,7 @@
 #include "katana/FileView.h"
 #include "katana/PartitionMetadata.h"
 #include "katana/RDGLineage.h"
+#include "katana/RDGStorageFormatVersion.h"
 #include "katana/RDGTopology.h"
 #include "katana/ReadGroup.h"
 #include "katana/Result.h"

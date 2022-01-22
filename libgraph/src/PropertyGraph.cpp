@@ -64,8 +64,8 @@ CheckTopology(
 /// favor of this method.
 katana::Result<katana::PropertyGraph::EntityTypeIDArray>
 MapEntityTypeIDsArray(
-                      const katana::FileView& file_view, size_t num_entries, bool rdg_unstable_format) {
-
+    const katana::FileView& file_view, size_t num_entries,
+    bool rdg_unstable_format) {
   if (file_view.size() == 0) {
     return katana::ErrorCode::InvalidArgument;
   }
@@ -76,15 +76,13 @@ MapEntityTypeIDsArray(
 
   const katana::EntityTypeID* type_IDs_array = nullptr;
 
-  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat) && rdg_unstable_format) {
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat) &&
+      rdg_unstable_format) {
     type_IDs_array = file_view.ptr<katana::EntityTypeID>();
-  }
-  else{
+  } else {
     const auto* data = file_view.ptr<katana::EntityTypeIDArrayHeader>();
-    type_IDs_array =
-        reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
+    type_IDs_array = reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
   }
-
 
   KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
 
@@ -102,7 +100,7 @@ WriteEntityTypeIDsArray(
 
   KATANA_CHECKED(ff->Init());
 
-  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)){
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
     if (entity_type_id_array.size()) {
       const katana::EntityTypeID* raw = entity_type_id_array.data();
       auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
@@ -111,8 +109,7 @@ WriteEntityTypeIDsArray(
         return katana::ArrowToKatana(aro_sts.code());
       }
     }
-  }
-  else{
+  } else {
     katana::EntityTypeIDArrayHeader data[1] = {
         {.size = entity_type_id_array.size()}};
     arrow::Status aro_sts =

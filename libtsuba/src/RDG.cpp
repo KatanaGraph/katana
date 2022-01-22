@@ -311,7 +311,7 @@ katana::RDG::DoStore(
 
   // all rdgs stored while the unstable rdg storage format flag is set
   // are considered to be in the unstable rdg storage format
-  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)){
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
     core_->part_header().set_unstable_storage_format();
   }
 

@@ -190,8 +190,7 @@ katana::RDGSlice::DoMake(
     // the uses are different enough between RDG and RDGSlice that it probably
     // doesn't make sense
     // The most recent storage_format removes this header,
-    size_t entity_type_id_array_header_offset =
-      sizeof(EntityTypeIDArrayHeader);
+    size_t entity_type_id_array_header_offset = sizeof(EntityTypeIDArrayHeader);
     if (core_->part_header().unstable_storage_format()) {
       entity_type_id_array_header_offset = 0;
     }

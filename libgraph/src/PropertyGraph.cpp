@@ -909,8 +909,8 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 
   // Create an index based on the type of the field.
-  std::unique_ptr<katana::PropertyIndex<GraphTopology::Node>> index =
-      KATANA_CHECKED(katana::MakeTypedIndex<katana::GraphTopology::Node>(
+  std::unique_ptr<katana::EntityIndex<GraphTopology::Node>> index =
+      KATANA_CHECKED(katana::MakeTypedEntityIndex<katana::GraphTopology::Node>(
           column_name, NumNodes(), property));
 
   KATANA_CHECKED(index->BuildFromProperty());
@@ -954,8 +954,8 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 
   // Create an index based on the type of the field.
-  std::unique_ptr<katana::PropertyIndex<katana::GraphTopology::Edge>> index =
-      KATANA_CHECKED(katana::MakeTypedIndex<katana::GraphTopology::Edge>(
+  std::unique_ptr<katana::EntityIndex<katana::GraphTopology::Edge>> index =
+      KATANA_CHECKED(katana::MakeTypedEntityIndex<katana::GraphTopology::Edge>(
           column_name, NumEdges(), property));
 
   KATANA_CHECKED(index->BuildFromProperty());
@@ -1270,9 +1270,8 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
   return katana::PropertyGraph::Make(std::move(transpose_topo));
 }
 
-katana::Result<katana::PropertyIndex<katana::GraphTopology::Node>*>
-katana::PropertyGraph::GetNodePropertyIndex(
-    const std::string& property_name) const {
+katana::Result<katana::EntityIndex<katana::GraphTopology::Node>*>
+katana::PropertyGraph::GetNodeIndex(const std::string& property_name) const {
   for (const auto& index : node_indexes()) {
     if (index->column_name() == property_name) {
       return index.get();

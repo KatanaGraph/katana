@@ -15,7 +15,7 @@ set(sources
         src/Properties.cpp
         src/PropertyGraph.cpp
         src/PropertyGraphRetractor.cpp
-        src/PropertyIndex.cpp
+        src/EntityIndex.cpp
         src/PropertyViews.cpp
         src/SharedMemSys.cpp
         src/TopologyGeneration.cpp

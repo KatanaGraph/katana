@@ -77,9 +77,6 @@ public:
   /// Is this RDG stored in an unstable format
   bool IsUnstableStorageFormat() const;
 
-  /// Mark the RDG as being in an unstable format
-  void SetUnstableStorageFormat();
-
   /// Perform some checks on assumed invariants
   katana::Result<void> Validate() const;
 

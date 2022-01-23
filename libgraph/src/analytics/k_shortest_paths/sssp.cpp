@@ -42,24 +42,20 @@ struct NodeMax : public katana::AtomicPODProperty<uint32_t> {};
 
 using EdgeWeight = katana::UInt32Property;
 
-template <typename Weight>
-struct SsspImplementation
-    : public katana::analytics::KSsspImplementationBase<
-          katana::TypedPropertyGraph<
-              std::tuple<NodeCount, NodeMax>, std::tuple<EdgeWeight>>,
-          Weight, const Path, true> {
+template <typename GraphTy, typename Weight>
+struct SsspImplementation : public katana::analytics::KSsspImplementationBase<
+                                GraphTy, Weight, const Path, true> {
   using NodeData = std::tuple<NodeCount, NodeMax>;
   using EdgeData = std::tuple<EdgeWeight>;
 
-  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-  typedef typename Graph::Node GNode;
+  typedef typename GraphTy::Node GNode;
 
   constexpr static const bool kTrackWork = false;
   constexpr static const unsigned kChunkSize = 64U;
   constexpr static const ptrdiff_t kEdgeTileSize = 512;
 
   using SSSP = katana::analytics::KSsspImplementationBase<
-      Graph, Weight, const Path, true>;
+      GraphTy, Weight, const Path, true>;
 
   using Distance = uint32_t;
   using SSSPUpdateRequest = typename SSSP::UpdateRequest;
@@ -77,7 +73,7 @@ struct SsspImplementation
   using OBIM_Barrier = typename katana::OrderedByIntegerMetric<
       SSSPUpdateRequestIndexer, PSchunk>::template with_barrier<true>::type;
 
-  using BFS = BfsSsspImplementationBase<Graph, unsigned int, false>;
+  using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
   using BFSUpdateRequest = typename BFS::UpdateRequest;
   using BFSSrcEdgeTile = typename BFS::SrcEdgeTile;
   using BFSSrcEdgeTileMaker = typename BFS::SrcEdgeTileMaker;
@@ -105,7 +101,7 @@ struct SsspImplementation
 
   template <typename Item, typename PushWrap, typename EdgeRange>
   bool CheckReachabilityAsync(
-      Graph* graph, const GNode& source, const PushWrap& pushWrap,
+      GraphTy* graph, const GNode& source, const PushWrap& pushWrap,
       const EdgeRange& edgeRange, unsigned int reportNode) {
     using FIFO = katana::PerSocketChunkFIFO<kChunkSize>;
     using WL = FIFO;
@@ -114,7 +110,7 @@ struct SsspImplementation
 
     Loop loop;
 
-    graph->GetData<NodeCount>(source) = 1;
+    graph->template GetData<NodeCount>(source) = 1;
     katana::InsertBag<Item> initBag;
 
     pushWrap(initBag, source, 1, "parallel");
@@ -124,8 +120,8 @@ struct SsspImplementation
         [&](const Item& item, auto& ctx) {
           for (auto ii : edgeRange(item)) {
             GNode dst = graph->OutEdgeDst(ii);
-            if (graph->GetData<NodeCount>(dst) == 0) {
-              graph->GetData<NodeCount>(dst) = 1;
+            if (graph->template GetData<NodeCount>(dst) == 0) {
+              graph->template GetData<NodeCount>(dst) = 1;
               pushWrap(ctx, dst, 1);
             }
           }
@@ -133,24 +129,24 @@ struct SsspImplementation
         katana::wl<WL>(), katana::loopname("runBFS"),
         katana::disable_conflict_detection());
 
-    if (graph->GetData<NodeCount>(reportNode) == 0) {
+    if (graph->template GetData<NodeCount>(reportNode) == 0) {
       return false;
     }
 
     katana::do_all(katana::iterate(*graph), [&graph](GNode n) {
-      graph->GetData<NodeCount>(n) = 0;
+      graph->template GetData<NodeCount>(n) = 0;
     });
 
     return true;
   }
 
   bool CheckReachabilitySync(
-      Graph* graph, const GNode& source, unsigned int reportNode) {
+      GraphTy* graph, const GNode& source, unsigned int reportNode) {
     katana::InsertBag<GNode> current_bag;
     katana::InsertBag<GNode> next_bag;
 
     current_bag.push(source);
-    graph->GetData<NodeCount>(source) = 1;
+    graph->template GetData<NodeCount>(source) = 1;
 
     while (current_bag.begin() != current_bag.end()) {
       katana::do_all(
@@ -158,8 +154,8 @@ struct SsspImplementation
           [&](GNode n) {
             for (auto edge : graph->OutEdges(n)) {
               auto dest = graph->OutEdgeDst(edge);
-              if (graph->GetData<NodeCount>(dest) == 0) {
-                graph->GetData<NodeCount>(dest) = 1;
+              if (graph->template GetData<NodeCount>(dest) == 0) {
+                graph->template GetData<NodeCount>(dest) = 1;
                 next_bag.push(dest);
               }
             }
@@ -170,12 +166,12 @@ struct SsspImplementation
       std::swap(current_bag, next_bag);
     }
 
-    if (graph->GetData<NodeCount>(reportNode) == 0) {
+    if (graph->template GetData<NodeCount>(reportNode) == 0) {
       return false;
     }
 
     katana::do_all(katana::iterate(*graph), [&graph](GNode n) {
-      graph->GetData<NodeCount>(n) = 0;
+      graph->template GetData<NodeCount>(n) = 0;
     });
 
     return true;
@@ -185,7 +181,7 @@ struct SsspImplementation
   template <
       typename Item, typename OBIMTy, typename PushWrap, typename EdgeRange>
   void DeltaStepAlgo(
-      katana::NUMAArray<Weight>* edge_data, Graph* graph, const GNode& source,
+      katana::NUMAArray<Weight>* edge_data, GraphTy* graph, const GNode& source,
       const PushWrap& pushWrap, const EdgeRange& edgeRange,
       katana::InsertBag<std::pair<Weight, Path*>>* report_paths_bag,
       katana::InsertBag<Path*>* path_pointers, PathAlloc& path_alloc,
@@ -270,7 +266,7 @@ struct SsspImplementation
 
 public:
   katana::Result<void> KSP(
-      Graph& graph, unsigned int startNode, unsigned int reportNode,
+      GraphTy& graph, unsigned int startNode, unsigned int reportNode,
       AlgoReachability algoReachability, unsigned int numPaths,
       unsigned int stepShift, SsspPlan plan) {
     auto it = graph.begin();
@@ -384,15 +380,13 @@ public:
   }
 };
 
-template <typename Weight>
+template <typename GraphTy, typename Weight>
 katana::Result<void>
-Ksp(katana::TypedPropertyGraph<
-        std::tuple<NodeCount, NodeMax>, std::tuple<EdgeWeight>>& pg,
-    unsigned int startNode, unsigned int reportNode,
+Ksp(GraphTy& pg, unsigned int startNode, unsigned int reportNode,
     AlgoReachability algoReachability, unsigned int numPaths,
     unsigned int stepShift, SsspPlan plan) {
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
-  SsspImplementation<Weight> impl{{plan.edge_tile_size()}};
+  SsspImplementation<GraphTy, Weight> impl{{plan.edge_tile_size()}};
   return impl.KSP(
       pg, startNode, reportNode, algoReachability, numPaths, stepShift, plan);
 }
@@ -409,14 +403,16 @@ SSSPWithWrap(
     return result.error();
   }
 
-  auto graph = katana::TypedPropertyGraph<
-      std::tuple<NodeCount, NodeMax>, std::tuple<EdgeWeight>>::Make(pg);
+  using GraphTy = katana::TypedPropertyGraph<
+      std::tuple<NodeCount, NodeMax>, std::tuple<EdgeWeight>>;
+
+  auto graph = GraphTy::Make(pg);
 
   if (!graph) {
     return graph.error();
   }
 
-  return Ksp<Weight>(
+  return Ksp<GraphTy, Weight>(
       graph.value(), startNode, reportNode, algoReachability, numPaths,
       stepShift, plan);
 }

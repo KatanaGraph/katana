@@ -921,7 +921,12 @@ katana::PropertyGraph::DeleteNodeIndex(const std::string& column_name) {
       return katana::ResultSuccess();
     }
   }
-  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+
+  // TODO(Chak-Pong) make deleteNodeIndex always successful
+  //  before index existence check is available from python side
+  //  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+  KATANA_LOG_WARN("the following node index not found: {}", column_name);
+  return katana::ResultSuccess();
 }
 
 // Build an index over edges.

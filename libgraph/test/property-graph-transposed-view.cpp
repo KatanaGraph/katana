@@ -7,7 +7,7 @@ using Node = PropertyGraph::Node;
 using TransposedGraphView = PropertyGraphViews::Transposed;
 
 Result<void>
-TestTransposedView() {
+TestTransposed() {
   // We build a simple tree-like graph and its transpose.
   // Then we compare the transposed view of the first graph with the second.
   AsymmetricGraphTopologyBuilder builder, builder_tr;
@@ -43,7 +43,7 @@ int
 main() {
   SharedMemSys sys;
 
-  auto res = TestTransposedView();
+  auto res = TestTransposed();
   KATANA_LOG_ASSERT(res);
 
   return 0;

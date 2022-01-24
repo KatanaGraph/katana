@@ -29,7 +29,7 @@ set(sources
         src/analytics/independent_set/independent_set.cpp
         src/analytics/jaccard/jaccard.cpp
         src/analytics/k_core/k_core.cpp
-        src/analytics/k_shortest_paths/sssp.cpp
+        src/analytics/k_shortest_paths/ksssp.cpp
         src/analytics/k_truss/k_truss.cpp
         src/analytics/pagerank/pagerank-pull.cpp
         src/analytics/pagerank/pagerank-push.cpp

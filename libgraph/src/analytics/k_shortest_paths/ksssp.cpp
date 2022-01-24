@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "katana/analytics/k_shortest_paths/sssp.h"
+#include "katana/analytics/k_shortest_paths/ksssp.h"
 
 #include "katana/AtomicHelpers.h"
 #include "katana/Reduction.h"

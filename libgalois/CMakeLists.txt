@@ -7,7 +7,6 @@ configure_file(src/Version.cpp.in Version.cpp @ONLY)
 
 set(sources
         "${CMAKE_CURRENT_BINARY_DIR}/Version.cpp"
-        src/ArrowRandomAccessBuilder.cpp
         src/Barrier.cpp
         src/Barrier_Counting.cpp
         src/Barrier_Dissemination.cpp

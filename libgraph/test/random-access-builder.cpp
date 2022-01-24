@@ -3,6 +3,7 @@
 //#include <omp.h>
 
 #include "katana/ArrowRandomAccessBuilder.h"
+#include "katana/SharedMemSys.h"
 
 template <typename T>
 T

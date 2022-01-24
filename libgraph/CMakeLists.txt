@@ -4,6 +4,7 @@ set_target_properties(katana_graph PROPERTIES EXPORT_NAME graph)
 add_dependencies(lib katana_graph)
 
 set(sources
+        src/ArrowRandomAccessBuilder.cpp
         src/BuildGraph.cpp
         src/FileGraph.cpp
         src/FileGraphParallel.cpp

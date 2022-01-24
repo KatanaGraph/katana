@@ -26,16 +26,12 @@
 
 #include "katana/analytics/Utils.h"
 
-// #include "katana/analytics/BfsSsspImplementationBase.h"
-
 namespace katana::analytics {
 
 template <
     typename _Graph, typename _DistLabel, typename Path, bool UseEdgeWt,
     ptrdiff_t EdgeTileSize = 256>
 struct KSsspImplementationBase {
-  /* struct KSsspImplementationBase : protected BfsSsspImplementationBase<
-  _Graph, _DistLabel, USE_EDGE_WT> { */
 
   const ptrdiff_t edge_tile_size;
 
@@ -77,18 +73,6 @@ struct KSsspImplementationBase {
     }
   };
 
-  /* struct YenUpdateRequest : UpdateRequest {
-    Path* path;
-    YenUpdateRequest(const GNode& N, Dist W, Path* P)
-        : src(N), dist(W), path(P) {}
-    YenUpdateRequest() : src(), dist(0), path(NULL) {}
-    friend bool operator<(
-        const YenUpdateRequest& left, const YenUpdateRequest& right) {
-      return left.dist == right.dist ? left.src < right.src
-                                     : left.dist < right.dist;
-    }
-  }; */
-
   struct SrcEdgeTile {
     GNode src;
     Distance distance;
@@ -101,15 +85,6 @@ struct KSsspImplementationBase {
                                              : left.distance < right.distance;
     }
   };
-
-  /* struct YenSrcEdgeTile : SrcEdgeTile {
-    Path* path;
-    friend bool operator<(const YenSrcEdgeTile& left,
-                          const YenSrcEdgeTile& right) {
-      return left.dist == right.dist ? left.src < right.src
-                                     : left.dist < right.dist;
-    }
-  }; */
 
   struct SrcEdgeTileMaker {
     GNode src;
@@ -171,14 +146,6 @@ struct KSsspImplementationBase {
     }
   }
 
-  /* struct YenSrcEdgeTileMaker : SrcEdgeTileMaker {
-    Path* path;
-
-    YenSrcEdgeTile operator()(const EI& beg, const EI& end) const {
-      return YenSrcEdgeTile{src, dist, beg, end, path};
-    }
-  }; */
-
   struct ReqPushWrap {
     template <typename C>
     void operator()(
@@ -194,21 +161,6 @@ struct KSsspImplementationBase {
       cont.push(UpdateRequest(n, distance, path));
     }
   };
-
-  /* struct YenReqPushWrap {
-    template <typename C>
-    void operator()(
-        C& cont, const GNode& n, const Distance& distance, const Path* path,
-        const char* const) const {
-      (*this)(cont, n, distance, path);
-    }
-    template <typename C>
-    void operator()(
-        C& cont, const GNode& n, const Distance& distance,
-        const Path* path) const {
-      cont.push(YenUpdateRequest(n, distance, path));
-    }
-  }; */
 
   struct SrcEdgeTilePushWrap {
     Graph* graph;
@@ -228,23 +180,6 @@ struct KSsspImplementationBase {
       PushEdgeTiles(cont, graph, n, SrcEdgeTileMaker{n, distance, path});
     }
   };
-
-  /* struct YenSrcEdgeTilePushWrap : SrcEdgeTilePushWrap {
-    KSsspImplementationBase& impl;
-    template <typename C>
-    void operator()(
-        C& cont, const GNode& n, const Distance& distance, const Path* path,
-        const char* const) const {
-      impl.YenPushEdgeTilesParallel(
-          cont, graph, n, YenSrcEdgeTileMaker{n, distance, path});
-    }
-    template <typename C>
-    void operator()(
-        C& cont, const GNode& n, const Distance& distance,
-        const Path* path) const {
-      impl.PushEdgeTiles(cont, graph, n, YenSrcEdgeTileMaker{n, distance, path});
-    }
-  }; */
 
   struct OutEdgeRangeFn {
     Graph* graph;
@@ -355,30 +290,6 @@ struct KSsspImplementationBase {
 
     return true;
   }
-
-  /* struct YenOutEdgeRangeFn : OutEdgeRangeFn {
-    auto operator()(const YenUpdateRequest& req) const {
-      return graph->OutEdges(req.src);
-    }
-  } */
-
-  /* public:
-    struct UpdateRequestIndexer;
-    template <typename WL, typename TileMaker>
-    void PushEdgeTiles(WL& wl, EI beg, const EI end, const TileMaker& f);
-    template <typename WL, typename TileMaker>
-    void PushEdgeTiles(WL& wl, Graph* graph, GNode src, const TileMaker& f);
-    template <typename WL, typename TileMaker>
-    void PushEdgeTilesParallel(
-        WL& wl, Graph* graph, GNode src, const TileMaker& f);
-
-    struct TileRangeFn;
-    template <typename NodeProp, typename EdgeProp>
-    struct NotConsistent;
-    template <typename NodeProp>
-    struct MaxDist;
-    template <typename NodeProp, typename EdgeProp = katana::PODProperty<int64_t>>
-    static bool Verify(Graph* graph, GNode source); */
 };
 
 }  // namespace katana::analytics

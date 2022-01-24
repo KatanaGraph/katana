@@ -67,11 +67,11 @@ main(int argc, char** argv) {
       MakeFileGraph(inputFile, edge_property_name);
   std::string output_property_name = "jaccard_output_property";
 
-  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
-            << pg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
+            << pg->topology().NumEdges() << " edges\n";
 
-  if (base_node >= pg->topology().num_nodes() ||
-      report_node >= pg->topology().num_nodes()) {
+  if (base_node >= pg->topology().NumNodes() ||
+      report_node >= pg->topology().NumNodes()) {
     std::cerr << "failed to set report: " << report_node
               << " or failed to set base: " << base_node << "\n";
     abort();

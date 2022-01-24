@@ -11,8 +11,7 @@ from katana import (
     obim_metric,
     set_active_threads,
 )
-from katana.local import Graph
-from katana.local.atomic import ReduceMax, ReduceSum, atomic_min
+from katana.local import Graph, ReduceMax, ReduceSum, atomic_min
 from katana.local.datastructures import InsertBag
 from katana.timer import StatTimer
 

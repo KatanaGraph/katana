@@ -8,6 +8,7 @@ from typing import Optional, Set
 
 import generate_from_jinja
 import setuptools
+from setuptools.extension import Extension
 
 __all__ = ["setup"]
 
@@ -346,6 +347,41 @@ def _build_cython_extensions(pyx_files, source_root_name, extension_options):
     return cython_extensions
 
 
+def get_extension_options():
+    import numpy
+    import pyarrow
+
+    extension_options = load_lang_config("CXX")
+    extension_options["include_dirs"].append(numpy.get_include())
+    extension_options["include_dirs"].append(pyarrow.get_include())
+    extension_options["extra_compile_args"].append("-std=c++17")
+    if extension_options["compiler"]:
+        compiler = " ".join(extension_options["compiler"])
+        os.environ["CXX"] = compiler
+        os.environ["CC"] = compiler
+
+        # Because of odd handling of the linker in setuptools with C++ the
+        # compiler and the linker must use the same programs, so build a linker
+        # command line using the compiler.
+        linker = " ".join(extension_options["compiler"] + ["-pthread", "-shared"])
+        os.environ["LDSHARED"] = linker
+        os.environ["LDEXE"] = linker
+    extension_options["extra_compile_args"].extend(
+        [
+            # Warnings are common in generated code and hard to fix. Don't make them errors.
+            "-Wno-error",
+            # Entirely disable some warning that are common in generated code and safe.
+            "-Wno-unused-variable",
+            "-Wno-unused-function",
+            "-Wno-deprecated-declarations",
+            # Disable numpy deprecation warning in generated code.
+            "-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION",
+        ]
+    )
+    extension_options.pop("compiler")
+    return extension_options
+
+
 def cythonize(module_list, *, source_root, **kwargs):
     # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
     require_python_module("packaging")
@@ -368,57 +404,25 @@ def cythonize(module_list, *, source_root, **kwargs):
 
     import Cython.Build
     import numpy
-    import pyarrow
 
-    extension_options = load_lang_config("CXX")
-    extension_options["include_dirs"].append(numpy.get_include())
-    extension_options["include_dirs"].append(pyarrow.get_include())
+    extension_options = get_extension_options()
 
-    if not extension_options["extra_compile_args"]:
-        extension_options["extra_compile_args"] = ["-std=c++17", "-Werror"]
-
-    if extension_options["compiler"]:
-        compiler = " ".join(extension_options["compiler"])
-        os.environ["CXX"] = compiler
-        os.environ["CC"] = compiler
-
-        # Because of odd handling of the linker in setuptools with C++ the
-        # compiler and the linker must use the same programs, so build a linker
-        # command line using the compiler.
-        linker = " ".join(extension_options["compiler"] + ["-pthread", "-shared"])
-        os.environ["LDSHARED"] = linker
-        os.environ["LDEXE"] = linker
-
-    extension_options["extra_compile_args"].extend(
-        [
-            # Warnings are common in generated code and hard to fix. Don't make them errors.
-            "-Wno-error",
-            # Entirely disable some warning that are common in generated code and safe.
-            "-Wno-unused-variable",
-            "-Wno-unused-function",
-            "-Wno-deprecated-declarations",
-            # Disable numpy deprecation warning in generated code.
-            "-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION",
-        ]
-    )
-    extension_options.pop("compiler")
-
-    test_extension_options = extension_options.copy()
-    test_extension_options.setdefault("extra_link_args", [])
-    if not any(s.endswith("/libkatana_graph.so") for s in test_extension_options["extra_link_args"]):
-        test_extension_options["extra_link_args"].append("-lkatana_graph")
-    if not any(s.endswith("/libkatana_galois.so") for s in test_extension_options["extra_link_args"]):
-        test_extension_options["extra_link_args"].append("-lkatana_galois")
-    check_cython_module(
-        "libkatana_graph",
-        """
-# distutils: language=c++
-from katana.cpp.libgalois.Galois cimport setActiveThreads, SharedMemSys
-cdef SharedMemSys _katana_runtime
-setActiveThreads(1)
-    """,
-        extension_options=test_extension_options,
-    )
+    #     test_extension_options = extension_options.copy()
+    #     test_extension_options.setdefault("extra_link_args", [])
+    #     if not any(s.endswith("/libkatana_graph.so") for s in test_extension_options["extra_link_args"]):
+    #         test_extension_options["extra_link_args"].append("-lkatana_graph")
+    #     if not any(s.endswith("/libkatana_galois.so") for s in test_extension_options["extra_link_args"]):
+    #         test_extension_options["extra_link_args"].append("-lkatana_galois")
+    #     check_cython_module(
+    #         "libkatana_graph",
+    #         """
+    # # distutils: language=c++
+    # from katana.cpp.libgalois.Galois cimport setActiveThreads, SharedMemSys
+    # cdef SharedMemSys _katana_runtime
+    # setActiveThreads(1)
+    #     """,
+    #         extension_options=test_extension_options,
+    #     )
 
     source_root = Path(source_root)
     source_root_name = source_root.name
@@ -437,6 +441,14 @@ setActiveThreads(1)
         language_level="3",
         compiler_directives={"binding": True},
         **kwargs,
+    )
+
+
+def extension(package_path, filenames):
+    return Extension(
+        ".".join(package_path),
+        sources=["python/" + "/".join(package_path) + "/" + fn for fn in filenames],
+        **get_extension_options(),
     )
 
 
@@ -461,6 +473,8 @@ def setup(*, source_dir, package_name, additional_requires=None, package_data=No
 
     pxd_files, pyx_files = collect_cython_files(source_root=source_dir / package_name)
 
+    ext_modules = kwargs.get("ext_modules", []) + cythonize(pyx_files, source_root=source_dir)
+
     options = dict(
         version=get_katana_version(),
         name=package_name + "_python",
@@ -470,10 +484,12 @@ def setup(*, source_dir, package_name, additional_requires=None, package_data=No
         # NOTE: Do not use setup_requires. It doesn't work properly for our needs because it doesn't install the
         # packages in the overall build environment. (It installs them in .eggs in the source tree.)
         requires=requires,
-        ext_modules=cythonize(pyx_files, source_root=source_dir),
+        ext_modules=ext_modules,
         include_package_data=True,
         zip_safe=False,
     )
+    if "ext_modules" in kwargs:
+        del kwargs["ext_modules"]
     options["package_data"].update(package_data)
     options.update(kwargs)
 

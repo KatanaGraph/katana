@@ -54,7 +54,7 @@ inline katana::Result<void>
 ConstructNodeProperties(
     PropertyGraph* pg, katana::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
-  auto res_table = katana::AllocateTable<NodeProps>(pg->num_nodes(), names);
+  auto res_table = katana::AllocateTable<NodeProps>(pg->NumNodes(), names);
   if (!res_table) {
     return res_table.error();
   }
@@ -72,7 +72,7 @@ ConstructNodeProperties(
   auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
   auto bit_mask = pg_view.node_bitmask();
   auto res_table =
-      katana::AllocateTable<NodeProps>(pg->num_nodes(), names, bit_mask);
+      katana::AllocateTable<NodeProps>(pg->NumNodes(), names, bit_mask);
   if (!res_table) {
     return res_table.error();
   }
@@ -85,7 +85,7 @@ inline katana::Result<void>
 ConstructEdgeProperties(
     PropertyGraph* pg, katana::TxnContext* txn_ctx,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
-  auto res_table = katana::AllocateTable<EdgeProps>(pg->num_edges(), names);
+  auto res_table = katana::AllocateTable<EdgeProps>(pg->NumEdges(), names);
   if (!res_table) {
     return res_table.error();
   }
@@ -101,7 +101,7 @@ ConstructEdgeProperties(
   auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
   auto bit_mask = pg_view.edge_bitmask();
   auto res_table =
-      katana::AllocateTable<EdgeProps>(pg->num_edges(), names, bit_mask);
+      katana::AllocateTable<EdgeProps>(pg->NumEdges(), names, bit_mask);
   if (!res_table) {
     return res_table.error();
   }

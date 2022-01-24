@@ -12,10 +12,8 @@
 katana::Result<std::string>
 WriteRDG(
     katana::RDG&& rdg_, katana::EntityTypeManager node_entity_type_manager,
-    katana::EntityTypeManager edge_entity_type_manager) {
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
-  KATANA_LOG_ASSERT(uri_res);
-  std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
+    katana::EntityTypeManager edge_entity_type_manager,
+    std::string tmp_rdg_dir) {
   std::string command_line;
 
   // Store graph. If there is a new storage format then storing it is enough to bump the version up.
@@ -45,10 +43,30 @@ WriteRDG(
 }
 
 katana::Result<std::string>
+WriteRDG(
+    katana::RDG&& rdg_, katana::EntityTypeManager node_entity_type_manager,
+    katana::EntityTypeManager edge_entity_type_manager) {
+  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  KATANA_LOG_ASSERT(uri_res);
+  std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
+
+  return WriteRDG(
+      std::move(rdg_), std::move(node_entity_type_manager),
+      std::move(edge_entity_type_manager), tmp_rdg_dir);
+}
+
+katana::Result<std::string>
 WriteRDG(katana::RDG&& rdg_) {
   return WriteRDG(
       std::move(rdg_), KATANA_CHECKED(rdg_.node_entity_type_manager()),
       KATANA_CHECKED(rdg_.edge_entity_type_manager()));
+}
+
+katana::Result<std::string>
+WriteRDG(katana::RDG&& rdg_, std::string out_dir) {
+  return WriteRDG(
+      std::move(rdg_), KATANA_CHECKED(rdg_.node_entity_type_manager()),
+      KATANA_CHECKED(rdg_.edge_entity_type_manager()), out_dir);
 }
 
 katana::Result<katana::RDG>

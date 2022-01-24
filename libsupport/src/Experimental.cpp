@@ -58,7 +58,7 @@ std::unique_ptr<ExperimentalFeatureEnvState>
 
 }  // namespace
 
-katana::internal::ExperimentalFeature*
+const katana::internal::ExperimentalFeature*
 katana::internal::ExperimentalFeature::Register(
     const std::string& feature_name, const std::string& filename,
     int line_number) {

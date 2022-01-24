@@ -22,6 +22,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -133,9 +134,12 @@ public:
   static_assert(std::is_same_v<
                 typename iterator::value_type,
                 typename std::iterator_traits<local_iterator>::value_type>);
+
   // construct on each thread
-  template <typename... Args>
-  PerThreadStorage(Args&&... args) : b(&getPTSBackend()) {
+  template <
+      typename... Args,
+      std::enable_if_t<std::is_constructible_v<T, Args...>, bool> = false>
+  explicit PerThreadStorage(Args&&... args) : b(&getPTSBackend()) {
     // In case we make one of these before initializing the thread pool, this
     // will call initPTS for each thread if it hasn't already
     auto& tp = GetThreadPool();
@@ -220,8 +224,10 @@ class PerSocketStorage {
   }
 
 public:
-  template <typename... Args>
-  PerSocketStorage(Args&&... args) : b(&getPPSBackend()) {
+  template <
+      typename... Args,
+      std::enable_if_t<std::is_constructible_v<T, Args...>, bool> = false>
+  explicit PerSocketStorage(Args&&... args) : b(&getPPSBackend()) {
     // in case we make one of these before initializing the thread pool
     // This will call initPTS for each thread if it hasn't already
     GetThreadPool();

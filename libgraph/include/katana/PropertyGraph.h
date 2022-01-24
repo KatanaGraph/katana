@@ -104,7 +104,7 @@ private:
   katana::Result<katana::RDGTopology*> LoadTopology(
       const katana::RDGTopology& shadow) {
     katana::RDGTopology* topo = KATANA_CHECKED(rdg_.GetTopology(shadow));
-    if (num_edges() != topo->num_edges() || num_nodes() != topo->num_nodes()) {
+    if (NumEdges() != topo->num_edges() || NumNodes() != topo->num_nodes()) {
       KATANA_LOG_WARN(
           "RDG found topology matching description, but num_edge/num_node does "
           "not match csr topology");
@@ -246,8 +246,8 @@ public:
         node_entity_type_ids_(std::move(node_entity_type_ids)),
         edge_entity_type_ids_(std::move(edge_entity_type_ids)),
         pg_view_cache_(std::move(topo)) {
-    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == num_nodes());
-    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == num_edges());
+    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == NumNodes());
+    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == NumEdges());
   }
 
   template <typename PGView>
@@ -271,6 +271,11 @@ public:
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
       const std::string& rdg_name, katana::TxnContext* txn_ctx,
+      const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
+
+  /// Make a property graph from an RDG handle
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      std::unique_ptr<RDGFile> rdg_hanlde, katana::TxnContext* txn_ctx,
       const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
   /// Make a property graph from topology
@@ -529,13 +534,13 @@ public:
 
   /// \return returns the most specific node entity type for @param node
   EntityTypeID GetTypeOfNode(Node node) const {
-    auto idx = node_property_index(node);
+    auto idx = GetNodePropertyIndex(node);
     return node_entity_type_ids_[idx];
   }
 
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdgeFromTopoIndex(Edge edge) const {
-    auto idx = edge_property_index(edge);
+    auto idx = GetEdgePropertyIndexFromOutEdge(edge);
     return GetTypeOfEdgeFromPropertyIndex(idx);
   }
 
@@ -580,7 +585,7 @@ public:
     return loaded_edge_schema()->num_fields();
   }
 
-  // num_rows() == num_nodes() (all local nodes)
+  // num_rows() == NumNodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
     if (i >= rdg_.node_properties()->num_columns()) {
       return nullptr;
@@ -695,14 +700,14 @@ public:
     return edge_entity_type_manager_;
   }
 
-  GraphTopology::PropertyIndex edge_property_index(
+  GraphTopology::PropertyIndex GetEdgePropertyIndexFromOutEdge(
       const Edge& eid) const noexcept {
-    return topology().edge_property_index(eid);
+    return topology().GetEdgePropertyIndexFromOutEdge(eid);
   }
 
-  GraphTopology::PropertyIndex node_property_index(
+  GraphTopology::PropertyIndex GetNodePropertyIndex(
       const Node& nid) const noexcept {
-    return topology().node_property_index(nid);
+    return topology().GetNodePropertyIndex(nid);
   }
 
   /// Add Node properties that do not exist in the current graph
@@ -838,9 +843,15 @@ public:
 
   node_iterator end() const { return topology().end(); }
 
-  nodes_range all_nodes() const noexcept { return topology().all_nodes(); }
+  nodes_range Nodes() const noexcept { return topology().Nodes(); }
 
-  edges_range all_edges() const noexcept { return topology().all_edges(); }
+  edges_range OutEdges() const noexcept { return topology().OutEdges(); }
+
+  /// Gets the edge range of some node.
+  ///
+  /// \param node node to get the edge range of
+  /// \returns iterable edge range for node.
+  edges_range OutEdges(Node node) const { return topology().OutEdges(node); }
 
   /// Return the number of local nodes
   size_t size() const { return topology().size(); }
@@ -849,22 +860,16 @@ public:
 
   /// Return the number of local nodes
   ///  num_nodes in repartitioner is of type LocalNodeID
-  uint64_t num_nodes() const { return topology().num_nodes(); }
+  uint64_t NumNodes() const { return topology().NumNodes(); }
   /// Return the number of local edges
-  uint64_t num_edges() const { return topology().num_edges(); }
-
-  /// Gets the edge range of some node.
-  ///
-  /// \param node node to get the edge range of
-  /// \returns iterable edge range for node.
-  edges_range edges(Node node) const { return topology().edges(node); }
+  uint64_t NumEdges() const { return topology().NumEdges(); }
 
   /// Gets the destination for an edge.
   ///
   /// @param edge edge iterator to get the destination of
   /// @returns node iterator to the edge destination
-  node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    auto node_id = topology().edge_dest(*edge);
+  node_iterator OutEdgeDst(const edge_iterator& edge) const {
+    auto node_id = topology().OutEdgeDst(*edge);
     return node_iterator(node_id);
   }
 

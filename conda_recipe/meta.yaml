@@ -22,18 +22,21 @@ requirements:
     - make {{ make }}
     - packaging {{ packaging }}
     - pandoc {{ pandoc }}
-    - pyarrow {{ arrow_cpp }}
     - pydata-sphinx-theme {{ pydata_sphinx_theme }}
     - pygithub {{ pygithub }}
     - python {{ python }}
     - sphinx {{ sphinx }}
     - sphinx-copybutton {{ sphinx_copybutton }}
     - sphinx-tabs {{ sphinx_tabs }}
+    - numpy {{ numpy }}
+    - pyarrow {{ arrow_cpp }}
   host:
     - jinja2 {{ jinja2 }}
     - cython {{ cython }}
     - pyarrow {{ arrow_cpp }}
+    - pybind11 {{ pybind11 }}
     - numba {{ numba }}
+    - numpy {{ numpy }}
     - python {{ python }}
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
@@ -46,7 +49,6 @@ requirements:
     - libcurl {{ libcurl }}
     - libxml2 {{ libxml2 }}
     - llvmdev {{ llvmdev }}
-    - ncurses {{ ncurses }}
     - nlohmann_json {{ nlohmann_json }}
     - openblas {{ openblas }}
     - zlib {{ zlib }}
@@ -79,8 +81,8 @@ outputs:
         - libcurl {{ libcurl }}
         - libxml2 {{ libxml2 }}
         - llvmdev {{ llvmdev }}
-        - ncurses {{ ncurses }}
         - nlohmann_json {{ nlohmann_json }}
+        - numpy {{ numpy }}
         - openblas {{ openblas }}
         - zlib {{ zlib }}
         - python {{ python }}
@@ -107,6 +109,7 @@ outputs:
     about:
       summary: Python library for parallel and distributed graph analytics and processing. (Open-source)
     files:
+      - lib/libkatana_python_native.so*
       - lib/python*/site-packages/katana_python-*/**
     requirements:
       build:

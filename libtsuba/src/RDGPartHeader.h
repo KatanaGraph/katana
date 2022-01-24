@@ -316,6 +316,17 @@ public:
   const PartitionMetadata& metadata() const { return metadata_; }
   void set_metadata(const PartitionMetadata& metadata) { metadata_ = metadata; }
 
+  bool unstable_storage_format() const { return unstable_storage_format_; }
+
+  /// To be set on store when the UnstableRDGStorageFormat flag is set
+  /// See RDGStorageFormatVersion.h for more details
+  void set_unstable_storage_format() {
+    // Callers should ensure the UnstableRDGStorageFormat flag is set before calling
+    // this function.
+    KATANA_LOG_ASSERT(KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat));
+    unstable_storage_format_ = true;
+  }
+
   uint32_t storage_format_version() const { return storage_format_version_; }
   void update_storage_format_version() {
     storage_format_version_ = kLatestPartitionStorageFormatVersion;
@@ -592,6 +603,12 @@ private:
   /// When a graph is loaded from file, this is overwritten with the loaded value
   /// When a graph is created in memory, this is updated on store
   uint32_t storage_format_version_ = 0;
+
+  /// if true, marks that the RDG has an unstable, unsupported storage format
+  /// unstable_storage_format RDGs can only be loaded if
+  /// the env variable "KATANA_ENABLE_EXPERIMENTAL=UnstableRDGStorageFormat" is set
+  /// See RDGStorageFormatVersion.h for additional information
+  bool unstable_storage_format_ = false;
 
   PartitionTopologyMetadata topology_metadata_;
 

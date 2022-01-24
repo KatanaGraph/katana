@@ -43,6 +43,29 @@ set_tests_properties(${name} PROPERTIES FIXTURES_REQUIRED parquet-ready LABELS q
 add_test(NAME ${clean_name} COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_CURRENT_BINARY_DIR}/parquet-test-wd")
 set_tests_properties(${clean_name} PROPERTIES FIXTURES_SETUP parquet-ready LABELS quick)
 
+## Storage Format Version Unstable Flag tests
+set(unstable_rdg_path ${PROJECT_BINARY_DIR}/Testing/Temporary/unstable_rdg)
+set(group ${name}-fixture)
+set(name unstable-storage-format-version-flag-on)
+set(test_name ${name}-test)
+add_executable(${test_name} storage-format-version/unstable-storage-format-version-flag-on.cpp)
+target_link_libraries(${test_name} katana_tsuba)
+target_include_directories(${test_name} PRIVATE ../src)
+add_test(NAME ${name} COMMAND ${test_name} ${RDG_LDBC_003} ${unstable_rdg_path})
+set_tests_properties(${name} PROPERTIES
+  ENVIRONMENT KATANA_ENABLE_EXPERIMENTAL=UnstableRDGStorageFormat)
+set_tests_properties(${name} PROPERTIES FIXTURES_SETUP ${group})
+set_property(TEST ${name} APPEND PROPERTY LABELS quick)
+
+# depends on the flag-on test to create a valid unstable RDG
+set(name unstable-storage-format-version-flag-off)
+set(test_name ${name}-test)
+add_executable(${test_name} storage-format-version/unstable-storage-format-version-flag-off.cpp)
+target_link_libraries(${test_name} katana_tsuba)
+target_include_directories(${test_name} PRIVATE ../src)
+add_test(NAME ${name} COMMAND ${test_name} ${RDG_LDBC_003} ${unstable_rdg_path})
+set_property(TEST ${name} APPEND PROPERTY FIXTURES_REQUIRED ${group})
+set_property(TEST ${name} APPEND PROPERTY LABELS quick)
 
 ## Storage Format Version backwards compatibility tests ##
 
@@ -63,7 +86,6 @@ target_include_directories(${test_name} PRIVATE ../src)
 add_test(NAME ${name} COMMAND ${test_name} ${RDG_LDBC_003_V3})
 set_property(TEST ${name} APPEND PROPERTY LABELS quick)
 set_tests_properties(${name} PROPERTIES LABELS quick)
-
 
 # Test entity type id loading/storing cycle on v3 input
 set(name storage-format-version-v3-v3-uint16-entity-type-ids)

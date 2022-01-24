@@ -8,22 +8,22 @@
 template <typename View>
 void
 verify_view(View generated_view, View loaded_view) {
-  KATANA_LOG_ASSERT(generated_view.num_edges() == loaded_view.num_edges());
-  KATANA_LOG_ASSERT(generated_view.num_nodes() == loaded_view.num_nodes());
+  KATANA_LOG_ASSERT(generated_view.NumEdges() == loaded_view.NumEdges());
+  KATANA_LOG_ASSERT(generated_view.NumNodes() == loaded_view.NumNodes());
 
   auto beg_edge = katana::make_zip_iterator(
-      generated_view.all_edges().begin(), loaded_view.all_edges().begin());
+      generated_view.OutEdges().begin(), loaded_view.OutEdges().begin());
   auto end_edge = katana::make_zip_iterator(
-      generated_view.all_edges().end(), loaded_view.all_edges().end());
+      generated_view.OutEdges().end(), loaded_view.OutEdges().end());
 
   for (auto i = beg_edge; i != end_edge; i++) {
     KATANA_LOG_ASSERT(std::get<0>(*i) == std::get<1>(*i));
   }
 
   auto beg_node = katana::make_zip_iterator(
-      generated_view.all_nodes().begin(), loaded_view.all_nodes().begin());
+      generated_view.Nodes().begin(), loaded_view.Nodes().begin());
   auto end_node = katana::make_zip_iterator(
-      generated_view.all_nodes().end(), loaded_view.all_nodes().end());
+      generated_view.Nodes().end(), loaded_view.Nodes().end());
 
   for (auto i = beg_node; i != end_node; i++) {
     KATANA_LOG_ASSERT(std::get<0>(*i) == std::get<1>(*i));

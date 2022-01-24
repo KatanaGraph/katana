@@ -130,10 +130,10 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         GraphTopology(
                 NUMAArray[uint64_t] &&adj_indices, NUMAArray[uint32_t] &&dests)
 
-        StandardRange[counting_iterator[Edge]] edges(Node node) const
-        Node edge_dest(Edge edge_id) const
-        uint64_t num_nodes() const
-        uint64_t num_edges() const
+        StandardRange[counting_iterator[Edge]] OutEdges(Node node) const
+        Node OutEdgeDst(Edge edge_id) const
+        uint64_t NumNodes() const
+        uint64_t NumEdges() const
 
     ctypedef uint16_t EntityTypeID
     cppclass _PropertyGraph "katana::PropertyGraph":

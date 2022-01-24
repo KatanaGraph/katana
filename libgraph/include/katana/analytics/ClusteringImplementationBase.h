@@ -102,8 +102,8 @@ struct ClusteringImplementationBase {
     num_unique_clusters++;
 
     // Assuming we have grabbed lock on all the neighbors
-    for (auto e : graph.edges(n)) {
-      auto dst = graph.edge_dest(e);
+    for (auto e : Edges(graph, n)) {
+      auto dst = EdgeDst(graph, e);
       // Self loop weights is recorded
       auto edge_wt = graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       if (dst == n) {
@@ -139,15 +139,16 @@ struct ClusteringImplementationBase {
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
       auto& n_data_curr_comm_id =
           graph->template GetData<CurrentCommunityID>(n);
-      uint64_t degree = graph->degree(n);
+      uint64_t degree = Degree(*graph, n);
       if (degree == 0) {
         isolated_nodes += 1;
         n_data_curr_comm_id = UNASSIGNED;
       } else {
         if (degree == 1) {
           // Check if the destination has degree greater than one
-          auto dst = graph->edge_dest(*graph->edges(n).begin());
-          uint64_t dst_degree = graph->degree(dst);
+          auto edge = Edges(*graph, n).begin();
+          auto dst = EdgeDst(*graph, *edge);
+          uint64_t dst_degree = Degree(*graph, dst);
           if ((dst_degree > 1 || (n > dst))) {
             isolated_nodes += 1;
             n_data_curr_comm_id =
@@ -170,7 +171,7 @@ struct ClusteringImplementationBase {
       EdgeTy total_weight = 0;
       auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
-      for (auto e : graph->edges(n)) {
+      for (auto e : Edges(*graph, n)) {
         total_weight +=
             graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
@@ -193,8 +194,8 @@ struct ClusteringImplementationBase {
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
       auto comm_id = graph->template GetData<CurrentCommunityID>(n);
 
-      for (auto e : graph->edges(n)) {
-        auto dst = graph->edge_dest(e);
+      for (auto e : Edges(*graph, n)) {
+        auto dst = EdgeDst(*graph, e);
 
         if (graph->template GetData<CurrentCommunityID>(dst) != comm_id) {
           continue;
@@ -330,7 +331,7 @@ struct ClusteringImplementationBase {
       const Graph& graph, const NodeWeightFunc& node_wt_func, double& e_xx,
       double& a2_x, const double constant_for_second_term) {
     katana::NUMAArray<EdgeTy> cluster_wt_internal;
-    cluster_wt_internal.allocateBlocked(graph.num_nodes());
+    cluster_wt_internal.allocateBlocked(graph.NumNodes());
     katana::ParallelSTL::fill(
         cluster_wt_internal.begin(), cluster_wt_internal.end(), 0);
 
@@ -340,8 +341,8 @@ struct ClusteringImplementationBase {
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       auto n_data_current_comm = graph.template GetData<CommunityIDType>(n);
-      for (auto e : graph.edges(n)) {
-        if (graph.template GetData<CommunityIDType>(graph.edge_dest(e)) ==
+      for (auto e : Edges(graph, n)) {
+        if (graph.template GetData<CommunityIDType>(EdgeDst(graph, e)) ==
             n_data_current_comm) {
           cluster_wt_internal[n] +=
               graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
@@ -384,7 +385,7 @@ struct ClusteringImplementationBase {
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       EdgeTy total_weight = 0;
-      for (auto e : graph.edges(n)) {
+      for (auto e : Edges(graph, n)) {
         total_weight +=
             graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
@@ -409,10 +410,10 @@ struct ClusteringImplementationBase {
     CommunityArray c_info;  // Community info
 
     /*** Initialization ***/
-    c_info.allocateBlocked(graph.num_nodes());
+    c_info.allocateBlocked(graph.NumNodes());
 
     katana::NUMAArray<EdgeWeightType> degree_weight_array;
-    degree_weight_array.allocateBlocked(graph.num_nodes());
+    degree_weight_array.allocateBlocked(graph.NumNodes());
 
     /* Calculate the weighted degree sum for each vertex */
     SumClusterWeight<EdgeWeightType, CommunityIDType>(
@@ -439,7 +440,7 @@ struct ClusteringImplementationBase {
     uint64_t num_unique_clusters = 0;
 
     // TODO(amber): parallelize
-    for (GNode n : graph->all_nodes()) {
+    for (GNode n : graph->Nodes()) {
       auto& n_data_curr_comm_id = graph->template GetData<CommunityIDType>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         auto stored_already = cluster_local_map.find(n_data_curr_comm_id);
@@ -564,7 +565,7 @@ struct ClusteringImplementationBase {
     // TODO(amber): This loop can be parallelized when using a concurrent container
     // for cluster_bags, but something like katana::InsertBag exhausts the
     // per-thread-storage memory
-    for (GNode n = 0; n < graph.num_nodes(); ++n) {
+    for (GNode n = 0; n < graph.NumNodes(); ++n) {
       auto n_data_curr_comm_id = graph.template GetData<CommunityIDType>(n);
       if (n_data_curr_comm_id != UNASSIGNED) {
         cluster_bags[n_data_curr_comm_id].push_back(n);
@@ -585,8 +586,8 @@ struct ClusteringImplementationBase {
                 graph.template GetData<CommunityIDType>(node) ==
                 c);  // All nodes in this bag must have same cluster id
 
-            for (auto e : graph.edges(node)) {
-              auto dst = graph.edge_dest(e);
+            for (auto e : Edges(graph, node)) {
+              auto dst = EdgeDst(graph, e);
               auto dst_data_curr_comm_id =
                   graph.template GetData<CommunityIDType>(dst);
               KATANA_LOG_DEBUG_ASSERT(dst_data_curr_comm_id != UNASSIGNED);
@@ -707,7 +708,7 @@ struct ClusteringImplementationBase {
     Graph graph_next = graph_result.value();
     // TODO(amber): figure out a better way to add/update the edge property
     katana::do_all(
-        katana::iterate(graph_next.all_edges()),
+        katana::iterate(graph_next.OutEdges()),
         [&](Edge e) {
           graph_next.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e) =
               edge_data_next[e];
@@ -732,7 +733,7 @@ struct ClusteringImplementationBase {
       auto& n_degree_wt =
           graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
 
-      for (auto e : graph->edges(n)) {
+      for (auto e : Edges(*graph, n)) {
         total_weight +=
             graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
       }
@@ -764,8 +765,8 @@ struct ClusteringImplementationBase {
 
     EdgeTy self_loop_wt = 0;
 
-    for (auto e : graph.edges(n)) {
-      auto dst = graph.edge_dest(e);
+    for (auto e : Edges(graph, n)) {
+      auto dst = EdgeDst(graph, e);
       // Self loop weights is recorded
       EdgeWeightType edge_wt =
           graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
@@ -890,8 +891,8 @@ struct ClusteringImplementationBase {
       EdgeWeightType node_edge_weight_within_cluster = 0;
       uint64_t num_edges_within_cluster = 0;
 
-      for (auto e : graph->edges(n)) {
-        auto dst = graph->edge_dest(e);
+      for (auto e : Edges(*graph, n)) {
+        auto dst = EdgeDst(*graph, e);
         EdgeWeightType edge_wt =
             graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
         /*
@@ -956,8 +957,8 @@ struct ClusteringImplementationBase {
           katana::atomicSub(
               subcomm_info[n_current_subcomm_id].degree_wt, n_degree_wt);
 
-          for (auto e : graph->edges(n)) {
-            auto dst = graph->edge_dest(e);
+          for (auto e : Edges(*graph, n)) {
+            auto dst = EdgeDst(*graph, e);
             auto edge_wt =
                 graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(e);
             if (dst != n &&
@@ -1046,19 +1047,22 @@ struct ClusteringImplementationBase {
     CalConstantForSecondTerm<EdgeWeightType>(*graph, &comm_constant_term);
 
     // call MergeNodesSubset for each community in parallel
-    katana::do_all(katana::iterate(size_t{0}, graph->size()), [&](size_t c) {
-      /*
+    katana::do_all(
+        katana::iterate(size_t{0}, graph->size()),
+        [&](size_t c) {
+          /*
                     * Only nodes belonging to singleton clusters can be moved to
                     * a different cluster. This guarantees that clusters will
                     * never be split up.
                     */
-      comm_info[c].num_sub_communities = 0;
-      if (cluster_bags[c].size() > 1) {
-        MergeNodesSubset<EdgeWeightType>(
-            graph, cluster_bags[c], c, subcomm_info, comm_constant_term,
-            resolution);
-      }
-    });
+          comm_info[c].num_sub_communities = 0;
+          if (cluster_bags[c].size() > 1) {
+            MergeNodesSubset<EdgeWeightType>(
+                graph, cluster_bags[c], c, subcomm_info, comm_constant_term,
+                resolution);
+          }
+        },
+        katana::steal());
 
     subcomm_info.deallocate();
     subcomm_info.destroy();

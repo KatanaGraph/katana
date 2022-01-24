@@ -47,13 +47,13 @@ public:
     uint32_t intersection_size = 0;
     // Iterate over the edges of both n2 and base in sync, based on the
     // assumption that edges lists are sorted.
-    auto edges_n2_iter = graph_.edges(n2).begin();
-    auto edges_n2_end = graph_.edges(n2).end();
-    auto edges_base_iter = graph_.edges(base_).begin();
-    auto edges_base_end = graph_.edges(base_).end();
+    auto edges_n2_iter = graph_.OutEdges(n2).begin();
+    auto edges_n2_end = graph_.OutEdges(n2).end();
+    auto edges_base_iter = graph_.OutEdges(base_).begin();
+    auto edges_base_end = graph_.OutEdges(base_).end();
     while (edges_n2_iter != edges_n2_end && edges_base_iter != edges_base_end) {
-      auto edge_n2_dst = graph_.edge_dest(*edges_n2_iter);
-      auto edge_base_dst = graph_.edge_dest(*edges_base_iter);
+      auto edge_n2_dst = graph_.OutEdgeDst(*edges_n2_iter);
+      auto edge_base_dst = graph_.OutEdgeDst(*edges_base_iter);
       if (edge_n2_dst == edge_base_dst) {
         intersection_size++;
         edges_n2_iter++;
@@ -77,16 +77,16 @@ public:
   IntersectWithUnsortedEdgeList(const Graph& graph, GNode base)
       : graph_(graph) {
     // Collect all the neighbors of the base node into a hash set.
-    for (const auto& e : graph.edges(base)) {
-      auto dest = graph.edge_dest(e);
+    for (const auto& e : graph.OutEdges(base)) {
+      auto dest = graph.OutEdgeDst(e);
       base_neighbors.emplace(dest);
     }
   }
 
   uint32_t operator()(GNode n2) {
     uint32_t intersection_size = 0;
-    for (const auto& e : graph_.edges(n2)) {
-      auto neighbor = graph_.edge_dest(e);
+    for (const auto& e : graph_.OutEdges(n2)) {
+      auto neighbor = graph_.OutEdgeDst(e);
       if (base_neighbors.count(neighbor) > 0)
         intersection_size++;
     }
@@ -110,14 +110,14 @@ JaccardImpl(Graph& graph, size_t compare_node, JaccardPlan /*plan*/) {
   std::advance(it, compare_node);
   Graph::Node base = *it;
 
-  uint32_t base_size = graph.edges(base).size();
+  uint32_t base_size = graph.OutDegree(base);
 
   IntersectAlgorithm intersect_with_base{graph, base};
 
   // Compute the similarity for each node
   katana::do_all(katana::iterate(graph), [&](const GNode& n2) {
     double& n2_data = graph.GetData<JaccardSimilarity>(n2);
-    uint32_t n2_size = graph.edges(n2).size();
+    uint32_t n2_size = graph.OutDegree(n2);
     // Count the number of neighbors of n2 and the number that are shared
     // with base
     uint32_t intersection_size = intersect_with_base(n2);

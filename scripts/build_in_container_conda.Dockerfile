@@ -32,8 +32,8 @@ COPY environment.yml open_environment.yml* ctx/
 
 RUN set -eux; \
     [ -f ctx/open_environment.yml ] && \
-        mamba env update --name base --file ctx/open_environment.yml; \
-    mamba env update --name base --file ctx/environment.yml; \
+        mamba env update --quiet --name base --file ctx/open_environment.yml; \
+    mamba env update --quiet --name base --file ctx/environment.yml; \
     rm -rf ctx; \
     conda clean --quiet --all --force-pkgs-dirs --yes
 

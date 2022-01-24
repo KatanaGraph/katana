@@ -133,12 +133,12 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
-            << pg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
+            << pg->topology().NumEdges() << " edges\n";
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
-  if (reportNode >= pg->topology().num_nodes()) {
+  if (reportNode >= pg->topology().NumNodes()) {
     KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
@@ -161,7 +161,7 @@ main(int argc, char** argv) {
   std::cout << "Running BFS for " << num_sources << " sources\n";
 
   for (auto start_node : startNodes) {
-    if (start_node >= pg->topology().num_nodes()) {
+    if (start_node >= pg->topology().NumNodes()) {
       KATANA_LOG_FATAL("failed to set source: {}", start_node);
     }
 
@@ -189,11 +189,11 @@ main(int argc, char** argv) {
     stats.Print();
 
     if (!skipVerify) {
-      if (stats.n_reached_nodes < pg->num_nodes()) {
+      if (stats.n_reached_nodes < pg->NumNodes()) {
         KATANA_LOG_WARN(
             "{} unvisited nodes; this is an error if the graph is strongly "
             "connected",
-            pg->num_nodes() - stats.n_reached_nodes);
+            pg->NumNodes() - stats.n_reached_nodes);
       }
       if (auto res = BfsAssertValid(pg.get(), start_node, node_distance_prop);
           res) {

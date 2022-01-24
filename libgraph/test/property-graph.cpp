@@ -47,7 +47,7 @@ TestIterate1(size_t num_nodes, size_t line_width) {
   size_t r_iterate = Iterate(r.value(), num_properties);
 
   size_t expected = ExpectedValue(
-      g->topology().num_nodes(), g->topology().num_edges(), num_properties,
+      g->topology().NumNodes(), g->topology().NumEdges(), num_properties,
       false);
 
   KATANA_LOG_VASSERT(
@@ -76,7 +76,7 @@ TestIterate3(size_t num_nodes, size_t line_width) {
 
   size_t r_iterate = Iterate(r.value(), num_properties);
   size_t expected = ExpectedValue(
-      g->topology().num_nodes(), g->topology().num_edges(), num_properties,
+      g->topology().NumNodes(), g->topology().NumEdges(), num_properties,
       false);
   KATANA_LOG_VASSERT(expected == r_iterate, "{} != {}", expected, r_iterate);
 }
@@ -104,7 +104,7 @@ TestIterate4(size_t num_nodes, size_t line_width) {
 
   size_t r_iterate = Iterate(r.value(), num_properties);
   size_t expected = ExpectedValue(
-      g->topology().num_nodes(), g->topology().num_edges(), num_properties,
+      g->topology().NumNodes(), g->topology().NumEdges(), num_properties,
       false);
   KATANA_LOG_VASSERT(expected == r_iterate, "{} != {}", expected, r_iterate);
 }

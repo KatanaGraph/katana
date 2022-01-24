@@ -252,7 +252,9 @@ def install_package_list(args, packages: List[Package], data: Requirements, sile
         mamba_or_conda = "conda"
         if has_mamba():
             mamba_or_conda = "mamba"
-        command = [mamba_or_conda, "install", "--override-channels"] + [v for c in ps.channels for v in ["-c", c]]
+        command = [mamba_or_conda, "install", "--quiet", "--override-channels"] + [
+            v for c in ps.channels for v in ["-c", c]
+        ]
     else:
         raise ValueError(f"{format.value} installation not supported from this command.")
 

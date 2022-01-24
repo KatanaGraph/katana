@@ -418,7 +418,7 @@ katana::graphml::ExportGraph(
     sub_indexes.emplace_back(0);
   }
 
-  for (uint64_t i = 0; i < graph->num_nodes(); i++) {
+  for (uint64_t i = 0; i < graph->NumNodes(); i++) {
     // find labels
     std::string labels;
     for (auto j : node_label_indexes) {
@@ -470,7 +470,7 @@ katana::graphml::ExportGraph(
     chunk_indexes.emplace_back(0);
     sub_indexes.emplace_back(0);
   }
-  for (uint64_t i = 0; i < graph->num_edges(); i++) {
+  for (uint64_t i = 0; i < graph->NumEdges(); i++) {
     // find labels
     std::string labels;
     for (auto j : edge_label_indexes) {
@@ -493,11 +493,11 @@ katana::graphml::ExportGraph(
       sub_indexes[j]++;
     }
 
-    while (!InRange(i, topology.edges(src_node))) {
+    while (!InRange(i, topology.OutEdges(src_node))) {
       src_node++;
     }
     std::string src = boost::lexical_cast<std::string>(src_node);
-    std::string dest = boost::lexical_cast<std::string>(topology.edge_dest(i));
+    std::string dest = boost::lexical_cast<std::string>(topology.OutEdgeDst(i));
     StartGraphmlEdge(
         writer, boost::lexical_cast<std::string>(i), src, dest, labels);
 

@@ -2,8 +2,7 @@ import numpy as np
 import pyarrow
 
 from katana import do_all, do_all_operator, set_active_threads
-from katana.local import Graph
-from katana.local.atomic import ReduceLogicalOr, ReduceMax, ReduceMin, ReduceSum, atomic_add
+from katana.local import Graph, ReduceMax, ReduceMin, ReduceOr, ReduceSum, atomic_add
 from katana.local.datastructures import AllocationPolicy, NUMAArray
 from katana.timer import StatTimer
 
@@ -75,7 +74,7 @@ def pagerank_pull_sync_residual(graph: Graph, maxIterations, tolerance, property
 
     print("Out-degree of 0: ", nout[0])
 
-    changed = ReduceLogicalOr(True)
+    changed = ReduceOr(True)
     iterations = 0
     timer = StatTimer("Pagerank: Property Graph Numba: " + property_name)
     timer.start()

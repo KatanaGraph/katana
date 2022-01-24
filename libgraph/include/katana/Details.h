@@ -21,6 +21,7 @@
 #define KATANA_LIBGRAPH_KATANA_DETAILS_H_
 
 #include <algorithm>
+#include <type_traits>
 
 #include <boost/mpl/if.hpp>
 
@@ -275,8 +276,10 @@ class NodeInfoBase
   NodeTy data;
 
 public:
-  template <typename... Args>
-  NodeInfoBase(Args&&... args) : data(std::forward<Args>(args)...) {}
+  template <
+      typename... Args,
+      std::enable_if_t<std::is_constructible_v<NodeTy, Args...>, bool> = false>
+  explicit NodeInfoBase(Args&&... args) : data(std::forward<Args>(args)...) {}
 
   typename NodeInfoBase::reference getData() { return data; }
   typename NodeInfoBase::const_reference getData() const { return data; }

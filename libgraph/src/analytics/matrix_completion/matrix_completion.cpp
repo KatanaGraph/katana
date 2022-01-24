@@ -67,8 +67,8 @@ struct MatrixCompletionImplementation
     katana::do_all(
         katana::iterate(graph.begin(), graph.begin() + kNumItemNodes),
         [&](GNode n) {
-          for (auto ii : graph.edges(n)) {
-            auto dst = graph.GetEdgeDest(ii);
+          for (auto ii : graph.OutEdges(n)) {
+            auto dst = graph.OutEdgeDst(ii);
             double e = PredictionError<NodeLatentVector>(
                 graph.GetData<NodeLatentVector>(n),
                 graph.GetData<NodeLatentVector>(dst),
@@ -235,7 +235,7 @@ struct MatrixCompletionImplementation
 
       largest_node_id_per_thread[tid] = 0;
       for (GNode i = start; i < end; ++i) {
-        if (graph.edges(i).size()) {
+        if (graph.OutDegree(i)) {
           if (largest_node_id_per_thread[tid] < i)
             largest_node_id_per_thread[tid] = i;
         }
@@ -332,8 +332,8 @@ private:
       katana::do_all(
           katana::iterate(graph.begin(), graph.begin() + kNumItemNodes),
           [&](GNode src) {
-            for (auto ii : graph.edges(src)) {
-              auto dst = graph.GetEdgeDest(ii);
+            for (auto ii : graph.OutEdges(src)) {
+              auto dst = graph.OutEdgeDst(ii);
               auto item_latent_vector = graph.GetData<NodeLatentVector>(src);
               auto user_latent_vector = graph.GetData<NodeLatentVector>(dst);
               LatentValue error = impl.DoGradientUpdate<NodeLatentVector>(

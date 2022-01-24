@@ -57,7 +57,8 @@ BuildText(
 
   fmt::format_to(
       std::back_inserter(buf),
-      "INFO: host={} ms={} max_mem_gb={:.3f} mem_gb={:.3f} arrow_mem_gb={:.3f}",
+      "TRACE: host={} ms={} max_mem_gb={:.3f} mem_gb={:.3f} "
+      "arrow_mem_gb={:.3f}",
       host_id, msec_since_begin,
       katana::ProgressTracer::GetMaxMem() / 1024.0 / 1024.0,
       katana::ProgressTracer::ParseProcSelfRssBytes() / 1024.0 / 1024.0 /

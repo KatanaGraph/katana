@@ -99,8 +99,8 @@ ComputeOutDeg(const Graph& graph, PagerankValueAndOutDegreeArray* node_data) {
   katana::do_all(
       katana::iterate(graph),
       [&](const GNode& src) {
-        for (auto nbr : graph.edges(src)) {
-          auto dest = graph.edge_dest(nbr);
+        for (auto nbr : graph.OutEdges(src)) {
+          auto dest = graph.OutEdgeDst(nbr);
           vec[dest].fetch_add(1ul);
         }
       },
@@ -134,8 +134,8 @@ ComputeOutDeg(const Graph& graph, NodeOutDegreeArray* node_data) {
   katana::do_all(
       katana::iterate(graph),
       [&](const GNode& src) {
-        for (auto nbr : graph.edges(src)) {
-          auto dest = graph.edge_dest(nbr);
+        for (auto nbr : graph.OutEdges(src)) {
+          auto dest = graph.OutEdgeDst(nbr);
           vec[dest].fetch_add(1ul);
         }
       },
@@ -197,8 +197,8 @@ ComputePRResidual(
         katana::iterate(*graph),
         [&](const GNode& src) {
           float sum = 0;
-          for (auto nbr : graph->edges(src)) {
-            auto dest = graph->edge_dest(nbr);
+          for (auto nbr : graph->OutEdges(src)) {
+            auto dest = graph->OutEdgeDst(nbr);
             if ((*delta)[dest] > 0) {
               sum += (*delta)[dest];
             }
@@ -247,8 +247,8 @@ ComputePRTopological(
         [&](const GNode& src) {
           float sum = 0.0;
 
-          for (auto jj : graph->edges(src)) {
-            auto dest = graph->edge_dest(jj);
+          for (auto jj : graph->OutEdges(src)) {
+            auto dest = graph->OutEdgeDst(jj);
             auto& ddata = (*node_data)[dest];
             sum += ddata.value / ddata.out;
           }

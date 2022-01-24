@@ -77,7 +77,7 @@ public:
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_col_index>(node_view_)
-        .GetValue(pg_->node_property_index(node));
+        .GetValue(pg_->GetNodePropertyIndex(node));
   }
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
@@ -94,7 +94,7 @@ public:
   PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_col_index>(node_view_)
-        .GetValue(pg_->node_property_index(node));
+        .GetValue(pg_->GetNodePropertyIndex(node));
   }
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(
@@ -112,7 +112,7 @@ public:
   PropertyReferenceType<EdgeIndex> GetEdgeData(const edge_iterator& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     return std::get<prop_col_index>(edge_view_)
-        .GetValue(pg_->edge_property_index(*edge));
+        .GetValue(pg_->GetEdgePropertyIndexFromOutEdge(*edge));
   }
 
   /**
@@ -126,26 +126,32 @@ public:
       const edge_iterator& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     return std::get<prop_col_index>(edge_view_)
-        .GetValue(pg_->edge_property_index(*edge));
+        .GetValue(pg_->GetEdgePropertyIndexFromOutEdge(*edge));
   }
 
   /**
    * Gets the destination for an edge.
    *
-   * @param edge edge iterator to get the destination of
-   * @returns node iterator to the edge destination
+   * @param edge edge id to get the destination of
+   * @returns node id of the edge destination
    */
-  node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    return pg_->GetEdgeDest(edge);
+  Node OutEdgeDst(Edge e) const noexcept {
+    return pg_->topology().OutEdgeDst(e);
   }
 
-  // TODO(amber): remove edge_dest or GetEdgeDest
-  Node edge_dest(Edge e) const noexcept { return pg_->topology().edge_dest(e); }
+  size_t OutDegree(Node n) const noexcept {
+    return pg_->topology().OutDegree(n);
+  }
 
-  size_t degree(Node n) const noexcept { return pg_->topology().degree(n); }
+  uint64_t NumNodes() const { return pg_->NumNodes(); }
+  uint64_t NumEdges() const { return pg_->NumEdges(); }
 
-  uint64_t num_nodes() const { return pg_->num_nodes(); }
-  uint64_t num_edges() const { return pg_->num_edges(); }
+  /**
+   * Gets all out-edges.
+   *
+   * @returns iterable edge range for the entire graph.
+   */
+  edges_range OutEdges() const noexcept { return pg_->topology().OutEdges(); }
 
   /**
    * Gets the edge range of some node.
@@ -153,38 +159,9 @@ public:
    * @param node node to get the edge range of
    * @returns iterable edge range for node.
    */
-  edges_range edges(Node node) const { return pg_->edges(node); }
+  edges_range OutEdges(Node node) const { return pg_->OutEdges(node); }
 
-  /**
-   * Gets the edge range of some node.
-   *
-   * @param node node to get the edge range of
-   * @returns iterable edge range for node.
-   */
-  edges_range edges(node_iterator node) const { return pg_->edges(*node); }
-  // TODO(amp): [[deprecated("use edges(Node node)")]]
-
-  /**
-   * Gets the first edge of some node.
-   *
-   * @param node node to get the edge of
-   * @returns iterator to first edge of node
-   */
-  edge_iterator edge_begin(Node node) const { return pg_->edges(node).begin(); }
-  // TODO(amp): [[deprecated("use edges(node)")]]
-
-  /**
-   * Gets the end edge boundary of some node.
-   *
-   * @param node node to get the edge of
-   * @returns iterator to the end of the edges of node, i.e. the first edge of
-   *     the next node (or an "end" iterator if there is no next node)
-   */
-  edge_iterator edge_end(Node node) const { return pg_->edges(node).end(); }
-  // TODO(amp): [[deprecated("use edges(node)")]]
-
-  nodes_range all_nodes() const noexcept { return pg_->topology().all_nodes(); }
-  edges_range all_edges() const noexcept { return pg_->topology().all_edges(); }
+  nodes_range Nodes() const noexcept { return pg_->topology().Nodes(); }
   /**
    * Accessor for the underlying PropertyGraph.
    *
@@ -234,7 +211,7 @@ public:
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_col_index>(node_view_)
-        .GetValue(PGView::node_property_index(node));
+        .GetValue(PGView::GetNodePropertyIndex(node));
   }
 
   /**
@@ -247,7 +224,7 @@ public:
   PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_col_index>(node_view_)
-        .GetValue(PGView::node_property_index(node));
+        .GetValue(PGView::GetNodePropertyIndex(node));
   }
 
   /**
@@ -259,8 +236,14 @@ public:
   template <typename EdgeIndex>
   PropertyReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_)
-        .GetValue(PGView::edge_property_index(edge));
+
+    if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
+      return std::get<prop_col_index>(edge_view_)
+          .GetValue(PGView::GetEdgePropertyIndexFromUndirectedEdge(edge));
+    } else {
+      return std::get<prop_col_index>(edge_view_)
+          .GetValue(PGView::GetEdgePropertyIndexFromOutEdge(edge));
+    }
   }
 
   /**
@@ -272,8 +255,14 @@ public:
   template <typename EdgeIndex>
   PropertyConstReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_)
-        .GetValue(PGView::edge_property_index(edge));
+
+    if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
+      return std::get<prop_col_index>(edge_view_)
+          .GetValue(PGView::GetEdgePropertyIndexFromUndirectedEdge(edge));
+    } else {
+      return std::get<prop_col_index>(edge_view_)
+          .GetValue(PGView::GetEdgePropertyIndexFromOutEdge(edge));
+    }
   }
 
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(

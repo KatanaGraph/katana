@@ -18,6 +18,7 @@
 #include "katana/FileView.h"
 #include "katana/PartitionMetadata.h"
 #include "katana/RDGLineage.h"
+#include "katana/RDGStorageFormatVersion.h"
 #include "katana/RDGTopology.h"
 #include "katana/ReadGroup.h"
 #include "katana/Result.h"
@@ -37,7 +38,7 @@ struct KATANA_EXPORT RDGLoadOptions {
   /// Which partition of the RDG on storage should be loaded
   /// nullopt means the partition associated with the current host's ID will be
   /// loaded
-  std::optional<uint32_t> partition_id_to_load;
+  std::optional<uint32_t> partition_id_to_load{std::nullopt};
   /// List of node properties that should be loaded
   /// nullptr means all node properties will be loaded
   std::optional<std::vector<std::string>> node_properties{std::nullopt};
@@ -48,6 +49,13 @@ struct KATANA_EXPORT RDGLoadOptions {
   // Callback provides a pointer to the RDG so we can evict
   // even before the PropertyGraph is created.
   katana::PropertyCache* prop_cache{nullptr};
+
+  /// Build a default options struct the default behavior is:
+  ///  * load the partition associated with this host
+  ///  * load all node properties
+  ///  * load all edge properties
+  ///  * do not use a property cache
+  static RDGLoadOptions Defaults() { return RDGLoadOptions{}; }
 };
 
 class KATANA_EXPORT RDG {
@@ -66,6 +74,9 @@ public:
   bool IsEntityTypeIDsOutsideProperties() const;
   /// What size are EntityTypeIDs on storage
   bool IsUint16tEntityTypeIDs() const;
+
+  /// Is this RDG stored in an unstable format
+  bool IsUnstableStorageFormat() const;
 
   /// Perform some checks on assumed invariants
   katana::Result<void> Validate() const;

@@ -35,7 +35,7 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
 
   size_t i = 0;
-  for (Node n : pg->all_nodes()) {
+  for (Node n : pg->Nodes()) {
     int32_t expected_age = static_cast<int32_t>(n) * 2;
     std::string expected_name = fmt::format("Node {}", n);
 
@@ -57,8 +57,8 @@ TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       PropertyGenerator(
           "average",
           [&pg](Edge id) {
-            Node src = pg->topology().edge_source(id);
-            Node dst = pg->topology().edge_dest(id);
+            Node src = pg->topology().GetEdgeSrc(id);
+            Node dst = pg->topology().OutEdgeDst(id);
             return 0.5 * (src + dst);
           }),
       PropertyGenerator(
@@ -83,9 +83,9 @@ TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
 
   size_t i = 0;
-  for (Edge e : pg->all_edges()) {
-    Node src = pg->topology().edge_source(e);
-    Node dst = pg->topology().edge_dest(e);
+  for (Edge e : pg->OutEdges()) {
+    Node src = pg->topology().GetEdgeSrc(e);
+    Node dst = pg->topology().OutEdgeDst(e);
     std::string expected_name = fmt::format("Edge {}", e);
 
     KATANA_LOG_VASSERT(

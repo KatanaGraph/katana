@@ -7,7 +7,6 @@ import pyarrow
 from pyarrow.lib cimport pyarrow_unwrap_table, pyarrow_wrap_chunked_array, pyarrow_wrap_schema, to_shared
 
 from katana.cpp.libgalois.graphs cimport Graph as CGraph
-from katana.cpp.libsupport.EntityTypeManager cimport EntityTypeManager as CEntityTypeManager
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
 
 from katana.native_interfacing._pyarrow_wrappers import unchunked
@@ -25,9 +24,9 @@ from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from katana.dataframe import DataFrame, LazyDataAccessor, LazyDataFrame
+from katana.local_native import EntityTypeManager
 
 from ..native_interfacing.buffer_access cimport to_pyarrow
-from .entity_type_manager cimport EntityType, EntityTypeManager
 
 from abc import abstractmethod
 
@@ -119,7 +118,7 @@ cdef class GraphBase:
         return &self.underlying_property_graph().topology()
 
     cpdef uint64_t num_nodes(Graph self):
-        return self.topology().num_nodes()
+        return self.topology().NumNodes()
 
     def __eq__(self, Graph other):
         return self.underlying_property_graph().Equals(other.underlying_property_graph())
@@ -140,7 +139,7 @@ cdef class GraphBase:
 
         Can be called from numba compiled code.
         """
-        return self.topology().num_edges()
+        return self.topology().NumEdges()
 
     def loaded_node_schema(self):
         """
@@ -201,7 +200,7 @@ cdef class GraphBase:
         if n > self.num_nodes():
             raise IndexError(n)
 
-        edge_range = self.topology().edges(n)
+        edge_range = self.topology().OutEdges(n)
         return range(deref(edge_range.begin()), deref(edge_range.end()))
 
     def get_edge_source(self, uint64_t e):
@@ -249,7 +248,7 @@ cdef class GraphBase:
 
         .. code-block:: Python
 
-            edges = graph.edges()
+            edges = graph.OutEdges()
             print("Number of edges", len(edges))
             print("One destination with at indexing", edges.at[0, "dest"])
             print("One source with columnar indexing", edges["source"][0]) # This is O(log(E)) time
@@ -285,8 +284,8 @@ cdef class GraphBase:
             if node_stop >= self.num_nodes():
                 raise IndexError(node_stop)
 
-            start = deref(self.topology().edges(node_start).begin())
-            stop = deref(self.topology().edges(node_stop-1).end())
+            start = deref(self.topology().OutEdges(node_start).begin())
+            stop = deref(self.topology().OutEdges(node_stop-1).end())
 
             return LazyDataFrame(
                 dict(id=range(0, self.num_edges()),
@@ -333,7 +332,7 @@ cdef class GraphBase:
         """
         if e > self.num_edges():
             raise IndexError(e)
-        return self.topology().edge_dest(e)
+        return self.topology().OutEdgeDst(e)
 
     def get_node_property(self, prop):
         """
@@ -464,7 +463,7 @@ cdef class GraphBase:
         """
         :return: the node type manager
         """
-        return EntityTypeManager.make(&self.underlying_property_graph().GetNodeTypeManager())
+        return EntityTypeManager._make_from_address(<uint64_t>&self.underlying_property_graph().GetNodeTypeManager(), self)
 
     def get_type_of_node(self, uint64_t n):
         """
@@ -473,7 +472,7 @@ cdef class GraphBase:
         :param n: node id
         :return: the type id of the node
         """
-        return self.underlying_property_graph().GetTypeOfNode(n)
+        return self.node_types.type_from_id(self.underlying_property_graph().GetTypeOfNode(n))
 
     def does_node_have_type(self, uint64_t n, entity_type):
         """
@@ -485,8 +484,8 @@ cdef class GraphBase:
         """
         if isinstance(entity_type, int):
             type_id = entity_type
-        elif isinstance(entity_type, EntityType):
-            type_id = entity_type.type_id
+        elif hasattr(entity_type, "id"):
+            type_id = entity_type.id
         else:
             raise ValueError(f"{entity_type}'s type is not supported")
         return self.underlying_property_graph().DoesNodeHaveType(n, type_id)
@@ -496,7 +495,7 @@ cdef class GraphBase:
         """
         :return: the edge type manager
         """
-        return EntityTypeManager.make(&self.underlying_property_graph().GetEdgeTypeManager())
+        return EntityTypeManager._make_from_address(<uint64_t>&self.underlying_property_graph().GetEdgeTypeManager(), self)
 
     def get_type_of_edge(self, uint64_t e):
         """
@@ -505,7 +504,7 @@ cdef class GraphBase:
         :param e: edge id
         :return: the type id of the edge
         """
-        return self.underlying_property_graph().GetTypeOfEdgeFromPropertyIndex(e)
+        return self.edge_types.type_from_id(self.underlying_property_graph().GetTypeOfEdgeFromPropertyIndex(e))
 
     def does_edge_have_type(self, uint64_t e, entity_type):
         """
@@ -517,8 +516,8 @@ cdef class GraphBase:
         """
         if isinstance(entity_type, int):
             type_id = entity_type
-        elif isinstance(entity_type, EntityType):
-            type_id = entity_type.type_id
+        elif hasattr(entity_type, "id"):
+            type_id = entity_type.id
         else:
             raise ValueError(f"{entity_type}'s type is not supported")
         return self.underlying_property_graph().DoesEdgeHaveTypeFromPropertyIndex(e, type_id)
@@ -581,6 +580,16 @@ cdef class Graph(GraphBase):
         f._underlying_property_graph = u
         return f
 
+    @staticmethod
+    def _make_from_address_shared(uint64_t u):
+        cdef shared_ptr[_PropertyGraph]* ptr = <shared_ptr[_PropertyGraph]*>u
+        return Graph.make(deref(ptr))
+
+    @staticmethod
+    def _make_from_address_unique(uint64_t u):
+        cdef unique_ptr[_PropertyGraph]* ptr = <unique_ptr[_PropertyGraph]*>u
+        return Graph.make(to_shared(deref(ptr)))
+
     @property
     def __katana_address__(self):
         """
@@ -594,3 +603,12 @@ cdef class Graph(GraphBase):
     def global_in_degree(self, uint64_t node):
         # TODO(loc) needs shared-memory bi-directional view
         raise NotImplementedError()
+
+
+cdef class TxnContext:
+    @property
+    def __katana_address__(self):
+        """
+        Internal.
+        """
+        return <uint64_t>&self._txn_ctx

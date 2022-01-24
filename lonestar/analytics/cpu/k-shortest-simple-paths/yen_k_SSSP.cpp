@@ -134,8 +134,8 @@ DeltaStepAlgo(
   katana::InsertBag<std::pair<uint32_t, const Path*>> report_paths;
 
   //add candidate paths corresponding to the neighbors of the source node
-  for (auto edge : graph->edges(source)) {
-    auto dest = graph->GetEdgeDest(edge);
+  for (auto edge : graph->OutEdges(source)) {
+    auto dest = graph->OutEdgeDst(edge);
 
     //check if dest is alive; otherwise dest is already in the root-path
     if (graph->GetData<NodeAlive>(dest) == (uint8_t)0) {
@@ -144,7 +144,7 @@ DeltaStepAlgo(
 
     //check if edge to dest has been removed or not
     //this ensures that we do not output an already computed path
-    if (remove_edges.find(*dest) == remove_edges.end()) {
+    if (remove_edges.find(dest) == remove_edges.end()) {
       auto wt = graph->GetEdgeData<EdgeWeight>(edge);
       Path* path_dest;
       path_dest = new Path();
@@ -154,10 +154,10 @@ DeltaStepAlgo(
 
       paths_bag.push(path_dest);
 
-      pushWrap(init_bag, *dest, wt, path_dest);
+      pushWrap(init_bag, dest, wt, path_dest);
 
       graph->GetData<NodeDist>(dest) = wt;
-      if (*dest == report) {
+      if (dest == report) {
         report_paths.push(std::make_pair(wt, path_dest));
       }
     }
@@ -182,7 +182,7 @@ DeltaStepAlgo(
         }
 
         for (auto ii : edgeRange(item)) {
-          auto dest = graph->GetEdgeDest(ii);
+          auto dest = graph->OutEdgeDst(ii);
           auto& ddist = graph->GetData<NodeDist>(dest);
 
           if (graph->GetData<NodeAlive>(dest) == (uint8_t)0) {
@@ -209,9 +209,9 @@ DeltaStepAlgo(
             paths_bag.push(path);
 
             const Path* const_path = path;
-            pushWrap(ctx, *dest, new_dist, const_path);
+            pushWrap(ctx, dest, new_dist, const_path);
 
-            if (*dest == report) {
+            if (dest == report) {
               report_paths.push(std::make_pair(new_dist, const_path));
             }
           }
@@ -488,7 +488,7 @@ main(int argc, char** argv) {
   Graph graph = pg_result.value();
 
   katana::gPrint(
-      "Read ", graph.num_nodes(), " nodes, ", graph.num_edges(), " edges\n");
+      "Read ", graph.NumNodes(), " nodes, ", graph.NumEdges(), " edges\n");
 
   if (startNode >= graph.size() || reportNode >= graph.size()) {
     KATANA_LOG_ERROR(

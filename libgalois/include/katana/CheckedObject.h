@@ -20,6 +20,8 @@
 #ifndef KATANA_LIBGALOIS_KATANA_CHECKEDOBJECT_H_
 #define KATANA_LIBGALOIS_KATANA_CHECKEDOBJECT_H_
 
+#include <type_traits>
+
 #include "katana/Context.h"
 #include "katana/config.h"
 
@@ -35,8 +37,10 @@ class GChecked : public katana::Lockable {
   T val;
 
 public:
-  template <typename... Args>
-  GChecked(Args&&... args) : val(std::forward<Args>(args)...) {}
+  template <
+      typename... Args,
+      std::enable_if_t<std::is_constructible_v<T, Args...>, bool> = false>
+  explicit GChecked(Args&&... args) : val(std::forward<Args>(args)...) {}
 
   T& get(katana::MethodFlag m = MethodFlag::WRITE) {
     katana::acquire(this, m);

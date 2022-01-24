@@ -7,6 +7,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 include(BuildCommon)
 include(AddUnitTest)
 
+if("gpu" IN_LIST KATANA_COMPONENTS)
+  if("${CMAKE_CUDA_ARCHITECTURES}" STREQUAL "")
+    set(CMAKE_CUDA_ARCHITECTURES "52;60;70;80")
+  endif()
+endif()
 string(COMPARE NOTEQUAL "${CMAKE_CUDA_ARCHITECTURES}" "" KATANA_USE_GPU)
 
 ###### Documentation ######
@@ -58,9 +63,13 @@ add_subdirectory(libgpu)
 
 ####### Language Bindings #######
 
+
 if(KATANA_LANG_BINDINGS_PYTHON)
+  find_package(pybind11 REQUIRED)
+  add_subdirectory(libkatana_python_native)
   add_python_setuptools_target(katana_python
-                               DEPENDS Katana::support arrow::arrow Katana::galois Katana::graph
+                               DEPENDS Katana::support arrow::arrow Katana::galois Katana::graph Katana::python_native
+                                      pybind11::headers
                                COMPONENT python)
   if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
     add_python_setuptools_tests(katana_python PATH python/test)

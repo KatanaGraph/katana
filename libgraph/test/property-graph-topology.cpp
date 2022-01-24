@@ -4,9 +4,9 @@
 
 void
 TestEdgeSource(const katana::GraphTopology& topo) noexcept {
-  for (auto node : topo.all_nodes()) {
-    for (auto e : topo.edges(node)) {
-      auto s = topo.edge_source(e);
+  for (auto node : topo.Nodes()) {
+    for (auto e : topo.OutEdges(node)) {
+      auto s = topo.GetEdgeSrc(e);
       KATANA_LOG_ASSERT(s == node);
     }
   }

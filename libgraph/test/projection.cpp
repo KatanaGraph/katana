@@ -97,20 +97,20 @@ main(int argc, char** argv) {
       full_graph.GetNodeProperty(temp_node_property.name());
   auto node_prop = res_node_get_prop.value();
 
-  num_valid_nodes = full_graph.num_nodes() - node_prop->null_count();
+  num_valid_nodes = full_graph.NumNodes() - node_prop->null_count();
 
   KATANA_LOG_VASSERT(
-      projected_graph.num_nodes() > 0 &&
-          full_graph.num_nodes() >= projected_graph.num_nodes(),
-      "\n Num Nodes: {}", projected_graph.num_nodes());
+      projected_graph.NumNodes() > 0 &&
+          full_graph.NumNodes() >= projected_graph.NumNodes(),
+      "\n Num Nodes: {}", projected_graph.NumNodes());
   KATANA_LOG_VASSERT(
-      projected_graph.num_edges() > 0 &&
-          full_graph.num_edges() >= projected_graph.num_edges(),
-      "\n Num Edges: {}", projected_graph.num_edges());
+      projected_graph.NumEdges() > 0 &&
+          full_graph.NumEdges() >= projected_graph.NumEdges(),
+      "\n Num Edges: {}", projected_graph.NumEdges());
   KATANA_LOG_VASSERT(
-      projected_graph.num_nodes() == num_valid_nodes,
+      projected_graph.NumNodes() == num_valid_nodes,
       "\n Num Valid Nodes: {} Num Nodes: {}", num_valid_nodes,
-      projected_graph.num_nodes());
+      projected_graph.NumNodes());
 
   return 0;
 }

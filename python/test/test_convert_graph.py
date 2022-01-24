@@ -126,14 +126,14 @@ def test_dataframe():
     assert list(g.get_edge_property("prop").to_numpy()) == [1, 2, 3]
 
 
-@pytest.mark.required_env("KATANA_SOURCE_DIR")
+@pytest.mark.required_env("KATANA_TEST_DATASETS")
 def test_load_graphml():
     input_file = Path(get_misc_dataset("graph-convert/movies.graphml"))
     pg = from_graphml(input_file)
     assert pg.get_node_property(0)[1].as_py() == "Keanu Reeves"
 
 
-@pytest.mark.required_env("KATANA_SOURCE_DIR")
+@pytest.mark.required_env("KATANA_TEST_DATASETS")
 def test_load_graphml_write():
     input_file = Path(get_misc_dataset("graph-convert/movies.graphml"))
     pg = from_graphml(input_file)

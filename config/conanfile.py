@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 import os
 import sys
+from pathlib import Path
 
 from conans import ConanFile
 from conans.model.version import Version
 
 # TODO(amp): Replace with normal import once we have a script utilities python project in this repo.
 # Add the project root to the python path just in case.
-conan_file_path = os.path.dirname(os.path.dirname(__file__))
-sys.path.append(conan_file_path)
+conan_file_path = Path(__file__).parent.parent / "scripts"
+sys.path.append(str(conan_file_path))
 
-from scripts import katana_requirements
+import katana_requirements
 
 
 class KatanaConan(ConanFile):

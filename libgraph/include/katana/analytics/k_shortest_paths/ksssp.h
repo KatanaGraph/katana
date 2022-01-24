@@ -4,6 +4,8 @@
 #include "katana/analytics/sssp/sssp.h"
 
 namespace katana::analytics {
+using kSsspPlan = SsspPlan;
+
 enum AlgoReachability { async = 0, syncLevel };
 
 /// Compute the K Shortest Path for pg starting from start_node.
@@ -12,10 +14,10 @@ enum AlgoReachability { async = 0, syncLevel };
 /// int). The algorithm and delta stepping
 /// parameter can be specified, but have reasonable defaults.
 KATANA_EXPORT Result<void> Ksp(
-    PropertyGraph* pg, unsigned int start_node, unsigned int reportNode,
+    PropertyGraph* pg, unsigned int start_node, unsigned int report_node,
     const std::string& edge_weight_property_name, katana::TxnContext* txn_ctx,
-    AlgoReachability algoReachability, unsigned int numPaths,
-    unsigned int stepShift, SsspPlan plan = {});
+    AlgoReachability algo_reachability, unsigned int num_paths,
+    unsigned int step_shift, kSsspPlan plan = {});
 }  // namespace katana::analytics
 
 #endif

@@ -153,7 +153,6 @@ main(int argc, char** argv) {
     abort();
   }
 
-  // std::string node_distance_prop = "distance-" + std::to_string(startNode);
   katana::TxnContext txn_ctx;
 
   auto pg_result =

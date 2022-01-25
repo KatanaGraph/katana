@@ -18,6 +18,7 @@
 #include "katana/FileView.h"
 #include "katana/PartitionMetadata.h"
 #include "katana/RDGLineage.h"
+#include "katana/RDGStorageFormatVersion.h"
 #include "katana/RDGTopology.h"
 #include "katana/ReadGroup.h"
 #include "katana/Result.h"
@@ -76,9 +77,6 @@ public:
 
   /// Is this RDG stored in an unstable format
   bool IsUnstableStorageFormat() const;
-
-  /// Mark the RDG as being in an unstable format
-  void SetUnstableStorageFormat();
 
   /// Perform some checks on assumed invariants
   katana::Result<void> Validate() const;

@@ -309,6 +309,12 @@ katana::RDG::DoStore(
   // bump the storage format version to the latest
   core_->part_header().update_storage_format_version();
 
+  // all rdgs stored while the unstable rdg storage format flag is set
+  // are considered to be in the unstable rdg storage format
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
+    core_->part_header().set_unstable_storage_format();
+  }
+
   std::vector<std::string> node_prop_names;
   for (const auto& field : core_->node_properties()->fields()) {
     node_prop_names.emplace_back(field->name());
@@ -534,11 +540,6 @@ katana::RDG::IsUint16tEntityTypeIDs() const {
 bool
 katana::RDG::IsUnstableStorageFormat() const {
   return core_->part_header().unstable_storage_format();
-}
-
-void
-katana::RDG::SetUnstableStorageFormat() {
-  core_->part_header().set_unstable_storage_format();
 }
 
 katana::Result<void>

@@ -35,11 +35,8 @@ TestRoundtripUnstable(
 
   // load a stable rdg
   katana::RDG rdg = KATANA_CHECKED(LoadRDG(stable_rdg));
+  // The rdg should not become unstable until it is stored, no matter the state of the `UnstableRDGStorageFormat` flag
   KATANA_LOG_ASSERT(!rdg.IsUnstableStorageFormat());
-
-  // make our in memory rdg unstable
-  rdg.SetUnstableStorageFormat();
-  KATANA_LOG_ASSERT(rdg.IsUnstableStorageFormat());
 
   // store the unstable rdg
   std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg), unstable_rdg));

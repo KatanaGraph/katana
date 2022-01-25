@@ -23,6 +23,7 @@
 #include "katana/RDG.h"
 #include "katana/RDGManifest.h"
 #include "katana/RDGPrefix.h"
+#include "katana/RDGStorageFormatVersion.h"
 #include "katana/RDGTopology.h"
 #include "katana/Result.h"
 #include "katana/tsuba.h"
@@ -63,37 +64,31 @@ CheckTopology(
 /// favor of this method.
 katana::Result<katana::PropertyGraph::EntityTypeIDArray>
 MapEntityTypeIDsArray(
-    const katana::FileView& file_view, bool is_uint16_t_entity_type_ids) {
-  const auto* data = file_view.ptr<katana::EntityTypeIDArrayHeader>();
-  const auto header = data[0];
-
+    const katana::FileView& file_view, size_t num_entries,
+    bool rdg_unstable_format) {
   if (file_view.size() == 0) {
     return katana::ErrorCode::InvalidArgument;
   }
 
   // allocate type IDs array
   katana::PropertyGraph::EntityTypeIDArray entity_type_id_array;
-  entity_type_id_array.allocateInterleaved(header.size);
+  entity_type_id_array.allocateInterleaved(num_entries);
 
-  if (is_uint16_t_entity_type_ids) {
-    const katana::EntityTypeID* type_IDs_array =
-        reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
+  const katana::EntityTypeID* type_IDs_array = nullptr;
 
-    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
-
-    katana::ParallelSTL::copy(
-        &type_IDs_array[0], &type_IDs_array[header.size],
-        entity_type_id_array.begin());
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat) &&
+      rdg_unstable_format) {
+    type_IDs_array = file_view.ptr<katana::EntityTypeID>();
   } else {
-    // On disk format is still uint8_t EntityTypeIDs
-    const uint8_t* type_IDs_array = reinterpret_cast<const uint8_t*>(&data[1]);
-
-    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
-
-    katana::ParallelSTL::copy(
-        &type_IDs_array[0], &type_IDs_array[header.size],
-        entity_type_id_array.begin());
+    const auto* data = file_view.ptr<katana::EntityTypeIDArrayHeader>();
+    type_IDs_array = reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
   }
+
+  KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+
+  katana::ParallelSTL::copy(
+      &type_IDs_array[0], &type_IDs_array[num_entries],
+      entity_type_id_array.begin());
 
   return katana::MakeResult(std::move(entity_type_id_array));
 }
@@ -103,27 +98,37 @@ WriteEntityTypeIDsArray(
     const katana::NUMAArray<katana::EntityTypeID>& entity_type_id_array) {
   auto ff = std::make_unique<katana::FileFrame>();
 
-  if (auto res = ff->Init(); !res) {
-    return res.error();
-  }
+  KATANA_CHECKED(ff->Init());
 
-  katana::EntityTypeIDArrayHeader data[1] = {
-      {.size = entity_type_id_array.size()}};
-  arrow::Status aro_sts =
-      ff->Write(&data, sizeof(katana::EntityTypeIDArrayHeader));
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
+    if (entity_type_id_array.size()) {
+      const katana::EntityTypeID* raw = entity_type_id_array.data();
+      auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
+      arrow::Status aro_sts = ff->Write(buf);
+      if (!aro_sts.ok()) {
+        return katana::ArrowToKatana(aro_sts.code());
+      }
+    }
+  } else {
+    katana::EntityTypeIDArrayHeader data[1] = {
+        {.size = entity_type_id_array.size()}};
+    arrow::Status aro_sts =
+        ff->Write(&data, sizeof(katana::EntityTypeIDArrayHeader));
 
-  if (!aro_sts.ok()) {
-    return katana::ArrowToKatana(aro_sts.code());
-  }
-
-  if (entity_type_id_array.size()) {
-    const katana::EntityTypeID* raw = entity_type_id_array.data();
-    auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
-    aro_sts = ff->Write(buf);
     if (!aro_sts.ok()) {
       return katana::ArrowToKatana(aro_sts.code());
     }
+
+    if (entity_type_id_array.size()) {
+      const katana::EntityTypeID* raw = entity_type_id_array.data();
+      auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
+      aro_sts = ff->Write(buf);
+      if (!aro_sts.ok()) {
+        return katana::ArrowToKatana(aro_sts.code());
+      }
+    }
   }
+
   return std::unique_ptr<katana::FileFrame>(std::move(ff));
 }
 
@@ -162,12 +167,12 @@ katana::PropertyGraph::Make(
     KATANA_LOG_DEBUG("loading EntityType data from outside properties");
 
     EntityTypeIDArray node_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
-        rdg.node_entity_type_id_array_file_storage(),
-        rdg.IsUint16tEntityTypeIDs()));
+        rdg.node_entity_type_id_array_file_storage(), topo.NumNodes(),
+        rdg.IsUnstableStorageFormat()));
 
     EntityTypeIDArray edge_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
-        rdg.edge_entity_type_id_array_file_storage(),
-        rdg.IsUint16tEntityTypeIDs()));
+        rdg.edge_entity_type_id_array_file_storage(), topo.NumEdges(),
+        rdg.IsUnstableStorageFormat()));
 
     KATANA_ASSERT(topo.NumNodes() == node_type_ids.size());
     KATANA_ASSERT(topo.NumEdges() == edge_type_ids.size());
@@ -416,7 +421,8 @@ katana::PropertyGraph::DoWrite(
 
   std::unique_ptr<katana::FileFrame> node_entity_type_id_array_res =
       !rdg_.node_entity_type_id_array_file_storage().Valid() ||
-              !rdg_.IsUint16tEntityTypeIDs()
+              (!rdg_.IsUnstableStorageFormat() &&
+               KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat))
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(node_entity_type_ids_))
           : nullptr;
 
@@ -426,7 +432,8 @@ katana::PropertyGraph::DoWrite(
 
   std::unique_ptr<katana::FileFrame> edge_entity_type_id_array_res =
       !rdg_.edge_entity_type_id_array_file_storage().Valid() ||
-              !rdg_.IsUint16tEntityTypeIDs()
+              (!rdg_.IsUnstableStorageFormat() &&
+               KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat))
           ? KATANA_CHECKED(WriteEntityTypeIDsArray(edge_entity_type_ids_))
           : nullptr;
 
@@ -921,7 +928,12 @@ katana::PropertyGraph::DeleteNodeIndex(const std::string& column_name) {
       return katana::ResultSuccess();
     }
   }
-  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+
+  // TODO(Chak-Pong) make deleteNodeIndex always successful
+  //  before index existence check is available from python side
+  //  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+  KATANA_LOG_WARN("the following node index not found: {}", column_name);
+  return katana::ResultSuccess();
 }
 
 // Build an index over edges.

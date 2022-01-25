@@ -318,11 +318,8 @@ public:
 
   bool unstable_storage_format() const { return unstable_storage_format_; }
 
-  /// Any feature which results in changes to the storage format version
-  /// but has not yet stabilized should ensure this is called
-  /// The feature can then be developed by setting the
-  /// KATANA_ENABLE_EXPERIMENTAL="UnstableRDGStorageFormat"
-  /// env var. See RDGStorageFormatVersion.h for more details
+  /// To be set on store when the UnstableRDGStorageFormat flag is set
+  /// See RDGStorageFormatVersion.h for more details
   void set_unstable_storage_format() {
     // Callers should ensure the UnstableRDGStorageFormat flag is set before calling
     // this function.

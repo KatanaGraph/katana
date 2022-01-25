@@ -3,14 +3,14 @@
 #include <arrow/type_traits.h>
 
 #include "TestTypedPropertyGraph.h"
+#include "katana/EntityIndex.h"
 #include "katana/Logging.h"
 #include "katana/Properties.h"
-#include "katana/PropertyIndex.h"
 #include "katana/SharedMemSys.h"
 
 template <typename node_or_edge>
 struct NodeOrEdge {
-  static katana::Result<katana::PropertyIndex<node_or_edge>*> MakeIndex(
+  static katana::Result<katana::EntityIndex<node_or_edge>*> MakeIndex(
       katana::PropertyGraph* pg, const std::string& column_name);
   static katana::Result<void> AddProperties(
       katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
@@ -22,7 +22,7 @@ using Node = NodeOrEdge<katana::GraphTopology::Node>;
 using Edge = NodeOrEdge<katana::GraphTopology::Edge>;
 
 template <>
-katana::Result<katana::PropertyIndex<katana::GraphTopology::Node>*>
+katana::Result<katana::EntityIndex<katana::GraphTopology::Node>*>
 Node::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
   auto result = pg->MakeNodeIndex(column_name);
   if (!result) {
@@ -39,7 +39,7 @@ Node::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
 }
 
 template <>
-katana::Result<katana::PropertyIndex<katana::GraphTopology::Edge>*>
+katana::Result<katana::EntityIndex<katana::GraphTopology::Edge>*>
 Edge::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
   auto result = pg->MakeEdgeIndex(column_name);
   if (!result) {
@@ -136,7 +136,7 @@ CreateStringProperty(const std::string& name, bool uniform, size_t num_rows) {
 template <typename node_or_edge, typename DataType>
 void
 TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
-  using IndexType = katana::PrimitivePropertyIndex<node_or_edge, DataType>;
+  using IndexType = katana::PrimitiveEntityIndex<node_or_edge, DataType>;
   using ArrayType = typename arrow::CTypeTraits<DataType>::ArrayType;
 
   LinePolicy policy{line_width};
@@ -208,7 +208,7 @@ TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
 template <typename node_or_edge>
 void
 TestStringIndex(size_t num_nodes, size_t line_width) {
-  using IndexType = katana::StringPropertyIndex<node_or_edge>;
+  using IndexType = katana::StringEntityIndex<node_or_edge>;
   using ArrayType = arrow::LargeStringArray;
 
   LinePolicy policy{line_width};

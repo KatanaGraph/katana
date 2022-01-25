@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBGRAPH_KATANA_PROPERTYINDEX_H_
-#define KATANA_LIBGRAPH_KATANA_PROPERTYINDEX_H_
+#ifndef KATANA_LIBGRAPH_KATANA_ENTITYINDEX_H_
+#define KATANA_LIBGRAPH_KATANA_ENTITYINDEX_H_
 
 #include <set>
 #include <string>
@@ -16,10 +16,10 @@
 
 namespace katana {
 
-// PropertyIndex provides an interface similar to an ordered container
+// EntityIndex provides an interface similar to an ordered container
 // over a single property.
 template <typename node_or_edge>
-class KATANA_EXPORT PropertyIndex {
+class KATANA_EXPORT EntityIndex {
 public:
   // Type-safe container for node and edge ids to avoid overlap with the
   // primitive types we are indexing.
@@ -32,7 +32,7 @@ public:
   using set_key_type = typename std::variant<
       IndexID, bool, uint8_t, int64_t, uint64_t, double_t, std::string_view*>;
 
-  // PropertyIndex::iterator returns a sequence of node or edge ids.
+  // EntityIndex::iterator returns a sequence of node or edge ids.
   using base_iterator = typename std::multiset<set_key_type>::iterator;
   class iterator : public base_iterator {
   public:
@@ -43,15 +43,14 @@ public:
     }
   };
 
-  PropertyIndex(std::string column_name)
-      : column_name_(std::move(column_name)) {}
+  EntityIndex(std::string column_name) : column_name_(std::move(column_name)) {}
 
-  PropertyIndex(const PropertyIndex&) = delete;
-  PropertyIndex& operator=(const PropertyIndex&) = delete;
-  PropertyIndex(const PropertyIndex&&) = delete;
-  PropertyIndex& operator=(const PropertyIndex&&) = delete;
+  EntityIndex(const EntityIndex&) = delete;
+  EntityIndex& operator=(const EntityIndex&) = delete;
+  EntityIndex(const EntityIndex&&) = delete;
+  EntityIndex& operator=(const EntityIndex&&) = delete;
 
-  virtual ~PropertyIndex() = default;
+  virtual ~EntityIndex() = default;
 
   // The name of the indexed property.
   std::string column_name() { return column_name_; }
@@ -66,20 +65,19 @@ private:
   std::string column_name_;
 };
 
-// PrimitivePropertyIndex provides a PropertyIndex for primitive types.
+// PrimitiveEntityIndex provides a EntityIndex for primitive types.
 template <typename node_or_edge, typename c_type>
-class KATANA_EXPORT PrimitivePropertyIndex
-    : public PropertyIndex<node_or_edge> {
+class KATANA_EXPORT PrimitiveEntityIndex : public EntityIndex<node_or_edge> {
 public:
   using ArrowArrayType = typename arrow::CTypeTraits<c_type>::ArrayType;
-  using IndexID = typename PropertyIndex<node_or_edge>::IndexID;
-  using iterator = typename PropertyIndex<node_or_edge>::iterator;
-  using set_key_type = typename PropertyIndex<node_or_edge>::set_key_type;
+  using IndexID = typename EntityIndex<node_or_edge>::IndexID;
+  using iterator = typename EntityIndex<node_or_edge>::iterator;
+  using set_key_type = typename EntityIndex<node_or_edge>::set_key_type;
 
-  PrimitivePropertyIndex(
+  PrimitiveEntityIndex(
       const std::string& column, size_t num_entities,
       std::shared_ptr<arrow::Array> property)
-      : PropertyIndex<node_or_edge>(column),
+      : EntityIndex<node_or_edge>(column),
         num_entities_(num_entities),
         property_(std::static_pointer_cast<ArrowArrayType>(property)),
         set_(PropertyCompare(property_)) {}
@@ -142,20 +140,20 @@ private:
   std::multiset<set_key_type, PropertyCompare> set_;
 };
 
-// StringPropertyIndex provides a PropertyIndex for strings.
+// StringEntityIndex provides a EntityIndex for strings.
 template <typename node_or_edge>
-class KATANA_EXPORT StringPropertyIndex : public PropertyIndex<node_or_edge> {
+class KATANA_EXPORT StringEntityIndex : public EntityIndex<node_or_edge> {
 public:
   using ArrowArrayType =
       typename arrow::TypeTraits<arrow::LargeStringType>::ArrayType;
-  using IndexID = typename PropertyIndex<node_or_edge>::IndexID;
-  using iterator = typename PropertyIndex<node_or_edge>::iterator;
-  using set_key_type = typename PropertyIndex<node_or_edge>::set_key_type;
+  using IndexID = typename EntityIndex<node_or_edge>::IndexID;
+  using iterator = typename EntityIndex<node_or_edge>::iterator;
+  using set_key_type = typename EntityIndex<node_or_edge>::set_key_type;
 
-  StringPropertyIndex(
+  StringEntityIndex(
       const std::string& column_name, size_t num_entities,
       const std::shared_ptr<arrow::Array>& property)
-      : PropertyIndex<node_or_edge>(column_name),
+      : EntityIndex<node_or_edge>(column_name),
         num_entities_(num_entities),
         property_(std::static_pointer_cast<arrow::LargeStringArray>(property)),
         set_(StringCompare(property_)) {}
@@ -225,10 +223,10 @@ private:
   std::multiset<set_key_type, StringCompare> set_;
 };  // namespace katana
 
-// Create a PropertyIndex with the apropriate type for 'property'. Does not
+// Create a EntityIndex with the appropriate type for 'property'. Does not
 // build the index.
 template <typename node_or_edge>
-Result<std::unique_ptr<PropertyIndex<node_or_edge>>> MakeTypedIndex(
+Result<std::unique_ptr<EntityIndex<node_or_edge>>> MakeTypedEntityIndex(
     const std::string& column_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property);
 

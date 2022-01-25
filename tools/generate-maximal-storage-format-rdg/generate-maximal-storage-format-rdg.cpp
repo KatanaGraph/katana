@@ -45,7 +45,7 @@ StoreGraph(katana::PropertyGraph* g, std::string& output_path) {
   std::string command_line;
   // Store graph. If there is a new storage format then storing it is enough to bump the version up.
   KATANA_LOG_WARN("writing graph at file {}", output_path);
-  auto write_result = g->Write(output_path, command_line);
+  auto write_result = g->Write(output_path, command_line, true);
   if (!write_result) {
     KATANA_LOG_FATAL("writing result failed: {}", write_result.error());
   }

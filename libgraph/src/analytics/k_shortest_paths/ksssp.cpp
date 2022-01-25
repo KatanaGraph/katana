@@ -69,9 +69,9 @@ struct kSsspImplementation : public katana::analytics::KSsspImplementationBase<
 
   using PSchunk = katana::PerSocketChunkFIFO<kChunkSize>;
   using OBIM =
-      katana::OrderedByIntegerMetric<SSSPUpdateRequestIndexer, PSchunk>;
+      katana::OrderedByIntegerMetric<kSSSPUpdateRequestIndexer, PSchunk>;
   using OBIM_Barrier = typename katana::OrderedByIntegerMetric<
-      SSSPUpdateRequestIndexer, PSchunk>::template with_barrier<true>::type;
+      kSSSPUpdateRequestIndexer, PSchunk>::template with_barrier<true>::type;
 
   using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
   using BFSUpdateRequest = typename BFS::UpdateRequest;
@@ -245,14 +245,14 @@ struct kSsspImplementation : public katana::analytics::KSsspImplementationBase<
             }
           }
         },
-        katana::wl<OBIM>(SSSPUpdateRequestIndexer{step_shift}),
-        katana::disable_conflict_detection(), katana::loopname("SSSP"));
+        katana::wl<OBIM>(kSSSPUpdateRequestIndexer{step_shift}),
+        katana::disable_conflict_detection(), katana::loopname("kSSSP"));
 
     if (kTrackWork) {
       //! [report self-defined stats]
-      katana::ReportStatSingle("SSSP", "BadWork", bad_work.reduce());
+      katana::ReportStatSingle("kSSSP", "BadWork", bad_work.reduce());
       //! [report self-defined stats]
-      katana::ReportStatSingle("SSSP", "WLEmptyWork", wl_empty_work.reduce());
+      katana::ReportStatSingle("kSSSP", "WLEmptyWork", wl_empty_work.reduce());
     }
   }
 
@@ -322,22 +322,22 @@ public:
     if (reachable) {
       switch (plan.algorithm()) {
       case kSsspPlan::kDeltaTile:
-        DeltaStepAlgo<SSSPSrcEdgeTile, OBIM>(
-            &edge_data, &graph, source, SSSPSrcEdgeTilePushWrap{&graph},
-            SSSPTileRangeFn(), &paths, &path_pointers, path_alloc, report_node,
+        DeltaStepAlgo<kSSSPSrcEdgeTile, OBIM>(
+            &edge_data, &graph, source, kSSSPSrcEdgeTilePushWrap{&graph},
+            kSSSPTileRangeFn(), &paths, &path_pointers, path_alloc, report_node,
             num_paths, step_shift);
         break;
       case kSsspPlan::kDeltaStep:
-        DeltaStepAlgo<SSSPUpdateRequest, OBIM>(
-            &edge_data, &graph, source, SSSPReqPushWrap(),
-            SSSPOutEdgeRangeFn{&graph}, &paths, &path_pointers, path_alloc,
+        DeltaStepAlgo<kSSSPUpdateRequest, OBIM>(
+            &edge_data, &graph, source, kSSSPReqPushWrap(),
+            kSSSPOutEdgeRangeFn{&graph}, &paths, &path_pointers, path_alloc,
             report_node, num_paths, step_shift);
         break;
       case kSsspPlan::kDeltaStepBarrier:
         katana::gInfo("Using OBIM with barrier\n");
-        DeltaStepAlgo<SSSPUpdateRequest, OBIM_Barrier>(
-            &edge_data, &graph, source, SSSPReqPushWrap(),
-            SSSPOutEdgeRangeFn{&graph}, &paths, &path_pointers, path_alloc,
+        DeltaStepAlgo<kSSSPUpdateRequest, OBIM_Barrier>(
+            &edge_data, &graph, source, kSSSPReqPushWrap(),
+            kSSSPOutEdgeRangeFn{&graph}, &paths, &path_pointers, path_alloc,
             report_node, num_paths, step_shift);
         break;
 

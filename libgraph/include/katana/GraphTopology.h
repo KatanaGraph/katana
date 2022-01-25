@@ -523,211 +523,6 @@ private:
   PropIndexVec node_prop_indices_;
 };
 
-/// filter nodes and edges
-/// and creates a new projected graph based on the filtered nodes and edges
-/// also maintains mappings from original to projected and projected to original nodes and edges
-class KATANA_EXPORT ProjectedTopology : public GraphTopologyTypes {
-public:
-  ProjectedTopology() = default;
-  ProjectedTopology(ProjectedTopology&&) = default;
-  ProjectedTopology& operator=(ProjectedTopology&&) = default;
-
-  ProjectedTopology(const ProjectedTopology&) = delete;
-  ProjectedTopology& operator=(const ProjectedTopology&) = delete;
-
-  uint64_t NumNodes() const noexcept { return adj_indices_.size(); }
-
-  uint64_t NumEdges() const noexcept { return dests_.size(); }
-
-  const Edge* AdjData() const noexcept { return adj_indices_.data(); }
-
-  const Node* DestData() const noexcept { return dests_.data(); }
-
-  /// Checks equality against another instance of ProjectedTopology.
-  /// WARNING: Expensive operation due to element-wise checks on large arrays
-  /// @param that: ProjectedTopology instance to compare against
-  /// @returns true if topology arrays are equal
-  /// should take O(|V| + |E|) in the worst case
-  bool Equals(const ProjectedTopology& projected_topo_) const noexcept {
-    if (this == &projected_topo_) {
-      return true;
-    }
-    if (NumNodes() != projected_topo_.NumNodes()) {
-      return false;
-    }
-    if (NumEdges() != projected_topo_.NumEdges()) {
-      return false;
-    }
-
-    return adj_indices_ == projected_topo_.adj_indices_ &&
-           dests_ == projected_topo_.dests_;
-  }
-
-  /// Gets all out-edges.
-  edges_range OutEdges() const noexcept {
-    return MakeStandardRange<edge_iterator>(Edge{0}, Edge{NumEdges()});
-  }
-
-  /// Gets the edge range of some node.
-  ///
-  /// \param node node to get the edge range of
-  /// \returns iterable edge range for node.
-  edges_range OutEdges(Node node) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(node < adj_indices_.size());
-    edge_iterator e_beg{node != 0 ? adj_indices_[node - 1] : 0};
-    edge_iterator e_end{adj_indices_[node]};
-
-    return MakeStandardRange(e_beg, e_end);
-  }
-
-  Node OutEdgeDst(Edge edge_id) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
-    return dests_[edge_id];
-  }
-
-  Node GetEdgeSrc(const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
-
-    if (eid < adj_indices_[0]) {
-      return Node{0};
-    }
-
-    // finds the node idx which contains the edge corresponding to eid
-    // since last entry in adj_indices corresponds to the total number of edges
-    // the value corresponding to iterator it should be greater than eid
-    auto it = std::upper_bound(adj_indices_.begin(), adj_indices_.end(), eid);
-    KATANA_LOG_DEBUG_ASSERT(it != adj_indices_.end());
-    KATANA_LOG_DEBUG_ASSERT(*it > eid);
-
-    const size_t d = it - adj_indices_.begin();
-    KATANA_LOG_DEBUG_ASSERT(d < NumNodes());
-
-    return static_cast<Node>(d);
-  }
-
-  /// @param node node to get degree for
-  /// @returns Degree of node N
-  size_t OutDegree(Node node) const noexcept { return OutEdges(node).size(); }
-
-  nodes_range Nodes() const noexcept {
-    return MakeStandardRange<node_iterator>(
-        Node{0}, static_cast<Node>(NumNodes()));
-  }
-
-  // Standard container concepts
-
-  node_iterator begin() const noexcept { return node_iterator(0); }
-
-  node_iterator end() const noexcept { return node_iterator(NumNodes()); }
-
-  size_t size() const noexcept { return NumNodes(); }
-
-  bool empty() const noexcept { return NumNodes() == 0; }
-
-  PropertyIndex GetEdgePropertyIndexFromOutEdge(
-      const Edge& eid) const noexcept {
-    return projected_to_original_edge_id(eid);
-  }
-
-  /// @param eid the input eid (must be projected edge id)
-  Edge projected_to_original_edge_id(const Edge& eid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
-    return projected_to_original_edges_mapping_[eid];
-  }
-
-  /// @param eid the input eid (must be original edge id)
-  Edge original_to_projected_edge_id(const Edge& eid) const noexcept {
-    return original_to_projected_edges_mapping_[eid];
-  }
-
-  PropertyIndex GetNodePropertyIndex(const Node& nid) const noexcept {
-    return projected_to_original_node_id(nid);
-  }
-
-  /// @param nid the input node id (must be projected node id)
-  Node projected_to_original_node_id(const Node& nid) const noexcept {
-    KATANA_LOG_DEBUG_ASSERT(nid < NumNodes());
-    return projected_to_original_nodes_mapping_[nid];
-  }
-
-  /// @param nid the input node id (must be original node id)
-  Node original_to_projected_node_id(const Node& nid) const noexcept {
-    return original_to_projected_nodes_mapping_[nid];
-  }
-
-  const std::shared_ptr<arrow::Buffer>& node_bitmask() const noexcept {
-    return node_bitmask_.buffer();
-  }
-
-  const std::shared_ptr<arrow::Buffer>& edge_bitmask() const noexcept {
-    return edge_bitmask_.buffer();
-  }
-
-  /// this function creates a topology by filtering nodes and edges
-  /// @param node_types the types that the selected nodes must have
-  /// @param edge_types the types that the selected edges must have
-  static std::shared_ptr<ProjectedTopology> MakeTypeProjectedTopology(
-      const PropertyGraph* pg, const std::vector<std::string>& node_types,
-      const std::vector<std::string>& edge_types);
-
-  /// this function creates an empty graph with num_new_nodes nodes
-  static std::shared_ptr<ProjectedTopology> CreateEmptyEdgeProjectedTopology(
-      const katana::PropertyGraph* pg, uint32_t num_new_nodes,
-      const katana::DynamicBitset& bitset);
-
-  /// this function creates an empty graph
-  static std::shared_ptr<ProjectedTopology> CreateEmptyProjectedTopology(
-      const katana::PropertyGraph* pg, const katana::DynamicBitset& bitset);
-
-  /// this function fills a bitmask depending on the input bitset
-  static void FillBitMask(
-      size_t num_elements, const katana::DynamicBitset& bitset,
-      katana::NUMAArray<uint8_t>* bitmask);
-
-private:
-  ProjectedTopology(
-      NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests,
-      NUMAArray<Node>&& original_to_projected_nodes_mapping,
-      NUMAArray<Node>&& projected_to_original_nodes_mapping,
-      NUMAArray<Edge>&& original_to_projected_edges_mapping,
-      NUMAArray<Edge>&& projected_to_original_edges_mapping,
-      NUMAArray<uint8_t>&& node_bitmask_data,
-      NUMAArray<uint8_t>&& edge_bitmask_data)
-      : adj_indices_(std::move(adj_indices)),
-        dests_(std::move(dests)),
-        original_to_projected_nodes_mapping_(
-            std::move(original_to_projected_nodes_mapping)),
-        projected_to_original_nodes_mapping_(
-            std::move(projected_to_original_nodes_mapping)),
-        original_to_projected_edges_mapping_(
-            std::move(original_to_projected_edges_mapping)),
-        projected_to_original_edges_mapping_(
-            std::move(projected_to_original_edges_mapping)),
-        node_bitmask_data_(std::move(node_bitmask_data)),
-        edge_bitmask_data_(std::move(edge_bitmask_data)),
-        node_bitmask_(
-            static_cast<void*>(node_bitmask_data_.data()), 0,
-            static_cast<int64_t>(original_to_projected_nodes_mapping_.size())),
-        edge_bitmask_(
-            static_cast<void*>(edge_bitmask_data_.data()), 0,
-            static_cast<int64_t>(original_to_projected_edges_mapping_.size())) {
-  }
-
-  // TODO(udit) : we can let go of original_to_projected_nodes_mapping_ and original_to_projected_edges_mapping_
-  // by doing a binary search on projected_to_original_nodes_mapping_ and projected_to_original_edges_mapping_
-  // it's a trade-off
-  NUMAArray<Edge> adj_indices_;
-  NUMAArray<Node> dests_;
-  NUMAArray<Node> original_to_projected_nodes_mapping_;
-  NUMAArray<Node> projected_to_original_nodes_mapping_;
-  NUMAArray<Edge> original_to_projected_edges_mapping_;
-  NUMAArray<Edge> projected_to_original_edges_mapping_;
-  NUMAArray<uint8_t> node_bitmask_data_;
-  NUMAArray<uint8_t> edge_bitmask_data_;
-  arrow::internal::Bitmap node_bitmask_;
-  arrow::internal::Bitmap edge_bitmask_;
-};
-
 namespace internal {
 // TODO(amber): make private
 template <typename Topo>
@@ -1129,93 +924,6 @@ protected:
 
 private:
   std::shared_ptr<const Topo> topo_ptr_;
-};
-
-class KATANA_EXPORT ProjectedPropGraphViewWrapper : public GraphTopologyTypes {
-public:
-  explicit ProjectedPropGraphViewWrapper(
-      const PropertyGraph* pg,
-      std::shared_ptr<const ProjectedTopology> projected_topo) noexcept
-      : prop_graph_(pg), projected_topo_ptr_(std::move(projected_topo)) {
-    KATANA_LOG_DEBUG_ASSERT(projected_topo_ptr_);
-  }
-
-  auto NumNodes() const noexcept { return topo().NumNodes(); }
-
-  auto NumEdges() const noexcept { return topo().NumEdges(); }
-
-  /// Gets the edge range of some node.
-  ///
-  /// \param node node to get the edge range of
-  /// \returns iterable edge range for node.
-  auto OutEdges(const Node& N) const noexcept { return topo().OutEdges(N); }
-
-  auto OutEdgeDst(const Edge& eid) const noexcept {
-    return topo().OutEdgeDst(eid);
-  }
-
-  auto GetEdgeSrc(const Edge& eid) const noexcept {
-    return topo().GetEdgeSrc(eid);
-  }
-
-  /// @param node node to get degree for
-  /// @returns Degree of node N
-  auto OutDegree(const Node& node) const noexcept {
-    return topo().OutDegree(node);
-  }
-
-  auto Nodes() const noexcept { return topo().Nodes(); }
-
-  auto OutEdges() const noexcept { return topo().OutEdges(); }
-
-  // Standard container concepts
-
-  auto begin() const noexcept { return topo().begin(); }
-
-  auto end() const noexcept { return topo().end(); }
-
-  auto size() const noexcept { return topo().size(); }
-
-  auto empty() const noexcept { return topo().empty(); }
-
-  auto GetEdgePropertyIndexFromOutEdge(const Edge& e) const noexcept {
-    return topo().GetEdgePropertyIndexFromOutEdge(e);
-  }
-
-  auto GetNodePropertyIndex(const Node& nid) const noexcept {
-    return topo().GetNodePropertyIndex(nid);
-  }
-  auto projected_to_original_node_id(const Node& nid) const noexcept {
-    return topo().projected_to_original_node_id(nid);
-  }
-  auto original_to_projected_node_id(const Node& nid) const noexcept {
-    return topo().original_to_projected_node_id(nid);
-  }
-  auto projected_to_original_edge_id(const Edge& eid) const noexcept {
-    return topo().projected_to_original_edge_id(eid);
-  }
-
-  auto original_to_projected_edge_id(const Edge& eid) const noexcept {
-    return topo().original_to_projected_edge_id(eid);
-  }
-
-  const PropertyGraph* property_graph() const noexcept { return prop_graph_; }
-
-  const std::shared_ptr<arrow::Buffer>& node_bitmask() const noexcept {
-    return topo().node_bitmask();
-  }
-  const std::shared_ptr<arrow::Buffer>& edge_bitmask() const noexcept {
-    return topo().edge_bitmask();
-  }
-
-protected:
-  const ProjectedTopology& topo() const noexcept {
-    return *projected_topo_ptr_;
-  }
-
-private:
-  const PropertyGraph* prop_graph_;
-  std::shared_ptr<const ProjectedTopology> projected_topo_ptr_;
 };
 
 template <typename OutTopo, typename InTopo>
@@ -1782,24 +1490,6 @@ struct PGViewBuilder<PGViewEdgeTypeAwareBiDir> {
   }
 };
 
-// Projected view
-
-using PGViewProjectedGraph = ProjectedPropGraphViewWrapper;
-
-template <>
-struct PGViewBuilder<PGViewProjectedGraph> {
-  template <typename ViewCache>
-  static PGViewProjectedGraph BuildView(
-      const PropertyGraph* pg, const std::vector<std::string>& node_types,
-      const std::vector<std::string>& edge_types,
-      ViewCache& viewCache) noexcept {
-    auto topo =
-        viewCache.BuildOrGetProjectedGraphTopo(pg, node_types, edge_types);
-
-    return PGViewProjectedGraph{pg, topo};
-  }
-};
-
 }  // end namespace internal
 
 struct PropertyGraphViews {
@@ -1811,7 +1501,6 @@ struct PropertyGraphViews {
   using EdgeTypeAwareBiDir = internal::PGViewEdgeTypeAwareBiDir;
   using NodesSortedByDegreeEdgesSortedByDestID =
       internal::PGViewNodesSortedByDegreeEdgesSortedByDestID;
-  using ProjectedGraph = internal::PGViewProjectedGraph;
 };
 
 class KATANA_EXPORT PGViewCache {
@@ -1823,8 +1512,6 @@ class KATANA_EXPORT PGViewCache {
   std::vector<std::shared_ptr<EdgeTypeAwareTopology>> edge_type_aware_topos_;
   std::shared_ptr<CondensedTypeIDMap> edge_type_id_map_;
   // TODO(amber): define a node_type_id_map_;
-
-  std::shared_ptr<ProjectedTopology> projected_topos_;
 
   template <typename>
   friend struct internal::PGViewBuilder;
@@ -1892,10 +1579,6 @@ private:
   std::shared_ptr<EdgeTypeAwareTopology> BuildOrGetEdgeTypeAwareTopo(
       PropertyGraph* pg,
       const katana::RDGTopology::TransposeKind& tpose_kind) noexcept;
-
-  std::shared_ptr<ProjectedTopology> BuildOrGetProjectedGraphTopo(
-      const PropertyGraph* pg, const std::vector<std::string>& node_properties,
-      const std::vector<std::string>& edge_properties) noexcept;
 };
 
 /// Creates a uniform-random CSR GraphTopology instance, where each node as

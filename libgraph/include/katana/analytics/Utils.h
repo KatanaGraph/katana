@@ -77,24 +77,6 @@ ConstructNodeProperties(
   return pg->AddNodeProperties(res_table.value(), txn_ctx);
 }
 
-/// TODO(udit) here pg_view which is a const object
-/// is modified to add properties
-template <typename PGView, typename NodeProps>
-inline katana::Result<void>
-ConstructNodeProperties(
-    const PGView& pg_view, katana::TxnContext* txn_ctx,
-    const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
-  auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
-  auto bit_mask = pg_view.node_bitmask();
-  auto res_table =
-      katana::AllocateTable<NodeProps>(pg->NumNodes(), names, bit_mask);
-  if (!res_table) {
-    return res_table.error();
-  }
-
-  return pg->AddNodeProperties(res_table.value(), txn_ctx);
-}
-
 template <typename EdgeProps>
 inline katana::Result<void>
 ConstructEdgeProperties(
@@ -116,22 +98,6 @@ ConstructEdgeProperties(
   auto bit_mask = pg->EdgeBitmask();
   auto res_table =
       katana::AllocateTable<EdgeProps>(pg->NumOriginalEdges(), names, bit_mask);
-  if (!res_table) {
-    return res_table.error();
-  }
-
-  return pg->AddEdgeProperties(res_table.value(), txn_ctx);
-}
-
-template <typename PGView, typename EdgeProps>
-inline katana::Result<void>
-ConstructEdgeProperties(
-    const PGView& pg_view, katana::TxnContext* txn_ctx,
-    const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
-  auto pg = const_cast<PropertyGraph*>(pg_view.property_graph());
-  auto bit_mask = pg_view.edge_bitmask();
-  auto res_table =
-      katana::AllocateTable<EdgeProps>(pg->NumEdges(), names, bit_mask);
   if (!res_table) {
     return res_table.error();
   }

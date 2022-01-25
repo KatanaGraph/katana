@@ -32,7 +32,6 @@ template <
     typename _Graph, typename _DistLabel, typename Path, bool UseEdgeWt,
     ptrdiff_t EdgeTileSize = 256>
 struct KSsspImplementationBase {
-
   const ptrdiff_t edge_tile_size;
 
   using Graph = _Graph;

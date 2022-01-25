@@ -388,15 +388,17 @@ Ksp(GraphTy& pg, unsigned int start_node, unsigned int report_node,
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
   SsspImplementation<GraphTy, Weight> impl{{plan.edge_tile_size()}};
   return impl.KSP(
-      pg, start_node, report_node, algo_reachability, num_paths, step_shift, plan);
+      pg, start_node, report_node, algo_reachability, num_paths, step_shift,
+      plan);
 }
 
 template <typename Weight>
 static katana::Result<void>
 kSSSPWithWrap(
-    katana::PropertyGraph* pg, unsigned int start_node, unsigned int report_node,
-    katana::TxnContext* txn_ctx, AlgoReachability algo_reachability,
-    unsigned int num_paths, unsigned int step_shift, kSsspPlan plan) {
+    katana::PropertyGraph* pg, unsigned int start_node,
+    unsigned int report_node, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, unsigned int num_paths,
+    unsigned int step_shift, kSsspPlan plan) {
   auto result =
       ConstructNodeProperties<std::tuple<NodeCount, NodeMax>>(pg, txn_ctx);
   if (!result) {
@@ -421,10 +423,10 @@ kSSSPWithWrap(
 
 katana::Result<void>
 katana::analytics::Ksp(
-    katana::PropertyGraph* pg, unsigned int start_node, unsigned int report_node,
-    const std::string& edge_weight_property_name, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, unsigned int num_paths,
-    unsigned int step_shift, kSsspPlan plan) {
+    katana::PropertyGraph* pg, unsigned int start_node,
+    unsigned int report_node, const std::string& edge_weight_property_name,
+    katana::TxnContext* txn_ctx, AlgoReachability algo_reachability,
+    unsigned int num_paths, unsigned int step_shift, kSsspPlan plan) {
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()
               ->id()) {

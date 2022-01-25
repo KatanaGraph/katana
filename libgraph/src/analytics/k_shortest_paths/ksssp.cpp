@@ -408,6 +408,6 @@ katana::analytics::Ksp(
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
   return KspImpl<GraphTy>(
-      pg, start_node, report_node, algo_reachability, num_paths, step_shift,
+      graph.value(), start_node, report_node, algo_reachability, num_paths, step_shift,
       plan);
 }

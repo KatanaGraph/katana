@@ -9,9 +9,7 @@ using kSsspPlan = SsspPlan;
 enum AlgoReachability { async = 0, syncLevel };
 
 /// Compute the K Shortest Path for pg starting from start_node.
-/// The edge weights are taken from the property named
-/// edge_weight_property_name (which may be a 32- or 64-bit sign or unsigned
-/// int). The algorithm and delta stepping
+/// The algorithm and delta stepping
 /// parameter can be specified, but have reasonable defaults.
 KATANA_EXPORT Result<void> Ksp(
     katana::PropertyGraph* pg, unsigned int start_node,

@@ -2929,34 +2929,25 @@ struct Gr2Kg : public Conversion {
     }
     auto node_types = std::make_unique<katana::FileFrame>();
     size_t node_type_buffer_size =
-        header.num_nodes * sizeof(katana::EntityTypeID) +
-        sizeof(katana::EntityTypeIDArrayHeader);
+        header.num_nodes * sizeof(katana::EntityTypeID);
     KATANA_CHECKED(node_types->Init(node_type_buffer_size));
     KATANA_CHECKED(node_types->SetCursor(node_type_buffer_size));
 
-    auto* node_header =
-        KATANA_CHECKED(node_types->ptr<katana::EntityTypeIDArrayHeader>());
-    node_header->size = header.num_nodes;
     katana::EntityTypeManager node_type_manager;
     std::fill_n(
-        reinterpret_cast<katana::EntityTypeID*>(
-            KATANA_CHECKED(node_types->ptr<uint8_t>()) + sizeof(uint64_t)),
+        KATANA_CHECKED(node_types->ptr<katana::EntityTypeID>()),
         header.num_nodes,
         KATANA_CHECKED(node_type_manager.AddAtomicEntityType("vertex")));
 
     auto edge_types = std::make_unique<katana::FileFrame>();
     size_t edge_type_buffer_size =
-        header.num_edges * sizeof(katana::EntityTypeID) + sizeof(uint64_t);
+        header.num_edges * sizeof(katana::EntityTypeID);
     KATANA_CHECKED(edge_types->Init(edge_type_buffer_size));
     KATANA_CHECKED(edge_types->SetCursor(edge_type_buffer_size));
 
-    auto* edge_header =
-        KATANA_CHECKED(edge_types->ptr<katana::EntityTypeIDArrayHeader>());
-    edge_header->size = header.num_edges;
     katana::EntityTypeManager edge_type_manager;
     std::fill_n(
-        reinterpret_cast<katana::EntityTypeID*>(
-            KATANA_CHECKED(edge_types->ptr<uint8_t>()) + sizeof(uint64_t)),
+        KATANA_CHECKED(edge_types->ptr<katana::EntityTypeID>()),
         header.num_edges,
         KATANA_CHECKED(edge_type_manager.AddAtomicEntityType("edge")));
 

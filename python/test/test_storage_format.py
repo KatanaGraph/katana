@@ -257,6 +257,9 @@ def cli():
     If the two RDGs are the same exact graph, stored in the same storage_format_version,
     then this script returns true
     If the two RDGs differ, this script returns false
+
+    to run this from the command line, first run a full build then
+    bash build/python_env.sh python3 python/test/test_storage_format.py rdgs -V -O <rdg_1> -N <rdg_2>
     """
 
 

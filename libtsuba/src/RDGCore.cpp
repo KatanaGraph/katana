@@ -133,9 +133,8 @@ schemify(const std::vector<katana::PropStorageInfo>& prop_info_list) {
   return arrow::schema(fields);
 }
 
-template <typename StorageType>
 katana::Result<katana::NUMAArray<katana::EntityTypeID>>
-LoadAndMaybeConvertTypeIDArray(
+LoadIDArray(
     size_t begin, size_t end, const katana::Uri& types_path,
     const katana::RDGPartHeader& part_header) {
   katana::NUMAArray<katana::EntityTypeID> types;
@@ -144,11 +143,11 @@ LoadAndMaybeConvertTypeIDArray(
   // the structure of this file is
   // [header, value, value, value, ...]
   // Recent storage formats remove this header
-  size_t header_size = part_header.unstable_storage_format()
+  size_t header_size = part_header.IsHeaderlessEntityTypeIDArray()
                            ? 0
                            : sizeof(katana::EntityTypeIDArrayHeader);
-  size_t storage_begin = begin * sizeof(StorageType) + header_size;
-  size_t storage_end = end * sizeof(StorageType) + header_size;
+  size_t storage_begin = begin * sizeof(katana::EntityTypeID) + header_size;
+  size_t storage_end = end * sizeof(katana::EntityTypeID) + header_size;
 
   katana::FileView fv;
 
@@ -158,7 +157,7 @@ LoadAndMaybeConvertTypeIDArray(
 
   types.allocateInterleaved(end - begin);
 
-  const auto* storage_types = fv.template valid_ptr<StorageType>();
+  const auto* storage_types = fv.template valid_ptr<katana::EntityTypeID>();
   katana::do_all(
       katana::iterate(size_t{0}, end - begin),
       [&types, &storage_types](size_t i) { types[i] = storage_types[i]; });
@@ -335,7 +334,7 @@ katana::RDGCore::RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx) {
 
 katana::Result<katana::NUMAArray<katana::EntityTypeID>>
 katana::RDGCore::node_entity_type_id_array(size_t begin, size_t end) const {
-  if (part_header().IsEntityTypeIDsOutsideProperties()) {
+  if (!part_header().IsUint16tEntityTypeIDs()) {
     NUMAArray<EntityTypeID> types;
     return types;
   }
@@ -344,20 +343,12 @@ katana::RDGCore::node_entity_type_id_array(size_t begin, size_t end) const {
   katana::Uri node_types_path =
       rdg_dir_.Join(part_header().node_entity_type_id_array_path());
 
-  if (part_header().IsUint16tEntityTypeIDs()) {
-    return KATANA_CHECKED(LoadAndMaybeConvertTypeIDArray<EntityTypeID>(
-        begin, end, node_types_path, part_header()));
-
-  } else {
-    return KATANA_CHECKED(LoadAndMaybeConvertTypeIDArray<uint8_t>(
-        begin, end, node_types_path, part_header()));
-  }
-
-  return KATANA_ERROR(katana::ErrorCode::AssertionFailed, "unreachable");
+  return KATANA_CHECKED(
+      LoadIDArray(begin, end, node_types_path, part_header()));
 }
 katana::Result<katana::NUMAArray<katana::EntityTypeID>>
 katana::RDGCore::edge_entity_type_id_array(size_t begin, size_t end) const {
-  if (part_header().IsEntityTypeIDsOutsideProperties()) {
+  if (!part_header().IsUint16tEntityTypeIDs()) {
     NUMAArray<EntityTypeID> types;
     return types;
   }
@@ -366,14 +357,6 @@ katana::RDGCore::edge_entity_type_id_array(size_t begin, size_t end) const {
   katana::Uri edge_types_path =
       rdg_dir_.Join(part_header().edge_entity_type_id_array_path());
 
-  if (part_header().IsUint16tEntityTypeIDs()) {
-    return KATANA_CHECKED(LoadAndMaybeConvertTypeIDArray<EntityTypeID>(
-        begin, end, edge_types_path, part_header()));
-
-  } else {
-    return KATANA_CHECKED(LoadAndMaybeConvertTypeIDArray<uint8_t>(
-        begin, end, edge_types_path, part_header()));
-  }
-
-  return KATANA_ERROR(katana::ErrorCode::AssertionFailed, "unreachable");
+  return KATANA_CHECKED(
+      LoadIDArray(begin, end, edge_types_path, part_header()));
 }

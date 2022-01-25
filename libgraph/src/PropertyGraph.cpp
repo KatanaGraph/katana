@@ -65,26 +65,28 @@ CheckTopology(
 katana::Result<katana::PropertyGraph::EntityTypeIDArray>
 MapEntityTypeIDsArray(
     const katana::FileView& file_view, size_t num_entries,
-    bool rdg_unstable_format) {
-  if (file_view.size() == 0) {
-    return katana::ErrorCode::InvalidArgument;
-  }
-
+    bool is_headerless_entity_type_id_array) {
   // allocate type IDs array
   katana::PropertyGraph::EntityTypeIDArray entity_type_id_array;
   entity_type_id_array.allocateInterleaved(num_entries);
 
   const katana::EntityTypeID* type_IDs_array = nullptr;
 
-  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat) &&
-      rdg_unstable_format) {
+  if (is_headerless_entity_type_id_array) {
     type_IDs_array = file_view.ptr<katana::EntityTypeID>();
   } else {
+    // If we have header, the file_view should not be empty
+    if (file_view.size() == 0) {
+      return katana::ErrorCode::InvalidArgument;
+    }
+
     const auto* data = file_view.ptr<katana::EntityTypeIDArrayHeader>();
     type_IDs_array = reinterpret_cast<const katana::EntityTypeID*>(&data[1]);
   }
 
-  KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+  if (num_entries != 0) {
+    KATANA_LOG_DEBUG_ASSERT(type_IDs_array != nullptr);
+  }
 
   katana::ParallelSTL::copy(
       &type_IDs_array[0], &type_IDs_array[num_entries],
@@ -100,32 +102,12 @@ WriteEntityTypeIDsArray(
 
   KATANA_CHECKED(ff->Init());
 
-  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
-    if (entity_type_id_array.size()) {
-      const katana::EntityTypeID* raw = entity_type_id_array.data();
-      auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
-      arrow::Status aro_sts = ff->Write(buf);
-      if (!aro_sts.ok()) {
-        return katana::ArrowToKatana(aro_sts.code());
-      }
-    }
-  } else {
-    katana::EntityTypeIDArrayHeader data[1] = {
-        {.size = entity_type_id_array.size()}};
-    arrow::Status aro_sts =
-        ff->Write(&data, sizeof(katana::EntityTypeIDArrayHeader));
-
+  if (entity_type_id_array.size()) {
+    const katana::EntityTypeID* raw = entity_type_id_array.data();
+    auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
+    arrow::Status aro_sts = ff->Write(buf);
     if (!aro_sts.ok()) {
       return katana::ArrowToKatana(aro_sts.code());
-    }
-
-    if (entity_type_id_array.size()) {
-      const katana::EntityTypeID* raw = entity_type_id_array.data();
-      auto buf = arrow::Buffer::Wrap(raw, entity_type_id_array.size());
-      aro_sts = ff->Write(buf);
-      if (!aro_sts.ok()) {
-        return katana::ArrowToKatana(aro_sts.code());
-      }
     }
   }
 
@@ -168,11 +150,11 @@ katana::PropertyGraph::Make(
 
     EntityTypeIDArray node_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
         rdg.node_entity_type_id_array_file_storage(), topo.NumNodes(),
-        rdg.IsUnstableStorageFormat()));
+        rdg.IsHeaderlessEntityTypeIDArray()));
 
     EntityTypeIDArray edge_type_ids = KATANA_CHECKED(MapEntityTypeIDsArray(
         rdg.edge_entity_type_id_array_file_storage(), topo.NumEdges(),
-        rdg.IsUnstableStorageFormat()));
+        rdg.IsHeaderlessEntityTypeIDArray()));
 
     KATANA_ASSERT(topo.NumNodes() == node_type_ids.size());
     KATANA_ASSERT(topo.NumEdges() == edge_type_ids.size());

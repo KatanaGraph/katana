@@ -179,6 +179,11 @@ katana::RDGPartHeader::IsMetadataOutsideTopologyFile() const {
   return (storage_format_version_ >= kPartitionStorageFormatVersion3);
 }
 
+bool
+katana::RDGPartHeader::IsHeaderlessEntityTypeIDArray() const {
+  return (storage_format_version_ >= kPartitionStorageFormatVersion4);
+}
+
 katana::Result<void>
 katana::RDGPartHeader::ValidateEntityTypeIDStructures() const {
   if (node_entity_type_id_array_path_.empty()) {

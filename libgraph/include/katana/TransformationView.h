@@ -11,7 +11,7 @@ namespace katana {
 /// A TransformationView is a topological transformation of the property graph.
 /// It is derived from the PropertyGraph so that it can be treated by query and
 /// analytics routines as a regular property graph.
-class KATANA_EXPORT TransformationView : public PropertyGraph {
+class KATANA_EXPORT TransformationView final : public PropertyGraph {
 public:
   TransformationView() = default;
   TransformationView(TransformationView&& other) = default;

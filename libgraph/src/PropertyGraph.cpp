@@ -751,7 +751,7 @@ katana::GraphTopology::PropertyIndex
 katana::PropertyGraph::GetEdgePropertyIndexFromOutEdge(
     const Edge& eid) const noexcept {
   auto idx = topology().GetEdgePropertyIndexFromOutEdge(eid);
-  if (transformation_.transformed_to_original_edges_.empty()) {
+  if (!is_transformation_) {
     return idx;
   } else {
     return transformation_.transformed_to_original_edges_[idx];
@@ -762,7 +762,7 @@ katana::PropertyGraph::GetEdgePropertyIndexFromOutEdge(
 katana::GraphTopology::PropertyIndex
 katana::PropertyGraph::GetNodePropertyIndex(const Node& nid) const noexcept {
   auto idx = topology().GetNodePropertyIndex(nid);
-  if (transformation_.transformed_to_original_nodes_.empty()) {
+  if (!is_transformation_) {
     return idx;
   } else {
     return transformation_.transformed_to_original_nodes_[idx];

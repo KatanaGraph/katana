@@ -325,7 +325,7 @@ TransformationView::AddNodeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         NumOriginalNodes(), props->num_rows());
   }
-  return rdg_->AddNodeProperties(props, txn_ctx);
+  return rdg().AddNodeProperties(props, txn_ctx);
 }
 
 Result<void>
@@ -340,7 +340,7 @@ TransformationView::UpsertNodeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         NumOriginalNodes(), props->num_rows());
   }
-  return rdg_->UpsertNodeProperties(props, txn_ctx);
+  return rdg().UpsertNodeProperties(props, txn_ctx);
 }
 
 Result<void>
@@ -355,7 +355,7 @@ TransformationView::AddEdgeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().NumEdges(), props->num_rows());
   }
-  return rdg_->AddEdgeProperties(props, txn_ctx);
+  return rdg().AddEdgeProperties(props, txn_ctx);
 }
 
 Result<void>
@@ -370,7 +370,7 @@ TransformationView::UpsertEdgeProperties(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
         topology().NumEdges(), props->num_rows());
   }
-  return rdg_->UpsertEdgeProperties(props, txn_ctx);
+  return rdg().UpsertEdgeProperties(props, txn_ctx);
 }
 
 }  // namespace katana

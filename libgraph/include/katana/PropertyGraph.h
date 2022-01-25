@@ -80,9 +80,13 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
+  std::shared_ptr<katana::RDG> rdg_;
+  std::shared_ptr<katana::RDGFile> file_;
+
   /// Manages the relations between the node entity types
   std::shared_ptr<EntityTypeManager> node_entity_type_manager_{
       std::make_shared<EntityTypeManager>()};
+
   /// Manages the relations between the edge entity types
   std::shared_ptr<EntityTypeManager> edge_entity_type_manager_{
       std::make_shared<EntityTypeManager>()};
@@ -105,6 +109,10 @@ private:
 
   PGViewCache pg_view_cache_;
 
+  // This variable is meant to assist the compiler in optimizing out
+  // the false if branch in Get*PropertyIndex methods.
+  const bool is_transformation_{false};
+
   katana::Result<katana::RDGTopology*> LoadTopology(
       const katana::RDGTopology& shadow) {
     katana::RDGTopology* topo = KATANA_CHECKED(rdg_->GetTopology(shadow));
@@ -123,6 +131,9 @@ private:
   friend class PropertyGraphRetractor;
 
 protected:
+  RDG& rdg() { return *rdg_; }
+  const RDG& rdg() const { return *rdg_; }
+
   struct Transformation {
     NUMAArray<Node> original_to_transformed_nodes_;
     NUMAArray<Node> transformed_to_original_nodes_;
@@ -134,24 +145,22 @@ protected:
 
   Transformation transformation_{};
 
-  std::shared_ptr<katana::RDG> rdg_;
-  std::shared_ptr<katana::RDGFile> file_;
-
   // This constructor is meant to be used by transformation views to share
   // state with the original graph.
   PropertyGraph(
       const PropertyGraph& parent, GraphTopology&& topo,
       Transformation&& transformation) noexcept
-      : node_entity_type_manager_(parent.node_entity_type_manager_),
+      : rdg_(parent.rdg_),
+        file_(parent.file_),
+        node_entity_type_manager_(parent.node_entity_type_manager_),
         edge_entity_type_manager_(parent.edge_entity_type_manager_),
         node_entity_type_ids_(parent.node_entity_type_ids_),
         node_entity_data_(node_entity_type_ids_->data()),
         edge_entity_type_ids_(parent.edge_entity_type_ids_),
         edge_entity_data_(edge_entity_type_ids_->data()),
         pg_view_cache_(std::move(topo)),
-        transformation_{std::move(transformation)},
-        rdg_(parent.rdg_),
-        file_(parent.file_) {}
+        is_transformation_(true),
+        transformation_{std::move(transformation)} {}
 
 public:
   virtual ~PropertyGraph() = default;
@@ -276,7 +285,9 @@ public:
       EntityTypeIDArray&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager) noexcept
-      : node_entity_type_manager_(
+      : rdg_(std::make_shared<RDG>(std::move(rdg))),
+        file_(std::move(rdg_file)),
+        node_entity_type_manager_(
             std::make_shared<EntityTypeManager>(std::move(node_type_manager))),
         edge_entity_type_manager_(
             std::make_shared<EntityTypeManager>(std::move(edge_type_manager))),
@@ -286,9 +297,7 @@ public:
         edge_entity_type_ids_(std::make_shared<EntityTypeIDArray>(
             std::move(edge_entity_type_ids))),
         edge_entity_data_(edge_entity_type_ids_->data()),
-        pg_view_cache_(std::move(topo)),
-        rdg_(std::make_shared<RDG>(std::move(rdg))),
-        file_(std::move(rdg_file)) {
+        pg_view_cache_(std::move(topo)) {
     KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_->size() == NumNodes());
     KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_->size() == NumEdges());
   }

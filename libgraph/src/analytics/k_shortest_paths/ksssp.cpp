@@ -386,7 +386,7 @@ Ksp(GraphTy& pg, unsigned int start_node, unsigned int report_node,
     AlgoReachability algo_reachability, unsigned int num_paths,
     unsigned int step_shift, kSsspPlan plan) {
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
-  SsspImplementation<GraphTy, Weight> impl{{plan.edge_tile_size()}};
+  kSsspImplementation<GraphTy, Weight> impl{{plan.edge_tile_size()}};
   return impl.KSP(
       pg, start_node, report_node, algo_reachability, num_paths, step_shift,
       plan);

@@ -20,7 +20,7 @@
 #include <iostream>
 
 #include "Lonestar/BoilerPlate.h"
-#include "katana/analytics/k_shortest_paths/sssp.h"
+#include "katana/analytics/k_shortest_paths/ksssp.h"
 
 using namespace katana::analytics;
 

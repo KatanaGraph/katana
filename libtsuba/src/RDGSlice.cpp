@@ -549,6 +549,16 @@ katana::RDGSlice::topology_file_storage() const {
   return topo->file_storage();
 }
 
+bool
+katana::RDGSlice::IsEntityTypeIDsOutsideProperties() const {
+  return core_->part_header().IsEntityTypeIDsOutsideProperties();
+}
+
+bool
+katana::RDGSlice::IsUint16tEntityTypeIDs() const {
+  return core_->part_header().IsUint16tEntityTypeIDs();
+}
+
 const katana::FileView&
 katana::RDGSlice::node_entity_type_id_array_file_storage() const {
   return core_->node_entity_type_id_array_file_storage();

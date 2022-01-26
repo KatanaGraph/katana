@@ -47,7 +47,6 @@ using Distance = uint32_t;
 
 constexpr static const bool kTrackWork = false;
 constexpr static const unsigned kChunkSize = 64U;
-constexpr static const ptrdiff_t kEdgeTileSize = 512;
 
 using PSchunk = katana::PerSocketChunkFIFO<kChunkSize>;
 

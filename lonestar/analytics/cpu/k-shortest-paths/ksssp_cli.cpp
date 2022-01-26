@@ -156,8 +156,8 @@ main(int argc, char** argv) {
   katana::TxnContext txn_ctx;
 
   auto pg_result =
-      Ksp(pg.get(), startNode, reportNode, &txn_ctx,
-          algoReachability, numPaths, stepShift, plan);
+      Ksp(pg.get(), startNode, reportNode, &txn_ctx, algoReachability, numPaths,
+          stepShift, plan);
 
   if (!pg_result) {
     KATANA_LOG_FATAL(

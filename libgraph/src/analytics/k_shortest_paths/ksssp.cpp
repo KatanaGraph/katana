@@ -68,10 +68,13 @@ private:
   katana::FixedSizeAllocator<Path> allocator_;
 };
 
-template <typename GraphTy, typename Item, typename PushWrap, typename EdgeRange>
-bool CheckReachabilityAsync(
-    GraphTy* graph, const typename GraphTy::Node& source, const PushWrap& push_wrap,
-    const EdgeRange& edge_range, unsigned int report_node) {
+template <
+    typename GraphTy, typename Item, typename PushWrap, typename EdgeRange>
+bool
+CheckReachabilityAsync(
+    GraphTy* graph, const typename GraphTy::Node& source,
+    const PushWrap& push_wrap, const EdgeRange& edge_range,
+    unsigned int report_node) {
   using FIFO = katana::PerSocketChunkFIFO<kChunkSize>;
   using WL = FIFO;
 
@@ -112,10 +115,12 @@ bool CheckReachabilityAsync(
 }
 
 template <typename GraphTy>
-bool CheckReachabilitySync(
-    GraphTy* graph, const typename GraphTy::Node& source, unsigned int report_node) {
+bool
+CheckReachabilitySync(
+    GraphTy* graph, const typename GraphTy::Node& source,
+    unsigned int report_node) {
   using GNode = typename GraphTy::Node;
-  
+
   katana::InsertBag<GNode> current_bag;
   katana::InsertBag<GNode> next_bag;
 
@@ -153,14 +158,16 @@ bool CheckReachabilitySync(
 
 //delta stepping implementation for finding a shortest path from source to report node
 template <
-    typename GraphTy, typename Item, typename OBIMTy, typename PushWrap, typename EdgeRange>
-void DeltaStepAlgo(
-    katana::NUMAArray<Weight>* edge_data, GraphTy* graph, const typename GraphTy::Node& source,
-    const PushWrap& push_wrap, const EdgeRange& edge_range,
+    typename GraphTy, typename Item, typename OBIMTy, typename PushWrap,
+    typename EdgeRange>
+void
+DeltaStepAlgo(
+    katana::NUMAArray<Weight>* edge_data, GraphTy* graph,
+    const typename GraphTy::Node& source, const PushWrap& push_wrap,
+    const EdgeRange& edge_range,
     katana::InsertBag<std::pair<Weight, Path*>>* report_paths_bag,
     katana::InsertBag<Path*>* path_pointers, PathAlloc& path_alloc,
-    unsigned int report_node, unsigned int num_paths,
-    unsigned int step_shift) {
+    unsigned int report_node, unsigned int num_paths, unsigned int step_shift) {
   using GNode = typename GraphTy::Node;
 
   using kSSSP = katana::analytics::KSsspImplementationBase<
@@ -169,7 +176,7 @@ void DeltaStepAlgo(
 
   using OBIM =
       katana::OrderedByIntegerMetric<kSSSPUpdateRequestIndexer, PSchunk>;
-  
+
   //! [reducible for self-defined stats]
   katana::GAccumulator<size_t> bad_work;
   //! [reducible for self-defined stats]
@@ -218,9 +225,8 @@ void DeltaStepAlgo(
           //check if this new extended path needs to be added to the worklist
           bool should_add =
               (graph->template GetData<NodeCount>(report_node) < num_paths) ||
-              ((graph->template GetData<NodeCount>(report_node) >=
-                num_paths) &&
-                (graph->template GetData<NodeMax>(report_node) > new_dist));
+              ((graph->template GetData<NodeCount>(report_node) >= num_paths) &&
+               (graph->template GetData<NodeMax>(report_node) > new_dist));
 
           if (should_add) {
             const Path* const_path = path;
@@ -239,7 +245,8 @@ void DeltaStepAlgo(
   }
 }
 
-void PrintPath(const Path* path) {
+void
+PrintPath(const Path* path) {
   if (path->last != nullptr) {
     PrintPath(path->last);
   }
@@ -248,14 +255,15 @@ void PrintPath(const Path* path) {
 }
 
 template <typename GraphTy>
-katana::Result<void> KspImpl(
+katana::Result<void>
+KspImpl(
     GraphTy& graph, unsigned int start_node, unsigned int report_node,
     AlgoReachability algo_reachability, unsigned int num_paths,
     unsigned int step_shift, kSsspPlan plan) {
   using GNode = typename GraphTy::Node;
-  
+
   using kSSSP = katana::analytics::KSsspImplementationBase<
-    GraphTy, Weight, const Path, true>;
+      GraphTy, Weight, const Path, true>;
   using kSSSPUpdateRequest = typename kSSSP::UpdateRequest;
   using kSSSPUpdateRequestIndexer = typename kSSSP::UpdateRequestIndexer;
   using kSSSPSrcEdgeTile = typename kSSSP::SrcEdgeTile;
@@ -273,7 +281,7 @@ katana::Result<void> KspImpl(
   using BFSUpdateRequest = typename BFS::UpdateRequest;
   using BFSReqPushWrap = typename BFS::ReqPushWrap;
   using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFn;
-  
+
   auto it = graph.begin();
   std::advance(it, start_node);
   GNode source = *it;
@@ -408,6 +416,6 @@ katana::analytics::Ksp(
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
   return KspImpl<GraphTy>(
-      graph.value(), start_node, report_node, algo_reachability, num_paths, step_shift,
-      plan);
+      graph.value(), start_node, report_node, algo_reachability, num_paths,
+      step_shift, plan);
 }

@@ -1,3 +1,4 @@
+import io
 import metagraph as mg
 import numpy as np
 import pandas as pd
@@ -110,7 +111,21 @@ def networkx_weighted_directed_8_12():
 
 @pytest.fixture(autouse=True)
 def networkx_weighted_directed_bfs():
-    df = pd.read_csv("tests/data/edge2.csv")
+    data = """
+Source,Destination,Weight
+0,3,1
+1,0,2
+1,4,3
+2,4,4
+2,5,5
+2,7,6
+3,4,8
+4,5,9
+5,6,10
+6,2,11
+"""
+    csv_file = io.StringIO(data)
+    df = pd.read_csv(csv_file)
     em = mg.wrappers.EdgeMap.PandasEdgeMap(
         df, "Source", "Destination", "Weight", is_directed=True
     )

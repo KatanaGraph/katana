@@ -129,6 +129,7 @@ public:
   /// Determine if the EntityTypeIDs are stored in properties, or outside
   /// in their own dedicated structures
   bool IsEntityTypeIDsOutsideProperties() const;
+  bool IsUint16tEntityTypeIDs() const;
   const FileView& node_entity_type_id_array_file_storage() const;
   const FileView& edge_entity_type_id_array_file_storage() const;
   katana::Result<katana::EntityTypeManager> node_entity_type_manager() const;

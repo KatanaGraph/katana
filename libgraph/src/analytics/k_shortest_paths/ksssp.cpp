@@ -311,7 +311,7 @@ katana::Result<void> KspImpl(
 
   switch (algo_reachability) {
   case async:
-    reachable = CheckReachabilityAsync<BFSUpdateRequest>(
+    reachable = CheckReachabilityAsync<GraphTy, BFSUpdateRequest>(
         &graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{&graph},
         report_node);
     break;
@@ -327,20 +327,20 @@ katana::Result<void> KspImpl(
   if (reachable) {
     switch (plan.algorithm()) {
     case kSsspPlan::kDeltaTile:
-      DeltaStepAlgo<kSSSPSrcEdgeTile, OBIM>(
+      DeltaStepAlgo<GraphTy, kSSSPSrcEdgeTile, OBIM>(
           &edge_data, &graph, source, kSSSPSrcEdgeTilePushWrap{&graph},
           kSSSPTileRangeFn(), &paths, &path_pointers, path_alloc, report_node,
           num_paths, step_shift);
       break;
     case kSsspPlan::kDeltaStep:
-      DeltaStepAlgo<kSSSPUpdateRequest, OBIM>(
+      DeltaStepAlgo<GraphTy, kSSSPUpdateRequest, OBIM>(
           &edge_data, &graph, source, kSSSPReqPushWrap(),
           kSSSPOutEdgeRangeFn{&graph}, &paths, &path_pointers, path_alloc,
           report_node, num_paths, step_shift);
       break;
     case kSsspPlan::kDeltaStepBarrier:
       katana::gInfo("Using OBIM with barrier\n");
-      DeltaStepAlgo<kSSSPUpdateRequest, OBIM_Barrier>(
+      DeltaStepAlgo<GraphTy, kSSSPUpdateRequest, OBIM_Barrier>(
           &edge_data, &graph, source, kSSSPReqPushWrap(),
           kSSSPOutEdgeRangeFn{&graph}, &paths, &path_pointers, path_alloc,
           report_node, num_paths, step_shift);

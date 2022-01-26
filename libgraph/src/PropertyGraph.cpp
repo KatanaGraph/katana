@@ -776,10 +776,10 @@ katana::PropertyGraph::AddNodeProperties(
     KATANA_LOG_DEBUG("adding empty node prop table");
     return ResultSuccess();
   }
-  if (topology().NumNodes() != static_cast<uint64_t>(props->num_rows())) {
+  if (NumOriginalNodes() != static_cast<uint64_t>(props->num_rows())) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology().NumNodes(), props->num_rows());
+        NumOriginalNodes(), props->num_rows());
   }
   return rdg_->AddNodeProperties(props, txn_ctx);
 }
@@ -791,10 +791,10 @@ katana::PropertyGraph::UpsertNodeProperties(
     KATANA_LOG_DEBUG("upsert empty node prop table");
     return ResultSuccess();
   }
-  if (topology().NumNodes() != static_cast<uint64_t>(props->num_rows())) {
+  if (NumOriginalNodes() != static_cast<uint64_t>(props->num_rows())) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology().NumNodes(), props->num_rows());
+        NumOriginalNodes(), props->num_rows());
   }
   return rdg_->UpsertNodeProperties(props, txn_ctx);
 }
@@ -842,10 +842,10 @@ katana::PropertyGraph::AddEdgeProperties(
     KATANA_LOG_DEBUG("adding empty edge prop table");
     return ResultSuccess();
   }
-  if (topology().NumEdges() != static_cast<uint64_t>(props->num_rows())) {
+  if (NumOriginalEdges() != static_cast<uint64_t>(props->num_rows())) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology().NumEdges(), props->num_rows());
+        NumOriginalEdges(), props->num_rows());
   }
   return rdg_->AddEdgeProperties(props, txn_ctx);
 }
@@ -857,10 +857,10 @@ katana::PropertyGraph::UpsertEdgeProperties(
     KATANA_LOG_DEBUG("upsert empty edge prop table");
     return ResultSuccess();
   }
-  if (topology().NumEdges() != static_cast<uint64_t>(props->num_rows())) {
+  if (NumOriginalEdges() != static_cast<uint64_t>(props->num_rows())) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology().NumEdges(), props->num_rows());
+        NumOriginalEdges(), props->num_rows());
   }
   return rdg_->UpsertEdgeProperties(props, txn_ctx);
 }

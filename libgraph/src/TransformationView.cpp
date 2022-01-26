@@ -29,6 +29,8 @@ FillBitMask(
 }  // namespace
 
 namespace katana {
+TransformationView::~TransformationView() = default;
+
 std::unique_ptr<TransformationView>
 TransformationView::CreateEmptyEdgeProjectedTopology(
     const PropertyGraph& pg, uint32_t num_new_nodes,
@@ -311,66 +313,6 @@ katana::TransformationView::MakeProjectedGraph(
   // Using `new` to access a non-public constructor.
   return std::unique_ptr<TransformationView>(
       new TransformationView(pg, std::move(topo), std::move(transformation)));
-}
-
-Result<void>
-TransformationView::AddNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, TxnContext* txn_ctx) {
-  if (props->num_columns() == 0) {
-    KATANA_LOG_DEBUG("adding empty node prop table");
-    return ResultSuccess();
-  }
-  if (NumOriginalNodes() != static_cast<uint64_t>(props->num_rows())) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        NumOriginalNodes(), props->num_rows());
-  }
-  return rdg().AddNodeProperties(props, txn_ctx);
-}
-
-Result<void>
-TransformationView::UpsertNodeProperties(
-    const std::shared_ptr<arrow::Table>& props, TxnContext* txn_ctx) {
-  if (props->num_columns() == 0) {
-    KATANA_LOG_DEBUG("upsert empty node prop table");
-    return ResultSuccess();
-  }
-  if (NumOriginalNodes() != static_cast<uint64_t>(props->num_rows())) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        NumOriginalNodes(), props->num_rows());
-  }
-  return rdg().UpsertNodeProperties(props, txn_ctx);
-}
-
-Result<void>
-TransformationView::AddEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, TxnContext* txn_ctx) {
-  if (props->num_columns() == 0) {
-    KATANA_LOG_DEBUG("adding empty edge prop table");
-    return ResultSuccess();
-  }
-  if (NumOriginalEdges() != static_cast<uint64_t>(props->num_rows())) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology().NumEdges(), props->num_rows());
-  }
-  return rdg().AddEdgeProperties(props, txn_ctx);
-}
-
-Result<void>
-TransformationView::UpsertEdgeProperties(
-    const std::shared_ptr<arrow::Table>& props, TxnContext* txn_ctx) {
-  if (props->num_columns() == 0) {
-    KATANA_LOG_DEBUG("upsert empty edge prop table");
-    return ResultSuccess();
-  }
-  if (NumOriginalEdges() != static_cast<uint64_t>(props->num_rows())) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology().NumEdges(), props->num_rows());
-  }
-  return rdg().UpsertEdgeProperties(props, txn_ctx);
 }
 
 }  // namespace katana

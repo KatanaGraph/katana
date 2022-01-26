@@ -80,7 +80,7 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
-  std::shared_ptr<katana::RDG> rdg_;
+  std::shared_ptr<katana::RDG> rdg_{std::make_shared<katana::RDG>()};
   std::shared_ptr<katana::RDGFile> file_;
 
   /// Manages the relations between the node entity types
@@ -895,6 +895,12 @@ public:
   uint64_t NumNodes() const { return topology().NumNodes(); }
   /// Return the number of local edges
   uint64_t NumEdges() const { return topology().NumEdges(); }
+
+  /// Return the number of nodes of the original property graph.
+  virtual uint64_t NumOriginalNodes() const { return NumNodes(); }
+
+  /// Return the number of edges of the original property graph.
+  virtual uint64_t NumOriginalEdges() const { return NumEdges(); }
 
   /// Gets the destination for an edge.
   ///

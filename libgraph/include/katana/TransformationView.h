@@ -16,7 +16,7 @@ public:
   TransformationView() = default;
   TransformationView(TransformationView&& other) = default;
 
-  virtual ~TransformationView() = default;
+  virtual ~TransformationView();
 
   /// Make a projected graph from a property graph. Shares state with
   /// the original graph.
@@ -25,12 +25,12 @@ public:
       const std::vector<std::string>& edge_types);
 
   /// Return the number of nodes of the original property graph.
-  uint64_t NumOriginalNodes() const {
+  uint64_t NumOriginalNodes() const final {
     return transformation_.original_to_transformed_nodes_.size();
   }
 
   /// Return the number of edges of the original property graph.
-  uint64_t NumOriginalEdges() const {
+  uint64_t NumOriginalEdges() const final {
     return transformation_.original_to_transformed_edges_.size();
   }
 
@@ -73,26 +73,6 @@ public:
         transformation_.edge_bitmask_data_.data(),
         arrow::BitUtil::BytesForBits(length));
   }
-
-  /// Add Node properties that do not exist in the current graph
-  Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& props,
-      katana::TxnContext* txn_ctx) final;
-
-  /// Add Edge properties that do not exist in the current graph
-  Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props,
-      katana::TxnContext* txn_ctx) final;
-
-  /// If property name exists, replace it, otherwise insert it
-  Result<void> UpsertNodeProperties(
-      const std::shared_ptr<arrow::Table>& props,
-      katana::TxnContext* txn_ctx) final;
-
-  /// If property name exists, replace it, otherwise insert it
-  Result<void> UpsertEdgeProperties(
-      const std::shared_ptr<arrow::Table>& props,
-      katana::TxnContext* txn_ctx) final;
 
 private:
   TransformationView(

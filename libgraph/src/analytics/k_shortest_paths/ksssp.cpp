@@ -303,7 +303,7 @@ KssspImpl(
   katana::do_all(katana::iterate(graph), [&](const GNode& n) {
     graph.template GetData<NodeMax>(n) = 0;
     graph.template GetData<NodeCount>(n) = 0;
-    for (auto e : graph.OutEdges(n)) {
+    for (auto e : Edges(graph, n)) {
       edge_data[e] = graph.template GetEdgeData<EdgeWeight>(e);
     }
   });

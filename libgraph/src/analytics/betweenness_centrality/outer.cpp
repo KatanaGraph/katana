@@ -246,7 +246,8 @@ struct HasOut {
 
 katana::Result<void>
 BetweennessCentralityOuter(
-    katana::PropertyGraph* pg, BetweennessCentralitySources sources,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    BetweennessCentralitySources sources,
     const std::string& output_property_name,
     BetweennessCentralityPlan plan [[maybe_unused]],
     katana::TxnContext* txn_ctx) {

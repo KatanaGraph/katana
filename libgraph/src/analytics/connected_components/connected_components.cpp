@@ -1137,15 +1137,16 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 template <typename Algorithm>
 static katana::Result<void>
 ConnectedComponentsWithWrap(
-    katana::PropertyGraph* pg, std::string output_property_name,
-    katana::TxnContext* txn_ctx, ConnectedComponentsPlan plan) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    std::string output_property_name, katana::TxnContext* txn_ctx,
+    ConnectedComponentsPlan plan) {
   katana::EnsurePreallocated(
       2, pg->topology().NumNodes() * sizeof(typename Algorithm::NodeComponent));
   katana::ReportPageAllocGuard page_alloc;
 
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeComponent>>(
-          pg, txn_ctx, {output_property_name});
+          pg.get(), txn_ctx, {output_property_name});
       !r) {
     return r.error();
   }
@@ -1173,8 +1174,9 @@ ConnectedComponentsWithWrap(
 template <typename GraphViewTy>
 katana::Result<void>
 ConnectedComponentsSelectAlgorithm(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx, ConnectedComponentsPlan plan) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
+    ConnectedComponentsPlan plan) {
   switch (plan.algorithm()) {
   case ConnectedComponentsPlan::kSerial:
     return ConnectedComponentsWithWrap<
@@ -1224,9 +1226,9 @@ ConnectedComponentsSelectAlgorithm(
 
 katana::Result<void>
 katana::analytics::ConnectedComponents(
-    PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx, const bool& is_symmetric,
-    ConnectedComponentsPlan plan) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
+    const bool& is_symmetric, ConnectedComponentsPlan plan) {
   if (is_symmetric) {
     using GraphView = katana::PropertyGraphViews::Default;
     return ConnectedComponentsSelectAlgorithm<GraphView>(
@@ -1240,7 +1242,8 @@ katana::analytics::ConnectedComponents(
 
 katana::Result<void>
 katana::analytics::ConnectedComponentsAssertValid(
-    PropertyGraph* pg, const std::string& property_name) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& property_name) {
   using ComponentType = uint64_t;
   struct NodeComponent : public katana::PODProperty<ComponentType> {};
 
@@ -1284,7 +1287,8 @@ katana::analytics::ConnectedComponentsAssertValid(
 
 katana::Result<ConnectedComponentsStatistics>
 katana::analytics::ConnectedComponentsStatistics::Compute(
-    katana::PropertyGraph* pg, const std::string& property_name) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& property_name) {
   using ComponentType = uint64_t;
   struct NodeComponent : public katana::PODProperty<ComponentType> {};
 

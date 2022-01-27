@@ -385,7 +385,8 @@ struct LeidenClusteringImplementation
 
 public:
   katana::Result<void> LeidenClustering(
-      katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+      const std::shared_ptr<katana::PropertyGraph>& pg,
+      const std::string& edge_weight_property_name,
       const std::vector<std::string>& temp_node_property_names,
       katana::NUMAArray<uint64_t>& clusters_orig, LeidenClusteringPlan plan,
       katana::TxnContext* txn_ctx) {
@@ -444,7 +445,7 @@ public:
 
       auto pg_dup = KATANA_CHECKED(Base::DuplicateGraphWithSameTopo(*pg));
       KATANA_CHECKED(Base::CopyEdgeProperty(
-          pg, pg_dup.get(), edge_weight_property_name,
+          pg.get(), pg_dup.get(), edge_weight_property_name,
           temp_edge_property_names[0], txn_ctx));
       KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg_dup.get(), txn_ctx));
 
@@ -457,7 +458,7 @@ public:
     double curr_mod = -1;  // Current modularity
     uint32_t phase = 0;
 
-    std::unique_ptr<katana::PropertyGraph> pg_curr = std::move(pg_mutable);
+    std::shared_ptr<katana::PropertyGraph> pg_curr = std::move(pg_mutable);
     uint32_t iter = 0;
     uint64_t num_nodes_orig = clusters_orig.size();
 
@@ -465,7 +466,7 @@ public:
       iter++;
       phase++;
 
-      graph_curr = KATANA_CHECKED(Graph::Make(pg_curr.get()));
+      graph_curr = KATANA_CHECKED(Graph::Make(pg_curr));
 
       if (iter == 1) {
         /* Initialization each node to its own cluster */
@@ -570,7 +571,7 @@ public:
         /**
        * Assign cluster id from previous iteration
        */
-        Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
+        Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr));
         katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
           graph_curr_tmp.template GetData<CurrentCommunityID>(n) =
               original_comm_ass[n];
@@ -609,7 +610,7 @@ public:
 
     prev_mod = curr_mod;
 
-    Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
+    Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr));
     katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
       graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n;
     });
@@ -631,12 +632,12 @@ public:
 template <typename EdgeWeightType>
 static katana::Result<void>
 AddDefaultEdgeWeight(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    katana::TxnContext* txn_ctx) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& edge_weight_property_name, katana::TxnContext* txn_ctx) {
   using EdgeData = std::tuple<EdgeWeightType>;
 
   if (auto res = katana::analytics::ConstructEdgeProperties<EdgeData>(
-          pg, txn_ctx, {edge_weight_property_name});
+          pg.get(), txn_ctx, {edge_weight_property_name});
       !res) {
     return res.error();
   }
@@ -654,7 +655,8 @@ AddDefaultEdgeWeight(
 template <typename EdgeWeightType>
 static katana::Result<void>
 LeidenClusteringWithWrap(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& edge_weight_property_name,
     const std::string& output_property_name, const bool& is_symmetric,
     LeidenClusteringPlan plan, katana::TxnContext* txn_ctx) {
   static_assert(
@@ -683,7 +685,7 @@ LeidenClusteringWithWrap(
     using Impl = LeidenClusteringImplementation<
         EdgeWeightType, katana::PropertyGraphViews::Default>;
     KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
-        pg, txn_ctx, temp_node_property_names));
+        pg.get(), txn_ctx, temp_node_property_names));
 
     LeidenClusteringImplementation<
         EdgeWeightType, katana::PropertyGraphViews::Default>
@@ -695,7 +697,7 @@ LeidenClusteringWithWrap(
     using Impl = LeidenClusteringImplementation<
         EdgeWeightType, katana::PropertyGraphViews::Undirected>;
     KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
-        pg, txn_ctx, temp_node_property_names));
+        pg.get(), txn_ctx, temp_node_property_names));
 
     LeidenClusteringImplementation<
         EdgeWeightType, katana::PropertyGraphViews::Undirected>
@@ -706,7 +708,7 @@ LeidenClusteringWithWrap(
   }
 
   KATANA_CHECKED(ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
-      pg, txn_ctx, {output_property_name}));
+      pg.get(), txn_ctx, {output_property_name}));
 
   auto graph = KATANA_CHECKED((
       katana::TypedPropertyGraph<std::tuple<CurrentCommunityID>, std::tuple<>>::
@@ -726,7 +728,8 @@ LeidenClusteringWithWrap(
 
 katana::Result<void>
 katana::analytics::LeidenClustering(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     const bool& is_symmetric, LeidenClusteringPlan plan) {
   if (!edge_weight_property_name.empty() &&
@@ -787,7 +790,7 @@ katana::analytics::LeidenClustering(
 /// \cond DO_NOT_DOCUMENT
 katana::Result<void>
 katana::analytics::LeidenClusteringAssertValid(
-    [[maybe_unused]] katana::PropertyGraph* pg,
+    [[maybe_unused]] const std::shared_ptr<katana::PropertyGraph>& pg,
     [[maybe_unused]] const std::string& edge_weight_property_name,
     [[maybe_unused]] const std::string& property_name) {
   // TODO(gill): This should have real checks.
@@ -810,7 +813,8 @@ katana::analytics::LeidenClusteringStatistics::Print(std::ostream& os) const {
 template <typename EdgeWeightType>
 katana::Result<double>
 CalModularityWrap(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& edge_weight_property_name,
     const std::string& property_name) {
   using CommTy = CommunityType<EdgeWeightType>;
   using NodeData = std::tuple<CurrentCommunityID>;
@@ -830,7 +834,8 @@ CalModularityWrap(
 
 katana::Result<katana::analytics::LeidenClusteringStatistics>
 katana::analytics::LeidenClusteringStatistics::Compute(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& edge_weight_property_name,
     const std::string& property_name, katana::TxnContext* txn_ctx) {
   auto graph_result = katana::
       TypedPropertyGraph<std::tuple<PreviousCommunityID>, std::tuple<>>::Make(

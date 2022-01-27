@@ -599,12 +599,12 @@ struct IsBad {
 
 template <typename Algo>
 katana::Result<void>
-Run(katana::PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx) {
+Run(const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx) {
   using Graph = typename Algo::Graph;
   using GNode = typename Graph::Node;
   auto result = ConstructNodeProperties<typename Algo::NodeData>(
-      pg, txn_ctx, {output_property_name});
+      pg.get(), txn_ctx, {output_property_name});
   if (!result) {
     return result.error();
   }
@@ -663,8 +663,9 @@ Run(katana::PropertyGraph* pg, const std::string& output_property_name,
 
 katana::Result<void>
 katana::analytics::IndependentSet(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx, IndependentSetPlan plan) {
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
+    IndependentSetPlan plan) {
   switch (plan.algorithm()) {
   case IndependentSetPlan::kSerial:
     return Run<SerialAlgo>(pg, output_property_name, txn_ctx);
@@ -681,7 +682,8 @@ katana::analytics::IndependentSet(
 
 katana::Result<void>
 katana::analytics::IndependentSetAssertValid(
-    katana::PropertyGraph* pg, const std::string& property_name) {
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& property_name) {
   auto pg_result =
       katana::TypedPropertyGraph<IsBad::NodeData, IsBad::EdgeData>::Make(
           pg, {property_name}, {});
@@ -706,7 +708,8 @@ katana::analytics::IndependentSetStatistics::Print(std::ostream& os) const {
 
 katana::Result<IndependentSetStatistics>
 katana::analytics::IndependentSetStatistics::Compute(
-    katana::PropertyGraph* pg, const std::string& property_name) {
+    std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& property_name) {
   auto property_result = pg->GetNodePropertyTyped<uint8_t>(property_name);
   if (!property_result) {
     return property_result.error();

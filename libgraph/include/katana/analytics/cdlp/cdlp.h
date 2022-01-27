@@ -98,9 +98,10 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Cdlp(
-    PropertyGraph* pg, const std::string& output_property_name,
-    size_t max_iterations, katana::TxnContext* txn_ctx,
-    const bool& is_symmetric = false, CdlpPlan plan = CdlpPlan());
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& output_property_name, size_t max_iterations,
+    katana::TxnContext* txn_ctx, const bool& is_symmetric = false,
+    CdlpPlan plan = CdlpPlan());
 
 /// TODO (Yasin): This Struct (Compute function) is now being used by louvain,
 /// cc, and cdlp, basically everything which is calculating communities. Explore
@@ -120,7 +121,8 @@ struct KATANA_EXPORT CdlpStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<CdlpStatistics> Compute(
-      katana::PropertyGraph* pg, const std::string& property_name);
+      const std::shared_ptr<PropertyGraph>& pg,
+      const std::string& property_name);
 };
 
 }  // namespace katana::analytics

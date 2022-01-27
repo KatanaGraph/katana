@@ -58,12 +58,13 @@ using JaccardSimilarity = katana::PODProperty<double>;
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Jaccard(
-    PropertyGraph* pg, uint32_t compare_node,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     JaccardPlan plan = {});
 
 KATANA_EXPORT Result<void> JaccardAssertValid(
-    PropertyGraph* pg, uint32_t compare_node, const std::string& property_name);
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
+    const std::string& property_name);
 
 struct KATANA_EXPORT JaccardStatistics {
   /// The maximum similarity excluding the comparison node.
@@ -77,7 +78,7 @@ struct KATANA_EXPORT JaccardStatistics {
   void Print(std::ostream& os = std::cout);
 
   static katana::Result<JaccardStatistics> Compute(
-      katana::PropertyGraph* pg, uint32_t compare_node,
+      const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
       const std::string& property_name);
 };
 

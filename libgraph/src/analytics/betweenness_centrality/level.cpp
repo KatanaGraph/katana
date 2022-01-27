@@ -216,13 +216,14 @@ LevelBackwardBrandes(
 //! property graph for use by stats/output verification
 katana::Result<void>
 ExtractBC(
-    katana::PropertyGraph* pg, const LevelGraph& array_of_struct_graph,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const LevelGraph& array_of_struct_graph,
     const BCLevelNodeDataArray& graph_data,
     const std::string& output_property_name, katana::TxnContext* txn_ctx) {
   // construct the new property
   if (auto result =
           katana::analytics::ConstructNodeProperties<std::tuple<NodeBC>>(
-              pg, txn_ctx, {output_property_name});
+              pg.get(), txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }
@@ -247,7 +248,7 @@ ExtractBC(
 
 katana::Result<void>
 BetweennessCentralityLevel(
-    katana::PropertyGraph* pg,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
     katana::analytics::BetweennessCentralityPlan plan [[maybe_unused]],

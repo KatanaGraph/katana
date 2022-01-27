@@ -138,9 +138,11 @@ public:
 /// parameters are used by the algorithms. The generated random-walks generated
 /// are returned as a vector of vectors.
 KATANA_EXPORT Result<std::vector<std::vector<uint32_t>>> RandomWalks(
-    PropertyGraph* pg, RandomWalksPlan plan = RandomWalksPlan());
+    const std::shared_ptr<PropertyGraph>& pg,
+    RandomWalksPlan plan = RandomWalksPlan());
 
-KATANA_EXPORT Result<void> RandomWalksAssertValid(PropertyGraph* pg);
+KATANA_EXPORT Result<void> RandomWalksAssertValid(
+    const std::shared_ptr<PropertyGraph>& pg);
 
 }  // namespace katana::analytics
 #endif

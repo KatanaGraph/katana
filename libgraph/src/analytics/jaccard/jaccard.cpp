@@ -138,11 +138,11 @@ JaccardImpl(Graph& graph, size_t compare_node, JaccardPlan /*plan*/) {
 
 katana::Result<void>
 katana::analytics::Jaccard(
-    PropertyGraph* pg, uint32_t compare_node,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     JaccardPlan plan) {
   if (auto result = ConstructNodeProperties<NodeData>(
-          pg, txn_ctx, {output_property_name});
+          pg.get(), txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }
@@ -169,10 +169,9 @@ constexpr static const double EPSILON = 1e-6;
 
 katana::Result<void>
 katana::analytics::JaccardAssertValid(
-    katana::PropertyGraph* pg, uint32_t compare_node,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
     const std::string& property_name) {
   Graph graph = KATANA_CHECKED(Graph::Make(pg, {property_name}, {}));
-  ;
 
   if (abs(graph.GetData<JaccardSimilarity>(compare_node) - 1.0) > EPSILON) {
     return katana::ErrorCode::AssertionFailed;
@@ -196,10 +195,9 @@ katana::analytics::JaccardAssertValid(
 
 katana::Result<JaccardStatistics>
 katana::analytics::JaccardStatistics::Compute(
-    katana::PropertyGraph* pg, uint32_t compare_node,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
     const std::string& property_name) {
   Graph graph = KATANA_CHECKED(Graph::Make(pg, {property_name}, {}));
-  ;
 
   katana::GReduceMax<double> max_similarity;
   katana::GReduceMin<double> min_similarity;

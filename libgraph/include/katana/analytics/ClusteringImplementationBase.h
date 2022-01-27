@@ -686,7 +686,7 @@ struct ClusteringImplementationBase {
     if (!pfg_next_res) {
       return pfg_next_res.error();
     }
-    std::unique_ptr<katana::PropertyGraph> pfg_next =
+    std::shared_ptr<katana::PropertyGraph> pfg_next =
         std::move(pfg_next_res.value());
 
     if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
@@ -701,7 +701,7 @@ struct ClusteringImplementationBase {
       return result.error();
     }
 
-    auto graph_result = Graph::Make(pfg_next.get());
+    auto graph_result = Graph::Make(pfg_next);
     if (!graph_result) {
       return graph_result.error();
     }
@@ -716,7 +716,7 @@ struct ClusteringImplementationBase {
         katana::no_stats());
 
     TimerGraphBuild.stop();
-    return std::unique_ptr<katana::PropertyGraph>(std::move(pfg_next));
+    return std::make_unique<katana::PropertyGraph>(std::move(*pfg_next));
   }
 
   /**

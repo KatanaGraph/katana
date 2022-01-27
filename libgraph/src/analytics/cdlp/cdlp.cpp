@@ -136,15 +136,16 @@ struct CdlpAsynchronousAlgo : CdlpAlgo<GraphViewTy> {
 template <typename Algorithm>
 static katana::Result<void>
 CdlpWithWrap(
-    katana::PropertyGraph* pg, std::string output_property_name,
-    size_t max_iterations, katana::TxnContext* txn_ctx) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    std::string output_property_name, size_t max_iterations,
+    katana::TxnContext* txn_ctx) {
   katana::EnsurePreallocated(
       2, pg->topology().NumNodes() * sizeof(typename Algorithm::NodeCommunity));
   katana::ReportPageAllocGuard page_alloc;
 
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeCommunity>>(
-          pg, txn_ctx, {output_property_name});
+          pg.get(), txn_ctx, {output_property_name});
       !r) {
     return r.error();
   }
@@ -169,9 +170,9 @@ CdlpWithWrap(
 
 katana::Result<void>
 katana::analytics::Cdlp(
-    PropertyGraph* pg, const std::string& output_property_name,
-    size_t max_iterations, katana::TxnContext* txn_ctx,
-    const bool& is_symmetric, CdlpPlan plan) {
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& output_property_name, size_t max_iterations,
+    katana::TxnContext* txn_ctx, const bool& is_symmetric, CdlpPlan plan) {
   switch (plan.algorithm()) {
   case CdlpPlan::kSynchronous:
     if (is_symmetric)
@@ -200,7 +201,8 @@ katana::analytics::Cdlp(
 /// to avoid code duplication.
 katana::Result<CdlpStatistics>
 katana::analytics::CdlpStatistics::Compute(
-    katana::PropertyGraph* pg, const std::string& property_name) {
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& property_name) {
   using CommunityType = uint64_t;
   struct NodeCommunity : public katana::PODProperty<CommunityType> {};
 

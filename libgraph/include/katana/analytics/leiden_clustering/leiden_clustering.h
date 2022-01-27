@@ -143,12 +143,14 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> LeidenClustering(
-    PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     const bool& is_symmetric = false, LeidenClusteringPlan plan = {});
 
 KATANA_EXPORT Result<void> LeidenClusteringAssertValid(
-    PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& edge_weight_property_name,
     const std::string& output_property_name);
 
 struct KATANA_EXPORT LeidenClusteringStatistics {
@@ -167,7 +169,8 @@ struct KATANA_EXPORT LeidenClusteringStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<LeidenClusteringStatistics> Compute(
-      PropertyGraph* pg, const std::string& edge_weight_property_name,
+      const std::shared_ptr<PropertyGraph>& pg,
+      const std::string& edge_weight_property_name,
       const std::string& output_property_name, katana::TxnContext* txn_ctx);
 };
 

@@ -57,11 +57,12 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call. The created property has type uint8_t.
 KATANA_EXPORT Result<void> IndependentSet(
-    PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx, IndependentSetPlan plan = {});
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
+    IndependentSetPlan plan = {});
 
 KATANA_EXPORT Result<void> IndependentSetAssertValid(
-    PropertyGraph* pg, const std::string& property_name);
+    const std::shared_ptr<PropertyGraph>& pg, const std::string& property_name);
 
 struct KATANA_EXPORT IndependentSetStatistics {
   /// The number of nodes in the independent set.
@@ -71,7 +72,7 @@ struct KATANA_EXPORT IndependentSetStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<IndependentSetStatistics> Compute(
-      katana::PropertyGraph* pg, const std::string& property_name);
+      std::shared_ptr<PropertyGraph>& pg, const std::string& property_name);
 };
 
 }  // namespace katana::analytics

@@ -48,12 +48,12 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> KCore(
-    PropertyGraph* pg, uint32_t k_core_number,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t k_core_number,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     const bool& is_symmetric = false, KCorePlan plan = KCorePlan());
 
 KATANA_EXPORT Result<void> KCoreAssertValid(
-    PropertyGraph* pg, uint32_t k_core_number,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t k_core_number,
     const std::string& property_name);
 
 struct KATANA_EXPORT KCoreStatistics {
@@ -64,7 +64,7 @@ struct KATANA_EXPORT KCoreStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KCoreStatistics> Compute(
-      katana::PropertyGraph* pg, uint32_t k_core_number,
+      const std::shared_ptr<PropertyGraph>& pg, uint32_t k_core_number,
       const std::string& property_name);
 };
 

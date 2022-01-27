@@ -28,7 +28,7 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   using Node = UndirectedView::Node;
   using Edge = UndirectedView::Edge;
 
-  auto view_res = UndirectedView::Make(pg.get(), {"label", "deg_sum"}, {});
+  auto view_res = UndirectedView::Make(std::move(pg), {"label", "deg_sum"}, {});
   KATANA_LOG_VASSERT(
       view_res, "Failed to create Undirected View. Error msg: {}",
       view_res.error());

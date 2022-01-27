@@ -451,11 +451,11 @@ BfsImpl(
 
 katana::Result<void>
 katana::analytics::Bfs(
-    PropertyGraph* pg, GNode start_node,
+    const std::shared_ptr<PropertyGraph>& pg, GNode start_node,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     BfsPlan algo) {
   if (auto result = ConstructNodeProperties<std::tuple<BfsNodeParent>>(
-          pg, txn_ctx, {output_property_name});
+          pg.get(), txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }
@@ -610,7 +610,7 @@ CheckParentByLevel(
 
 katana::Result<void>
 katana::analytics::BfsAssertValid(
-    PropertyGraph* pg, const GNode source,
+    const std::shared_ptr<PropertyGraph>& pg, const GNode source,
     const std::string& output_property_name) {
   auto graph = KATANA_CHECKED(Graph::Make(pg, {output_property_name}, {}));
   auto bidir_view =
@@ -629,7 +629,8 @@ katana::analytics::BfsAssertValid(
 
 katana::Result<BfsStatistics>
 katana::analytics::BfsStatistics::Compute(
-    katana::PropertyGraph* pg, const std::string& property_name) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& property_name) {
   auto pg_result = BfsImplementation::Graph::Make(pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();

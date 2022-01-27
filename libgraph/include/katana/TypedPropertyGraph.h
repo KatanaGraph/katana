@@ -34,13 +34,14 @@ class TypedPropertyGraph {
   using NodeView = PropertyViewTuple<NodeProps>;
   using EdgeView = PropertyViewTuple<EdgeProps>;
 
-  PropertyGraph* pg_;
+  std::shared_ptr<PropertyGraph> pg_;
 
   NodeView node_view_;
   EdgeView edge_view_;
 
-  TypedPropertyGraph(PropertyGraph* pg, NodeView node_view, EdgeView edge_view)
-      : pg_(pg),
+  TypedPropertyGraph(
+      std::shared_ptr<PropertyGraph> pg, NodeView node_view, EdgeView edge_view)
+      : pg_(std::move(pg)),
         node_view_(std::move(node_view)),
         edge_view_(std::move(edge_view)) {}
 
@@ -351,7 +352,7 @@ TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
 
   auto pg_view = PGView::Make(std::move(pg));
   return TypedPropertyGraphView(
-      std::move(*pg_view), std::move(node_view_result.value()),
+      *pg_view, std::move(node_view_result.value()),
       std::move(edge_view_result.value()));
 }
 
@@ -363,7 +364,7 @@ TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
   auto node_fields = pg->loaded_node_schema()->field_names();
   auto edge_fields = pg->loaded_edge_schema()->field_names();
   return TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
-      std::move(pg_view), std::move(node_fields), std::move(edge_fields));
+      *pg_view, std::move(node_fields), std::move(edge_fields));
 }
 
 template <typename PGView, typename NodeProps, typename EdgeProps>

@@ -109,11 +109,13 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Pagerank(
-    PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx, PagerankPlan plan = {});
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
+    PagerankPlan plan = {});
 
 KATANA_EXPORT Result<void> PagerankAssertValid(
-    PropertyGraph* pg, const std::string& property_name);
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& property_name);
 
 struct KATANA_EXPORT PagerankStatistics {
   /// The maximum similarity excluding the comparison node.
@@ -127,7 +129,8 @@ struct KATANA_EXPORT PagerankStatistics {
   void Print(std::ostream& os = std::cout);
 
   static katana::Result<PagerankStatistics> Compute(
-      katana::PropertyGraph* pg, const std::string& property_name);
+      const std::shared_ptr<katana::PropertyGraph>& pg,
+      const std::string& property_name);
 };
 
 }  // namespace katana::analytics

@@ -919,8 +919,8 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 
   // Create an index based on the type of the field.
-  std::unique_ptr<katana::PropertyIndex<GraphTopology::Node>> index =
-      KATANA_CHECKED(katana::MakeTypedIndex<katana::GraphTopology::Node>(
+  std::unique_ptr<katana::EntityIndex<GraphTopology::Node>> index =
+      KATANA_CHECKED(katana::MakeTypedEntityIndex<katana::GraphTopology::Node>(
           column_name, NumNodes(), property));
 
   KATANA_CHECKED(index->BuildFromProperty());
@@ -938,7 +938,12 @@ katana::PropertyGraph::DeleteNodeIndex(const std::string& column_name) {
       return katana::ResultSuccess();
     }
   }
-  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+
+  // TODO(Chak-Pong) make deleteNodeIndex always successful
+  //  before index existence check is available from python side
+  //  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+  KATANA_LOG_WARN("the following node index not found: {}", column_name);
+  return katana::ResultSuccess();
 }
 
 // Build an index over edges.
@@ -959,8 +964,8 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 
   // Create an index based on the type of the field.
-  std::unique_ptr<katana::PropertyIndex<katana::GraphTopology::Edge>> index =
-      KATANA_CHECKED(katana::MakeTypedIndex<katana::GraphTopology::Edge>(
+  std::unique_ptr<katana::EntityIndex<katana::GraphTopology::Edge>> index =
+      KATANA_CHECKED(katana::MakeTypedEntityIndex<katana::GraphTopology::Edge>(
           column_name, NumEdges(), property));
 
   KATANA_CHECKED(index->BuildFromProperty());
@@ -1275,9 +1280,8 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
   return katana::PropertyGraph::Make(std::move(transpose_topo));
 }
 
-katana::Result<katana::PropertyIndex<katana::GraphTopology::Node>*>
-katana::PropertyGraph::GetNodePropertyIndex(
-    const std::string& property_name) const {
+katana::Result<katana::EntityIndex<katana::GraphTopology::Node>*>
+katana::PropertyGraph::GetNodeIndex(const std::string& property_name) const {
   for (const auto& index : node_indexes()) {
     if (index->column_name() == property_name) {
       return index.get();

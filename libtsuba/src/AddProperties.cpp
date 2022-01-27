@@ -87,7 +87,7 @@ katana::AddProperties(
       auto& tracer = katana::GetTracer();
       katana::Uri cache_key(rdg->rdg_dir().Join(prop->path()));
       std::optional<std::shared_ptr<arrow::Table>> column_table =
-          cache->Get(cache_key);
+          cache->GetAndEvict(cache_key);
       KATANA_LOG_ASSERT(!rdg->rdg_dir().empty());
       if (column_table.has_value()) {
         std::shared_ptr<arrow::Table> props = column_table.value();

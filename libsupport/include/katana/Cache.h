@@ -66,7 +66,10 @@ class KATANA_EXPORT Cache {
     typename ListType::iterator lru_it;
   };
   using MapType = std::unordered_map<Key, MapValue, Key::Hash>;
-  enum class ReplacementPolicy { kLRUSize, kLRUBytes };
+  // kLRUSize - LRU replacement when the number of elements is above threshold
+  // kLRUBytes- LRU replacement when the byte count of elements is above threshold
+  // kNone - LRU replacement only on demand
+  enum class ReplacementPolicy { kLRUSize, kLRUBytes, kLRUExplicit };
 
 public:
   /// Construct an LRU cache that has a fixed number of entries.
@@ -88,24 +91,54 @@ public:
         value_to_bytes_ != nullptr,
         "kLRUBytes policy requires value to bytes function");
   }
+  /// Construct an LRU cache that holds whatever we put in it and only evicts when we
+  /// explicitly tell it to do so.
+  Cache(std::function<size_t(const Value& value)> value_to_bytes)
+      : policy_(ReplacementPolicy::kLRUExplicit),
+        capacity_(std::numeric_limits<size_t>::max()),
+        value_to_bytes_(std::move(value_to_bytes)) {
+    KATANA_LOG_VASSERT(
+        value_to_bytes_ != nullptr,
+        "kLRUExplicit policy requires value to bytes function");
+  }
 
+  /// Returns the size of the cache (in number of elements or size of elements,
+  /// depending on the replacement policy).
   size_t size() const {
     if (policy_ == ReplacementPolicy::kLRUSize) {
       return key_to_value_.size();
-    } else {
-      return total_bytes_;
     }
+    return total_bytes_;
   }
 
-  size_t capacity() const { return capacity_; }
+  /// Returns the capacity (in number of elements or size of elements, depending on
+  /// the replacement policy).
+  size_t capacity() const {
+    if (policy_ == ReplacementPolicy::kLRUExplicit) {
+      return std::numeric_limits<size_t>::max();
+    }
+    return capacity_;
+  }
 
+  /// Clear cache
   void clear() {
     key_to_value_.clear();
     lru_list_.clear();
     total_bytes_ = 0;
   }
 
+  /// Returns true if the cache is empty
   bool empty() const { return key_to_value_.empty(); }
+
+  /// Try to reclaim \p goal bytes (#entries), evicting least recently used entries to
+  /// do it.  Returns the number of bytes actually evicted.
+  size_t Reclaim(size_t goal) {
+    size_t reclaimed{};
+    while (!empty() && reclaimed < goal) {
+      reclaimed += EvictLastOne();
+    }
+    return reclaimed;
+  }
 
   bool Contains(const Key& key) const {
     return key_to_value_.find(key) != key_to_value_.end();
@@ -115,15 +148,22 @@ public:
     cache_stats_.insert_count++;
     auto mapit = key_to_value_.find(key);
     if (mapit == key_to_value_.end()) {
+      size_t approx_bytes{};
+      if (value_to_bytes_ != nullptr) {
+        approx_bytes = value_to_bytes_(value);
+        if (approx_bytes > capacity_) {
+          // Object too big, don't insert
+          return;
+        }
+      }
       lru_list_.push_front(key);
       key_to_value_[key] = {value, lru_list_.begin()};
       if (value_to_bytes_ != nullptr) {
-        auto approx_bytes = value_to_bytes_(value);
         if (approx_bytes == 0) {
           KATANA_LOG_WARN(
               "caching zero sized object with LRUBytes policy is illogical");
         }
-        total_bytes_ += value_to_bytes_(value);
+        total_bytes_ += approx_bytes;
       }
     } else {
       cache_stats_.insert_hit_count++;
@@ -131,8 +171,6 @@ public:
       UpdateLRU(mapit);
     }
     EvictIfNecessary();
-    // An inserted entry should be accessible
-    KATANA_LOG_DEBUG_ASSERT(Get(key));
   }
 
   std::optional<Value> Get(const Key& key) {
@@ -142,6 +180,18 @@ public:
     auto it = key_to_value_.find(key);
     if (it != key_to_value_.end()) {
       ret = UpdateLRU(it);
+      cache_stats_.get_hit_count++;
+    }
+    return ret;
+  }
+
+  std::optional<Value> GetAndEvict(const Key& key) {
+    // lookup value in the cache
+    cache_stats_.get_count++;
+    std::optional<Value> ret;
+    auto it = key_to_value_.find(key);
+    if (it != key_to_value_.end()) {
+      ret = EvictMe(it->second.lru_it);
       cache_stats_.get_hit_count++;
     }
     return ret;
@@ -171,35 +221,38 @@ private:
     return mapit->second.value;
   }
 
-  void EvictLastOne() {
-    // evict item from the end of most recently used list
-    auto tail = --lru_list_.end();
-    KATANA_LOG_ASSERT(tail != lru_list_.end());
-    Key evicted_key = std::move(*tail);
-    lru_list_.erase(tail);
+  Value EvictMe(ListType::iterator evictit) {
+    KATANA_LOG_DEBUG_ASSERT(evictit != lru_list_.end());
+    Key evicted_key = std::move(*evictit);
+    lru_list_.erase(evictit);
     auto evicted_value = std::move(key_to_value_.at(evicted_key).value);
-    uint64_t approx_evicted_bytes = 0;
     key_to_value_.erase(evicted_key);
     if (value_to_bytes_ != nullptr) {
-      approx_evicted_bytes = value_to_bytes_(evicted_value);
-      total_bytes_ -= approx_evicted_bytes;
+      total_bytes_ -= value_to_bytes_(evicted_value);
     }
+    return evicted_value;
+  }
+
+  uint64_t EvictLastOne() {
+    // evict item from the end of most recently used list
+    auto tail = --lru_list_.end();
+    auto evicted_value = EvictMe(tail);
+    if (value_to_bytes_ != nullptr) {
+      return value_to_bytes_(evicted_value);
+    }
+    return 1;
   }
 
   void EvictIfNecessary() {
     switch (policy_) {
-    case ReplacementPolicy::kLRUSize: {
+    case ReplacementPolicy::kLRUSize:
+    case ReplacementPolicy::kLRUBytes: {
       while (size() > capacity_) {
         EvictLastOne();
       }
     } break;
-    case ReplacementPolicy::kLRUBytes: {
-      KATANA_LOG_DEBUG_ASSERT(value_to_bytes_ != nullptr);
-      // Allow a single entry to exceed our byte capacity.
-      // The new entry has already been added to the cache, hence > 1.
-      while (size() > capacity_ && key_to_value_.size() > 1) {
-        EvictLastOne();
-      }
+    case ReplacementPolicy::kLRUExplicit: {
+      // Do nothing
     } break;
     default:
       KATANA_LOG_FATAL("bad cache replacement policy: {}", policy_);

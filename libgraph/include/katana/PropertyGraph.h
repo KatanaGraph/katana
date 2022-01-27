@@ -109,10 +109,6 @@ private:
 
   PGViewCache pg_view_cache_;
 
-  // This variable is meant to assist the compiler in optimizing out
-  // the false if branch in Get*PropertyIndex methods.
-  const bool is_transformation_{false};
-
   katana::Result<katana::RDGTopology*> LoadTopology(
       const katana::RDGTopology& shadow) {
     katana::RDGTopology* topo = KATANA_CHECKED(rdg_->GetTopology(shadow));
@@ -134,22 +130,9 @@ protected:
   RDG& rdg() { return *rdg_; }
   const RDG& rdg() const { return *rdg_; }
 
-  struct Transformation {
-    NUMAArray<Node> original_to_transformed_nodes_;
-    NUMAArray<Node> transformed_to_original_nodes_;
-    NUMAArray<Edge> original_to_transformed_edges_;
-    NUMAArray<Edge> transformed_to_original_edges_;
-    NUMAArray<uint8_t> node_bitmask_data_;
-    NUMAArray<uint8_t> edge_bitmask_data_;
-  };
-
-  Transformation transformation_{};
-
   // This constructor is meant to be used by transformation views to share
   // state with the original graph.
-  PropertyGraph(
-      const PropertyGraph& parent, GraphTopology&& topo,
-      Transformation&& transformation) noexcept
+  PropertyGraph(const PropertyGraph& parent, GraphTopology&& topo) noexcept
       : rdg_(parent.rdg_),
         file_(parent.file_),
         node_entity_type_manager_(parent.node_entity_type_manager_),
@@ -158,13 +141,13 @@ protected:
         node_entity_data_(node_entity_type_ids_->data()),
         edge_entity_type_ids_(parent.edge_entity_type_ids_),
         edge_entity_data_(edge_entity_type_ids_->data()),
-        pg_view_cache_(std::move(topo)),
-        is_transformation_(true),
-        transformation_{std::move(transformation)} {}
+        pg_view_cache_(std::move(topo)) {}
 
 public:
-  virtual ~PropertyGraph() = default;
+  virtual ~PropertyGraph();
+
   PropertyGraph(PropertyGraph&& other) = default;
+
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
   struct ReadOnlyPropertyView {
@@ -305,14 +288,6 @@ public:
   template <typename PGView>
   PGView BuildView() noexcept {
     return pg_view_cache_.BuildView<PGView>(this);
-  }
-
-  //TODO(yan): remove this once the ProjectedGraph has been refactored.
-  template <typename PGView>
-  PGView BuildView(
-      const std::vector<std::string>& node_types,
-      const std::vector<std::string>& edge_types) noexcept {
-    return pg_view_cache_.BuildView<PGView>(this, node_types, edge_types);
   }
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
@@ -582,6 +557,12 @@ public:
     return node_entity_data_[idx];
   }
 
+  /// \return returns the most specific node entity type for @param node
+  EntityTypeID GetTypeOfNodeFromPropertyIndex(
+      GraphTopology::PropertyIndex prop_index) const {
+    return node_entity_data_[prop_index];
+  }
+
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdgeFromTopoIndex(Edge edge) const {
     auto idx = GetEdgePropertyIndexFromOutEdge(edge);
@@ -743,16 +724,16 @@ public:
       const Node& nid) const noexcept;
 
   /// Add Node properties that do not exist in the current graph
-  virtual Result<void> AddNodeProperties(
+  Result<void> AddNodeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// Add Edge properties that do not exist in the current graph
-  virtual Result<void> AddEdgeProperties(
+  Result<void> AddEdgeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// If property name exists, replace it, otherwise insert it
-  virtual Result<void> UpsertNodeProperties(
+  Result<void> UpsertNodeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
   /// If property name exists, replace it, otherwise insert it
-  virtual Result<void> UpsertEdgeProperties(
+  Result<void> UpsertEdgeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
 
   Result<void> RemoveNodeProperty(int i, katana::TxnContext* txn_ctx);

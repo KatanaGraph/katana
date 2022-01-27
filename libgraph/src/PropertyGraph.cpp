@@ -143,6 +143,8 @@ MakeDefaultEntityTypeIDArray(size_t vec_sz) {
 
 }  // namespace
 
+katana::PropertyGraph::~PropertyGraph() = default;
+
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<katana::RDGFile> rdg_file, katana::RDG&& rdg,
@@ -750,23 +752,13 @@ katana::PropertyGraph::Write(
 katana::GraphTopology::PropertyIndex
 katana::PropertyGraph::GetEdgePropertyIndexFromOutEdge(
     const Edge& eid) const noexcept {
-  auto idx = topology().GetEdgePropertyIndexFromOutEdge(eid);
-  if (!is_transformation_) {
-    return idx;
-  } else {
-    return transformation_.transformed_to_original_edges_[idx];
-  }
+  return topology().GetEdgePropertyIndexFromOutEdge(eid);
 }
 
 // We do this to avoid a virtual call, since this method is often on a hot path.
 katana::GraphTopology::PropertyIndex
 katana::PropertyGraph::GetNodePropertyIndex(const Node& nid) const noexcept {
-  auto idx = topology().GetNodePropertyIndex(nid);
-  if (!is_transformation_) {
-    return idx;
-  } else {
-    return transformation_.transformed_to_original_nodes_[idx];
-  }
+  return topology().GetNodePropertyIndex(nid);
 }
 
 katana::Result<void>

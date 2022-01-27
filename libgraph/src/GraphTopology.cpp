@@ -35,27 +35,65 @@ katana::GraphTopology::GraphTopology(
   katana::ParallelSTL::copy(
       &adj_indices[0], &adj_indices[num_nodes], adj_indices_.begin());
   katana::ParallelSTL::copy(&dests[0], &dests[num_edges], dests_.begin());
-
-  edge_prop_indices_.allocateInterleaved(num_edges);
-
-  katana::ParallelSTL::iota(
-      edge_prop_indices_.begin(), edge_prop_indices_.end(), Edge{0});
 }
 
 katana::GraphTopology::GraphTopology(
-    NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests) noexcept
-    : adj_indices_(std::move(adj_indices)), dests_(std::move(dests)) {
-  edge_prop_indices_.allocateInterleaved(dests_.size());
+    const Edge* adj_indices, size_t num_nodes, const Node* dests,
+    size_t num_edges, const PropertyIndex* edge_prop_indices,
+    const PropertyIndex* node_prop_indices) noexcept {
+  adj_indices_.allocateInterleaved(num_nodes);
+  dests_.allocateInterleaved(num_edges);
 
-  katana::ParallelSTL::iota(
-      edge_prop_indices_.begin(), edge_prop_indices_.end(), Edge{0});
+  katana::ParallelSTL::copy(
+      &adj_indices[0], &adj_indices[num_nodes], adj_indices_.begin());
+  katana::ParallelSTL::copy(&dests[0], &dests[num_edges], dests_.begin());
+
+  if (edge_prop_indices) {
+    edge_prop_indices_.allocateInterleaved(num_edges);
+    katana::ParallelSTL::copy(
+        &edge_prop_indices[0], &edge_prop_indices[num_edges],
+        edge_prop_indices_.begin());
+  }
+
+  if (node_prop_indices) {
+    node_prop_indices_.allocateInterleaved(num_nodes);
+    katana::ParallelSTL::copy(
+        &node_prop_indices[0], &node_prop_indices[num_nodes],
+        node_prop_indices_.begin());
+  }
 }
+
+katana::GraphTopology::GraphTopology(
+    AdjIndexVec&& adj_indices, EdgeDestVec&& dests) noexcept
+    : adj_indices_(std::move(adj_indices)), dests_(std::move(dests)) {}
+
+katana::GraphTopology::GraphTopology(
+    AdjIndexVec&& adj_indices, EdgeDestVec&& dests,
+    PropIndexVec&& edge_prop_indices, PropIndexVec&& node_prop_indices) noexcept
+    : adj_indices_(std::move(adj_indices)),
+      dests_(std::move(dests)),
+      edge_prop_indices_(std::move(edge_prop_indices)),
+      node_prop_indices_(std::move(node_prop_indices)) {}
 
 katana::GraphTopology
 katana::GraphTopology::Copy(const GraphTopology& that) noexcept {
   return katana::GraphTopology(
       that.adj_indices_.data(), that.adj_indices_.size(), that.dests_.data(),
-      that.dests_.size());
+      that.dests_.size(), that.edge_prop_indices_.data(),
+      that.edge_prop_indices_.data());
+}
+
+katana::GraphTopology::PropertyIndex
+katana::GraphTopology::GetEdgePropertyIndexFromOutEdge(
+    const Edge& eid) const noexcept {
+  KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
+  return edge_prop_indices_.empty() ? eid : edge_prop_indices_[eid];
+}
+
+katana::GraphTopology::PropertyIndex
+katana::GraphTopology::GetNodePropertyIndex(const Node& nid) const noexcept {
+  KATANA_LOG_DEBUG_ASSERT(nid < NumNodes() || NumNodes() == 0);
+  return node_prop_indices_.empty() ? nid : node_prop_indices_[nid];
 }
 
 katana::ShuffleTopology::~ShuffleTopology() = default;
@@ -82,10 +120,10 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
     return std::make_shared<EdgeShuffleTopology>(std::move(et));
   }
 
-  GraphTopologyTypes::AdjIndexVec out_indices;
-  GraphTopologyTypes::EdgeDestVec out_dests;
-  GraphTopologyTypes::PropIndexVec edge_prop_indices;
-  GraphTopologyTypes::AdjIndexVec out_dests_offset;
+  AdjIndexVec out_indices;
+  EdgeDestVec out_dests;
+  PropIndexVec edge_prop_indices;
+  AdjIndexVec out_dests_offset;
 
   out_indices.allocateInterleaved(topology.NumNodes());
   out_dests.allocateInterleaved(topology.NumEdges());
@@ -134,15 +172,19 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
           // Save src as destination
           out_dests[e_new] = src;
           // remember the original edge ID to look up properties
-          edge_prop_indices[e_new] = e;
+          edge_prop_indices[e_new] =
+              topology.GetEdgePropertyIndexFromOutEdge(e);
         }
       },
       katana::steal(), katana::no_stats());
 
   return std::make_shared<EdgeShuffleTopology>(EdgeShuffleTopology{
       katana::RDGTopology::TransposeKind::kYes,
-      katana::RDGTopology::EdgeSortKind::kAny, std::move(out_indices),
-      std::move(out_dests), std::move(edge_prop_indices)});
+      katana::RDGTopology::EdgeSortKind::kAny,
+      std::move(out_indices),
+      std::move(out_dests),
+      std::move(edge_prop_indices),
+      {}});
 }
 
 std::shared_ptr<katana::EdgeShuffleTopology>
@@ -150,15 +192,19 @@ katana::EdgeShuffleTopology::MakeOriginalCopy(const katana::PropertyGraph* pg) {
   GraphTopology copy_topo = GraphTopology::Copy(pg->topology());
 
   GraphTopologyTypes::PropIndexVec edge_prop_indices;
-  edge_prop_indices.allocateInterleaved(copy_topo.NumEdges());
-  katana::ParallelSTL::iota(
-      edge_prop_indices.begin(), edge_prop_indices.end(), Edge{0});
+  if (copy_topo.GetEdgePropIndices().empty()) {
+    edge_prop_indices.allocateInterleaved(copy_topo.NumEdges());
+    katana::ParallelSTL::iota(
+        edge_prop_indices.begin(), edge_prop_indices.end(), Edge{0});
+  } else {
+    edge_prop_indices = std::move(copy_topo.GetEdgePropIndices());
+  }
 
   return std::make_shared<EdgeShuffleTopology>(EdgeShuffleTopology{
       katana::RDGTopology::TransposeKind::kNo,
       katana::RDGTopology::EdgeSortKind::kAny,
       std::move(copy_topo.GetAdjIndices()), std::move(copy_topo.GetDests()),
-      std::move(edge_prop_indices)});
+      std::move(edge_prop_indices), std::move(copy_topo.GetNodePropIndices())});
 }
 
 std::shared_ptr<katana::EdgeShuffleTopology>
@@ -196,9 +242,12 @@ katana::EdgeShuffleTopology::Make(katana::RDGTopology* rdg_topo) {
 
   std::shared_ptr<EdgeShuffleTopology> shuffle =
       std::make_shared<EdgeShuffleTopology>(EdgeShuffleTopology{
-          rdg_topo->transpose_state(), rdg_topo->edge_sort_state(),
-          std::move(adj_indices_copy), std::move(dests_copy),
-          std::move(edge_prop_indices)});
+          rdg_topo->transpose_state(),
+          rdg_topo->edge_sort_state(),
+          std::move(adj_indices_copy),
+          std::move(dests_copy),
+          std::move(edge_prop_indices),
+          {}});
 
   return shuffle;
 }
@@ -395,8 +444,10 @@ katana::ShuffleTopology::MakeSortedByNodeType(
     const PropertyGraph* pg,
     const katana::EdgeShuffleTopology& seed_topo) noexcept {
   auto cmp = [&](const auto& i1, const auto& i2) {
-    auto k1 = pg->GetTypeOfNode(i1);
-    auto k2 = pg->GetTypeOfNode(i2);
+    auto idx1 = seed_topo.GetNodePropertyIndex(i1);
+    auto idx2 = seed_topo.GetNodePropertyIndex(i2);
+    auto k1 = pg->GetTypeOfNodeFromPropertyIndex(idx1);
+    auto k2 = pg->GetTypeOfNodeFromPropertyIndex(idx2);
     if (k1 == k2) {
       return i1 < i2;
     }
@@ -458,7 +509,7 @@ katana::ShuffleTopology::ToRDGTopology() const {
       AdjData(), NumNodes(), DestData(), NumEdges(),
       katana::RDGTopology::TopologyKind::kShuffleTopology, transpose_state(),
       edge_sort_state(), node_sort_state(), edge_property_index_data(),
-      node_prop_indices_.data()));
+      node_property_index_data()));
   return katana::RDGTopology(std::move(topo));
 }
 

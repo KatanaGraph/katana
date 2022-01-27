@@ -37,13 +37,13 @@ public:
   /// @param eid the input eid (must be projected edge id)
   Edge TransformedToOriginalEdgeId(const Edge& eid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(eid < NumEdges());
-    return transformation_.transformed_to_original_edges_[eid];
+    return topology().GetLocalEdgeIDFromOutEdge(eid);
   }
 
   /// @param nid the input node id (must be projected node id)
   Node TransformedToOriginalNodeId(const Node& nid) const noexcept {
     KATANA_LOG_DEBUG_ASSERT(nid < NumNodes());
-    return transformation_.transformed_to_original_nodes_[nid];
+    return topology().GetLocalNodeID(nid);
   }
 
   /// @param eid the input eid (must be original edge id)
@@ -75,11 +75,18 @@ public:
   }
 
 private:
+  struct Transformation {
+    NUMAArray<Node> original_to_transformed_nodes_;
+    NUMAArray<Edge> original_to_transformed_edges_;
+    NUMAArray<uint8_t> node_bitmask_data_;
+    NUMAArray<uint8_t> edge_bitmask_data_;
+  };
+
   TransformationView(
       const PropertyGraph& pg, GraphTopology&& projected_topo,
       Transformation&& transformation) noexcept
-      : PropertyGraph(
-            pg, std::move(projected_topo), std::move(transformation)) {}
+      : PropertyGraph(pg, std::move(projected_topo)),
+        transformation_(std::move(transformation)) {}
 
   /// this function creates an empty projection with num_new_nodes nodes
   static std::unique_ptr<TransformationView> CreateEmptyEdgeProjectedTopology(
@@ -89,6 +96,9 @@ private:
   /// this function creates an empty projection
   static std::unique_ptr<TransformationView> CreateEmptyProjectedTopology(
       const PropertyGraph& pg, const DynamicBitset& bitset);
+
+  // Data
+  Transformation transformation_{};
 };
 }  // namespace katana
 

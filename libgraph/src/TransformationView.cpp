@@ -48,11 +48,11 @@ TransformationView::CreateEmptyEdgeProjectedTopology(
       original_to_projected_nodes_mapping.end(),
       static_cast<Node>(topology.NumNodes()));
 
-  NUMAArray<Node> projected_to_original_nodes_mapping;
+  NUMAArray<GraphTopology::PropertyIndex> projected_to_original_nodes_mapping;
   projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
 
   NUMAArray<Edge> original_to_projected_edges_mapping;
-  NUMAArray<Edge> projected_to_original_edges_mapping;
+  NUMAArray<GraphTopology::PropertyIndex> projected_to_original_edges_mapping;
 
   original_to_projected_edges_mapping.allocateInterleaved(topology.NumEdges());
   katana::ParallelSTL::fill(
@@ -67,14 +67,14 @@ TransformationView::CreateEmptyEdgeProjectedTopology(
   NUMAArray<uint8_t> edge_bitmask;
   edge_bitmask.allocateInterleaved((topology.NumEdges() + 7) / 8);
 
-  GraphTopology topo{std::move(out_indices), std::move(out_dests)};
-
-  PropertyGraph::Transformation transformation{
-      std::move(original_to_projected_nodes_mapping),
-      std::move(projected_to_original_nodes_mapping),
-      std::move(original_to_projected_edges_mapping),
+  GraphTopology topo{
+      std::move(out_indices), std::move(out_dests),
       std::move(projected_to_original_edges_mapping),
-      std::move(node_bitmask),
+      std::move(projected_to_original_nodes_mapping)};
+
+  Transformation transformation{
+      std::move(original_to_projected_nodes_mapping),
+      std::move(original_to_projected_edges_mapping), std::move(node_bitmask),
       std::move(edge_bitmask)};
 
   // Using `new` to access a non-public constructor.
@@ -156,7 +156,7 @@ katana::TransformationView::MakeProjectedGraph(
       original_to_projected_nodes_mapping.end(),
       original_to_projected_nodes_mapping.begin());
 
-  NUMAArray<Node> projected_to_original_nodes_mapping;
+  NUMAArray<GraphTopology::PropertyIndex> projected_to_original_nodes_mapping;
   projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
 
   uint32_t num_nodes_bytes = (topology.NumNodes() + 7) / 8;
@@ -262,7 +262,7 @@ katana::TransformationView::MakeProjectedGraph(
 
   NUMAArray<Node> out_dests;
   NUMAArray<Edge> original_to_projected_edges_mapping;
-  NUMAArray<Edge> projected_to_original_edges_mapping;
+  NUMAArray<GraphTopology::PropertyIndex> projected_to_original_edges_mapping;
   NUMAArray<uint8_t> edge_bitmask;
 
   out_dests.allocateInterleaved(num_new_edges);
@@ -300,14 +300,14 @@ katana::TransformationView::MakeProjectedGraph(
 
   FillBitMask(topology.NumEdges(), bitset_edges, &edge_bitmask);
 
-  GraphTopology topo{std::move(out_indices), std::move(out_dests)};
+  GraphTopology topo{
+      std::move(out_indices), std::move(out_dests),
+      std::move(projected_to_original_edges_mapping),
+      std::move(projected_to_original_nodes_mapping)};
 
   Transformation transformation{
       std::move(original_to_projected_nodes_mapping),
-      std::move(projected_to_original_nodes_mapping),
-      std::move(original_to_projected_edges_mapping),
-      std::move(projected_to_original_edges_mapping),
-      std::move(node_bitmask),
+      std::move(original_to_projected_edges_mapping), std::move(node_bitmask),
       std::move(edge_bitmask)};
 
   // Using `new` to access a non-public constructor.

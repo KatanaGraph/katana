@@ -398,7 +398,7 @@ katana::analytics::Ksssp(
     AlgoReachability algo_reachability, uint32_t num_paths,
     uint32_t step_shift, const bool& is_symmetric, 
     kSsspPlan plan) {
-  auto result = ConstructNodeProperties<NodeData, EdgeData>(
+  auto result = ConstructNodeProperties<NodeData>(
       pg, txn_ctx);
   if (!result) {
     return result.error();

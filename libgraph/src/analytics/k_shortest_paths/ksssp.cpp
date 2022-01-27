@@ -279,7 +279,7 @@ KssspImpl(
   using BFS = BfsSsspImplementationBase<GraphTy, uint32_t, false>;
   using BFSUpdateRequest = typename BFS::UpdateRequest;
   using BFSReqPushWrap = typename BFS::ReqPushWrap;
-  using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFn;
+  using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFnViews;
 
   auto it = graph.begin();
   std::advance(it, start_node);

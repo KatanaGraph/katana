@@ -1,6 +1,10 @@
 #ifndef KATANA_LIBTSUBA_KATANA_TXNCONTEXT_H_
 #define KATANA_LIBTSUBA_KATANA_TXNCONTEXT_H_
 
+#include <set>
+
+#include "katana/config.h"
+
 namespace katana {
 
 class KATANA_EXPORT TxnContext {

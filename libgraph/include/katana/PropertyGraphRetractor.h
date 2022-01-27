@@ -85,8 +85,10 @@ public:
     pg_->edge_entity_type_manager_ = std::move(manager);
   }
 
-  /// Tell the RDG where it's data is coming from
-  Result<void> InformPath(const std::string& input_path);
+  /// RDGs need a storage location, which can be accessed via the PGRetractor
+  Result<void> InformPath(const std::string& storage_prefix);
+  void InformPath(const katana::Uri& storage_prefix);
+  const katana::Uri& rdg_dir() const;
 
   /// Vector from storage mapping host to global node ID ranges
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_node_ids()

@@ -142,7 +142,12 @@ Result<Uri>
 Uri::Make(const std::string& str) {
   std::smatch sub_match;
   if (!std::regex_match(str, sub_match, kUriRegex)) {
-    return KATANA_ERROR(ErrorCode::InvalidArgument, "could not parse URI");
+    if (str.empty()) {
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument, "can't make URI from empty string");
+    }
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "could not parse URI: {}", str);
   }
   std::string scheme(sub_match[1]);
   std::string path(sub_match[2]);

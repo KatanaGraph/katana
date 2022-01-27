@@ -153,9 +153,9 @@ jobs:
     - name: Cache ccache objects
       uses: actions/cache@v2
       with:
-        key: ${{matrix.os}}-${{matrix.build_type}}-${{matrix.cxx}}-ccache-${{github.sha}}
+        key: ${{matrix.os}}-${{matrix.build_type}}-${{matrix.cxx}}-ccache-arrow-6-${{github.sha}}
         restore-keys: |
-          ${{matrix.os}}-${{matrix.build_type}}-${{matrix.cxx}}-ccache-
+          ${{matrix.os}}-${{matrix.build_type}}-${{matrix.cxx}}-ccache-arrow-6-
         path: ~/.ccache
 
     ###

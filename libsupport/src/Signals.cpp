@@ -7,6 +7,7 @@
 #include <csignal>
 
 #include "katana/Backtrace.h"
+#include "katana/Env.h"
 #include "katana/Logging.h"
 
 namespace {
@@ -60,10 +61,19 @@ public:
       loaded = false;
     }
 
-    if (!Install(
-            {SIGPIPE}, Ignore,
-            static_cast<int>(SA_SIGINFO | SA_ONSTACK | SA_NODEFER))) {
-      loaded = false;
+    bool verbose_sigpipe_handler = false;
+    katana::GetEnv("KATANA_VERBOSE_SIGPIPE_HANDLER", &verbose_sigpipe_handler);
+
+    if (verbose_sigpipe_handler) {
+      if (!Install(
+              {SIGPIPE}, Ignore,
+              static_cast<int>(SA_SIGINFO | SA_ONSTACK | SA_NODEFER))) {
+        loaded = false;
+      }
+    } else {
+      if (!Mask({SIGPIPE}, static_cast<int>(SA_ONSTACK | SA_NODEFER))) {
+        loaded = false;
+      }
     }
 
     loaded_ = loaded;
@@ -84,6 +94,26 @@ private:
       sigfillset(&action.sa_mask);
       sigdelset(&action.sa_mask, sig);
       action.sa_sigaction = handler;
+
+      int r = sigaction(sig, &action, nullptr);
+      if (r != 0) {
+        loaded = false;
+      }
+    }
+
+    return loaded;
+  }
+
+  bool Mask(const std::vector<int>& signals, int flags) {
+    bool loaded = true;
+
+    for (const int& sig : signals) {
+      struct sigaction action;
+      memset(&action, 0, sizeof action);
+      action.sa_flags = flags;
+      sigfillset(&action.sa_mask);
+      sigdelset(&action.sa_mask, sig);
+      action.sa_handler = SIG_IGN;
 
       int r = sigaction(sig, &action, nullptr);
       if (r != 0) {

@@ -6,7 +6,6 @@
 #include <arrow/api.h>
 #include <arrow/type.h>
 #include <arrow/vendored/datetime/date.h>
-#include <boost/preprocessor/repetition/repeat.hpp>
 
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"

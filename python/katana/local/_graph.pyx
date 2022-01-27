@@ -537,6 +537,9 @@ cdef class Graph(GraphBase):
     cdef _PropertyGraph * underlying_property_graph(self) nogil except NULL:
         return self._underlying_property_graph.get()
 
+    cdef shared_ptr[_PropertyGraph] shared_underlying_property_graph(self) nogil:
+        return self._underlying_property_graph
+
     def __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None, TxnContext txn_ctx=None):
         """
         __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None)

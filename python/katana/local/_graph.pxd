@@ -42,6 +42,8 @@ cdef class Graph(GraphBase):
 
     cdef _PropertyGraph * underlying_property_graph(self) nogil except NULL
 
+    cdef shared_ptr[_PropertyGraph] shared_underlying_property_graph(self) nogil
+
     @staticmethod
     cdef Graph make(shared_ptr[_PropertyGraph] u)
 

@@ -36,16 +36,16 @@ static const char* url = "k_shortest_paths";
 
 static cll::opt<std::string> inputFile(
     cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<unsigned int> startNode(
+static cll::opt<uint32_t> startNode(
     "startNode", cll::desc("Node to start search from (default value 0)"),
     cll::init(0));
-static cll::opt<unsigned int> reportNode(
+static cll::opt<uint32_t> reportNode(
     "reportNode", cll::desc("Node to report distance to (default value 1)"),
     cll::init(0));
-static cll::opt<unsigned int> stepShift(
+static cll::opt<uint32_t> stepShift(
     "delta", cll::desc("Shift value for the deltastep (default value 13)"),
     cll::init(13));
-static cll::opt<unsigned int> numPaths(
+static cll::opt<uint32_t> numPaths(
     "numPaths",
     cll::desc("Number of paths to compute from source to report node (default "
               "value 1)"),
@@ -113,6 +113,14 @@ main(int argc, char** argv) {
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
+  if (symmetricGraph) {
+    KATANA_LOG_WARN(
+        "This application requires a symmetric graph input;"
+        " Using the -symmetricGraph flag "
+        " indicates that the input is a symmetric graph and can be used as it "
+        "is.");
+  }
+
   katana::gInfo("Reading from file: ", inputFile, "\n");
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
@@ -156,8 +164,8 @@ main(int argc, char** argv) {
   katana::TxnContext txn_ctx;
 
   auto pg_result =
-      Ksp(pg.get(), startNode, reportNode, &txn_ctx, algoReachability, numPaths,
-          stepShift, plan);
+      Ksssp(pg.get(), startNode, reportNode, &txn_ctx, algoReachability, numPaths,
+          stepShift, symmetricGraph, plan);
 
   if (!pg_result) {
     KATANA_LOG_FATAL(

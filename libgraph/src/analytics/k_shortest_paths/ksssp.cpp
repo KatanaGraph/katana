@@ -73,7 +73,7 @@ bool
 CheckReachabilityAsync(
     GraphTy* graph, const typename GraphTy::Node& source,
     const PushWrap& push_wrap, const EdgeRange& edge_range,
-    unsigned int report_node) {
+    uint32_t report_node) {
   using FIFO = katana::PerSocketChunkFIFO<kChunkSize>;
   using WL = FIFO;
 
@@ -117,7 +117,7 @@ template <typename GraphTy>
 bool
 CheckReachabilitySync(
     GraphTy* graph, const typename GraphTy::Node& source,
-    unsigned int report_node) {
+    uint32_t report_node) {
   using GNode = typename GraphTy::Node;
 
   katana::InsertBag<GNode> current_bag;
@@ -166,7 +166,7 @@ DeltaStepAlgo(
     const EdgeRange& edge_range,
     katana::InsertBag<std::pair<Weight, Path*>>* report_paths_bag,
     katana::InsertBag<Path*>* path_pointers, PathAlloc& path_alloc,
-    unsigned int report_node, unsigned int num_paths, unsigned int step_shift) {
+    uint32_t report_node, uint32_t num_paths, uint32_t step_shift) {
   using GNode = typename GraphTy::Node;
 
   using kSSSP = katana::analytics::KSsspImplementationBase<
@@ -255,10 +255,10 @@ PrintPath(const Path* path) {
 
 template <typename GraphTy>
 katana::Result<void>
-KspImpl(
-    GraphTy& graph, unsigned int start_node, unsigned int report_node,
-    AlgoReachability algo_reachability, unsigned int num_paths,
-    unsigned int step_shift, kSsspPlan plan) {
+KssspImpl(
+    GraphTy& graph, uint32_t start_node, uint32_t report_node,
+    AlgoReachability algo_reachability, uint32_t num_paths,
+    uint32_t step_shift, kSsspPlan plan) {
   using GNode = typename GraphTy::Node;
 
   using kSSSP = katana::analytics::KSsspImplementationBase<
@@ -276,7 +276,7 @@ KspImpl(
   using OBIM_Barrier = typename katana::OrderedByIntegerMetric<
       kSSSPUpdateRequestIndexer, PSchunk>::template with_barrier<true>::type;
 
-  using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
+  using BFS = BfsSsspImplementationBase<GraphTy, uint32_t, false>;
   using BFSUpdateRequest = typename BFS::UpdateRequest;
   using BFSReqPushWrap = typename BFS::ReqPushWrap;
   using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFn;
@@ -392,29 +392,38 @@ KspImpl(
 }
 
 katana::Result<void>
-katana::analytics::Ksp(
-    katana::PropertyGraph* pg, unsigned int start_node,
-    unsigned int report_node, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, unsigned int num_paths,
-    unsigned int step_shift, kSsspPlan plan) {
-  auto result =
-      ConstructNodeProperties<std::tuple<NodeCount, NodeMax>>(pg, txn_ctx);
-  if (!result) {
-    return result.error();
-  }
-
-  using GraphTy = katana::TypedPropertyGraph<
-      std::tuple<NodeCount, NodeMax>, std::tuple<EdgeWeight>>;
-
-  auto graph = GraphTy::Make(pg);
-
-  if (!graph) {
-    return graph.error();
-  }
+katana::analytics::Ksssp(
+    katana::PropertyGraph* pg, uint32_t start_node,
+    uint32_t report_node, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, uint32_t num_paths,
+    uint32_t step_shift, const bool& is_symmetric, 
+    kSsspPlan plan) {
+  katana::analytics::TemporaryPropertyGuard temporary_property{
+      pg->NodeMutablePropertyView()};
 
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
-  return KspImpl<GraphTy>(
+  KATANA_CHECKED(ConstructNodeProperties<std::tuple<NodeCount, NodeMax>>(
+      pg, txn_ctx, {temporary_property.name()}));
+
+  if (is_symmetric) {
+    using Graph = katana::TypedPropertyGraphView<
+        katana::PropertyGraphViews::Default, NodeCount, NodeMax>;
+    Graph graph =
+        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
+
+    KATANA_CHECKED(KssspImpl(
       graph.value(), start_node, report_node, algo_reachability, num_paths,
-      step_shift, plan);
+      step_shift, plan));
+  } else {
+    using Graph = katana::TypedPropertyGraphView<
+        katana::PropertyGraphViews::Undirected, NodeCount, NodeMax>;
+
+    Graph graph =
+        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
+
+    KATANA_CHECKED(KssspImpl(
+      graph.value(), start_node, report_node, algo_reachability, num_paths,
+      step_shift, plan));
+  }
 }

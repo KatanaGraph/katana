@@ -11,11 +11,11 @@ enum AlgoReachability { async = 0, syncLevel };
 /// Compute the K Shortest Path for pg starting from start_node.
 /// The algorithm and delta stepping
 /// parameter can be specified, but have reasonable defaults.
-KATANA_EXPORT Result<void> Ksp(
-    katana::PropertyGraph* pg, unsigned int start_node,
-    unsigned int report_node, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, unsigned int num_paths,
-    unsigned int step_shift, kSsspPlan plan = {});
+KATANA_EXPORT Result<void> Ksssp(
+    katana::PropertyGraph* pg, uint32_t start_node,
+    uint32_t report_node, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, uint32_t num_paths,
+    uint32_t step_shift, kSsspPlan plan = {});
 }  // namespace katana::analytics
 
 #endif

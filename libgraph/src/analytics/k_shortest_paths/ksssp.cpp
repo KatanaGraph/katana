@@ -30,8 +30,8 @@
 using namespace katana::analytics;
 
 struct Path {
-  uint32_t parent;
-  const Path* last{nullptr};
+  typedef uint32_t parent;
+  typedef const Path* last{nullptr};
 };
 
 struct NodeCount : public katana::AtomicPODProperty<uint32_t> {};
@@ -92,7 +92,7 @@ CheckReachabilityAsync(
       katana::iterate(initBag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edge_range(item)) {
-          GNode dst = EdgeDst(*graph, ii);
+          GNode dst = graph->OutEdgeDst(ii);
           if (graph->template GetData<NodeCount>(dst) == 0) {
             graph->template GetData<NodeCount>(dst) = 1;
             push_wrap(ctx, dst, 1);
@@ -130,8 +130,8 @@ CheckReachabilitySync(
     katana::do_all(
         katana::iterate(current_bag),
         [&](GNode n) {
-          for (auto edge : Edges(*graph, n)) {
-            auto dest = EdgeDst(*graph, edge);
+          for (auto edge : graph->OutEdges(n)) {
+            auto dest = graph->OutEdgeDst(edge);
             if (graph->template GetData<NodeCount>(dest) == 0) {
               graph->template GetData<NodeCount>(dest) = 1;
               next_bag.push(dest);
@@ -197,7 +197,7 @@ DeltaStepAlgo(
       katana::iterate(init_bag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edge_range(item)) {
-          GNode dst = EdgeDst(*graph, ii);
+          GNode dst = graph->OutEdgeDst(ii);
           auto& ddata_count = graph->template GetData<NodeCount>(dst);
           auto& ddata_max = graph->template GetData<NodeMax>(dst);
 
@@ -303,7 +303,7 @@ KssspImpl(
   katana::do_all(katana::iterate(graph), [&](const GNode& n) {
     graph.template GetData<NodeMax>(n) = 0;
     graph.template GetData<NodeCount>(n) = 0;
-    for (auto e : Edges(graph, n)) {
+    for (auto e : graph.OutEdges(n)) {
       edge_data[e] = graph.template GetEdgeData<EdgeWeight>(e);
     }
   });

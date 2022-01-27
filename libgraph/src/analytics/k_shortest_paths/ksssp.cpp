@@ -131,7 +131,7 @@ CheckReachabilitySync(
         katana::iterate(current_bag),
         [&](GNode n) {
           for (auto edge : Edges(*graph, n)) {
-            auto dest = graph->OutEdgeDst(edge);
+            auto dest = EdgeDst(*graph, edge);
             if (graph->template GetData<NodeCount>(dest) == 0) {
               graph->template GetData<NodeCount>(dest) = 1;
               next_bag.push(dest);
@@ -197,7 +197,7 @@ DeltaStepAlgo(
       katana::iterate(init_bag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edge_range(item)) {
-          GNode dst = graph->OutEdgeDst(ii);
+          GNode dst = EdgeDst(*graph, ii);
           auto& ddata_count = graph->template GetData<NodeCount>(dst);
           auto& ddata_max = graph->template GetData<NodeMax>(dst);
 

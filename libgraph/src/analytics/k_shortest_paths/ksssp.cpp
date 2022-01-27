@@ -409,19 +409,19 @@ katana::analytics::Ksssp(
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Default, NodeData, EdgeData>;
-    Graph graph = KATANA_CHECKED(Graph::Make(pg));
+    auto graph = KATANA_CHECKED(Graph::Make(pg));
 
     return KssspImpl(
-      graph, start_node, report_node, algo_reachability, num_paths,
+      graph.value(), start_node, report_node, algo_reachability, num_paths,
       step_shift, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 
-    Graph graph = KATANA_CHECKED(Graph::Make(pg));
+    auto graph = KATANA_CHECKED(Graph::Make(pg));
 
     return KssspImpl(
-      graph, start_node, report_node, algo_reachability, num_paths,
+      graph.value(), start_node, report_node, algo_reachability, num_paths,
       step_shift, plan);
   }
 }

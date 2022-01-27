@@ -358,6 +358,7 @@ jobs:
         run: |
           . .github/workflows/activate_miniconda.sh
           mamba env update --quiet --file=conda_recipe/environment.yml
+          mamba list
 
       ###
       # Standard CMake build process

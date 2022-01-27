@@ -92,7 +92,7 @@ CheckReachabilityAsync(
       katana::iterate(initBag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edge_range(item)) {
-          GNode dst = graph->OutEdgeDst(ii);
+          GNode dst = EdgeDst(graph, ii);
           if (graph->template GetData<NodeCount>(dst) == 0) {
             graph->template GetData<NodeCount>(dst) = 1;
             push_wrap(ctx, dst, 1);

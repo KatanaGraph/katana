@@ -1,16 +1,20 @@
 #include "RDGPartHeader.h"
 
+#include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 #include "Constants.h"
 #include "GlobalState.h"
 #include "PartitionTopologyMetadata.h"
 #include "RDGHandleImpl.h"
+#include "katana/CompilerSpecific.h"
 #include "katana/ErrorCode.h"
 #include "katana/Experimental.h"
 #include "katana/FaultTest.h"
 #include "katana/FileView.h"
 #include "katana/Logging.h"
+#include "katana/RDGOptionalDatastructure.h"
 #include "katana/RDGStorageFormatVersion.h"
 #include "katana/RDGTopology.h"
 #include "katana/Result.h"
@@ -47,6 +51,7 @@ const char* kPartitionTopologyMetadataEntriesKey =
     "kg.v1.partition_topology_metadata_entries";
 const char* kPartitionTopologyMetadataEntriesSizeKey =
     "kg.v1.partition_topology_metadata_entries_size";
+const char* kOptionalDatastructuresKey = "kg.v1.optional_datastructures";
 
 //
 //constexpr std::string_view  mirror_nodes_prop_name = "mirror_nodes";
@@ -274,6 +279,13 @@ katana::RDGPartHeader::ChangeStorageLocation(
   edge_entity_type_id_array_path_ = "";
   topology_metadata_.ChangeStorageLocation();
 
+  // the OptionalDatastructure Files are loaded and stored on demand,
+  // move any that are present, even if they are unloaded, to the new location
+  for (auto& datastructure : optional_datastructure_manifests_) {
+    KATANA_CHECKED(katana::RDGOptionalDatastructure::ChangeStorageLocation(
+        datastructure.second, old_location, new_location));
+  }
+
   return katana::ResultSuccess();
 }
 
@@ -320,20 +332,42 @@ katana::to_json(json& j, const katana::RDGPartHeader& header) {
         "RDGPartHeader.unstable_storage_format_ is true");
   }
 
-  j = json{
-      {kNodePropertyKey, header.node_prop_info_list_},
-      {kEdgePropertyKey, header.edge_prop_info_list_},
-      {kPartPropertyFilesKey, header.part_prop_info_list_},
-      {kPartPropertyMetaKey, header.metadata_},
-      {kStorageFormatVersionKey, header.storage_format_version_},
-      {kUnstableStorageFormatFlagKey, header.unstable_storage_format_},
-      {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
-      {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
-      {kNodeEntityTypeIDDictionaryKey, header.node_entity_type_id_dictionary_},
-      {kEdgeEntityTypeIDDictionaryKey, header.edge_entity_type_id_dictionary_},
-      {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
-      {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
-      {kPartitionTopologyMetadataKey, header.topology_metadata_}};
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
+    j = json{
+        {kNodePropertyKey, header.node_prop_info_list_},
+        {kEdgePropertyKey, header.edge_prop_info_list_},
+        {kPartPropertyFilesKey, header.part_prop_info_list_},
+        {kPartPropertyMetaKey, header.metadata_},
+        {kStorageFormatVersionKey, header.storage_format_version_},
+        {kUnstableStorageFormatFlagKey, header.unstable_storage_format_},
+        {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
+        {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
+        {kNodeEntityTypeIDDictionaryKey,
+         header.node_entity_type_id_dictionary_},
+        {kEdgeEntityTypeIDDictionaryKey,
+         header.edge_entity_type_id_dictionary_},
+        {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
+        {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
+        {kPartitionTopologyMetadataKey, header.topology_metadata_},
+        {kOptionalDatastructuresKey, header.optional_datastructure_manifests_}};
+  } else {
+    j = json{
+        {kNodePropertyKey, header.node_prop_info_list_},
+        {kEdgePropertyKey, header.edge_prop_info_list_},
+        {kPartPropertyFilesKey, header.part_prop_info_list_},
+        {kPartPropertyMetaKey, header.metadata_},
+        {kStorageFormatVersionKey, header.storage_format_version_},
+        {kUnstableStorageFormatFlagKey, header.unstable_storage_format_},
+        {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
+        {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
+        {kNodeEntityTypeIDDictionaryKey,
+         header.node_entity_type_id_dictionary_},
+        {kEdgeEntityTypeIDDictionaryKey,
+         header.edge_entity_type_id_dictionary_},
+        {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
+        {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
+        {kPartitionTopologyMetadataKey, header.topology_metadata_}};
+  }
 }
 
 void
@@ -429,6 +463,13 @@ katana::from_json(const json& j, katana::RDGPartHeader& header) {
     }
     j.at(kTopologyPathKey).get_to(entry.path_);
     header.topology_metadata_.Append(entry);
+  }
+
+  // Version N added optional data structures
+  // TODO(emcginnis) unstable for now
+  if (header.unstable_storage_format_) {
+    j.at(kOptionalDatastructuresKey)
+        .get_to(header.optional_datastructure_manifests_);
   }
 }
 
@@ -613,4 +654,85 @@ katana::to_json(json& j, const katana::PartitionTopologyMetadata& topomd) {
       {kPartitionTopologyMetadataEntriesSizeKey, num_valid_entries},
       {kPartitionTopologyMetadataEntriesKey, entries_vec},
   };
+}
+
+void
+katana::from_json(const nlohmann::json& j, katana::DynamicBitset& bitset) {
+  std::vector<uint64_t> vec;
+  size_t size;
+  j.at("bitset_vec").get_to(vec);
+  j.at("bitset_size").get_to(size);
+
+  bitset.clear();
+  bitset.resize(size);
+  for (const auto& val : vec) {
+    bitset.set(val);
+  }
+}
+
+void
+katana::to_json(nlohmann::json& j, const katana::DynamicBitset& bitset) {
+  std::vector<uint64_t> vec = bitset.GetOffsets<uint64_t>();
+  j = nlohmann::json{{"bitset_vec", vec}, {"bitset_size", bitset.size()}};
+}
+
+void
+katana::from_json(
+    const nlohmann::json& j, katana::RDKLSHIndexPrimitive& index) {
+  j.at("num_hashes_per_bucket").get_to(index.num_hashes_per_bucket_);
+  j.at("num_buckets").get_to(index.num_buckets_);
+  j.at("fingerprint_length").get_to(index.fingerprint_length_);
+  j.at("num_fingerprints").get_to(index.num_fingerprints_);
+  j.at("smiles").get_to(index.smiles_);
+  j.at("hash_structure").get_to(index.hash_structure_);
+  j.at("fingerprints").get_to(index.fingerprints_);
+  j.at("paths").get_to(index.paths_);
+}
+
+void
+katana::to_json(nlohmann::json& j, const katana::RDKLSHIndexPrimitive& index) {
+  j = nlohmann::json{
+      {"num_hashes_per_bucket", index.num_hashes_per_bucket_},
+      {"num_buckets", index.num_buckets_},
+      {"fingerprint_length", index.fingerprint_length_},
+      {"num_fingerprints", index.num_fingerprints_},
+      {"smiles", index.smiles_},
+      {"hash_structure", index.hash_structure_},
+      {"fingerprints", index.fingerprints_},
+      {"paths", index.paths_}};
+}
+
+void
+katana::from_json(
+    const nlohmann::json& j, katana::RDKSubstructureIndexPrimitive& index) {
+  j.at("fp_size").get_to(index.fp_size_);
+  j.at("num_entries").get_to(index.num_entries_);
+  j.at("smiles").get_to(index.smiles_);
+  j.at("index").get_to(index.index_);
+  j.at("fingerprints").get_to(index.fingerprints_);
+  j.at("paths").get_to(index.paths_);
+}
+
+void
+katana::to_json(
+    nlohmann::json& j, const katana::RDKSubstructureIndexPrimitive& index) {
+  j = nlohmann::json{
+      {"fp_size", index.fp_size_},
+      {"num_entries", index.num_entries_},
+      {"smiles", index.smiles_},
+      {"index", index.index_},
+      {"fingerprints", index.fingerprints_},
+      {"paths", index.paths_}};
+}
+
+void
+katana::from_json(
+    const nlohmann::json& j, katana::RDGOptionalDatastructure& data) {
+  j.at("paths").get_to(data.paths_);
+}
+
+void
+katana::to_json(
+    nlohmann::json& j, const katana::RDGOptionalDatastructure& data) {
+  j = nlohmann::json{{"paths", data.paths_}};
 }

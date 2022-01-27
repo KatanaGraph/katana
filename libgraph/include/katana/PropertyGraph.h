@@ -315,6 +315,24 @@ public:
     return *edge_entity_type_manager_;
   }
 
+  Result<std::optional<RDKLSHIndexPrimitive>> LoadRDKLSHIndexPrimitive() {
+    return rdg_->LoadRDKLSHIndexPrimitive();
+  }
+
+  Result<void> WriteRDKLSHIndexPrimitive(RDKLSHIndexPrimitive& index) {
+    return rdg_->WriteRDKLSHIndexPrimitive(index);
+  }
+
+  Result<std::optional<RDKSubstructureIndexPrimitive>>
+  LoadRDKSubstructureIndexPrimitive() {
+    return rdg_->LoadRDKSubstructureIndexPrimitive();
+  }
+
+  Result<void> WriteRDKSubstructureIndexPrimitive(
+      RDKSubstructureIndexPrimitive& index) {
+    return rdg_->WriteRDKSubstructureIndexPrimitive(index);
+  }
+
   const std::string& rdg_dir() const { return rdg_->rdg_dir().string(); }
 
   uint32_t partition_id() const { return rdg_->partition_id(); }

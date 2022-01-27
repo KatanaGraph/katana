@@ -21,6 +21,8 @@
 #include "katana/RDGLineage.h"
 #include "katana/RDGStorageFormatVersion.h"
 #include "katana/RDGTopology.h"
+#include "katana/RDKLSHIndexPrimitive.h"
+#include "katana/RDKSubstructureIndexPrimitive.h"
 #include "katana/ReadGroup.h"
 #include "katana/Result.h"
 #include "katana/TxnContext.h"
@@ -311,6 +313,20 @@ public:
   void set_prop_cache(katana::PropertyCache* prop_cache) {
     prop_cache_ = prop_cache;
   }
+
+  // Returns katana::ResultErrno if the RDKLSHIndexPrimitive is not found on disk
+  katana::Result<std::optional<katana::RDKLSHIndexPrimitive>>
+  LoadRDKLSHIndexPrimitive();
+
+  katana::Result<void> WriteRDKLSHIndexPrimitive(
+      katana::RDKLSHIndexPrimitive& index);
+
+  // Returns katana::ResultErrno if the RDKSubstructureIndexPrimitive is not found on disk
+  katana::Result<std::optional<katana::RDKSubstructureIndexPrimitive>>
+  LoadRDKSubstructureIndexPrimitive();
+
+  katana::Result<void> WriteRDKSubstructureIndexPrimitive(
+      katana::RDKSubstructureIndexPrimitive& index);
 
 private:
   std::string view_type_;

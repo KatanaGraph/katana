@@ -21,6 +21,8 @@
 #include "katana/RDG.h"
 #include "katana/RDGStorageFormatVersion.h"
 #include "katana/RDGTopology.h"
+#include "katana/RDKLSHIndexPrimitive.h"
+#include "katana/RDKSubstructureIndexPrimitive.h"
 #include "katana/Result.h"
 #include "katana/URI.h"
 #include "katana/WriteGroup.h"
@@ -469,6 +471,26 @@ public:
     return topology_metadata_.Append(std::move(new_entry));
   }
 
+  katana::Result<std::optional<std::string>> OptionalDatastructureManifest(
+      const std::string& optional_datastructure_name) {
+    auto search =
+        optional_datastructure_manifests_.find(optional_datastructure_name);
+    if (search != optional_datastructure_manifests_.end()) {
+      return search->second;
+    }
+    KATANA_LOG_DEBUG(
+        "No optional datastructure manifest available matching [{}]",
+        optional_datastructure_name);
+    return std::nullopt;
+  }
+
+  void AppendOptionalDatastructureManifest(
+      const std::string& optional_datastructure_name,
+      const std::string& optional_datastructure_path) {
+    optional_datastructure_manifests_.emplace(
+        optional_datastructure_name, optional_datastructure_path);
+  }
+
   friend void to_json(nlohmann::json& j, const RDGPartHeader& header);
   friend void from_json(const nlohmann::json& j, RDGPartHeader& header);
 
@@ -628,6 +650,11 @@ private:
   // entity_type_id_name maps from Atomic Entity Type ID to string name for the Entity Type ID
   katana::EntityTypeIDToAtomicTypeNameMap node_entity_type_id_name_;
   katana::EntityTypeIDToAtomicTypeNameMap edge_entity_type_id_name_;
+
+  // map from the name of an optional_datastructure to its json manifest path
+  // if no optional data structures are present, this map is empty
+  std::unordered_map<std::string, std::string>
+      optional_datastructure_manifests_;
 };
 
 void to_json(nlohmann::json& j, const RDGPartHeader& header);
@@ -647,6 +674,18 @@ void from_json(const nlohmann::json& j, PartitionTopologyMetadata& topomd);
 
 void to_json(
     nlohmann::json& j, const std::vector<katana::PropStorageInfo>& vec_pmd);
+
+void to_json(nlohmann::json& j, const katana::DynamicBitset& topomd);
+void from_json(const nlohmann::json& j, katana::DynamicBitset& topomd);
+
+void to_json(nlohmann::json& j, const RDKLSHIndexPrimitive& index);
+void from_json(const nlohmann::json& j, RDKLSHIndexPrimitive& index);
+
+void to_json(nlohmann::json& j, const RDKSubstructureIndexPrimitive& index);
+void from_json(const nlohmann::json& j, RDKSubstructureIndexPrimitive& index);
+
+void to_json(nlohmann::json& j, const RDGOptionalDatastructure& data);
+void from_json(const nlohmann::json& j, RDGOptionalDatastructure& data);
 
 // nlohmann map enum values to JSON as strings
 // *** do not alter these mappings, only append to them ***

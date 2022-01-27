@@ -130,7 +130,7 @@ CheckReachabilitySync(
     katana::do_all(
         katana::iterate(current_bag),
         [&](GNode n) {
-          for (auto edge : graph->OutEdges(n)) {
+          for (auto edge : Edges(*graph, n)) {
             auto dest = graph->OutEdgeDst(edge);
             if (graph->template GetData<NodeCount>(dest) == 0) {
               graph->template GetData<NodeCount>(dest) = 1;

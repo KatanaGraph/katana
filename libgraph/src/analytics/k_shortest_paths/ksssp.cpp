@@ -401,7 +401,7 @@ katana::analytics::Ksssp(
   katana::analytics::TemporaryPropertyGuard temporary_property{
       pg->NodeMutablePropertyView()};
 
-  auto result = ConstructNodeProperties<std::tuple<NodeCount, NodeMax>>(
+  auto result = ConstructNodeProperties<NodeData>(
       pg, txn_ctx, {temporary_property.name()});
   if (!result) {
     return result.error();
@@ -411,7 +411,7 @@ katana::analytics::Ksssp(
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
-        katana::PropertyGraphViews::Default, NodeCount, NodeMax>;
+        katana::PropertyGraphViews::Default, NodeData, EdgeData>;
     Graph graph = Graph::Make(pg, {temporary_property.name()}, {});
 
     if (!graph) {
@@ -423,7 +423,7 @@ katana::analytics::Ksssp(
       step_shift, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
-        katana::PropertyGraphViews::Undirected, NodeCount, NodeMax>;
+        katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 
     Graph graph = Graph::Make(pg, {temporary_property.name()}, {});
 

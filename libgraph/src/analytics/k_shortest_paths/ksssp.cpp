@@ -402,7 +402,7 @@ katana::analytics::Ksssp(
       pg->NodeMutablePropertyView()};
 
   auto result = ConstructNodeProperties<std::tuple<NodeCount, NodeMax>>(
-      pg, txn_ctx, {temporary_property.name()}));
+      pg, txn_ctx, {temporary_property.name()});
   if (!result) {
     return result.error();
   }
@@ -420,7 +420,7 @@ katana::analytics::Ksssp(
 
     return KssspImpl(
       graph.value(), start_node, report_node, algo_reachability, num_paths,
-      step_shift, plan));
+      step_shift, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeCount, NodeMax>;
@@ -433,6 +433,6 @@ katana::analytics::Ksssp(
 
     return KssspImpl(
       graph.value(), start_node, report_node, algo_reachability, num_paths,
-      step_shift, plan));
+      step_shift, plan);
   }
 }

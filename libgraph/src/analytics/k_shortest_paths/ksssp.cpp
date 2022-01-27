@@ -412,7 +412,7 @@ katana::analytics::Ksssp(
     Graph graph = KATANA_CHECKED(Graph::Make(pg));
 
     return KssspImpl(
-      graph.value(), start_node, report_node, algo_reachability, num_paths,
+      graph, start_node, report_node, algo_reachability, num_paths,
       step_shift, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
@@ -421,7 +421,7 @@ katana::analytics::Ksssp(
     Graph graph = KATANA_CHECKED(Graph::Make(pg));
 
     return KssspImpl(
-      graph.value(), start_node, report_node, algo_reachability, num_paths,
+      graph, start_node, report_node, algo_reachability, num_paths,
       step_shift, plan);
   }
 }

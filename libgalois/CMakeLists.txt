@@ -22,6 +22,7 @@ set(sources
         src/Mem.cpp
         src/MemorySupervisor.cpp
         src/NumaMem.cpp
+        src/OSMemoryNotify.cpp
         src/PageAlloc.cpp
         src/PagePool.cpp
         src/ParaMeter.cpp

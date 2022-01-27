@@ -77,6 +77,7 @@ enum class ErrorCode {
   MpiError,
   BadVersion,
   GSError,
+  OSError,
 };
 
 KATANA_EXPORT ErrorCode ArrowToKatana(arrow::StatusCode);

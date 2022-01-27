@@ -403,7 +403,8 @@ katana::analytics::Ksssp(
 
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
-  KATANA_CHECKED(ConstructNodeProperties<std::tuple<NodeCount, NodeMax>>(
+  KATANA_CHECKED(katana::analytics::ConstructNodeProperties<
+                 std::tuple<NodeCount, NodeMax>>(
       pg, txn_ctx, {temporary_property.name()}));
 
   if (is_symmetric) {

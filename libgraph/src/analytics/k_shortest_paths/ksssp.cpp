@@ -257,8 +257,8 @@ template <typename GraphTy>
 katana::Result<void>
 KssspImpl(
     GraphTy& graph, uint32_t start_node, uint32_t report_node,
-    AlgoReachability algo_reachability, uint32_t num_paths,
-    uint32_t step_shift, kSsspPlan plan) {
+    AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift,
+    kSsspPlan plan) {
   using GNode = typename GraphTy::Node;
 
   using kSSSP = katana::analytics::KSsspImplementationBase<
@@ -393,13 +393,11 @@ KssspImpl(
 
 katana::Result<void>
 katana::analytics::Ksssp(
-    katana::PropertyGraph* pg, uint32_t start_node,
-    uint32_t report_node, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, uint32_t num_paths,
-    uint32_t step_shift, const bool& is_symmetric, 
+    katana::PropertyGraph* pg, uint32_t start_node, uint32_t report_node,
+    katana::TxnContext* txn_ctx, AlgoReachability algo_reachability,
+    uint32_t num_paths, uint32_t step_shift, const bool& is_symmetric,
     kSsspPlan plan) {
-  KATANA_CHECKED(ConstructNodeProperties<NodeData>(
-      pg, txn_ctx));
+  KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg, txn_ctx));
 
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
@@ -409,8 +407,8 @@ katana::analytics::Ksssp(
     Graph graph = KATANA_CHECKED(Graph::Make(pg));
 
     return KssspImpl(
-      graph, start_node, report_node, algo_reachability, num_paths,
-      step_shift, plan);
+        graph, start_node, report_node, algo_reachability, num_paths,
+        step_shift, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
@@ -418,7 +416,7 @@ katana::analytics::Ksssp(
     Graph graph = KATANA_CHECKED(Graph::Make(pg));
 
     return KssspImpl(
-      graph, start_node, report_node, algo_reachability, num_paths,
-      step_shift, plan);
+        graph, start_node, report_node, algo_reachability, num_paths,
+        step_shift, plan);
   }
 }

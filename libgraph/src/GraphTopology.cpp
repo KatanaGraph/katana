@@ -1223,3 +1223,127 @@ katana::CreateUniformRandomTopology(
 
   return GraphTopology{std::move(adj_indices), std::move(dests)};
 }
+
+//////////////////////////////////////
+// PropertyGraphView Make methods   //
+//////////////////////////////////////
+
+// Default view
+
+template <>
+std::unique_ptr<katana::internal::PGViewDefault>
+katana::internal::PGViewDefault::Make(
+    std::shared_ptr<PropertyGraph> pg) noexcept {
+  auto topo = pg->GetPGViewCache()->GetDefaultTopology();
+  return std::make_unique<katana::internal::PGViewDefault>(
+      std::move(pg), katana::internal::DefaultPGTopology(std::move(topo)));
+}
+
+// Transposed view
+
+template <>
+std::unique_ptr<katana::internal::PGViewTransposed>
+katana::internal::PGViewTransposed::Make(
+    std::shared_ptr<PropertyGraph> pg) noexcept {
+  auto transposed_topo = pg->GetPGViewCache()->BuildOrGetEdgeShuffTopo(
+      pg.get(), katana::RDGTopology::TransposeKind::kYes,
+      katana::RDGTopology::EdgeSortKind::kAny);
+  return std::make_unique<katana::internal::PGViewTransposed>(
+      std::move(pg),
+      katana::internal::TransposedTopology(std::move(transposed_topo)));
+}
+
+// Edges sorted by destination view
+
+template <>
+std::unique_ptr<katana::internal::PGViewEdgesSortedByDestID>
+katana::internal::PGViewEdgesSortedByDestID::Make(
+    std::shared_ptr<PropertyGraph> pg) noexcept {
+  auto sorted_topo = pg->GetPGViewCache()->BuildOrGetEdgeShuffTopo(
+      pg.get(), katana::RDGTopology::TransposeKind::kNo,
+      katana::RDGTopology::EdgeSortKind::kSortedByDestID);
+  return std::make_unique<katana::internal::PGViewEdgesSortedByDestID>(
+      std::move(pg),
+      katana::internal::EdgesSortedByDestTopology(std::move(sorted_topo)));
+}
+
+// Nodes sorted by degree, edges sorted by destination view
+
+template <>
+std::unique_ptr<katana::internal::PGViewNodesSortedByDegreeEdgesSortedByDestID>
+katana::internal::PGViewNodesSortedByDegreeEdgesSortedByDestID::Make(
+    std::shared_ptr<PropertyGraph> pg) noexcept {
+  auto sorted_topo = pg->GetPGViewCache()->BuildOrGetShuffTopo(
+      pg.get(), katana::RDGTopology::TransposeKind::kNo,
+      katana::RDGTopology::NodeSortKind::kSortedByDegree,
+      katana::RDGTopology::EdgeSortKind::kSortedByDestID);
+  return std::make_unique<
+      katana::internal::PGViewNodesSortedByDegreeEdgesSortedByDestID>(
+      std::move(pg),
+      katana::internal::NodesSortedByDegreeEdgesSortedByDestIDTopology(
+          std::move(sorted_topo)));
+}
+
+// Bidirectional view
+
+template <>
+std::unique_ptr<katana::internal::PGViewBiDirectional>
+katana::internal::PGViewBiDirectional::Make(
+    std::shared_ptr<PropertyGraph> pg) noexcept {
+  auto tpose_topo = pg->GetPGViewCache()->BuildOrGetEdgeShuffTopo(
+      pg.get(), katana::RDGTopology::TransposeKind::kYes,
+      katana::RDGTopology::EdgeSortKind::kAny);
+  auto bidir_topo = katana::internal::SimpleBiDirTopology(
+      pg->GetPGViewCache()->GetDefaultTopology(), std::move(tpose_topo));
+  return std::make_unique<katana::internal::PGViewBiDirectional>(
+      std::move(pg), std::move(bidir_topo));
+}
+
+// Undirected view
+
+template <>
+std::unique_ptr<katana::internal::PGViewUnDirected>
+katana::internal::PGViewUnDirected::Make(
+    std::shared_ptr<PropertyGraph> pg) noexcept {
+  auto tpose_topo = pg->GetPGViewCache()->BuildOrGetEdgeShuffTopo(
+      pg.get(), katana::RDGTopology::TransposeKind::kYes,
+      katana::RDGTopology::EdgeSortKind::kAny);
+  auto undir_topo = katana::internal::UndirectedTopology{
+      pg->GetPGViewCache()->GetDefaultTopology(), tpose_topo};
+
+  return std::make_unique<katana::internal::PGViewUnDirected>(
+      std::move(pg), std::move(undir_topo));
+}
+
+// Edge type aware bidirectional view
+
+template <>
+std::unique_ptr<katana::internal::PGViewEdgeTypeAwareBiDir>
+katana::internal::PGViewEdgeTypeAwareBiDir::Make(
+    std::shared_ptr<PropertyGraph> pg) noexcept {
+  auto out_topo = pg->GetPGViewCache()->BuildOrGetEdgeTypeAwareTopo(
+      pg.get(), katana::RDGTopology::TransposeKind::kNo);
+  auto in_topo = pg->GetPGViewCache()->BuildOrGetEdgeTypeAwareTopo(
+      pg.get(), katana::RDGTopology::TransposeKind::kYes);
+
+  // The new topology can replace the defaut one.
+  pg->GetPGViewCache()->ReseatDefaultTopo(out_topo);
+
+  return std::make_unique<katana::internal::PGViewEdgeTypeAwareBiDir>(
+      std::move(pg),
+      EdgeTypeAwareBiDirTopology(std::move(out_topo), std::move(in_topo)));
+}
+
+// Projected view
+
+std::unique_ptr<katana::internal::PGViewProjectedGraph>
+katana::internal::PGViewProjectedGraph::Make(
+    std::shared_ptr<PropertyGraph> pg,
+    const std::vector<std::string>& node_types,
+    const std::vector<std::string>& edge_types) noexcept {
+  auto topo = pg->GetPGViewCache()->BuildOrGetProjectedGraphTopo(
+      pg.get(), node_types, edge_types);
+
+  return std::make_unique<katana::internal::PGViewProjectedGraph>(
+      std::move(pg), std::move(topo));
+}

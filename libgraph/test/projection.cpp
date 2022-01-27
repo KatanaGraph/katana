@@ -63,7 +63,8 @@ main(int argc, char** argv) {
   katana::SharedMemSys sys;
   cll::ParseCommandLineOptions(argc, argv);
 
-  katana::PropertyGraph full_graph = LoadGraph(inputFile);
+  auto full_graph =
+      std::make_shared<katana::PropertyGraph>(LoadGraph(inputFile));
 
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);
@@ -72,40 +73,40 @@ main(int argc, char** argv) {
   SplitString(edgeTypes, &edge_types);
 
   auto pg_view =
-      full_graph.BuildView<ProjectedPropertyGraphView>(node_types, edge_types);
+      ProjectedPropertyGraphView::Make(full_graph, node_types, edge_types);
 
   katana::analytics::TemporaryPropertyGuard temp_node_property{
-      full_graph.NodeMutablePropertyView()};
+      full_graph->NodeMutablePropertyView()};
 
   std::vector<std::string> node_props;
   node_props.emplace_back(temp_node_property.name());
   katana::TxnContext txn_ctx;
   auto res_node_prop = katana::analytics::ConstructNodeProperties<
-      ProjectedPropertyGraphView, NodeData>(pg_view, &txn_ctx, node_props);
+      ProjectedPropertyGraphView, NodeData>(*pg_view, &txn_ctx, node_props);
 
   if (!res_node_prop) {
     KATANA_LOG_FATAL(
         "Failed to Construct Properties: {}", res_node_prop.error());
   }
-  auto res_projected_graph = ProjectedGraphView::Make(pg_view, node_props, {});
+  auto res_projected_graph = ProjectedGraphView::Make(*pg_view, node_props, {});
 
   auto projected_graph = res_projected_graph.value();
 
   uint32_t num_valid_nodes{0};
 
   auto res_node_get_prop =
-      full_graph.GetNodeProperty(temp_node_property.name());
+      full_graph->GetNodeProperty(temp_node_property.name());
   auto node_prop = res_node_get_prop.value();
 
-  num_valid_nodes = full_graph.NumNodes() - node_prop->null_count();
+  num_valid_nodes = full_graph->NumNodes() - node_prop->null_count();
 
   KATANA_LOG_VASSERT(
       projected_graph.NumNodes() > 0 &&
-          full_graph.NumNodes() >= projected_graph.NumNodes(),
+          full_graph->NumNodes() >= projected_graph.NumNodes(),
       "\n Num Nodes: {}", projected_graph.NumNodes());
   KATANA_LOG_VASSERT(
       projected_graph.NumEdges() > 0 &&
-          full_graph.NumEdges() >= projected_graph.NumEdges(),
+          full_graph->NumEdges() >= projected_graph.NumEdges(),
       "\n Num Edges: {}", projected_graph.NumEdges());
   KATANA_LOG_VASSERT(
       projected_graph.NumNodes() == num_valid_nodes,

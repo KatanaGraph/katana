@@ -94,7 +94,7 @@ SubGraphNodeSet(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::analytics::SubGraphExtraction(
-    katana::PropertyGraph* pg, const std::vector<Node>& node_vec,
+    const SortedGraphView& sg, const std::vector<Node>& node_vec,
     SubGraphExtractionPlan plan) {
   // Remove duplicates from the node vector
   std::unordered_set<uint32_t> set;
@@ -108,8 +108,6 @@ katana::analytics::SubGraphExtraction(
   if (dedup_node_vec.empty()) {
     return std::make_unique<katana::PropertyGraph>();
   }
-
-  SortedGraphView sg = pg->BuildView<SortedGraphView>();
 
   katana::StatTimer execTime("SubGraph-Extraction");
   switch (plan.algorithm()) {

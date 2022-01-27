@@ -248,18 +248,6 @@ public:
     KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == NumEdges());
   }
 
-  template <typename PGView>
-  PGView BuildView() noexcept {
-    return pg_view_cache_.BuildView<PGView>(this);
-  }
-
-  template <typename PGView>
-  PGView BuildView(
-      const std::vector<std::string>& node_types,
-      const std::vector<std::string>& edge_types) noexcept {
-    return pg_view_cache_.BuildView<PGView>(this, node_types, edge_types);
-  }
-
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -907,6 +895,8 @@ public:
   // Returns the property index associated with the named property
   katana::Result<katana::EntityIndex<GraphTopology::Node>*> GetNodeIndex(
       const std::string& property_name) const;
+
+  PGViewCache* GetPGViewCache() { return &pg_view_cache_; }
 };
 
 /// SortAllEdgesByDest sorts edges for each node by destination

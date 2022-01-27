@@ -102,7 +102,9 @@ public:
  * @param plan
  */
 KATANA_EXPORT katana::Result<uint64_t> TriangleCount(
-    PropertyGraph* pg, TriangleCountPlan plan = {});
+    const PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID&
+        sorted_view,
+    TriangleCountPlan plan = {});
 
 }  // namespace katana::analytics
 

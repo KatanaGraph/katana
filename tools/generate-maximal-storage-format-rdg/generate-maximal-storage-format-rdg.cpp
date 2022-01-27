@@ -54,17 +54,18 @@ StoreGraph(katana::PropertyGraph* g, std::string& output_path) {
 
 void
 MaximizeGraph(std::string& input_rdg, std::string& output_path) {
-  katana::PropertyGraph g = LoadGraph(input_rdg);
+  auto g = std::make_shared<katana::PropertyGraph>(LoadGraph(input_rdg));
 
   // Add calls which add optional data structures to the RDG here
-  auto generated_sorted_view_sort1 = g.BuildView<
-      katana::PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID>();
+  auto generated_sorted_view_sort1 =
+      katana::PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID::Make(
+          g);
   auto generated_sorted_view_sort2 =
-      g.BuildView<katana::PropertyGraphViews::EdgesSortedByDestID>();
+      katana::PropertyGraphViews::EdgesSortedByDestID::Make(g);
   auto generated_sorted_view_sort3 =
-      g.BuildView<katana::PropertyGraphViews::EdgeTypeAwareBiDir>();
+      katana::PropertyGraphViews::EdgeTypeAwareBiDir::Make(g);
 
-  std::string g2_rdg_file = StoreGraph(&g, output_path);
+  std::string g2_rdg_file = StoreGraph(g.get(), output_path);
   KATANA_LOG_WARN(
       "maximized version of {} stored at {}", input_rdg, g2_rdg_file);
 }

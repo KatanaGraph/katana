@@ -23,16 +23,16 @@ TestTransposedView() {
   }
 
   auto pg = KATANA_CHECKED(PropertyGraph::Make(builder.ConvertToCSR()));
-  TransposedGraphView pg_tr_view = pg->BuildView<TransposedGraphView>();
+  auto pg_tr_view = TransposedGraphView::Make(std::move(pg));
 
   auto pg_tr = KATANA_CHECKED(PropertyGraph::Make(builder_tr.ConvertToCSR()));
 
-  for (Edge e : pg_tr_view.OutEdges()) {
+  for (Edge e : pg_tr_view->OutEdges()) {
     KATANA_LOG_VASSERT(
-        pg_tr->topology().GetEdgeSrc(e) == pg_tr_view.GetEdgeSrc(e),
+        pg_tr->topology().GetEdgeSrc(e) == pg_tr_view->GetEdgeSrc(e),
         "Edge sources do not match");
     KATANA_LOG_VASSERT(
-        pg_tr->topology().OutEdgeDst(e) == pg_tr_view.OutEdgeDst(e),
+        pg_tr->topology().OutEdgeDst(e) == pg_tr_view->OutEdgeDst(e),
         "Edge destinations do not match");
   }
 

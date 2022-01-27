@@ -263,7 +263,7 @@ EdgeIteratingAlgo(const SortedGraphView* graph) {
 
 katana::Result<uint64_t>
 katana::analytics::TriangleCount(
-    katana::PropertyGraph* pg, TriangleCountPlan plan) {
+    const SortedGraphView& sorted_view, TriangleCountPlan plan) {
   katana::StatTimer timer_graph_read("GraphReadingTime", "TriangleCount");
   katana::StatTimer timer_auto_algo("AutoRelabel", "TriangleCount");
 
@@ -271,7 +271,6 @@ katana::analytics::TriangleCount(
 
   katana::StatTimer timer_relabel("GraphRelabelTimer", "TriangleCount");
   timer_relabel.start();
-  SortedGraphView sorted_view = pg->BuildView<SortedGraphView>();
   timer_relabel.stop();
 
   // TODO(amber): Today we sort unconditionally. Figure out a way to re-enable the
@@ -325,7 +324,8 @@ katana::analytics::TriangleCount(
   timer_graph_read.stop();
 #endif
 
-  katana::EnsurePreallocated(1, 16 * (pg->NumNodes() + pg->NumEdges()));
+  katana::EnsurePreallocated(
+      1, 16 * (sorted_view.NumNodes() + sorted_view.NumEdges()));
   katana::ReportPageAllocGuard page_alloc;
 
   KATANA_LOG_VERBOSE("Done relabeling. Starting TriangleCount");

@@ -171,10 +171,11 @@ public:
 
   // Graph constructors
   static Result<TypedPropertyGraph<NodeProps, EdgeProps>> Make(
-      PropertyGraph* pg, const std::vector<std::string>& node_properties,
+      std::shared_ptr<PropertyGraph> pg,
+      const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
   static Result<TypedPropertyGraph<NodeProps, EdgeProps>> Make(
-      PropertyGraph* pg);
+      std::shared_ptr<PropertyGraph> pg);
 };
 
 template <typename PGView, typename NodeProps, typename EdgeProps>
@@ -266,10 +267,11 @@ public:
   }
 
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
-      PropertyGraph* pg, const std::vector<std::string>& node_properties,
+      std::shared_ptr<PropertyGraph> pg,
+      const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
-      PropertyGraph* pg);
+      std::shared_ptr<PropertyGraph> pg);
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
       const PGView& pg_view, const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
@@ -298,64 +300,70 @@ FindEdgeSortedByDest(
 template <typename NodeProps, typename EdgeProps>
 Result<TypedPropertyGraph<NodeProps, EdgeProps>>
 TypedPropertyGraph<NodeProps, EdgeProps>::Make(
-    PropertyGraph* pg, const std::vector<std::string>& node_properties,
+    std::shared_ptr<PropertyGraph> pg,
+    const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
   auto node_view_result =
-      internal::MakeNodePropertyViews<NodeProps>(pg, node_properties);
+      internal::MakeNodePropertyViews<NodeProps>(pg.get(), node_properties);
   if (!node_view_result) {
     return node_view_result.error();
   }
 
   auto edge_view_result =
-      internal::MakeEdgePropertyViews<EdgeProps>(pg, edge_properties);
+      internal::MakeEdgePropertyViews<EdgeProps>(pg.get(), edge_properties);
   if (!edge_view_result) {
     return edge_view_result.error();
   }
 
   return TypedPropertyGraph(
-      pg, std::move(node_view_result.value()),
+      std::move(pg), std::move(node_view_result.value()),
       std::move(edge_view_result.value()));
 }
 
 template <typename NodeProps, typename EdgeProps>
 Result<TypedPropertyGraph<NodeProps, EdgeProps>>
-TypedPropertyGraph<NodeProps, EdgeProps>::Make(PropertyGraph* pg) {
+TypedPropertyGraph<NodeProps, EdgeProps>::Make(
+    std::shared_ptr<PropertyGraph> pg) {
+  auto node_fields = pg->loaded_node_schema()->field_names();
+  auto edge_fields = pg->loaded_edge_schema()->field_names();
   return TypedPropertyGraph<NodeProps, EdgeProps>::Make(
-      pg, pg->loaded_node_schema()->field_names(),
-      pg->loaded_edge_schema()->field_names());
+      std::move(pg), std::move(node_fields), std::move(edge_fields));
 }
 
 template <typename PGView, typename NodeProps, typename EdgeProps>
 Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
 TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
-    PropertyGraph* pg, const std::vector<std::string>& node_properties,
+    std::shared_ptr<PropertyGraph> pg,
+    const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
-  auto pg_view = pg->BuildView<PGView>();
   KATANA_LOG_DEBUG_ASSERT(pg);
   auto node_view_result =
-      internal::MakeNodePropertyViews<NodeProps>(pg, node_properties);
+      internal::MakeNodePropertyViews<NodeProps>(pg.get(), node_properties);
   if (!node_view_result) {
     return node_view_result.error();
   }
 
   auto edge_view_result =
-      internal::MakeEdgePropertyViews<EdgeProps>(pg, edge_properties);
+      internal::MakeEdgePropertyViews<EdgeProps>(pg.get(), edge_properties);
   if (!edge_view_result) {
     return edge_view_result.error();
   }
 
+  auto pg_view = PGView::Make(std::move(pg));
   return TypedPropertyGraphView(
-      pg_view, std::move(node_view_result.value()),
+      std::move(*pg_view), std::move(node_view_result.value()),
       std::move(edge_view_result.value()));
 }
 
 template <typename PGView, typename NodeProps, typename EdgeProps>
 Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>>
-TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(PropertyGraph* pg) {
-  auto pg_view = pg->BuildView<PGView>();
+TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
+    std::shared_ptr<PropertyGraph> pg) {
+  auto pg_view = PGView::Make(std::move(pg));
+  auto node_fields = pg->loaded_node_schema()->field_names();
+  auto edge_fields = pg->loaded_edge_schema()->field_names();
   return TypedPropertyGraphView<PGView, NodeProps, EdgeProps>::Make(
-      pg_view, pg->loaded_node_schema()->field_names(),
-      pg->loaded_edge_schema()->field_names());
+      std::move(pg_view), std::move(node_fields), std::move(edge_fields));
 }
 
 template <typename PGView, typename NodeProps, typename EdgeProps>

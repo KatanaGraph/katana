@@ -409,11 +409,7 @@ katana::analytics::Ksssp(
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Default, NodeData, EdgeData>;
-    Graph graph = Graph::Make(pg);
-
-    if (!graph) {
-      return graph.error();
-    }
+    Graph graph = KATANA_CHECKED(Graph::Make(pg));
 
     return KssspImpl(
       graph.value(), start_node, report_node, algo_reachability, num_paths,
@@ -422,11 +418,7 @@ katana::analytics::Ksssp(
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 
-    Graph graph = Graph::Make(pg);
-
-    if (!graph) {
-      return graph.error();
-    }
+    Graph graph = KATANA_CHECKED(Graph::Make(pg));
 
     return KssspImpl(
       graph.value(), start_node, report_node, algo_reachability, num_paths,

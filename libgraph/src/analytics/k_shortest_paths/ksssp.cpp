@@ -398,11 +398,8 @@ katana::analytics::Ksssp(
     AlgoReachability algo_reachability, uint32_t num_paths,
     uint32_t step_shift, const bool& is_symmetric, 
     kSsspPlan plan) {
-  katana::analytics::TemporaryPropertyGuard temporary_property{
-      pg->NodeMutablePropertyView()};
-
-  auto result = ConstructNodeProperties<NodeData>(
-      pg, txn_ctx, {temporary_property.name()});
+  auto result = ConstructNodeProperties<NodeData, EdgeData>(
+      pg, txn_ctx);
   if (!result) {
     return result.error();
   }
@@ -412,7 +409,7 @@ katana::analytics::Ksssp(
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Default, NodeData, EdgeData>;
-    Graph graph = Graph::Make(pg, {temporary_property.name()}, {});
+    Graph graph = Graph::Make(pg);
 
     if (!graph) {
       return graph.error();
@@ -425,7 +422,7 @@ katana::analytics::Ksssp(
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 
-    Graph graph = Graph::Make(pg, {temporary_property.name()}, {});
+    Graph graph = Graph::Make(pg);
 
     if (!graph) {
       return graph.error();

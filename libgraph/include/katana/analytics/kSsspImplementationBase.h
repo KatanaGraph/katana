@@ -66,8 +66,8 @@ struct KSsspImplementationBase {
         : shift(_shift), divisor(std::pow(2, shift)) {}
 
     template <typename R>
-    unsigned int operator()(const R& req) const {
-      unsigned int t = req.distance / divisor;
+    uint32_t operator()(const R& req) const {
+      uint32_t t = req.distance / divisor;
       return t;
     }
   };

@@ -401,29 +401,37 @@ katana::analytics::Ksssp(
   katana::analytics::TemporaryPropertyGuard temporary_property{
       pg->NodeMutablePropertyView()};
 
-  static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
-
-  KATANA_CHECKED(katana::analytics::ConstructNodeProperties<
-                 std::tuple<NodeCount, NodeMax>>(
+  auto result = ConstructNodeProperties<std::tuple<NodeCount, NodeMax>>(
       pg, txn_ctx, {temporary_property.name()}));
+  if (!result) {
+    return result.error();
+  }
+
+  static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Default, NodeCount, NodeMax>;
-    Graph graph =
-        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
+    Graph graph = Graph::Make(pg, {temporary_property.name()}, {});
 
-    KATANA_CHECKED(KssspImpl(
+    if (!graph) {
+      return graph.error();
+    }
+
+    return KssspImpl(
       graph.value(), start_node, report_node, algo_reachability, num_paths,
       step_shift, plan));
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeCount, NodeMax>;
 
-    Graph graph =
-        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
+    Graph graph = Graph::Make(pg, {temporary_property.name()}, {});
 
-    KATANA_CHECKED(KssspImpl(
+    if (!graph) {
+      return graph.error();
+    }
+
+    return KssspImpl(
       graph.value(), start_node, report_node, algo_reachability, num_paths,
       step_shift, plan));
   }

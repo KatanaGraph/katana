@@ -191,8 +191,7 @@ public:
     std::optional<Value> ret;
     auto it = key_to_value_.find(key);
     if (it != key_to_value_.end()) {
-      ret = std::move(it->second.value);
-      EvictMe(it->second.lru_it);
+      ret = EvictMe(it->second.lru_it);
       cache_stats_.get_hit_count++;
     }
     return ret;
@@ -222,24 +221,26 @@ private:
     return mapit->second.value;
   }
 
-  uint64_t EvictMe(ListType::iterator evictit) {
+  Value EvictMe(ListType::iterator evictit) {
     KATANA_LOG_DEBUG_ASSERT(evictit != lru_list_.end());
     Key evicted_key = std::move(*evictit);
     lru_list_.erase(evictit);
     auto evicted_value = std::move(key_to_value_.at(evicted_key).value);
-    uint64_t approx_evicted_bytes = 1;  // 1 entry for kLRUSize
     key_to_value_.erase(evicted_key);
     if (value_to_bytes_ != nullptr) {
-      approx_evicted_bytes = value_to_bytes_(evicted_value);
-      total_bytes_ -= approx_evicted_bytes;
+      total_bytes_ -= value_to_bytes_(evicted_value);
     }
-    return approx_evicted_bytes;
+    return evicted_value;
   }
 
   uint64_t EvictLastOne() {
     // evict item from the end of most recently used list
     auto tail = --lru_list_.end();
-    return EvictMe(tail);
+    auto evicted_value = EvictMe(tail);
+    if (value_to_bytes_ != nullptr) {
+      return value_to_bytes_(evicted_value);
+    }
+    return 1;
   }
 
   void EvictIfNecessary() {

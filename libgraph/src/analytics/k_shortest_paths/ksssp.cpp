@@ -92,7 +92,7 @@ CheckReachabilityAsync(
       katana::iterate(initBag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edge_range(item)) {
-          GNode dst = graph->template OutEdgeDst(ii);
+          GNode dst = graph->OutEdgeDst(ii);
           if (graph->template GetData<NodeCount>(dst) == 0) {
             graph->template GetData<NodeCount>(dst) = 1;
             push_wrap(ctx, dst, 1);
@@ -131,7 +131,7 @@ CheckReachabilitySync(
         katana::iterate(current_bag),
         [&](GNode n) {
           for (auto edge : graph->OutEdges(n)) {
-            auto dest = graph->template OutEdgeDst(edge);
+            auto dest = graph->OutEdgeDst(edge);
             if (graph->template GetData<NodeCount>(dest) == 0) {
               graph->template GetData<NodeCount>(dest) = 1;
               next_bag.push(dest);
@@ -197,7 +197,7 @@ DeltaStepAlgo(
       katana::iterate(init_bag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edge_range(item)) {
-          GNode dst = graph->template OutEdgeDst(ii);
+          GNode dst = graph->OutEdgeDst(ii);
           auto& ddata_count = graph->template GetData<NodeCount>(dst);
           auto& ddata_max = graph->template GetData<NodeMax>(dst);
 
@@ -279,7 +279,7 @@ KssspImpl(
   using BFS = BfsSsspImplementationBase<GraphTy, uint32_t, false>;
   using BFSUpdateRequest = typename BFS::UpdateRequest;
   using BFSReqPushWrap = typename BFS::ReqPushWrap;
-  using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFnViews;
+  using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFn;
 
   auto it = graph.begin();
   std::advance(it, start_node);

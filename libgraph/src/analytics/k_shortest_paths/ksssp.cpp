@@ -282,10 +282,10 @@ KssspImpl(
   using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFn;
 
   auto it = graph.begin();
-  std::advance(it, start_node);
+  std::advance(it, start_node.getValue());
   GNode source = *it;
   it = graph.begin();
-  std::advance(it, report_node);
+  std::advance(it, report_node.getValue());
   GNode report = *it;
 
   size_t approxNodeData = graph.size() * 64;

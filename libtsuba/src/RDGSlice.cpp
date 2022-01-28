@@ -577,6 +577,18 @@ katana::RDGSlice::edge_entity_type_manager() const {
   return core_->part_header().GetEdgeEntityTypeManager();
 }
 
+katana::Result<katana::NUMAArray<katana::EntityTypeID>>
+katana::RDGSlice::node_entity_type_id_array() const {
+  return KATANA_CHECKED(core_->node_entity_type_id_array(
+      slice_arg_.node_range.first, slice_arg_.node_range.second));
+}
+
+katana::Result<katana::NUMAArray<katana::EntityTypeID>>
+katana::RDGSlice::edge_entity_type_id_array() const {
+  return KATANA_CHECKED(core_->edge_entity_type_id_array(
+      slice_arg_.edge_range.first, slice_arg_.edge_range.second));
+}
+
 katana::RDGSlice::RDGSlice(std::unique_ptr<RDGCore>&& core)
     : core_(std::move(core)) {}
 

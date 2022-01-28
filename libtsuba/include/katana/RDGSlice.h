@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "katana/FileView.h"
+#include "katana/NUMAArray.h"
 #include "katana/RDGLineage.h"
 #include "katana/RDGTopology.h"
 #include "katana/Result.h"
@@ -132,8 +133,10 @@ public:
   bool IsUint16tEntityTypeIDs() const;
   const FileView& node_entity_type_id_array_file_storage() const;
   const FileView& edge_entity_type_id_array_file_storage() const;
-  katana::Result<katana::EntityTypeManager> node_entity_type_manager() const;
-  katana::Result<katana::EntityTypeManager> edge_entity_type_manager() const;
+  Result<EntityTypeManager> node_entity_type_manager() const;
+  Result<EntityTypeManager> edge_entity_type_manager() const;
+  Result<NUMAArray<EntityTypeID>> node_entity_type_id_array() const;
+  Result<NUMAArray<EntityTypeID>> edge_entity_type_id_array() const;
 
 private:
   static katana::Result<RDGSlice> Make(

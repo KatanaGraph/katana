@@ -16,6 +16,7 @@
 #include "katana/ErrorCode.h"
 #include "katana/FileFrame.h"
 #include "katana/FileView.h"
+#include "katana/NUMAArray.h"
 #include "katana/PartitionMetadata.h"
 #include "katana/RDGLineage.h"
 #include "katana/RDGStorageFormatVersion.h"
@@ -292,9 +293,13 @@ public:
 
   const FileView& edge_entity_type_id_array_file_storage() const;
 
-  katana::Result<katana::EntityTypeManager> node_entity_type_manager() const;
+  Result<EntityTypeManager> node_entity_type_manager() const;
 
-  katana::Result<katana::EntityTypeManager> edge_entity_type_manager() const;
+  Result<EntityTypeManager> edge_entity_type_manager() const;
+
+  Result<NUMAArray<EntityTypeID>> node_entity_type_id_array() const;
+
+  Result<NUMAArray<EntityTypeID>> edge_entity_type_id_array() const;
 
   void set_view_name(const std::string& v) { view_type_ = v; }
 

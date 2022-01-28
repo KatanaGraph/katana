@@ -980,11 +980,6 @@ katana::RDG::node_entity_type_manager() const {
   return core_->part_header().GetNodeEntityTypeManager();
 }
 
-katana::Result<katana::EntityTypeManager>
-katana::RDG::edge_entity_type_manager() const {
-  return core_->part_header().GetEdgeEntityTypeManager();
-}
-
 katana::Result<void>
 katana::RDG::UnbindNodeEntityTypeIDArrayFileStorage() {
   return core_->node_entity_type_id_array_file_storage().Unbind();
@@ -1003,9 +998,19 @@ katana::RDG::SetNodeEntityTypeIDArrayFile(
   return core_->RegisterNodeEntityTypeIDArrayFile(new_type_id_array.BaseName());
 }
 
+katana::Result<katana::NUMAArray<katana::EntityTypeID>>
+katana::RDG::node_entity_type_id_array() const {
+  return KATANA_CHECKED(core_->node_entity_type_id_array());
+}
+
 const katana::FileView&
 katana::RDG::edge_entity_type_id_array_file_storage() const {
   return core_->edge_entity_type_id_array_file_storage();
+}
+
+katana::Result<katana::EntityTypeManager>
+katana::RDG::edge_entity_type_manager() const {
+  return core_->part_header().GetEdgeEntityTypeManager();
 }
 
 katana::Result<void>
@@ -1024,6 +1029,11 @@ katana::RDG::SetEdgeEntityTypeIDArrayFile(
         rdg_dir());
   }
   return core_->RegisterEdgeEntityTypeIDArrayFile(new_type_id_array.BaseName());
+}
+
+katana::Result<katana::NUMAArray<katana::EntityTypeID>>
+katana::RDG::edge_entity_type_id_array() const {
+  return KATANA_CHECKED(core_->edge_entity_type_id_array());
 }
 
 katana::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {}

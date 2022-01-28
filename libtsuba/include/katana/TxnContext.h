@@ -15,7 +15,7 @@ public:
 
   template <typename Container>
   void InsertNodePropertyRead(std::string rdg_dir, const Container& names) {
-    for (auto name : names) {
+    for (const auto& name : names) {
       node_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
     }
   }
@@ -26,7 +26,7 @@ public:
 
   template <typename Container>
   void InsertNodePropertyWrite(std::string rdg_dir, const Container& names) {
-    for (auto name : names) {
+    for (const auto& name : names) {
       node_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
     }
   }
@@ -37,7 +37,7 @@ public:
 
   template <typename Container>
   void InsertEdgePropertyRead(std::string rdg_dir, const Container& names) {
-    for (auto name : names) {
+    for (const auto& name : names) {
       edge_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
     }
   }
@@ -48,7 +48,7 @@ public:
 
   template <typename Container>
   void InsertEdgePropertyWrite(std::string rdg_dir, const Container& names) {
-    for (auto name : names) {
+    for (const auto& name : names) {
       edge_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
     }
   }

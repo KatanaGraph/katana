@@ -64,13 +64,26 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
 # -- Options for HTML output -------------------------------------------------
 
+if tags.has("external"):
+    publish_url = "docs.katanagraph.com"
+else:
+    publish_url = "docs.k9h.dev"
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
 html_theme = "pydata_sphinx_theme"
 html_logo = "_static/logo.png"
 html_title = "Katana"
-html_theme_options = {"show_prev_next": False}
+html_theme_options = {
+    "show_prev_next": False,
+    "switcher": {
+        "json_url": "https://" + publish_url + "/switcher.json",
+        "url_template": "https://" + publish_url + "/{version}/",
+        "version_match": "latest"
+    },
+    "navbar_end": ["version-switcher"]
+}
 # html_theme_path = []
 
 # Add any paths that contain custom static files (such as style sheets) here,

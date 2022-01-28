@@ -86,8 +86,8 @@ public:
   bool GetTopologyWrite() const { return topology_write_; }
 
 private:
-  std::string ConcatRDGProperty(std::string rdg_dir, std::string prop) {
-    return rdg_dir + kPropSeparator + prop;
+  inline std::string ConcatRDGProperty(std::string rdg_dir, std::string prop) {
+    return Uri::JoinPath(rdg_dir, prop);
   }
 
   static constexpr char kPropSeparator[] = "/propertyseparator/";

@@ -9,40 +9,48 @@ namespace katana {
 
 class KATANA_EXPORT TxnContext {
 public:
-  void InsertNodePropertyRead(std::string name) {
-    node_properties_read_.insert(name);
+  void InsertNodePropertyRead(std::string rdg_dir, std::string name) {
+    node_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
   }
 
   template <typename Container>
-  void InsertNodePropertyRead(const Container& names) {
-    node_properties_read_.insert(names.begin(), names.end());
+  void InsertNodePropertyRead(std::string rdg_dir, const Container& names) {
+    for (auto name : names) {
+      node_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
+    }
   }
 
-  void InsertNodePropertyWrite(std::string name) {
-    node_properties_write_.insert(name);
-  }
-
-  template <typename Container>
-  void InsertNodePropertyWrite(const Container& names) {
-    node_properties_write_.insert(names.begin(), names.end());
-  }
-
-  void InsertEdgePropertyRead(std::string name) {
-    edge_properties_read_.insert(name);
+  void InsertNodePropertyWrite(std::string rdg_dir, std::string name) {
+    node_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
   }
 
   template <typename Container>
-  void InsertEdgePropertyRead(const Container& names) {
-    edge_properties_read_.insert(names.begin(), names.end());
+  void InsertNodePropertyWrite(std::string rdg_dir, const Container& names) {
+    for (auto name : names) {
+      node_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
+    }
   }
 
-  void InsertEdgePropertyWrite(std::string name) {
-    edge_properties_write_.insert(name);
+  void InsertEdgePropertyRead(std::string rdg_dir, std::string name) {
+    edge_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
   }
 
   template <typename Container>
-  void InsertEdgePropertyWrite(const Container& names) {
-    edge_properties_write_.insert(names.begin(), names.end());
+  void InsertEdgePropertyRead(std::string rdg_dir, const Container& names) {
+    for (auto name : names) {
+      edge_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
+    }
+  }
+
+  void InsertEdgePropertyWrite(std::string rdg_dir, std::string name) {
+    edge_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
+  }
+
+  template <typename Container>
+  void InsertEdgePropertyWrite(std::string rdg_dir, const Container& names) {
+    for (auto name : names) {
+      edge_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
+    }
   }
 
   void SetAllPropertiesRead() { all_properties_read_ = true; }
@@ -78,6 +86,12 @@ public:
   bool GetTopologyWrite() const { return topology_write_; }
 
 private:
+  std::string ConcatRDGProperty(std::string rdg_dir, std::string prop) {
+    return rdg_dir + kPropSeparator + prop;
+  }
+
+  static constexpr char kPropSeparator[] = "/propertyseparator/";
+
   std::set<std::string> node_properties_read_;
   std::set<std::string> node_properties_write_;
   std::set<std::string> edge_properties_read_;

@@ -80,9 +80,9 @@ html_theme_options = {
     "switcher": {
         "json_url": "https://" + publish_url + "/switcher.json",
         "url_template": "https://" + publish_url + "/{version}/",
-        "version_match": "latest"
+        "version_match": "latest",
     },
-    "navbar_end": ["version-switcher"]
+    "navbar_end": ["version-switcher"],
 }
 # html_theme_path = []
 

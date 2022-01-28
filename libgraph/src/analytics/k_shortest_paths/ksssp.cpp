@@ -256,7 +256,7 @@ PrintPath(const Path* path) {
 template <typename GraphTy>
 katana::Result<void>
 KssspImpl(
-    GraphTy& graph, uint32_t start_node, uint32_t report_node,
+    GraphTy graph, uint32_t start_node, uint32_t report_node,
     AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift,
     kSsspPlan plan) {
   using GNode = typename GraphTy::Node;
@@ -276,7 +276,7 @@ KssspImpl(
   using OBIM_Barrier = typename katana::OrderedByIntegerMetric<
       kSSSPUpdateRequestIndexer, PSchunk>::template with_barrier<true>::type;
 
-  using BFS = BfsSsspImplementationBase<GraphTy, uint32_t, false>;
+  using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
   using BFSUpdateRequest = typename BFS::UpdateRequest;
   using BFSReqPushWrap = typename BFS::ReqPushWrap;
   using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFn;

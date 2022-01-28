@@ -30,8 +30,8 @@
 using namespace katana::analytics;
 
 struct Path {
-  typedef uint32_t parent;
-  typedef const Path* last{nullptr};
+  uint32_t parent;
+  const Path* last{nullptr};
 };
 
 struct NodeCount : public katana::AtomicPODProperty<uint32_t> {};
@@ -201,7 +201,7 @@ DeltaStepAlgo(
           auto& ddata_count = graph->template GetData<NodeCount>(dst);
           auto& ddata_max = graph->template GetData<NodeMax>(dst);
 
-          Distance ew = (*edge_data)[ii];
+          Distance ew = graph->GetEdgeData<EdgeWeight>(ii);
           const Distance new_dist = item.distance + ew;
 
           if ((ddata_count >= num_paths) && (ddata_max <= new_dist))
@@ -303,9 +303,6 @@ KssspImpl(
   katana::do_all(katana::iterate(graph), [&](const GNode& n) {
     graph.template GetData<NodeMax>(n) = 0;
     graph.template GetData<NodeCount>(n) = 0;
-    for (auto e : graph.OutEdges(n)) {
-      edge_data[e] = graph.template GetEdgeData<EdgeWeight>(e);
-    }
   });
 
   katana::StatTimer execTime("kSSSP");

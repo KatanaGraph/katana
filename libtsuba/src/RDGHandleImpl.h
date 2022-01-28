@@ -26,7 +26,7 @@ public:
   void set_rdg_manifest(RDGManifest&& rdg_manifest) {
     rdg_manifest_ = std::move(rdg_manifest);
   }
-  void set_viewtype(const std::string v) { rdg_manifest_.set_viewtype(v); }
+  void set_viewtype(const std::string& v) { rdg_manifest_.set_viewtype(v); }
 
 private:
   uint32_t flags_;

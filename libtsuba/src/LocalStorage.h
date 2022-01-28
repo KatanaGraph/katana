@@ -16,21 +16,20 @@ namespace katana {
 /// Store byte arrays to the local file system; Provided as a convenience for
 /// testing only (un-optimized)
 class LocalStorage : public FileStorage {
-  void CleanUri(std::string* uri);
   katana::Result<void> WriteFile(
-      std::string, const uint8_t* data, uint64_t size);
+      const std::string&, const uint8_t* data, uint64_t size);
   katana::Result<void> ReadFile(
-      std::string uri, uint64_t start, uint64_t size, uint8_t* data);
+      const std::string& uri, uint64_t start, uint64_t size, uint8_t* data);
   katana::Result<void> RemoteCopyFile(
-      std::string source_uri, std::string dest_uri, uint64_t begin,
-      uint64_t size);
+      const std::string& source_uri, const std::string& dest_uri,
+      uint64_t begin, uint64_t size);
 
 public:
   LocalStorage() : FileStorage("file://") {}
 
   katana::Result<void> Init() override { return katana::ResultSuccess(); }
   katana::Result<void> Fini() override { return katana::ResultSuccess(); }
-  katana::Result<void> Stat(const std::string& uri, StatBuf* size) override;
+  katana::Result<void> Stat(const std::string& uri, StatBuf* s_buf) override;
 
   uint32_t Priority() const override { return 1; }
 

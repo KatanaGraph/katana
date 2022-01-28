@@ -185,7 +185,8 @@ katana::RDGCore::AddNodeProperties(
   auto written_prop_names = KATANA_CHECKED(AddProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
   // store write properties into transaction context
-  txn_ctx->InsertNodePropertyWrite<std::set<std::string>>(written_prop_names);
+  txn_ctx->InsertNodePropertyWrite<std::set<std::string>>(
+      rdg_dir_.string(), written_prop_names);
 
   return katana::ResultSuccess();
 }
@@ -197,7 +198,8 @@ katana::RDGCore::AddEdgeProperties(
   auto written_prop_names = KATANA_CHECKED(AddProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
   // store write properties into transaction context
-  txn_ctx->InsertEdgePropertyWrite<std::set<std::string>>(written_prop_names);
+  txn_ctx->InsertEdgePropertyWrite<std::set<std::string>>(
+      rdg_dir_.string(), written_prop_names);
 
   return katana::ResultSuccess();
 }
@@ -209,7 +211,8 @@ katana::RDGCore::UpsertNodeProperties(
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &node_properties_, &part_header_.node_prop_info_list()));
   // store write properties into transaction context
-  txn_ctx->InsertNodePropertyWrite<std::set<std::string>>(written_prop_names);
+  txn_ctx->InsertNodePropertyWrite<std::set<std::string>>(
+      rdg_dir_.string(), written_prop_names);
 
   return katana::ResultSuccess();
 }
@@ -221,7 +224,8 @@ katana::RDGCore::UpsertEdgeProperties(
   auto written_prop_names = KATANA_CHECKED(UpsertProperties(
       props, &edge_properties_, &part_header_.edge_prop_info_list()));
   // store write properties into transaction context
-  txn_ctx->InsertEdgePropertyWrite<std::set<std::string>>(written_prop_names);
+  txn_ctx->InsertEdgePropertyWrite<std::set<std::string>>(
+      rdg_dir_.string(), written_prop_names);
 
   return katana::ResultSuccess();
 }
@@ -279,7 +283,7 @@ katana::RDGCore::RemoveNodeProperty(int i, katana::TxnContext* txn_ctx) {
   auto field = node_properties_->field(i);
   node_properties_ = KATANA_CHECKED(node_properties_->RemoveColumn(i));
   // store write properties into transaction context
-  txn_ctx->InsertNodePropertyWrite(field->name());
+  txn_ctx->InsertNodePropertyWrite(rdg_dir_.string(), field->name());
 
   return part_header_.RemoveNodeProperty(field->name());
 }
@@ -289,7 +293,7 @@ katana::RDGCore::RemoveEdgeProperty(int i, katana::TxnContext* txn_ctx) {
   auto field = edge_properties_->field(i);
   edge_properties_ = KATANA_CHECKED(edge_properties_->RemoveColumn(i));
   // store write properties into transaction context
-  txn_ctx->InsertEdgePropertyWrite(field->name());
+  txn_ctx->InsertEdgePropertyWrite(rdg_dir_.string(), field->name());
 
   return part_header_.RemoveEdgeProperty(field->name());
 }

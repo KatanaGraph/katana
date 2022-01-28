@@ -415,27 +415,15 @@ katana::PropertyGraph::DoWrite(
 
   KATANA_CHECKED(DoWriteTopologies());
 
-  if (!rdg_.node_entity_type_id_array_file_storage().Valid()) {
-    KATANA_LOG_DEBUG("node_entity_type_id_array file store invalid, writing");
-  }
-
+  //TODO(emcginnis): we don't actually have any lifetime tracking for the in memory
+  // entity_type_id arrays, which means we don't actually know when the array
+  // on disk is out of date and we should write. For now, just always write the file.
+  // This is correct, but wasteful.
   std::unique_ptr<katana::FileFrame> node_entity_type_id_array_res =
-      !rdg_.node_entity_type_id_array_file_storage().Valid() ||
-              (!rdg_.IsUnstableStorageFormat() &&
-               KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat))
-          ? KATANA_CHECKED(WriteEntityTypeIDsArray(node_entity_type_ids_))
-          : nullptr;
-
-  if (!rdg_.edge_entity_type_id_array_file_storage().Valid()) {
-    KATANA_LOG_DEBUG("edge_entity_type_id_array file store invalid, writing");
-  }
+      KATANA_CHECKED(WriteEntityTypeIDsArray(node_entity_type_ids_));
 
   std::unique_ptr<katana::FileFrame> edge_entity_type_id_array_res =
-      !rdg_.edge_entity_type_id_array_file_storage().Valid() ||
-              (!rdg_.IsUnstableStorageFormat() &&
-               KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat))
-          ? KATANA_CHECKED(WriteEntityTypeIDsArray(edge_entity_type_ids_))
-          : nullptr;
+      KATANA_CHECKED(WriteEntityTypeIDsArray(edge_entity_type_ids_));
 
   return rdg_.Store(
       handle, command_line, versioning_action,

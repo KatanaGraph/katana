@@ -688,10 +688,6 @@ LoadProperty(
     katana::PropertyCache* cache, katana::RDG* rdg,
     std::vector<katana::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
-  if (i < 0 || i > props->num_columns()) {
-    i = props->num_columns();
-  }
-
   auto psi_it = std::find_if(
       prop_info_list->begin(), prop_info_list->end(),
       [&](const katana::PropStorageInfo& psi) { return psi.name() == name; });
@@ -714,10 +710,21 @@ LoadProperty(
 
   KATANA_CHECKED(katana::AddProperties(
       dir, cache, rdg, {&prop_info}, nullptr,
-      [&](const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
+      [i, &props, &new_table](
+          const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
+        // props is derived from rdg and cache, and AddProperties may update
+        // rdg and cache which in turn may transitively change props. Defer
+        // observations about props (e.g., props->num_columns) until the
+        // callback executes.
+        //
+        // TODO(ddn): Rethink this loopy design.
+        int idx = i;
         if (props->num_columns() > 0) {
+          if (idx < 0 || idx > props->num_columns()) {
+            idx = props->num_columns();
+          }
           new_table = KATANA_CHECKED(
-              props->AddColumn(i, col->field(0), col->column(0)));
+              props->AddColumn(idx, col->field(0), col->column(0)));
         } else {
           new_table = col;
         }

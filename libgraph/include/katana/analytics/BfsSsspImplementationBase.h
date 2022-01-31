@@ -211,7 +211,7 @@ struct BfsSsspImplementationBase {
     }
   };
 
-    struct OutEdgeRangeFnUndirected {
+  struct OutEdgeRangeFnUndirected {
     Graph* graph;
     auto operator()(const GNode& n) const { return graph->OutEdges(n); }
 

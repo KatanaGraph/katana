@@ -161,9 +161,8 @@ template <
     typename EdgeRange>
 void
 DeltaStepAlgo(
-    GraphTy* graph,
-    const typename GraphTy::Node& source, const PushWrap& push_wrap,
-    const EdgeRange& edge_range,
+    GraphTy* graph, const typename GraphTy::Node& source,
+    const PushWrap& push_wrap, const EdgeRange& edge_range,
     katana::InsertBag<std::pair<Weight, Path*>>* report_paths_bag,
     katana::InsertBag<Path*>* path_pointers, PathAlloc& path_alloc,
     uint32_t report_node, uint32_t num_paths, uint32_t step_shift) {
@@ -324,22 +323,22 @@ KssspImpl(
     switch (plan.algorithm()) {
     case kSsspPlan::kDeltaTile:
       DeltaStepAlgo<GraphTy, kSSSPSrcEdgeTile, OBIM>(
-          &graph, source, kSSSPSrcEdgeTilePushWrap{&graph},
-          kSSSPTileRangeFn(), &paths, &path_pointers, path_alloc, report_node,
-          num_paths, step_shift);
+          &graph, source, kSSSPSrcEdgeTilePushWrap{&graph}, kSSSPTileRangeFn(),
+          &paths, &path_pointers, path_alloc, report_node, num_paths,
+          step_shift);
       break;
     case kSsspPlan::kDeltaStep:
       DeltaStepAlgo<GraphTy, kSSSPUpdateRequest, OBIM>(
-          &graph, source, kSSSPReqPushWrap(),
-          kSSSPOutEdgeRangeFn{&graph}, &paths, &path_pointers, path_alloc,
-          report_node, num_paths, step_shift);
+          &graph, source, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
+          &paths, &path_pointers, path_alloc, report_node, num_paths,
+          step_shift);
       break;
     case kSsspPlan::kDeltaStepBarrier:
       katana::gInfo("Using OBIM with barrier\n");
       DeltaStepAlgo<GraphTy, kSSSPUpdateRequest, OBIM_Barrier>(
-          &graph, source, kSSSPReqPushWrap(),
-          kSSSPOutEdgeRangeFn{&graph}, &paths, &path_pointers, path_alloc,
-          report_node, num_paths, step_shift);
+          &graph, source, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
+          &paths, &path_pointers, path_alloc, report_node, num_paths,
+          step_shift);
       break;
 
     default:

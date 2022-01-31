@@ -127,12 +127,12 @@ katana::python::InitEntityTypeManager(py::module_& m) {
             py::set ret;
             if (self->HasEntityType(type.type_id)) {
               auto type_set = self->GetAtomicSubtypes(type.type_id);
+              // TODO(denish44): This isn't very efficient. we should add a method that
+              // efficiently finds ones (by iterating over 64-bit words and doing bit magic).
               for (EntityTypeID subtype_id = 0; subtype_id < type_set.size();
                    ++subtype_id) {
                 if (type_set.test(subtype_id)) {
-                  if (self->GetAtomicTypeName(subtype_id).has_value()) {
-                    ret.add(AtomicEntityType{{self, subtype_id}});
-                  }
+                  ret.add(AtomicEntityType{{self, subtype_id}});
                 }
               }
             }
@@ -153,9 +153,6 @@ katana::python::InitEntityTypeManager(py::module_& m) {
             }
             return ret;
           })
-      .def(
-          "get_num_atomic_types", &katana::EntityTypeManager::GetNumAtomicTypes)
-      .def(
-          "get_num_of_entity_types",
-          &katana::EntityTypeManager::GetNumEntityTypes);
+      .def("num_atomic_types", &katana::EntityTypeManager::GetNumAtomicTypes)
+      .def("num_types", &katana::EntityTypeManager::GetNumEntityTypes);
 }

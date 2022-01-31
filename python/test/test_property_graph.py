@@ -361,8 +361,8 @@ def test_types(graph):
     assert graph.node_types.get_atomic_subtypes(non_atomic_type) == set(
         [node_atomic_types["Message"], node_atomic_types["Post"]]
     )
-    assert graph.node_types.get_supertypes(node_atomic_types["Message"]) == set(
-        [node_atomic_types["Message"], non_atomic_type]
+    assert graph.node_types.get_supertypes(node_atomic_types["Message"]).issuperset(
+        set([node_atomic_types["Message"], non_atomic_type])
     )
 
     edge_atomic_types = graph.edge_types.atomic_types

@@ -352,7 +352,7 @@ katana::analytics::KTruss(
   katana::ReportPageAllocGuard page_alloc;
 
   KATANA_CHECKED(
-      ConstructEdgeProperties<EdgeData>(pg, txn_ctx, {output_property_name}));
+      pg->ConstructEdgeProperties<EdgeData>(txn_ctx, {output_property_name}));
 
   auto graph =
       KATANA_CHECKED(SortedGraphView::Make(pg, {}, {output_property_name}));

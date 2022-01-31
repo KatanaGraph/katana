@@ -31,6 +31,13 @@ FillBitMask(
 namespace katana {
 TransformationView::~TransformationView() = default;
 
+Result<katana::RDGTopology*>
+TransformationView::LoadTopology(const RDGTopology&) {
+  return KATANA_ERROR(
+      katana::ErrorCode::InvalidArgument,
+      "Transformation topologies are not persisted yet.");
+}
+
 std::unique_ptr<TransformationView>
 TransformationView::CreateEmptyEdgeProjectedTopology(
     const PropertyGraph& pg, uint32_t num_new_nodes,
@@ -72,15 +79,12 @@ TransformationView::CreateEmptyEdgeProjectedTopology(
       std::move(projected_to_original_edges_mapping),
       std::move(projected_to_original_nodes_mapping)};
 
-  Transformation transformation{
-      std::move(original_to_projected_nodes_mapping),
-      std::move(original_to_projected_edges_mapping), std::move(node_bitmask),
-      std::move(edge_bitmask)};
-
   // Using `new` to access a non-public constructor.
   return std::unique_ptr<katana::TransformationView>(
       new katana::TransformationView(
-          pg, std::move(topo), std::move(transformation)));
+          pg, std::move(topo), std::move(original_to_projected_nodes_mapping),
+          std::move(original_to_projected_edges_mapping),
+          std::move(node_bitmask), std::move(edge_bitmask)));
 }
 
 std::unique_ptr<TransformationView>
@@ -305,14 +309,11 @@ katana::TransformationView::MakeProjectedGraph(
       std::move(projected_to_original_edges_mapping),
       std::move(projected_to_original_nodes_mapping)};
 
-  Transformation transformation{
-      std::move(original_to_projected_nodes_mapping),
-      std::move(original_to_projected_edges_mapping), std::move(node_bitmask),
-      std::move(edge_bitmask)};
-
   // Using `new` to access a non-public constructor.
-  return std::unique_ptr<TransformationView>(
-      new TransformationView(pg, std::move(topo), std::move(transformation)));
+  return std::unique_ptr<TransformationView>(new TransformationView(
+      pg, std::move(topo), std::move(original_to_projected_nodes_mapping),
+      std::move(original_to_projected_edges_mapping), std::move(node_bitmask),
+      std::move(edge_bitmask)));
 }
 
 }  // namespace katana

@@ -416,7 +416,8 @@ public:
       KATANA_CHECKED(Base::CopyEdgeProperty(
           pg, pg_dup.get(), edge_weight_property_name,
           temp_edge_property_names[0], txn_ctx));
-      KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg_dup.get(), txn_ctx));
+      KATANA_CHECKED(
+          pg_dup->template ConstructNodeProperties<NodeData>(txn_ctx));
 
       pg_mutable = std::move(pg_dup);
     }
@@ -508,8 +509,8 @@ AddDefaultEdgeWeight(
     katana::TxnContext* txn_ctx) {
   using EdgeData = std::tuple<EdgeWeightType>;
 
-  if (auto res = katana::analytics::ConstructEdgeProperties<EdgeData>(
-          pg, txn_ctx, {edge_weight_property_name});
+  if (auto res = pg->ConstructEdgeProperties<EdgeData>(
+          txn_ctx, {edge_weight_property_name});
       !res) {
     return res.error();
   }
@@ -555,8 +556,8 @@ LouvainClusteringWithWrap(
   if (is_symmetric) {
     using GraphViewTy = katana::PropertyGraphViews::Default;
     using Impl = LouvainClusteringImplementation<EdgeWeightType, GraphViewTy>;
-    KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
-        pg, txn_ctx, temp_node_property_names));
+    KATANA_CHECKED(pg->ConstructNodeProperties<typename Impl::NodeData>(
+        txn_ctx, temp_node_property_names));
 
     LouvainClusteringImplementation<EdgeWeightType, GraphViewTy> impl{};
     KATANA_CHECKED(impl.LouvainClustering(
@@ -565,8 +566,8 @@ LouvainClusteringWithWrap(
   } else {
     using GraphViewTy = katana::PropertyGraphViews::Undirected;
     using Impl = LouvainClusteringImplementation<EdgeWeightType, GraphViewTy>;
-    KATANA_CHECKED(ConstructNodeProperties<typename Impl::NodeData>(
-        pg, txn_ctx, temp_node_property_names));
+    KATANA_CHECKED(pg->ConstructNodeProperties<typename Impl::NodeData>(
+        txn_ctx, temp_node_property_names));
 
     LouvainClusteringImplementation<EdgeWeightType, GraphViewTy> impl{};
     KATANA_CHECKED(impl.LouvainClustering(
@@ -574,8 +575,8 @@ LouvainClusteringWithWrap(
         plan, txn_ctx));
   }
 
-  KATANA_CHECKED(ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
-      pg, txn_ctx, {output_property_name}));
+  KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
+      txn_ctx, {output_property_name}));
 
   auto graph = KATANA_CHECKED((
       katana::TypedPropertyGraph<std::tuple<CurrentCommunityID>, std::tuple<>>::

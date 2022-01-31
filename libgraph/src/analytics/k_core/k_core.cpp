@@ -233,9 +233,9 @@ katana::analytics::KCore(
   katana::analytics::TemporaryPropertyGuard temporary_property{
       pg->NodeMutablePropertyView()};
 
-  KATANA_CHECKED(katana::analytics::ConstructNodeProperties<
-                 std::tuple<KCoreNodeCurrentDegree>>(
-      pg, txn_ctx, {temporary_property.name()}));
+  KATANA_CHECKED(
+      pg->ConstructNodeProperties<std::tuple<KCoreNodeCurrentDegree>>(
+          txn_ctx, {temporary_property.name()}));
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
@@ -254,9 +254,8 @@ katana::analytics::KCore(
     KATANA_CHECKED(KCoreImpl(&graph, plan, k_core_number));
   }
   // Post processing. Mark alive nodes.
-  KATANA_CHECKED(
-      katana::analytics::ConstructNodeProperties<std::tuple<KCoreNodeAlive>>(
-          pg, txn_ctx, {output_property_name}));
+  KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<KCoreNodeAlive>>(
+      txn_ctx, {output_property_name}));
 
   using GraphTy = katana::TypedPropertyGraph<
       std::tuple<KCoreNodeAlive, KCoreNodeCurrentDegree>, std::tuple<>>;

@@ -302,9 +302,8 @@ katana::Result<void>
 PagerankPullTopological(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan, katana::TxnContext* txn_ctx) {
-  KATANA_CHECKED(
-      katana::analytics::ConstructNodeProperties<std::tuple<NodeValue>>(
-          pg, txn_ctx, {output_property_name}));
+  KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<NodeValue>>(
+      txn_ctx, {output_property_name}));
 
   Graph graph = KATANA_CHECKED(Graph::Make(pg, {output_property_name}, {}));
 
@@ -325,8 +324,8 @@ katana::Result<void>
 PagerankPullResidual(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan, katana::TxnContext* txn_ctx) {
-  KATANA_CHECKED(katana::analytics::ConstructNodeProperties<NodeData>(
-      pg, txn_ctx, {output_property_name}));
+  KATANA_CHECKED(
+      pg->ConstructNodeProperties<NodeData>(txn_ctx, {output_property_name}));
 
   Graph graph = KATANA_CHECKED(Graph::Make(pg, {output_property_name}, {}));
 

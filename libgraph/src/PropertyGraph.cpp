@@ -388,6 +388,19 @@ katana::PropertyGraph::ConstructEntityTypeIDs(katana::TxnContext* txn_ctx) {
   return katana::ResultSuccess();
 }
 
+katana::Result<katana::RDGTopology*>
+katana::PropertyGraph::LoadTopology(const katana::RDGTopology& shadow) {
+  katana::RDGTopology* topo = KATANA_CHECKED(rdg_->GetTopology(shadow));
+  if (NumEdges() != topo->num_edges() || NumNodes() != topo->num_nodes()) {
+    KATANA_LOG_WARN(
+        "RDG found topology matching description, but num_edge/num_node does "
+        "not match csr topology");
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "no matching topology found");
+  }
+  return topo;
+}
+
 katana::Result<void>
 katana::PropertyGraph::DoWriteTopologies() {
   // Since PGViewCache doesn't manage the main csr topology, see if we need to store it now

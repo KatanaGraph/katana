@@ -27,9 +27,6 @@
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
 
-using katana::analytics::ConstructEdgeProperties;
-using katana::analytics::ConstructNodeProperties;
-
 //! standard global options to the benchmarks
 extern llvm::cl::opt<bool> skipVerify;
 extern llvm::cl::opt<int> numThreads;

@@ -27,8 +27,8 @@ struct TempNodeProp : public katana::PODProperty<uint64_t> {};
 using NodeData = std::tuple<TempNodeProp>;
 using EdgeData = std::tuple<>;
 
-using ProjectedGraph = katana::TypedPropertyGraph<NodeData, EdgeData>;
-using GNode = typename ProjectedGraph::Node;
+using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
+using GNode = typename Graph::Node;
 
 katana::PropertyGraph
 LoadGraph(const std::string& rdg_file) {
@@ -77,17 +77,15 @@ main(int argc, char** argv) {
   std::vector<std::string> node_props;
   node_props.emplace_back(temp_node_property.name());
   katana::TxnContext txn_ctx;
-  auto res_node_prop = katana::analytics::ConstructNodeProperties<NodeData>(
-      pg_view.get(), &txn_ctx, node_props);
+  auto res_node_prop =
+      pg_view->ConstructNodeProperties<NodeData>(&txn_ctx, node_props);
 
   if (!res_node_prop) {
     KATANA_LOG_FATAL(
         "Failed to Construct Properties: {}", res_node_prop.error());
   }
-  auto res_projected_graph =
-      ProjectedGraph::Make(pg_view.get(), node_props, {});
-
-  auto projected_graph = res_projected_graph.value();
+  auto typed_pg_view =
+      Graph::Make(pg_view.get(), node_props, {}).assume_value();
 
   uint32_t num_valid_nodes{0};
 
@@ -98,17 +96,17 @@ main(int argc, char** argv) {
   num_valid_nodes = full_graph.NumNodes() - node_prop->null_count();
 
   KATANA_LOG_VASSERT(
-      projected_graph.NumNodes() > 0 &&
-          full_graph.NumNodes() >= projected_graph.NumNodes(),
-      "\n Num Nodes: {}", projected_graph.NumNodes());
+      typed_pg_view.NumNodes() > 0 &&
+          full_graph.NumNodes() >= typed_pg_view.NumNodes(),
+      "\n Num Nodes: {}", typed_pg_view.NumNodes());
   KATANA_LOG_VASSERT(
-      projected_graph.NumEdges() > 0 &&
-          full_graph.NumEdges() >= projected_graph.NumEdges(),
-      "\n Num Edges: {}", projected_graph.NumEdges());
+      typed_pg_view.NumEdges() > 0 &&
+          full_graph.NumEdges() >= typed_pg_view.NumEdges(),
+      "\n Num Edges: {}", typed_pg_view.NumEdges());
   KATANA_LOG_VASSERT(
-      projected_graph.NumNodes() == num_valid_nodes,
+      typed_pg_view.NumNodes() == num_valid_nodes,
       "\n Num Valid Nodes: {} Num Nodes: {}", num_valid_nodes,
-      projected_graph.NumNodes());
+      typed_pg_view.NumNodes());
 
   return 0;
 }

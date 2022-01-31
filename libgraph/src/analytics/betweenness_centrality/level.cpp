@@ -220,9 +220,8 @@ ExtractBC(
     const BCLevelNodeDataArray& graph_data,
     const std::string& output_property_name, katana::TxnContext* txn_ctx) {
   // construct the new property
-  if (auto result =
-          katana::analytics::ConstructNodeProperties<std::tuple<NodeBC>>(
-              pg, txn_ctx, {output_property_name});
+  if (auto result = pg->ConstructNodeProperties<std::tuple<NodeBC>>(
+          txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }

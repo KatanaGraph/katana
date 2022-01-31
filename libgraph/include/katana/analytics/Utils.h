@@ -9,7 +9,6 @@
 
 #include "arrow/util/bitmap.h"
 #include "katana/ErrorCode.h"
-#include "katana/Properties.h"
 #include "katana/Result.h"
 #include "katana/TransformationView.h"
 
@@ -36,74 +35,6 @@ public:
 //! (https://github.com/sbeamer/gapbs/blob/master/src/tc.cc WorthRelabelling())
 KATANA_EXPORT bool IsApproximateDegreeDistributionPowerLaw(
     const PropertyGraph& graph);
-
-template <typename Props>
-std::vector<std::string>
-DefaultPropertyNames() {
-  auto num_tuple_elem = std::tuple_size<Props>::value;
-  std::vector<std::string> names(num_tuple_elem);
-
-  for (size_t i = 0; i < names.size(); ++i) {
-    names[i] = "Column_" + std::to_string(i);
-  }
-  return names;
-}
-
-template <typename NodeProps>
-inline katana::Result<void>
-ConstructNodeProperties(
-    PropertyGraph* pg, katana::TxnContext* txn_ctx,
-    const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
-  auto res_table = katana::AllocateTable<NodeProps>(pg->NumNodes(), names);
-  if (!res_table) {
-    return res_table.error();
-  }
-
-  return pg->AddNodeProperties(res_table.value(), txn_ctx);
-}
-
-template <typename NodeProps>
-inline katana::Result<void>
-ConstructNodeProperties(
-    TransformationView* pg, katana::TxnContext* txn_ctx,
-    const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
-  auto bit_mask = pg->NodeBitmask();
-  auto res_table =
-      katana::AllocateTable<NodeProps>(pg->NumOriginalNodes(), names, bit_mask);
-  if (!res_table) {
-    return res_table.error();
-  }
-
-  return pg->AddNodeProperties(res_table.value(), txn_ctx);
-}
-
-template <typename EdgeProps>
-inline katana::Result<void>
-ConstructEdgeProperties(
-    PropertyGraph* pg, katana::TxnContext* txn_ctx,
-    const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
-  auto res_table = katana::AllocateTable<EdgeProps>(pg->NumEdges(), names);
-  if (!res_table) {
-    return res_table.error();
-  }
-
-  return pg->AddEdgeProperties(res_table.value(), txn_ctx);
-}
-
-template <typename EdgeProps>
-inline katana::Result<void>
-ConstructEdgeProperties(
-    TransformationView* pg, katana::TxnContext* txn_ctx,
-    const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
-  auto bit_mask = pg->EdgeBitmask();
-  auto res_table =
-      katana::AllocateTable<EdgeProps>(pg->NumOriginalEdges(), names, bit_mask);
-  if (!res_table) {
-    return res_table.error();
-  }
-
-  return pg->AddEdgeProperties(res_table.value(), txn_ctx);
-}
 
 class KATANA_EXPORT TemporaryPropertyGuard {
   static thread_local int temporary_property_counter;

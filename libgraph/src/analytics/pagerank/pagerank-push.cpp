@@ -62,8 +62,8 @@ PagerankPushAsynchronous(
   katana::analytics::TemporaryPropertyGuard temporary_property{
       pg->NodeMutablePropertyView()};
 
-  if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pg, txn_ctx, {output_property_name, temporary_property.name()});
+  if (auto result = pg->ConstructNodeProperties<NodeData>(
+          txn_ctx, {output_property_name, temporary_property.name()});
       !result) {
     return result.error();
   }
@@ -118,8 +118,8 @@ PagerankPushSynchronous(
   katana::analytics::TemporaryPropertyGuard temporary_property{
       pg->NodeMutablePropertyView()};
 
-  if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pg, txn_ctx, {output_property_name, temporary_property.name()});
+  if (auto result = pg->ConstructNodeProperties<NodeData>(
+          txn_ctx, {output_property_name, temporary_property.name()});
       !result) {
     return result.error();
   }

@@ -307,8 +307,8 @@ AddDefaultEdgeWeight(
     katana::TxnContext* txn_ctx) {
   using EdgeData = std::tuple<EdgeWeightType>;
 
-  if (auto res = katana::analytics::ConstructEdgeProperties<EdgeData>(
-          pg, txn_ctx, {edge_weight_property_name});
+  if (auto res = pg->ConstructEdgeProperties<EdgeData>(
+          txn_ctx, {edge_weight_property_name});
       !res) {
     return res.error();
   }
@@ -509,8 +509,8 @@ kSSSPWithWrap(
       temp_node_property_names.begin(),
       [](const TemporaryPropertyGuard& p) { return p.name(); });
 
-  KATANA_CHECKED(ConstructNodeProperties<NodeData<Weight>>(
-      pg, txn_ctx, temp_node_property_names));
+  KATANA_CHECKED(pg->ConstructNodeProperties<NodeData<Weight>>(
+      txn_ctx, temp_node_property_names));
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<

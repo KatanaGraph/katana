@@ -17,6 +17,7 @@
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
 #include "katana/NUMAArray.h"
+#include "katana/Properties.h"
 #include "katana/RDG.h"
 #include "katana/RDGTopology.h"
 #include "katana/Result.h"
@@ -35,6 +36,18 @@ ProjectAsArrowArray(const T* buf, const size_t len) noexcept {
   return std::make_shared<ArrowArrayType>(len, arrow::Buffer::Wrap(buf, len));
 }
 
+template <typename Props>
+std::vector<std::string>
+DefaultPropertyNames() {
+  auto num_tuple_elem = std::tuple_size_v<Props>;
+  std::vector<std::string> names(num_tuple_elem);
+
+  for (size_t i = 0; i < names.size(); ++i) {
+    names[i] = "Column_" + std::to_string(i);
+  }
+  return names;
+}
+
 /// A property graph is a graph that has properties associated with its nodes
 /// and edges. A property has a name and value. Its value may be a primitive
 /// type, a list of values or a composition of properties.
@@ -48,8 +61,32 @@ ProjectAsArrowArray(const T* buf, const size_t len) noexcept {
 /// manages the serialization of the various partitions and properties that
 /// comprise the physical representation of the logical property graph.
 class KATANA_EXPORT PropertyGraph {
+  friend class PGViewCache;
+  friend class PropertyGraphRetractor;
+
+  // Virtual methods
 public:
-  // Pass through topology API
+  virtual ~PropertyGraph();
+
+private:
+  virtual std::shared_ptr<arrow::Buffer> NodeBitmask() const noexcept {
+    return nullptr;
+  }
+
+  virtual std::shared_ptr<arrow::Buffer> EdgeBitmask() const noexcept {
+    return nullptr;
+  }
+
+  /// Return the number of nodes of the original property graph.
+  virtual uint64_t NumOriginalNodes() const { return NumNodes(); }
+
+  /// Return the number of edges of the original property graph.
+  virtual uint64_t NumOriginalEdges() const { return NumEdges(); }
+
+  virtual Result<RDGTopology*> LoadTopology(const RDGTopology& shadow);
+
+  // Regular methods
+public:
   using node_iterator = GraphTopology::node_iterator;
   using edge_iterator = GraphTopology::edge_iterator;
   using nodes_range = GraphTopology::nodes_range;
@@ -59,92 +96,6 @@ public:
   using Edge = GraphTopology::Edge;
 
   using EntityTypeIDArray = katana::NUMAArray<EntityTypeID>;
-
-private:
-  /// Validate performs a sanity check on the the graph after loading
-  Result<void> Validate();
-
-  Result<void> DoWriteTopologies();
-
-  Result<void> DoWrite(
-      katana::RDGHandle handle, const std::string& command_line,
-      katana::RDG::RDGVersioningPolicy versioning_action);
-
-  Result<void> ConductWriteOp(
-      const std::string& uri, const std::string& command_line,
-      katana::RDG::RDGVersioningPolicy versioning_action);
-
-  Result<void> WriteGraph(
-      const std::string& uri, const std::string& command_line);
-
-  Result<void> WriteView(
-      const std::string& uri, const std::string& command_line);
-
-  std::shared_ptr<katana::RDG> rdg_{std::make_shared<katana::RDG>()};
-  std::shared_ptr<katana::RDGFile> file_;
-
-  /// Manages the relations between the node entity types
-  std::shared_ptr<EntityTypeManager> node_entity_type_manager_{
-      std::make_shared<EntityTypeManager>()};
-
-  /// Manages the relations between the edge entity types
-  std::shared_ptr<EntityTypeManager> edge_entity_type_manager_{
-      std::make_shared<EntityTypeManager>()};
-
-  /// The node EntityTypeID for each node's most specific type
-  std::shared_ptr<EntityTypeIDArray> node_entity_type_ids_;
-
-  // Optimization to avoid shared_ptr indirection when indexing into node_entity_type_ids_
-  EntityTypeID* node_entity_data_;
-
-  /// The edge EntityTypeID for each edge's most specific type
-  std::shared_ptr<EntityTypeIDArray> edge_entity_type_ids_;
-
-  // Optimization to avoid shared_ptr indirection when indexing into edge_entity_type_ids_
-  EntityTypeID* edge_entity_data_;
-
-  // List of node and edge indexes on this graph.
-  std::vector<std::unique_ptr<EntityIndex<Node>>> node_indexes_;
-  std::vector<std::unique_ptr<EntityIndex<Edge>>> edge_indexes_;
-
-  PGViewCache pg_view_cache_;
-
-  katana::Result<katana::RDGTopology*> LoadTopology(
-      const katana::RDGTopology& shadow) {
-    katana::RDGTopology* topo = KATANA_CHECKED(rdg_->GetTopology(shadow));
-    if (NumEdges() != topo->num_edges() || NumNodes() != topo->num_nodes()) {
-      KATANA_LOG_WARN(
-          "RDG found topology matching description, but num_edge/num_node does "
-          "not match csr topology");
-      return KATANA_ERROR(
-          ErrorCode::InvalidArgument, "no matching topology found");
-    }
-    return topo;
-  }
-
-  friend class PGViewCache;
-
-  friend class PropertyGraphRetractor;
-
-protected:
-  RDG& rdg() { return *rdg_; }
-  const RDG& rdg() const { return *rdg_; }
-
-  // This constructor is meant to be used by transformation views to share
-  // state with the original graph.
-  PropertyGraph(const PropertyGraph& parent, GraphTopology&& topo) noexcept
-      : rdg_(parent.rdg_),
-        file_(parent.file_),
-        node_entity_type_manager_(parent.node_entity_type_manager_),
-        edge_entity_type_manager_(parent.edge_entity_type_manager_),
-        node_entity_type_ids_(parent.node_entity_type_ids_),
-        node_entity_data_(node_entity_type_ids_->data()),
-        edge_entity_type_ids_(parent.edge_entity_type_ids_),
-        edge_entity_data_(edge_entity_type_ids_->data()),
-        pg_view_cache_(std::move(topo)) {}
-
-public:
-  virtual ~PropertyGraph();
 
   PropertyGraph(PropertyGraph&& other) = default;
 
@@ -723,6 +674,38 @@ public:
   GraphTopology::PropertyIndex GetNodePropertyIndex(
       const Node& nid) const noexcept;
 
+  template <typename NodeProps>
+  Result<void> ConstructNodeProperties(
+      katana::TxnContext* txn_ctx, const std::vector<std::string>& names =
+                                       DefaultPropertyNames<NodeProps>()) {
+    auto bit_mask = NodeBitmask();
+    auto num_nodes = NumOriginalNodes();
+    auto res_table =
+        bit_mask ? katana::AllocateTable<NodeProps>(num_nodes, names, bit_mask)
+                 : katana::AllocateTable<NodeProps>(num_nodes, names);
+    if (!res_table) {
+      return res_table.error();
+    }
+
+    return AddNodeProperties(res_table.value(), txn_ctx);
+  }
+
+  template <typename EdgeProps>
+  Result<void> ConstructEdgeProperties(
+      katana::TxnContext* txn_ctx, const std::vector<std::string>& names =
+                                       DefaultPropertyNames<EdgeProps>()) {
+    auto bit_mask = EdgeBitmask();
+    auto num_edges = NumOriginalEdges();
+    auto res_table =
+        bit_mask ? katana::AllocateTable<EdgeProps>(num_edges, names, bit_mask)
+                 : katana::AllocateTable<EdgeProps>(num_edges, names);
+    if (!res_table) {
+      return res_table.error();
+    }
+
+    return AddEdgeProperties(res_table.value(), txn_ctx);
+  }
+
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(
       const std::shared_ptr<arrow::Table>& props, katana::TxnContext* txn_ctx);
@@ -877,12 +860,6 @@ public:
   /// Return the number of local edges
   uint64_t NumEdges() const { return topology().NumEdges(); }
 
-  /// Return the number of nodes of the original property graph.
-  virtual uint64_t NumOriginalNodes() const { return NumNodes(); }
-
-  /// Return the number of edges of the original property graph.
-  virtual uint64_t NumOriginalEdges() const { return NumEdges(); }
-
   /// Gets the destination for an edge.
   ///
   /// @param edge edge iterator to get the destination of
@@ -927,8 +904,77 @@ public:
   }
 
   // Returns the property index associated with the named property
-  katana::Result<katana::EntityIndex<GraphTopology::Node>*> GetNodeIndex(
+  Result<EntityIndex<GraphTopology::Node>*> GetNodeIndex(
       const std::string& property_name) const;
+
+protected:
+  RDG& rdg() { return *rdg_; }
+  const RDG& rdg() const { return *rdg_; }
+
+  // This constructor is meant to be used is situations when you want to share
+  // property and type data (including RDG) with another PropertyGraph instance,
+  // while using a new topology. The topology is assumed to maintain the correct
+  // property index mapping from its nodes/edges to the original property table.
+  PropertyGraph(const PropertyGraph& parent, GraphTopology&& topo) noexcept
+      : rdg_(parent.rdg_),
+        file_(parent.file_),
+        node_entity_type_manager_(parent.node_entity_type_manager_),
+        edge_entity_type_manager_(parent.edge_entity_type_manager_),
+        node_entity_type_ids_(parent.node_entity_type_ids_),
+        node_entity_data_(node_entity_type_ids_->data()),
+        edge_entity_type_ids_(parent.edge_entity_type_ids_),
+        edge_entity_data_(edge_entity_type_ids_->data()),
+        pg_view_cache_(std::move(topo)) {}
+
+private:
+  /// Validate performs a sanity check on the the graph after loading
+  Result<void> Validate();
+
+  Result<void> DoWriteTopologies();
+
+  Result<void> DoWrite(
+      katana::RDGHandle handle, const std::string& command_line,
+      katana::RDG::RDGVersioningPolicy versioning_action);
+
+  Result<void> ConductWriteOp(
+      const std::string& uri, const std::string& command_line,
+      katana::RDG::RDGVersioningPolicy versioning_action);
+
+  Result<void> WriteGraph(
+      const std::string& uri, const std::string& command_line);
+
+  Result<void> WriteView(
+      const std::string& uri, const std::string& command_line);
+
+  // Data
+  std::shared_ptr<katana::RDG> rdg_{std::make_shared<katana::RDG>()};
+  std::shared_ptr<katana::RDGFile> file_;
+
+  /// Manages the relations between the node entity types
+  std::shared_ptr<EntityTypeManager> node_entity_type_manager_{
+      std::make_shared<EntityTypeManager>()};
+
+  /// Manages the relations between the edge entity types
+  std::shared_ptr<EntityTypeManager> edge_entity_type_manager_{
+      std::make_shared<EntityTypeManager>()};
+
+  /// The node EntityTypeID for each node's most specific type
+  std::shared_ptr<EntityTypeIDArray> node_entity_type_ids_;
+
+  // Optimization to avoid shared_ptr indirection when indexing into node_entity_type_ids_
+  EntityTypeID* node_entity_data_;
+
+  /// The edge EntityTypeID for each edge's most specific type
+  std::shared_ptr<EntityTypeIDArray> edge_entity_type_ids_;
+
+  // Optimization to avoid shared_ptr indirection when indexing into edge_entity_type_ids_
+  EntityTypeID* edge_entity_data_;
+
+  // List of node and edge indexes on this graph.
+  std::vector<std::unique_ptr<EntityIndex<Node>>> node_indexes_;
+  std::vector<std::unique_ptr<EntityIndex<Edge>>> edge_indexes_;
+
+  PGViewCache pg_view_cache_;
 };
 
 /// SortAllEdgesByDest sorts edges for each node by destination

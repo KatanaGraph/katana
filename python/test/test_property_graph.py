@@ -350,7 +350,7 @@ def test_types(graph):
         "Post": 11,
     }
     assert graph.node_types.is_subtype_of(0, 1) is True
-    non_atomic_type = graph.get_or_add_non_atomic_entity_type([node_atomic_types["Message"], node_atomic_types["Post"]])
+    non_atomic_type = graph.node_types.get_or_add_non_atomic_entity_type([node_atomic_types["Message"], node_atomic_types["Post"]])
     assert (
         graph.node_types.get_non_atomic_entity_type([node_atomic_types["Message"], node_atomic_types["Post"]])
         == non_atomic_type

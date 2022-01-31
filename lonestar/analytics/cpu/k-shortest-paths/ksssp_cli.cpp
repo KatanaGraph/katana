@@ -164,8 +164,8 @@ main(int argc, char** argv) {
   katana::TxnContext txn_ctx;
 
   auto pg_result = Ksssp(
-      pg.get(), startNode, reportNode, &txn_ctx, algoReachability, numPaths,
-      stepShift, symmetricGraph, plan);
+      pg.get(), edge_property_name, startNode, reportNode, &txn_ctx, 
+      algoReachability, numPaths, stepShift, symmetricGraph, plan);
 
   if (!pg_result) {
     KATANA_LOG_FATAL(

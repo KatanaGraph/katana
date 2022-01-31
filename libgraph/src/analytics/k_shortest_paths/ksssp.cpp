@@ -409,9 +409,6 @@ katana::analytics::Ksssp(
     katana::TxnContext* txn_ctx, AlgoReachability algo_reachability,
     uint32_t num_paths, uint32_t step_shift, const bool& is_symmetric,
     kSsspPlan plan) {
-      katana::analytics::TemporaryPropertyGuard temporary_property{
-        pg->NodeMutablePropertyView()};
-  
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {
     return KATANA_ERROR(
@@ -426,16 +423,27 @@ katana::analytics::Ksssp(
     KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
         pg, temporary_edge_property.name(), txn_ctx));
   }
-  
-  KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg, txn_ctx, {temporary_property.name()}));
 
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
+
+  std::vector<TemporaryPropertyGuard> temp_node_properties(2);
+  std::generate_n(
+      temp_node_properties.begin(), temp_node_properties.size(),
+      [&]() { return TemporaryPropertyGuard{pg->NodeMutablePropertyView()}; });
+  std::vector<std::string> temp_node_property_names(
+      temp_node_properties.size());
+  std::transform(
+      temp_node_properties.begin(), temp_node_properties.end(),
+      temp_node_property_names.begin(),
+      [](const TemporaryPropertyGuard& p) { return p.name(); });
+
+  KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg, txn_ctx, temp_node_property_names));
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Default, NodeData, EdgeData>;
     Graph graph = 
-        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {edge_weight_property_name}));
+        KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
     return KssspImpl(
         graph, start_node, report_node, algo_reachability, num_paths,
@@ -445,7 +453,7 @@ katana::analytics::Ksssp(
         katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 
     Graph graph = 
-      KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {edge_weight_property_name}));
+      KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
     return KssspImpl(
         graph, start_node, report_node, algo_reachability, num_paths,

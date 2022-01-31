@@ -151,12 +151,11 @@ jobs:
     needs: build_and_test_conda_package
     runs-on: ubuntu-20.04
     strategy:
+      fail-fast: false
       matrix:
         image:
-          - ubuntu:16.04
+          - ubuntu:18.04
           - ubuntu:latest
-          - centos:7
-          - centos:latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2

@@ -694,10 +694,6 @@ LoadProperty(
     katana::PropertyCache* cache, katana::RDG* rdg,
     std::vector<katana::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
-  if (i < 0 || i > props->num_columns()) {
-    i = props->num_columns();
-  }
-
   auto psi_it = std::find_if(
       prop_info_list->begin(), prop_info_list->end(),
       [&](const katana::PropStorageInfo& psi) { return psi.name() == name; });
@@ -720,10 +716,21 @@ LoadProperty(
 
   KATANA_CHECKED(katana::AddProperties(
       dir, cache, rdg, {&prop_info}, nullptr,
-      [&](const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
+      [i, &props, &new_table](
+          const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
+        // props is derived from rdg and cache, and AddProperties may update
+        // rdg and cache which in turn may transitively change props. Defer
+        // observations about props (e.g., props->num_columns) until the
+        // callback executes.
+        //
+        // TODO(ddn): Rethink this loopy design.
+        int idx = i;
         if (props->num_columns() > 0) {
+          if (idx < 0 || idx > props->num_columns()) {
+            idx = props->num_columns();
+          }
           new_table = KATANA_CHECKED(
-              props->AddColumn(i, col->field(0), col->column(0)));
+              props->AddColumn(idx, col->field(0), col->column(0)));
         } else {
           new_table = col;
         }
@@ -986,11 +993,6 @@ katana::RDG::node_entity_type_manager() const {
   return core_->part_header().GetNodeEntityTypeManager();
 }
 
-katana::Result<katana::EntityTypeManager>
-katana::RDG::edge_entity_type_manager() const {
-  return core_->part_header().GetEdgeEntityTypeManager();
-}
-
 katana::Result<void>
 katana::RDG::UnbindNodeEntityTypeIDArrayFileStorage() {
   return core_->node_entity_type_id_array_file_storage().Unbind();
@@ -1009,9 +1011,19 @@ katana::RDG::SetNodeEntityTypeIDArrayFile(
   return core_->RegisterNodeEntityTypeIDArrayFile(new_type_id_array.BaseName());
 }
 
+katana::Result<katana::NUMAArray<katana::EntityTypeID>>
+katana::RDG::node_entity_type_id_array() const {
+  return KATANA_CHECKED(core_->node_entity_type_id_array());
+}
+
 const katana::FileView&
 katana::RDG::edge_entity_type_id_array_file_storage() const {
   return core_->edge_entity_type_id_array_file_storage();
+}
+
+katana::Result<katana::EntityTypeManager>
+katana::RDG::edge_entity_type_manager() const {
+  return core_->part_header().GetEdgeEntityTypeManager();
 }
 
 katana::Result<void>
@@ -1030,6 +1042,11 @@ katana::RDG::SetEdgeEntityTypeIDArrayFile(
         rdg_dir());
   }
   return core_->RegisterEdgeEntityTypeIDArrayFile(new_type_id_array.BaseName());
+}
+
+katana::Result<katana::NUMAArray<katana::EntityTypeID>>
+katana::RDG::edge_entity_type_id_array() const {
+  return KATANA_CHECKED(core_->edge_entity_type_id_array());
 }
 
 katana::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {}

@@ -10,6 +10,7 @@
 #include "RDGTopologyManager.h"
 #include "katana/FileView.h"
 #include "katana/Logging.h"
+#include "katana/NUMAArray.h"
 #include "katana/RDGTopology.h"
 #include "katana/Result.h"
 #include "katana/TxnContext.h"
@@ -171,6 +172,13 @@ public:
 
   const RDGLineage& lineage() const { return lineage_; }
   void set_lineage(RDGLineage&& lineage) { lineage_ = lineage; }
+
+  /// An alternate interface for loading entity type ids
+  Result<NUMAArray<EntityTypeID>> node_entity_type_id_array(
+      size_t begin = 0, size_t end = std::numeric_limits<size_t>::max()) const;
+  /// An alternate interface for loading entity type ids
+  Result<NUMAArray<EntityTypeID>> edge_entity_type_id_array(
+      size_t begin = 0, size_t end = std::numeric_limits<size_t>::max()) const;
 
   const FileView& node_entity_type_id_array_file_storage() const {
     return node_entity_type_id_array_file_storage_;

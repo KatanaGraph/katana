@@ -427,7 +427,7 @@ katana::analytics::Ksssp(
         pg, temporary_edge_property.name(), txn_ctx));
   }
   
-  KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg, txn_ctx));
+  KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg, txn_ctx, {temporary_property.name()}));
 
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
@@ -435,7 +435,7 @@ katana::analytics::Ksssp(
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Default, NodeData, EdgeData>;
     Graph graph = 
-        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
+        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {edge_weight_property_name}));
 
     return KssspImpl(
         graph, start_node, report_node, algo_reachability, num_paths,
@@ -445,7 +445,7 @@ katana::analytics::Ksssp(
         katana::PropertyGraphViews::Undirected, NodeData, EdgeData>;
 
     Graph graph = 
-        KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {}));
+      KATANA_CHECKED(Graph::Make(pg, {temporary_property.name()}, {edge_weight_property_name}));
 
     return KssspImpl(
         graph, start_node, report_node, algo_reachability, num_paths,

@@ -3,6 +3,7 @@
 
 #include <set>
 
+#include "katana/URI.h"
 #include "katana/config.h"
 
 namespace katana {

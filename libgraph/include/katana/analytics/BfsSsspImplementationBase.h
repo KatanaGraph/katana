@@ -211,6 +211,15 @@ struct BfsSsspImplementationBase {
     }
   };
 
+    struct OutEdgeRangeFnUndirected {
+    Graph* graph;
+    auto operator()(const GNode& n) const { return graph->OutEdges(n); }
+
+    auto operator()(const UpdateRequest& req) const {
+      return Edges(*graph, req.src);
+    }
+  };
+
   struct TileRangeFn {
     template <typename T>
     auto operator()(const T& tile) const {

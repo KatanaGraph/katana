@@ -116,8 +116,8 @@ struct KSsspImplementationBase {
   template <typename WL, typename TileMaker>
   static void PushEdgeTiles(
       WL& wl, Graph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->OutEdges(src).begin();
-    const auto end = graph->OutEdges(src).end();
+    auto beg = Edges(*graph, src).begin();
+    const auto end = Edges(*graph, src).end();
 
     PushEdgeTiles(wl, beg, end, f);
   }
@@ -125,8 +125,8 @@ struct KSsspImplementationBase {
   template <typename WL, typename TileMaker>
   static void PushEdgeTilesParallel(
       WL& wl, Graph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->OutEdges(src).begin();
-    const auto end = graph->OutEdges(src).end();
+    auto beg = Edges(*graph, src).begin();
+    const auto end = Edges(*graph, src).end();
 
     if ((end - beg) > EdgeTileSize) {
       katana::on_each(
@@ -182,10 +182,10 @@ struct KSsspImplementationBase {
 
   struct OutEdgeRangeFn {
     Graph* graph;
-    auto operator()(const GNode& n) const { return graph->OutEdges(n); }
+    auto operator()(const GNode& n) const { return Edges(*graph, n); }
 
     auto operator()(const UpdateRequest& req) const {
-      return graph->OutEdges(req.src);
+      return Edges(*graph, req.src);
     }
   };
 
@@ -220,8 +220,8 @@ struct KSsspImplementationBase {
         return;
       }
 
-      for (auto ii : g->OutEdges(node)) {
-        auto dest = g->OutEdgeDst(ii);
+      for (auto ii : Edges(*g, node)) {
+        auto dest = EdgeDst(*g, ii);
         Distance dd = g->template GetData<NodeProp>(*dest);
         Distance ew = GetEdgeWeight<UseEdgeWt>(ii);
         if (dd > sd + ew) {

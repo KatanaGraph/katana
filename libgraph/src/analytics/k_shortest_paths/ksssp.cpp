@@ -29,8 +29,10 @@
 
 using namespace katana::analytics;
 
+typedef uint32_t Parent;
+
 struct Path {
-  uint32_t parent;
+  Parent parent;
   const Path* last{nullptr};
 };
 

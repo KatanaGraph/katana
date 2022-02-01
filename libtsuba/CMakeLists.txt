@@ -23,6 +23,7 @@ set(sources
   src/RDGManifest.cpp
   src/RDGPartHeader.cpp
   src/RDGPrefix.cpp
+  src/RDGPythonInterface.cpp
   src/RDGSlice.cpp
   src/RDGTopology.cpp
   src/RDGTopologyManager.cpp

@@ -446,7 +446,7 @@ kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
-        katana::PropertyGraphViews::Default, NodeData<weight>, EdgeData<weight>>;
+        katana::PropertyGraphViews::Default, NodeData<Weight>, EdgeData<Weight>>;
     Graph graph = 
         KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
@@ -455,7 +455,7 @@ kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property
         algo_reachability, num_paths, step_shift, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
-        katana::PropertyGraphViews::Undirected, NodeData<weight>, EdgeData<weight>>;
+        katana::PropertyGraphViews::Undirected, NodeData<Weight>, EdgeData<Weight>>;
 
     Graph graph = 
       KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
@@ -463,33 +463,6 @@ kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property
     return KssspImpl<Graph, Weight>(
         graph, start_node, report_node, 
         algo_reachability, num_paths, step_shift, plan);
-  }
-}
-
-typename KssspGetWeight(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name) {
-  switch (
-      KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
-          ->type()
-          ->id()) {
-  case arrow::UInt32Type::type_id:
-    return uint32_t;
-  case arrow::Int32Type::type_id:
-    return int32_t;
-  case arrow::UInt64Type::type_id:
-    return uint64_t;
-  case arrow::Int64Type::type_id:
-    return int64_t;
-  case arrow::FloatType::type_id:
-    return float;
-  case arrow::DoubleType::type_id:
-    return double;
-  default:
-    return KATANA_ERROR(
-        katana::ErrorCode::TypeError, "Unsupported type: {}",
-        KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
-            ->type()
-            ->ToString());
   }
 }
 

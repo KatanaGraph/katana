@@ -71,6 +71,16 @@ private:
   katana::FixedSizeAllocator<Path> allocator_;
 };
 
+/**
+ * Checks if source node can reach report_node 
+ * for asynchronous graphs
+ *  
+ * @param graph typed distributed graph
+ * @param source Beginning node in graph
+ * @param push_wrap Function to get the next updated path
+ * @param edge_range Range of edge nodes to explore
+ * @param report_node Final node to look for
+ */
 template <
     typename GraphTy, typename Item, typename PushWrap, typename EdgeRange>
 bool
@@ -117,6 +127,14 @@ CheckReachabilityAsync(
   return true;
 }
 
+/**
+ * Checks if source node can reach report_node 
+ * for synchronous graphs
+ *  
+ * @param graph typed distributed graph
+ * @param source Beginning node in graph
+ * @param report_node Final node to look for
+ */
 template <typename GraphTy>
 bool
 CheckReachabilitySync(
@@ -159,7 +177,21 @@ CheckReachabilitySync(
   return true;
 }
 
-//delta stepping implementation for finding a shortest path from source to report node
+/**
+ * Checks if source node can reach report_node 
+ * for asynchronous graphs
+ *  
+ * @param graph typed distributed graph
+ * @param source Beginning node in graph
+ * @param push_wrap Function to get the next updated path
+ * @param edge_range Range of edge nodes to explore
+ * @param report_paths_bag Total paths (and weights) from source to report_node
+ * @param path_pointers Pointers for each path
+ * @param path_alloc Allocates paths in graph
+ * @param report_node Final node to look for
+ * @param num_paths Number of paths to look for
+ * @param step_shift Shift value for deltastep
+ */
 template <
     typename GraphTy, typename Weight, typename Item, typename OBIMTy, typename PushWrap,
     typename EdgeRange>
@@ -247,6 +279,11 @@ DeltaStepAlgo(
   }
 }
 
+/**
+ * Prints all paths recursively
+ *  
+ * @param path all paths found
+ */
 void
 PrintPath(const Path* path) {
   if (path->last != nullptr) {
@@ -256,6 +293,12 @@ PrintPath(const Path* path) {
   katana::gPrint(" ", path->parent);
 }
 
+/**
+ * Adds edge weights if there are none
+ *  
+ * @param pg property graph
+ * @param edge_weight_property_name edge weights
+ */
 template <typename EdgeWeightType>
 static katana::Result<void>
 AddDefaultEdgeWeight(
@@ -279,6 +322,17 @@ AddDefaultEdgeWeight(
   return katana::ResultSuccess();
 }
 
+/**
+ * Sets up and runs implementation of ksssp
+ *  
+ * @param graph typed distributed graph
+ * @param start_node Beginning node in graph
+ * @param report_node Final node to look for
+ * @param algo_reachability Algorithm to to calculate if path is reachable
+ * @param num_paths Number of paths to look for
+ * @param step_shift Shift value for deltastep
+ * @param plan Algorithm to get path
+ */
 template <typename GraphTy, typename Weight>
 katana::Result<void>
 KssspImpl(
@@ -406,6 +460,19 @@ KssspImpl(
   return katana::ResultSuccess();
 }
 
+/**
+ * Wrapper for ksssp that sets up and runs either a symmetric or asymmetric graph
+ *  
+ * @param pg property graph
+ * @param edge_weight_property_name edge weights
+ * @param start_node Beginning node in graph
+ * @param report_node Final node to look for
+ * @param algo_reachability Algorithm to to calculate if path is reachable
+ * @param num_paths Number of paths to look for
+ * @param step_shift Shift value for deltastep
+ * @param is_symmetric Whether or not the path is symmetric
+ * @param plan Algorithm to get path
+ */
 template <typename Weight>
 katana::Result<void>
 kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
@@ -465,6 +532,19 @@ kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property
   }
 }
 
+/**
+ * Runs a ksssp algorithm based on its weight
+ *  
+ * @param pg property graph
+ * @param edge_weight_property_name edge weights
+ * @param start_node Beginning node in graph
+ * @param report_node Final node to look for
+ * @param algo_reachability Algorithm to to calculate if path is reachable
+ * @param num_paths Number of paths to look for
+ * @param step_shift Shift value for deltastep
+ * @param is_symmetric Whether or not the path is symmetric
+ * @param plan Algorithm to get path
+ */
 katana::Result<void>
 katana::analytics::Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 

@@ -216,7 +216,7 @@ DeltaStepAlgo(
           path_pointers->push(path);
 
           if (ddata_count < num_paths) {
-            katana::atomicAdd<Weight>(ddata_count, (uint32_t)1);
+            katana::atomicAdd<Weight>(ddata_count, (Weight)1);
             katana::atomicMax<Weight>(ddata_max, new_dist);
           }
 

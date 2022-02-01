@@ -72,9 +72,9 @@ private:
 };
 
 /**
- * Checks if source node can reach report_node 
+ * Checks if source node can reach report_node
  * for asynchronous graphs
- *  
+ *
  * @param graph typed graph
  * @param source Beginning node in graph
  * @param push_wrap Function to get the next updated path
@@ -128,9 +128,9 @@ CheckReachabilityAsync(
 }
 
 /**
- * Checks if source node can reach report_node 
+ * Checks if source node can reach report_node
  * for synchronous graphs
- *  
+ *
  * @param graph typed graph
  * @param source Beginning node in graph
  * @param report_node Final node to look for
@@ -178,9 +178,9 @@ CheckReachabilitySync(
 }
 
 /**
- * Checks if source node can reach report_node 
+ * Checks if source node can reach report_node
  * for asynchronous graphs
- *  
+ *
  * @param graph typed graph
  * @param source Beginning node in graph
  * @param push_wrap Function to get the next updated path
@@ -282,7 +282,7 @@ DeltaStepAlgo(
 
 /**
  * Prints all paths recursively
- *  
+ *
  * @param path all paths found
  */
 void
@@ -296,7 +296,7 @@ PrintPath(const Path* path) {
 
 /**
  * Adds edge weights if there are none
- *  
+ *
  * @param pg property graph
  * @param edge_weight_property_name edge weights
  */
@@ -325,7 +325,7 @@ AddDefaultEdgeWeight(
 
 /**
  * Sets up and runs implementation of ksssp
- *  
+ *
  * @param graph typed graph
  * @param start_node Beginning node in graph
  * @param report_node Final node to look for
@@ -463,7 +463,7 @@ KssspImpl(
 
 /**
  * Wrapper for ksssp that sets up and runs either a symmetric or asymmetric graph
- *  
+ *
  * @param pg property graph
  * @param edge_weight_property_name edge weights
  * @param start_node Beginning node in graph
@@ -538,7 +538,7 @@ kSSSPWithWrap(
 
 /**
  * Runs a ksssp algorithm based on its weight
- *  
+ *
  * @param pg property graph
  * @param edge_weight_property_name edge weights
  * @param start_node Beginning node in graph

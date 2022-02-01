@@ -450,7 +450,7 @@ kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property
     Graph graph = 
         KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
-    return KssspImpl<Graph>(
+    return KssspImpl<Graph, Weight>(
         graph, start_node, report_node, 
         algo_reachability, num_paths, step_shift, plan);
   } else {

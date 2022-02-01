@@ -75,7 +75,7 @@ private:
  * Checks if source node can reach report_node 
  * for asynchronous graphs
  *  
- * @param graph typed distributed graph
+ * @param graph typed graph
  * @param source Beginning node in graph
  * @param push_wrap Function to get the next updated path
  * @param edge_range Range of edge nodes to explore
@@ -131,7 +131,7 @@ CheckReachabilityAsync(
  * Checks if source node can reach report_node 
  * for synchronous graphs
  *  
- * @param graph typed distributed graph
+ * @param graph typed graph
  * @param source Beginning node in graph
  * @param report_node Final node to look for
  */
@@ -181,7 +181,7 @@ CheckReachabilitySync(
  * Checks if source node can reach report_node 
  * for asynchronous graphs
  *  
- * @param graph typed distributed graph
+ * @param graph typed graph
  * @param source Beginning node in graph
  * @param push_wrap Function to get the next updated path
  * @param edge_range Range of edge nodes to explore
@@ -325,7 +325,7 @@ AddDefaultEdgeWeight(
 /**
  * Sets up and runs implementation of ksssp
  *  
- * @param graph typed distributed graph
+ * @param graph typed graph
  * @param start_node Beginning node in graph
  * @param report_node Final node to look for
  * @param algo_reachability Algorithm to to calculate if path is reachable

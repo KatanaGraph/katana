@@ -358,11 +358,11 @@ def test_types(graph):
         graph.node_types.get_non_atomic_entity_type([node_atomic_types["Message"], node_atomic_types["Post"]])
         == non_atomic_type
     )
-    assert graph.node_types.get_atomic_subtypes(non_atomic_type) == set(
+    assert graph.node_types.get_atomic_subtypes(non_atomic_type) == {
         [node_atomic_types["Message"], node_atomic_types["Post"]]
-    )
+    }
     assert graph.node_types.get_supertypes(node_atomic_types["Message"]).issuperset(
-        set([node_atomic_types["Message"], non_atomic_type])
+        {[node_atomic_types["Message"], non_atomic_type]}
     )
 
     edge_atomic_types = graph.edge_types.atomic_types

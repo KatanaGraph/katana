@@ -213,7 +213,7 @@ def capture_environment(filename: Optional[Union[str, Path, Any]] = None, **kwar
     :param filename: The file name for the captured environment information.
         (Default: an auto generated file in the system temporary directory)
     :type filename: str or Path or a file-like object or None
-    :key client: Required if using remote enviroment. Expects katana.remote.Client
+    :key client: When using remote environment please provide the katana.remote.Client. Otherwise, not required.
     :return: A file path where the captured environment information is stored.
     """
     # pylint: disable=consider-using-with

@@ -351,6 +351,20 @@ def test_types(graph):
         "Post": 11,
     }
     assert graph.node_types.is_subtype_of(0, 1) is True
+    non_atomic_type = graph.node_types.get_or_add_non_atomic_entity_type(
+        [node_atomic_types["Message"], node_atomic_types["Post"]]
+    )
+    assert (
+        graph.node_types.get_non_atomic_entity_type([node_atomic_types["Message"], node_atomic_types["Post"]])
+        == non_atomic_type
+    )
+    assert graph.node_types.get_atomic_subtypes(non_atomic_type) == {
+        node_atomic_types["Message"],
+        node_atomic_types["Post"],
+    }
+    assert graph.node_types.get_supertypes(node_atomic_types["Message"]).issuperset(
+        {node_atomic_types["Message"], non_atomic_type}
+    )
 
     edge_atomic_types = graph.edge_types.atomic_types
     edge_name_to_id_map = {name: edge_atomic_types[name].id for name in edge_atomic_types}

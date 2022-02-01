@@ -308,8 +308,6 @@ KssspImpl(
   using BFSReqPushWrap = typename BFS::ReqPushWrap;
   using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFnUndirected;
 
-  static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
-
   auto it = graph.begin();
   std::advance(it, start_node);
   GNode source = *it;
@@ -409,53 +407,9 @@ KssspImpl(
   return katana::ResultSuccess();
 }
 
-template <typename GraphTy>
+template <typename Weight>
 katana::Result<void>
-KssspSetWeight(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
-    GraphTy graph, uint32_t start_node, uint32_t report_node,
-    AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift,
-    kSsspPlan plan) {
-  switch (
-      KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
-          ->type()
-          ->id()) {
-  case arrow::UInt32Type::type_id:
-    return KssspImpl<GraphTy, uint32_t>(
-        graph, start_node, report_node, algo_reachability, num_paths, 
-        step_shift, plan);
-  case arrow::Int32Type::type_id:
-    return KssspImpl<GraphTy, int32_t>(
-        graph, start_node, report_node, algo_reachability, num_paths, 
-        step_shift, plan);
-  case arrow::UInt64Type::type_id:
-    return KssspImpl<GraphTy, uint64_t>(
-        graph, start_node, report_node, algo_reachability, num_paths, 
-        step_shift, plan);
-  case arrow::Int64Type::type_id:
-    return KssspImpl<GraphTy, int64_t>(
-        graph, start_node, report_node, algo_reachability, num_paths, 
-        step_shift, plan);
-  case arrow::FloatType::type_id:
-    return KssspImpl<GraphTy, float>(
-        graph, start_node, report_node, algo_reachability, num_paths, 
-        step_shift, plan);
-  case arrow::DoubleType::type_id:
-    return KssspImpl<GraphTy, double>(
-        graph, start_node, report_node, algo_reachability, num_paths, 
-        step_shift, plan);
-  default:
-    return KATANA_ERROR(
-        katana::ErrorCode::TypeError, "Unsupported type: {}",
-        KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
-            ->type()
-            ->ToString());
-  }
-}
-
-katana::Result<void>
-katana::analytics::Ksssp(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
+kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
     uint32_t start_node, uint32_t report_node,
     katana::TxnContext* txn_ctx, AlgoReachability algo_reachability,
     uint32_t num_paths, uint32_t step_shift, const bool& is_symmetric,
@@ -475,6 +429,8 @@ katana::analytics::Ksssp(
         pg, temporary_edge_property.name(), txn_ctx));
   }
 
+  static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
+
   std::vector<TemporaryPropertyGuard> temp_node_properties(2);
   std::generate_n(
       temp_node_properties.begin(), temp_node_properties.size(),
@@ -486,7 +442,7 @@ katana::analytics::Ksssp(
       temp_node_property_names.begin(),
       [](const TemporaryPropertyGuard& p) { return p.name(); });
 
-  KATANA_CHECKED(ConstructNodeProperties<NodeData<EdgeWeight>>(pg, txn_ctx, temp_node_property_names));
+  KATANA_CHECKED(ConstructNodeProperties<NodeData<EdgeWeight<Weight>>(pg, txn_ctx, temp_node_property_names));
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
@@ -494,8 +450,8 @@ katana::analytics::Ksssp(
     Graph graph = 
         KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
-    return KssspSetWeight<Graph>(
-        pg, edge_weight_property_name, graph, start_node, report_node, 
+    return KssspImpl<Graph>(
+        graph, start_node, report_node, 
         algo_reachability, num_paths, step_shift, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
@@ -504,8 +460,79 @@ katana::analytics::Ksssp(
     Graph graph = 
       KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
-    return KssspSetWeight<Graph>(
-        pg, edge_weight_property_name, graph, start_node, report_node, 
+    return KssspImpl<Graph, Weight>(
+        graph, start_node, report_node, 
         algo_reachability, num_paths, step_shift, plan);
+  }
+}
+
+KssspGetWeight(
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name) {
+  switch (
+      KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+          ->type()
+          ->id()) {
+  case arrow::UInt32Type::type_id:
+    return uint32_t;
+  case arrow::Int32Type::type_id:
+    return int32_t;
+  case arrow::UInt64Type::type_id:
+    return uint64_t;
+  case arrow::Int64Type::type_id:
+    return int64_t;
+  case arrow::FloatType::type_id:
+    return float;
+  case arrow::DoubleType::type_id:
+    return double;
+  default:
+    return KATANA_ERROR(
+        katana::ErrorCode::TypeError, "Unsupported type: {}",
+        KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+            ->type()
+            ->ToString());
+  }
+}
+
+katana::Result<void>
+katana::analytics::Ksssp(
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
+    uint32_t start_node, uint32_t report_node,
+    katana::TxnContext* txn_ctx, AlgoReachability algo_reachability,
+    uint32_t num_paths, uint32_t step_shift, const bool& is_symmetric,
+    kSsspPlan plan) {
+  switch (
+      KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+          ->type()
+          ->id()) {
+  case arrow::UInt32Type::type_id:
+    return kSSSPWithWrap<uint32_t>(
+        pg, edge_weight_property_name, start_node, report_node, txn_ctx, 
+        algo_reachability, num_paths, step_shift, is_symmetric, plan);
+  case arrow::Int32Type::type_id:
+    return kSSSPWithWrap<int32_t>(
+        pg, edge_weight_property_name, start_node, report_node, txn_ctx, 
+        algo_reachability, num_paths, step_shift, is_symmetric, plan);
+  case arrow::UInt64Type::type_id:
+    return kSSSPWithWrap<uint64_t>(
+        pg, edge_weight_property_name, start_node, report_node, txn_ctx, 
+        algo_reachability, num_paths, step_shift, is_symmetric, plan);
+  case arrow::Int64Type::type_id:
+    return kSSSPWithWrap<int64_t>(
+        pg, edge_weight_property_name, start_node, report_node, txn_ctx, 
+        algo_reachability, num_paths, step_shift, is_symmetric, plan);
+  case arrow::FloatType::type_id:
+    return kSSSPWithWrap<float>(
+        pg, edge_weight_property_name, start_node, report_node, txn_ctx, 
+        algo_reachability, num_paths, step_shift, is_symmetric, plan);
+  case arrow::DoubleType::type_id:
+    return kSSSPWithWrap<double>(
+        pg, edge_weight_property_name, start_node, report_node, txn_ctx, 
+        algo_reachability, num_paths, step_shift, is_symmetric, plan);
+  default:
+    return KATANA_ERROR(
+        katana::ErrorCode::TypeError, "Unsupported type: {}",
+        KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+            ->type()
+            ->ToString());
   }
 }

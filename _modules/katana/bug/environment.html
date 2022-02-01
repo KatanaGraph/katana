@@ -177,7 +177,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+139.0.1a6d20 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+140.0.6d1efd variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -253,7 +253,8 @@ function checkPageExistsAndRedirect(event) {
 
 
 <span class="nd">@register_capture_routine</span>
-<span class="k">def</span> <span class="nf">_capture_system</span><span class="p">(</span><span class="n">zipout</span><span class="p">:</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_capture_system</span><span class="p">(</span><span class="n">zipout</span><span class="p">:</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="c1"># pylint: disable=unused-argument</span>
     <span class="kn">import</span> <span class="nn">katana</span>  <span class="c1"># Imported here to avoid cyclical import</span>
 
     <span class="n">capture_string</span><span class="p">(</span>
@@ -326,7 +327,8 @@ function checkPageExistsAndRedirect(event) {
 
 
 <span class="nd">@register_capture_routine</span>
-<span class="k">def</span> <span class="nf">_capture_build</span><span class="p">(</span><span class="n">zipout</span><span class="p">:</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_capture_build</span><span class="p">(</span><span class="n">zipout</span><span class="p">:</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="c1"># pylint: disable=unused-argument</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Capture build related files into zip.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -437,7 +439,7 @@ function checkPageExistsAndRedirect(event) {
     <span class="k">return</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="s2">&quot;ps1&quot;</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="capture_environment"><a class="viewcode-back" href="../../../reference/python/katana.bug.html#katana.bug.capture_environment">[docs]</a><span class="k">def</span> <span class="nf">capture_environment</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="capture_environment"><a class="viewcode-back" href="../../../reference/python/katana.bug.html#katana.bug.capture_environment">[docs]</a><span class="k">def</span> <span class="nf">capture_environment</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Capture the execution and build environment in as much detail as reasonably possible</span>
 <span class="sd">    and store it to a file. This is used for bug reporting.</span>
@@ -445,6 +447,7 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">    :param filename: The file name for the captured environment information.</span>
 <span class="sd">        (Default: an auto generated file in the system temporary directory)</span>
 <span class="sd">    :type filename: str or Path or a file-like object or None</span>
+<span class="sd">    :key client: When using remote environment please provide the katana.remote.Client. Otherwise, not required.</span>
 <span class="sd">    :return: A file path where the captured environment information is stored.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># pylint: disable=consider-using-with</span>
@@ -463,7 +466,7 @@ function checkPageExistsAndRedirect(event) {
     <span class="k">try</span><span class="p">:</span>
         <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">zipfile</span><span class="o">.</span><span class="n">ZIP_BZIP2</span><span class="p">)</span> <span class="k">as</span> <span class="n">zipout</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">_environment_capture_routines</span><span class="p">:</span>
-                <span class="n">f</span><span class="p">(</span><span class="n">zipout</span><span class="p">)</span>
+                <span class="n">f</span><span class="p">(</span><span class="n">zipout</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>

@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+139.0.1a6d20 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+140.0.6d1efd variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -392,7 +392,7 @@ This function can be invoked from the command-line by running (with the Katana l
 command.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.bug.capture_environment">
-<span class="sig-prename descclassname"><span class="pre">katana.bug.</span></span><span class="sig-name descname"><span class="pre">capture_environment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">pathlib.Path</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/bug/environment.html#capture_environment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.bug.capture_environment" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.bug.</span></span><span class="sig-name descname"><span class="pre">capture_environment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">pathlib.Path</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/bug/environment.html#capture_environment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.bug.capture_environment" title="Permalink to this definition">¶</a></dt>
 <dd><p>Capture the execution and build environment in as much detail as reasonably possible
 and store it to a file. This is used for bug reporting.</p>
 <dl class="field-list simple">
@@ -400,8 +400,11 @@ and store it to a file. This is used for bug reporting.</p>
 <dd class="field-odd"><p><strong>filename</strong> (<em>str</em><em> or </em><em>Path</em><em> or </em><em>a file-like object</em><em> or </em><em>None</em>) – The file name for the captured environment information.
 (Default: an auto generated file in the system temporary directory)</p>
 </dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>A file path where the captured environment information is stored.</p>
+<dt class="field-even">Key client</dt>
+<dd class="field-even"><p>When using remote environment please provide the katana.remote.Client. Otherwise, not required.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A file path where the captured environment information is stored.</p>
 </dd>
 </dl>
 </dd></dl>

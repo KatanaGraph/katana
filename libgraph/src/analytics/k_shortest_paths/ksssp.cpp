@@ -36,8 +36,7 @@ struct Path {
   const Path* last{nullptr};
 };
 
-template <typename Weight>
-struct NodeCount : public katana::AtomicPODProperty<Weight> {};
+struct NodeCount : public katana::AtomicPODProperty<uint32_t> {};
 
 template <typename Weight>
 struct NodeMax : public katana::AtomicPODProperty<Weight> {};
@@ -46,7 +45,7 @@ template <typename Weight>
 using EdgeWeight = katana::PODProperty<Weight>;
 
 template <typename Weight>
-using NodeData = std::tuple<NodeCount<Weight>, NodeMax<Weight>>;
+using NodeData = std::tuple<NodeCount, NodeMax<Weight>>;
 template <typename Weight>
 using EdgeData = std::tuple<EdgeWeight<Weight>>;
 
@@ -88,7 +87,7 @@ CheckReachabilityAsync(
 
   Loop loop;
 
-  graph->template GetData<NodeCount<Weight>>(source) = 1;
+  graph->template GetData<NodeCount>(source) = 1;
   katana::InsertBag<Item> initBag;
 
   push_wrap(initBag, source, 1, "parallel");
@@ -98,8 +97,8 @@ CheckReachabilityAsync(
       [&](const Item& item, auto& ctx) {
         for (auto ii : edge_range(item)) {
           GNode dst = EdgeDst(*graph, ii);
-          if (graph->template GetData<NodeCount<Weight>>(dst) == 0) {
-            graph->template GetData<NodeCount<Weight>>(dst) = 1;
+          if (graph->template GetData<NodeCount>(dst) == 0) {
+            graph->template GetData<NodeCount>(dst) = 1;
             push_wrap(ctx, dst, 1);
           }
         }
@@ -107,12 +106,12 @@ CheckReachabilityAsync(
       katana::wl<WL>(), katana::loopname("runBFS"),
       katana::disable_conflict_detection());
 
-  if (graph->template GetData<NodeCount<Weight>>(report_node) == 0) {
+  if (graph->template GetData<NodeCount>(report_node) == 0) {
     return false;
   }
 
   katana::do_all(katana::iterate(*graph), [&graph](GNode n) {
-    graph->template GetData<NodeCount<Weight>>(n) = 0;
+    graph->template GetData<NodeCount>(n) = 0;
   });
 
   return true;
@@ -129,7 +128,7 @@ CheckReachabilitySync(
   katana::InsertBag<GNode> next_bag;
 
   current_bag.push(source);
-  graph->template GetData<NodeCount<Weight>>(source) = 1;
+  graph->template GetData<NodeCount>(source) = 1;
 
   while (current_bag.begin() != current_bag.end()) {
     katana::do_all(
@@ -137,8 +136,8 @@ CheckReachabilitySync(
         [&](GNode n) {
           for (auto edge : Edges(*graph, n)) {
             auto dest = EdgeDst(*graph, edge);
-            if (graph->template GetData<NodeCount<Weight>>(dest) == 0) {
-              graph->template GetData<NodeCount<Weight>>(dest) = 1;
+            if (graph->template GetData<NodeCount>(dest) == 0) {
+              graph->template GetData<NodeCount>(dest) = 1;
               next_bag.push(dest);
             }
           }
@@ -149,12 +148,12 @@ CheckReachabilitySync(
     std::swap(current_bag, next_bag);
   }
 
-  if (graph->template GetData<NodeCount<Weight>>(report_node) == 0) {
+  if (graph->template GetData<NodeCount>(report_node) == 0) {
     return false;
   }
 
   katana::do_all(katana::iterate(*graph), [&graph](GNode n) {
-    graph->template GetData<NodeCount<Weight>>(n) = 0;
+    graph->template GetData<NodeCount>(n) = 0;
   });
 
   return true;
@@ -185,7 +184,7 @@ DeltaStepAlgo(
   //! [reducible for self-defined stats]
   katana::GAccumulator<size_t> wl_empty_work;
 
-  graph->template GetData<NodeCount<Weight>>(source) = 1;
+  graph->template GetData<NodeCount>(source) = 1;
 
   katana::InsertBag<Item> init_bag;
 
@@ -202,7 +201,7 @@ DeltaStepAlgo(
       [&](const Item& item, auto& ctx) {
         for (auto ii : edge_range(item)) {
           GNode dst = EdgeDst(*graph, ii);
-          auto& ddata_count = graph->template GetData<NodeCount<Weight>>(dst);
+          auto& ddata_count = graph->template GetData<NodeCount>(dst);
           auto& ddata_max = graph->template GetData<NodeMax<Weight>>(dst);
 
           Weight ew = graph->template GetEdgeData<EdgeWeight<Weight>>(ii);
@@ -227,8 +226,8 @@ DeltaStepAlgo(
 
           //check if this new extended path needs to be added to the worklist
           bool should_add =
-              (graph->template GetData<NodeCount<Weight>>(report_node) < num_paths) ||
-              ((graph->template GetData<NodeCount<Weight>>(report_node) >= num_paths) &&
+              (graph->template GetData<NodeCount>(report_node) < num_paths) ||
+              ((graph->template GetData<NodeCount>(report_node) >= num_paths) &&
                (graph->template GetData<NodeMax<Weight>>(report_node) > new_dist));
 
           if (should_add) {
@@ -321,7 +320,7 @@ KssspImpl(
 
   katana::do_all(katana::iterate(graph), [&](const GNode& n) {
     graph.template GetData<NodeMax<Weight>>(n) = 0;
-    graph.template GetData<NodeCount<Weight>>(n) = 0;
+    graph.template GetData<NodeCount>(n) = 0;
   });
 
   katana::StatTimer execTime("kSSSP");

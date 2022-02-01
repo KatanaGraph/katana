@@ -429,21 +429,6 @@ katana::analytics::Ksssp(
         pg, temporary_edge_property.name(), txn_ctx));
   }
 
-  static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
-
-  std::vector<TemporaryPropertyGuard> temp_node_properties(2);
-  std::generate_n(
-      temp_node_properties.begin(), temp_node_properties.size(),
-      [&]() { return TemporaryPropertyGuard{pg->NodeMutablePropertyView()}; });
-  std::vector<std::string> temp_node_property_names(
-      temp_node_properties.size());
-  std::transform(
-      temp_node_properties.begin(), temp_node_properties.end(),
-      temp_node_property_names.begin(),
-      [](const TemporaryPropertyGuard& p) { return p.name(); });
-
-  KATANA_CHECKED(ConstructNodeProperties<NodeData<EdgeWeight>>(pg, txn_ctx, temp_node_property_names));
-
   typename weight; 
 
   switch (
@@ -469,6 +454,21 @@ katana::analytics::Ksssp(
             ->type()
             ->ToString());
   }
+
+  static_assert(std::is_integral_v<weight> || std::is_floating_point_v<weight>);
+
+  std::vector<TemporaryPropertyGuard> temp_node_properties(2);
+  std::generate_n(
+      temp_node_properties.begin(), temp_node_properties.size(),
+      [&]() { return TemporaryPropertyGuard{pg->NodeMutablePropertyView()}; });
+  std::vector<std::string> temp_node_property_names(
+      temp_node_properties.size());
+  std::transform(
+      temp_node_properties.begin(), temp_node_properties.end(),
+      temp_node_property_names.begin(),
+      [](const TemporaryPropertyGuard& p) { return p.name(); });
+
+  KATANA_CHECKED(ConstructNodeProperties<NodeData<EdgeWeight>>(pg, txn_ctx, temp_node_property_names));
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<

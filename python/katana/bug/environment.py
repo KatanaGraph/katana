@@ -206,7 +206,6 @@ def is_interactive():
 
 
 def capture_environment(filename: Optional[Union[str, Path, Any]] = None, **kwargs):
-    # pylint: disable=unused-argument
     """
     Capture the execution and build environment in as much detail as reasonably possible
     and store it to a file. This is used for bug reporting.
@@ -233,7 +232,7 @@ def capture_environment(filename: Optional[Union[str, Path, Any]] = None, **kwar
     try:
         with zipfile.ZipFile(file=file, mode="w", compression=zipfile.ZIP_BZIP2) as zipout:
             for f in _environment_capture_routines:
-                f(zipout)
+                f(zipout, kwargs)
     finally:
         if filename is not None:
             file.close()

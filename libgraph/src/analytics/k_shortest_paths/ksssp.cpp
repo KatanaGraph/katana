@@ -412,7 +412,8 @@ KssspImpl(
 template <typename GraphTy>
 katana::Result<void>
 KssspSetWeight(
-    katana::PropertyGraph* pg, GraphTy graph, uint32_t start_node, uint32_t report_node,
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
+    GraphTy graph, uint32_t start_node, uint32_t report_node,
     AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift,
     kSsspPlan plan) {
   switch (
@@ -493,9 +494,9 @@ katana::analytics::Ksssp(
     Graph graph = 
         KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
-    return KssspImpl<Graph, weight>(
-        graph, start_node, report_node, algo_reachability, num_paths,
-        step_shift, plan);
+    return KssspSetWeight<Graph>(
+        pg, edge_weight_property_name, graph, start_node, report_node, 
+        algo_reachability, num_paths, step_shift, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData<weight>, EdgeData<weight>>;
@@ -503,8 +504,8 @@ katana::analytics::Ksssp(
     Graph graph = 
       KATANA_CHECKED(Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
-    return KssspImpl<Graph, weight>(
-        graph, start_node, report_node, algo_reachability, num_paths,
-        step_shift, plan);
+    return KssspSetWeight<Graph>(
+        pg, edge_weight_property_name, graph, start_node, report_node, 
+        algo_reachability, num_paths, step_shift, plan);
   }
 }

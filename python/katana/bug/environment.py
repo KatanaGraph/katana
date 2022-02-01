@@ -20,6 +20,7 @@ def register_capture_routine(f):
 
 @register_capture_routine
 def _capture_system(zipout: zipfile.ZipFile, **kwargs):
+    # pylint: disable=unused-argument
     import katana  # Imported here to avoid cyclical import
 
     capture_string(
@@ -93,6 +94,7 @@ def _capture_system(zipout: zipfile.ZipFile, **kwargs):
 
 @register_capture_routine
 def _capture_build(zipout: zipfile.ZipFile, **kwargs):
+    # pylint: disable=unused-argument
     """
     Capture build related files into zip.
     """
@@ -204,6 +206,7 @@ def is_interactive():
 
 
 def capture_environment(filename: Optional[Union[str, Path, Any]] = None, **kwargs):
+    # pylint: disable=unused-argument
     """
     Capture the execution and build environment in as much detail as reasonably possible
     and store it to a file. This is used for bug reporting.

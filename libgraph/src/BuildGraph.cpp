@@ -1880,12 +1880,13 @@ katana::WritePropertyGraph(
     return graph_ptr.error();
   }
 
-  return WritePropertyGraph(*graph_ptr.value(), dir);
+  return WritePropertyGraph(*graph_ptr.value(), dir, txn_ctx);
 }
 
 katana::Result<void>
 katana::WritePropertyGraph(
-    katana::PropertyGraph& prop_graph, const std::string& dir) {
+    katana::PropertyGraph& prop_graph, const std::string& dir,
+    katana::TxnContext* txn_ctx) {
   for (const auto& field : prop_graph.loaded_node_schema()->fields()) {
     KATANA_LOG_VERBOSE(
         "node prop: ({}) {}", field->type()->ToString(), field->name());
@@ -1899,7 +1900,7 @@ katana::WritePropertyGraph(
   // external/katana/tools/graph-convert/, but not any other graph
   // operations that can potentially be involved in transactions,
   // we commit the RDGManifest here.
-  auto result = prop_graph.Write(dir, "libkatana_graph", true);
+  auto result = prop_graph.Write(dir, "libkatana_graph", txn_ctx);
   if (!result) {
     return result.error().WithContext("writing to fs");
   }

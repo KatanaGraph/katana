@@ -2960,9 +2960,10 @@ struct Gr2Kg : public Conversion {
         header.num_edges,
         KATANA_CHECKED(edge_type_manager.AddAtomicEntityType("edge")));
 
+    katana::TxnContext txn_ctx;
     return rdg.Store(
         handle, kCommandLine, std::move(node_types), std::move(edge_types),
-        node_type_manager, edge_type_manager, true);
+        node_type_manager, edge_type_manager, &txn_ctx);
   }
 
   template <typename EdgeTy>
@@ -3024,9 +3025,9 @@ struct Gr2Kg : public Conversion {
       KATANA_LOG_FATAL("Failed to create PropertyGraph");
     }
     std::unique_ptr<katana::PropertyGraph> pg = std::move(pg_res.value());
+    katana::TxnContext txn_ctx;
 
     if (EdgeData::has_value) {
-      katana::TxnContext txn_ctx;
       if (auto r = AppendEdgeData<EdgeTy>(pg.get(), out_dests_data, &txn_ctx);
           !r) {
         KATANA_LOG_FATAL("could not add edge property: {}", r.error());
@@ -3038,7 +3039,7 @@ struct Gr2Kg : public Conversion {
     katana::gPrint(
         "Node Schema : ", pg->loaded_node_schema()->ToString(), "\n");
 
-    if (auto r = pg->Write(out_file_name, "cmd", true); !r) {
+    if (auto r = pg->Write(out_file_name, "cmd", &txn_ctx); !r) {
       KATANA_LOG_FATAL("Failed to write property file graph: {}", r.error());
     }
     printStatus(graph.size(), graph.sizeEdges());

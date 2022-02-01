@@ -10,6 +10,10 @@ namespace katana {
 
 class KATANA_EXPORT TxnContext {
 public:
+  TxnContext() {}
+
+  TxnContext(bool commit_manifest) : commit_manifest_(commit_manifest) {}
+
   void InsertNodePropertyRead(std::string rdg_dir, std::string name) {
     node_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
   }
@@ -62,6 +66,8 @@ public:
 
   void SetTopologyWrite() { topology_write_ = true; }
 
+  void DelayManifestCommit() { commit_manifest_ = false; }
+
   const std::set<std::string>& GetNodePropertyRead() const {
     return node_properties_read_;
   }
@@ -86,6 +92,8 @@ public:
 
   bool GetTopologyWrite() const { return topology_write_; }
 
+  bool GetCommitManifest() const { return commit_manifest_; }
+
 private:
   inline std::string ConcatRDGProperty(std::string rdg_dir, std::string prop) {
     return Uri::JoinPath(rdg_dir, prop);
@@ -101,6 +109,8 @@ private:
   bool all_properties_write_{false};
   bool topology_read_{false};
   bool topology_write_{false};
+
+  bool commit_manifest_{true};
 };
 
 }  // namespace katana

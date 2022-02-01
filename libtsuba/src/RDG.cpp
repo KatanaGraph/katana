@@ -305,7 +305,7 @@ katana::Result<void>
 katana::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
-    std::unique_ptr<WriteGroup> write_group, bool commit_manifest) {
+    std::unique_ptr<WriteGroup> write_group, katana::TxnContext* txn_ctx) {
   // bump the storage format version to the latest
   core_->part_header().update_storage_format_version();
 
@@ -359,7 +359,7 @@ katana::RDG::DoStore(
   // Update lineage and commit
   core_->AddCommandLine(command_line);
 
-  if (commit_manifest) {
+  if (txn_ctx->GetCommitManifest()) {
     KATANA_CHECKED(CommitRDG(
         handle, core_->part_header().metadata().policy_id_,
         core_->part_header().metadata().transposed_, versioning_action,
@@ -573,7 +573,7 @@ katana::RDG::Store(
     std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
     const katana::EntityTypeManager& node_entity_type_manager,
     const katana::EntityTypeManager& edge_entity_type_manager,
-    bool commit_manifest) {
+    katana::TxnContext* txn_ctx) {
   if (!handle.impl_->AllowsWrite()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "handle does not allow write");
@@ -606,8 +606,7 @@ katana::RDG::Store(
   core_->part_header().StoreEdgeEntityTypeManager(edge_entity_type_manager);
 
   return DoStore(
-      handle, command_line, versioning_action, std::move(desc),
-      commit_manifest);
+      handle, command_line, versioning_action, std::move(desc), txn_ctx);
 }
 
 katana::Result<void>

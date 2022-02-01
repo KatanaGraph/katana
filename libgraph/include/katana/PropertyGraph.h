@@ -68,19 +68,21 @@ private:
 
   Result<void> DoWrite(
       katana::RDGHandle handle, const std::string& command_line,
-      katana::RDG::RDGVersioningPolicy versioning_action, bool commit_manifest);
+      katana::RDG::RDGVersioningPolicy versioning_action,
+      katana::TxnContext* txn_ctx);
 
   Result<void> ConductWriteOp(
       const std::string& uri, const std::string& command_line,
-      katana::RDG::RDGVersioningPolicy versioning_action, bool commit_manifest);
+      katana::RDG::RDGVersioningPolicy versioning_action,
+      katana::TxnContext* txn_ctx);
 
   Result<void> WriteGraph(
       const std::string& uri, const std::string& command_line,
-      bool commit_manifest);
+      katana::TxnContext* txn_ctx);
 
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line,
-      bool commit_manifest);
+      katana::TxnContext* txn_ctx);
 
   katana::RDG rdg_;
   std::unique_ptr<katana::RDGFile> file_;
@@ -353,14 +355,16 @@ public:
   /// \returns io_error if, for instance, a file already exists
   Result<void> Write(
       const std::string& rdg_name, const std::string& command_line,
-      bool commit_manifest);
+      katana::TxnContext* txn_ctx);
 
   /// Commit updates modified state and re-uses graph components already in storage.
   ///
   /// Like \ref Write(const std::string&, const std::string&) but can only update
   /// parts of the original read location of the graph.
-  Result<void> Commit(const std::string& command_line, bool commit_manifest);
-  Result<void> WriteView(const std::string& command_line, bool commit_manifest);
+  Result<void> Commit(
+      const std::string& command_line, katana::TxnContext* txn_ctx);
+  Result<void> WriteView(
+      const std::string& command_line, katana::TxnContext* txn_ctx);
 
   /// Determine if two PropertyGraphs are Equal
   /// THIS IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER

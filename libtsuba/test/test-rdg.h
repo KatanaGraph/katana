@@ -31,10 +31,11 @@ WriteRDG(
   }
   auto new_file = std::make_unique<katana::RDGFile>(open_res.value());
 
+  katana::TxnContext txn_ctx;
   auto res = rdg_.Store(
       *new_file, command_line,
       katana::RDG::RDGVersioningPolicy::IncrementVersion, nullptr, nullptr,
-      node_entity_type_manager, edge_entity_type_manager, true);
+      node_entity_type_manager, edge_entity_type_manager, &txn_ctx);
 
   if (!res) {
     return res.error();

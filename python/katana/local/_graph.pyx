@@ -96,7 +96,7 @@ cdef class GraphBase:
         with gil:
             raise NotImplementedError()
 
-    def write(self, path = None, str command_line = "katana.local.Graph", bool commit_manifest = True):
+    def write(self, path = None, str command_line = "katana.local.Graph", TxnContext txn_ctx=None):
         """
         Write the property graph to the specified path or URL (or the original path it was loaded from if path is
         not provided). Provide lineage information in the form of a command line.
@@ -107,12 +107,13 @@ cdef class GraphBase:
         :type command_line: str
         """
         command_line_str = <string>bytes(command_line, "utf-8")
+        txn_ctx = txn_ctx or TxnContext()
         if path is None:
             with nogil:
-                handle_result_void(self.underlying_property_graph().Commit(command_line_str, commit_manifest))
+                handle_result_void(self.underlying_property_graph().Commit(command_line_str, &txn_ctx._txn_ctx))
         path_str = <string>bytes(str(path), "utf-8")
         with nogil:
-            handle_result_void(self.underlying_property_graph().Write(path_str, command_line_str, commit_manifest))
+            handle_result_void(self.underlying_property_graph().Write(path_str, command_line_str, &txn_ctx._txn_ctx))
 
     cdef const GraphTopology* topology(Graph self):
         return &self.underlying_property_graph().topology()

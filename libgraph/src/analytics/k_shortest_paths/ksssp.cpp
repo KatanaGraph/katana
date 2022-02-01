@@ -72,7 +72,7 @@ private:
 };
 
 template <
-    typename GraphTy, typename Weight, typename Item, typename PushWrap, typename EdgeRange>
+    typename GraphTy, typename Item, typename PushWrap, typename EdgeRange>
 bool
 CheckReachabilityAsync(
     GraphTy* graph, const typename GraphTy::Node& source,
@@ -161,7 +161,7 @@ CheckReachabilitySync(
 
 //delta stepping implementation for finding a shortest path from source to report node
 template <
-    typename GraphTy, typename Weight, typename Item, typename OBIMTy, typename PushWrap,
+    typename GraphTy, typename Item, typename OBIMTy, typename PushWrap,
     typename EdgeRange>
 void
 DeltaStepAlgo(
@@ -333,12 +333,12 @@ KssspImpl(
 
   switch (algo_reachability) {
   case async:
-    reachable = CheckReachabilityAsync<GraphTy, Weight, BFSUpdateRequest>(
+    reachable = CheckReachabilityAsync<GraphTy, BFSUpdateRequest>(
         &graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{&graph},
         report_node);
     break;
   case syncLevel:
-    reachable = CheckReachabilitySync<GraphTy, Weight>(&graph, source, report_node);
+    reachable = CheckReachabilitySync<GraphTy>(&graph, source, report_node);
     break;
   default:
     std::abort();

@@ -232,7 +232,7 @@ def capture_environment(filename: Optional[Union[str, Path, Any]] = None, **kwar
     try:
         with zipfile.ZipFile(file=file, mode="w", compression=zipfile.ZIP_BZIP2) as zipout:
             for f in _environment_capture_routines:
-                f(zipout, kwargs)
+                f(zipout, **kwargs)
     finally:
         if filename is not None:
             file.close()

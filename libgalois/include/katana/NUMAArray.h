@@ -130,6 +130,23 @@ public:
   void set(difference_type x, const_reference v) { data_[x] = v; }
   size_type size() const { return size_; }
   bool empty() const { return size() == 0; }
+  // calling front() or back() on an empty array is unsafe
+  reference front() {
+    KATANA_LOG_DEBUG_ASSERT(!empty());
+    return data_[0];
+  }
+  const_reference front() const {
+    KATANA_LOG_DEBUG_ASSERT(!empty());
+    return data_[0];
+  }
+  reference back() {
+    KATANA_LOG_DEBUG_ASSERT(!empty());
+    return data_[size() - 1];
+  }
+  const_reference back() const {
+    KATANA_LOG_DEBUG_ASSERT(!empty());
+    return data_[size() - 1];
+  }
   iterator begin() { return data_; }
   const_iterator begin() const { return data_; }
   iterator end() { return data_ + size_; }

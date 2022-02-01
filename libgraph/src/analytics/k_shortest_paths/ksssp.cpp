@@ -442,7 +442,7 @@ kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property
       temp_node_property_names.begin(),
       [](const TemporaryPropertyGuard& p) { return p.name(); });
 
-  KATANA_CHECKED(ConstructNodeProperties<NodeData<EdgeWeight<Weight>>(pg, txn_ctx, temp_node_property_names));
+  KATANA_CHECKED(ConstructNodeProperties<NodeData<Weight>(pg, txn_ctx, temp_node_property_names));
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<

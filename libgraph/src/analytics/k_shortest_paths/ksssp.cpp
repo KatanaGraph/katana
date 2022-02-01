@@ -117,7 +117,7 @@ CheckReachabilityAsync(
   return true;
 }
 
-template <typename GraphTy, typename Weight>
+template <typename GraphTy>
 bool
 CheckReachabilitySync(
     GraphTy* graph, const typename GraphTy::Node& source,
@@ -161,7 +161,7 @@ CheckReachabilitySync(
 
 //delta stepping implementation for finding a shortest path from source to report node
 template <
-    typename GraphTy, typename Item, typename OBIMTy, typename PushWrap,
+    typename GraphTy, typename Weight, typename Item, typename OBIMTy, typename PushWrap,
     typename EdgeRange>
 void
 DeltaStepAlgo(
@@ -377,7 +377,7 @@ KssspImpl(
   page_alloc.Report();
 
   if (reachable) {
-    std::multimap<uint32_t, Path*> paths_map;
+    std::multimap<Weight, Path*> paths_map;
 
     for (auto pair : paths) {
       paths_map.insert(std::make_pair(pair.first, pair.second));

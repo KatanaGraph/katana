@@ -12,11 +12,10 @@ enum AlgoReachability { async = 0, syncLevel };
 /// The algorithm and delta stepping
 /// parameter can be specified, but have reasonable defaults.
 KATANA_EXPORT Result<void> Ksssp(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
-    uint32_t start_node, uint32_t report_node,
-    katana::TxnContext* txn_ctx, AlgoReachability algo_reachability,
-    uint32_t num_paths, uint32_t step_shift, const bool& is_symmetric,
-    kSsspPlan plan = {});
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+    uint32_t start_node, uint32_t report_node, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift,
+    const bool& is_symmetric, kSsspPlan plan = {});
 }  // namespace katana::analytics
 
 #endif

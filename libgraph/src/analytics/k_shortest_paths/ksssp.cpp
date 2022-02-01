@@ -280,7 +280,7 @@ AddDefaultEdgeWeight(
   return katana::ResultSuccess();
 }
 
-template <typename GraphTy, template Weight>
+template <typename GraphTy, typename Weight>
 katana::Result<void>
 KssspImpl(
     GraphTy graph, uint32_t start_node, uint32_t report_node,

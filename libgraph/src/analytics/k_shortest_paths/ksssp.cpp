@@ -466,7 +466,7 @@ kSSSPWithWrap(katana::PropertyGraph* pg, const std::string& edge_weight_property
   }
 }
 
-KssspGetWeight(
+typename KssspGetWeight(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name) {
   switch (
       KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))

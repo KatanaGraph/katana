@@ -22,7 +22,7 @@ struct RDGPropInfo {
 /// by the Python out-of-core import tool
 class RDGPythonInterface {
 public:
-  katana::Result<void> WriteRDGPartHeader(
+  static katana::Result<void> WriteRDGPartHeader(
       std::vector<RDGPropInfo> node_properties,
       std::vector<RDGPropInfo> edge_properties,
       katana::EntityTypeManager node_entity_type_manager,

@@ -5,6 +5,7 @@ add_library(Katana::python_native ALIAS katana_python_native)
 add_dependencies(lib katana_python_native)
 
 set(sources
+    src/ErrorHandling.cpp
     src/Reductions.cpp
     src/EntityTypeManager.cpp
     src/ImportData.cpp

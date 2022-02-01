@@ -22,46 +22,5 @@ katana::python::InitRDGInterface(py::module& m) {
     return katana::RDGPropInfo{name, path};
   }));
 
-//   // Define the wrapped interface for RDGPartHeader
-//   py::class_<katana::RDGPartHeader> rdg_part_header_cls(m, "RDGPartHeader");
-
-//   katana::DefConventions(rdg_part_header_cls);
-//   rdg_part_header_cls
-//       .def(py::init([](const std::string& path) {
-//         auto uri_path = katana::Uri::Make(path).value();
-//         return katana::RDGPartHeader::Make(uri_path).value();
-//       }))
-//       .def(
-//           "set_node_prop_info_list",
-//           &katana::RDGPartHeader::set_node_prop_info_list)
-//       .def(
-//           "set_edge_prop_info_list",
-//           &katana::RDGPartHeader::set_edge_prop_info_list)
-//       .def(
-//           "store_node_entity_type_manager",
-//           &katana::RDGPartHeader::StoreNodeEntityTypeManager)
-//       .def(
-//           "store_edge_entity_type_manager",
-//           &katana::RDGPartHeader::StoreEdgeEntityTypeManager)
-//       .def(
-//           "make_partition_topology_metadata_entry",
-//           [](const katana::RDGPartHeader* self, const std::string& topo_path) {
-//             self->MakePartitionTopologyMetadataEntry(
-//                 topo_path);  // We don't need to return the value from here
-//           })
-//       .def(
-//           "write",
-//           [](const katana::RDGPartHeader* self, const std::string& rdg_dir) -> Result<void> {
-//             // We need to create an RDGHandle
-//             // Need to call the WriteGroup?
-//             // Pass in one more thing about versioning?
-//             std::unique_ptr<WriteGroup> write_group =
-//                 KATANA_CHECKED(WriteGroup::Make());
-//             auto policy = katana::RDG::RDGVersioningPolicy::RetainVersion;
-//             auto uri_dir = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
-//             auto manifest = katana::RDGManifest(
-//                 1, 0, 1, 0, false, uri_dir, katana::RDGLineage());
-//             katana::RDGHandle handle = KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
-//             self->Write(handle, write_group.get(), policy);
-//           });
+  m.def("write_rdg_part_header", &katana::RDGPythonInterface::WriteRDGPartHeader);
 }

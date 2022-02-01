@@ -19,7 +19,7 @@ def register_capture_routine(f):
 
 
 @register_capture_routine
-def _capture_system(zipout: zipfile.ZipFile):
+def _capture_system(zipout: zipfile.ZipFile, **kwargs):
     import katana  # Imported here to avoid cyclical import
 
     capture_string(
@@ -92,7 +92,7 @@ def _capture_system(zipout: zipfile.ZipFile):
 
 
 @register_capture_routine
-def _capture_build(zipout: zipfile.ZipFile):
+def _capture_build(zipout: zipfile.ZipFile, **kwargs):
     """
     Capture build related files into zip.
     """
@@ -203,7 +203,7 @@ def is_interactive():
     return hasattr(sys, "ps1")
 
 
-def capture_environment(filename: Optional[Union[str, Path, Any]] = None):
+def capture_environment(filename: Optional[Union[str, Path, Any]] = None, **kwargs):
     """
     Capture the execution and build environment in as much detail as reasonably possible
     and store it to a file. This is used for bug reporting.
@@ -211,6 +211,7 @@ def capture_environment(filename: Optional[Union[str, Path, Any]] = None):
     :param filename: The file name for the captured environment information.
         (Default: an auto generated file in the system temporary directory)
     :type filename: str or Path or a file-like object or None
+    :key client: Required if using remote enviroment. Expects katana.remote.Client
     :return: A file path where the captured environment information is stored.
     """
     # pylint: disable=consider-using-with

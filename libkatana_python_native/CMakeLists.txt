@@ -8,6 +8,7 @@ set(sources
     src/Reductions.cpp
     src/EntityTypeManager.cpp
     src/ImportData.cpp
+    src/ErrorHandling.cpp
     )
 
 target_sources(katana_python_native PRIVATE ${sources})

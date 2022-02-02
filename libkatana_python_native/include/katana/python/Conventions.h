@@ -1,9 +1,13 @@
 #ifndef KATANA_LIBKATANAPYTHONNATIVE_KATANA_PYTHON_CONVENTIONS_H_
 #define KATANA_LIBKATANAPYTHONNATIVE_KATANA_PYTHON_CONVENTIONS_H_
 
+#include <sstream>
 #include <type_traits>
 
+#include <fmt/format.h>
 #include <pybind11/pybind11.h>
+
+#include "katana/CompileTimeIntrospection.h"
 
 namespace katana {
 
@@ -12,96 +16,112 @@ namespace detail {
 // In these classes, the empty implementations are the default cases used when
 // the class T does *not* have the method being checked for.
 
-/// DefRepr will def `__repr__` based on `ToString` if it is available.
-template <typename T, typename Enable = void>
-struct DefRepr {
-  void operator()(pybind11::class_<T>& cls [[maybe_unused]]) {}
-};
+template <typename T>
+using has_ostream_insert_t =
+    decltype(std::declval<std::ostream>() << std::declval<T>());
+template <typename T>
+using has_to_string_t = decltype(std::declval<T>().ToString());
 
 template <typename T>
-struct DefRepr<T, std::void_t<decltype(std::declval<T>().ToString())>> {
-  void operator()(pybind11::class_<T>& cls) {
-    cls.def("__repr__", &T::ToString);
-  }
-};
+bool always_false = false;
 
-/// DefEqualsEquals will def ``__eq__`` (Python ``==``) based on operator==() if
-/// it is available.
-template <typename T, typename Enable = void>
-struct DefEqualsEquals {
-  void operator()(pybind11::class_<T>& cls [[maybe_unused]]) {}
-};
+/// DefRepr will def `__repr__` based on `ToString` or `<<` if available.
+/// `ToString` is preferred.
+template <typename ClassT>
+void
+DefRepr(ClassT& cls) {
+  using T = typename ClassT::type;
+  if constexpr (is_detected_v<has_to_string_t, T>) {
+    cls.def("__repr__", [](T& self) { return self.ToString(); });
+  } else if constexpr (is_detected_v<has_ostream_insert_t, T>) {
+    cls.def("__repr__", [](const T& self) {
+      std::ostringstream out;
+      out << self;
+      return out.str();
+    });
+  }
+}
 
 template <typename T>
-struct DefEqualsEquals<
-    T, std::void_t<decltype(std::declval<T>() == std::declval<T>())>> {
-  static bool Equals(const T& a, const T& b) { return a == b; }
-  void operator()(pybind11::class_<T>& cls) {
-    cls.def("__eq__", &T::operator==);
+using has_equal_equal_t = decltype(std::declval<T>() == std::declval<T>());
+template <typename T>
+using has_equals_t = decltype(std::declval<T>().Equals(std::declval<T>()));
+
+template <typename T>
+bool
+Equals(const T& a, const T& b) {
+  if constexpr (is_detected_v<has_equals_t, T>) {
+    return a.Equals(b);
+  } else if constexpr (is_detected_v<has_equal_equal_t, T>) {
+    return a == b;
+  } else {
+    static_assert(always_false<T>);
   }
-};
+}
 
 /// DefEqualsEquals will def ``__eq__`` (Python ``==``) based on Equals() or
 /// operator==() if one is available (`Equals` is preferred). Falling back to
 /// operator==() is handled by deferring to DefEqualsEquals.
-template <typename T, typename Enable = void>
-struct DefEquals {
-  static bool Equals(const T& a, const T& b) {
-    return DefEqualsEquals<T>::Equals(a, b);
+template <typename ClassT>
+void
+DefEquals(ClassT& cls) {
+  using T = typename ClassT::type;
+  if constexpr (
+      is_detected_v<has_equals_t, T> || is_detected_v<has_equal_equal_t, T>) {
+    cls.def("__eq__", [](const T& self, const T& other) {
+      return Equals(self, other);
+    });
   }
-  void operator()(pybind11::class_<T>& cls) {
-    // If Equals doesn't exist then check for ==.
-    DefEqualsEquals<T>{}(cls);
-  }
-};
+}
 
 template <typename T>
-struct DefEquals<
-    T, std::void_t<decltype(std::declval<T>().Equals(std::declval<T>()))>> {
-  static bool Equals(const T& a, const T& b) { return a.Equals(b); }
-  void operator()(pybind11::class_<T>& cls) { cls.def("__eq__", &T::Equals); }
-};
+using has_less_than_t = decltype(std::declval<T>() < std::declval<T>());
 
 /// DefComparison will def the python comparison operators based on
 /// operator<() if it is available.
-template <typename T, typename Enable = void>
-struct DefComparison {
-  void operator()(pybind11::class_<T>& cls [[maybe_unused]]) {}
-};
-
-template <typename T>
-struct DefComparison<
-    T, std::tuple<
-           std::void_t<std::less<T>>,
-           std::void_t<decltype(DefEquals<T>::Equals(
-               std::declval<T>(), std::declval<T>()))>>> {
-  static constexpr std::less<T> less = {};
-
-  void operator()(pybind11::class_<T>& cls) {
-    cls.def("__lt__", [](const T& a, const T& b) { return dless(a, b); });
-    cls.def("__le__", [](const T& a, const T& b) {
-      return less(a, b) || DefEquals<T>::Equals(a, b);
-    });
+template <typename ClassT>
+void
+DefComparison(ClassT& cls) {
+  using T = typename ClassT::type;
+  constexpr bool has_equals =
+      is_detected_v<has_equals_t, T> || is_detected_v<has_equal_equal_t, T>;
+  constexpr bool has_less_than = is_detected_v<has_less_than_t, T>;
+  if constexpr (has_equals && has_less_than) {
+    cls.def("__lt__", [](const T& a, const T& b) { return a < b; });
+    cls.def(
+        "__le__", [](const T& a, const T& b) { return a < b || Equals(a, b); });
     cls.def("__gt__", [](const T& a, const T& b) {
-      return !less(a, b) && !DefEquals<T>::Equals(a, b);
+      return !(a < b) && !Equals(a, b);
     });
-    cls.def("__ge__", [](const T& a, const T& b) { return !less(a, b); });
+    cls.def("__ge__", [](const T& a, const T& b) { return !(a < b); });
   }
-};
+}
 
 /// DefCopy defs `__copy__` and `copy` based on the copy constructor if it is
 /// available.
-template <typename T, typename Enable = void>
-struct DefCopy {
-  void operator()(pybind11::class_<T>& cls [[maybe_unused]]) {}
+template <typename ClassT>
+void
+DefCopy(ClassT& cls) {
+  using T = typename ClassT::type;
+  if constexpr (std::is_copy_constructible_v<T>) {
+    auto copy_operation = [](const T& self) {
+      return std::make_unique<T>(self);
+    };
+    cls.def("__copy__", copy_operation);
+    cls.def("copy", copy_operation);
+  }
 };
 
 template <typename T>
-struct DefCopy<T, std::void_t<decltype(T((const T&)std::declval<T>()))>> {
-  void operator()(pybind11::class_<T>& cls) {
-    cls.def(
-        "__copy__", [](const T& self) { return std::make_unique<T>(self); });
-    cls.def("copy", [](const T& self) { return std::make_unique<T>(self); });
+using has_hash_t = decltype(std::hash<T>{}(std::declval<T>()));
+
+/// DefCopy defs `__hash__` if `std::hash` is available.
+template <typename ClassT>
+void
+DefHash(ClassT& cls) {
+  using T = typename ClassT::type;
+  if constexpr (is_detected_v<has_hash_t, T>) {
+    cls.def("__hash__", [](const T& self) { return std::hash<T>{}(self); });
   }
 };
 
@@ -120,13 +140,14 @@ struct DefCopy<T, std::void_t<decltype(T((const T&)std::declval<T>()))>> {
 /// \tparam T The C++ type wrapped by @p cls. Usually inferred.
 /// \param cls The pybind11 class object.
 /// \return @p cls to allow chaining.
-template <typename T>
-pybind11::class_<T>
-DefConventions(pybind11::class_<T> cls) {
-  detail::DefRepr<T>{}(cls);
-  detail::DefEquals<T>{}(cls);
-  detail::DefComparison<T>{}(cls);
-  detail::DefCopy<T>{}(cls);
+template <typename ClassT>
+ClassT
+DefConventions(ClassT cls) {
+  detail::DefRepr(cls);
+  detail::DefEquals(cls);
+  detail::DefComparison(cls);
+  detail::DefCopy(cls);
+  detail::DefHash(cls);
   return cls;
 }
 
@@ -134,13 +155,131 @@ DefConventions(pybind11::class_<T> cls) {
 /// integrations.
 ///
 /// This is idempotent.
-template <typename T>
-pybind11::class_<T>
-DefKatanaAddress(pybind11::class_<T>& cls) {
+template <typename ClassT>
+ClassT
+DefKatanaAddress(ClassT& cls) {
+  using T = typename ClassT::type;
   if (!hasattr(cls, "__katana_address__")) {
     cls.def_property_readonly(
-        "__katana_address__", [](T* self) { return (uintptr_t)self; });
+        "__katana_address__", [](T* self) { return (uintptr_t)self; },
+        "Katana Internal. Used for passing objects into numba compiled code.");
   }
+  return cls;
+}
+
+/// Define an OpaqueID class.
+template <typename T>
+pybind11::class_<T>
+DefOpaqueID(pybind11::module& m, const char* name) {
+  pybind11::class_<T> cls(m, name);
+
+  detail::DefEquals(cls);
+  detail::DefComparison(cls);
+  detail::DefCopy(cls);
+  detail::DefHash(cls);
+
+  cls.def(pybind11::init<typename T::ValueType>());
+  cls.def_property_readonly("value", [](const T& v) { return v.value(); });
+  cls.def("__repr__", [name](const T& self) {
+    std::ostringstream out;
+    out << name << "(" << self << ")";
+    return out.str();
+  });
+  return cls;
+}
+
+namespace detail {
+
+template <typename T>
+using has_size_t = decltype((size_t)std::declval<T>().size());
+
+template <typename ClassT>
+ClassT
+DefLen(ClassT& cls) {
+  using T = typename ClassT::type;
+  if constexpr (is_detected_v<has_size_t, T>) {
+    cls.def("__len__", [](T& self) { return self.size(); });
+  }
+  return cls;
+}
+
+}  // namespace detail
+
+/// Define __iter__ on cls using std::begin and std::end to make it an iterable
+/// in Python.
+template <typename ClassT>
+ClassT
+DefIterable(ClassT& cls) {
+  cls.def("__iter__", [](typename ClassT::type& self) {
+    return pybind11::make_iterator(self.begin(), self.end());
+  });
+  detail::DefLen(cls);
+  return cls;
+}
+
+template <typename ClassT>
+ClassT
+DefContainer(ClassT& cls) {
+  DefIterable(cls);
+  cls.def("__getitem__", [](typename ClassT::type& self, ssize_t i) {
+    if (i >= 0) {
+      auto iter = self.begin();
+      std::advance(iter, i);
+      return *iter;
+    } else {
+      auto iter = self.end();
+      std::advance(iter, i);
+      return *iter;
+    }
+  });
+  return cls;
+}
+
+namespace detail {
+
+template <typename T>
+auto
+GetRangeStep(T& self) -> std::remove_reference_t<decltype(*self.begin())> {
+  if (std::distance(self.begin(), self.end()) <= 1) {
+    return 1;
+  }
+  auto next = self.begin();
+  next++;
+  return *next - *self.begin();
+}
+
+}  // namespace detail
+
+template <typename ClassT>
+ClassT
+DefRange(ClassT& cls) {
+  using T = typename ClassT::type;
+  static_assert(
+      std::is_integral_v<std::remove_cv_t<
+          std::remove_reference_t<decltype(*std::declval<T>().begin())>>>,
+      "Only integral types may be in ranges");
+  DefContainer(cls);
+  cls.template def_property_readonly(
+      "start", [](T& self) { return *self.begin(); });
+
+  cls.template def_property_readonly("step", &detail::GetRangeStep<T>);
+  cls.template def_property_readonly(
+      "stop", [](T& self) { return *self.end(); });
+
+  cls.template def("__repr__", [cls](T& self) {
+    auto step = detail::GetRangeStep(self);
+    if (step == 1) {
+      return fmt::format(
+          FMT_STRING("<{}: {}, {}>"),
+          pybind11::cast<std::string>(cls.attr("__name__")), *self.begin(),
+          *self.end());
+    } else {
+      return fmt::format(
+          FMT_STRING("<{}: {}, {}, {}>"),
+          pybind11::cast<std::string>(cls.attr("__name__")), *self.begin(),
+          *self.end(), step);
+    }
+  });
   return cls;
 }
 

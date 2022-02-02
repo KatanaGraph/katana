@@ -1900,9 +1900,8 @@ katana::WritePropertyGraph(
   // external/katana/tools/graph-convert/, but not any other graph
   // operations that can potentially be involved in transactions,
   // we commit the RDGManifest here.
-  auto result =
-      KATANA_CHECKED(prop_graph.Write(dir, "libkatana_graph", txn_ctx));
-  return result;
+  KATANA_CHECKED(prop_graph.Write(dir, "libkatana_graph", txn_ctx));
+  return ResultSuccess();
 }
 
 std::vector<katana::ImportData>

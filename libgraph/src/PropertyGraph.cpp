@@ -443,8 +443,7 @@ katana::PropertyGraph::ConductWriteOp(
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
   auto new_file = std::make_unique<katana::RDGFile>(rdg_handle);
 
-  auto res = KATANA_CHECKED(
-      DoWrite(*new_file, command_line, versioning_action, txn_ctx));
+  KATANA_CHECKED(DoWrite(*new_file, command_line, versioning_action, txn_ctx));
 
   file_ = std::move(new_file);
 

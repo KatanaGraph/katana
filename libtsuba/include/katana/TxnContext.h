@@ -12,7 +12,8 @@ class KATANA_EXPORT TxnContext {
 public:
   TxnContext() {}
 
-  TxnContext(bool commit_manifest) : commit_manifest_(commit_manifest) {}
+  explicit TxnContext(bool commit_manifest)
+      : commit_manifest_(commit_manifest) {}
 
   void InsertNodePropertyRead(std::string rdg_dir, std::string name) {
     node_properties_read_.insert(Uri::JoinPath(rdg_dir, name));

@@ -30,6 +30,15 @@ class LazyDataAccessor(ABC):
     def array(self, items: slice):
         raise NotImplementedError()
 
+    @classmethod
+    def __subclasshook__(cls, checkcls):
+        if cls is LazyDataAccessor:
+            if any("__getitem__" in b.__dict__ for b in checkcls.__mro__) and any(
+                "array" in b.__dict__ for b in checkcls.__mro__
+            ):
+                return True
+        return NotImplemented
+
 
 class LazyDataFrame(DataFrame):
     """

@@ -232,8 +232,14 @@ public:
             std::move(edge_entity_type_ids))),
         edge_entity_data_(edge_entity_type_ids_->data()),
         pg_view_cache_(std::move(topo)) {
-    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_->size() == NumNodes());
-    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_->size() == NumEdges());
+    KATANA_LOG_DEBUG_VASSERT(
+        node_entity_type_ids_->size() == NumNodes(),
+        "type array size: {}, num nodes: {}", node_entity_type_ids_->size(),
+        NumNodes());
+    KATANA_LOG_DEBUG_VASSERT(
+        edge_entity_type_ids_->size() == NumEdges(),
+        "type array size: {}, num edges: {}", edge_entity_type_ids_->size(),
+        NumEdges());
   }
 
   template <typename PGView>

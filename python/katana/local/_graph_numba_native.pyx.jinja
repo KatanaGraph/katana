@@ -17,7 +17,7 @@ from cython.operator cimport dereference as deref
 {% call numba.method_with_body("edge_index", "uint64_t", ["uint64_t"]) %}
     return deref(self.topology().OutEdges(arg1).end())
 {% endcall %}
-{% call numba.method_with_body("get_edge_dest", "uint64_t", ["uint64_t"]) %}
+{% call numba.method_with_body("get_edge_dst", "uint64_t", ["uint64_t"]) %}
     return self.topology().OutEdgeDst(arg1)
 {% endcall %}
 {% endcall %}

@@ -50,23 +50,25 @@ def networkx_to_katanagraph(x: NetworkXGraph, **props) -> KatanaGraph:
 @translator
 def katanagraph_to_networkx(x: KatanaGraph, **props) -> NetworkXGraph:
     pg = x.value
-    dest_list = [dest for src in pg for dest in [pg.get_edge_dest(e) for e in pg.edge_ids(src)]]
-    for src in pg:
-        if pg.edge_ids(src) == range(0, 0):
+    dest_list = [dest for src in pg.nodes() for dest in [pg.get_edge_dst(e) for e in pg.out_edge_ids(src)]]
+    for src in pg.nodes():
+        if len(pg.out_edge_ids(src)) == 0:
             if src not in dest_list:
                 raise ValueError("NetworkX does not support graph with isolated nodes")
-    edge_dict_count = {(src, dest): 0 for src in pg for dest in [pg.get_edge_dest(e) for e in pg.edge_ids(src)]}
-    for src in pg:
-        for dest in [pg.get_edge_dest(e) for e in pg.edge_ids(src)]:
+    edge_dict_count = {
+        (src, dest): 0 for src in pg.nodes() for dest in [pg.get_edge_dst(e) for e in pg.out_edge_ids(src)]
+    }
+    for src in pg.nodes():
+        for dest in [pg.get_edge_dst(e) for e in pg.out_edge_ids(src)]:
             edge_dict_count[(src, dest)] += 1
             if edge_dict_count[(src, dest)] > 1:
                 raise ValueError("NetworkX does not support graph with duplicated edges")
     elist = []
     edge_weights = pg.get_edge_property(x.edge_weight_prop_name).to_pandas()
     if isinstance(edge_weights[0], np.int64):
-        elist = [(nid, pg.get_edge_dest(j), int(edge_weights[j])) for nid in pg for j in pg.edge_ids(nid)]
+        elist = [(nid, pg.get_edge_dst(j), int(edge_weights[j])) for nid in pg.nodes() for j in pg.out_edge_ids(nid)]
     elif isinstance(edge_weights[0], pyarrow.lib.Int64Scalar):
-        elist = [(nid, pg.get_edge_dest(j), edge_weights[j].as_py()) for nid in pg for j in pg.edge_ids(nid)]
+        elist = [(nid, pg.get_edge_dst(j), edge_weights[j].as_py()) for nid in pg.nodes() for j in pg.out_edge_ids(nid)]
         # TODO(pengfei): add more type conversion support: like np.float64 -> float??
     elist = list(OrderedDict.fromkeys(elist))
     if x.is_directed:

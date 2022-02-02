@@ -30,7 +30,10 @@ from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph, TxnContext
+
+from katana.local import Graph, TxnContext
+
+from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -120,9 +123,9 @@ cdef class CdlpPlan(Plan):
         #"""
         #return CdlpPlan.make(_CdlpPlan.Asynchronous())
 
-def cdlp(Graph pg, str output_property_name,
+def cdlp(pg, str output_property_name,
                          int max_iteration = kMaxIterations , bool is_symmetric = False, CdlpPlan plan = CdlpPlan(),
-                         *, TxnContext txn_ctx = None) -> int:
+                         *, txn_ctx = None) -> int:
     """
     Compute the CDLP for `pg`.
 
@@ -158,7 +161,7 @@ def cdlp(Graph pg, str output_property_name,
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(Cdlp(pg.underlying_property_graph(), output_property_name_str, max_iteration, &txn_ctx._txn_ctx, is_symmetric, plan.underlying_))
+        v = handle_result_void(Cdlp(underlying_property_graph(pg), output_property_name_str, max_iteration, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
     return v
 
 cdef _CdlpStatistics handle_result_CdlpStatistics(
@@ -174,11 +177,11 @@ cdef class CdlpStatistics:
     """
     cdef _CdlpStatistics underlying
 
-    def __init__(self, Graph pg, str output_property_name):
+    def __init__(self, pg, str output_property_name):
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_CdlpStatistics(_CdlpStatistics.Compute(
-                pg.underlying_property_graph(), output_property_name_str))
+                underlying_property_graph(pg), output_property_name_str))
 
     @property
     def total_communities(self) -> uint64_t:

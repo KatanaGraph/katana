@@ -414,7 +414,7 @@ def _run_all_gap(args):
         print(f"Running {args.application} on graph: {graph_path}")
         with time_block("read Graph", {}):
             graph = Graph(graph_path, edge_properties=edge_properties, node_properties=[])
-        print(f"#Nodes: {len(graph)}, #Edges: {graph.num_edges()}")
+        print(f"#Nodes: {graph.num_nodes()}, #Edges: {graph.num_edges()}")
         return graph
 
     # Load our graph

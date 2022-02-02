@@ -14,9 +14,9 @@ def initialize_in_degree(nin, nid):
 @do_all_operator()
 def count_in_and_out_degree(graph: Graph, nout, nin, nid):
     out_degree = 0
-    for edge in graph.edge_ids(nid):
+    for edge in graph.out_edge_ids(nid):
         out_degree += 1
-        dst = graph.get_edge_dest(edge)
+        dst = graph.out_edge_dst(edge)
         atomic_add(nin, dst, 1)
     nout[nid] = out_degree
 
@@ -24,10 +24,10 @@ def count_in_and_out_degree(graph: Graph, nout, nin, nid):
 @do_all_operator()
 def count_weighted_in_and_out_degree(graph: Graph, nout, nin, weight_array, nid):
     out_degree = 0
-    for edge in graph.edge_ids(nid):
+    for edge in graph.out_edge_ids(nid):
         weight = weight_array[edge]
         out_degree += weight
-        dst = graph.get_edge_dest(edge)
+        dst = graph.out_edge_dst(edge)
         atomic_add(nin, dst, weight)
     nout[nid] = out_degree
 

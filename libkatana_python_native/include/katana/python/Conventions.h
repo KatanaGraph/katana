@@ -107,7 +107,7 @@ DefCopy(ClassT& cls) {
     cls.def("__copy__", copy_operation);
     cls.def("copy", copy_operation);
   }
-};
+}
 
 template <typename T>
 using has_hash_t = decltype(std::hash<T>{}(std::declval<T>()));
@@ -121,6 +121,19 @@ DefHash(ClassT& cls) {
     cls.def("__hash__", [](const T& self) { return std::hash<T>{}(self); });
   }
 };
+
+template <typename T>
+using has_size_t = decltype((size_t)std::declval<T>().size());
+
+template <typename ClassT>
+ClassT
+DefLen(ClassT& cls) {
+  using T = typename ClassT::type;
+  if constexpr (is_detected_v<has_size_t, T>) {
+    cls.def("__len__", [](T& self) { return self.size(); });
+  }
+  return cls;
+}
 
 }  // namespace detail
 
@@ -185,23 +198,6 @@ DefOpaqueID(pybind11::module& m, const char* name) {
   return cls;
 }
 
-namespace detail {
-
-template <typename T>
-using has_size_t = decltype((size_t)std::declval<T>().size());
-
-template <typename ClassT>
-ClassT
-DefLen(ClassT& cls) {
-  using T = typename ClassT::type;
-  if constexpr (is_detected_v<has_size_t, T>) {
-    cls.def("__len__", [](T& self) { return self.size(); });
-  }
-  return cls;
-}
-
-}  // namespace detail
-
 /// Define __iter__ on cls using std::begin and std::end to make it an iterable
 /// in Python.
 template <typename ClassT>
@@ -234,15 +230,21 @@ DefContainer(ClassT& cls) {
 
 namespace detail {
 
+/// Return the difference between two elements of the C++ "range" (iterable).
+/// This is used to compute the step to allow the Python wrapper to emulate the
+/// @e Python @c range type which provides start, stop, and step values.
 template <typename T>
 auto
-GetRangeStep(T& self) -> std::remove_reference_t<decltype(*self.begin())> {
+GetRangeStep(T& self) -> std::make_signed_t<
+    std::remove_reference_t<std::remove_cv_t<decltype(*self.begin())>>> {
+  using Signed = std::make_signed_t<
+      std::remove_reference_t<std::remove_cv_t<decltype(*self.begin())>>>;
   if (std::distance(self.begin(), self.end()) <= 1) {
     return 1;
   }
   auto next = self.begin();
-  next++;
-  return *next - *self.begin();
+  std::advance(next, 1);
+  return Signed(*next) - *self.begin();
 }
 
 }  // namespace detail

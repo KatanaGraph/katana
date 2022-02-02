@@ -36,14 +36,18 @@ PythonArgumentsToTable(
 
 // Banned types based on the holders used for graph related types.
 
+namespace pybind11::detail {
+
 template <typename T>
-struct ::pybind11::detail::type_caster<std::unique_ptr<katana::EntityIndex<T>>>
+struct type_caster<std::unique_ptr<katana::EntityIndex<T>>>
     : public katana::python::banned_type_caster<
           std::unique_ptr<katana::EntityIndex<T>>> {};
 
 template <>
-struct ::pybind11::detail::type_caster<std::unique_ptr<katana::PropertyGraph>>
+struct type_caster<std::unique_ptr<katana::PropertyGraph>>
     : public katana::python::banned_type_caster<
           std::unique_ptr<katana::PropertyGraph>> {};
+
+}  // namespace pybind11::detail
 
 #endif

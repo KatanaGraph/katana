@@ -22,7 +22,10 @@ from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph, TxnContext
+
+from katana.local import Graph, TxnContext
+
+from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -125,9 +128,9 @@ cdef class BetweennessCentralityPlan(Plan):
         return BetweennessCentralityPlan.make(_BetweennessCentralityPlan.Level())
 
 
-def betweenness_centrality(Graph pg, str output_property_name, sources = None,
+def betweenness_centrality(pg, str output_property_name, sources = None,
              BetweennessCentralityPlan plan = BetweennessCentralityPlan(),
-             *, TxnContext txn_ctx = None):
+             *, txn_ctx = None):
     """
     Betweenness centrality measures the extent to which a vertex lies on paths between other vertices.
     Vertices with high betweenness may have considerable influence within a network by virtue of their control over information passing between others.
@@ -171,7 +174,7 @@ def betweenness_centrality(Graph pg, str output_property_name, sources = None,
     else:
         c_sources = BetweennessCentralitySources_from_int(int(sources))
     with nogil:
-        handle_result_void(BetweennessCentrality(pg.underlying_property_graph(), output_property_name_cstr, &txn_ctx._txn_ctx, c_sources, plan.underlying_))
+        handle_result_void(BetweennessCentrality(underlying_property_graph(pg), output_property_name_cstr, underlying_txn_context(txn_ctx), c_sources, plan.underlying_))
 
 
 cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatistics(Result[_BetweennessCentralityStatistics] res) nogil except *:
@@ -189,12 +192,12 @@ cdef class BetweennessCentralityStatistics:
     """
     cdef _BetweennessCentralityStatistics underlying
 
-    def __init__(self, Graph pg, str output_property_name):
+    def __init__(self, pg, str output_property_name):
         output_property_name_bytes = bytes(output_property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_BetweennessCentralityStatistics(_BetweennessCentralityStatistics.Compute(
-                pg.underlying_property_graph(), output_property_name_cstr))
+                underlying_property_graph(pg), output_property_name_cstr))
 
     @property
     def max_centrality(self) -> float:

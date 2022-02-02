@@ -41,7 +41,11 @@ def register_method(cls: type, method, invoker_ptr: int, ret_type, *arg_types) -
         )
     numba_wrapper: SimpleNumbaPointerWrapper = cls._numba_type_wrapper
     ctypes_func_type = ctypes.CFUNCTYPE(ret_type, ctypes.c_void_p, *arg_types)
-    numba_wrapper.register_method(method.__name__, ctypes_func_type, addr=invoker_ptr)
+    if hasattr(method, "__name__"):
+        name = method.__name__
+    else:
+        name = method
+    numba_wrapper.register_method(name, ctypes_func_type, addr=invoker_ptr)
 
 
 def register_function(func: callable, invoker_ptr: int, ret_type, *arg_types) -> None:

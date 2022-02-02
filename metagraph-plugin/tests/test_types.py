@@ -1,10 +1,20 @@
+from typing import Any, Union
+
 import metagraph as mg
 import pytest
 
 
+def range_equivalent(a: Union[range, Any], b: Union[range, Any]):
+    """
+    :return: True if two range like objects have the same start, stop, and step.
+        They need not be the same type.
+    """
+    return a.start == b.start and a.stop == b.stop and a.step == b.step
+
+
 def test_num_nodes(katanagraph_rmat15_cleaned_di):
     cnt = 0
-    for nid in katanagraph_rmat15_cleaned_di.value:
+    for nid in katanagraph_rmat15_cleaned_di.value.nodes():
         cnt += 1
     assert katanagraph_rmat15_cleaned_di.value.num_nodes() == 32768
     assert katanagraph_rmat15_cleaned_di.value.num_nodes() == cnt
@@ -12,8 +22,8 @@ def test_num_nodes(katanagraph_rmat15_cleaned_di):
 
 def test_num_edges(katanagraph_rmat15_cleaned_di):
     cnt = 0
-    for nid in katanagraph_rmat15_cleaned_di.value:
-        cnt += len(katanagraph_rmat15_cleaned_di.value.edge_ids(nid))
+    for nid in katanagraph_rmat15_cleaned_di.value.nodes():
+        cnt += len(katanagraph_rmat15_cleaned_di.value.out_edge_ids(nid))
     assert katanagraph_rmat15_cleaned_di.value.num_edges() == 363194
     assert katanagraph_rmat15_cleaned_di.value.num_edges() == cnt
 
@@ -32,21 +42,18 @@ def test_edge_schema(katanagraph_rmat15_cleaned_di):
 
 def test_edge_property(katanagraph_rmat15_cleaned_di):
     assert katanagraph_rmat15_cleaned_di.value.loaded_edge_schema()[0].name == "value"
-    assert katanagraph_rmat15_cleaned_di.value.get_edge_property(
-        0
-    ) == katanagraph_rmat15_cleaned_di.value.get_edge_property("value")
     assert katanagraph_rmat15_cleaned_di.value.get_edge_property("value").to_pandas()[0] == 339302416426
 
 
 def test_topology(katanagraph_rmat15_cleaned_di):
-    assert katanagraph_rmat15_cleaned_di.value.edge_ids(0) == range(0, 20767)
+    assert range_equivalent(katanagraph_rmat15_cleaned_di.value.out_edge_ids(0), range(0, 20767))
     assert [
-        katanagraph_rmat15_cleaned_di.value.get_edge_dest(i) for i in katanagraph_rmat15_cleaned_di.value.edge_ids(0)
-    ][0:5] == [1, 2, 3, 4, 5,]
-    assert katanagraph_rmat15_cleaned_di.value.edge_ids(8) == range(36475, 41133)
+        katanagraph_rmat15_cleaned_di.value.get_edge_dst(i) for i in katanagraph_rmat15_cleaned_di.value.out_edge_ids(0)
+    ][0:5] == [1, 2, 3, 4, 5]
+    assert range_equivalent(katanagraph_rmat15_cleaned_di.value.out_edge_ids(8), range(36475, 41133))
     assert [
-        katanagraph_rmat15_cleaned_di.value.get_edge_dest(i) for i in katanagraph_rmat15_cleaned_di.value.edge_ids(8)
-    ][0:5] == [0, 9, 10, 11, 12,]
+        katanagraph_rmat15_cleaned_di.value.get_edge_dst(i) for i in katanagraph_rmat15_cleaned_di.value.out_edge_ids(8)
+    ][0:5] == [0, 9, 10, 11, 12]
 
 
 def test_num_nodes_networkx(networkx_weighted_undirected_8_12, networkx_weighted_directed_8_12):

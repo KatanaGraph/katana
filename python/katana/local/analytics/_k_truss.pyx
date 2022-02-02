@@ -24,7 +24,10 @@ from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph, TxnContext
+
+from katana.local import Graph, TxnContext
+
+from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -118,7 +121,7 @@ cdef class KTrussPlan(Plan):
         return KTrussPlan.make(_KTrussPlan.BspCoreThenTruss())
 
 
-def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan(), *, TxnContext txn_ctx = None) -> int:
+def k_truss(pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan(), *, txn_ctx = None) -> int:
     """
     Compute the k-truss for pg. `pg` must be symmetric.
 
@@ -150,11 +153,11 @@ def k_truss(Graph pg, uint32_t k_truss_number, str output_property_name, KTrussP
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(KTruss(&txn_ctx._txn_ctx, pg.underlying_property_graph(),k_truss_number,output_property_name_str, plan.underlying_))
+        v = handle_result_void(KTruss(underlying_txn_context(txn_ctx), underlying_property_graph(pg),k_truss_number,output_property_name_str, plan.underlying_))
     return v
 
 
-def k_truss_assert_valid(Graph pg, uint32_t k_truss_number, str output_property_name):
+def k_truss_assert_valid(pg, uint32_t k_truss_number, str output_property_name):
     """
     Raise an exception if the k-truss results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
 
@@ -162,7 +165,7 @@ def k_truss_assert_valid(Graph pg, uint32_t k_truss_number, str output_property_
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        handle_result_assert(KTrussAssertValid(pg.underlying_property_graph(), k_truss_number, output_property_name_str))
+        handle_result_assert(KTrussAssertValid(underlying_property_graph(pg), k_truss_number, output_property_name_str))
 
 
 cdef _KTrussStatistics handle_result_KTrussStatistics(Result[_KTrussStatistics] res) nogil except *:
@@ -178,11 +181,11 @@ cdef class KTrussStatistics:
     """
     cdef _KTrussStatistics underlying
 
-    def __init__(self, Graph pg, uint32_t k_truss_number, str output_property_name):
+    def __init__(self, pg, uint32_t k_truss_number, str output_property_name):
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_KTrussStatistics(_KTrussStatistics.Compute(
-                pg.underlying_property_graph(), k_truss_number, output_property_name_str))
+                underlying_property_graph(pg), k_truss_number, output_property_name_str))
 
     @property
     def number_of_edges_left(self) -> uint64_t:

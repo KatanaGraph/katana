@@ -1,14 +1,14 @@
 from numba import types
 from numba.extending import overload, overload_method
 
-from katana.local._graph_numba_native import Graph_numba_wrapper
+from katana.local_native import Graph
 
 # Graph
 
 
 @overload(len)
 def overload_Graph_len(self):
-    if isinstance(self, Graph_numba_wrapper.Type):
+    if isinstance(self, Graph._numba_type_wrapper.Type):
 
         def impl(self):
             return self.num_nodes()
@@ -17,7 +17,7 @@ def overload_Graph_len(self):
     return None
 
 
-@overload_method(Graph_numba_wrapper.Type, "nodes")
+@overload_method(Graph._numba_type_wrapper.Type, "nodes")
 def overload_Graph_nodes(self):
     _ = self
 
@@ -27,17 +27,13 @@ def overload_Graph_nodes(self):
     return impl
 
 
-@overload_method(Graph_numba_wrapper.Type, "edge_ids")
-def overload_Graph_edges(self, n):
+@overload_method(Graph._numba_type_wrapper.Type, "out_edge_ids")
+def overload_Graph_out_edge_ids(self, n):
     if isinstance(n, types.Integer) and not n.signed:
         _ = self
 
         def impl(self, n):
-            if n == 0:
-                prev = 0
-            else:
-                prev = self.edge_index(n - 1)
-            return range(prev, self.edge_index(n))
+            return range(self._out_edge_begin(n), self._out_edge_end(n))
 
         return impl
     return None

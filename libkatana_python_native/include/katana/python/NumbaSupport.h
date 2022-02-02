@@ -255,10 +255,6 @@ DefWithNumba(
             decltype(member_func)>,
         const char>* name,
     const Extra&... extra) {
-  static_assert(std::is_same_v<
-                typename detail::MemberFunctionBinder<
-                    member_func>::MemberFunctionPointer,
-                decltype(member_func)>);
   detail::MemberFunctionBinder<member_func>::template def_class_method<
       member_func>(cls, name, extra...);
 }
@@ -273,16 +269,11 @@ DefWithNumba(
             decltype(func)>,
         const char>* name,
     const Extra&... extra) {
-  static_assert(
-      std::is_same_v<
-          typename detail::StaticFunctionBinder<func>::StaticFunctionPointer,
-          decltype(func)>);
   detail::StaticFunctionBinder<func>::template def_class_method<func>(
       cls, name, extra...);
 }
 
-// TODO(amp): Implement missing overloads/variants for: lambdas (as methods and
-//  functions), static methods.
+// TODO(amp): Implement missing overloads/variants for: static methods.
 
 /// Register a Python class for use from Numba compiled code.
 /// This enables DefWithNumba() to be used on methods of this class.

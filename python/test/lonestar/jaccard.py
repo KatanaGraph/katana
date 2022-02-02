@@ -9,9 +9,9 @@ from katana.timer import StatTimer
 @do_all_operator()
 def jaccard_operator(g, n1_neighbors, n1_size, output, n2):
     intersection_size = 0
-    n2_size = len(g.edge_ids(n2))
-    for e_iter in g.edge_ids(n2):
-        ne = g.get_edge_dest(e_iter)
+    n2_size = len(g.out_edge_ids(n2))
+    for e_iter in g.out_edge_ids(n2):
+        ne = g.out_edge_dst(e_iter)
         if n1_neighbors[ne]:
             intersection_size += 1
     union_size = n1_size + n2_size - intersection_size
@@ -23,15 +23,15 @@ def jaccard_operator(g, n1_neighbors, n1_size, output, n2):
 
 
 def jaccard(g, key_node, property_name):
-    key_neighbors = np.zeros(len(g), dtype=bool)
-    output = np.empty(len(g), dtype=float)
+    key_neighbors = np.zeros(g.num_nodes(), dtype=bool)
+    output = np.empty(g.num_nodes(), dtype=float)
 
-    for e in g.edge_ids(key_node):
-        n = g.get_edge_dest(e)
+    for e in g.out_edge_ids(key_node):
+        n = g.out_edge_dst(e)
         key_neighbors[n] = True
 
     do_all(
-        g, jaccard_operator(g, key_neighbors, len(g.edge_ids(key_node)), output), steal=True, loop_name="jaccard",
+        g, jaccard_operator(g, key_neighbors, len(g.out_edge_ids(key_node)), output), steal=True, loop_name="jaccard",
     )
 
     g.add_node_property(pyarrow.table({property_name: output}))

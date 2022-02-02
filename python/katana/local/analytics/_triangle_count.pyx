@@ -18,7 +18,8 @@ from libcpp cimport bool
 
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local import Graph, TxnContext
+from katana.local._graph cimport underlying_property_graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -177,7 +178,7 @@ cdef uint64_t handle_result_int(Result[uint64_t] res) nogil except *:
     return res.value()
 
 
-def triangle_count(Graph pg,  TriangleCountPlan plan = TriangleCountPlan()) -> int:
+def triangle_count(pg,  TriangleCountPlan plan = TriangleCountPlan()) -> int:
     """
     Count the triangles in `pg`.
 
@@ -201,5 +202,5 @@ def triangle_count(Graph pg,  TriangleCountPlan plan = TriangleCountPlan()) -> i
 
     """
     with nogil:
-        v = handle_result_int(TriangleCount(pg.underlying_property_graph(), plan.underlying_))
+        v = handle_result_int(TriangleCount(underlying_property_graph(pg), plan.underlying_))
     return v

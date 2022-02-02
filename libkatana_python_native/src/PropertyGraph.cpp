@@ -23,6 +23,8 @@
 
 namespace py = pybind11;
 
+/// Utility to convert Python argument to an Arrow Table for insertion into a
+/// graph as properties.
 katana::Result<std::shared_ptr<arrow::Table>>
 katana::python::PythonArgumentsToTable(
     const pybind11::object& table, const pybind11::dict& kwargs) {
@@ -73,6 +75,7 @@ katana::python::PythonArgumentsToTable(
   return arrow_table;
 }
 
+/// Base class analogous to the Python katana.dataframe.LazyDataAccessor.
 class LazyDataAccessor {
 public:
   virtual ~LazyDataAccessor();
@@ -86,8 +89,8 @@ template <typename T>
 class LazyDataAccessorTyped : public LazyDataAccessor {
 public:
   virtual T at_typed(ssize_t i) const = 0;
-  virtual py::object at(ssize_t i) const final { return py::cast(at_typed(i)); }
-  virtual py::object array(const py::slice& slice) const {
+  py::object at(ssize_t i) const final { return py::cast(at_typed(i)); }
+  py::object array(const py::slice& slice) const override {
     auto begin = py::cast<ssize_t>(slice.attr("start"));
     auto end = py::cast<ssize_t>(slice.attr("stop"));
     auto step = py::cast<ssize_t>(slice.attr("step"));
@@ -99,6 +102,8 @@ public:
   }
 };
 
+// LazyDataAccessors for edge destination and source
+
 class GraphBaseEdgeDestAccessor final
     : public LazyDataAccessorTyped<katana::PropertyGraph::Node> {
   const katana::PropertyGraph* pg_;
@@ -108,7 +113,7 @@ public:
 
   GraphBaseEdgeDestAccessor(const katana::PropertyGraph* pg) : pg_(pg) {}
 
-  virtual katana::PropertyGraph::Node at_typed(ssize_t i) const {
+  katana::PropertyGraph::Node at_typed(ssize_t i) const final {
     return *pg_->OutEdgeDst(i);
   }
 };
@@ -124,29 +129,31 @@ public:
   GraphBaseEdgeSourceAccessor(katana::PropertyGraph* pg)
       : view_(pg->BuildView<katana::PropertyGraphViews::BiDirectional>()) {}
 
-  virtual katana::PropertyGraph::Node at_typed(ssize_t i) const {
+  katana::PropertyGraph::Node at_typed(ssize_t i) const final {
     return view_.GetEdgeSrc(i);
   }
 };
 GraphBaseEdgeSourceAccessor::~GraphBaseEdgeSourceAccessor() = default;
 
-template <typename T>
-py::object
-range(T start, T end, T step = 1) {
-  py::module builtins = py::module::import("builtins");
-  return builtins.attr("range")(start, end, step);
-}
-
 namespace {
+// Custom Python methods on PropertyGraph that are used from Numba so cannot be
+// lambdas until C++20
+
 katana::GraphTopologyTypes::Edge
-out_edge_index(katana::PropertyGraph* pg, katana::GraphTopologyTypes::Node n) {
+out_edge_begin(katana::PropertyGraph* pg, katana::GraphTopologyTypes::Node n) {
   return *pg->OutEdges(n).begin();
+}
+katana::GraphTopologyTypes::Edge
+out_edge_end(katana::PropertyGraph* pg, katana::GraphTopologyTypes::Node n) {
+  return *pg->OutEdges(n).end();
 }
 katana::GraphTopologyTypes::Node
 out_edge_dst(katana::PropertyGraph* pg, katana::GraphTopologyTypes::Edge e) {
   return *pg->OutEdgeDst(e);
 }
-}  // namespace
+
+// Functions which define specific types or groups of types. These are all
+// called from InitPropertyGraph.
 
 void
 DefPropertyGraph(py::module& m) {
@@ -269,8 +276,10 @@ DefPropertyGraph(py::module& m) {
       "out_edge_ids",
       py::overload_cast<>(&PropertyGraph::OutEdges, py::const_));
 
-  katana::DefWithNumba<out_edge_index>(
-      cls, "_out_edge_index", katana::numba_only());
+  katana::DefWithNumba<&out_edge_begin>(
+      cls, "_out_edge_begin", katana::numba_only());
+  katana::DefWithNumba<&out_edge_end>(
+      cls, "_out_edge_end", katana::numba_only());
 
   // OutEdges(NodeHandle)-> OutEdgeHandle iterator - iterator over out-edges for a node
   cls.def(
@@ -730,6 +739,8 @@ DefAccessors(py::module& m) {
       .def("__getitem__", &GraphBaseEdgeSourceAccessor::at)
       .def("array", &GraphBaseEdgeSourceAccessor::array);
 }
+
+}  // namespace
 
 void
 katana::python::InitPropertyGraph(py::module& m) {

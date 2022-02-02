@@ -45,7 +45,11 @@ InstantiateForTypes(pybind11::module m, const std::string& basename, F f) {
           .attr("make_template_type1"));
   pybind11::dict types;
 
-  auto t = std::make_tuple(InstantiateForType<Types>(m, basename, f, types)...);
+  // Parameter pack expansion is only allowed in the arguments or initializer
+  // for something. The array is unused and only exists to allow that pack
+  // expansion.
+  pybind11::object classes_unused[] = {
+      InstantiateForType<Types>(m, basename, f, types)...};
 
   // Set the builtin type int as an alias for int64 if int64 exists.
   if (types.template contains(

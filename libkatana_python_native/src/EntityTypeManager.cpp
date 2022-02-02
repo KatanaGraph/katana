@@ -5,6 +5,7 @@
 
 #include "katana/python/Conventions.h"
 #include "katana/python/CythonIntegration.h"
+#include "katana/python/EntityTypeManagerPython.h"
 #include "katana/python/ErrorHandling.h"
 #include "katana/python/PythonModuleInitializers.h"
 
@@ -12,30 +13,8 @@ namespace py = pybind11;
 
 namespace {
 
-struct EntityType {
-  const katana::EntityTypeManager* owner;
-  const katana::EntityTypeID type_id;
-
-  bool operator==(const EntityType& other) const {
-    return owner == other.owner && type_id == other.type_id;
-  }
-
-  std::string ToString() {
-    auto r = owner->GetAtomicTypeName(type_id);
-    if (r) {
-      return r.value();
-    } else {
-      return fmt::format("<non-atomic type {}>", type_id);
-    }
-  }
-};
-
-struct AtomicEntityType : public EntityType {
-  std::string name() { return ToString(); }
-};
-
 katana::SetOfEntityTypeIDs
-GetSetOfEntityTypeIds(std::vector<EntityType> types) {
+GetSetOfEntityTypeIds(std::vector<katana::python::EntityType> types) {
   katana::SetOfEntityTypeIDs type_ids;
   type_ids.resize(types.size());
   for (auto t : types) {
@@ -46,9 +25,20 @@ GetSetOfEntityTypeIds(std::vector<EntityType> types) {
 
 }  // namespace
 
+std::unique_ptr<katana::python::EntityType>
+katana::python::EntityType::Make(
+    const katana::EntityTypeManager* self, katana::EntityTypeID id) {
+  if (self->GetAtomicTypeName(id).has_value()) {
+    return std::make_unique<AtomicEntityType>(self, id);
+  } else {
+    return std::make_unique<EntityType>(self, id);
+  }
+}
+
 void
 katana::python::InitEntityTypeManager(py::module_& m) {
-  katana::DefConventions(py::class_<EntityType>(m, "EntityType"))
+  py::class_<EntityType> entity_type_cls(m, "EntityType");
+  katana::DefConventions(entity_type_cls)
       // Expose a field, read only
       .def_readonly("id", &EntityType::type_id)
       .def("__hash__", [](EntityType* self) { return self->type_id; });
@@ -67,7 +57,7 @@ katana::python::InitEntityTypeManager(py::module_& m) {
           [](const katana::EntityTypeManager* self) {
             py::dict ret;
             for (auto& id : self->GetAtomicEntityTypeIDs()) {
-              AtomicEntityType type{{self, id}};
+              AtomicEntityType type(self, id);
               ret[py::cast(type.name())] = type;
             }
             return ret;
@@ -112,15 +102,7 @@ katana::python::InitEntityTypeManager(py::module_& m) {
                 self, KATANA_CHECKED(
                           self->GetOrAddNonAtomicEntityType(set_of_type_ids))};
           })
-      .def(
-          "type_from_id",
-          [](const katana::EntityTypeManager* self, katana::EntityTypeID id) {
-            if (self->GetAtomicTypeName(id).has_value()) {
-              return py::cast(AtomicEntityType{{self, id}});
-            } else {
-              return py::cast(EntityType{self, id});
-            }
-          })
+      .def("type_from_id", &EntityType::Make)
       .def(
           "get_atomic_subtypes",
           [](const katana::EntityTypeManager* self, EntityType type) {
@@ -132,7 +114,7 @@ katana::python::InitEntityTypeManager(py::module_& m) {
               for (EntityTypeID subtype_id = 0; subtype_id < type_set.size();
                    ++subtype_id) {
                 if (type_set.test(subtype_id)) {
-                  ret.add(AtomicEntityType{{self, subtype_id}});
+                  ret.add(AtomicEntityType(self, subtype_id));
                 }
               }
             }

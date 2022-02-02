@@ -339,8 +339,10 @@ else()
   # Libarrow project cmake
   get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
   find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
+  find_package(ArrowPython REQUIRED HINTS ${ARROW_CONFIG_DIR})
   add_library(arrow::arrow ALIAS arrow_shared)
   add_library(arrow::parquet ALIAS parquet_shared)
+  add_library(arrow::python ALIAS arrow_python_shared)
 endif()
 
 # Testing-only dependencies

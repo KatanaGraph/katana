@@ -15,46 +15,46 @@ public:
   TxnContext(bool commit_manifest) : commit_manifest_(commit_manifest) {}
 
   void InsertNodePropertyRead(std::string rdg_dir, std::string name) {
-    node_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
+    node_properties_read_.insert(Uri::JoinPath(rdg_dir, name));
   }
 
   template <typename Container>
   void InsertNodePropertyRead(std::string rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      node_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
+      node_properties_read_.insert(Uri::JoinPath(rdg_dir, name));
     }
   }
 
   void InsertNodePropertyWrite(std::string rdg_dir, std::string name) {
-    node_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
+    node_properties_write_.insert(Uri::JoinPath(rdg_dir, name));
   }
 
   template <typename Container>
   void InsertNodePropertyWrite(std::string rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      node_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
+      node_properties_write_.insert(Uri::JoinPath(rdg_dir, name));
     }
   }
 
   void InsertEdgePropertyRead(std::string rdg_dir, std::string name) {
-    edge_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
+    edge_properties_read_.insert(Uri::JoinPath(rdg_dir, name));
   }
 
   template <typename Container>
   void InsertEdgePropertyRead(std::string rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      edge_properties_read_.insert(ConcatRDGProperty(rdg_dir, name));
+      edge_properties_read_.insert(Uri::JoinPath(rdg_dir, name));
     }
   }
 
   void InsertEdgePropertyWrite(std::string rdg_dir, std::string name) {
-    edge_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
+    edge_properties_write_.insert(Uri::JoinPath(rdg_dir, name));
   }
 
   template <typename Container>
   void InsertEdgePropertyWrite(std::string rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      edge_properties_write_.insert(ConcatRDGProperty(rdg_dir, name));
+      edge_properties_write_.insert(Uri::JoinPath(rdg_dir, name));
     }
   }
 
@@ -68,39 +68,33 @@ public:
 
   void DelayManifestCommit() { commit_manifest_ = false; }
 
-  const std::set<std::string>& GetNodePropertyRead() const {
+  const std::set<std::string>& NodePropertyRead() const {
     return node_properties_read_;
   }
 
-  const std::set<std::string>& GetNodePropertyWrite() const {
+  const std::set<std::string>& NodePropertyWrite() const {
     return node_properties_write_;
   }
 
-  const std::set<std::string>& GetEdgePropertyRead() const {
+  const std::set<std::string>& EdgePropertyRead() const {
     return edge_properties_read_;
   }
 
-  const std::set<std::string>& GetEdgePropertyWrite() const {
+  const std::set<std::string>& EdgePropertyWrite() const {
     return edge_properties_write_;
   }
 
-  bool GetAllPropertiesRead() const { return all_properties_read_; }
+  bool AllPropertiesRead() const { return all_properties_read_; }
 
-  bool GetAllPropertiesWrite() const { return all_properties_write_; }
+  bool AllPropertiesWrite() const { return all_properties_write_; }
 
-  bool GetTopologyRead() const { return topology_read_; }
+  bool TopologyRead() const { return topology_read_; }
 
-  bool GetTopologyWrite() const { return topology_write_; }
+  bool TopologyWrite() const { return topology_write_; }
 
-  bool GetCommitManifest() const { return commit_manifest_; }
+  bool CommitManifest() const { return commit_manifest_; }
 
 private:
-  inline std::string ConcatRDGProperty(std::string rdg_dir, std::string prop) {
-    return Uri::JoinPath(rdg_dir, prop);
-  }
-
-  static constexpr char kPropSeparator[] = "/propertyseparator/";
-
   std::set<std::string> node_properties_read_;
   std::set<std::string> node_properties_write_;
   std::set<std::string> edge_properties_read_;

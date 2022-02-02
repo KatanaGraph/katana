@@ -359,7 +359,7 @@ katana::RDG::DoStore(
   // Update lineage and commit
   core_->AddCommandLine(command_line);
 
-  if (txn_ctx->GetCommitManifest()) {
+  if (txn_ctx->CommitManifest()) {
     KATANA_CHECKED(CommitRDG(
         handle, core_->part_header().metadata().policy_id_,
         core_->part_header().metadata().transposed_, versioning_action,

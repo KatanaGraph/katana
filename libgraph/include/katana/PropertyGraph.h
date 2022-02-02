@@ -870,42 +870,46 @@ public:
   }
 
   // Creates an index over a node property.
-  Result<void> MakeNodeIndex(const std::string& column_name);
+  Result<void> MakeNodeIndex(const std::string& property_name);
 
   // Delete an existing index over a node property.
-  Result<void> DeleteNodeIndex(const std::string& column_name);
+  Result<void> DeleteNodeIndex(const std::string& property_name);
 
   // Creates an index over an edge property.
-  Result<void> MakeEdgeIndex(const std::string& column_name);
+  Result<void> MakeEdgeIndex(const std::string& property_name);
 
   // Delete an existing index over an edge property.
-  Result<void> DeleteEdgeIndex(const std::string& column_name);
+  Result<void> DeleteEdgeIndex(const std::string& property_name);
 
   // Returns the list of node indexes.
-  const std::vector<std::unique_ptr<EntityIndex<GraphTopology::Node>>>&
+  const std::vector<std::shared_ptr<EntityIndex<GraphTopology::Node>>>&
   node_indexes() const {
     return node_indexes_;
   }
 
   // Returns the list of edge indexes.
-  const std::vector<std::unique_ptr<EntityIndex<GraphTopology::Edge>>>&
+  const std::vector<std::shared_ptr<EntityIndex<GraphTopology::Edge>>>&
   edge_indexes() const {
     return edge_indexes_;
   }
 
-  // Returns true of an index exists for the named property
-  bool HasNodeIndex(const std::string& property_name) const {
-    for (const auto& index : node_indexes()) {
-      if (index->column_name() == property_name) {
-        return true;
-      }
-    }
-    return false;
-  }
+  /// Returns true of an index exists for the named node property
+  bool HasNodeIndex(const std::string& property_name) const;
 
-  // Returns the property index associated with the named property
-  Result<EntityIndex<GraphTopology::Node>*> GetNodeIndex(
-      const std::string& property_name) const;
+  /// Returns the index associated with the named node property.
+  ///
+  /// The graph retains ownership of the index.
+  katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Node>>>
+  GetNodeIndex(const std::string& property_name) const;
+
+  /// Returns true of an index exists for the named edge property
+  bool HasEdgeIndex(const std::string& property_name) const;
+
+  /// Returns the index associated with the named edge property.
+  ///
+  /// The graph retains ownership of the index.
+  katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Edge>>>
+  GetEdgeIndex(const std::string& property_name) const;
 
 protected:
   RDG& rdg() { return *rdg_; }
@@ -971,8 +975,8 @@ private:
   EntityTypeID* edge_entity_data_;
 
   // List of node and edge indexes on this graph.
-  std::vector<std::unique_ptr<EntityIndex<Node>>> node_indexes_;
-  std::vector<std::unique_ptr<EntityIndex<Edge>>> edge_indexes_;
+  std::vector<std::shared_ptr<EntityIndex<Node>>> node_indexes_;
+  std::vector<std::shared_ptr<EntityIndex<Edge>>> edge_indexes_;
 
   PGViewCache pg_view_cache_;
 };

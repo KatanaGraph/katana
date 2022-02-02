@@ -11,7 +11,7 @@
 template <typename node_or_edge>
 struct NodeOrEdge {
   static katana::Result<katana::EntityIndex<node_or_edge>*> MakeIndex(
-      katana::PropertyGraph* pg, const std::string& column_name);
+      katana::PropertyGraph* pg, const std::string& property_name);
   static katana::Result<void> AddProperties(
       katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
       katana::TxnContext* txn_ctx);
@@ -23,14 +23,14 @@ using Edge = NodeOrEdge<katana::GraphTopology::Edge>;
 
 template <>
 katana::Result<katana::EntityIndex<katana::GraphTopology::Node>*>
-Node::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
-  auto result = pg->MakeNodeIndex(column_name);
+Node::MakeIndex(katana::PropertyGraph* pg, const std::string& property_name) {
+  auto result = pg->MakeNodeIndex(property_name);
   if (!result) {
     return result.error();
   }
 
   for (const auto& index : pg->node_indexes()) {
-    if (index->column_name() == column_name) {
+    if (index->property_name() == property_name) {
       return index.get();
     }
   }
@@ -40,14 +40,14 @@ Node::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
 
 template <>
 katana::Result<katana::EntityIndex<katana::GraphTopology::Edge>*>
-Edge::MakeIndex(katana::PropertyGraph* pg, const std::string& column_name) {
-  auto result = pg->MakeEdgeIndex(column_name);
+Edge::MakeIndex(katana::PropertyGraph* pg, const std::string& property_name) {
+  auto result = pg->MakeEdgeIndex(property_name);
   if (!result) {
     return result.error();
   }
 
   for (const auto& index : pg->edge_indexes()) {
-    if (index->column_name() == column_name) {
+    if (index->property_name() == property_name) {
       return index.get();
     }
   }

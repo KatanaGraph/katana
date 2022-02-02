@@ -8,34 +8,34 @@ namespace katana {
 template <typename node_or_edge>
 Result<std::unique_ptr<EntityIndex<node_or_edge>>>
 MakeTypedEntityIndex(
-    const std::string& column_name, size_t num_entities,
+    const std::string& property_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property) {
   std::unique_ptr<EntityIndex<node_or_edge>> index;
 
   switch (property->type_id()) {
   case arrow::Type::BOOL:
     index = std::make_unique<PrimitiveEntityIndex<node_or_edge, bool>>(
-        column_name, num_entities, property);
+        property_name, num_entities, property);
     break;
   case arrow::Type::UINT8:
     index = std::make_unique<PrimitiveEntityIndex<node_or_edge, uint8_t>>(
-        column_name, num_entities, property);
+        property_name, num_entities, property);
     break;
   case arrow::Type::INT64:
     index = std::make_unique<PrimitiveEntityIndex<node_or_edge, int64_t>>(
-        column_name, num_entities, property);
+        property_name, num_entities, property);
     break;
   case arrow::Type::UINT64:
     index = std::make_unique<PrimitiveEntityIndex<node_or_edge, uint64_t>>(
-        column_name, num_entities, property);
+        property_name, num_entities, property);
     break;
   case arrow::Type::DOUBLE:
     index = std::make_unique<PrimitiveEntityIndex<node_or_edge, double_t>>(
-        column_name, num_entities, property);
+        property_name, num_entities, property);
     break;
   case arrow::Type::LARGE_STRING:
     index = std::make_unique<StringEntityIndex<node_or_edge>>(
-        column_name, num_entities, property);
+        property_name, num_entities, property);
     break;
   default:
     return KATANA_ERROR(
@@ -104,11 +104,11 @@ template class StringEntityIndex<GraphTopology::Edge>;
 
 template Result<std::unique_ptr<EntityIndex<GraphTopology::Node>>>
 MakeTypedEntityIndex(
-    const std::string& column_name, size_t num_entities,
+    const std::string& property_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property);
 template Result<std::unique_ptr<EntityIndex<GraphTopology::Edge>>>
 MakeTypedEntityIndex(
-    const std::string& column_name, size_t num_entities,
+    const std::string& property_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property);
 
 }  // namespace katana

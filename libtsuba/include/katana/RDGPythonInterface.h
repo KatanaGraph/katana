@@ -23,8 +23,8 @@ struct RDGPropInfo {
 class RDGPythonInterface {
 public:
   static katana::Result<void> WriteRDGPartHeader(
-      std::vector<RDGPropInfo> node_properties,
-      std::vector<RDGPropInfo> edge_properties,
+      std::vector<katana::RDGPropInfo> node_properties,
+      std::vector<katana::RDGPropInfo> edge_properties,
       katana::EntityTypeManager node_entity_type_manager,
       katana::EntityTypeManager edge_entity_type_manager,
       const std::string& topology_path, const std::string& rdg_dir);

@@ -1,7 +1,6 @@
 #include <pybind11/pybind11.h>
 
 #include "katana/RDGPythonInterface.h"
-
 #include "katana/python/CythonIntegration.h"
 #include "katana/python/ErrorHandling.h"
 #include "katana/python/PythonModuleInitializers.h"
@@ -16,11 +15,11 @@ void
 katana::python::InitRDGInterface(py::module& m) {
   // Define the wrapped interface for PropStorageInfo - needed for RDGPartHeader
   // Only need the initial constructor since properites will be in memory
-  py::class_<katana::RDGPropInfo> rdg_prop_info_cls(
-      m, "RDGPropInfo");
+  py::class_<katana::RDGPropInfo> rdg_prop_info_cls(m, "RDGPropInfo");
   rdg_prop_info_cls.def(py::init([](std::string name, std::string path) {
     return katana::RDGPropInfo{name, path};
   }));
 
-  m.def("write_rdg_part_header", &katana::RDGPythonInterface::WriteRDGPartHeader);
+  m.def(
+      "write_rdg_part_header", &katana::RDGPythonInterface::WriteRDGPartHeader);
 }

@@ -454,8 +454,8 @@ katana::analytics::Bfs(
     PropertyGraph* pg, GNode start_node,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     BfsPlan algo) {
-  if (auto result = ConstructNodeProperties<std::tuple<BfsNodeParent>>(
-          pg, txn_ctx, {output_property_name});
+  if (auto result = pg->ConstructNodeProperties<std::tuple<BfsNodeParent>>(
+          txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }

@@ -689,14 +689,14 @@ struct ClusteringImplementationBase {
     std::unique_ptr<katana::PropertyGraph> pfg_next =
         std::move(pfg_next_res.value());
 
-    if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-            pfg_next.get(), txn_ctx, temp_node_property_names);
+    if (auto result = pfg_next->ConstructNodeProperties<NodeData>(
+            txn_ctx, temp_node_property_names);
         !result) {
       return result.error();
     }
 
-    if (auto result = katana::analytics::ConstructEdgeProperties<EdgeData>(
-            pfg_next.get(), txn_ctx, temp_edge_property_names);
+    if (auto result = pfg_next->ConstructEdgeProperties<EdgeData>(
+            txn_ctx, temp_edge_property_names);
         !result) {
       return result.error();
     }

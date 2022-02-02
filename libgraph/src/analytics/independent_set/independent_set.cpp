@@ -603,8 +603,8 @@ Run(katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::TxnContext* txn_ctx) {
   using Graph = typename Algo::Graph;
   using GNode = typename Graph::Node;
-  auto result = ConstructNodeProperties<typename Algo::NodeData>(
-      pg, txn_ctx, {output_property_name});
+  auto result = pg->ConstructNodeProperties<typename Algo::NodeData>(
+      txn_ctx, {output_property_name});
   if (!result) {
     return result.error();
   }

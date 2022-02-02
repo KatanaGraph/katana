@@ -98,9 +98,15 @@ autodoc_member_order = "groupwise"
 suppress_warning = []
 nitpick_ignore = []
 
-# Exclude drafts from external documentation
+# Include todos in internal documentation
+todo_include_todos = True
+
 if tags.has("external"):
+    # Exclude drafts from external documentation
     exclude_patterns.extend(["**-draft*", "**-internal*"])
+
+    # Exclude todos from external documentation
+    todo_include_todos = False
 
 # Standard Sphinx values
 project = "Katana Graph"

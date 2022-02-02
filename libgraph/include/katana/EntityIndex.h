@@ -43,7 +43,8 @@ public:
     }
   };
 
-  EntityIndex(std::string column_name) : column_name_(std::move(column_name)) {}
+  EntityIndex(std::string property_name)
+      : property_name_(std::move(property_name)) {}
 
   EntityIndex(const EntityIndex&) = delete;
   EntityIndex& operator=(const EntityIndex&) = delete;
@@ -53,7 +54,7 @@ public:
   virtual ~EntityIndex() = default;
 
   // The name of the indexed property.
-  std::string column_name() { return column_name_; }
+  std::string property_name() { return property_name_; }
 
   virtual iterator begin() = 0;
   virtual iterator end() = 0;
@@ -62,7 +63,7 @@ public:
   // virtual Result<void> BuildFromFile() = 0;
 
 private:
-  std::string column_name_;
+  std::string property_name_;
 };
 
 // PrimitiveEntityIndex provides a EntityIndex for primitive types.
@@ -151,9 +152,9 @@ public:
   using set_key_type = typename EntityIndex<node_or_edge>::set_key_type;
 
   StringEntityIndex(
-      const std::string& column_name, size_t num_entities,
+      const std::string& property_name, size_t num_entities,
       const std::shared_ptr<arrow::Array>& property)
-      : EntityIndex<node_or_edge>(column_name),
+      : EntityIndex<node_or_edge>(property_name),
         num_entities_(num_entities),
         property_(std::static_pointer_cast<arrow::LargeStringArray>(property)),
         set_(StringCompare(property_)) {}
@@ -227,7 +228,7 @@ private:
 // build the index.
 template <typename node_or_edge>
 Result<std::unique_ptr<EntityIndex<node_or_edge>>> MakeTypedEntityIndex(
-    const std::string& column_name, size_t num_entities,
+    const std::string& property_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property);
 
 }  // namespace katana

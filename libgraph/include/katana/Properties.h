@@ -498,12 +498,10 @@ struct Property {
   static Result<std::shared_ptr<arrow::Table>> Allocate(
       size_t num_rows, const std::string& name) {
     using Builder = typename arrow::TypeTraits<ArrowType>::BuilderType;
-    using CType = typename arrow::TypeTraits<ArrowType>::CType;
     Builder builder;
 
-    // TODO(lhc): replace this with AppendEmptyValues() on Arrow >= 3.0.
-    katana::PODVector<CType> rows(num_rows);
-    if (auto r = builder.AppendValues(rows.data(), num_rows); !r.ok()) {
+    builder.Reserve(num_rows);
+    if (auto r = builder.AppendEmptyValues(num_rows); !r.ok()) {
       return KATANA_ERROR(
           katana::ErrorCode::ArrowError, "failed to append values {}", r);
     }

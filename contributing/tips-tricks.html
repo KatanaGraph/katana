@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+144.0.201ba7 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+145.0.d9b859 variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -208,67 +208,250 @@ function checkPageExistsAndRedirect(event) {
   <i class="icon fas fa-search"></i>
   <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
 </form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
-  <div class="bd-toc-item active">
-    <ul class="current nav bd-sidenav">
+    <div class="bd-toc-item active">
+      <ul class="current nav bd-sidenav">
  <li class="toctree-l1">
-  <a class="reference internal" href="history.html">
-   History
+  <a class="reference internal" href="../getting-started/index.html">
+   Getting Started
   </a>
  </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="codebase-overview.html">
-   Quick Overview of the Codebase
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../user-guides/index.html">
+   User Guides
   </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../user-guides/algorithms_in_python.html">
+     Implementing an Algorithm in Katana Python
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../user-guides/hello_world.html">
+     First steps in Katana on One Host
+    </a>
+   </li>
+  </ul>
  </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="building.html">
-   Building
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../reference/index.html">
+   Reference
   </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../reference/cxx/index.html">
+     C++ Library
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/cxx/arrow.html">
+       Arrow
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/cxx/error-handling.html">
+       Error Handling
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/cxx/logging.html">
+       Logging
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/cxx/property-graph.html">
+       Property Graph
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/cxx/strings.html">
+       Strings
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/cxx/tracing.html">
+       Tracing
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../reference/python/index.html">
+     Python Library
+    </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+    <label for="toctree-checkbox-4">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/python/katana.html">
+       Katana
+      </a>
+     </li>
+     <li class="toctree-l3 has-children">
+      <a class="reference internal" href="../reference/python/katana.local.html">
+       Katana Local API
+      </a>
+      <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+      <label for="toctree-checkbox-5">
+       <i class="fas fa-chevron-down">
+       </i>
+      </label>
+      <ul>
+       <li class="toctree-l4">
+        <a class="reference internal" href="../reference/python/katana.local.graph.html">
+         Graphs
+        </a>
+       </li>
+       <li class="toctree-l4">
+        <a class="reference internal" href="../reference/python/katana.local.analytics.html">
+         Analytics
+        </a>
+       </li>
+       <li class="toctree-l4">
+        <a class="reference internal" href="../reference/python/katana.local.import_data.html">
+         Import Data
+        </a>
+       </li>
+       <li class="toctree-l4">
+        <a class="reference internal" href="../reference/python/katana.local.atomic.html">
+         Atomic Operations
+        </a>
+       </li>
+       <li class="toctree-l4">
+        <a class="reference internal" href="../reference/python/katana.local.datastructures.html">
+         Data Structures
+        </a>
+       </li>
+      </ul>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/python/katana.local.analytics.html">
+       Analytics
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/python/katana.local.atomic.html">
+       Atomic Operations
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/python/katana.local.datastructures.html">
+       Data Structures
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/python/katana.local.graph.html">
+       Graphs
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/python/katana.local.import_data.html">
+       Import Data
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/python/katana.timer.html">
+       Performance Timers
+      </a>
+     </li>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../reference/python/katana.bug.html">
+       Bug Reporting Tools
+      </a>
+     </li>
+    </ul>
+   </li>
+  </ul>
  </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="git-style.html">
-   Git Style
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   Contributing
   </a>
- </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="code-style.html">
-   Code Style
-  </a>
- </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="testing.html">
-   Testing
-  </a>
- </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="performance.html">
-   Performance
-  </a>
- </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="documentation.html">
-   Documentation
-  </a>
- </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="releases.html">
-   Releases
-  </a>
- </li>
- <li class="toctree-l1 current active">
-  <a class="current reference internal" href="#">
-   Helpful Tips and Tricks
-  </a>
- </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="rdg-storage-format.html">
-   Katana RDG Storage Format
-  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" type="checkbox"/>
+  <label for="toctree-checkbox-6">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="history.html">
+     History
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="codebase-overview.html">
+     Quick Overview of the Codebase
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="building.html">
+     Building
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="git-style.html">
+     Git Style
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="code-style.html">
+     Code Style
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="testing.html">
+     Testing
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="performance.html">
+     Performance
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="documentation.html">
+     Documentation
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="releases.html">
+     Releases
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Helpful Tips and Tricks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="rdg-storage-format.html">
+     Katana RDG Storage Format
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
-  </div>
-</nav>
+    </div>
+  </nav>
+  
               </div>
               <div class="sidebar-end-items">
               </div>

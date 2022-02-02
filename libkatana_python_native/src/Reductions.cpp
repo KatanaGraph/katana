@@ -66,7 +66,7 @@ struct ReducibleFunctor {
         cls, "update",
         "Update this reducer with ``v`` performing the operation.");
     katana::DefWithNumba<&For::template type<T>::reduce>(
-        cls, "reduce",
+        cls, "reduce", py::call_guard<py::gil_scoped_release>(),
         "Get the current value of the reducer. This must only be called from "
         "single threaded code.");
     katana::DefWithNumba<&For::template type<T>::getLocal>(

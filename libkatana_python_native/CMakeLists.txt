@@ -8,6 +8,7 @@ set(sources
     src/Reductions.cpp
     src/EntityTypeManager.cpp
     src/ImportData.cpp
+    src/PropertyGraph.cpp
     src/ErrorHandling.cpp
     )
 
@@ -25,7 +26,12 @@ target_link_libraries(katana_python_native PUBLIC katana_support)
 set_common_katana_library_options(katana_python_native)
 
 # Pybind11 dependencies to enable the way it wants to be built.
-target_link_libraries(katana_python_native PRIVATE pybind11::headers pybind11::python_headers)
+target_link_libraries(katana_python_native PRIVATE
+                      pybind11::headers
+                      pybind11::python_headers)
+target_link_libraries(katana_python_native PUBLIC
+                      Python3::NumPy
+                      arrow::python)
 if (TARGET pybind11::thin_lto)
   target_link_libraries(katana_python_native PRIVATE pybind11::thin_lto)
 endif()

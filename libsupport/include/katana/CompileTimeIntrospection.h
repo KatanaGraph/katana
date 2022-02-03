@@ -60,6 +60,13 @@ using is_detected =
 
 template <template <class...> class Op, class... Args>
 constexpr inline bool is_detected_v = is_detected<Op, Args...>::value;
+
+/// A type variable dependent value that is always false.
+/// This can be passed to static assert to trigger failure only a template is
+/// fully instantiated.
+template <typename... T>
+constexpr bool always_false = false;
+
 }  // namespace katana
 
 #endif

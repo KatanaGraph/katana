@@ -5,6 +5,7 @@
 #include <pybind11/pybind11.h>
 
 #include "katana/TxnContext.h"
+#include "katana/python/TypeBans.h"
 
 namespace katana::python {
 
@@ -32,5 +33,17 @@ PythonArgumentsToTable(
     const pybind11::object& table, const pybind11::dict& kwargs);
 
 }  // namespace katana::python
+
+// Banned types based on the holders used for graph related types.
+
+template <typename T>
+struct ::pybind11::detail::type_caster<std::unique_ptr<katana::EntityIndex<T>>>
+    : public katana::python::banned_type_caster<
+          std::unique_ptr<katana::EntityIndex<T>>> {};
+
+template <>
+struct ::pybind11::detail::type_caster<std::unique_ptr<katana::PropertyGraph>>
+    : public katana::python::banned_type_caster<
+          std::unique_ptr<katana::PropertyGraph>> {};
 
 #endif

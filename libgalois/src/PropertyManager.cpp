@@ -3,6 +3,7 @@
 #include "katana/ArrowInterchange.h"
 #include "katana/MemorySupervisor.h"
 #include "katana/ProgressTracer.h"
+#include "katana/Time.h"
 
 const std::string katana::PropertyManager::memory_category = "property";
 
@@ -24,14 +25,28 @@ katana::PropertyManager::MakePropertyCache() {
 katana::PropertyManager::PropertyManager() { MakePropertyCache(); }
 katana::PropertyManager::~PropertyManager() { cache_.reset(); }
 
-// TODO(witchel) should return a bool or the property table to caller
-void
-katana::PropertyManager::AddProperty(const katana::Uri& property_path) {
+std::shared_ptr<arrow::Table>
+katana::PropertyManager::GetProperty(const katana::Uri& property_path) {
   auto property = cache_->GetAndEvict(property_path);
   if (property.has_value()) {
     auto bytes = katana::ApproxTableMemUse(property.value());
     MemorySupervisor::Get().StandbyToActive(this, bytes);
+    katana::GetTracer().GetActiveSpan().Log(
+        "property cache get evict",
+        {
+            {"storage_name", property_path.BaseName()},
+            {"approx_size_gb",
+             ToGB(katana::ApproxTableMemUse(property.value()))},
+        });
+    return property.value();
   }
+  katana::GetTracer().GetActiveSpan().Log(
+      "property cache get evict not found",
+      {
+          {"storage_name", property_path.BaseName()},
+      });
+
+  return nullptr;
 }
 
 void
@@ -43,13 +58,19 @@ katana::PropertyManager::PropertyLoadedCallback(
 }
 
 void
-katana::PropertyManager::UnloadProperty(
+katana::PropertyManager::PutProperty(
     const katana::Uri& property_path,
     const std::shared_ptr<arrow::Table>& property) {
   auto bytes = katana::ApproxTableMemUse(property);
   auto granted = MemorySupervisor::Get().ActiveToStandby(this, bytes);
   if (granted >= static_cast<count_t>(bytes)) {
     cache_->Insert(property_path, property);
+    katana::GetTracer().GetActiveSpan().Log(
+        "property cache insert",
+        {
+            {"storage_name", property_path.BaseName()},
+            {"approx_size_gb", ToGB(katana::ApproxTableMemUse(property))},
+        });
   } else {
     MemorySupervisor::Get().ReturnActive(this, bytes);
   }
@@ -58,13 +79,25 @@ katana::PropertyManager::UnloadProperty(
 katana::count_t
 katana::PropertyManager::FreeStandbyMemory(count_t goal) {
   count_t total = 0;
+  auto scope = katana::GetTracer().StartActiveSpan("free standby memory");
+  scope.span().Log(
+      "before", {
+                    {"goal_gb", ToGB(goal)},
+                    {"cache_gb", ToGB(cache_->size())},
+                });
+
   if (goal >= static_cast<count_t>(cache_->size())) {
     total = static_cast<count_t>(cache_->size());
-    MemorySupervisor::Get().ReturnStandby(this, total);
+    MemorySupervisor::Get().ReturnStandby(this, std::min(goal, total));
     cache_->clear();
   } else {
     total = cache_->Reclaim(goal);
-    MemorySupervisor::Get().ReturnStandby(this, total);
+    MemorySupervisor::Get().ReturnStandby(this, std::min(goal, total));
   }
+  scope.span().Log(
+      "after", {
+                   {"reclaimed_gb", ToGB(total)},
+                   {"cache_gb", ToGB(cache_->size())},
+               });
   return total;
 }

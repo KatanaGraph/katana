@@ -6,6 +6,8 @@
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 
+/// Support time and also units of size
+
 namespace katana {
 
 using Clock = std::chrono::high_resolution_clock;
@@ -47,8 +49,8 @@ UsToStr(const std::string& fmt, uint64_t us_) {
   return fmt::format(fmt, val, unit);
 }
 
-// Input: Byte count
-// Output: scaled count and units
+/// Input: Byte count
+/// Output: scaled count and units
 inline std::string
 BytesToStr(const std::string& fmt, uint64_t bytes_) {
   static std::vector<std::string> suffixes = {"B",  "KB", "MB",
@@ -61,6 +63,12 @@ BytesToStr(const std::string& fmt, uint64_t bytes_) {
     bytes /= 1024;
   }
   return fmt::format(fmt, bytes, "PB");
+}
+
+/// Convert byte count to GB count
+inline std::string
+ToGB(uint64_t total) {
+  return fmt::format("{:.3f}", total / 1024.0 / 1024.0 / 1024.0);
 }
 
 }  // namespace katana

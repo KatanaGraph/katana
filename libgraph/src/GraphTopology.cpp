@@ -526,7 +526,7 @@ katana::CondensedTypeIDMap::MakeFromEdgeTypes(
   katana::do_all(
       katana::iterate(Edge{0}, topo.NumEdges()),
       [&](const Edge& e) {
-        katana::EntityTypeID type = pg->GetTypeOfEdgeFromPropertyIndex(e);
+        katana::EntityTypeID type = pg->GetTypeOfEdgeFromTopoIndex(e);
         edgeTypes.getLocal()->insert(type);
       },
       katana::no_stats());

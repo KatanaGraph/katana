@@ -22,9 +22,6 @@ using has_ostream_insert_t =
 template <typename T>
 using has_to_string_t = decltype(std::declval<T>().ToString());
 
-template <typename T>
-bool always_false = false;
-
 /// DefRepr will def `__repr__` based on `ToString` or `<<` if available.
 /// `ToString` is preferred.
 template <typename ClassT>

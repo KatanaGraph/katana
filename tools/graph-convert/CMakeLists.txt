@@ -87,9 +87,6 @@ target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)
 target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-common)
 target_link_libraries(graph-properties-convert PUBLIC katana_graph)
 
-add_executable(oplog-rdg oplog-rdg.cpp)
-target_link_libraries(oplog-rdg graph-properties-convert-common katana_graph)
-
 install(TARGETS graph-properties-convert
   COMPONENT tools
 )

@@ -41,6 +41,9 @@ if __name__ == "__main__":
         "--isort", default=False, action="store_true", help="Run isort and other explicitly requested commands.",
     )
     parser.add_argument(
+        "--no-versions", default=False, action="store_true", help="Don't print tool versions.",
+    )
+    parser.add_argument(
         "--exclude",
         default=[],
         action="append",
@@ -57,7 +60,7 @@ if __name__ == "__main__":
     exclude_paths = set(args.exclude)
     # For backwards compat check an old environment variable.
     exclude_paths.update(os.environ.get("PRUNE_PATHS", "").split(":"))
-    exclude_paths.update({"build*", ".#*", "*-build-*"})
+    exclude_paths.update({"build*", ".#*", "*-build-*", ".git"})
 
     # Empty strings can come from user input. Drop them.
     exclude_paths.discard("")
@@ -83,6 +86,13 @@ if __name__ == "__main__":
     isort_cmd = [os.environ.get("ISORT", "isort"), f"--settings-file={git_root}/pyproject.toml"]
     isort_check_cmd = isort_cmd + ["--diff", "--check"]
     lint_cmd = [os.environ.get("PYLINT", "pylint"), "-j", "0", f"--rcfile={git_root}/pyproject.toml"]
+
+    if args.black and not args.no_versions:
+        subprocess.check_call([os.environ.get("BLACK", "black"), "--version"])
+    if args.isort and not args.no_versions:
+        subprocess.check_call([os.environ.get("ISORT", "isort"), "--version"])
+    if args.pylint and not args.no_versions:
+        subprocess.check_call([os.environ.get("PYLINT", "pylint"), "--version"])
 
     def check_file(file_path: Path, cmd_prefix: List[str], fix: bool, verbose: bool):
         if fix:

@@ -123,6 +123,7 @@ jobs:
     - name: Build conda Packages
       run: |
         . .github/workflows/activate_miniconda.sh
+        export CPU_COUNT=1
         scripts/build_conda.py --output-folder $HOME/build/
 
     - name: Build conda Packages for Katana Metagraph Plugin

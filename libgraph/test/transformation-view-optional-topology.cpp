@@ -75,7 +75,7 @@ main(int argc, char** argv) {
   cll::ParseCommandLineOptions(argc, argv);
 
   katana::TxnContext txn_ctx;
-  katana::PropertyGraph pg = LoadGraph(inputFile, &txn_ctx);
+  katana::PropertyGraph pg = LoadGraph(inputFile);
 
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);

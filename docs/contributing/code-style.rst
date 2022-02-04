@@ -16,10 +16,19 @@ enforced by maintainers to be aware of:
 
 * Dates in comments should always take the form ``YYYY-MM-DD``.
 
-* In general, we try to adhere to the
-  `Google C++ Style Guide <https://google.github.io/styleguide/cppguide.html>`_.
-  One exception (so far) is that when passing arguments to functions, prefer
-  pointers to non-const references (which used to be a part of that guide).
+In general, we adhere to the `Google C++ Style Guide
+<https://google.github.io/styleguide/cppguide.html>`_.
+
+One exception (so far) is that when passing arguments to functions, prefer
+pointers to non-const references (which used to be a part of that guide).
+
+In addition to the guidelines in the Google Style Guide, which are quite
+general, here is some specific guidance:
+
+* When using the deprecated C++ attribute also provide an upgrade path to users
+  to avoid the deprecated functionality. This can be indicated in the attribute
+  itself, e.g., ``[[deprecated("use Foo instead")]]``, or in the documentation
+  for the deprecated function.
 
 The following are the automated style checkers that we use. The continuous
 integration process will check adherence on each Pull Request, but it is faster,
@@ -38,15 +47,15 @@ in terms of feedback latency, to run these checks locally first.
 
 * ``scripts/check_python_format.sh .``: applies ``black`` to format python code.
 
-We also have a ``clang-tidy`` and ``pylint`` configuration. Both these are useful
-tools for checking your code locally but they are not currently used by continuous
-integration.
+We also have a ``clang-tidy`` and ``pylint`` configuration. Both these are
+useful tools for checking your code locally. Although, ``clang-tidy`` is not
+currently enforced by continuous integration.
 
 None of these checks are exhaustive (on their own or combined)!
 
 New code is expected to follow the above guidelines. But also be aware: there
 are older modules that predate these expectations (currently, older modules are
-everything that is not ``libtsuba``, ``libsupport`` and ``libquery``). In those cases,
+everything that is not ``libtsuba`` and ``libsupport``). In those cases,
 it is acceptable to follow the convention in that module; though in general, it
 would be preferable to follow the motto of "leave the codebase in better shape
 than you found it."

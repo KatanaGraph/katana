@@ -371,7 +371,7 @@ def test_k_truss():
 
     stats = KTrussStatistics(graph, 10, "output")
 
-    assert stats.number_of_edges_left == 13338
+    assert stats.number_of_edges_left == 13339
 
     k_truss_assert_valid(graph, 10, "output")
 

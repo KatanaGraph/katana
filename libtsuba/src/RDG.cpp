@@ -352,7 +352,8 @@ katana::RDG::DoStore(
   return katana::ResultSuccess();
 }
 
-katana::Result<void> katana::RDG::DoMake(
+katana::Result<void>
+katana::RDG::DoMake(
     const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
     const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
     const katana::Uri& metadata_dir) {

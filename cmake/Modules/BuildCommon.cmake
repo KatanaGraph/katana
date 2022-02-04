@@ -64,6 +64,7 @@ set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: min(number of physical cores, 8))")
 set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 set(KATANA_NUM_DOC_THREADS "" CACHE STRING "Maximum number of threads to use when reading / writing with Sphinx (default: min(number of physical cores, 4))")
+set(KATANA_USE_DEPRECATED_ERROR OFF CACHE BOOL "If set, when treating warnings as errors also treat deprecated declarations as errors")
 
 ###### Configure (users don't need to go beyond here) ######
 
@@ -181,8 +182,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-copy>")
   endif ()
 
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
+    if (NOT KATANA_USE_DEPRECATED_ERROR)
+      add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=deprecated-declarations>")
+    endif ()
   endif ()
 endif ()
 
@@ -200,14 +204,20 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
+    if (NOT KATANA_USE_DEPRECATED_ERROR)
+      add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=deprecated-declarations>")
+    endif ()
   endif ()
 endif ()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
   add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra>")
 
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
+    if (NOT KATANA_USE_DEPRECATED_ERROR)
+      add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=deprecated-declarations>")
+    endif ()
   endif ()
 endif ()
 

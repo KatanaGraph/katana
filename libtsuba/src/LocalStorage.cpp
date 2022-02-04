@@ -26,8 +26,8 @@ namespace fs = boost::filesystem;
 namespace {
 
 katana::Result<void>
-EnsureDirectories(const std::string& uri) {
-  fs::path m_path{uri};
+EnsureDirectories(const std::string& path) {
+  fs::path m_path{path};
   fs::path dir = m_path.parent_path();
   if (!dir.empty()) {
     if (boost::system::error_code err; !fs::create_directories(dir, err)) {
@@ -41,23 +41,21 @@ EnsureDirectories(const std::string& uri) {
   return katana::ResultSuccess();
 }
 
-}  // namespace
-
-void
-katana::LocalStorage::CleanUri(std::string* uri) {
-  if (uri->find(uri_scheme()) != 0) {
-    return;
-  }
-  *uri = std::string(uri->begin() + uri_scheme().size(), uri->end());
+katana::Result<std::string>
+GetPath(const std::string& uri) {
+  auto u = KATANA_CHECKED(katana::Uri::Make(uri));
+  return u.path();
 }
+
+}  // namespace
 
 katana::Result<void>
 katana::LocalStorage::WriteFile(
-    std::string uri, const uint8_t* data, uint64_t size) {
-  CleanUri(&uri);
-  KATANA_CHECKED(EnsureDirectories(uri));
+    const std::string& uri, const uint8_t* data, uint64_t size) {
+  std::string path = KATANA_CHECKED(GetPath(uri));
+  KATANA_CHECKED(EnsureDirectories(path));
 
-  std::ofstream ofile(uri);
+  std::ofstream ofile(path);
   if (!ofile.good()) {
     return KATANA_ERROR(
         ErrorCode::LocalStorageError, "opening file: {}", strerror(errno));
@@ -71,21 +69,21 @@ katana::LocalStorage::WriteFile(
 
 katana::Result<void>
 katana::LocalStorage::RemoteCopyFile(
-    std::string source_uri, std::string dest_uri, uint64_t begin,
+    const std::string& source_uri, const std::string& dest_uri, uint64_t begin,
     uint64_t size) {
-  CleanUri(&source_uri);
-  CleanUri(&dest_uri);
+  std::string source_path = KATANA_CHECKED(GetPath(source_uri));
+  std::string dest_path = KATANA_CHECKED(GetPath(dest_uri));
 
-  KATANA_CHECKED(EnsureDirectories(dest_uri));
+  KATANA_CHECKED(EnsureDirectories(dest_path));
 
-  std::ifstream ifile(source_uri, std::ios_base::binary);
+  std::ifstream ifile(source_path, std::ios_base::binary);
   if (!ifile) {
     return KATANA_ERROR(
         ErrorCode::LocalStorageError, "failed to open source file");
   }
   ifile.seekg(begin, std::ios_base::beg);
 
-  std::ofstream ofile(dest_uri, std::ios_base::binary | std::ios_base::trunc);
+  std::ofstream ofile(dest_path, std::ios_base::binary | std::ios_base::trunc);
   if (!ofile) {
     return KATANA_ERROR(
         ErrorCode::LocalStorageError, "failed to open dest file");
@@ -99,19 +97,19 @@ katana::LocalStorage::RemoteCopyFile(
 
 katana::Result<void>
 katana::LocalStorage::ReadFile(
-    std::string uri, uint64_t start, uint64_t size, uint8_t* data) {
-  CleanUri(&uri);
-  std::ifstream ifile(uri, std::ios_base::binary);
+    const std::string& uri, uint64_t start, uint64_t size, uint8_t* data) {
+  std::string path = KATANA_CHECKED(GetPath(uri));
+  std::ifstream ifile(path, std::ios_base::binary);
   if (!ifile) {
     return KATANA_ERROR(
         ErrorCode::LocalStorageError, "failed to open source file {}",
-        std::quoted(uri));
+        std::quoted(path));
   }
 
   ifile.seekg(start);
   if (!ifile) {
     return KATANA_ERROR(
-        ErrorCode::LocalStorageError, "failed to seek, {}", start);
+        ErrorCode::LocalStorageError, "failed to seek to offset {}", start);
   }
 
   ifile.read(reinterpret_cast<char*>(data), size); /* NOLINT */
@@ -129,11 +127,10 @@ katana::LocalStorage::ReadFile(
 
 katana::Result<void>
 katana::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
-  std::string filename = uri;
-  CleanUri(&filename);
+  std::string path = KATANA_CHECKED(GetPath(uri));
   struct stat local_s_buf;
 
-  if (int ret = stat(filename.c_str(), &local_s_buf); ret) {
+  if (int ret = stat(path.c_str(), &local_s_buf); ret) {
     return katana::ResultErrno();
   }
   s_buf->size = local_s_buf.st_size;
@@ -148,8 +145,19 @@ katana::LocalStorage::ListAsync(
   // Implement with synchronous calls
   DIR* dirp{};
   struct dirent* dp{};
-  std::string dirname = uri;
-  CleanUri(&dirname);
+
+  auto get_path_res = GetPath(uri);
+
+  if (!get_path_res) {
+    CopyableErrorInfo ei = get_path_res.error();
+    return std::async(
+        std::launch::deferred, [ei, uri]() -> katana::CopyableResult<void> {
+          return KATANA_ERROR(
+              ErrorCode::LocalStorageError, "list dir failed: {}: {}", uri, ei);
+        });
+  }
+
+  std::string dirname = std::move(get_path_res.value());
 
   if ((dirp = opendir(dirname.c_str())) == nullptr) {
     if (errno == ENOENT) {
@@ -185,7 +193,7 @@ katana::LocalStorage::ListAsync(
           } else {
             size->emplace_back(0UL);
             KATANA_LOG_DEBUG(
-                "dir file stat failed dir: {} file: {} : {}", dirname,
+                "dir file stat failed dir: {} file: {}: {}", dirname,
                 dp->d_name, katana::ResultErrno().message());
           }
         }
@@ -216,8 +224,7 @@ katana::Result<void>
 katana::LocalStorage::Delete(
     const std::string& directory_uri,
     const std::unordered_set<std::string>& files) {
-  std::string dir = directory_uri;
-  CleanUri(&dir);
+  std::string dir = KATANA_CHECKED(GetPath(directory_uri));
 
   if (files.empty()) {
     rmdir(dir.c_str());

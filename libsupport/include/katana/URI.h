@@ -24,10 +24,12 @@ public:
   static Result<Uri> MakeFromFile(const std::string& str);
   /// Append a '-' and then a random string to input
   static Result<Uri> MakeRand(const std::string& str);
+
   static std::string JoinPath(const std::string& dir, const std::string& file);
 
-  /// Return the base64 (url variant) encoded version of this uri
-  std::string Encode() const;
+  // Decode returns the raw bytes represented by a URI encoded string.
+  static std::string Decode(const std::string& uri);
+
   /// Hash URI
   struct Hash {
     std::size_t operator()(const Uri& uri) const {
@@ -36,8 +38,15 @@ public:
   };
 
   const std::string& scheme() const { return scheme_; }
+
+  /// path returns the portion of a URI after the scheme. This a concatenation
+  /// of the traditional URI host and path components. Unlike string(), the
+  /// returned value are raw bytes and there is no encoding of special
+  /// characters.
   const std::string& path() const { return path_; }
-  const std::string& string() const { return string_; }
+
+  /// string returns the URI as a URI-encoded string.
+  const std::string& string() const { return encoded_; }
 
   bool empty() const;
 
@@ -60,7 +69,7 @@ private:
 
   std::string scheme_;
   std::string path_;
-  std::string string_;
+  std::string encoded_;
 };
 
 KATANA_EXPORT bool operator==(const Uri& lhs, const Uri& rhs);

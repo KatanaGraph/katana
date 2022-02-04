@@ -518,8 +518,9 @@ SSSPWithWrap(
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan,
     katana::TxnContext* txn_ctx) {
-  if (auto r = ConstructNodeProperties<std::tuple<SsspNodeDistance<Weight>>>(
-          pg, txn_ctx, {output_property_name});
+  if (auto r =
+          pg->ConstructNodeProperties<std::tuple<SsspNodeDistance<Weight>>>(
+              txn_ctx, {output_property_name});
       !r) {
     return r.error();
   }

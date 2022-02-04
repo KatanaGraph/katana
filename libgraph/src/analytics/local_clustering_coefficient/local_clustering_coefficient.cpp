@@ -244,8 +244,8 @@ katana::Result<void>
 LocalClusteringCoefficientWithWrap(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::TxnContext* txn_ctx) {
-  if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pg, txn_ctx, {output_property_name});
+  if (auto result = pg->ConstructNodeProperties<NodeData>(
+          txn_ctx, {output_property_name});
       !result) {
     return result.error();
   }

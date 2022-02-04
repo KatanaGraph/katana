@@ -116,10 +116,10 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
       g2->GetNumNodeEntityTypes());
   KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() == 2);
 
-  KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
-  KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);
-  KATANA_LOG_ASSERT((g2->node_entity_type_ids_size()) == test_length);
-  KATANA_LOG_ASSERT((g2->edge_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g->NumNodes()) == test_length);
+  KATANA_LOG_ASSERT((g->NumEdges()) == test_length);
+  KATANA_LOG_ASSERT((g2->NumNodes()) == test_length);
+  KATANA_LOG_ASSERT((g2->NumEdges()) == test_length);
 
   KATANA_LOG_ASSERT(g->Equals(g2.get()));
 }
@@ -235,10 +235,10 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
       g2->GetNumNodeEntityTypes());
   KATANA_LOG_ASSERT(g2->GetNumEdgeEntityTypes() == 4);
 
-  KATANA_LOG_ASSERT((g->node_entity_type_ids_size()) == test_length);
-  KATANA_LOG_ASSERT((g->edge_entity_type_ids_size()) == test_length);
-  KATANA_LOG_ASSERT((g2->node_entity_type_ids_size()) == test_length);
-  KATANA_LOG_ASSERT((g2->edge_entity_type_ids_size()) == test_length);
+  KATANA_LOG_ASSERT((g->NumNodes()) == test_length);
+  KATANA_LOG_ASSERT((g->NumEdges()) == test_length);
+  KATANA_LOG_ASSERT((g2->NumNodes()) == test_length);
+  KATANA_LOG_ASSERT((g2->NumEdges()) == test_length);
 
   KATANA_LOG_ASSERT(g->Equals(g2.get()));
 }

@@ -117,14 +117,111 @@ DoJoinPath(std::string_view dir, std::string_view file) {
   return fmt::format("{}{}", dir, file);
 }
 
+bool
+ShouldURLEncode(int c) {
+  if ('a' <= c && c <= 'z') {
+    return false;
+  }
+  if ('A' <= c && c <= 'Z') {
+    return false;
+  }
+  if ('0' <= c && c <= '9') {
+    return false;
+  }
+  if (c == '-') {
+    return false;
+  }
+  if (c == '.') {
+    return false;
+  }
+  if (c == '_') {
+    return false;
+  }
+  if (c == '~') {
+    return false;
+  }
+
+  // We encode whole paths, so in addition to the standard unencoded characters
+  // above, we should not encode '/' either.
+  if (c == '/') {
+    return false;
+  }
+
+  return true;
+}
+
+// ToHex converts a char between 0 and 15 to an ASCII character from 0 to F.
+char
+ToHex(int c) {
+  c = c & 0x0F;
+
+  if (c < 10) {
+    return '0' + c;
+  }
+  return 'A' + (c - 10);
+}
+
+int
+FromHex(char a) {
+  if ('0' <= a && a <= '9') {
+    return a - '0';
+  }
+  if ('A' <= a && a <= 'F') {
+    return a - 'A' + 10;
+  }
+  return 0;
+}
+
+std::string
+URLEncode(const std::string& s) {
+  std::vector<char> buf;
+
+  for (const char& c : s) {
+    if (!ShouldURLEncode(c)) {
+      buf.emplace_back(c);
+      continue;
+    }
+
+    buf.emplace_back('%');
+    buf.emplace_back(ToHex(c >> 4));
+    buf.emplace_back(ToHex(c & 0x0F));
+  }
+
+  return std::string(buf.data(), buf.size());
+}
+
+std::string
+URLDecode(const std::string& s) {
+  std::vector<char> buf;
+
+  for (size_t i = 0, n = s.size(); i < n; ++i) {
+    char c = s[i];
+    if (c != '%') {
+      buf.emplace_back(c);
+      continue;
+    }
+    if (i + 2 >= n) {
+      // invalid escape
+      continue;
+    }
+    int a = FromHex(s[i + 1]);
+    int b = FromHex(s[i + 2]);
+
+    buf.emplace_back((a << 4) + b);
+    i += 2;
+  }
+
+  return std::string(buf.data(), buf.size());
+}
+
 }  // namespace
 
 namespace katana {
 
 Uri::Uri(std::string scheme, std::string path)
-    : scheme_(std::move(scheme)),
-      path_(std::move(path)),
-      string_(scheme_ + "://" + path_) {
+    : scheme_(std::move(scheme)), path_(std::move(path)) {
+  encoded_ = scheme_ + "://" + URLEncode(path_);
+
   KATANA_LOG_DEBUG_ASSERT(!scheme_.empty());
   KATANA_LOG_DEBUG_ASSERT(!path_.empty());
 }
@@ -154,7 +251,8 @@ Uri::Make(const std::string& str) {
   if (scheme.empty()) {
     return MakeFromFile(path);
   }
-  return Uri(scheme, path);
+
+  return Uri(scheme, URLDecode(path));
 }
 
 Result<Uri>
@@ -171,6 +269,11 @@ Uri::JoinPath(const std::string& dir, const std::string& file) {
   return DoJoinPath(dir, file);
 }
 
+std::string
+Uri::Decode(const std::string& uri) {
+  return URLDecode(uri);
+}
+
 bool
 Uri::empty() const {
   if (scheme_.empty()) {
@@ -178,11 +281,6 @@ Uri::empty() const {
     return true;
   }
   return false;
-}
-
-std::string
-Uri::Encode() const {
-  return katana::ToBase64(string(), true);
 }
 
 std::string

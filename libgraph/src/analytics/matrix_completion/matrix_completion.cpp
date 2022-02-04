@@ -372,7 +372,7 @@ template <typename Algo>
 katana::Result<void>
 Run(katana::PropertyGraph* pg, MatrixCompletionPlan plan,
     katana::TxnContext* txn_ctx) {
-  KATANA_CHECKED(ConstructNodeProperties<NodeData>(pg, txn_ctx));
+  KATANA_CHECKED(pg->ConstructNodeProperties<NodeData>(txn_ctx));
   Graph graph = KATANA_CHECKED(Graph::Make(pg));
 
   Algo algo;

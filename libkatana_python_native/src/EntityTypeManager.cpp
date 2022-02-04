@@ -1,6 +1,7 @@
 #include "katana/EntityTypeManager.h"
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "katana/python/Conventions.h"
 #include "katana/python/CythonIntegration.h"
@@ -32,6 +33,16 @@ struct EntityType {
 struct AtomicEntityType : public EntityType {
   std::string name() { return ToString(); }
 };
+
+katana::SetOfEntityTypeIDs
+GetSetOfEntityTypeIds(std::vector<EntityType> types) {
+  katana::SetOfEntityTypeIDs type_ids;
+  type_ids.resize(types.size());
+  for (auto t : types) {
+    type_ids.set(t.type_id);
+  }
+  return type_ids;
+}
 
 }  // namespace
 
@@ -87,13 +98,19 @@ katana::python::InitEntityTypeManager(py::module_& m) {
           "get_non_atomic_entity_type",
           [](katana::EntityTypeManager* self,
              std::vector<EntityType> types) -> Result<EntityType> {
-            katana::SetOfEntityTypeIDs type_ids;
-            for (auto t : types) {
-              type_ids.set(t.type_id);
-            }
+            auto set_of_type_ids = GetSetOfEntityTypeIds(types);
             return EntityType{
                 self,
-                KATANA_CHECKED(self->GetOrAddNonAtomicEntityType(type_ids))};
+                KATANA_CHECKED(self->GetNonAtomicEntityType(set_of_type_ids))};
+          })
+      .def(
+          "get_or_add_non_atomic_entity_type",
+          [](katana::EntityTypeManager* self,
+             std::vector<EntityType> types) -> Result<EntityType> {
+            auto set_of_type_ids = GetSetOfEntityTypeIds(types);
+            return EntityType{
+                self, KATANA_CHECKED(
+                          self->GetOrAddNonAtomicEntityType(set_of_type_ids))};
           })
       .def(
           "type_from_id",
@@ -103,5 +120,39 @@ katana::python::InitEntityTypeManager(py::module_& m) {
             } else {
               return py::cast(EntityType{self, id});
             }
-          });
+          })
+      .def(
+          "get_atomic_subtypes",
+          [](const katana::EntityTypeManager* self, EntityType type) {
+            py::set ret;
+            if (self->HasEntityType(type.type_id)) {
+              auto type_set = self->GetAtomicSubtypes(type.type_id);
+              // TODO(denish44): This isn't very efficient. we should add a method that
+              // efficiently finds ones (by iterating over 64-bit words and doing bit magic).
+              for (EntityTypeID subtype_id = 0; subtype_id < type_set.size();
+                   ++subtype_id) {
+                if (type_set.test(subtype_id)) {
+                  ret.add(AtomicEntityType{{self, subtype_id}});
+                }
+              }
+            }
+            return ret;
+          })
+      .def(
+          "get_supertypes",
+          [](const katana::EntityTypeManager* self, EntityType type) {
+            py::set ret;
+            if (self->GetAtomicTypeName(type.type_id).has_value()) {
+              auto type_set = self->GetSupertypes(type.type_id);
+              for (EntityTypeID subtype_id = 0; subtype_id < type_set.size();
+                   ++subtype_id) {
+                if (type_set.test(subtype_id)) {
+                  ret.add(EntityType{self, subtype_id});
+                }
+              }
+            }
+            return ret;
+          })
+      .def("num_atomic_types", &katana::EntityTypeManager::GetNumAtomicTypes)
+      .def("num_types", &katana::EntityTypeManager::GetNumEntityTypes);
 }

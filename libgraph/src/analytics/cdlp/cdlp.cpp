@@ -142,9 +142,9 @@ CdlpWithWrap(
       2, pg->topology().NumNodes() * sizeof(typename Algorithm::NodeCommunity));
   katana::ReportPageAllocGuard page_alloc;
 
-  if (auto r = ConstructNodeProperties<
-          std::tuple<typename Algorithm::NodeCommunity>>(
-          pg, txn_ctx, {output_property_name});
+  if (auto r = pg->ConstructNodeProperties<
+               std::tuple<typename Algorithm::NodeCommunity>>(
+          txn_ctx, {output_property_name});
       !r) {
     return r.error();
   }

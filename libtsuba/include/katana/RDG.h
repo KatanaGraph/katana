@@ -75,6 +75,8 @@ public:
   bool IsEntityTypeIDsOutsideProperties() const;
   /// What size are EntityTypeIDs on storage
   bool IsUint16tEntityTypeIDs() const;
+  /// What format is the EntityTypeIDArray in
+  bool IsHeaderlessEntityTypeIDArray() const;
 
   /// Is this RDG stored in an unstable format
   bool IsUnstableStorageFormat() const;

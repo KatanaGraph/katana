@@ -6,7 +6,7 @@ set(MISC_TEST_DATASETS ${KATANA_TEST_DATASETS}/misc_datasets)
 
 ## latest supported rdg storage_format_version
 #TODO(emcginnis) get this envar in RDGPartHeader.h instead of having to hard code it here and there
-set(KATANA_RDG_STORAGE_FORMAT_VERSION "3")
+set(KATANA_RDG_STORAGE_FORMAT_VERSION "4")
 
 
 ## returns path to the specified rdg dataset at the specified storage_format_version

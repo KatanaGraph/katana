@@ -154,6 +154,8 @@ public:
   bool IsEntityTypeIDsOutsideProperties() const;
   bool IsUint16tEntityTypeIDs() const;
   bool IsMetadataOutsideTopologyFile() const;
+  bool IsHeaderlessEntityTypeIDArray() const;
+
   //
   // Property manipulation
   //

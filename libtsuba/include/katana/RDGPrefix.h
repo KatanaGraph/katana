@@ -54,6 +54,9 @@ private:
       const RDGManifest& manifest, uint32_t partition_id);
 };
 
+/// THIS HEADER WAS DEPRECATED AS OF storage_format_version = 4
+/// DO NOT MODIFY THIS HEADER
+/// This header is used only for backwards compatibility with older storage formats
 /// EntityTypeIDArrayHeader describes the header in the on disk representation
 /// of EntityTypeID arrays, it could be probably be rolled into RDGPrefix but it
 /// has slightly different uses so for now it is separate

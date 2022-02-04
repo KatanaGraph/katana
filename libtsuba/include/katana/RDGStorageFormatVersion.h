@@ -11,11 +11,12 @@ namespace katana {
 static const uint32_t kPartitionStorageFormatVersion1 = 1;
 static const uint32_t kPartitionStorageFormatVersion2 = 2;
 static const uint32_t kPartitionStorageFormatVersion3 = 3;
+static const uint32_t kPartitionStorageFormatVersion4 = 4;
 
 /// kLatestPartitionStorageFormatVersion to be bumped any time
 /// the on disk format of RDGPartHeader changes
 static const uint32_t kLatestPartitionStorageFormatVersion =
-    kPartitionStorageFormatVersion3;
+    kPartitionStorageFormatVersion4;
 
 };  // namespace katana
 

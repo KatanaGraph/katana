@@ -17,6 +17,7 @@
 #include "katana/Iterators.h"
 #include "katana/Logging.h"
 #include "katana/NUMAArray.h"
+#include "katana/Properties.h"
 #include "katana/RDG.h"
 #include "katana/RDGTopology.h"
 #include "katana/Result.h"
@@ -35,6 +36,18 @@ ProjectAsArrowArray(const T* buf, const size_t len) noexcept {
   return std::make_shared<ArrowArrayType>(len, arrow::Buffer::Wrap(buf, len));
 }
 
+template <typename Props>
+std::vector<std::string>
+DefaultPropertyNames() {
+  auto num_tuple_elem = std::tuple_size_v<Props>;
+  std::vector<std::string> names(num_tuple_elem);
+
+  for (size_t i = 0; i < names.size(); ++i) {
+    names[i] = "Column_" + std::to_string(i);
+  }
+  return names;
+}
+
 /// A property graph is a graph that has properties associated with its nodes
 /// and edges. A property has a name and value. Its value may be a primitive
 /// type, a list of values or a composition of properties.
@@ -48,8 +61,32 @@ ProjectAsArrowArray(const T* buf, const size_t len) noexcept {
 /// manages the serialization of the various partitions and properties that
 /// comprise the physical representation of the logical property graph.
 class KATANA_EXPORT PropertyGraph {
+  friend class PGViewCache;
+  friend class PropertyGraphRetractor;
+
+  // Virtual methods
 public:
-  // Pass through topology API
+  virtual ~PropertyGraph();
+
+private:
+  virtual std::shared_ptr<arrow::Buffer> NodeBitmask() const noexcept {
+    return nullptr;
+  }
+
+  virtual std::shared_ptr<arrow::Buffer> EdgeBitmask() const noexcept {
+    return nullptr;
+  }
+
+  /// Return the number of nodes of the original property graph.
+  virtual uint64_t NumOriginalNodes() const { return NumNodes(); }
+
+  /// Return the number of edges of the original property graph.
+  virtual uint64_t NumOriginalEdges() const { return NumEdges(); }
+
+  virtual Result<RDGTopology*> LoadTopology(const RDGTopology& shadow);
+
+  // Regular methods
+public:
   using node_iterator = GraphTopology::node_iterator;
   using edge_iterator = GraphTopology::edge_iterator;
   using nodes_range = GraphTopology::nodes_range;
@@ -60,67 +97,8 @@ public:
 
   using EntityTypeIDArray = katana::NUMAArray<EntityTypeID>;
 
-private:
-  /// Validate performs a sanity check on the the graph after loading
-  Result<void> Validate();
+  PropertyGraph(PropertyGraph&& other) = default;
 
-  Result<void> DoWriteTopologies();
-
-  Result<void> DoWrite(
-      katana::RDGHandle handle, const std::string& command_line,
-      katana::RDG::RDGVersioningPolicy versioning_action,
-      katana::TxnContext* txn_ctx);
-
-  Result<void> ConductWriteOp(
-      const std::string& uri, const std::string& command_line,
-      katana::RDG::RDGVersioningPolicy versioning_action,
-      katana::TxnContext* txn_ctx);
-
-  Result<void> WriteGraph(
-      const std::string& uri, const std::string& command_line,
-      katana::TxnContext* txn_ctx);
-
-  Result<void> WriteView(
-      const std::string& uri, const std::string& command_line,
-      katana::TxnContext* txn_ctx);
-
-  katana::RDG rdg_;
-  std::unique_ptr<katana::RDGFile> file_;
-
-  /// Manages the relations between the node entity types
-  EntityTypeManager node_entity_type_manager_;
-  /// Manages the relations between the edge entity types
-  EntityTypeManager edge_entity_type_manager_;
-
-  /// The node EntityTypeID for each node's most specific type
-  EntityTypeIDArray node_entity_type_ids_;
-  /// The edge EntityTypeID for each edge's most specific type
-  EntityTypeIDArray edge_entity_type_ids_;
-
-  // List of node and edge indexes on this graph.
-  std::vector<std::unique_ptr<EntityIndex<Node>>> node_indexes_;
-  std::vector<std::unique_ptr<EntityIndex<Edge>>> edge_indexes_;
-
-  PGViewCache pg_view_cache_;
-
-  katana::Result<katana::RDGTopology*> LoadTopology(
-      const katana::RDGTopology& shadow) {
-    katana::RDGTopology* topo = KATANA_CHECKED(rdg_.GetTopology(shadow));
-    if (NumEdges() != topo->num_edges() || NumNodes() != topo->num_nodes()) {
-      KATANA_LOG_WARN(
-          "RDG found topology matching description, but num_edge/num_node does "
-          "not match csr topology");
-      return KATANA_ERROR(
-          ErrorCode::InvalidArgument, "no matching topology found");
-    }
-    return topo;
-  }
-
-  friend class PGViewCache;
-
-  friend class PropertyGraphRetractor;
-
-public:
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
   struct ReadOnlyPropertyView {
@@ -236,32 +214,31 @@ public:
 
   // XXX: WARNING: do not add new constructors. Add Make Functions
   PropertyGraph(
-      std::unique_ptr<katana::RDGFile>&& rdg_file, katana::RDG&& rdg,
-      GraphTopology&& topo, EntityTypeIDArray&& node_entity_type_ids,
+      std::unique_ptr<RDGFile>&& rdg_file, RDG&& rdg, GraphTopology&& topo,
+      EntityTypeIDArray&& node_entity_type_ids,
       EntityTypeIDArray&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager) noexcept
-      : rdg_(std::move(rdg)),
+      : rdg_(std::make_shared<RDG>(std::move(rdg))),
         file_(std::move(rdg_file)),
-        node_entity_type_manager_(std::move(node_type_manager)),
-        edge_entity_type_manager_(std::move(edge_type_manager)),
-        node_entity_type_ids_(std::move(node_entity_type_ids)),
-        edge_entity_type_ids_(std::move(edge_entity_type_ids)),
+        node_entity_type_manager_(
+            std::make_shared<EntityTypeManager>(std::move(node_type_manager))),
+        edge_entity_type_manager_(
+            std::make_shared<EntityTypeManager>(std::move(edge_type_manager))),
+        node_entity_type_ids_(std::make_shared<EntityTypeIDArray>(
+            std::move(node_entity_type_ids))),
+        node_entity_data_(node_entity_type_ids_->data()),
+        edge_entity_type_ids_(std::make_shared<EntityTypeIDArray>(
+            std::move(edge_entity_type_ids))),
+        edge_entity_data_(edge_entity_type_ids_->data()),
         pg_view_cache_(std::move(topo)) {
-    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_.size() == NumNodes());
-    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_.size() == NumEdges());
+    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_->size() == NumNodes());
+    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_->size() == NumEdges());
   }
 
   template <typename PGView>
   PGView BuildView() noexcept {
     return pg_view_cache_.BuildView<PGView>(this);
-  }
-
-  template <typename PGView>
-  PGView BuildView(
-      const std::vector<std::string>& node_types,
-      const std::vector<std::string>& edge_types) noexcept {
-    return pg_view_cache_.BuildView<PGView>(this, node_types, edge_types);
   }
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
@@ -277,7 +254,7 @@ public:
 
   /// Make a property graph from an RDG handle
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      std::unique_ptr<RDGFile> rdg_hanlde, katana::TxnContext* txn_ctx,
+      std::unique_ptr<RDGFile> rdg_handle, katana::TxnContext* txn_ctx,
       const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
   /// Make a property graph from topology
@@ -315,40 +292,32 @@ public:
   /// TODO(roshan) move this to be a part of Make()
   Result<void> ConstructEntityTypeIDs(katana::TxnContext* txn_ctx);
 
-  size_t node_entity_type_ids_size() const noexcept {
-    return node_entity_type_ids_.size();
-  }
-
-  size_t edge_entity_type_ids_size() const noexcept {
-    return edge_entity_type_ids_.size();
-  }
-
   /// This is an unfortunate hack. Due to some technical debt, we need a way to
   /// modify these arrays in place from outside this class. This style mirrors a
   /// similar hack in GraphTopology and hopefully makes it clear that these
   /// functions should not be used lightly.
   const EntityTypeID* node_type_data() const noexcept {
-    return node_entity_type_ids_.data();
+    return node_entity_data_;
   }
   /// This is an unfortunate hack. Due to some technical debt, we need a way to
   /// modify these arrays in place from outside this class. This style mirrors a
   /// similar hack in GraphTopology and hopefully makes it clear that these
   /// functions should not be used lightly.
   const EntityTypeID* edge_type_data() const noexcept {
-    return edge_entity_type_ids_.data();
+    return edge_entity_data_;
   }
 
   const EntityTypeManager& GetNodeTypeManager() const {
-    return node_entity_type_manager_;
+    return *node_entity_type_manager_;
   }
 
   const EntityTypeManager& GetEdgeTypeManager() const {
-    return edge_entity_type_manager_;
+    return *edge_entity_type_manager_;
   }
 
-  const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
+  const std::string& rdg_dir() const { return rdg_->rdg_dir().string(); }
 
-  uint32_t partition_id() const { return rdg_.partition_id(); }
+  uint32_t partition_id() const { return rdg_->partition_id(); }
 
   /// Create a new storage location for a graph and write everything into it.
   ///
@@ -384,94 +353,94 @@ public:
 
   /// get the schema for loaded node properties
   std::shared_ptr<arrow::Schema> loaded_node_schema() const {
-    return rdg_.node_properties()->schema();
+    return rdg_->node_properties()->schema();
   }
 
   /// get the schema for all node properties (includes unloaded properties)
   std::shared_ptr<arrow::Schema> full_node_schema() const {
-    return rdg_.full_node_schema();
+    return rdg_->full_node_schema();
   }
 
   /// get the schema for loaded edge properties
   std::shared_ptr<arrow::Schema> loaded_edge_schema() const {
-    return rdg_.edge_properties()->schema();
+    return rdg_->edge_properties()->schema();
   }
 
   /// get the schema for all edge properties (includes unloaded properties)
   std::shared_ptr<arrow::Schema> full_edge_schema() const {
-    return rdg_.full_edge_schema();
+    return rdg_->full_edge_schema();
   }
 
   /// \returns the number of node atomic types
   size_t GetNumNodeAtomicTypes() const {
-    return node_entity_type_manager_.GetNumAtomicTypes();
+    return GetNodeTypeManager().GetNumAtomicTypes();
   }
 
   /// \returns the number of edge atomic types
   size_t GetNumEdgeAtomicTypes() const {
-    return edge_entity_type_manager_.GetNumAtomicTypes();
+    return GetEdgeTypeManager().GetNumAtomicTypes();
   }
 
   /// \returns the number of node entity types (including kUnknownEntityType)
   size_t GetNumNodeEntityTypes() const {
-    return node_entity_type_manager_.GetNumEntityTypes();
+    return GetNodeTypeManager().GetNumEntityTypes();
   }
 
   /// \returns the number of edge entity types (including kUnknownEntityType)
   size_t GetNumEdgeEntityTypes() const {
-    return edge_entity_type_manager_.GetNumEntityTypes();
+    return GetEdgeTypeManager().GetNumEntityTypes();
   }
 
   /// \returns true iff a node atomic type @param name exists
   /// NB: no node may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of nodes with the type
   bool HasAtomicNodeType(const std::string& name) const {
-    return node_entity_type_manager_.HasAtomicType(name);
+    return GetNodeTypeManager().HasAtomicType(name);
   }
 
   /// \returns all atomic node types
   std::vector<std::string> ListAtomicNodeTypes() const {
-    return node_entity_type_manager_.ListAtomicTypes();
+    return GetNodeTypeManager().ListAtomicTypes();
   }
 
   /// \returns true iff an edge atomic type with @param name exists
   /// NB: no edge may have a type that intersects with this atomic type
   /// TODO(roshan) build an index for the number of edges with the type
   bool HasAtomicEdgeType(const std::string& name) const {
-    return edge_entity_type_manager_.HasAtomicType(name);
+    return GetEdgeTypeManager().HasAtomicType(name);
   }
 
   /// \returns all atomic edge types
   std::vector<std::string> ListAtomicEdgeTypes() const {
-    return edge_entity_type_manager_.ListAtomicTypes();
+    return GetEdgeTypeManager().ListAtomicTypes();
   }
 
   /// \returns true iff a node entity type @param node_entity_type_id exists
   /// NB: even if it exists, it may not be the most specific type for any node
   /// (returns true for kUnknownEntityType)
   bool HasNodeEntityType(EntityTypeID node_entity_type_id) const {
-    return node_entity_type_manager_.HasEntityType(node_entity_type_id);
+    return GetNodeTypeManager().HasEntityType(node_entity_type_id);
   }
 
   /// \returns true iff an edge entity type @param node_entity_type_id exists
   /// NB: even if it exists, it may not be the most specific type for any edge
   /// (returns true for kUnknownEntityType)
   bool HasEdgeEntityType(EntityTypeID edge_entity_type_id) const {
-    return edge_entity_type_manager_.HasEntityType(edge_entity_type_id);
+    return GetEdgeTypeManager().HasEntityType(edge_entity_type_id);
   }
 
   /// \returns the node EntityTypeID for an atomic node type with name
   /// @param name
   /// (assumes that the node type exists)
   EntityTypeID GetNodeEntityTypeID(const std::string& name) const {
-    return node_entity_type_manager_.GetEntityTypeID(name);
+    return GetNodeTypeManager().GetEntityTypeID(name);
   }
 
   /// \returns the edge EntityTypeID for an atomic edge type with name
   /// @param name
   /// (assumes that the edge type exists)
   EntityTypeID GetEdgeEntityTypeID(const std::string& name) const {
-    return edge_entity_type_manager_.GetEntityTypeID(name);
+    return GetEdgeTypeManager().GetEntityTypeID(name);
   }
 
   /// \returns the name of the atomic type if the node EntityTypeID
@@ -479,7 +448,7 @@ public:
   /// nullopt otherwise
   std::optional<std::string> GetNodeAtomicTypeName(
       EntityTypeID node_entity_type_id) const {
-    return node_entity_type_manager_.GetAtomicTypeName(node_entity_type_id);
+    return GetNodeTypeManager().GetAtomicTypeName(node_entity_type_id);
   }
 
   /// \returns the name of the atomic type if the edge EntityTypeID
@@ -487,7 +456,7 @@ public:
   /// nullopt otherwise
   std::optional<std::string> GetEdgeAtomicTypeName(
       EntityTypeID edge_entity_type_id) const {
-    return edge_entity_type_manager_.GetAtomicTypeName(edge_entity_type_id);
+    return GetEdgeTypeManager().GetAtomicTypeName(edge_entity_type_id);
   }
 
   /// \returns the set of node entity types that intersect
@@ -495,7 +464,7 @@ public:
   /// (assumes that the node atomic type exists)
   const SetOfEntityTypeIDs& GetNodeSupertypes(
       EntityTypeID node_entity_type_id) const {
-    return node_entity_type_manager_.GetSupertypes(node_entity_type_id);
+    return GetNodeTypeManager().GetSupertypes(node_entity_type_id);
   }
 
   /// \returns the set of edge entity types that intersect
@@ -503,7 +472,7 @@ public:
   /// (assumes that the edge atomic type exists)
   const SetOfEntityTypeIDs& GetEdgeSupertypes(
       EntityTypeID edge_entity_type_id) const {
-    return edge_entity_type_manager_.GetSupertypes(edge_entity_type_id);
+    return GetEdgeTypeManager().GetSupertypes(edge_entity_type_id);
   }
 
   /// \returns the set of atomic node types that are intersected
@@ -511,7 +480,7 @@ public:
   /// (assumes that the node entity type exists)
   const SetOfEntityTypeIDs& GetNodeAtomicSubtypes(
       EntityTypeID node_entity_type_id) const {
-    return node_entity_type_manager_.GetAtomicSubtypes(node_entity_type_id);
+    return GetNodeTypeManager().GetAtomicSubtypes(node_entity_type_id);
   }
 
   /// \returns the set of atomic edge types that are intersected
@@ -519,27 +488,33 @@ public:
   /// (assumes that the edge entity type exists)
   const SetOfEntityTypeIDs& GetEdgeAtomicSubtypes(
       EntityTypeID edge_entity_type_id) const {
-    return edge_entity_type_manager_.GetAtomicSubtypes(edge_entity_type_id);
+    return GetEdgeTypeManager().GetAtomicSubtypes(edge_entity_type_id);
   }
 
   /// \returns true iff the node type @param sub_type is a
   /// sub-type of the node type @param super_type
   /// (assumes that the sub_type and super_type EntityTypeIDs exists)
   bool IsNodeSubtypeOf(EntityTypeID sub_type, EntityTypeID super_type) const {
-    return node_entity_type_manager_.IsSubtypeOf(sub_type, super_type);
+    return GetNodeTypeManager().IsSubtypeOf(sub_type, super_type);
   }
 
   /// \returns true iff the edge type @param sub_type is a
   /// sub-type of the edge type @param super_type
   /// (assumes that the sub_type and super_type EntityTypeIDs exists)
   bool IsEdgeSubtypeOf(EntityTypeID sub_type, EntityTypeID super_type) const {
-    return edge_entity_type_manager_.IsSubtypeOf(sub_type, super_type);
+    return GetEdgeTypeManager().IsSubtypeOf(sub_type, super_type);
   }
 
   /// \return returns the most specific node entity type for @param node
   EntityTypeID GetTypeOfNode(Node node) const {
     auto idx = GetNodePropertyIndex(node);
-    return node_entity_type_ids_[idx];
+    return node_entity_data_[idx];
+  }
+
+  /// \return returns the most specific node entity type for @param node
+  EntityTypeID GetTypeOfNodeFromPropertyIndex(
+      GraphTopology::PropertyIndex prop_index) const {
+    return node_entity_data_[prop_index];
   }
 
   /// \return returns the most specific edge entity type for @param edge
@@ -551,7 +526,7 @@ public:
   /// \return returns the most specific edge entity type for @param edge
   EntityTypeID GetTypeOfEdgeFromPropertyIndex(
       GraphTopology::PropertyIndex prop_index) const {
-    return edge_entity_type_ids_[prop_index];
+    return edge_entity_data_[prop_index];
   }
 
   /// \return true iff the node @param node has the given entity type
@@ -591,18 +566,18 @@ public:
 
   // num_rows() == NumNodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
-    if (i >= rdg_.node_properties()->num_columns()) {
+    if (i >= rdg_->node_properties()->num_columns()) {
       return nullptr;
     }
-    return rdg_.node_properties()->column(i);
+    return rdg_->node_properties()->column(i);
   }
 
   // num_rows() == num_edges() (all local edges)
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(int i) const {
-    if (i >= rdg_.edge_properties()->num_columns()) {
+    if (i >= rdg_->edge_properties()->num_columns()) {
       return nullptr;
     }
-    return rdg_.edge_properties()->column(i);
+    return rdg_->edge_properties()->column(i);
   }
 
   /// \returns true if a node property/type with @param name exists
@@ -696,22 +671,42 @@ public:
     return pg_view_cache_.GetDefaultTopologyRef();
   }
 
-  const EntityTypeManager& node_entity_type_manager() const noexcept {
-    return node_entity_type_manager_;
-  }
-
-  const EntityTypeManager& edge_entity_type_manager() const noexcept {
-    return edge_entity_type_manager_;
-  }
-
   GraphTopology::PropertyIndex GetEdgePropertyIndexFromOutEdge(
-      const Edge& eid) const noexcept {
-    return topology().GetEdgePropertyIndexFromOutEdge(eid);
-  }
+      const Edge& eid) const noexcept;
 
   GraphTopology::PropertyIndex GetNodePropertyIndex(
-      const Node& nid) const noexcept {
-    return topology().GetNodePropertyIndex(nid);
+      const Node& nid) const noexcept;
+
+  template <typename NodeProps>
+  Result<void> ConstructNodeProperties(
+      katana::TxnContext* txn_ctx, const std::vector<std::string>& names =
+                                       DefaultPropertyNames<NodeProps>()) {
+    auto bit_mask = NodeBitmask();
+    auto num_nodes = NumOriginalNodes();
+    auto res_table =
+        bit_mask ? katana::AllocateTable<NodeProps>(num_nodes, names, bit_mask)
+                 : katana::AllocateTable<NodeProps>(num_nodes, names);
+    if (!res_table) {
+      return res_table.error();
+    }
+
+    return AddNodeProperties(res_table.value(), txn_ctx);
+  }
+
+  template <typename EdgeProps>
+  Result<void> ConstructEdgeProperties(
+      katana::TxnContext* txn_ctx, const std::vector<std::string>& names =
+                                       DefaultPropertyNames<EdgeProps>()) {
+    auto bit_mask = EdgeBitmask();
+    auto num_edges = NumOriginalEdges();
+    auto res_table =
+        bit_mask ? katana::AllocateTable<EdgeProps>(num_edges, names, bit_mask)
+                 : katana::AllocateTable<EdgeProps>(num_edges, names);
+    if (!res_table) {
+      return res_table.error();
+    }
+
+    return AddEdgeProperties(res_table.value(), txn_ctx);
   }
 
   /// Add Node properties that do not exist in the current graph
@@ -760,22 +755,22 @@ public:
   Result<void> EnsureEdgePropertyLoaded(const std::string& name);
 
   std::vector<std::string> ListFullNodeProperties() const {
-    return rdg_.ListFullNodeProperties();
+    return rdg_->ListFullNodeProperties();
   }
   std::vector<std::string> ListLoadedNodeProperties() const {
-    return rdg_.ListLoadedNodeProperties();
+    return rdg_->ListLoadedNodeProperties();
   }
   std::vector<std::string> ListFullEdgeProperties() const {
-    return rdg_.ListFullEdgeProperties();
+    return rdg_->ListFullEdgeProperties();
   }
   std::vector<std::string> ListLoadedEdgeProperties() const {
-    return rdg_.ListLoadedEdgeProperties();
+    return rdg_->ListLoadedEdgeProperties();
   }
 
   /// Remove all node properties
-  void DropNodeProperties() { rdg_.DropNodeProperties(); }
+  void DropNodeProperties() { rdg_->DropNodeProperties(); }
   /// Remove all edge properties
-  void DropEdgeProperties() { rdg_.DropEdgeProperties(); }
+  void DropEdgeProperties() { rdg_->DropEdgeProperties(); }
 
   MutablePropertyView NodeMutablePropertyView() {
     return MutablePropertyView{
@@ -912,8 +907,81 @@ public:
   }
 
   // Returns the property index associated with the named property
-  katana::Result<katana::EntityIndex<GraphTopology::Node>*> GetNodeIndex(
+  Result<EntityIndex<GraphTopology::Node>*> GetNodeIndex(
       const std::string& property_name) const;
+
+protected:
+  RDG& rdg() { return *rdg_; }
+  const RDG& rdg() const { return *rdg_; }
+
+  // This constructor is meant to be used is situations when you want to share
+  // property and type data (including RDG) with another PropertyGraph instance,
+  // while using a new topology. The topology is assumed to maintain the correct
+  // property index mapping from its nodes/edges to the original property table.
+  PropertyGraph(const PropertyGraph& parent, GraphTopology&& topo) noexcept
+      : rdg_(parent.rdg_),
+        file_(parent.file_),
+        node_entity_type_manager_(parent.node_entity_type_manager_),
+        edge_entity_type_manager_(parent.edge_entity_type_manager_),
+        node_entity_type_ids_(parent.node_entity_type_ids_),
+        node_entity_data_(node_entity_type_ids_->data()),
+        edge_entity_type_ids_(parent.edge_entity_type_ids_),
+        edge_entity_data_(edge_entity_type_ids_->data()),
+        pg_view_cache_(std::move(topo)) {}
+
+private:
+  /// Validate performs a sanity check on the the graph after loading
+  Result<void> Validate();
+
+  Result<void> DoWriteTopologies();
+
+  Result<void> DoWrite(
+      katana::RDGHandle handle, const std::string& command_line,
+      katana::RDG::RDGVersioningPolicy versioning_action,
+      katana::TxnContext* txn_ctx);
+
+  Result<void> ConductWriteOp(
+      const std::string& uri, const std::string& command_line,
+      katana::RDG::RDGVersioningPolicy versioning_action,
+      katana::TxnContext* txn_ctx);
+
+  Result<void> WriteGraph(
+      const std::string& uri, const std::string& command_line,
+      katana::TxnContext* txn_ctx);
+
+  Result<void> WriteView(
+      const std::string& uri, const std::string& command_line,
+      katana::TxnContext* txn_ctx);
+
+  // Data
+  std::shared_ptr<katana::RDG> rdg_{std::make_shared<katana::RDG>()};
+  std::shared_ptr<katana::RDGFile> file_;
+
+  /// Manages the relations between the node entity types
+  std::shared_ptr<EntityTypeManager> node_entity_type_manager_{
+      std::make_shared<EntityTypeManager>()};
+
+  /// Manages the relations between the edge entity types
+  std::shared_ptr<EntityTypeManager> edge_entity_type_manager_{
+      std::make_shared<EntityTypeManager>()};
+
+  /// The node EntityTypeID for each node's most specific type
+  std::shared_ptr<EntityTypeIDArray> node_entity_type_ids_;
+
+  // Optimization to avoid shared_ptr indirection when indexing into node_entity_type_ids_
+  EntityTypeID* node_entity_data_;
+
+  /// The edge EntityTypeID for each edge's most specific type
+  std::shared_ptr<EntityTypeIDArray> edge_entity_type_ids_;
+
+  // Optimization to avoid shared_ptr indirection when indexing into edge_entity_type_ids_
+  EntityTypeID* edge_entity_data_;
+
+  // List of node and edge indexes on this graph.
+  std::vector<std::unique_ptr<EntityIndex<Node>>> node_indexes_;
+  std::vector<std::unique_ptr<EntityIndex<Edge>>> edge_indexes_;
+
+  PGViewCache pg_view_cache_;
 };
 
 /// SortAllEdgesByDest sorts edges for each node by destination

@@ -191,7 +191,7 @@ katana::RDGSlice::DoMake(
     // doesn't make sense
     // The most recent storage_format removes this header,
     size_t entity_type_id_array_header_offset = sizeof(EntityTypeIDArrayHeader);
-    if (core_->part_header().unstable_storage_format()) {
+    if (core_->part_header().IsHeaderlessEntityTypeIDArray()) {
       entity_type_id_array_header_offset = 0;
     }
 

@@ -524,6 +524,11 @@ katana::RDG::IsUint16tEntityTypeIDs() const {
 }
 
 bool
+katana::RDG::IsHeaderlessEntityTypeIDArray() const {
+  return core_->part_header().IsHeaderlessEntityTypeIDArray();
+}
+
+bool
 katana::RDG::IsUnstableStorageFormat() const {
   return core_->part_header().unstable_storage_format();
 }

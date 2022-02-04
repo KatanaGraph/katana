@@ -19,6 +19,7 @@ set(sources
         src/PropertyViews.cpp
         src/SharedMemSys.cpp
         src/TopologyGeneration.cpp
+        src/TransformationView.cpp
         src/analytics/Utils.cpp
         src/analytics/betweenness_centrality/betweenness_centrality.cpp
         src/analytics/betweenness_centrality/level.cpp

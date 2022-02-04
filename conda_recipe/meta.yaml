@@ -69,6 +69,7 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
+        - numpy {{ numpy }}
         - python {{ python }}
       host:
         - {{ cdt('numactl-devel') }}
@@ -123,6 +124,7 @@ outputs:
         - sphinx {{ sphinx }}
         - sphinx-copybutton {{ sphinx_copybutton }}
         - sphinx-tabs {{ sphinx_tabs }}
+        - numpy {{ numpy }}
         - python {{ python }}
       host:
         - {{ pin_subpackage('katana-cpp', exact=True) }}

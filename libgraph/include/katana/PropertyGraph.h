@@ -98,7 +98,9 @@ public:
   using EntityTypeIDArray = katana::NUMAArray<EntityTypeID>;
 
   PropertyGraph(PropertyGraph&& other) = default;
+  PropertyGraph& operator=(PropertyGraph&& other) = default;
 
+public:
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
   struct ReadOnlyPropertyView {
@@ -324,6 +326,10 @@ public:
   const std::string& rdg_dir() const { return rdg_->rdg_dir().string(); }
 
   uint32_t partition_id() const { return rdg_->partition_id(); }
+
+  uint32_t partition_policy_id() const {
+    return rdg_->part_metadata().policy_id_;
+  }
 
   /// Create a new storage location for a graph and write everything into it.
   ///
@@ -920,6 +926,25 @@ public:
 protected:
   RDG& rdg() { return *rdg_; }
   const RDG& rdg() const { return *rdg_; }
+
+  // TODO(Rob): avoid exposing mutable versions of these
+  //            members b/c they are NUMAArrays, and there
+  //            is a potential issue of who owns and frees
+  //            the (memory for) the array.
+  //            Alternative solution: provide mutable access
+  //            to the array buffer instead of the array
+  EntityTypeManager& mutable_node_entity_type_manager() {
+    return *node_entity_type_manager_;
+  }
+  EntityTypeManager& mutable_edge_entity_type_manager() {
+    return *edge_entity_type_manager_;
+  }
+  EntityTypeIDArray& mutable_node_entity_type_ids() {
+    return *node_entity_type_ids_;
+  }
+  EntityTypeIDArray& mutable_edge_entity_type_ids() {
+    return *edge_entity_type_ids_;
+  }
 
   // This constructor is meant to be used is situations when you want to share
   // property and type data (including RDG) with another PropertyGraph instance,

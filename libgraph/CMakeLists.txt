@@ -14,7 +14,6 @@ set(sources
         src/OCFileGraph.cpp
         src/Properties.cpp
         src/PropertyGraph.cpp
-        src/PropertyGraphRetractor.cpp
         src/EntityIndex.cpp
         src/PropertyViews.cpp
         src/SharedMemSys.cpp

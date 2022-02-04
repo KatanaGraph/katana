@@ -81,11 +81,11 @@ WriteProperties(
 }
 
 katana::Result<void>
-CommitRDG(
+ComputeManifest(
     katana::RDGHandle handle, uint32_t policy_id, bool transposed,
     katana::RDG::RDGVersioningPolicy versioning_action,
-    const katana::RDGLineage& lineage,
-    std::unique_ptr<katana::WriteGroup> desc) {
+    const katana::RDGLineage& lineage, std::unique_ptr<katana::WriteGroup> desc,
+    katana::TxnContext* txn_ctx) {
   katana::CommBackend* comm = katana::Comm();
   katana::RDGManifest new_manifest =
       (versioning_action == katana::RDG::RetainVersion)
@@ -93,33 +93,17 @@ CommitRDG(
                 comm->Num, policy_id, transposed, lineage)
           : handle.impl_->rdg_manifest().NextVersion(
                 comm->Num, policy_id, transposed, lineage);
+  txn_ctx->SetManifest(new_manifest);
 
   // wait for all the work we queued to finish
-  TSUBA_PTP(katana::internal::FaultSensitivity::High);
   KATANA_CHECKED_CONTEXT(desc->Finish(), "at least one async write failed");
 
-  TSUBA_PTP(katana::internal::FaultSensitivity::High);
-  comm->Barrier();
-
-  TSUBA_PTP(katana::internal::FaultSensitivity::High);
-  katana::Result<void> ret = katana::OneHostOnly([&]() -> katana::Result<void> {
-    TSUBA_PTP(katana::internal::FaultSensitivity::High);
-
-    std::string curr_s = new_manifest.ToJsonString();
-    auto manifest_file = katana::RDGManifest::FileName(
-        handle.impl_->rdg_manifest().dir(),
-        handle.impl_->rdg_manifest().viewtype(), new_manifest.version());
-    KATANA_CHECKED_CONTEXT(
-        katana::FileStore(
-            manifest_file.string(),
-            reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size()),
-        "CommitRDG future failed {}", manifest_file);
-    return katana::ResultSuccess();
-  });
-  if (ret) {
-    handle.impl_->set_rdg_manifest(std::move(new_manifest));
-  }
-  return ret;
+  auto manifest_file = katana::RDGManifest::FileName(
+      handle.impl_->rdg_manifest().dir(),
+      handle.impl_->rdg_manifest().viewtype(), new_manifest.version());
+  txn_ctx->SetManifestFile(manifest_file);
+  handle.impl_->set_rdg_manifest(std::move(new_manifest));
+  return katana::ResultSuccess();
 }
 
 }  // namespace
@@ -306,6 +290,8 @@ katana::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group, katana::TxnContext* txn_ctx) {
+  KATANA_LOG_DEBUG_ASSERT(txn_ctx != nullptr);
+
   // bump the storage format version to the latest
   core_->part_header().update_storage_format_version();
 
@@ -359,17 +345,14 @@ katana::RDG::DoStore(
   // Update lineage and commit
   core_->AddCommandLine(command_line);
 
-  if (txn_ctx->CommitManifest()) {
-    KATANA_CHECKED(CommitRDG(
-        handle, core_->part_header().metadata().policy_id_,
-        core_->part_header().metadata().transposed_, versioning_action,
-        core_->lineage(), std::move(write_group)));
-  }
+  KATANA_CHECKED(ComputeManifest(
+      handle, core_->part_header().metadata().policy_id_,
+      core_->part_header().metadata().transposed_, versioning_action,
+      core_->lineage(), std::move(write_group), txn_ctx));
   return katana::ResultSuccess();
 }
 
-katana::Result<void>
-katana::RDG::DoMake(
+katana::Result<void> katana::RDG::DoMake(
     const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
     const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
     const katana::Uri& metadata_dir) {

@@ -177,7 +177,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+163.0.3552ec variable.
+            // this version, rather than using sphinx's 0.1.102.dev+169.0.c3763f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -483,6 +483,7 @@ function checkPageExistsAndRedirect(event) {
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
  | <a href="#J"><strong>J</strong></a>
  | <a href="#K"><strong>K</strong></a>
@@ -603,15 +604,9 @@ function checkPageExistsAndRedirect(event) {
       <ul>
         <li><a href="reference/python/katana.local.datastructures.html#katana.local.datastructures.NUMAArray.__iter__">(katana.local.datastructures.NUMAArray method)</a>
 </li>
-        <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.__iter__">(katana.local.Graph method)</a>
-</li>
       </ul></li>
       <li><a href="reference/python/katana.local.datastructures.html#katana.local.datastructures.NUMAArray.__len__">__len__() (katana.local.datastructures.NUMAArray method)</a>
-
-      <ul>
-        <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.__len__">(katana.local.Graph method)</a>
 </li>
-      </ul></li>
       <li><a href="reference/python/katana.local.datastructures.html#katana.local.datastructures.NUMAArray.__setitem__">__setitem__() (katana.local.datastructures.NUMAArray method)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._betweenness_centrality._BetweennessCentralityAlgorithm">_BetweennessCentralityAlgorithm (class in katana.local.analytics._betweenness_centrality)</a>
@@ -1182,16 +1177,12 @@ function checkPageExistsAndRedirect(event) {
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics.ConnectedComponentsPlan.edge_asynchronous">(katana.local.analytics.ConnectedComponentsPlan static method)</a>
 </li>
       </ul></li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.edge_ids">edge_ids() (katana.local.Graph method)</a>
-</li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._triangle_count.TriangleCountPlan.edge_iteration">edge_iteration() (katana.local.analytics._triangle_count.TriangleCountPlan static method)</a>
 
       <ul>
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics.TriangleCountPlan.edge_iteration">(katana.local.analytics.TriangleCountPlan static method)</a>
 </li>
       </ul></li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.edge_property_name_to_id">edge_property_name_to_id() (katana.local.Graph method)</a>
-</li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._jaccard.JaccardPlan.edge_sorting">edge_sorting (katana.local.analytics._jaccard.JaccardPlan attribute)</a>
 
       <ul>
@@ -1232,15 +1223,13 @@ function checkPageExistsAndRedirect(event) {
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics.IndependentSetPlan.edge_tiled_priority">(katana.local.analytics.IndependentSetPlan static method)</a>
 </li>
       </ul></li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.edge_types">edge_types (katana.local.Graph attribute)</a>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.edge_types">edge_types (katana.local.Graph property)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._connected_components._ConnectedComponentsPlanAlgorithm.EdgeAfforest">EdgeAfforest (katana.local.analytics._connected_components._ConnectedComponentsPlanAlgorithm attribute)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._connected_components._ConnectedComponentsPlanAlgorithm.EdgeAsynchronous">EdgeAsynchronous (katana.local.analytics._connected_components._ConnectedComponentsPlanAlgorithm attribute)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._triangle_count._TriangleCountPlanAlgorithm.EdgeIteration">EdgeIteration (katana.local.analytics._triangle_count._TriangleCountPlanAlgorithm attribute)</a>
-</li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.edges">edges() (katana.local.Graph method)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._local_clustering_coefficient.LocalClusteringCoefficientPlan.edges_sorted">edges_sorted (katana.local.analytics._local_clustering_coefficient.LocalClusteringCoefficientPlan attribute)</a>
 
@@ -1280,16 +1269,18 @@ function checkPageExistsAndRedirect(event) {
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/python/katana.timer.html#katana.timer.StatTimer.finalize">finalize() (katana.timer.StatTimer method)</a>
 </li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.find_all_edge_ids">find_all_edge_ids() (katana.local.Graph method)</a>
+</li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._wrappers.find_edge_sorted_by_dest">find_edge_sorted_by_dest() (in module katana.local.analytics._wrappers)</a>
 </li>
       <li><a href="reference/python/katana.html#katana.for_each">for_each() (in module katana)</a>
 </li>
       <li><a href="reference/python/katana.html#katana.for_each_operator">for_each_operator() (in module katana)</a>
 </li>
-      <li><a href="reference/python/katana.local.import_data.html#katana.local.import_data.from_adjacency_matrix">from_adjacency_matrix() (in module katana.local.import_data)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/python/katana.local.import_data.html#katana.local.import_data.from_adjacency_matrix">from_adjacency_matrix() (in module katana.local.import_data)</a>
+</li>
       <li><a href="reference/python/katana.local.import_data.html#katana.local.import_data.from_csr">from_csr() (in module katana.local.import_data)</a>
 </li>
       <li><a href="reference/python/katana.local.import_data.html#katana.local.import_data.from_edge_list_arrays">from_edge_list_arrays() (in module katana.local.import_data)</a>
@@ -1318,13 +1309,21 @@ function checkPageExistsAndRedirect(event) {
       </ul></li>
       <li><a href="reference/python/katana.html#katana.get_active_threads">get_active_threads() (in module katana)</a>
 </li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_dest">get_edge_dest() (katana.local.Graph method)</a>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_dst">get_edge_dst() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_index">get_edge_index() (katana.local.Graph method)</a>
 </li>
       <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_property">get_edge_property() (katana.local.Graph method)</a>
 </li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_property_chunked">get_edge_property_chunked() (katana.local.Graph method)</a>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_property_index_from_in_edge">get_edge_property_index_from_in_edge() (katana.local.Graph method)</a>
 </li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_source">get_edge_source() (katana.local.Graph method)</a>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_property_index_from_out_edge">get_edge_property_index_from_out_edge() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_property_index_from_undirected_edge">get_edge_property_index_from_undirected_edge() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_src">get_edge_src() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_edge_type">get_edge_type() (katana.local.Graph method)</a>
 </li>
       <li><a href="reference/python/katana.local.atomic.html#katana.local.ReduceAnd.get_local">get_local() (katana.local.ReduceAnd method)</a>
 
@@ -1340,9 +1339,21 @@ function checkPageExistsAndRedirect(event) {
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_local_edge_id_from_in_edge">get_local_edge_id_from_in_edge() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_local_edge_id_from_out_edge">get_local_edge_id_from_out_edge() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_local_edge_id_from_undirected_edge">get_local_edge_id_from_undirected_edge() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_local_node_id">get_local_node_id() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_node_index">get_node_index() (katana.local.Graph method)</a>
+</li>
       <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_node_property">get_node_property() (katana.local.Graph method)</a>
 </li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_node_property_chunked">get_node_property_chunked() (katana.local.Graph method)</a>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_node_property_index">get_node_property_index() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_node_type">get_node_type() (katana.local.Graph method)</a>
 </li>
       <li><a href="reference/python/katana.timer.html#katana.timer.StatTimer.get_sec">get_sec() (katana.timer.StatTimer method)</a>
 
@@ -1350,21 +1361,27 @@ function checkPageExistsAndRedirect(event) {
         <li><a href="reference/python/katana.timer.html#katana.timer.Timer.get_sec">(katana.timer.Timer method)</a>
 </li>
       </ul></li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_type_of_edge">get_type_of_edge() (katana.local.Graph method)</a>
-</li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.get_type_of_node">get_type_of_node() (katana.local.Graph method)</a>
-</li>
       <li><a href="reference/python/katana.timer.html#katana.timer.StatTimer.get_usec">get_usec() (katana.timer.StatTimer method)</a>
 
       <ul>
         <li><a href="reference/python/katana.timer.html#katana.timer.Timer.get_usec">(katana.timer.Timer method)</a>
 </li>
       </ul></li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.global_in_degree">global_in_degree() (katana.local.Graph method)</a>
-</li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.global_out_degree">global_out_degree() (katana.local.Graph method)</a>
-</li>
       <li><a href="reference/python/katana.local.graph.html#katana.local.Graph">Graph (class in katana.local)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.has_edge">has_edge() (katana.local.Graph method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.has_edge_index">has_edge_index() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.has_node_index">has_node_index() (katana.local.Graph method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1372,6 +1389,12 @@ function checkPageExistsAndRedirect(event) {
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.in_degree">in_degree() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.in_edge_ids">in_edge_ids() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.in_edge_src">in_edge_src() (katana.local.Graph method)</a>
+</li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics.independent_set">independent_set() (in module katana.local.analytics)</a>
 
       <ul>
@@ -1390,14 +1413,14 @@ function checkPageExistsAndRedirect(event) {
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._independent_set.IndependentSetPlan">(class in katana.local.analytics._independent_set)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics.IndependentSetStatistics">IndependentSetStatistics (class in katana.local.analytics)</a>
 
       <ul>
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._independent_set.IndependentSetStatistics">(class in katana.local.analytics._independent_set)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/python/katana.html#katana.DataFrame.index">index() (katana.DataFrame method)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._pagerank.PagerankPlan.initial_residual">initial_residual (katana.local.analytics._pagerank.PagerankPlan attribute)</a>
@@ -2529,17 +2552,17 @@ function checkPageExistsAndRedirect(event) {
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.node_property_name_to_id">node_property_name_to_id() (katana.local.Graph method)</a>
-</li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._subgraph_extraction.SubGraphExtractionPlan.node_set">node_set() (katana.local.analytics._subgraph_extraction.SubGraphExtractionPlan static method)</a>
 
       <ul>
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics.SubGraphExtractionPlan.node_set">(katana.local.analytics.SubGraphExtractionPlan static method)</a>
 </li>
       </ul></li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.node_types">node_types (katana.local.Graph attribute)</a>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.node_types">node_types (katana.local.Graph property)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._triangle_count._TriangleCountPlanAlgorithm.NodeIteration">NodeIteration (katana.local.analytics._triangle_count._TriangleCountPlanAlgorithm attribute)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.nodes">nodes() (katana.local.Graph method)</a>
 </li>
       <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.num_edges">num_edges() (katana.local.Graph method)</a>
 </li>
@@ -2585,15 +2608,23 @@ function checkPageExistsAndRedirect(event) {
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics.LocalClusteringCoefficientPlan.ordered_count_per_thread">(katana.local.analytics.LocalClusteringCoefficientPlan static method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/python/katana.html#katana.OrderedByIntegerMetric">OrderedByIntegerMetric (class in katana)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._triangle_count._TriangleCountPlanAlgorithm.OrderedCount">OrderedCount (katana.local.analytics._triangle_count._TriangleCountPlanAlgorithm attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._local_clustering_coefficient._LocalClusteringCoefficientPlanAlgorithm.OrderedCountAtomics">OrderedCountAtomics (katana.local.analytics._local_clustering_coefficient._LocalClusteringCoefficientPlanAlgorithm attribute)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._local_clustering_coefficient._LocalClusteringCoefficientPlanAlgorithm.OrderedCountPerThread">OrderedCountPerThread (katana.local.analytics._local_clustering_coefficient._LocalClusteringCoefficientPlanAlgorithm attribute)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.out_degree">out_degree() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.out_edge_dst">out_edge_dst() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.out_edge_ids">out_edge_ids() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.out_edges">out_edges() (katana.local.Graph method)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._betweenness_centrality._BetweennessCentralityAlgorithm.Outer">Outer (katana.local.analytics._betweenness_centrality._BetweennessCentralityAlgorithm attribute)</a>
 </li>
@@ -2633,7 +2664,7 @@ function checkPageExistsAndRedirect(event) {
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._pagerank.PagerankStatistics">(class in katana.local.analytics._pagerank)</a>
 </li>
       </ul></li>
-      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.path">path (katana.local.Graph attribute)</a>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.path">path (katana.local.Graph property)</a>
 </li>
       <li><a href="reference/python/katana.html#katana.PerSocketChunkFIFO">PerSocketChunkFIFO (class in katana)</a>
 </li>
@@ -3001,7 +3032,19 @@ function checkPageExistsAndRedirect(event) {
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.undirected_degree">undirected_degree() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.undirected_edge_ids">undirected_edge_ids() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.undirected_edge_neighbor">undirected_edge_neighbor() (katana.local.Graph method)</a>
+</li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._jaccard._JaccardEdgeSorting.Unknown">Unknown (katana.local.analytics._jaccard._JaccardEdgeSorting attribute)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.unload_edge_property">unload_edge_property() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.unload_node_property">unload_node_property() (katana.local.Graph method)</a>
+</li>
+      <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.unload_topologies">unload_topologies() (katana.local.Graph method)</a>
 </li>
       <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics._jaccard._JaccardEdgeSorting.Unsorted">Unsorted (katana.local.analytics._jaccard._JaccardEdgeSorting attribute)</a>
 </li>
@@ -3011,6 +3054,8 @@ function checkPageExistsAndRedirect(event) {
         <li><a href="reference/python/katana.local.analytics.html#katana.local.analytics.JaccardPlan.unsorted">(katana.local.analytics.JaccardPlan static method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/python/katana.local.atomic.html#katana.local.ReduceAnd.update">update() (katana.local.ReduceAnd method)</a>
 
       <ul>
@@ -3023,8 +3068,6 @@ function checkPageExistsAndRedirect(event) {
         <li><a href="reference/python/katana.local.atomic.html#katana.local.ReduceSum.update">(katana.local.ReduceSum method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.upsert_edge_property">upsert_edge_property() (katana.local.Graph method)</a>
 </li>
       <li><a href="reference/python/katana.local.graph.html#katana.local.Graph.upsert_node_property">upsert_node_property() (katana.local.Graph method)</a>

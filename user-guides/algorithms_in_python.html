@@ -181,7 +181,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+163.0.3552ec variable.
+            // this version, rather than using sphinx's 0.1.102.dev+169.0.c3763f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -786,7 +786,7 @@ div.rendered_html tbody tr:hover {
     <span class="n">next_level_worklist</span> <span class="o">=</span> <span class="n">InsertBag</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">]()</span>
 
     <span class="c1"># Create an initialize the distance array. source is 0, everywhere else is INFINITY</span>
-    <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">graph</span><span class="p">),),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+    <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">graph</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">(),),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
     <span class="n">distance</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">INFINITY</span>
     <span class="n">distance</span><span class="p">[</span><span class="n">source</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
@@ -834,9 +834,9 @@ div.rendered_html tbody tr:hover {
 <span class="sd">    :return:</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Iterate over the out edges of our node</span>
-    <span class="k">for</span> <span class="n">edge_id</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">edge_ids</span><span class="p">(</span><span class="n">node_id</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">edge_id</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">out_edge_ids</span><span class="p">(</span><span class="n">node_id</span><span class="p">):</span>
         <span class="c1"># Get the destination of the edge</span>
-        <span class="n">dst</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_edge_dest</span><span class="p">(</span><span class="n">edge_id</span><span class="p">)</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">out_edge_dst</span><span class="p">(</span><span class="n">edge_id</span><span class="p">)</span>
         <span class="c1"># If the destination has not yet been reached set it&#39;s level and add it</span>
         <span class="c1"># to the work list, so it&#39;s out edges can be processed in the next level.</span>
         <span class="k">if</span> <span class="n">distance</span><span class="p">[</span><span class="n">dst</span><span class="p">]</span> <span class="o">==</span> <span class="n">INFINITY</span><span class="p">:</span>

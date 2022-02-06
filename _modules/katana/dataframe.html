@@ -177,7 +177,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+163.0.3552ec variable.
+            // this version, rather than using sphinx's 0.1.102.dev+169.0.c3763f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -503,6 +503,15 @@ function checkPageExistsAndRedirect(event) {
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="nb">slice</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">__subclasshook__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">checkcls</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="n">LazyDataAccessor</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="s2">&quot;__getitem__&quot;</span> <span class="ow">in</span> <span class="n">b</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">checkcls</span><span class="o">.</span><span class="vm">__mro__</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="s2">&quot;array&quot;</span> <span class="ow">in</span> <span class="n">b</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">checkcls</span><span class="o">.</span><span class="vm">__mro__</span>
+            <span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span>
 
 
 <span class="k">class</span> <span class="nc">LazyDataFrame</span><span class="p">(</span><span class="n">DataFrame</span><span class="p">):</span>

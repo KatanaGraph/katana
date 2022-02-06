@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+163.0.3552ec variable.
+            // this version, rather than using sphinx's 0.1.102.dev+169.0.c3763f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -2552,7 +2552,7 @@ ordered count algorithm from the following:
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.local.analytics.subgraph_extraction">
-<span class="sig-prename descclassname"><span class="pre">katana.local.analytics.</span></span><span class="sig-name descname"><span class="pre">subgraph_extraction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plan=&lt;katana.local.analytics._subgraph_extraction.SubGraphExtractionPlan</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><span class="pre">Graph</span></a></span></span><a class="headerlink" href="#katana.local.analytics.subgraph_extraction" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.local.analytics.</span></span><span class="sig-name descname"><span class="pre">subgraph_extraction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plan=&lt;katana.local.analytics._subgraph_extraction.SubGraphExtractionPlan</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></span><a class="headerlink" href="#katana.local.analytics.subgraph_extraction" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given a set of node ids, this algorithm constructs a new sub-graph which contains all nodes in the set and edges
 between them.</p>
 </dd></dl>
@@ -2589,7 +2589,7 @@ between them.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.local.analytics._subgraph_extraction.subgraph_extraction">
-<span class="sig-prename descclassname"><span class="pre">katana.local.analytics._subgraph_extraction.</span></span><span class="sig-name descname"><span class="pre">subgraph_extraction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plan=&lt;katana.local.analytics._subgraph_extraction.SubGraphExtractionPlan</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><span class="pre">Graph</span></a></span></span><a class="headerlink" href="#katana.local.analytics._subgraph_extraction.subgraph_extraction" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.local.analytics._subgraph_extraction.</span></span><span class="sig-name descname"><span class="pre">subgraph_extraction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plan=&lt;katana.local.analytics._subgraph_extraction.SubGraphExtractionPlan</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></span><a class="headerlink" href="#katana.local.analytics._subgraph_extraction.subgraph_extraction" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given a set of node ids, this algorithm constructs a new sub-graph which contains all nodes in the set and edges
 between them.</p>
 </dd></dl>

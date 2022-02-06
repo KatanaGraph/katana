@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+163.0.3552ec variable.
+            // this version, rather than using sphinx's 0.1.102.dev+169.0.c3763f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -495,129 +495,233 @@ A <code class="docutils literal notranslate"><span class="pre">Graph</span></cod
 <dl class="py class">
 <dt class="sig sig-object py" id="katana.local.Graph">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.</span></span><span class="sig-name descname"><span class="pre">Graph</span></span><a class="headerlink" href="#katana.local.Graph" title="Permalink to this definition">¶</a></dt>
-<dd><p>A property graph loaded into memory.</p>
-<dl class="py method">
+<dd><dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_id_to_load</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_properties</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_properties</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.TxnContext</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#katana.local.Graph.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load a property graph.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>path</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>Path</em><em>]</em>) – the path or URL from which to load the graph. This support local paths or s3 URLs.</p></li>
-<li><p><strong>partition_id_to_load</strong> – The partition number in the graph to load. If this is None (default), then the
-partition corresponding to this host’s network id will be loaded.</p></li>
+<li><p><strong>path</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>Path</em><em>]</em>) – the path or URL from which to load the graph.</p></li>
 <li><p><strong>node_properties</strong> – A list of node property names to load into memory. If this is None (default), then all
 properties are loaded.</p></li>
 <li><p><strong>edge_properties</strong> – A list of edge property names to load into memory. If this is None (default), then all
 properties are loaded.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.__iter__">
-<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.__iter__" title="Permalink to this definition">¶</a></dt>
-<dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">nid</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span> <span class="o">...</span>
-</pre></div>
-</div>
-<p>Iterate over the node IDs of this graph.</p>
-<p>Can be called from numba compiled code with the name <cite>self.nodes()</cite>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.__len__">
-<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.__len__" title="Permalink to this definition">¶</a></dt>
-<dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Return the number of nodes in the graph.</p>
-<p>Can be called from numba compiled code.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.add_edge_property">
-<span class="sig-name descname"><span class="pre">add_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.add_edge_property" title="Permalink to this definition">¶</a></dt>
-<dd><p>Insert new edge properties into this graph.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>table</strong> – A pyarrow Table or other dataframe-like object containing the properties. The table must have
-length <code class="docutils literal notranslate"><span class="pre">self.num_edges()</span></code>. (Optional)</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
-<li><p><strong>kwargs</strong> – Properties to add. The values must be arrays or sequences of length <code class="docutils literal notranslate"><span class="pre">self.num_edges()</span></code>. (Optional)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">add_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.TxnContext</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.add_edge_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.add_node_property">
-<span class="sig-name descname"><span class="pre">add_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.add_node_property" title="Permalink to this definition">¶</a></dt>
-<dd><p>Insert new node properties into this graph.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>table</strong> – A pyarrow Table or other dataframe-like object containing the properties. The table must have
-length <code class="docutils literal notranslate"><span class="pre">self.num_nodes()</span></code>. (Optional)</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
-<li><p><strong>kwargs</strong> – Properties to add. The values must be arrays or sequences of length <code class="docutils literal notranslate"><span class="pre">self.num_nodes()</span></code>. (Optional)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">add_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.TxnContext</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.add_node_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.does_edge_have_type">
-<span class="sig-name descname"><span class="pre">does_edge_have_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.does_edge_have_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check whether a given edge has a certain type</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>e</strong> – edge id</p></li>
-<li><p><strong>type_id</strong> – type id of type int or EntityType</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>True iff edge e has the given type</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">does_edge_have_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.EntityType</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#katana.local.Graph.does_edge_have_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.does_node_have_type">
-<span class="sig-name descname"><span class="pre">does_node_have_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entity_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.does_node_have_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check whether a given node has a certain type</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>n</strong> – node id</p></li>
-<li><p><strong>type_id</strong> – type id of type int or EntityType</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>True iff node n has the given type</p>
-</dd>
-</dl>
+<span class="sig-name descname"><span class="pre">does_node_have_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.EntityType</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#katana.local.Graph.does_node_have_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.find_all_edge_ids">
+<span class="sig-name descname"><span class="pre">find_all_edge_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.find_all_edge_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>find_all_edge_ids(self: katana.local_native.Graph, arg0: int, arg1: int) -&gt; katana.local_native.EdgeRange</p></li>
+<li><p>find_all_edge_ids(self: katana.local_native.Graph, arg0: int, arg1: int, arg2: katana.local_native.EntityType) -&gt; katana.local_native.EdgeRange</p></li>
+</ol>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.edge_ids">
-<span class="sig-name descname"><span class="pre">edge_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.edge_ids" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a collection of edge IDs which are the outgoing edges of the node <cite>n</cite>.</p>
-<p>Can be called from numba compiled code.</p>
+<dt class="sig sig-object py" id="katana.local.Graph.get_edge_dst">
+<span class="sig-name descname"><span class="pre">get_edge_dst</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_edge_dst" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_edge_index">
+<span class="sig-name descname"><span class="pre">get_edge_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">std::shared_ptr&lt;katana::EntityIndex&lt;unsigned</span> <span class="pre">long&gt;</span> <span class="pre">&gt;</span></span></span><a class="headerlink" href="#katana.local.Graph.get_edge_index" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_edge_property">
+<span class="sig-name descname"><span class="pre">get_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">object</span></span></span><a class="headerlink" href="#katana.local.Graph.get_edge_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_edge_property_index_from_in_edge">
+<span class="sig-name descname"><span class="pre">get_edge_property_index_from_in_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_edge_property_index_from_in_edge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_edge_property_index_from_out_edge">
+<span class="sig-name descname"><span class="pre">get_edge_property_index_from_out_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self:</span> <span class="pre">katana::GraphTopology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0:</span> <span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_edge_property_index_from_out_edge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_edge_property_index_from_undirected_edge">
+<span class="sig-name descname"><span class="pre">get_edge_property_index_from_undirected_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_edge_property_index_from_undirected_edge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_edge_src">
+<span class="sig-name descname"><span class="pre">get_edge_src</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_edge_src" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_edge_type">
+<span class="sig-name descname"><span class="pre">get_edge_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">katana.local_native.EntityType</span></span></span><a class="headerlink" href="#katana.local.Graph.get_edge_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_local_edge_id_from_in_edge">
+<span class="sig-name descname"><span class="pre">get_local_edge_id_from_in_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_local_edge_id_from_in_edge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_local_edge_id_from_out_edge">
+<span class="sig-name descname"><span class="pre">get_local_edge_id_from_out_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_local_edge_id_from_out_edge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_local_edge_id_from_undirected_edge">
+<span class="sig-name descname"><span class="pre">get_local_edge_id_from_undirected_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_local_edge_id_from_undirected_edge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_local_node_id">
+<span class="sig-name descname"><span class="pre">get_local_node_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_local_node_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_node_index">
+<span class="sig-name descname"><span class="pre">get_node_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">std::shared_ptr&lt;katana::EntityIndex&lt;unsigned</span> <span class="pre">int&gt;</span> <span class="pre">&gt;</span></span></span><a class="headerlink" href="#katana.local.Graph.get_node_index" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_node_property">
+<span class="sig-name descname"><span class="pre">get_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">object</span></span></span><a class="headerlink" href="#katana.local.Graph.get_node_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_node_property_index">
+<span class="sig-name descname"><span class="pre">get_node_property_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.get_node_property_index" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.get_node_type">
+<span class="sig-name descname"><span class="pre">get_node_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">katana.local_native.EntityType</span></span></span><a class="headerlink" href="#katana.local.Graph.get_node_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.has_edge">
+<span class="sig-name descname"><span class="pre">has_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.has_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>has_edge(self: katana.local_native.Graph, arg0: int, arg1: int) -&gt; bool</p></li>
+<li><p>has_edge(self: katana.local_native.Graph, arg0: int, arg1: int, arg2: katana.local_native.EntityType) -&gt; bool</p></li>
+</ol>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.edge_property_name_to_id">
-<span class="sig-name descname"><span class="pre">edge_property_name_to_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prop</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.edge_property_name_to_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the index (ID) of a edge property specified by name. If an index is provided, it is returned.</p>
+<dt class="sig sig-object py" id="katana.local.Graph.has_edge_index">
+<span class="sig-name descname"><span class="pre">has_edge_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#katana.local.Graph.has_edge_index" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.has_node_index">
+<span class="sig-name descname"><span class="pre">has_node_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#katana.local.Graph.has_node_index" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.in_degree">
+<span class="sig-name descname"><span class="pre">in_degree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.in_degree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>in_degree(self: katana.local_native.Graph, arg0: int) -&gt; int</p></li>
+<li><p>in_degree(self: katana.local_native.Graph, arg0: int, arg1: katana.local_native.EntityType) -&gt; int</p></li>
+</ol>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.edges">
-<span class="sig-name descname"><span class="pre">edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">slice</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">may_copy</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.html#katana.DataFrame" title="katana.dataframe.DataFrame"><span class="pre">katana.dataframe.DataFrame</span></a></span></span><a class="headerlink" href="#katana.local.Graph.edges" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="katana.local.Graph.in_edge_ids">
+<span class="sig-name descname"><span class="pre">in_edge_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.in_edge_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>in_edge_ids(self: katana.local_native.Graph) -&gt; katana.local_native.EdgeRange</p></li>
+<li><p>in_edge_ids(self: katana.local_native.Graph, arg0: int) -&gt; katana.local_native.EdgeRange</p></li>
+<li><p>in_edge_ids(self: katana.local_native.Graph, arg0: int, arg1: katana.local_native.EntityType) -&gt; katana.local_native.EdgeRange</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.in_edge_src">
+<span class="sig-name descname"><span class="pre">in_edge_src</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.in_edge_src" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.loaded_edge_schema">
+<span class="sig-name descname"><span class="pre">loaded_edge_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">object</span></span></span><a class="headerlink" href="#katana.local.Graph.loaded_edge_schema" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.loaded_node_schema">
+<span class="sig-name descname"><span class="pre">loaded_node_schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">object</span></span></span><a class="headerlink" href="#katana.local.Graph.loaded_node_schema" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.nodes">
+<span class="sig-name descname"><span class="pre">nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">katana.local_native.NodeRange</span></span></span><a class="headerlink" href="#katana.local.Graph.nodes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.num_edges">
+<span class="sig-name descname"><span class="pre">num_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.num_edges" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.num_nodes">
+<span class="sig-name descname"><span class="pre">num_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.num_nodes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.out_degree">
+<span class="sig-name descname"><span class="pre">out_degree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.out_degree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>out_degree(self: katana.local_native.Graph, arg0: int) -&gt; int</p></li>
+<li><p>out_degree(self: katana.local_native.Graph, arg0: int, arg1: katana.local_native.EntityType) -&gt; int</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.out_edge_dst">
+<span class="sig-name descname"><span class="pre">out_edge_dst</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.out_edge_dst" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.out_edge_ids">
+<span class="sig-name descname"><span class="pre">out_edge_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.out_edge_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>out_edge_ids(self: katana.local_native.Graph) -&gt; katana.local_native.EdgeRange</p></li>
+<li><p>out_edge_ids(self: katana.local_native.Graph, arg0: int) -&gt; katana.local_native.EdgeRange</p></li>
+<li><p>out_edge_ids(self: katana.local_native.Graph, arg0: int, arg1: katana.local_native.EntityType) -&gt; katana.local_native.EdgeRange</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.out_edges">
+<span class="sig-name descname"><span class="pre">out_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">slice</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">may_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="katana.html#katana.DataFrame" title="katana.dataframe.DataFrame"><span class="pre">katana.dataframe.DataFrame</span></a></span></span><a class="headerlink" href="#katana.local.Graph.out_edges" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -634,7 +738,7 @@ is an error and will raise an exception.</p></li>
 <dd class="field-even"><p>a collection of edges which are the outgoing edges of the node <cite>n</cite> as a data frame.</p>
 </dd>
 </dl>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">edges</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">OutEdges</span><span class="p">()</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">edges</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">out_edges</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of edges&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">edges</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;One destination with at indexing&quot;</span><span class="p">,</span> <span class="n">edges</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;dest&quot;</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;One source with columnar indexing&quot;</span><span class="p">,</span> <span class="n">edges</span><span class="p">[</span><span class="s2">&quot;source&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># This is O(log(E)) time</span>
@@ -646,167 +750,63 @@ contiguous and compact (just a starting node and an ending node with stride 1) d
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.get_edge_dest">
-<span class="sig-name descname"><span class="pre">get_edge_dest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.get_edge_dest" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the destination node ID of the edge <cite>e</cite>.</p>
-<p>Can be called from numba compiled code.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.get_edge_property">
-<span class="sig-name descname"><span class="pre">get_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prop</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.get_edge_property" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a <cite>pyarrow</cite> array or chunked array storing the data for edge property <cite>prop</cite>.
-This attempts to unwrap chunked arrays if possible.
-<cite>prop</cite> may be either a name or an index.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.get_edge_property_chunked">
-<span class="sig-name descname"><span class="pre">get_edge_property_chunked</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prop</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.get_edge_property_chunked" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a <cite>pyarrow</cite> chunked array storing the data for edge property <cite>prop</cite>.
-<cite>prop</cite> may be either a name or an index.
-<cite>get_edge_property</cite> should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.get_edge_source">
-<span class="sig-name descname"><span class="pre">get_edge_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.get_edge_source" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the source of an edge. This is O(log(N)) since it uses binary search to avoid having to store a source list.
-:param e: an edge ID.
-:return: The source node of that edge.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.get_node_property">
-<span class="sig-name descname"><span class="pre">get_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prop</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.get_node_property" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a <cite>pyarrow</cite> array or chunked array storing the data for node property <cite>prop</cite>.
-This attempts to unwrap chunked arrays if possible.
-<cite>prop</cite> may be either a name or an index.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.get_node_property_chunked">
-<span class="sig-name descname"><span class="pre">get_node_property_chunked</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prop</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.get_node_property_chunked" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a <cite>pyarrow</cite> chunked array storing the data for node property <cite>prop</cite>.
-<cite>prop</cite> may be either a name or an index.
-<cite>get_node_property</cite> should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.get_type_of_edge">
-<span class="sig-name descname"><span class="pre">get_type_of_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.get_type_of_edge" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the type ID of the most specific type of an edge <cite>e</cite></p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>e</strong> – edge id</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>the type id of the edge</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.get_type_of_node">
-<span class="sig-name descname"><span class="pre">get_type_of_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.get_type_of_node" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the type ID of the most specific type of a node <cite>n</cite></p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>n</strong> – node id</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>the type id of the node</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.global_in_degree">
-<span class="sig-name descname"><span class="pre">global_in_degree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.global_in_degree" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.global_out_degree">
-<span class="sig-name descname"><span class="pre">global_out_degree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.global_out_degree" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.loaded_edge_schema">
-<span class="sig-name descname"><span class="pre">loaded_edge_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.loaded_edge_schema" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the <cite>pyarrow</cite> schema for the edge properties loaded for this graph.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.loaded_node_schema">
-<span class="sig-name descname"><span class="pre">loaded_node_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.loaded_node_schema" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the <cite>pyarrow</cite> schema for the node properties loaded for this graph.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.node_property_name_to_id">
-<span class="sig-name descname"><span class="pre">node_property_name_to_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prop</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.node_property_name_to_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the index (ID) of a node property specified by name. If an index is provided, it is returned.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.num_edges">
-<span class="sig-name descname"><span class="pre">num_edges</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.num_edges" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the number of edges in the graph.</p>
-<p>Can be called from numba compiled code.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="katana.local.Graph.num_nodes">
-<span class="sig-name descname"><span class="pre">num_nodes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.num_nodes" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.remove_edge_property">
-<span class="sig-name descname"><span class="pre">remove_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.remove_edge_property" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove an edge property from the graph by name or index.</p>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">remove_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.TxnContext</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.remove_edge_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.remove_node_property">
-<span class="sig-name descname"><span class="pre">remove_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.remove_node_property" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove a node property from the graph by name or index.</p>
+<span class="sig-name descname"><span class="pre">remove_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.TxnContext</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.remove_node_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.undirected_degree">
+<span class="sig-name descname"><span class="pre">undirected_degree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.undirected_degree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.undirected_edge_ids">
+<span class="sig-name descname"><span class="pre">undirected_edge_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.undirected_edge_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>undirected_edge_ids(self: katana.local_native.Graph) -&gt; katana.local_native.EdgeRange</p></li>
+<li><p>undirected_edge_ids(self: katana.local_native.Graph, arg0: int) -&gt; katana::StandardRange&lt;katana::DisjointRangesIterator&lt;boost::iterators::counting_iterator&lt;unsigned long, boost::use_default, boost::use_default&gt; &gt; &gt;</p></li>
+</ol>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.undirected_edge_neighbor">
+<span class="sig-name descname"><span class="pre">undirected_edge_neighbor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#katana.local.Graph.undirected_edge_neighbor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.unload_edge_property">
+<span class="sig-name descname"><span class="pre">unload_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.unload_edge_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.unload_node_property">
+<span class="sig-name descname"><span class="pre">unload_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.unload_node_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.unload_topologies">
+<span class="sig-name descname"><span class="pre">unload_topologies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#katana.local.Graph.unload_topologies" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.upsert_edge_property">
-<span class="sig-name descname"><span class="pre">upsert_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.upsert_edge_property" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update or insert edge properties into this graph.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>table</strong> – A pyarrow Table or other dataframe-like object containing the properties. The table must have
-length <code class="docutils literal notranslate"><span class="pre">self.num_edges()</span></code>. (Optional)</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
-<li><p><strong>kwargs</strong> – Properties to add. The values must be arrays or sequences of length <code class="docutils literal notranslate"><span class="pre">self.num_edges()</span></code>. (Optional)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">upsert_edge_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.TxnContext</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.upsert_edge_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.upsert_node_property">
-<span class="sig-name descname"><span class="pre">upsert_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.upsert_node_property" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update or insert node properties into this graph.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>table</strong> – A pyarrow Table or other dataframe-like object containing the properties. The table must have
-length <code class="docutils literal notranslate"><span class="pre">self.num_nodes()</span></code>. (Optional)</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
-<li><p><strong>kwargs</strong> – Properties to add. The values must be arrays or sequences of length <code class="docutils literal notranslate"><span class="pre">self.num_nodes()</span></code>. (Optional)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">upsert_node_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">katana.local_native.TxnContext</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.upsert_node_property" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.local.Graph.write">
-<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">command_line</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.Graph.write" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provenance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'katana.local'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">void</span></span></span><a class="headerlink" href="#katana.local.Graph.write" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write the property graph to the specified path or URL (or the original path it was loaded from if path is
 not provided). Provide lineage information in the form of a command line.</p>
 <dl class="field-list simple">
@@ -819,36 +819,20 @@ not provided). Provide lineage information in the form of a command line.</p>
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
+<dl class="py property">
 <dt class="sig sig-object py" id="katana.local.Graph.edge_types">
-<span class="sig-name descname"><span class="pre">edge_types</span></span><a class="headerlink" href="#katana.local.Graph.edge_types" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>the edge type manager</p>
-</dd>
-</dl>
-</dd></dl>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">edge_types</span></span><a class="headerlink" href="#katana.local.Graph.edge_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
-<dl class="py attribute">
+<dl class="py property">
 <dt class="sig sig-object py" id="katana.local.Graph.node_types">
-<span class="sig-name descname"><span class="pre">node_types</span></span><a class="headerlink" href="#katana.local.Graph.node_types" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>the node type manager</p>
-</dd>
-</dl>
-</dd></dl>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">node_types</span></span><a class="headerlink" href="#katana.local.Graph.node_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
-<dl class="py attribute">
+<dl class="py property">
 <dt class="sig sig-object py" id="katana.local.Graph.path">
-<span class="sig-name descname"><span class="pre">path</span></span><a class="headerlink" href="#katana.local.Graph.path" title="Permalink to this definition">¶</a></dt>
-<dd><p>The path that the graph was read from and will be written to by default. This can be set.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>str</p>
-</dd>
-</dl>
-</dd></dl>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">path</span></span><a class="headerlink" href="#katana.local.Graph.path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 

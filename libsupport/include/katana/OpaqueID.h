@@ -5,6 +5,8 @@
 
 #include <boost/math/tools/precision.hpp>
 
+#include "katana/CompileTimeIntrospection.h"
+
 namespace katana {
 
 // The count_traits are here to support the Count type within OpaqueIDs
@@ -19,6 +21,10 @@ template <class T>
 struct count_traits<T, typename std::enable_if_t<std::is_integral_v<T>>> {
   using Count = std::make_unsigned_t<T>;
 };
+
+template <typename T>
+using has_ostream_insert_t =
+    decltype(std::declval<std::ostream>() << std::declval<T>());
 
 /// Base class for opaque ID types.
 ///
@@ -93,14 +99,17 @@ public:
     std::swap(a.value_, b.value_);
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const _IDType& self) {
-    return os << self.value();
-  }
-
   friend std::size_t hash_value(const _IDType& self) {
     return std::hash<ValueType>{}(self.value());
   }
 };
+
+template <typename T, typename _Value>
+std::enable_if_t<
+    is_detected_v<has_ostream_insert_t, typename T::ValueType>, std::ostream>&
+operator<<(std::ostream& os, const OpaqueID<T, _Value>& self) {
+  return os << self.value();
+}
 
 // This function has a non-standard name type to act as a better error message
 // in case of template match failure.

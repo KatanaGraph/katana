@@ -5,9 +5,11 @@
 #include <type_traits>
 
 #include <fmt/format.h>
+#include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
 
 #include "katana/CompileTimeIntrospection.h"
+#include "katana/OpaqueID.h"
 
 namespace katana {
 
@@ -91,6 +93,30 @@ DefComparison(ClassT& cls) {
       return !(a < b) && !Equals(a, b);
     });
     cls.def("__ge__", [](const T& a, const T& b) { return !(a < b); });
+  }
+}
+
+template <typename T>
+using has_plus_t = decltype(std::declval<T>() + std::declval<T>());
+template <typename T>
+using has_minus_t = decltype(std::declval<T>() - std::declval<T>());
+template <typename T>
+using has_unaryminus_t = decltype(-std::declval<T>());
+
+/// DefComparison will def the python comparison operators based on
+/// operator<() if it is available.
+template <typename ClassT>
+void
+DefPlusMinus(ClassT& cls) {
+  using T = typename ClassT::type;
+  if constexpr (is_detected_v<has_plus_t, T>) {
+    cls.def(pybind11::self + pybind11::self);
+  }
+  if constexpr (is_detected_v<has_minus_t, T>) {
+    cls.def(pybind11::self - pybind11::self);
+  }
+  if constexpr (is_detected_v<has_unaryminus_t, T>) {
+    cls.def(-pybind11::self);
   }
 }
 
@@ -185,16 +211,29 @@ DefOpaqueID(pybind11::module& m, const char* name) {
 
   detail::DefEquals(cls);
   detail::DefComparison(cls);
-  detail::DefCopy(cls);
   detail::DefHash(cls);
+  detail::DefPlusMinus(cls);
+
+  if constexpr (std::is_base_of_v<
+                    katana::OpaqueIDLinear<T, typename T::ValueType>, T>) {
+    cls.def(pybind11::self + typename T::DifferenceType());
+    cls.def(pybind11::self - typename T::DifferenceType());
+
+    cls.def_property_readonly_static(
+        "sentinel", [](pybind11::object) { return T::sentinel(); });
+  }
 
   cls.def(pybind11::init<typename T::ValueType>());
   cls.def_property_readonly("value", [](const T& v) { return v.value(); });
-  cls.def("__repr__", [name](const T& self) {
-    std::ostringstream out;
-    out << name << "(" << self << ")";
-    return out.str();
-  });
+
+  if constexpr (is_detected_v<detail::has_ostream_insert_t, T>) {
+    cls.def("__repr__", [name](const T& self) {
+      std::ostringstream out;
+      out << name << "(" << self << ")";
+      return out.str();
+    });
+  }
+
   return cls;
 }
 

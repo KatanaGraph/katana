@@ -47,6 +47,56 @@ PythonChecked(katana::Result<T>&& src) {
   return std::move(src.value());
 }
 
+template <typename Cls, typename Return, typename Error, typename... Args>
+auto
+WithErrorSentinel(Return (Cls::*func)(Args...), Return sentinel, Error error) {
+  return [=](Cls& self, Args... args) {
+    auto r = self.*func(args...);
+    if (r == sentinel) {
+      throw error;
+    }
+    return r;
+  };
+}
+
+template <typename Cls, typename Return, typename Error, typename... Args>
+auto
+WithErrorSentinel(
+    Return (Cls::*func)(Args...) const, Return sentinel, Error error) {
+  return [=](const Cls& self, Args... args) {
+    auto r = (self.*func)(args...);
+    if (r == sentinel) {
+      throw error;
+    }
+    return r;
+  };
+}
+
+template <typename Cls, typename Return, typename Error, typename... Args>
+auto
+WithErrorSentinel(Return (*func)(Cls&, Args...), Return sentinel, Error error) {
+  return [=](Cls& self, Args... args) {
+    auto r = func(self, args...);
+    if (r == sentinel) {
+      throw error;
+    }
+    return r;
+  };
+}
+
+template <typename Cls, typename Return, typename Error, typename... Args>
+auto
+WithErrorSentinel(
+    Return (*func)(const Cls&, Args...), Return sentinel, Error error) {
+  return [=](const Cls& self, Args... args) {
+    auto r = func(self, args...);
+    if (r == sentinel) {
+      throw error;
+    }
+    return r;
+  };
+}
+
 }  // namespace katana::python
 
 namespace pybind11 {

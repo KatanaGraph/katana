@@ -182,7 +182,7 @@ DefPropertyGraph(py::module& m) {
             return PythonChecked(PropertyGraph::Make(
                 path_str, txn_context_handler.get(), options));
           }),
-      py::arg("path"), py::arg("node_properties") = std::nullopt,
+      py::arg("path"), py::kw_only(), py::arg("node_properties") = std::nullopt,
       py::arg("edge_properties") = std::nullopt,
       py::arg("txn_ctx") = TxnContextArgumentHandler::default_value,
       R"""(

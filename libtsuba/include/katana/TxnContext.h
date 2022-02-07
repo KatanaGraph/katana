@@ -11,8 +11,11 @@ namespace katana {
 
 class KATANA_EXPORT TxnContext {
 public:
+  /// Create a transaction context. By default it commits changes when the context is destroyed. This is useful when calling from transaction unaware code like tests.
   TxnContext() {}
 
+  /// @brief Create a transaction context.
+  /// @param auto_commit :: if false, changes are only committed when Commit is called; if true, changes are committed also when the context is destroyed.
   explicit TxnContext(bool auto_commit) : auto_commit_(auto_commit) {}
 
   ~TxnContext() {

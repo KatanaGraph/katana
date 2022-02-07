@@ -167,7 +167,24 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  if (reportNode >= pg->topology().NumNodes()) {
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
+
+  if (reportNode >= pg_projected_view->topology().NumNodes()) {
     KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
@@ -239,20 +256,21 @@ main(int argc, char** argv) {
   }
 
   for (auto startNode : startNodes) {
-    if (startNode >= pg->topology().NumNodes()) {
+    if (startNode >= pg_projected_view->topology().NumNodes()) {
       KATANA_LOG_FATAL("failed to set source: {}", startNode);
     }
 
     std::string node_distance_prop = "distance-" + std::to_string(startNode);
     katana::TxnContext txn_ctx;
     auto pg_result = Sssp(
-        pg.get(), startNode, edge_property_name, node_distance_prop, &txn_ctx,
-        plan);
+        pg_projected_view.get(), startNode, edge_property_name,
+        node_distance_prop, &txn_ctx, plan);
     if (!pg_result) {
       KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
     }
 
-    auto stats_result = SsspStatistics::Compute(pg.get(), node_distance_prop);
+    auto stats_result =
+        SsspStatistics::Compute(pg_projected_view.get(), node_distance_prop);
     if (!stats_result) {
       KATANA_LOG_FATAL("Computing statistics: {}", stats_result.error());
     }
@@ -260,14 +278,15 @@ main(int argc, char** argv) {
     stats.Print();
 
     if (!skipVerify) {
-      if (stats.n_reached_nodes < pg->topology().NumNodes()) {
+      if (stats.n_reached_nodes < pg_projected_view->topology().NumNodes()) {
         KATANA_LOG_WARN(
             "{} unvisited nodes; this is an error if the graph is strongly "
             "connected",
-            pg->topology().NumNodes() - stats.n_reached_nodes);
+            pg_projected_view->topology().NumNodes() - stats.n_reached_nodes);
       }
       if (auto r = SsspAssertValid(
-              pg.get(), startNode, edge_property_name, node_distance_prop);
+              pg_projected_view.get(), startNode, edge_property_name,
+              node_distance_prop);
           r) {
         std::cout << "Verification successful.\n";
       } else {
@@ -277,35 +296,48 @@ main(int argc, char** argv) {
 
     if (output) {
       std::string output_filename = "output-" + std::to_string(startNode);
-      switch (pg->GetNodeProperty(node_distance_prop).value()->type()->id()) {
+      switch (pg_projected_view->GetNodeProperty(node_distance_prop)
+                  .value()
+                  ->type()
+                  ->id()) {
       case arrow::UInt32Type::type_id:
-        OutputResults<uint32_t>(pg.get(), node_distance_prop, output_filename);
+        OutputResults<uint32_t>(
+            pg_projected_view.get(), node_distance_prop, output_filename);
         break;
       case arrow::Int32Type::type_id:
-        OutputResults<int32_t>(pg.get(), node_distance_prop, output_filename);
+        OutputResults<int32_t>(
+            pg_projected_view.get(), node_distance_prop, output_filename);
         break;
       case arrow::UInt64Type::type_id:
-        OutputResults<uint64_t>(pg.get(), node_distance_prop, output_filename);
+        OutputResults<uint64_t>(
+            pg_projected_view.get(), node_distance_prop, output_filename);
         break;
       case arrow::Int64Type::type_id:
-        OutputResults<int64_t>(pg.get(), node_distance_prop, output_filename);
+        OutputResults<int64_t>(
+            pg_projected_view.get(), node_distance_prop, output_filename);
         break;
       case arrow::FloatType::type_id:
-        OutputResults<float>(pg.get(), node_distance_prop, output_filename);
+        OutputResults<float>(
+            pg_projected_view.get(), node_distance_prop, output_filename);
         break;
       case arrow::DoubleType::type_id:
-        OutputResults<double>(pg.get(), node_distance_prop, output_filename);
+        OutputResults<double>(
+            pg_projected_view.get(), node_distance_prop, output_filename);
         break;
       default:
         KATANA_LOG_FATAL(
             "Unsupported type: {}",
-            pg->GetNodeProperty(node_distance_prop).value()->type());
+            pg_projected_view->GetNodeProperty(node_distance_prop)
+                .value()
+                ->type());
         break;
       }
     }
     --num_sources;
     if (num_sources != 0 && !persistAllDistances) {
-      if (auto r = pg->RemoveNodeProperty(node_distance_prop, &txn_ctx); !r) {
+      if (auto r = pg_projected_view->RemoveNodeProperty(
+              node_distance_prop, &txn_ctx);
+          !r) {
         KATANA_LOG_FATAL(
             "Failed to remove the node distance property stats {}", r.error());
       }

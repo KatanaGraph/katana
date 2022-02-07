@@ -66,6 +66,26 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
+  std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
+            << pg->topology().NumEdges() << " edges\n";
+
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
+
   LocalClusteringCoefficientPlan plan;
 
   LocalClusteringCoefficientPlan::Relabeling relabeling_flag =
@@ -86,7 +106,7 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   auto lcc_result = LocalClusteringCoefficient(
-      pg.get(), "localClusteringCoefficient", &txn_ctx, plan);
+      pg_projected_view.get(), "localClusteringCoefficient", &txn_ctx, plan);
   if (!lcc_result) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", lcc_result.error());
   }

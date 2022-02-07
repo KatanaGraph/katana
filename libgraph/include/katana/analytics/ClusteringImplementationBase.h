@@ -505,9 +505,9 @@ struct ClusteringImplementationBase {
  * Copy edge property from
  * property graph, pg_from to pg_to.
  */
+  template <typename GraphViewTy>
   static katana::Result<void> CopyEdgeProperty(
       katana::PropertyGraph* pfg_from, katana::PropertyGraph* pfg_to,
-      const std::string& edge_property_name,
       const std::string& new_edge_property_name, katana::TxnContext* txn_ctx) {
     // Remove the existing edge property
     if (pfg_to->HasEdgeProperty(new_edge_property_name)) {
@@ -516,23 +516,28 @@ struct ClusteringImplementationBase {
         return r.error();
       }
     }
+
+    using NodeData = std::tuple<>;
+    using EdgeData = std::tuple<EdgeWeight<EdgeTy>>;
+    using GraphTy =
+        katana::TypedPropertyGraphView<GraphViewTy, NodeData, EdgeData>;
+
+    std::vector<std::string> new_edge_property_vec{"new_edge_property_name"};
+    KATANA_CHECKED(pfg_to->ConstructEdgeProperties<EdgeData>(
+        txn_ctx, new_edge_property_vec));
+
+    auto graph_to = KATANA_CHECKED(GraphTy::Make(pfg_to));
+    auto graph_from = KATANA_CHECKED(GraphTy::Make(pfg_from));
+
+    using Edge = katana::GraphTopology::Edge;
     // Copy edge properties
-    using ArrowType = typename arrow::CTypeTraits<EdgeTy>::ArrowType;
-    auto edge_property_result =
-        pfg_from->GetEdgePropertyTyped<EdgeTy>(edge_property_name);
-    if (!edge_property_result) {
-      return edge_property_result.error();
-    }
-    auto edge_property = edge_property_result.value();
-    std::vector<std::shared_ptr<arrow::Field>> fields;
-    std::vector<std::shared_ptr<arrow::Array>> columns;
-    fields.emplace_back(
-        arrow::field((new_edge_property_name), std::make_shared<ArrowType>()));
-    columns.emplace_back(edge_property);
-    auto edge_data_table = arrow::Table::Make(arrow::schema(fields), columns);
-    if (auto r = pfg_to->AddEdgeProperties(edge_data_table, txn_ctx); !r) {
-      return r.error();
-    }
+    katana::do_all(
+        katana::iterate(graph_from.OutEdges()),
+        [&](Edge e) {
+          graph_to.template GetEdgeData<EdgeWeight<EdgeTy>>(e) =
+              graph_from.template GetEdgeData<EdgeWeight<EdgeTy>>(e);
+        },
+        katana::no_stats());
     return katana::ResultSuccess();
   }
 

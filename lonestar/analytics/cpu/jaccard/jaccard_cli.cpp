@@ -70,8 +70,25 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  if (base_node >= pg->topology().NumNodes() ||
-      report_node >= pg->topology().NumNodes()) {
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
+
+  if (base_node >= pg_projected_view->topology().NumNodes() ||
+      report_node >= pg_projected_view->topology().NumNodes()) {
     std::cerr << "failed to set report: " << report_node
               << " or failed to set base: " << base_node << "\n";
     abort();
@@ -79,17 +96,17 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   if (auto r = katana::analytics::Jaccard(
-          pg.get(), base_node, output_property_name, &txn_ctx,
+          pg_projected_view.get(), base_node, output_property_name, &txn_ctx,
           katana::analytics::JaccardPlan());
       !r) {
     KATANA_LOG_FATAL("Jaccard failed: {}", r.error());
   }
 
   /// TODO (Yasin): not sure whythe following  KATANA_CHECKED gave me error here.
-  /// Graph graph = KATANA_CHECKED(Graph::Make(pg.get(), {output_property_name}, {}));
+  /// Graph graph = KATANA_CHECKED(Graph::Make(pg_projected_view.get(), {output_property_name}, {}));
   auto pg_result = katana::TypedPropertyGraphView<
       katana::PropertyGraphViews::Default, NodeData,
-      EdgeData>::Make(pg.get(), {output_property_name}, {});
+      EdgeData>::Make(pg_projected_view.get(), {output_property_name}, {});
   if (!pg_result) {
     KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
@@ -99,7 +116,7 @@ main(int argc, char** argv) {
             << graph.GetData<NodeValue>(report_node) << "\n";
 
   auto stats_result = katana::analytics::JaccardStatistics::Compute(
-      pg.get(), base_node, output_property_name);
+      pg_projected_view.get(), base_node, output_property_name);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "could not make compute statistics: {}", stats_result.error());
@@ -109,7 +126,7 @@ main(int argc, char** argv) {
 
   if (!skipVerify) {
     if (katana::analytics::JaccardAssertValid(
-            pg.get(), base_node, output_property_name)) {
+            pg_projected_view.get(), base_node, output_property_name)) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL(

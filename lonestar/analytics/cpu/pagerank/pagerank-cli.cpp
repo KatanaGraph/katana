@@ -70,14 +70,32 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
+
   PagerankPlan plan{kCPU, algo, tolerance, maxIterations, kAlpha};
 
   katana::TxnContext txn_ctx;
-  if (auto r = Pagerank(pg.get(), "rank", &txn_ctx, plan); !r) {
+  if (auto r = Pagerank(pg_projected_view.get(), "rank", &txn_ctx, plan); !r) {
     KATANA_LOG_FATAL("Failed to run Pagerank {}", r.error());
   }
 
-  auto stats_result = PagerankStatistics::Compute(pg.get(), "rank");
+  auto stats_result =
+      PagerankStatistics::Compute(pg_projected_view.get(), "rank");
   if (!stats_result) {
     KATANA_LOG_FATAL("Failed to compute stats {}", stats_result.error());
   }
@@ -85,7 +103,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (PagerankAssertValid(pg.get(), "rank")) {
+    if (PagerankAssertValid(pg_projected_view.get(), "rank")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");
@@ -93,13 +111,14 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pg->GetNodePropertyTyped<float>("rank");
+    auto r = pg_projected_view->GetNodePropertyTyped<float>("rank");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     KATANA_LOG_DEBUG_ASSERT(
-        uint64_t(results->length()) == pg->topology().NumNodes());
+        uint64_t(results->length()) ==
+        pg_projected_view->topology().NumNodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

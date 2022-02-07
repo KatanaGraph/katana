@@ -56,6 +56,12 @@ llvm::cl::opt<bool> output(
     "output", llvm::cl::desc("Write result (default false)"),
     llvm::cl::init(false));
 
+llvm::cl::opt<std::string> node_types(
+    "node_types", llvm::cl::desc("<node types to project>"));
+
+llvm::cl::opt<std::string> edge_types(
+    "edge_types", llvm::cl::desc("<edge types to project>"));
+
 static void
 LonestarPrintVersion(llvm::raw_ostream& out) {
   out << "LoneStar Benchmark Suite v" << katana::getVersion() << " ("

@@ -373,7 +373,6 @@ public:
 
     Graph graph_curr = KATANA_CHECKED(
         Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
-
     /*
     * Vertex following optimization
     */
@@ -413,9 +412,9 @@ public:
       });
 
       auto pg_dup = KATANA_CHECKED(Base::DuplicateGraphWithSameTopo(*pg));
-      KATANA_CHECKED(Base::CopyEdgeProperty(
-          pg, pg_dup.get(), edge_weight_property_name,
-          temp_edge_property_names[0], txn_ctx));
+      KATANA_CHECKED(Base::template CopyEdgeProperty<GraphViewTy>(
+          pg, pg_dup.get(), temp_edge_property_names[0], txn_ctx));
+
       KATANA_CHECKED(
           pg_dup->template ConstructNodeProperties<NodeData>(txn_ctx));
 

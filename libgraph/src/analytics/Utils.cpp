@@ -64,5 +64,17 @@ katana::analytics::IsApproximateDegreeDistributionPowerLaw(
   return sample_average / 1.3 > sample_median;
 }
 
+void
+katana::analytics::SplitStringByComma(
+    std::string& str, std::vector<std::string>* vec) {
+  size_t start;
+  size_t end = 0;
+
+  while ((start = str.find_first_not_of(',', end)) != std::string::npos) {
+    end = str.find(',', start);
+    vec->push_back(str.substr(start, end - start));
+  }
+}
+
 thread_local int
     katana::analytics::TemporaryPropertyGuard::temporary_property_counter = 0;

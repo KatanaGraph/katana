@@ -95,6 +95,23 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
+
   KTrussPlan plan = KTrussPlan();
   switch (algo) {
   case KTrussPlan::kBsp:
@@ -111,13 +128,14 @@ main(int argc, char** argv) {
   }
 
   katana::TxnContext txn_ctx;
-  if (auto r = KTruss(&txn_ctx, pg.get(), kTrussNumber, "edge-alive", plan);
+  if (auto r = KTruss(
+          &txn_ctx, pg_projected_view.get(), kTrussNumber, "edge-alive", plan);
       !r) {
     KATANA_LOG_FATAL("Failed to compute k-truss: {}", r.error());
   }
 
-  auto stats_result =
-      KTrussStatistics::Compute(pg.get(), kTrussNumber, "edge-alive");
+  auto stats_result = KTrussStatistics::Compute(
+      pg_projected_view.get(), kTrussNumber, "edge-alive");
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute KTruss statistics: {}", stats_result.error());
@@ -126,7 +144,8 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (KTrussAssertValid(pg.get(), kTrussNumber, "edge-alive")) {
+    if (KTrussAssertValid(
+            pg_projected_view.get(), kTrussNumber, "edge-alive")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");
@@ -134,13 +153,14 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pg->GetEdgePropertyTyped<uint32_t>("edge-alive");
+    auto r = pg_projected_view->GetEdgePropertyTyped<uint32_t>("edge-alive");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get edge property {}", r.error());
     }
     auto results = r.value();
     KATANA_LOG_DEBUG_ASSERT(
-        uint64_t(results->length()) == pg->topology().NumNodes());
+        uint64_t(results->length()) ==
+        pg_projected_view->topology().NumNodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

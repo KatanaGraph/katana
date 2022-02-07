@@ -110,6 +110,8 @@ public:
   ~TemporaryPropertyGuard() { Deinit(); }
 };
 
+KATANA_EXPORT void SplitStringByComma(
+    std::string& str, std::vector<std::string>* vec);
 }  // namespace katana::analytics
 
 #endif

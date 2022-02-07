@@ -100,11 +100,31 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
+  std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
+            << pg->topology().NumEdges() << " edges\n";
+
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
+
   BetweennessCentralityPlan plan =
       BetweennessCentralityPlan::FromAlgorithm(algo);
 
   BetweennessCentralitySources sources = kBetweennessCentralityAllNodes;
-  uint32_t num_sources = pg->NumNodes();
+  uint32_t num_sources = pg_projected_view->NumNodes();
 
   if (!allSources) {
     if (!startNodesFile.getValue().empty()) {
@@ -147,13 +167,14 @@ main(int argc, char** argv) {
             << " sources\n";
   katana::TxnContext txn_ctx;
   if (auto r = BetweennessCentrality(
-          pg.get(), "betweenness_centrality", &txn_ctx, sources, plan);
+          pg_projected_view.get(), "betweenness_centrality", &txn_ctx, sources,
+          plan);
       !r) {
     KATANA_LOG_FATAL("Couldn't run algorithm: {}", r.error());
   }
 
   auto stats_result = BetweennessCentralityStatistics::Compute(
-      pg.get(), "betweenness_centrality");
+      pg_projected_view.get(), "betweenness_centrality");
   if (!stats_result) {
     KATANA_LOG_FATAL("Failed to compute statistics: {}", stats_result.error());
   }
@@ -161,14 +182,16 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (output) {
-    auto results_result =
-        pg->GetNodePropertyTyped<float>("betweenness_centrality");
+    auto results_result = pg_projected_view->GetNodePropertyTyped<float>(
+        "betweenness_centrality");
     if (!results_result) {
       KATANA_LOG_FATAL("Failed to get results: {}", results_result.error());
     }
     auto results = results_result.value();
 
-    KATANA_LOG_ASSERT((uint64_t)results->length() == pg->topology().NumNodes());
+    KATANA_LOG_ASSERT(
+        (uint64_t)results->length() ==
+        pg_projected_view->topology().NumNodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

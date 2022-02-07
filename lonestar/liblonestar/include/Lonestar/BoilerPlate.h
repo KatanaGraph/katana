@@ -36,6 +36,9 @@ extern llvm::cl::opt<std::string> edge_property_name;
 //! Where to write output if output is set
 extern llvm::cl::opt<std::string> outputLocation;
 extern llvm::cl::opt<bool> output;
+//! Node and edge types for native projections
+extern llvm::cl::opt<std::string> node_types;
+extern llvm::cl::opt<std::string> edge_types;
 
 //! initialize lonestar benchmark
 std::unique_ptr<katana::SharedMemSys> LonestarStart(

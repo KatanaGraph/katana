@@ -95,6 +95,23 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
+
   KCorePlan plan = KCorePlan();
   switch (algo) {
   case KCorePlan::kSynchronous:
@@ -109,14 +126,14 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   if (auto r = KCore(
-          pg.get(), kCoreNumber, "node-in-core", &txn_ctx, symmetricGraph,
-          plan);
+          pg_projected_view.get(), kCoreNumber, "node-in-core", &txn_ctx,
+          symmetricGraph, plan);
       !r) {
     KATANA_LOG_FATAL("Failed to compute k-core: {}", r.error());
   }
 
-  auto stats_result =
-      KCoreStatistics::Compute(pg.get(), kCoreNumber, "node-in-core");
+  auto stats_result = KCoreStatistics::Compute(
+      pg_projected_view.get(), kCoreNumber, "node-in-core");
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute KCore statistics: {}", stats_result.error());
@@ -125,7 +142,8 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (KCoreAssertValid(pg.get(), kCoreNumber, "node-in-core")) {
+    if (KCoreAssertValid(
+            pg_projected_view.get(), kCoreNumber, "node-in-core")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");
@@ -133,13 +151,14 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pg->GetNodePropertyTyped<uint32_t>("node-in-core");
+    auto r = pg_projected_view->GetNodePropertyTyped<uint32_t>("node-in-core");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     KATANA_LOG_DEBUG_ASSERT(
-        uint64_t(results->length()) == pg->topology().NumNodes());
+        uint64_t(results->length()) ==
+        pg_projected_view->topology().NumNodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

@@ -7,3 +7,9 @@ add_dependencies(apps verify-k-truss)
 target_link_libraries(verify-k-truss PRIVATE Katana::galois lonestar)
 
 add_test_scale(small k-truss-cpu INPUT rmat15 INPUT_URI "${RDG_RMAT10_SYMMETRIC}" NO_VERIFY -kTrussNumber=4 -symmetricGraph)
+add_test_scale(small k-truss-cpu INPUT rmat15 INPUT_URI "${RDG_RMAT10}" NO_VERIFY -kTrussNumber=4)
+
+## Test TranformView
+add_test_scale(small k-truss-cpu NO_VERIFY INPUT ldbc003 INPUT_URI "${RDG_LDBC_003}" --node_types=Person -kTrussNumber=4)
+add_test_scale(small k-truss-cpu NO_VERIFY INPUT ldbc003 INPUT_URI "${RDG_LDBC_003}" --edge_types=CONTAINER_OF -kTrussNumber=4)
+

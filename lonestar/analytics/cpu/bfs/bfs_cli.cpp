@@ -138,7 +138,24 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
-  if (reportNode >= pg->topology().NumNodes()) {
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
+
+  if (reportNode >= pg_projected_view->topology().NumNodes()) {
     KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
@@ -161,18 +178,21 @@ main(int argc, char** argv) {
   std::cout << "Running BFS for " << num_sources << " sources\n";
 
   for (auto start_node : startNodes) {
-    if (start_node >= pg->topology().NumNodes()) {
+    if (start_node >= pg_projected_view->topology().NumNodes()) {
       KATANA_LOG_FATAL("failed to set source: {}", start_node);
     }
 
     std::string node_distance_prop = "level-" + std::to_string(start_node);
     katana::TxnContext txn_ctx;
-    if (auto r = Bfs(pg.get(), start_node, node_distance_prop, &txn_ctx, plan);
+    if (auto r =
+            Bfs(pg_projected_view.get(), start_node, node_distance_prop,
+                &txn_ctx, plan);
         !r) {
       KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
 
-    auto r = pg->GetNodePropertyTyped<uint32_t>(node_distance_prop);
+    auto r =
+        pg_projected_view->GetNodePropertyTyped<uint32_t>(node_distance_prop);
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
@@ -181,7 +201,8 @@ main(int argc, char** argv) {
     std::cout << "Node " << reportNode << " has distance "
               << results->Value(reportNode) << "\n";
 
-    auto stats_result = BfsStatistics::Compute(pg.get(), node_distance_prop);
+    auto stats_result =
+        BfsStatistics::Compute(pg_projected_view.get(), node_distance_prop);
     if (!stats_result) {
       KATANA_LOG_FATAL("Failed to compute stats {}", stats_result.error());
     }
@@ -189,13 +210,14 @@ main(int argc, char** argv) {
     stats.Print();
 
     if (!skipVerify) {
-      if (stats.n_reached_nodes < pg->NumNodes()) {
+      if (stats.n_reached_nodes < pg_projected_view->NumNodes()) {
         KATANA_LOG_WARN(
             "{} unvisited nodes; this is an error if the graph is strongly "
             "connected",
-            pg->NumNodes() - stats.n_reached_nodes);
+            pg_projected_view->NumNodes() - stats.n_reached_nodes);
       }
-      if (auto res = BfsAssertValid(pg.get(), start_node, node_distance_prop);
+      if (auto res = BfsAssertValid(
+              pg_projected_view.get(), start_node, node_distance_prop);
           res) {
         std::cout << "Verification successful.\n";
       } else {
@@ -204,7 +226,8 @@ main(int argc, char** argv) {
     }
 
     if (output) {
-      KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pg->size());
+      KATANA_LOG_DEBUG_ASSERT(
+          uint64_t(results->length()) == pg_projected_view->size());
 
       std::string output_filename = "output-" + std::to_string(start_node);
       writeOutput(
@@ -213,7 +236,9 @@ main(int argc, char** argv) {
     }
     --num_sources;
     if (num_sources != 0 && !persistAllDistances) {
-      if (auto r = pg->RemoveNodeProperty(node_distance_prop, &txn_ctx); !r) {
+      if (auto r = pg_projected_view->RemoveNodeProperty(
+              node_distance_prop, &txn_ctx);
+          !r) {
         KATANA_LOG_FATAL(
             "Failed to remove the node distance property stats {}", r.error());
       }

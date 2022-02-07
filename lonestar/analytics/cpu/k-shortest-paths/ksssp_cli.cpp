@@ -123,6 +123,22 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::PropertyGraph::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
   if (algo == KssspPlan::kDeltaStep || algo == KssspPlan::kDeltaTile) {
     katana::gInfo("Using delta-step of ", (1 << stepShift), "\n");
     KATANA_LOG_WARN(
@@ -152,8 +168,8 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm selected");
   }
 
-  if (startNode >= pg->topology().size() ||
-      reportNode >= pg->topology().size()) {
+  if (startNode >= pg_projected_view->topology().size() ||
+      reportNode >= pg_projected_view->topology().size()) {
     KATANA_LOG_ERROR(
         "failed to set report: ", reportNode,
         " or failed to set source: ", startNode, "\n");
@@ -164,7 +180,7 @@ main(int argc, char** argv) {
   katana::TxnContext txn_ctx;
 
   auto pg_result = Ksssp(
-      pg.get(), edge_property_name, startNode, reportNode, numPaths,
+      pg_projected_view.get(), edge_property_name, startNode, reportNode, numPaths,
       symmetricGraph, &txn_ctx, plan);
 
   if (!pg_result) {

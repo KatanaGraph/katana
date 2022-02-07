@@ -99,6 +99,14 @@ main(int argc, char** argv) {
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
+  if (symmetricGraph) {
+    KATANA_LOG_WARN(
+        "This application requires a symmetric graph input;"
+        " Using the -symmetricGraph flag "
+        " indicates that the input is a symmetric graph and can be used as it "
+        "is.");
+  }
+
   std::cout << "Reading from file: " << inputFile << "\n";
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
@@ -107,6 +115,23 @@ main(int argc, char** argv) {
             << pg->topology().NumEdges() << " edges\n";
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
+
+  std::vector<std::string> vec_node_types;
+  if (node_types != "") {
+    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
+  }
+
+  std::vector<std::string> vec_edge_types;
+  if (edge_types != "") {
+    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
+  }
+
+  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+      *pg.get(), vec_node_types, vec_edge_types);
+
+  std::cout << "Projected graph has: "
+            << pg_projected_view->topology().NumNodes() << " nodes, "
+            << pg_projected_view->topology().NumEdges() << " edges\n";
 
   LeidenClusteringPlan plan = LeidenClusteringPlan();
   switch (algo) {
@@ -126,14 +151,14 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   auto pg_result = LeidenClustering(
-      pg.get(), edge_property_name, "clusterId", &txn_ctx, symmetricGraph,
-      plan);
+      pg_projected_view.get(), edge_property_name, "clusterId", &txn_ctx,
+      symmetricGraph, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run LeidenClustering: {}", pg_result.error());
   }
 
   auto stats_result = LeidenClusteringStatistics::Compute(
-      pg.get(), edge_property_name, "clusterId", &txn_ctx);
+      pg_projected_view.get(), edge_property_name, "clusterId", &txn_ctx);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute LeidenClustering statistics: {}",
@@ -144,7 +169,7 @@ main(int argc, char** argv) {
 
   if (!skipVerify) {
     if (LeidenClusteringAssertValid(
-            pg.get(), edge_property_name, "clusterId")) {
+            pg_projected_view.get(), edge_property_name, "clusterId")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");
@@ -152,13 +177,14 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pg->GetNodePropertyTyped<uint64_t>("clusterId");
+    auto r = pg_projected_view->GetNodePropertyTyped<uint64_t>("clusterId");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     KATANA_LOG_DEBUG_ASSERT(
-        uint64_t(results->length()) == pg->topology().NumNodes());
+        uint64_t(results->length()) ==
+        pg_projected_view->topology().NumNodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

@@ -157,7 +157,7 @@ main(int argc, char** argv) {
 
   auto pg_result = Ksssp(
       pg.get(), edge_property_name, startNode, reportNode, &txn_ctx,
-      algoReachability, numPaths, stepShift, symmetricGraph, plan);
+      algoReachability, numPaths, symmetricGraph, plan);
 
   if (!pg_result) {
     KATANA_LOG_FATAL("failed to run ksssp: {}", pg_result.error());

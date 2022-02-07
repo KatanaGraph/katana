@@ -13,7 +13,8 @@ from pyarrow.lib cimport CUInt64Array
 from katana.cpp.libgalois.datastructures cimport NUMAArray
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph
+from katana.local import Graph, TxnContext
+from katana.local._graph cimport underlying_property_graph
 from katana.local.datastructures cimport NUMAArray_uint64_t
 
 
@@ -50,7 +51,7 @@ cdef extern from "katana/PropertyGraph.h" namespace "katana" nogil:
 # TODO(amber/amp): Update the following functions to use Sorted PropertyGraph
 # Views, because functions like SortNodesByDegree and FindEdgeSortedByDest etc. are
 # deprecated and will be removed in the near future.
-def sort_all_edges_by_dest(Graph pg):
+def sort_all_edges_by_dest(pg):
     """
     Sort the edges of each node by the node ID of the target. This enables the use of
     :py:func:`find_edge_sorted_by_dest`.
@@ -59,11 +60,11 @@ def sort_all_edges_by_dest(Graph pg):
     :rtype: NUMAArray[np.uint64]
     """
     with nogil:
-        res = move(handle_result_unique_numaarray_uint64(SortAllEdgesByDest(pg.underlying_property_graph())))
+        res = move(handle_result_unique_numaarray_uint64(SortAllEdgesByDest(underlying_property_graph(pg))))
     return NUMAArray_uint64_t.make_move(move(deref(res.get())))
 
 
-def find_edge_sorted_by_dest(Graph pg, uint32_t node, uint32_t node_to_find):
+def find_edge_sorted_by_dest(pg, uint32_t node, uint32_t node_to_find):
     """
     Find an edge based on its incident nodes. The graph must have sorted edges.
 
@@ -75,15 +76,15 @@ def find_edge_sorted_by_dest(Graph pg, uint32_t node, uint32_t node_to_find):
     :see: :func:`sort_all_edges_by_dest`
     """
     with nogil:
-        res = FindEdgeSortedByDest(pg.underlying_property_graph(), node, node_to_find)
-    if res == pg.edge_ids(node)[-1] + 1:
+        res = FindEdgeSortedByDest(underlying_property_graph(pg), node, node_to_find)
+    if res == pg.out_edge_ids(node)[-1] + 1:
         return None
     return res
 
 
-def sort_nodes_by_degree(Graph pg):
+def sort_nodes_by_degree(pg):
     """
     Relabel all nodes in the graph by sorting in the descending order by node degree.
     """
     with nogil:
-        handle_result_void(SortNodesByDegree(pg.underlying_property_graph()))
+        handle_result_void(SortNodesByDegree(underlying_property_graph(pg)))

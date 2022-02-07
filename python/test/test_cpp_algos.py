@@ -76,14 +76,14 @@ def test_assert_valid(graph: Graph):
 
 
 def test_sort_all_edges_by_dest(graph: Graph):
-    original_dests = [[graph.get_edge_dest(e) for e in graph.edge_ids(n)] for n in range(NODES_TO_SAMPLE)]
+    original_dests = [[graph.get_edge_dst(e) for e in graph.out_edge_ids(n)] for n in range(NODES_TO_SAMPLE)]
     mapping = sort_all_edges_by_dest(graph)
-    new_dests = [[graph.get_edge_dest(e) for e in graph.edge_ids(n)] for n in range(NODES_TO_SAMPLE)]
+    new_dests = [[graph.get_edge_dst(e) for e in graph.out_edge_ids(n)] for n in range(NODES_TO_SAMPLE)]
     for n in range(NODES_TO_SAMPLE):
         assert len(original_dests[n]) == len(new_dests[n])
-        my_mapping = [mapping[e] for e in graph.edge_ids(n)]
+        my_mapping = [mapping[e] for e in graph.out_edge_ids(n)]
         for i, _ in enumerate(my_mapping):
-            assert original_dests[n][i] == new_dests[n][my_mapping[i] - graph.edge_ids(n)[0]]
+            assert original_dests[n][i] == new_dests[n][my_mapping[i] - graph.out_edge_ids(n)[0]]
         original_dests[n].sort()
 
         assert original_dests[n] == new_dests[n]
@@ -97,10 +97,10 @@ def test_find_edge_sorted_by_dest(graph: Graph):
 
 def test_sort_nodes_by_degree(graph: Graph):
     sort_nodes_by_degree(graph)
-    assert len(graph.edge_ids(0)) == 103
+    assert len(graph.out_edge_ids(0)) == 103
     last_node_n_edges = 103
     for n in range(1, NODES_TO_SAMPLE):
-        v = len(graph.edge_ids(n))
+        v = len(graph.out_edge_ids(n))
         assert v <= last_node_n_edges
         last_node_n_edges = v
 
@@ -125,7 +125,7 @@ def test_bfs(graph: Graph):
     assert stats.n_reached_nodes == 3
 
     # Verify with numba implementation of verifier as well
-    verify_bfs(graph, start_node, new_property_id)
+    verify_bfs(graph, start_node, property_name)
 
 
 def test_sssp(graph: Graph):
@@ -150,7 +150,7 @@ def test_sssp(graph: Graph):
     assert stats.max_distance == 0.0
 
     # Verify with numba implementation of verifier
-    verify_sssp(graph, start_node, new_property_id)
+    verify_sssp(graph, start_node, property_name)
 
 
 def test_jaccard(graph: Graph):
@@ -249,7 +249,7 @@ def test_betweenness_centrality_level(graph: Graph):
 
 def test_triangle_count():
     graph = Graph(get_rdg_dataset("rmat15_cleaned_symmetric"))
-    original_first_edge_list = [graph.get_edge_dest(e) for e in graph.edge_ids(0)]
+    original_first_edge_list = [graph.get_edge_dst(e) for e in graph.out_edge_ids(0)]
     n = triangle_count(graph)
     assert n == 282617
 
@@ -259,7 +259,7 @@ def test_triangle_count():
     n = triangle_count(graph, TriangleCountPlan.edge_iteration())
     assert n == 282617
 
-    assert [graph.get_edge_dest(e) for e in graph.edge_ids(0)] == original_first_edge_list
+    assert [graph.get_edge_dst(e) for e in graph.out_edge_ids(0)] == original_first_edge_list
 
     sort_all_edges_by_dest(graph)
     n = triangle_count(graph, TriangleCountPlan.ordered_count(edges_sorted=True))
@@ -371,7 +371,7 @@ def test_k_truss():
 
     stats = KTrussStatistics(graph, 10, "output")
 
-    assert stats.number_of_edges_left == 13338
+    assert stats.number_of_edges_left == 13339
 
     k_truss_assert_valid(graph, 10, "output")
 
@@ -453,19 +453,19 @@ def test_subgraph_extraction():
     nodes = [1, 3, 11, 120]
 
     expected_edges = [
-        [nodes.index(graph.get_edge_dest(e)) for e in graph.edge_ids(i) if graph.get_edge_dest(e) in nodes]
+        [nodes.index(graph.get_edge_dst(e)) for e in graph.out_edge_ids(i) if graph.get_edge_dst(e) in nodes]
         for i in nodes
     ]
 
     pg = subgraph_extraction(graph, nodes)
 
     assert isinstance(pg, Graph)
-    assert len(pg) == len(nodes)
+    assert pg.num_nodes() == len(nodes)
     assert pg.num_edges() == 6
 
     for i, _ in enumerate(expected_edges):
-        assert len(pg.edge_ids(i)) == len(expected_edges[i])
-        assert [pg.get_edge_dest(e) for e in pg.edge_ids(i)] == expected_edges[i]
+        assert len(pg.out_edge_ids(i)) == len(expected_edges[i])
+        assert [pg.get_edge_dst(e) for e in pg.out_edge_ids(i)] == expected_edges[i]
 
 
 def test_busy_wait(graph: Graph):
@@ -487,5 +487,5 @@ def test_busy_wait(graph: Graph):
     BfsStatistics(graph, property_name)
 
     # Verify with numba implementation of verifier as well
-    verify_bfs(graph, start_node, new_property_id)
+    verify_bfs(graph, start_node, property_name)
     set_busy_wait(0)

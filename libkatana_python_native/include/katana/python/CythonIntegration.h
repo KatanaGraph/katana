@@ -93,7 +93,7 @@ namespace pybind11 {
 namespace detail {
 /// Automatic cast from/to Python for Cython types which support it.
 template <typename T>
-struct type_caster<katana::CythonReference<T> > {
+struct type_caster<katana::CythonReference<T>> {
 public:
   PYBIND11_TYPE_CASTER(katana::CythonReference<T>, _<T>());
 
@@ -132,16 +132,18 @@ namespace katana {
 
 // Add Cython classes here as needed. Remove them when they are moved to
 // pybind11.
-CYTHON_REFERENCE_SUPPORT(katana::PropertyGraph, "katana.local", "Graph");
-CYTHON_REFERENCE_SUPPORT(katana::TxnContext, "katana.local", "TxnContext");
+// For example,
+//    CYTHON_REFERENCE_SUPPORT(katana::PropertyGraph, "katana.local", "Graph");
 
 #undef CYTHON_REFERENCE_SUPPORT
 
 /// Define utilities on @p cls which allow Cython to access and construct
 /// instances of the pybind11 wrapper of @p T.
-template <typename T>
-pybind11::class_<T>
-DefCythonSupport(pybind11::class_<T> cls) {
+template <typename ClassT>
+ClassT
+DefCythonSupport(ClassT cls) {
+  using T = typename ClassT::type;
+  using Holder = typename ClassT::holder_type;
   cls.template def_static(
       "_make_from_address",
       [](uintptr_t addr, pybind11::handle owner [[maybe_unused]]) {
@@ -152,14 +154,20 @@ DefCythonSupport(pybind11::class_<T> cls) {
   // keep_alive<0, 2> causes the owner argument to be kept alive as long as the
   // returned object exists. See
   // https://pybind11.readthedocs.io/en/stable/advanced/functions.html#keep-alive
-  cls.template def_static("_make_from_address_shared", [](uintptr_t addr) {
-    auto* ptr = reinterpret_cast<std::shared_ptr<T>*>(addr);
-    return *ptr;
-  });
-  cls.template def_static("_make_from_address_unique", [](uintptr_t addr) {
-    auto* ptr = reinterpret_cast<std::unique_ptr<T>*>(addr);
-    return std::move(*ptr);
-  });
+  if constexpr (std::is_same_v<Holder, std::shared_ptr<T>>) {
+    cls.template def_static(
+        "_make_from_address_shared", [](uintptr_t addr) -> std::shared_ptr<T> {
+          auto* ptr = reinterpret_cast<std::shared_ptr<T>*>(addr);
+          return *ptr;
+        });
+  }
+  if constexpr (std::is_same_v<Holder, std::unique_ptr<T>>) {
+    cls.template def_static(
+        "_make_from_address_unique", [](uintptr_t addr) -> std::unique_ptr<T> {
+          auto* ptr = reinterpret_cast<std::unique_ptr<T>*>(addr);
+          return std::move(*ptr);
+        });
+  }
   DefKatanaAddress(cls);
   return cls;
 }

@@ -98,7 +98,9 @@ public:
   using EntityTypeIDArray = katana::NUMAArray<EntityTypeID>;
 
   PropertyGraph(PropertyGraph&& other) = default;
+  PropertyGraph& operator=(PropertyGraph&& other) = default;
 
+public:
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
   struct ReadOnlyPropertyView {
@@ -232,8 +234,14 @@ public:
             std::move(edge_entity_type_ids))),
         edge_entity_data_(edge_entity_type_ids_->data()),
         pg_view_cache_(std::move(topo)) {
-    KATANA_LOG_DEBUG_ASSERT(node_entity_type_ids_->size() == NumNodes());
-    KATANA_LOG_DEBUG_ASSERT(edge_entity_type_ids_->size() == NumEdges());
+    KATANA_LOG_DEBUG_VASSERT(
+        node_entity_type_ids_->size() == NumNodes(),
+        "type array size: {}, num nodes: {}", node_entity_type_ids_->size(),
+        NumNodes());
+    KATANA_LOG_DEBUG_VASSERT(
+        edge_entity_type_ids_->size() == NumEdges(),
+        "type array size: {}, num edges: {}", edge_entity_type_ids_->size(),
+        NumEdges());
   }
 
   template <typename PGView>
@@ -318,6 +326,10 @@ public:
   const std::string& rdg_dir() const { return rdg_->rdg_dir().string(); }
 
   uint32_t partition_id() const { return rdg_->partition_id(); }
+
+  uint32_t partition_policy_id() const {
+    return rdg_->part_metadata().policy_id_;
+  }
 
   /// Create a new storage location for a graph and write everything into it.
   ///
@@ -873,46 +885,69 @@ public:
   }
 
   // Creates an index over a node property.
-  Result<void> MakeNodeIndex(const std::string& column_name);
+  Result<void> MakeNodeIndex(const std::string& property_name);
 
   // Delete an existing index over a node property.
-  Result<void> DeleteNodeIndex(const std::string& column_name);
+  Result<void> DeleteNodeIndex(const std::string& property_name);
 
   // Creates an index over an edge property.
-  Result<void> MakeEdgeIndex(const std::string& column_name);
+  Result<void> MakeEdgeIndex(const std::string& property_name);
 
   // Delete an existing index over an edge property.
-  Result<void> DeleteEdgeIndex(const std::string& column_name);
+  Result<void> DeleteEdgeIndex(const std::string& property_name);
 
   // Returns the list of node indexes.
-  const std::vector<std::unique_ptr<EntityIndex<GraphTopology::Node>>>&
+  const std::vector<std::shared_ptr<EntityIndex<GraphTopology::Node>>>&
   node_indexes() const {
     return node_indexes_;
   }
 
   // Returns the list of edge indexes.
-  const std::vector<std::unique_ptr<EntityIndex<GraphTopology::Edge>>>&
+  const std::vector<std::shared_ptr<EntityIndex<GraphTopology::Edge>>>&
   edge_indexes() const {
     return edge_indexes_;
   }
 
-  // Returns true of an index exists for the named property
-  bool HasNodeIndex(const std::string& property_name) const {
-    for (const auto& index : node_indexes()) {
-      if (index->column_name() == property_name) {
-        return true;
-      }
-    }
-    return false;
-  }
+  /// Returns true of an index exists for the named node property
+  bool HasNodeIndex(const std::string& property_name) const;
 
-  // Returns the property index associated with the named property
-  Result<EntityIndex<GraphTopology::Node>*> GetNodeIndex(
-      const std::string& property_name) const;
+  /// Returns the index associated with the named node property.
+  ///
+  /// The graph retains ownership of the index.
+  katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Node>>>
+  GetNodeIndex(const std::string& property_name) const;
+
+  /// Returns true of an index exists for the named edge property
+  bool HasEdgeIndex(const std::string& property_name) const;
+
+  /// Returns the index associated with the named edge property.
+  ///
+  /// The graph retains ownership of the index.
+  katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Edge>>>
+  GetEdgeIndex(const std::string& property_name) const;
 
 protected:
   RDG& rdg() { return *rdg_; }
   const RDG& rdg() const { return *rdg_; }
+
+  // TODO(Rob): avoid exposing mutable versions of these
+  //            members b/c they are NUMAArrays, and there
+  //            is a potential issue of who owns and frees
+  //            the (memory for) the array.
+  //            Alternative solution: provide mutable access
+  //            to the array buffer instead of the array
+  EntityTypeManager& mutable_node_entity_type_manager() {
+    return *node_entity_type_manager_;
+  }
+  EntityTypeManager& mutable_edge_entity_type_manager() {
+    return *edge_entity_type_manager_;
+  }
+  EntityTypeIDArray& mutable_node_entity_type_ids() {
+    return *node_entity_type_ids_;
+  }
+  EntityTypeIDArray& mutable_edge_entity_type_ids() {
+    return *edge_entity_type_ids_;
+  }
 
   // This constructor is meant to be used is situations when you want to share
   // property and type data (including RDG) with another PropertyGraph instance,
@@ -978,8 +1013,8 @@ private:
   EntityTypeID* edge_entity_data_;
 
   // List of node and edge indexes on this graph.
-  std::vector<std::unique_ptr<EntityIndex<Node>>> node_indexes_;
-  std::vector<std::unique_ptr<EntityIndex<Edge>>> edge_indexes_;
+  std::vector<std::shared_ptr<EntityIndex<Node>>> node_indexes_;
+  std::vector<std::shared_ptr<EntityIndex<Edge>>> edge_indexes_;
 
   PGViewCache pg_view_cache_;
 };

@@ -24,7 +24,10 @@ from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph, TxnContext
+
+from katana.local import Graph, TxnContext
+
+from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -157,7 +160,7 @@ cdef class BfsPlan(Plan):
         return BfsPlan.make(_BfsPlan.SynchronousDirectOpt(alpha, beta))
 
 
-def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan(), *, TxnContext txn_ctx = None):
+def bfs(pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan(), *, txn_ctx = None):
     """
     Compute the Breadth-First Search parents on `pg` using `start_node` as the source. The computed parents are
     written to the property `output_property_name`.
@@ -192,9 +195,9 @@ def bfs(Graph pg, uint32_t start_node, str output_property_name, BfsPlan plan = 
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Bfs(pg.underlying_property_graph(), start_node, output_property_name_cstr, &txn_ctx._txn_ctx, plan.underlying_))
+        handle_result_void(Bfs(underlying_property_graph(pg), start_node, output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
 
-def bfs_assert_valid(Graph pg, uint32_t start_node, str property_name):
+def bfs_assert_valid(pg, uint32_t start_node, str property_name):
     """
     Raise an exception if the BFS results in `pg` appear to be incorrect. This is not an
     exhaustive check, just a sanity check.
@@ -204,7 +207,7 @@ def bfs_assert_valid(Graph pg, uint32_t start_node, str property_name):
     output_property_name_bytes = bytes(property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(BfsAssertValid(pg.underlying_property_graph(), start_node, output_property_name_cstr))
+        handle_result_assert(BfsAssertValid(underlying_property_graph(pg), start_node, output_property_name_cstr))
 
 cdef _BfsStatistics handle_result_BfsStatistics(Result[_BfsStatistics] res) nogil except *:
     if not res.has_value():
@@ -218,11 +221,11 @@ cdef class BfsStatistics:
     """
     cdef _BfsStatistics underlying
 
-    def __init__(self, Graph pg, str property_name):
+    def __init__(self, pg, str property_name):
         output_property_name_bytes = bytes(property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
-            self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(pg.underlying_property_graph(), output_property_name_cstr))
+            self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(underlying_property_graph(pg), output_property_name_cstr))
 
     @property
     def n_reached_nodes(self):

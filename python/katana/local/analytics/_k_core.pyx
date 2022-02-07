@@ -23,7 +23,10 @@ from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph, TxnContext
+
+from katana.local import Graph, TxnContext
+
+from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -104,7 +107,7 @@ cdef class KCorePlan(Plan):
         return KCorePlan.make(_KCorePlan.Asynchronous())
 
 
-def k_core(Graph pg, uint32_t k_core_number, str output_property_name, bool is_symmetric = False, KCorePlan plan = KCorePlan(), *, TxnContext txn_ctx = None) -> int:
+def k_core(pg, uint32_t k_core_number, str output_property_name, bool is_symmetric = False, KCorePlan plan = KCorePlan(), *, txn_ctx = None) -> int:
     """
     Compute nodes which are in the k-core of pg. The pg must be symmetric.
 
@@ -137,11 +140,11 @@ def k_core(Graph pg, uint32_t k_core_number, str output_property_name, bool is_s
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(KCore(pg.underlying_property_graph(), k_core_number, output_property_name_str, &txn_ctx._txn_ctx, is_symmetric, plan.underlying_))
+        v = handle_result_void(KCore(underlying_property_graph(pg), k_core_number, output_property_name_str, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
     return v
 
 
-def k_core_assert_valid(Graph pg, uint32_t k_core_number, str output_property_name):
+def k_core_assert_valid(pg, uint32_t k_core_number, str output_property_name):
     """
     Raise an exception if the k-core results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
 
@@ -149,7 +152,7 @@ def k_core_assert_valid(Graph pg, uint32_t k_core_number, str output_property_na
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        handle_result_assert(KCoreAssertValid(pg.underlying_property_graph(), k_core_number, output_property_name_str))
+        handle_result_assert(KCoreAssertValid(underlying_property_graph(pg), k_core_number, output_property_name_str))
 
 
 cdef _KCoreStatistics handle_result_KCoreStatistics(Result[_KCoreStatistics] res) nogil except *:
@@ -165,11 +168,11 @@ cdef class KCoreStatistics:
     """
     cdef _KCoreStatistics underlying
 
-    def __init__(self, Graph pg, uint32_t k_core_number, str output_property_name):
+    def __init__(self, pg, uint32_t k_core_number, str output_property_name):
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_KCoreStatistics(_KCoreStatistics.Compute(
-                pg.underlying_property_graph(), k_core_number, output_property_name_str))
+                underlying_property_graph(pg), k_core_number, output_property_name_str))
 
     @property
     def number_of_nodes_in_kcore(self) -> uint64_t:

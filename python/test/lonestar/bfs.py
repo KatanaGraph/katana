@@ -35,7 +35,7 @@ def max_dist_operator(max_dist: ReduceMax[int], data, nid):
         max_dist.update(val)
 
 
-def verify_bfs(graph: Graph, _source_i: int, property_id: int):
+def verify_bfs(graph: Graph, _source_i: int, property_id):
     chunk_array = graph.get_node_property(property_id)
     not_visited = ReduceSum[int](0)
     max_dist = ReduceMax[int]()
@@ -60,8 +60,8 @@ def verify_bfs(graph: Graph, _source_i: int, property_id: int):
 def bfs_sync_operator_pg(
     graph: Graph, next_level: InsertBag[np.uint64], next_level_number: int, distance: np.ndarray, nid,
 ):
-    for ii in graph.edge_ids(nid):
-        dst = graph.get_edge_dest(ii)
+    for ii in graph.out_edge_ids(nid):
+        dst = graph.out_edge_dst(ii)
         if distance[dst] == distance_infinity:
             distance[dst] = next_level_number
             next_level.push(dst)
@@ -75,7 +75,7 @@ def bfs_sync_pg(graph: Graph, source, property_name):
 
     timer = StatTimer("BFS Property Graph Numba: " + property_name)
     timer.start()
-    distance = np.empty((len(graph),), dtype=np.uint32)
+    distance = np.empty((graph.num_nodes(),), dtype=np.uint32)
     initialize(graph, source, distance)
     next_level.push(source)
     while not next_level.empty():
@@ -120,8 +120,7 @@ def main():
     print("Node {}: {}".format(args.reportNode, graph.get_node_property(args.propertyName)[args.reportNode]))
 
     if not args.noverify:
-        numNodeProperties = len(graph.loaded_node_schema())
-        newPropertyID = numNodeProperties - 1
+        newPropertyID = graph.loaded_node_schema()[-1].name
         verify_bfs(graph, args.startNode, newPropertyID)
 
 

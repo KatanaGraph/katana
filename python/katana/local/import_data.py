@@ -8,9 +8,7 @@ from typing import Collection, Dict, Optional, Union
 import numba
 import numpy as np
 
-from katana.local._graph import Graph, TxnContext
-from katana.local._import_data import from_csr
-from katana.local_native import from_graphml_native
+from katana.local_native import Graph, TxnContext, from_csr, from_graphml_native
 from katana.native_interfacing.buffer_access import to_numpy
 
 __all__ = [

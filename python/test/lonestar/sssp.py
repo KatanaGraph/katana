@@ -24,7 +24,7 @@ def dtype_info(t):
 
 
 def create_distance_array(g: Graph, source, length_property):
-    a = np.empty(len(g), dtype=dtype_of_pyarrow_array(g.get_edge_property(length_property)))
+    a = np.empty(g.num_nodes(), dtype=dtype_of_pyarrow_array(g.get_edge_property(length_property)))
     # TODO(amp): Remove / 4
     infinity = dtype_info(a.dtype).max / 4
     a[:] = infinity
@@ -42,8 +42,8 @@ def dtype_of_pyarrow_array(a):
 def sssp_operator(g: Graph, dists: np.ndarray, edge_weights, item, ctx: UserContext):
     if dists[item.src] < item.dist:
         return
-    for ii in g.edge_ids(item.src):
-        dst = g.get_edge_dest(ii)
+    for ii in g.out_edge_ids(item.src):
+        dst = g.out_edge_dst(ii)
         edge_length = edge_weights[ii]
         new_distance = edge_length + dists[item.src]
         old_distance = atomic_min(dists, dst, new_distance)

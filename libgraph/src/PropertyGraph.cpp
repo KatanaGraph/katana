@@ -910,25 +910,25 @@ katana::PropertyGraph::EnsureEdgePropertyLoaded(const std::string& name) {
 
 // Build an index over nodes.
 katana::Result<void>
-katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
+katana::PropertyGraph::MakeNodeIndex(const std::string& property_name) {
   for (const auto& existing_index : node_indexes_) {
-    if (existing_index->column_name() == column_name) {
+    if (existing_index->property_name() == property_name) {
       return KATANA_ERROR(
           katana::ErrorCode::AlreadyExists,
-          "Index already exists for column {}", column_name);
+          "Index already exists for column {}", property_name);
     }
   }
 
   // Get a view of the property.
   std::shared_ptr<arrow::ChunkedArray> chunked_property =
-      KATANA_CHECKED(GetNodeProperty(column_name));
+      KATANA_CHECKED(GetNodeProperty(property_name));
   KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 
   // Create an index based on the type of the field.
-  std::unique_ptr<katana::EntityIndex<GraphTopology::Node>> index =
+  std::shared_ptr<katana::EntityIndex<GraphTopology::Node>> index =
       KATANA_CHECKED(katana::MakeTypedEntityIndex<katana::GraphTopology::Node>(
-          column_name, NumNodes(), property));
+          property_name, NumNodes(), property));
 
   KATANA_CHECKED(index->BuildFromProperty());
 
@@ -938,9 +938,9 @@ katana::PropertyGraph::MakeNodeIndex(const std::string& column_name) {
 }
 
 katana::Result<void>
-katana::PropertyGraph::DeleteNodeIndex(const std::string& column_name) {
+katana::PropertyGraph::DeleteNodeIndex(const std::string& property_name) {
   for (auto it = node_indexes_.begin(); it != node_indexes_.end(); it++) {
-    if ((*it)->column_name() == column_name) {
+    if ((*it)->property_name() == property_name) {
       node_indexes_.erase(it);
       return katana::ResultSuccess();
     }
@@ -949,31 +949,31 @@ katana::PropertyGraph::DeleteNodeIndex(const std::string& column_name) {
   // TODO(Chak-Pong) make deleteNodeIndex always successful
   //  before index existence check is available from python side
   //  return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
-  KATANA_LOG_WARN("the following node index not found: {}", column_name);
+  KATANA_LOG_WARN("the following node index not found: {}", property_name);
   return katana::ResultSuccess();
 }
 
 // Build an index over edges.
 katana::Result<void>
-katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
+katana::PropertyGraph::MakeEdgeIndex(const std::string& property_name) {
   for (const auto& existing_index : edge_indexes_) {
-    if (existing_index->column_name() == column_name) {
+    if (existing_index->property_name() == property_name) {
       return KATANA_ERROR(
           katana::ErrorCode::AlreadyExists,
-          "Index already exists for column {}", column_name);
+          "Index already exists for column {}", property_name);
     }
   }
 
   // Get a view of the property.
   std::shared_ptr<arrow::ChunkedArray> chunked_property =
-      KATANA_CHECKED(GetEdgeProperty(column_name));
+      KATANA_CHECKED(GetEdgeProperty(property_name));
   KATANA_LOG_ASSERT(chunked_property->num_chunks() == 1);
   std::shared_ptr<arrow::Array> property = chunked_property->chunk(0);
 
   // Create an index based on the type of the field.
   std::unique_ptr<katana::EntityIndex<katana::GraphTopology::Edge>> index =
       KATANA_CHECKED(katana::MakeTypedEntityIndex<katana::GraphTopology::Edge>(
-          column_name, NumEdges(), property));
+          property_name, NumEdges(), property));
 
   KATANA_CHECKED(index->BuildFromProperty());
 
@@ -983,9 +983,9 @@ katana::PropertyGraph::MakeEdgeIndex(const std::string& column_name) {
 }
 
 katana::Result<void>
-katana::PropertyGraph::DeleteEdgeIndex(const std::string& column_name) {
+katana::PropertyGraph::DeleteEdgeIndex(const std::string& property_name) {
   for (auto it = edge_indexes_.begin(); it != edge_indexes_.end(); it++) {
-    if ((*it)->column_name() == column_name) {
+    if ((*it)->property_name() == property_name) {
       edge_indexes_.erase(it);
       return katana::ResultSuccess();
     }
@@ -1287,12 +1287,44 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
   return katana::PropertyGraph::Make(std::move(transpose_topo));
 }
 
-katana::Result<katana::EntityIndex<katana::GraphTopology::Node>*>
+bool
+katana::PropertyGraph::HasNodeIndex(const std::string& property_name) const {
+  for (const auto& index : node_indexes()) {
+    if (index->property_name() == property_name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+katana::Result<
+    std::shared_ptr<katana::EntityIndex<katana::GraphTopology::Node>>>
 katana::PropertyGraph::GetNodeIndex(const std::string& property_name) const {
   for (const auto& index : node_indexes()) {
-    if (index->column_name() == property_name) {
-      return index.get();
+    if (index->property_name() == property_name) {
+      return index;
     }
   }
   return KATANA_ERROR(katana::ErrorCode::NotFound, "node index not found");
+}
+
+bool
+katana::PropertyGraph::HasEdgeIndex(const std::string& property_name) const {
+  for (const auto& index : edge_indexes()) {
+    if (index->property_name() == property_name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+katana::Result<
+    std::shared_ptr<katana::EntityIndex<katana::GraphTopology::Edge>>>
+katana::PropertyGraph::GetEdgeIndex(const std::string& property_name) const {
+  for (const auto& index : edge_indexes()) {
+    if (index->property_name() == property_name) {
+      return index;
+    }
+  }
+  return KATANA_ERROR(katana::ErrorCode::NotFound, "edge index not found");
 }

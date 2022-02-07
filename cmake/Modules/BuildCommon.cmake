@@ -241,9 +241,20 @@ endif ()
 message(STATUS "Building Katana language bindings: ${KATANA_LANG_BINDINGS}")
 
 if (python IN_LIST KATANA_LANG_BINDINGS)
-  include(FindPythonModule)
-  find_package (Python3 COMPONENTS Interpreter Development NumPy)
+  # Make sure any python virtual environment (such as conda) is preferred.
+  set (Python3_FIND_VIRTUALENV FIRST)
 
+  # The NumPy component of FindPython3 does not work correctly in conda-build
+  # (it works fine in normal conda environments), so use SP_DIR, which is the
+  # path to the site-packages directory, to directly compute where the numpy
+  # headers will be.
+  if(EXISTS $ENV{SP_DIR})
+    set(Python3_NumPy_INCLUDE_DIR $ENV{SP_DIR}/numpy/core/include)
+  endif()
+
+  find_package (Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+
+  include(FindPythonModule)
   find_python_module(setuptools REQUIRED)
   find_python_module(Cython REQUIRED)
   find_python_module(numpy REQUIRED)
@@ -339,8 +350,10 @@ else()
   # Libarrow project cmake
   get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
   find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
+  find_package(ArrowPython REQUIRED HINTS ${ARROW_CONFIG_DIR})
   add_library(arrow::arrow ALIAS arrow_shared)
   add_library(arrow::parquet ALIAS parquet_shared)
+  add_library(arrow::python ALIAS arrow_python_shared)
 endif()
 
 # Testing-only dependencies

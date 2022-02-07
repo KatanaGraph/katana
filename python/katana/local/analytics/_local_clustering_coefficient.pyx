@@ -16,7 +16,10 @@ from libcpp.string cimport string
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_void
-from katana.local._graph cimport Graph, TxnContext
+
+from katana.local import Graph, TxnContext
+
+from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -150,8 +153,8 @@ cdef class LocalClusteringCoefficientPlan(Plan):
              edges_sorted, _relabeling_from_python(relabeling)))
 
 
-def local_clustering_coefficient(Graph pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan(), *, TxnContext txn_ctx = None):
+def local_clustering_coefficient(pg, str output_property_name, LocalClusteringCoefficientPlan plan = LocalClusteringCoefficientPlan(), *, txn_ctx = None):
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(LocalClusteringCoefficient(pg.underlying_property_graph(), output_property_name_str, &txn_ctx._txn_ctx, plan.underlying_))
+        handle_result_void(LocalClusteringCoefficient(underlying_property_graph(pg), output_property_name_str, underlying_txn_context(txn_ctx), plan.underlying_))

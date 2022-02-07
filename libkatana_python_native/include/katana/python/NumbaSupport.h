@@ -3,10 +3,13 @@
 
 #include <type_traits>
 
+#include <katana/Traits.h>
 #include <katana/python/TypeTraits.h>
 #include <pybind11/pybind11.h>
 
 namespace katana {
+
+struct numba_only {};
 
 namespace detail {
 
@@ -14,29 +17,63 @@ namespace detail {
 template <typename T>
 using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
+/**
+ * Returns true if Ts contains the given trait T.
+ */
+template <typename T, typename... Ts>
+constexpr bool
+has_trait() {
+  return (... || at_least_base_of<T, Ts>);
+}
+
 /// A utility class for instantiating static function wrappers and binding
 /// them into Python. It encapsulates much of the type trickery.
-template <typename _Return, typename... _Args>
+template <typename _Return, typename Arg1, typename... _Args>
 struct StaticFunctionBinderImpl {
   using Return = _Return;
-  using StaticFunctionPointer = Return (*)(_Args...);
+  using StaticFunctionPointer = Return (*)(Arg1, _Args...);
 
   /// A wrapper function that makes sure any argument conversions required by
   /// the use of remove_cvref are performed on each call.
   template <StaticFunctionPointer func>
-  static remove_cvref_t<Return> call(remove_cvref_t<_Args>... args) {
-    return func(args...);
+  static remove_cvref_t<Return> call(
+      remove_cvref_t<Arg1> arg1, remove_cvref_t<_Args>... args) {
+    return func(arg1, args...);
   }
 
   /// Define an actual python method and numba wrapper using @p func.
   template <StaticFunctionPointer func, typename... Extra>
   static void def_method(
       pybind11::module& m, const char* name, const Extra&... extra) {
-    m.def(name, func, extra...);
+    pybind11::object method_arg = pybind11::cast(name);
+    if constexpr (!has_trait<numba_only, Extra...>()) {
+      m.def(name, func, extra...);
+      method_arg = m.attr(name);
+    }
     auto numba_support =
         pybind11::module::import("katana.native_interfacing.numba_support");
     numba_support.attr("register_function")(
-        m.attr(name), (uintptr_t)&call<func>,
+        method_arg, (uintptr_t)&call<func>,
+        PythonTypeTraits<remove_cvref_t<Return>>::ctypes_type(),
+        PythonTypeTraits<remove_cvref_t<Arg1>>::ctypes_type(),
+        PythonTypeTraits<remove_cvref_t<_Args>>::ctypes_type()...);
+  }
+  /// Define an actual python method and numba wrapper using @p func.
+  template <
+      StaticFunctionPointer func, typename... Extra, typename... SelfClsExtra>
+  static void def_class_method(
+      pybind11::class_<
+          std::remove_pointer_t<remove_cvref_t<Arg1>>, SelfClsExtra...>& cls,
+      const char* name, const Extra&... extra) {
+    pybind11::object method_arg = pybind11::cast(name);
+    if constexpr (!has_trait<numba_only, Extra...>()) {
+      cls.def(name, func, extra...);
+      method_arg = cls.attr(name);
+    }
+    auto numba_support =
+        pybind11::module::import("katana.native_interfacing.numba_support");
+    numba_support.attr("register_method")(
+        cls, method_arg, (uintptr_t)&call<func>,
         PythonTypeTraits<remove_cvref_t<Return>>::ctypes_type(),
         PythonTypeTraits<remove_cvref_t<_Args>>::ctypes_type()...);
   }
@@ -77,14 +114,20 @@ struct MemberFunctionBinderImpl {
 
   /// Define an actual python method and numba wrapper using @p member_func.
   template <
-      MemberFunctionPointer member_func, typename SelfCls, typename... Extra>
+      MemberFunctionPointer member_func, typename SelfCls, typename... Extra,
+      typename... SelfClsExtra>
   static void def_class_method(
-      pybind11::class_<SelfCls>& cls, const char* name, const Extra&... extra) {
-    cls.def(name, member_func, extra...);
+      pybind11::class_<SelfCls, SelfClsExtra...>& cls, const char* name,
+      const Extra&... extra) {
+    pybind11::object method_arg = pybind11::cast(name);
+    if constexpr (!has_trait<numba_only, Extra...>()) {
+      cls.def(name, member_func, extra...);
+      method_arg = cls.attr(name);
+    }
     auto numba_support =
         pybind11::module::import("katana.native_interfacing.numba_support");
     numba_support.attr("register_method")(
-        cls, cls.attr(name), (uintptr_t)&call<member_func>,
+        cls, method_arg, (uintptr_t)&call<member_func>,
         PythonTypeTraits<remove_cvref_t<Return>>::ctypes_type(),
         PythonTypeTraits<remove_cvref_t<_Args>>::ctypes_type()...);
   }
@@ -115,14 +158,20 @@ struct ConstMemberFunctionBinderImpl {
 
   /// Define an actual python method and numba wrapper using @p member_func.
   template <
-      MemberFunctionPointer member_func, typename SelfCls, typename... Extra>
+      MemberFunctionPointer member_func, typename SelfCls, typename... Extra,
+      typename... SelfClsExtra>
   static void def_class_method(
-      pybind11::class_<SelfCls>& cls, const char* name, const Extra&... extra) {
-    cls.def(name, member_func, extra...);
+      pybind11::class_<SelfCls, SelfClsExtra...>& cls, const char* name,
+      const Extra&... extra) {
+    pybind11::object method_arg = pybind11::cast(name);
+    if constexpr (!has_trait<numba_only, Extra...>()) {
+      cls.def(name, member_func, extra...);
+      method_arg = cls.attr(name);
+    }
     auto numba_support =
         pybind11::module::import("katana.native_interfacing.numba_support");
     numba_support.attr("register_method")(
-        cls, cls.attr(name), (uintptr_t)&call<member_func>,
+        cls, method_arg, (uintptr_t)&call<member_func>,
         PythonTypeTraits<remove_cvref_t<Return>>::ctypes_type(),
         PythonTypeTraits<remove_cvref_t<_Args>>::ctypes_type()...);
   }
@@ -194,20 +243,37 @@ DefWithNumba(pybind11::module& m, const char* name, const Extra&... extra) {
 /// \param cls The Python class object.
 /// \param name The name of the method in python.
 /// \param extra Extra arguments as you would pass to pybind11::class_::def().
-template <auto member_func, typename Cls, typename... Extra>
+template <
+    auto member_func, typename Cls, typename... Extra, typename... ClsExtra>
 constexpr void
 DefWithNumba(
-    pybind11::class_<Cls>& cls, const char* name, const Extra&... extra) {
-  static_assert(std::is_same_v<
-                typename detail::MemberFunctionBinder<
-                    member_func>::MemberFunctionPointer,
-                decltype(member_func)>);
+    pybind11::class_<Cls, ClsExtra...>& cls,
+    std::enable_if_t<
+        std::is_same_v<
+            typename detail::MemberFunctionBinder<
+                member_func>::MemberFunctionPointer,
+            decltype(member_func)>,
+        const char>* name,
+    const Extra&... extra) {
   detail::MemberFunctionBinder<member_func>::template def_class_method<
       member_func>(cls, name, extra...);
 }
 
-// TODO(amp): Implement missing overloads/variants for: lambdas (as methods and
-//  functions), static methods.
+template <auto func, typename Cls, typename... Extra, typename... ClsExtra>
+constexpr void
+DefWithNumba(
+    pybind11::class_<Cls, ClsExtra...>& cls,
+    std::enable_if_t<
+        std::is_same_v<
+            typename detail::StaticFunctionBinder<func>::StaticFunctionPointer,
+            decltype(func)>,
+        const char>* name,
+    const Extra&... extra) {
+  detail::StaticFunctionBinder<func>::template def_class_method<func>(
+      cls, name, extra...);
+}
+
+// TODO(amp): Implement missing overloads/variants for: static methods.
 
 /// Register a Python class for use from Numba compiled code.
 /// This enables DefWithNumba() to be used on methods of this class.
@@ -215,13 +281,14 @@ DefWithNumba(
 /// This calls `katana.native_interfacing.numba_support.register_class`
 ///
 /// \param cls The Python class object.
-template <typename T>
-void
-RegisterNumbaClass(pybind11::class_<T>& cls) {
+template <typename T, typename... Extra>
+pybind11::class_<T, Extra...>
+RegisterNumbaClass(pybind11::class_<T, Extra...>& cls) {
   auto numba_support =
       pybind11::module::import("katana.native_interfacing.numba_support");
   DefKatanaAddress(cls);
   numba_support.attr("register_class")(cls);
+  return cls;
 }
 
 }  // namespace katana

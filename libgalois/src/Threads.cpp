@@ -28,6 +28,10 @@ KATANA_EXPORT unsigned int activeThreads = 1;
 
 unsigned int
 katana::setActiveThreads(unsigned int num) noexcept {
+  // Reset "burn power"/"busy wait" mode since it might be configured for a
+  // different number of threads than we have after this call. That can cause
+  // crashes.
+  katana::GetThreadPool().beKind();
   num = std::min(num, katana::GetThreadPool().getMaxUsableThreads());
   num = std::max(num, 1U);
   katana::activeThreads = num;

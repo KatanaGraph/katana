@@ -12,9 +12,7 @@ def test_bfs(graph: Graph):
 
     bfs_sync_pg(graph, start_node, property_name)
 
-    num_node_properties = len(graph.loaded_node_schema())
-    new_property_id = num_node_properties - 1
-    verify_bfs(graph, start_node, new_property_id)
+    verify_bfs(graph, start_node, property_name)
 
     stats = BfsStatistics(graph, property_name)
     assert stats.n_reached_nodes == 3
@@ -27,15 +25,12 @@ def test_sssp(graph):
 
     sssp(graph, start_node, weight_name, 6, property_name)
 
-    num_node_properties = len(graph.loaded_node_schema())
-    new_property_id = num_node_properties - 1
-    verify_sssp(graph, start_node, new_property_id)
+    verify_sssp(graph, start_node, property_name)
 
     sssp_assert_valid(graph, start_node, weight_name, property_name)
 
     stats = SsspStatistics(graph, property_name)
 
-    print(stats)
     assert stats.max_distance == 0.0
 
 

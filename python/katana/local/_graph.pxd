@@ -11,6 +11,9 @@ from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result
 
 
+cdef _PropertyGraph* underlying_property_graph(graph) nogil
+cdef CTxnContext* underlying_txn_context(txn_context) nogil
+
 cdef _convert_string_list(l)
 cdef shared_ptr[_PropertyGraph] handle_result_PropertyGraph(Result[unique_ptr[_PropertyGraph]] res) nogil except *
 
@@ -33,17 +36,4 @@ cdef class GraphBase:
 
     cpdef uint64_t num_edges(PropertyGraphInterface)
 
-    cpdef uint64_t get_edge_dest(PropertyGraphInterface, uint64_t)
-
-
-cdef class Graph(GraphBase):
-    cdef:
-        shared_ptr[_PropertyGraph] _underlying_property_graph
-
-    cdef _PropertyGraph * underlying_property_graph(self) nogil except NULL
-
-    @staticmethod
-    cdef Graph make(shared_ptr[_PropertyGraph] u)
-
-cdef class TxnContext:
-    cdef CTxnContext _txn_ctx
+    cpdef uint64_t get_edge_dst(PropertyGraphInterface, uint64_t)

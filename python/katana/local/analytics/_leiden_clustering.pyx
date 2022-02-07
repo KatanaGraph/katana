@@ -23,7 +23,10 @@ from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.local._graph cimport Graph, TxnContext
+
+from katana.local import Graph, TxnContext
+
+from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -185,7 +188,7 @@ cdef class LeidenClusteringPlan(Plan):
             min_graph_size, resolution, randomness))
 
 
-def leiden_clustering(Graph pg, str edge_weight_property_name, str output_property_name, bool is_symmetric = False, LeidenClusteringPlan plan = LeidenClusteringPlan(), *, TxnContext txn_ctx = None):
+def leiden_clustering(pg, str edge_weight_property_name, str output_property_name, bool is_symmetric = False, LeidenClusteringPlan plan = LeidenClusteringPlan(), *, txn_ctx = None):
     """
     Compute the Leiden Clustering for pg.
     The edge weights are taken from the property named
@@ -224,14 +227,14 @@ def leiden_clustering(Graph pg, str edge_weight_property_name, str output_proper
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(LeidenClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, &txn_ctx._txn_ctx, is_symmetric, plan.underlying_))
+        handle_result_void(LeidenClustering(underlying_property_graph(pg), edge_weight_property_name_str, output_property_name_str, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
 
 
-def leiden_clustering_assert_valid(Graph pg, str edge_weight_property_name, str output_property_name ):
+def leiden_clustering_assert_valid(pg, str edge_weight_property_name, str output_property_name ):
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_assert(LeidenClusteringAssertValid(pg.underlying_property_graph(),
+        handle_result_assert(LeidenClusteringAssertValid(underlying_property_graph(pg),
                 edge_weight_property_name_str,
                 output_property_name_str
                 ))
@@ -247,20 +250,20 @@ cdef _LeidenClusteringStatistics handle_result_LeidenClusteringStatistics(Result
 cdef class LeidenClusteringStatistics:
     cdef _LeidenClusteringStatistics underlying
 
-    def __init__(self, Graph pg,
+    def __init__(self, pg,
             str edge_weight_property_name,
             str output_property_name,
-            *, TxnContext txn_ctx = None
+            *, txn_ctx = None
             ):
         cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
         cdef string output_property_name_str = bytes(output_property_name, "utf-8")
         txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_LeidenClusteringStatistics(_LeidenClusteringStatistics.Compute(
-                pg.underlying_property_graph(),
+                underlying_property_graph(pg),
                 edge_weight_property_name_str,
                 output_property_name_str,
-                &txn_ctx._txn_ctx
+                underlying_txn_context(txn_ctx)
                 ))
 
     @property

@@ -64,7 +64,7 @@ add_subdirectory(libgpu)
 ####### Language Bindings #######
 
 
-if(KATANA_LANG_BINDINGS_PYTHON)
+if (python IN_LIST KATANA_LANG_BINDINGS)
   find_package(pybind11 REQUIRED)
   add_subdirectory(libkatana_python_native)
   add_python_setuptools_target(katana_python

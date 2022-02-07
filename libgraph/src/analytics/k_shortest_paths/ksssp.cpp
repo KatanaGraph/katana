@@ -560,27 +560,27 @@ katana::analytics::Ksssp(
   case arrow::UInt32Type::type_id:
     return kSSSPWithWrap<uint32_t>(
         pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta, is_symmetric, plan);
+        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
   case arrow::Int32Type::type_id:
     return kSSSPWithWrap<int32_t>(
         pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta, is_symmetric, plan);
+        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
   case arrow::UInt64Type::type_id:
     return kSSSPWithWrap<uint64_t>(
         pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta, is_symmetric, plan);
+        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
   case arrow::Int64Type::type_id:
     return kSSSPWithWrap<int64_t>(
         pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta, is_symmetric, plan);
+        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
   case arrow::FloatType::type_id:
     return kSSSPWithWrap<float>(
         pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta, is_symmetric, plan);
+        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
   case arrow::DoubleType::type_id:
     return kSSSPWithWrap<double>(
         pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta, is_symmetric, plan);
+        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
   default:
     return KATANA_ERROR(
         katana::ErrorCode::TypeError, "Unsupported type: {}",

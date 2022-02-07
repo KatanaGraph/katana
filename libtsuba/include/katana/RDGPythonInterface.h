@@ -20,7 +20,7 @@ struct RDGPropInfo {
 
 /// RDGPythonInterface exposes some inner details of RDGs that are needed
 /// by the Python out-of-core import tool
-class RDGPythonInterface {
+class KATANA_EXPORT RDGPythonInterface {
 public:
   static katana::Result<void> WriteRDGPartHeader(
       std::vector<katana::RDGPropInfo> node_properties,

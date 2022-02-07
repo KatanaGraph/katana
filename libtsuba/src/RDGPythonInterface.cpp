@@ -16,7 +16,7 @@
 namespace katana {
 
 katana::Result<void>
-WriteRDGPartHeader(
+RDGPythonInterface::WriteRDGPartHeader(
     std::vector<katana::RDGPropInfo> node_properties,
     std::vector<katana::RDGPropInfo> edge_properties,
     katana::EntityTypeManager node_entity_type_manager,

@@ -5,7 +5,7 @@
 
 katana::Result<void>
 katana::TxnContext::Commit() const {
-  if (manifest_file_.empty()) {
+  if (!manifest_cached_ || manifest_file_.empty()) {
     return katana::ResultSuccess();
   }
 

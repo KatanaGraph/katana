@@ -93,6 +93,8 @@ ComputeManifest(
                 comm->Num, policy_id, transposed, lineage)
           : handle.impl_->rdg_manifest().NextVersion(
                 comm->Num, policy_id, transposed, lineage);
+  new_manifest.set_viewtype(handle.impl_->rdg_manifest().viewtype());
+  new_manifest.set_viewargs(handle.impl_->rdg_manifest().viewargs());
   txn_ctx->SetManifest(new_manifest);
 
   // wait for all the work we queued to finish

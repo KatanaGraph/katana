@@ -11,7 +11,7 @@ namespace katana {
 
 class KATANA_EXPORT TxnContext {
 public:
-  TxnContext() {}
+  TxnContext() : auto_commit_(true) {}
 
   explicit TxnContext(bool auto_commit) : auto_commit_(auto_commit) {}
 
@@ -87,6 +87,7 @@ public:
 
   void SetManifest(const RDGManifest& rdg_manifest) {
     rdg_manifest_ = rdg_manifest;
+    manifest_cached_ = true;
   }
 
   const std::set<std::string>& NodePropertyRead() const {
@@ -113,6 +114,8 @@ public:
 
   bool TopologyWrite() const { return topology_write_; }
 
+  bool ManifestCached() const { return manifest_cached_; }
+
   const Uri& ManifestFile() const { return manifest_file_; };
 
   const RDGManifest& Manifest() const { return rdg_manifest_; }
@@ -130,40 +133,10 @@ private:
   bool topology_write_{false};
 
   bool auto_commit_{true};
-
+  bool manifest_cached_{false};
   Uri manifest_file_;
   RDGManifest rdg_manifest_;
 };
-
-/** I'm putting it here only for review purpose.
-  * C++ self-define conversion can only convert the case
-  *     AutoCommit<TxnContext> a;
-  *     TxnContext b = a;
-  * with the below defined converter.
-  * But the followed is not allowed because &a is not a member variable
-  *     AutoCommit<TxnContext> a;
-  *     TxnContext *b = &a; // not possible
-  * And we need the second case because we're calling functions in tools
-  * and tests like the followed:
-  *     TxnContext txn_ctx;
-  *     func(..., &txn_ctx);
-  * which needs conversion from AutoCommit* to txn_ctx* if we use AutoCommit
-
-template <typename C>
-class AutoCommit {  // Maybe call this AutoCommit?
-  C ctx_;
-
-public:
-  AutoCommit() {}
-
-  ~AutoCommit() {
-    // Yes this is violent but AutoCommit is only for tests
-    KATANA_LOG_ASSERT(ctx_.Commit());
-  }
-
-  operator C&() { return ctx_; }
-};
-*/
 
 }  // namespace katana
 

@@ -2,8 +2,9 @@
 Documentation
 =============
 
+********
 Overview
-========
+********
 
 People turn to documentation for many different reasons, so it is important to
 consider the audience and what their needs are. What a person wants out of
@@ -30,8 +31,9 @@ answer specific questions:
 - :ref:`contributing`: I'd like to improve to Katana itself. What should I
   know?
 
+**********************
 Building Documentation
-======================
+**********************
 
 To build the documentation, set the ``-DBUILD_DOCS=`` option to either
 ``internal`` or ``external`` and ``-DKATANA_LANG_BINDINGS=python`` ``cmake``
@@ -50,8 +52,9 @@ options and then make the ``docs`` build target.
    cd $BUILD_DIR
    make docs
 
+*****************************************
 Annotating Internal or Draft only Content
-=========================================
+*****************************************
 
 Files ending in ``-draft.[rst/ipynb]`` or ``-internal.[rst/ipynb]`` will not be
 included in external facing documentation.
@@ -59,8 +62,9 @@ included in external facing documentation.
 Whole directories ending in ``-draft/`` or ``-internal/`` will be omitted when
 building external documentation.
 
+*****************
 Restructured Text
-=================
+*****************
 
 Most documentation is written in Restructured Text (``.rst``) format, which is
 similar to Markdown (``.md``) in spirit but has a slightly different syntax.
@@ -158,14 +162,95 @@ similar to Markdown (``.md``) in spirit but has a slightly different syntax.
 
 - https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
 
+*****************
 Jupyter Notebooks
-=================
+*****************
 
 Guides on how to use Katana Graph in Python should be written as Jupyter
 Notebooks. They will be parsed similar to Restructured Text (``.rst``) files.
 
+Style
+=====
+
+* Keep titles and headings in sentence case (capitalize first letter of first
+  word, proper nouns, first letter of subheading after colon, and no
+  punctuation).
+* Code cells in user guides must be evaluated with results less than 30 lines.
+* Do not number headings of step titles in step by step guide. For substep
+  sequences, use numbered bullet points under a given step title.
+* Write in the second person: "Delete your database."
+
+How-to template
+===============
+
+``katana/docs/contributing/how_to_template.ipynb`` is a template for creating a
+how-to guide in the form of a Jupyter Notebook. Use it when you wish to take a
+reader through a detailed series of steps required to do an individual task or
+procedure. Be sure to follow the section structure in the notebook and to use
+the above Katana Graph writing style.
+
+Customization
+-------------
+
+#. Choose a filename that matches or abbreviates what you wish to title the
+   guide. Add the ``-draft`` tag (with hyphen) to the end of the filename. For
+   example, ``const_cool_graphs-draft.ipynb`` for a guide titled "Constructing
+   Cool Graphs."
+#. The guide should be committed to
+   ``/docs/user-guides/<most relevant directory>``. Create a new directory in
+   ``/docs/user-guides/`` if a relevant directory does not exist.
+#. In the above directory, ensure that the filename is added to the list under
+   ``.. toctree::`` located in that directory's ``index.rst`` file. The name is
+   to be included without the file extension. For example,
+   ``const_cool_graphs-draft``. If you created a directory in the previous step,
+   you will need to create a new ``index.rst`` and copy the format used in
+   another user guide subdirectory.
+#. Use a descriptive title according to the style guide.
+
+Fill out the Requirements section
+---------------------------------
+
+This section prevents readers from getting halfway through and discovering that
+they need to go and read other documentation before they can continue.
+Prerequisites can include other articles or information to read, or it can be
+technical dependencies. If there is more than one prerequisite, a bulleted list
+is good to make the needs clearer. Describe what the audience needs to know, or
+needs to have, before they attempt the how-to. By stating the requirements
+up-front, you prevent your readers from having a bad experience with your
+how-to. You must include links to procedures or information about how to get
+what they need. If not possible, give useful pointers.
+
+Explain steps and process
+-------------------------
+
+Images
+^^^^^^
+
+When you are explaining steps in a process, it can be useful to include images
+(such as screenshots) for each key part of the process. This can help readers
+orientate themselves as they move through the steps. It can also help someone
+who is evaluating the software see how it works without having to install it.
+When an image is quicker to interpret than descriptive text, put the screenshot
+first, otherwise lead with the text.
+
+Ordered lists
+^^^^^^^^^^^^^
+
+In general, ordered lists should be avoided in favor of section titles presented
+in order to the reader. When unavoidable, provide a lead-in sentence before the
+ordered list.
+
+Code
+^^^^
+
+Break up your code where possible into smaller code cells and provide a lead-in
+sentence explaining the code snippet. Describe what you are doing and your
+expected result. If a large code block cannot be broken up, provide comments in
+your code as well. Your code must not be pseudocode and the notebook as a whole
+must be fully executable with no errors or warnings.
+
 Orphaned Notebooks
-------------------
+==================
 
 This means that it doesn’t appear in a toctree (see ``index.rst``),
 but other pages can still link to it.
@@ -179,8 +264,9 @@ metadata:
       "orphan": true
    }
 
+*****************
 API Documentation
-=================
+*****************
 
 API documentation is a form of reference information, usually embedded in code
 files, and is targeted towards people who know the general concepts in question
@@ -204,7 +290,7 @@ is best to keep text simple and communicate using basic text that can be read
 easily without being rendered by a separate documentation tool.
 
 C++
----
+===
 
 .. code-block:: cpp
 
@@ -243,7 +329,7 @@ particular code block.
    /// \endcode DO_NOT_DOCUMENT
 
 Python
-------
+======
 
 .. code-block:: python
 
@@ -269,7 +355,7 @@ Python
       ...
 
 Go
---
+==
 
 .. code-block:: go
 

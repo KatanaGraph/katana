@@ -218,16 +218,21 @@ katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    katana::GraphTopology&& topo_to_assign,
+    const katana::Uri& rdg_dir, katana::GraphTopology&& topo_to_assign,
     NUMAArray<EntityTypeID>&& node_entity_type_ids,
     NUMAArray<EntityTypeID>&& edge_entity_type_ids,
     EntityTypeManager&& node_type_manager,
     EntityTypeManager&& edge_type_manager) {
-  return std::make_unique<katana::PropertyGraph>(
+  auto retval = std::make_unique<katana::PropertyGraph>(
       std::unique_ptr<katana::RDGFile>(), katana::RDG{},
       std::move(topo_to_assign), std::move(node_entity_type_ids),
       std::move(edge_entity_type_ids), std::move(node_type_manager),
       std::move(edge_type_manager));
+  // It doesn't make sense to pass a RDGFile to the constructor because this
+  // PropertyGraph wasn't loaded from a file. But all PropertyGraphs have an
+  // associated storage location, so set one here.
+  retval->rdg().set_rdg_dir(rdg_dir);
+  return retval;
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>

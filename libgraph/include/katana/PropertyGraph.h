@@ -269,9 +269,17 @@ public:
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign);
 
-  /// Make a property graph from topology and type arrays
+  /// [[deprecated("You should provide a rdg dir")]]
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign, EntityTypeIDArray&& node_entity_type_ids,
+      EntityTypeIDArray&& edge_entity_type_ids,
+      EntityTypeManager&& node_type_manager,
+      EntityTypeManager&& edge_type_manager);
+
+  /// Make a property graph from topology and type arrays
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      const Uri& rdg_dir, GraphTopology&& topo_to_assign,
+      EntityTypeIDArray&& node_entity_type_ids,
       EntityTypeIDArray&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
       EntityTypeManager&& edge_type_manager);

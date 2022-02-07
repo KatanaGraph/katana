@@ -178,7 +178,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+169.0.c3763f variable.
+            // this version, rather than using sphinx's 0.1.102.dev+170.0.f8930f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -444,6 +444,11 @@ function checkPageExistsAndRedirect(event) {
      Katana RDG Storage Format
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="contributing/how_to_template.html">
+     How-to guide template
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -499,195 +504,6 @@ function checkPageExistsAndRedirect(event) {
   <section id="katana">
 <h1>Katana<a class="headerlink" href="#katana" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="getting-started/index.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="user-guides/index.html">User Guides</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="user-guides/algorithms_in_python.html">Implementing an Algorithm in Katana Python</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guides/hello_world.html">First steps in Katana on One Host</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="reference/cxx/index.html">C++ Library</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="reference/cxx/arrow.html">Arrow</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="reference/cxx/arrow.html#inspecting-arrow-data">Inspecting Arrow Data</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="reference/cxx/error-handling.html">Error Handling</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="reference/cxx/error-handling.html#returning-errors">Returning Errors</a></li>
-<li class="toctree-l4"><a class="reference internal" href="reference/cxx/error-handling.html#results">Results</a></li>
-<li class="toctree-l4"><a class="reference internal" href="reference/cxx/error-handling.html#error-codes">Error Codes</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="reference/cxx/logging.html">Logging</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/cxx/property-graph.html">Property Graph</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/cxx/strings.html">Strings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/cxx/tracing.html">Tracing</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="reference/python/index.html">Python Library</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.html">Katana</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.local.html">Katana Local API</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="reference/python/katana.local.graph.html">Graphs</a></li>
-<li class="toctree-l4"><a class="reference internal" href="reference/python/katana.local.analytics.html">Analytics</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#plans">Plans</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#statistics">Statistics</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#module-katana.local.analytics._betweenness_centrality">Algorithms</a><ul>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#betweenness-centrality">Betweenness Centrality</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#breadth-first-search">Breadth-first Search</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#community-detection-using-label-propagation-cdlp">Community Detection using Label Propagation (CDLP)</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#connected-components">Connected Components</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#independent-set">Independent Set</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#louvain-clustering">Louvain Clustering</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#local-clustering-coefficient">Local Clustering Coefficient</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#subgraph-extraction">Subgraph Extraction</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#jaccard-similarity">Jaccard Similarity</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#k-core">k-Core</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#k-truss">k-Truss</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#page-rank">Page Rank</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#single-source-shortest-path">Single-Source Shortest Path</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#triangle-counting">Triangle Counting</a></li>
-<li class="toctree-l6"><a class="reference internal" href="reference/python/katana.local.analytics.html#trivial-algorithms">Trivial Algorithms</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l4"><a class="reference internal" href="reference/python/katana.local.import_data.html">Import Data</a></li>
-<li class="toctree-l4"><a class="reference internal" href="reference/python/katana.local.atomic.html">Atomic Operations</a></li>
-<li class="toctree-l4"><a class="reference internal" href="reference/python/katana.local.datastructures.html">Data Structures</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.local.analytics.html">Analytics</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="reference/python/katana.local.analytics.html#plans">Plans</a></li>
-<li class="toctree-l4"><a class="reference internal" href="reference/python/katana.local.analytics.html#statistics">Statistics</a></li>
-<li class="toctree-l4"><a class="reference internal" href="reference/python/katana.local.analytics.html#module-katana.local.analytics._betweenness_centrality">Algorithms</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#betweenness-centrality">Betweenness Centrality</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#breadth-first-search">Breadth-first Search</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#community-detection-using-label-propagation-cdlp">Community Detection using Label Propagation (CDLP)</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#connected-components">Connected Components</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#independent-set">Independent Set</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#louvain-clustering">Louvain Clustering</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#local-clustering-coefficient">Local Clustering Coefficient</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#subgraph-extraction">Subgraph Extraction</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#jaccard-similarity">Jaccard Similarity</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#k-core">k-Core</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#k-truss">k-Truss</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#page-rank">Page Rank</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#single-source-shortest-path">Single-Source Shortest Path</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#triangle-counting">Triangle Counting</a></li>
-<li class="toctree-l5"><a class="reference internal" href="reference/python/katana.local.analytics.html#trivial-algorithms">Trivial Algorithms</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.local.atomic.html">Atomic Operations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.local.datastructures.html">Data Structures</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.local.graph.html">Graphs</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.local.import_data.html">Import Data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.timer.html">Performance Timers</a></li>
-<li class="toctree-l3"><a class="reference internal" href="reference/python/katana.bug.html">Bug Reporting Tools</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="contributing/index.html">Contributing</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="contributing/history.html">History</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/codebase-overview.html">Quick Overview of the Codebase</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/building.html">Building</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing/building.html#setting-up-a-build">Setting up a Build</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="contributing/building.html#building-with-conda">Building with Conda</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="contributing/building.html#conda-performance">Conda Performance</a></li>
-</ul>
-</li>
-<li class="toctree-l4"><a class="reference internal" href="contributing/building.html#building-with-conan">Building with Conan</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="contributing/building.html#compiling-with-clang">Compiling with <code class="docutils literal notranslate"><span class="pre">clang</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/building.html#python">Python</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/building.html#resolving-common-build-issues">Resolving Common Build Issues</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/building.html#specifying-and-resolving-c-dependencies">Specifying and Resolving C++ Dependencies</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/building.html#adding-new-e-x-ternal-dependencies">Adding New E(x)ternal Dependencies</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/building.html#building-in-docker">Building in Docker</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/git-style.html">Git Style</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing/git-style.html#submitting-changes">Submitting Changes</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/git-style.html#merging-changes">Merging Changes</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/git-style.html#pull-request-style">Pull Request Style</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/git-style.html#commit-message-style">Commit Message Style</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/code-style.html">Code Style</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/testing.html">Testing</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing/testing.html#test-inputs">Test Inputs</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="contributing/testing.html#using-inputs-with-cmake-tests">Using inputs with CMake tests</a></li>
-<li class="toctree-l4"><a class="reference internal" href="contributing/testing.html#using-inputs-with-python-tests-and-notebooks">Using inputs with python tests and notebooks</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/testing.html#running">Running</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="contributing/testing.html#notebooks">Notebooks</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/testing.html#coverage">Coverage</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="contributing/testing.html#python">Python</a></li>
-<li class="toctree-l4"><a class="reference internal" href="contributing/testing.html#c">C++</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/testing.html#debugging">Debugging</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/testing.html#dealing-with-errors-in-ci">Dealing with Errors in CI</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/testing.html#manually-controlling-ci-jobs">Manually Controlling CI Jobs</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/testing.html#caching-in-ci">Caching in CI</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/performance.html">Performance</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing/performance.html#arrays-and-vectors">Arrays and Vectors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/performance.html#profiling">Profiling</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="contributing/performance.html#cpu">CPU</a></li>
-<li class="toctree-l4"><a class="reference internal" href="contributing/performance.html#memory">Memory</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/documentation.html">Documentation</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing/documentation.html#overview">Overview</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/documentation.html#building-documentation">Building Documentation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/documentation.html#annotating-internal-or-draft-only-content">Annotating Internal or Draft only Content</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/documentation.html#restructured-text">Restructured Text</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/documentation.html#jupyter-notebooks">Jupyter Notebooks</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="contributing/documentation.html#orphaned-notebooks">Orphaned Notebooks</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/documentation.html#api-documentation">API Documentation</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="contributing/documentation.html#c">C++</a></li>
-<li class="toctree-l4"><a class="reference internal" href="contributing/documentation.html#python">Python</a></li>
-<li class="toctree-l4"><a class="reference internal" href="contributing/documentation.html#go">Go</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/releases.html">Releases</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing/releases.html#build-and-release-versions">Build and Release Versions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/releases.html#version-management-tool">Version Management Tool</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="contributing/releases.html#example">Example</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/releases.html#conda-packages">Conda Packages</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/tips-tricks.html">Helpful Tips and Tricks</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing/tips-tricks.html#some-helpful-commands">Some Helpful Commands</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/tips-tricks.html#helpful-tools">Helpful Tools</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="contributing/rdg-storage-format.html">Katana RDG Storage Format</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing/rdg-storage-format.html#unstable-rdg-storage-format">Unstable RDG Storage Format</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing/rdg-storage-format.html#developing-a-new-revision-of-the-rdg-storage-format">Developing a new revision of the RDG Storage Format</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
 </div>
 <section id="indices-and-tables">
 <h2>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>

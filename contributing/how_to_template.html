@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Git Style &#8212; Katana</title>
+    <title>&lt;Title of how-to guide&gt; &#8212; Katana</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -38,10 +38,11 @@
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Code Style" href="code-style.html" />
-    <link rel="prev" title="Building" href="building.html" />
+    <link rel="prev" title="Katana RDG Storage Format" href="rdg-storage-format.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -123,7 +124,7 @@
 
 <!-- NOTE: this JS must live here (not in our global JS file) because it relies
      on being processed by Jinja before it is run (specifically for replacing
-     variables contributing/git-style and {'json_url': 'https://docs.k9h.dev/switcher.json', 'url_template': 'https://docs.k9h.dev/{version}/', 'version_match': 'latest'}.
+     variables contributing/how_to_template and {'json_url': 'https://docs.k9h.dev/switcher.json', 'url_template': 'https://docs.k9h.dev/{version}/', 'version_match': 'latest'}.
 -->
 
 <script type="text/javascript">
@@ -137,7 +138,7 @@ function buildURL(entry) {
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
-    const currentFilePath = "contributing/git-style.html",
+    const currentFilePath = "contributing/how_to_template.html",
           tryUrl = event.target.getAttribute("href");
     let otherDocsHomepage = tryUrl.replace(currentFilePath, "");
     $.ajax({
@@ -158,7 +159,7 @@ function checkPageExistsAndRedirect(event) {
 // Populate the version switcher from the JSON config file
 (function () {
     $.getJSON("https://docs.k9h.dev/switcher.json", function(data, textStatus, jqXHR) {
-        const currentFilePath = "contributing/git-style.html";
+        const currentFilePath = "contributing/how_to_template.html";
         // create links to the corresponding page in the other docs versions
         $.each(data, function(index, entry) {
             // if no custom name specified (e.g., "latest"), use version string
@@ -405,8 +406,8 @@ function checkPageExistsAndRedirect(event) {
      Building
     </a>
    </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
+   <li class="toctree-l2">
+    <a class="reference internal" href="git-style.html">
      Git Style
     </a>
    </li>
@@ -445,8 +446,8 @@ function checkPageExistsAndRedirect(event) {
      Katana RDG Storage Format
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="how_to_template.html">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      How-to guide template
     </a>
    </li>
@@ -477,23 +478,69 @@ function checkPageExistsAndRedirect(event) {
 <nav id="bd-toc-nav">
     <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#submitting-changes">
-   Submitting Changes
+  <a class="reference internal nav-link" href="#Requirements">
+   Requirements
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#merging-changes">
-   Merging Changes
+  <a class="reference internal nav-link" href="#Setup">
+   Setup
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Load-libraries">
+     Load libraries
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Connect-client">
+     Connect client
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Load-data">
+     Load data
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#pull-request-style">
-   Pull Request Style
+  <a class="reference internal nav-link" href="#&lt;Title-of-step-1&gt;">
+   &lt;Title of step 1&gt;
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#&lt;Title-of-substep-1&gt;">
+     &lt;Title of substep 1&gt;
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#&lt;Title-of-next-substep&gt;">
+     &lt;Title of next substep&gt;
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#commit-message-style">
-   Commit Message Style
+  <a class="reference internal nav-link" href="#&lt;Title-of-next-step&gt;">
+   &lt;Title of next step&gt;
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id1">
+     &lt;Title of substep 1&gt;
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id2">
+     &lt;Title of next substep&gt;
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Next-Steps">
+   Next Steps
   </a>
  </li>
 </ul>
@@ -517,144 +564,329 @@ function checkPageExistsAndRedirect(event) {
               
               <div>
                 
-  <section id="git-style">
-<h1>Git Style<a class="headerlink" href="#git-style" title="Permalink to this headline">¶</a></h1>
-<p>The main development branch <code class="docutils literal notranslate"><span class="pre">master</span></code> should build and pass tests, but may be
-unstable at times. Regressions may be introduced post-merge or a PR may be more
-clearly expressed with intermediate commits that do not pass all tests. We
-prefer a clear history over “atomic” commits. During our release process, we
-specifically address stability and regression issues.</p>
-<section id="submitting-changes">
-<h2>Submitting Changes<a class="headerlink" href="#submitting-changes" title="Permalink to this headline">¶</a></h2>
-<p>The way to contribute code to the Katana project is to make a fork of this
-repository and create a pull request with your desired changes. For a general
-overview of this process, this
-<a class="reference external" href="https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow">description</a>
-from Atlassian.</p>
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    /*background: #f5f5f5;*/
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+    margin: 0;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt .copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="admonition note">
+    Download Notebook: <a class="reference external" href="../contributing/how_to_template.ipynb">source</a>
+</div><section id="&lt;Title-of-how-to-guide&gt;">
+<h1>&lt;Title of how-to guide&gt;<a class="headerlink" href="#<Title-of-how-to-guide>" title="Permalink to this headline">¶</a></h1>
+<p>&lt;Introduction - Summarize what this how-to guide is about in a sentence or two. Ensure you link to the relevant explanations in the introduction so that the reader can gain more understanding of the related topics.&gt;</p>
+<section id="Requirements">
+<h2>Requirements<a class="headerlink" href="#Requirements" title="Permalink to this headline">¶</a></h2>
+<p>Before you begin, make sure you meet these prerequisites:</p>
+<ul class="simple">
+<li><p>&lt;First prerequisite&gt;</p></li>
+<li><p>&lt;Next prerequisite&gt;</p></li>
+</ul>
+<p>&lt;Include other important information here, such as known issues or bugs.&gt;</p>
 </section>
-<section id="merging-changes">
-<h2>Merging Changes<a class="headerlink" href="#merging-changes" title="Permalink to this headline">¶</a></h2>
-<p>If you are an external contributor (i.e., someone who does not have write
-access to this repo), the main reviewer of your pull request is responsible for
-finally merging your code after it has been reviewed.</p>
-<p>If you are an internal contributor (e.g., a member of Katana Graph), you are
-responsible for merging your code after it has been reviewed.</p>
-<p>When writing your change and during the review process, it is common to just
-append commits to your pull request branch, but prior to merging, these process
-commits should be reorganized with the interest of future developers in mind.
-This usually means structuring commits to be less about your process and more
-about the logical outcomes.</p>
-<p>A common pattern is a refactoring commit followed by the actual new feature.
-Each commit is usually buildable and testable on its own but altogether they
-comprise the work done. You can look at the git history of this repo for
-inspiration, but if you have any doubts, squashing all your commits into one is
-usually a safe choice.</p>
-<p>You can use <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">rebase</span> <span class="pre">--interactive</span></code> to reorganize your commits and  <code class="docutils literal notranslate"><span class="pre">git</span>
-<span class="pre">push</span> <span class="pre">--force</span></code>  to update your branch. Depending on your IDE, there are various
-features or plugins to streamline this process (e.g.,
-<a class="reference external" href="https://github.com/tpope/vim-fugitive">vim-fugitive</a>,
-<a class="reference external" href="https://magit.vc/">magit</a>). Git also provides <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">commit</span> <span class="pre">--fixup</span></code> and
-<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">rebase</span> <span class="pre">--autosquash</span></code> which can streamline this process.</p>
-<p>It is also possible to ask GitHub to squash your commits for you. This is the
-“squash and merge” option when merging your PR.</p>
-</section>
-<section id="pull-request-style">
-<span id="id1"></span><h2>Pull Request Style<a class="headerlink" href="#pull-request-style" title="Permalink to this headline">¶</a></h2>
-<p>Include the Jira issue keys that are being addressed at the end of the pull
-request title as a comma separated list in brackets.</p>
-<p>Example PR title:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reduce</span> <span class="n">memory</span> <span class="n">usage</span> <span class="n">of</span> <span class="n">Foo</span> <span class="p">[</span><span class="n">KAT</span><span class="o">-</span><span class="mi">1000</span><span class="p">,</span> <span class="n">KAT</span><span class="o">-</span><span class="mi">1001</span><span class="p">]</span>
+<section id="Setup">
+<h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
+<section id="Load-libraries">
+<h3>Load libraries<a class="headerlink" href="#Load-libraries" title="Permalink to this headline">¶</a></h3>
+<p>&lt;For example:&gt;</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<p>If you squash and merge your PR, by default, the PR description and title are
-turned into the commit message for your squashed PR, so apply the
-recommendations about commit message style below to your PR description instead.</p>
-<p>Jira issue keys referenced in the description of the PR do not get picked up by
-the Jira-GitHub integration, but do get automatically converted into a link by
-GitHub’s Jira bot. This is helpful for reviewers to quickly navigate to the
-related Jira issue.</p>
-</section>
-<section id="commit-message-style">
-<h2>Commit Message Style<a class="headerlink" href="#commit-message-style" title="Permalink to this headline">¶</a></h2>
-<p>If you intend to rebase and merge, please still include Jira issue keys as described in
-pull request style above.</p>
-<p>If you intend to squash and merge, apply the recommendations in this section to your
-pull request message instead of your commit message.</p>
-<p>There are three main things we accomplish with commit messages:</p>
-<ol class="arabic simple">
-<li><p>Facilitate review of our changes by reviewers</p></li>
-<li><p>Provide context to future readers about our changes</p></li>
-<li><p>Ground the scope of our changes to ourselves.</p></li>
-</ol>
-<p>If we struggle to write a simple explanation of why we made a change, it is a
-sign that the underlying code changes are also not as clear as they could be.</p>
-<p>Commit messages are part of the repository in the same way as the files in a
-repository are. And as developers may use <code class="docutils literal notranslate"><span class="pre">grep</span></code> to orient themselves around
-the repository, developers may also use <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">log</span></code> and <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">blame</span></code> to
-understand more of the history of a file and its context. So, it pays to be
-mindful of the content and structure of commits and their messages.</p>
-<p>Messages should be written with your reviewers in mind as well as future
-developers (or generally the codebase itself). Changes to the repository are
-already included in a commit so use your commit message to focus on things that
-would not readily be apparent from just looking at the textual changes.</p>
-<p>Here are some examples of useful things to note for your reviewers and future
-developers:</p>
-<ul class="simple">
-<li><p>Why was this change made?</p></li>
-<li><p>What plausible alternative implementations did you consider but rule out?</p></li>
-<li><p>What general thing or abstraction is this change in furtherance of?</p></li>
-<li><p>If this change fixes a bug, what was the original bug or its symptoms?</p></li>
-<li><p>Are there any notable API changes? Call them out specifically so that other
-developers browsing <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">log</span></code> or resolving a conflict can adjust their
-current work accordingly.</p></li>
-<li><p>If you did some additional changes along the way to facilitate the main
-thrust of your work, explain the rational behind any non-obvious but required
-changes.</p></li>
-</ul>
-<p>At the same time, there is no reason to agonize over the content of a commit
-message or be overly verbose. Applying an automatic formatter changes a lot of
-files but doesn’t require a lot of context, while a one-line change might merit
-several paragraphs of context if the rationale is subtle or non-obvious.</p>
-<p>The subject line (i.e., the first line) of a commit message should be short,
-generally less than 80 characters long, and start with a verb in the imperative
-mood (present tense, second person). You can think of the message as directing
-the codebase itself to do something. Optionally, the subject line may begin
-with a component followed by a colon if the change is specific to a commonly
-known component or library.</p>
-<p>Examples:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">Apply</span> <span class="pre">clang-format</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tsuba:</span> <span class="pre">Support</span> <span class="pre">compressed</span> <span class="pre">and</span> <span class="pre">uncompressed</span> <span class="pre">files</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">support:</span> <span class="pre">Fix</span> <span class="pre">release</span> <span class="pre">order</span> <span class="pre">when</span> <span class="pre">handling</span> <span class="pre">errors</span></code></p></li>
-</ul>
-<p>Commit messages are traditionally viewed in a terminal. Hard wrap your lines to
-some reasonable column width (e.g., 80 or 120 characters) and use a blank line
-to separate paragraphs. Avoid markup or excessive decoration on text. A commit
-message is plain text.</p>
-<p>Refrain from using external links unless you are sure they will be valid
-indefinitely. Assume that readers do not have access to external links and
-summarize relevant details in the commit message itself. This includes
-references to issue and work trackers.</p>
-<p>An example of a typical commit message:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">support</span><span class="p">:</span> <span class="n">Reduce</span> <span class="n">memory</span> <span class="n">usage</span> <span class="n">of</span> <span class="n">Foo</span>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="n">A</span> <span class="n">Foo</span> <span class="n">instance</span> <span class="n">maintains</span> <span class="n">references</span> <span class="n">to</span> <span class="n">Bar</span> <span class="n">objects</span><span class="o">.</span> <span class="n">The</span> <span class="n">number</span> <span class="n">of</span> <span class="n">Bar</span>
-<span class="n">objects</span> <span class="n">can</span> <span class="n">grow</span> <span class="n">when</span> <span class="n">a</span> <span class="n">Foo</span> <span class="ow">is</span> <span class="n">used</span> <span class="n">multiple</span> <span class="n">times</span><span class="o">.</span> <span class="n">This</span> <span class="n">can</span> <span class="n">reach</span> <span class="mi">10</span><span class="n">GB</span> <span class="ow">in</span>
-<span class="n">typical</span> <span class="n">usage</span><span class="o">.</span>
-
-<span class="n">In</span> <span class="n">practice</span><span class="p">,</span> <span class="n">once</span> <span class="n">a</span> <span class="n">Foo</span> <span class="ow">is</span> <span class="n">reused</span> <span class="n">only</span> <span class="n">some</span> <span class="n">Bar</span> <span class="n">objects</span> <span class="n">need</span> <span class="n">to</span> <span class="n">be</span> <span class="n">retained</span><span class="o">.</span>
-<span class="n">So</span><span class="p">,</span> <span class="n">add</span> <span class="n">a</span> <span class="n">dispose</span> <span class="n">API</span> <span class="n">that</span> <span class="n">allows</span> <span class="n">Foo</span> <span class="n">users</span> <span class="n">to</span> <span class="n">indicate</span> <span class="n">which</span> <span class="n">Bar</span> <span class="n">objects</span> <span class="n">to</span>
-<span class="n">release</span> <span class="n">on</span> <span class="n">reuse</span><span class="o">.</span> <span class="n">The</span> <span class="n">default</span> <span class="n">behavior</span> <span class="ow">is</span> <span class="n">to</span> <span class="n">retain</span> <span class="nb">all</span> <span class="n">Bars</span><span class="o">.</span>
-
-<span class="n">In</span> <span class="n">most</span> <span class="n">cases</span><span class="p">,</span> <span class="n">it</span> <span class="ow">is</span> <span class="n">easy</span> <span class="n">to</span> <span class="n">infer</span> <span class="n">which</span> <span class="n">Bar</span> <span class="n">objects</span> <span class="n">to</span> <span class="n">dispose</span> <span class="n">of</span> <span class="n">by</span>
-<span class="n">inspecting</span> <span class="n">the</span> <span class="n">code</span><span class="o">.</span> <span class="n">The</span> <span class="n">few</span> <span class="n">remaining</span> <span class="n">cases</span> <span class="n">where</span> <span class="n">it</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">possible</span> <span class="n">to</span> <span class="n">use</span>
-<span class="n">the</span> <span class="n">dispose</span> <span class="n">API</span> <span class="n">are</span> <span class="n">on</span> <span class="n">less</span> <span class="n">frequently</span> <span class="n">executed</span> <span class="n">recovery</span> <span class="n">paths</span><span class="o">.</span>
-
-<span class="n">After</span> <span class="n">this</span> <span class="n">change</span><span class="p">,</span> <span class="n">typical</span> <span class="n">memory</span> <span class="n">usage</span> <span class="n">reduces</span> <span class="n">to</span> <span class="n">a</span> <span class="n">few</span> <span class="n">KB</span><span class="o">.</span>
+<span class="kn">from</span> <span class="nn">katana</span> <span class="kn">import</span> <span class="n">remote</span>
+<span class="kn">from</span> <span class="nn">katana.remote</span> <span class="kn">import</span> <span class="n">import_data</span><span class="p">,</span> <span class="n">analytics</span>
 </pre></div>
 </div>
+</div>
+</section>
+<section id="Connect-client">
+<h3>Connect client<a class="headerlink" href="#Connect-client" title="Permalink to this headline">¶</a></h3>
+<p>Starting a Katana remote Client is required to interface with the Katana remote service and schedule distributed operations. Provide the Katana Graph server address by setting the environment variable <code class="docutils literal notranslate"><span class="pre">KATANA_SERVER_ADDRESS</span></code>. This variable applies only to your current shell session. If you want the variable to be automatically set for future shell sessions, set the variable in your shell startup file. For more detailed information refer to the Getting Started section of the documentation.
+Alternatively, you can pass in the address of the remote service by calling <code class="docutils literal notranslate"><span class="pre">Client(address=&quot;localhost:8080&quot;)</span></code> for Linux machines or <code class="docutils literal notranslate"><span class="pre">Client(address=&quot;host.docker.internal:8080&quot;)</span></code> for macOS and Windows machines.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Connect to the Katana Server</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">remote</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Load-data">
+<h3>Load data<a class="headerlink" href="#Load-data" title="Permalink to this headline">¶</a></h3>
+<p>&lt;Create a new graph and load data to that graph.&gt;</p>
 </section>
 </section>
+<section id="&lt;Title-of-step-1&gt;">
+<h2>&lt;Title of step 1&gt;<a class="headerlink" href="#<Title-of-step-1>" title="Permalink to this headline">¶</a></h2>
+<section id="&lt;Title-of-substep-1&gt;">
+<h3>&lt;Title of substep 1&gt;<a class="headerlink" href="#<Title-of-substep-1>" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="&lt;Title-of-next-substep&gt;">
+<h3>&lt;Title of next substep&gt;<a class="headerlink" href="#<Title-of-next-substep>" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="&lt;Title-of-next-step&gt;">
+<h2>&lt;Title of next step&gt;<a class="headerlink" href="#<Title-of-next-step>" title="Permalink to this headline">¶</a></h2>
+<section id="id1">
+<h3>&lt;Title of substep 1&gt;<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="id2">
+<h3>&lt;Title of next substep&gt;<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="Next-Steps">
+<h2>Next Steps<a class="headerlink" href="#Next-Steps" title="Permalink to this headline">¶</a></h2>
+<p>&lt;Provide recommendations of other resources or documentation sections for the reader. Include links for each recommendation.&gt;</p>
+</section>
+</section>
+<hr class="docutils" />
+<p>Generated by <a class="reference external" href="https://nbsphinx.readthedocs.io/">nbsphinx</a> from a <a class="reference external" href="https://jupyter.org/">Jupyter</a> notebook.</p>
 
 
               </div>

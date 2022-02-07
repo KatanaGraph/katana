@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+169.0.c3763f variable.
+            // this version, rather than using sphinx's 0.1.102.dev+170.0.f8930f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -445,6 +445,11 @@ function checkPageExistsAndRedirect(event) {
      Katana RDG Storage Format
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="how_to_template.html">
+     How-to guide template
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -496,6 +501,50 @@ function checkPageExistsAndRedirect(event) {
    Jupyter Notebooks
   </a>
   <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#style">
+     Style
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#how-to-template">
+     How-to template
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#customization">
+       Customization
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#fill-out-the-requirements-section">
+       Fill out the Requirements section
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#explain-steps-and-process">
+       Explain steps and process
+      </a>
+      <ul class="nav section-nav flex-column">
+       <li class="toc-h5 nav-item toc-entry">
+        <a class="reference internal nav-link" href="#images">
+         Images
+        </a>
+       </li>
+       <li class="toc-h5 nav-item toc-entry">
+        <a class="reference internal nav-link" href="#ordered-lists">
+         Ordered lists
+        </a>
+       </li>
+       <li class="toc-h5 nav-item toc-entry">
+        <a class="reference internal nav-link" href="#code">
+         Code
+        </a>
+       </li>
+      </ul>
+     </li>
+    </ul>
+   </li>
    <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#orphaned-notebooks">
      Orphaned Notebooks
@@ -721,6 +770,83 @@ so references must be valid regardless of the condition.</p>
 <h2>Jupyter Notebooks<a class="headerlink" href="#jupyter-notebooks" title="Permalink to this headline">¶</a></h2>
 <p>Guides on how to use Katana Graph in Python should be written as Jupyter
 Notebooks. They will be parsed similar to Restructured Text (<code class="docutils literal notranslate"><span class="pre">.rst</span></code>) files.</p>
+<section id="style">
+<h3>Style<a class="headerlink" href="#style" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Keep titles and headings in sentence case (capitalize first letter of first
+word, proper nouns, first letter of subheading after colon, and no
+punctuation).</p></li>
+<li><p>Code cells in user guides must be evaluated with results less than 30 lines.</p></li>
+<li><p>Do not number headings of step titles in step by step guide. For substep
+sequences, use numbered bullet points under a given step title.</p></li>
+<li><p>Write in the second person: “Delete your database.”</p></li>
+</ul>
+</section>
+<section id="how-to-template">
+<h3>How-to template<a class="headerlink" href="#how-to-template" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">katana/docs/contributing/how_to_template.ipynb</span></code> is a template for creating a
+how-to guide in the form of a Jupyter Notebook. Use it when you wish to take a
+reader through a detailed series of steps required to do an individual task or
+procedure. Be sure to follow the section structure in the notebook and to use
+the above Katana Graph writing style.</p>
+<section id="customization">
+<h4>Customization<a class="headerlink" href="#customization" title="Permalink to this headline">¶</a></h4>
+<ol class="arabic simple">
+<li><p>Choose a filename that matches or abbreviates what you wish to title the
+guide. Add the <code class="docutils literal notranslate"><span class="pre">-draft</span></code> tag (with hyphen) to the end of the filename. For
+example, <code class="docutils literal notranslate"><span class="pre">const_cool_graphs-draft.ipynb</span></code> for a guide titled “Constructing
+Cool Graphs.”</p></li>
+<li><p>The guide should be committed to
+<code class="docutils literal notranslate"><span class="pre">/docs/user-guides/&lt;most</span> <span class="pre">relevant</span> <span class="pre">directory&gt;</span></code>. Create a new directory in
+<code class="docutils literal notranslate"><span class="pre">/docs/user-guides/</span></code> if a relevant directory does not exist.</p></li>
+<li><p>In the above directory, ensure that the filename is added to the list under
+<code class="docutils literal notranslate"><span class="pre">..</span> <span class="pre">toctree::</span></code> located in that directory’s <code class="docutils literal notranslate"><span class="pre">index.rst</span></code> file. The name is
+to be included without the file extension. For example,
+<code class="docutils literal notranslate"><span class="pre">const_cool_graphs-draft</span></code>. If you created a directory in the previous step,
+you will need to create a new <code class="docutils literal notranslate"><span class="pre">index.rst</span></code> and copy the format used in
+another user guide subdirectory.</p></li>
+<li><p>Use a descriptive title according to the style guide.</p></li>
+</ol>
+</section>
+<section id="fill-out-the-requirements-section">
+<h4>Fill out the Requirements section<a class="headerlink" href="#fill-out-the-requirements-section" title="Permalink to this headline">¶</a></h4>
+<p>This section prevents readers from getting halfway through and discovering that
+they need to go and read other documentation before they can continue.
+Prerequisites can include other articles or information to read, or it can be
+technical dependencies. If there is more than one prerequisite, a bulleted list
+is good to make the needs clearer. Describe what the audience needs to know, or
+needs to have, before they attempt the how-to. By stating the requirements
+up-front, you prevent your readers from having a bad experience with your
+how-to. You must include links to procedures or information about how to get
+what they need. If not possible, give useful pointers.</p>
+</section>
+<section id="explain-steps-and-process">
+<h4>Explain steps and process<a class="headerlink" href="#explain-steps-and-process" title="Permalink to this headline">¶</a></h4>
+<section id="images">
+<h5>Images<a class="headerlink" href="#images" title="Permalink to this headline">¶</a></h5>
+<p>When you are explaining steps in a process, it can be useful to include images
+(such as screenshots) for each key part of the process. This can help readers
+orientate themselves as they move through the steps. It can also help someone
+who is evaluating the software see how it works without having to install it.
+When an image is quicker to interpret than descriptive text, put the screenshot
+first, otherwise lead with the text.</p>
+</section>
+<section id="ordered-lists">
+<h5>Ordered lists<a class="headerlink" href="#ordered-lists" title="Permalink to this headline">¶</a></h5>
+<p>In general, ordered lists should be avoided in favor of section titles presented
+in order to the reader. When unavoidable, provide a lead-in sentence before the
+ordered list.</p>
+</section>
+<section id="code">
+<h5>Code<a class="headerlink" href="#code" title="Permalink to this headline">¶</a></h5>
+<p>Break up your code where possible into smaller code cells and provide a lead-in
+sentence explaining the code snippet. Describe what you are doing and your
+expected result. If a large code block cannot be broken up, provide comments in
+your code as well. Your code must not be pseudocode and the notebook as a whole
+must be fully executable with no errors or warnings.</p>
+</section>
+</section>
+</section>
 <section id="orphaned-notebooks">
 <h3>Orphaned Notebooks<a class="headerlink" href="#orphaned-notebooks" title="Permalink to this headline">¶</a></h3>
 <p>This means that it doesn’t appear in a toctree (see <code class="docutils literal notranslate"><span class="pre">index.rst</span></code>),

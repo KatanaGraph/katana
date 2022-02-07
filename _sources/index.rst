@@ -3,6 +3,7 @@ Katana
 ======
 
 .. toctree::
+   :hidden:
    
    getting-started/index
    user-guides/index

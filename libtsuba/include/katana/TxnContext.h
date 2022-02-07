@@ -11,13 +11,13 @@ namespace katana {
 
 class KATANA_EXPORT TxnContext {
 public:
-  TxnContext() : auto_commit_(true) {}
+  TxnContext() {}
 
   explicit TxnContext(bool auto_commit) : auto_commit_(auto_commit) {}
 
   ~TxnContext() {
     if (auto_commit_) {
-      KATANA_LOG_DEBUG_ASSERT(Commit());
+      KATANA_LOG_ASSERT(Commit());
     }
   }
 

@@ -571,7 +571,7 @@ struct StructProperty
 
     auto type = res.ValueOrDie();
     arrow::FixedSizeBinaryBuilder builder(type);
-    builder.Reserve(num_rows);
+    builder.ReserveData(num_rows);
     if (auto res = builder.AppendEmptyValues(num_rows); !res.ok()) {
       return KATANA_ERROR(
           katana::ErrorCode::ArrowError, "failed to append values {}", res);

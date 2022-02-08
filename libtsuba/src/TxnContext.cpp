@@ -9,9 +9,6 @@ katana::TxnContext::Commit() const {
     return katana::ResultSuccess();
   }
 
-  katana::CommBackend* comm = katana::Comm();
-  comm->Barrier();
-
   katana::Result<void> ret = katana::OneHostOnly([&]() -> katana::Result<void> {
     std::string curr_s = rdg_manifest_.ToJsonString();
     KATANA_CHECKED_CONTEXT(

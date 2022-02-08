@@ -88,6 +88,9 @@ public:
   //views
   bool Equals(const RDG& other) const;
 
+  /// \returns the current version of the loaded graph (does not access storage)
+  uint64_t CurrentVersion(RDGHandle handle);
+
   /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
   /// @param handle :: handle indicating where to store RDG
   /// @param command_line :: added to metadata to track lineage of RDG

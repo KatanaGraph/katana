@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "katana/python/CythonIntegration.h"
 #include "katana/python/ErrorHandling.h"

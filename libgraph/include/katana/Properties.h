@@ -498,22 +498,17 @@ struct Property {
   static Result<std::shared_ptr<arrow::Table>> Allocate(
       size_t num_rows, const std::string& name) {
     using Builder = typename arrow::TypeTraits<ArrowType>::BuilderType;
-    using CType = typename arrow::TypeTraits<ArrowType>::CType;
     Builder builder;
 
-    // TODO(lhc): replace this with AppendEmptyValues() on Arrow >= 3.0.
-    katana::PODVector<CType> rows(num_rows);
-    if (auto r = builder.AppendValues(rows.data(), num_rows); !r.ok()) {
-      return KATANA_ERROR(
-          katana::ErrorCode::ArrowError, "failed to append values {}", r);
-    }
+    KATANA_CHECKED(builder.Reserve(num_rows));
+    KATANA_CHECKED_ERROR_CODE(
+        builder.AppendEmptyValues(num_rows), katana::ErrorCode::ArrowError,
+        "failed to append values");
 
     std::shared_ptr<arrow::Array> array;
-    if (auto r = builder.Finish(&array); !r.ok()) {
-      return KATANA_ERROR(
-          katana::ErrorCode::ArrowError, "failed to construct arrow array {}",
-          r);
-    }
+    KATANA_CHECKED_ERROR_CODE(
+        builder.Finish(&array), katana::ErrorCode::ArrowError,
+        "failed to construct arrow array");
 
     return arrow::Table::Make(
         arrow::schema({arrow::field(
@@ -573,19 +568,15 @@ struct StructProperty
 
     auto type = res.ValueOrDie();
     arrow::FixedSizeBinaryBuilder builder(type);
-    // TODO(lhc): replace this with AppendEmptyValues() on Arrow >= 3.0.
-    katana::PODVector<uint8_t> data(sizeof(T) * num_rows);
+    KATANA_CHECKED(builder.Reserve(num_rows));
+    KATANA_CHECKED_ERROR_CODE(
+        builder.AppendEmptyValues(num_rows), katana::ErrorCode::ArrowError,
+        "failed to append values");
 
-    if (auto res = builder.AppendValues(data.data(), num_rows); !res.ok()) {
-      return KATANA_ERROR(
-          katana::ErrorCode::ArrowError, "failed to append values {}", res);
-    }
     std::shared_ptr<arrow::Array> array;
-    if (auto res = builder.Finish(&array); !res.ok()) {
-      return KATANA_ERROR(
-          katana::ErrorCode::ArrowError, "failed to construct arrow array {}",
-          res);
-    }
+    KATANA_CHECKED_ERROR_CODE(
+        builder.Finish(&array), katana::ErrorCode::ArrowError,
+        "failed to construct arrow array ");
 
     return katana::Result<std::shared_ptr<arrow::Table>>(
         arrow::Table::Make(arrow::schema({arrow::field(name, type)}), {array}));

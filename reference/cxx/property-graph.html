@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+174.0.331f2a variable.
+            // this version, rather than using sphinx's 0.1.102.dev+175.0.60b08b variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -648,6 +648,16 @@ function checkPageExistsAndRedirect(event) {
 <dt class="sig sig-object cpp" id="_CPPv4NK6katana13PropertyGraph19partition_policy_idEv">
 <span class="target" id="classkatana_1_1PropertyGraph_1a5b567ed4772e1ea1e485e9d8b69934e9"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">partition_policy_id</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6katana13PropertyGraph19partition_policy_idEv" title="Permalink to this definition">¶</a><br /></dt>
 <dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6katana13PropertyGraph14CurrentVersionEv">
+<span class="target" id="classkatana_1_1PropertyGraph_1a4b4fd1405c971c8e06858bdedf3ae379"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="error-handling.html#_CPPv4I0EN6katana6ResultE" title="katana::Result"><span class="n"><span class="pre">Result</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">uint64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CurrentVersion</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana13PropertyGraph14CurrentVersionEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>the current version of the graph (does not access storage) </p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana13PropertyGraph5WriteERKNSt6stringERKNSt6stringEPN6katana10TxnContextE">

@@ -29,6 +29,7 @@ set(sources
   src/PartitionTopologyMetadata.cpp
   src/ReadGroup.cpp
   src/tsuba.cpp
+  src/TxnContext.cpp
   src/WriteGroup.cpp
 )
 

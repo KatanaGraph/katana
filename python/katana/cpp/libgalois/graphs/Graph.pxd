@@ -150,8 +150,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
         bint Equals(const _PropertyGraph*)
 
-        Result[void] Write(string path, string command_line)
-        Result[void] Commit(string command_line)
+        Result[void] Write(string path, string command_line, TxnContext* txn_ctx)
+        Result[void] Commit(string command_line, TxnContext* txn_ctx)
 
         GraphTopology& topology()
 

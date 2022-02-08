@@ -5,10 +5,11 @@
 #include "katana/PropertyGraph.h"
 
 katana::PropertyGraph
-LoadGraph(const std::string& rdg_file, katana::TxnContext* txn_ctx) {
+LoadGraph(const std::string& rdg_file) {
   KATANA_LOG_ASSERT(!rdg_file.empty());
+  katana::TxnContext txn_ctx;
   auto g_res =
-      katana::PropertyGraph::Make(rdg_file, txn_ctx, katana::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_file, &txn_ctx, katana::RDGLoadOptions());
 
   if (!g_res) {
     KATANA_LOG_FATAL("making result: {}", g_res.error());
@@ -23,10 +24,11 @@ StoreGraph(katana::PropertyGraph* g) {
   KATANA_LOG_ASSERT(uri_res);
   std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
   std::string command_line;
+  katana::TxnContext txn_ctx;
 
   // Store graph. If there is a new storage format then storing it is enough to bump the version up.
   KATANA_LOG_WARN("writing graph at temp file {}", tmp_rdg_dir);
-  auto write_result = g->Write(tmp_rdg_dir, command_line);
+  auto write_result = g->Write(tmp_rdg_dir, command_line, &txn_ctx);
   if (!write_result) {
     KATANA_LOG_FATAL("writing result failed: {}", write_result.error());
   }

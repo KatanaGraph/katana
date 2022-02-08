@@ -4,11 +4,12 @@
 #include "katana/file.h"
 
 katana::Result<void>
-katana::TxnContext::Commit() const {
-  if (!manifest_cached_ || manifest_file_.empty()) {
+katana::TxnContext::Commit() {
+  if (!manifest_cached_ || manifest_uptodate_) {
     return katana::ResultSuccess();
   }
 
+  KATANA_LOG_DEBUG_ASSERT(!manifest_file_.empty());
   katana::Result<void> ret = katana::OneHostOnly([&]() -> katana::Result<void> {
     std::string curr_s = rdg_manifest_.ToJsonString();
     KATANA_CHECKED_CONTEXT(
@@ -18,5 +19,7 @@ katana::TxnContext::Commit() const {
         "CommitRDG future failed {}", manifest_file_);
     return katana::ResultSuccess();
   });
+
+  manifest_uptodate_ = true;
   return ret;
 }

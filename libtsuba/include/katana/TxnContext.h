@@ -91,6 +91,7 @@ public:
   void SetManifest(const RDGManifest& rdg_manifest) {
     rdg_manifest_ = rdg_manifest;
     manifest_cached_ = true;
+    manifest_uptodate_ = false;
   }
 
   const std::set<std::string>& NodePropertyRead() const {
@@ -123,7 +124,7 @@ public:
 
   const RDGManifest& Manifest() const { return rdg_manifest_; }
 
-  katana::Result<void> Commit() const;
+  katana::Result<void> Commit();
 
 private:
   std::set<std::string> node_properties_read_;
@@ -137,6 +138,7 @@ private:
 
   bool auto_commit_{true};
   bool manifest_cached_{false};
+  bool manifest_uptodate_{true};
   Uri manifest_file_;
   RDGManifest rdg_manifest_;
 };

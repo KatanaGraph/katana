@@ -21,7 +21,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.local._graph cimport Graph
+from katana.local import Graph
 from katana.local.analytics.plan cimport Plan, _Plan
 
 cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" nogil:

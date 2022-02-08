@@ -223,6 +223,20 @@ katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
+    katana::GraphTopology&& topo_to_assign,
+    NUMAArray<EntityTypeID>&& node_entity_type_ids,
+    NUMAArray<EntityTypeID>&& edge_entity_type_ids,
+    EntityTypeManager&& node_type_manager,
+    EntityTypeManager&& edge_type_manager) {
+  return std::make_unique<katana::PropertyGraph>(
+      std::unique_ptr<katana::RDGFile>(), katana::RDG{},
+      std::move(topo_to_assign), std::move(node_entity_type_ids),
+      std::move(edge_entity_type_ids), std::move(node_type_manager),
+      std::move(edge_type_manager));
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
     const katana::Uri& rdg_dir, katana::GraphTopology&& topo_to_assign,
     NUMAArray<EntityTypeID>&& node_entity_type_ids,
     NUMAArray<EntityTypeID>&& edge_entity_type_ids,

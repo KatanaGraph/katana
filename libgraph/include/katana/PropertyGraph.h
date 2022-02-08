@@ -331,6 +331,14 @@ public:
     return rdg_->part_metadata().policy_id_;
   }
 
+  /// \returns the current version of the graph (does not access storage)
+  Result<uint64_t> CurrentVersion() {
+    if (file_ == nullptr) {
+      return KATANA_ERROR(katana::ErrorCode::AssertionFailed, "no RDG handle");
+    }
+    return rdg_->CurrentVersion(*file_);
+  }
+
   /// Create a new storage location for a graph and write everything into it.
   ///
   /// \returns io_error if, for instance, a file already exists

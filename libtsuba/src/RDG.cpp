@@ -567,6 +567,11 @@ katana::RDG::Make(RDGHandle handle, const RDGLoadOptions& opts) {
   return Make(handle.impl_->rdg_manifest(), opts);
 }
 
+uint64_t
+katana::RDG::CurrentVersion(RDGHandle handle) {
+  return handle.impl_->rdg_manifest().version();
+}
+
 katana::Result<void>
 katana::RDG::Store(
     RDGHandle handle, const std::string& command_line,

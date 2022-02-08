@@ -6,18 +6,7 @@ from katana.local_native import Graph
 # Graph
 
 
-@overload(len)
-def overload_Graph_len(self):
-    if isinstance(self, Graph._numba_type_wrapper.Type):
-
-        def impl(self):
-            return self.num_nodes()
-
-        return impl
-    return None
-
-
-@overload_method(Graph._numba_type_wrapper.Type, "nodes")
+@overload_method(Graph._numba_type_wrapper.Type, "node_ids")
 def overload_Graph_nodes(self):
     _ = self
 

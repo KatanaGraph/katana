@@ -54,7 +54,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
       syncLevel "katana::analytics::AlgoReachability::syncLevel"
 
   Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name, 
-                     uint32_t start_node, uint32_t report_node, katana::TxnContext* txn_ctx, 
+                     uint32_t start_node, uint32_t report_node, CTxnContext* txn_ctx, 
                      AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift, 
                      const bool& is_symmetric, _KssspPlan plan)
 

@@ -1,6 +1,5 @@
 #include <pybind11/pybind11.h>
 
-#include "katana/RDGPythonInterface.h"
 #include "katana/python/CythonIntegration.h"
 #include "katana/python/ErrorHandling.h"
 #include "katana/python/PythonModuleInitializers.h"
@@ -20,6 +19,5 @@ katana::python::InitRDGInterface(py::module& m) {
     return katana::RDGPropInfo{name, path};
   }));
 
-  m.def(
-      "write_rdg_part_header", &katana::RDGPythonInterface::WriteRDGPartHeader);
+  m.def("write_rdg_part_header", &katana::WriteRDGPartHeader);
 }

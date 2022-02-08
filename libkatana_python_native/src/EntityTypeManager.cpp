@@ -106,11 +106,13 @@ katana::python::InitEntityTypeManager(py::module_& m) {
       .def(
           "get_or_add_non_atomic_entity_type_from_strings",
           [](katana::EntityTypeManager* self,
-             std::set<std::string> type_strs) -> Result<EntityType> {
+             std::vector<std::string> type_strs) -> Result<EntityType> {
+            std::set<std::string> type_strs_set(
+                type_strs.begin(), type_strs.end());
             return EntityType{
                 self,
-                KATANA_CHECKED(
-                    self->GetOrAddNonAtomicEntityTypeFromStrings(type_strs))};
+                KATANA_CHECKED(self->GetOrAddNonAtomicEntityTypeFromStrings(
+                    type_strs_set))};
           })
       .def(
           "get_atomic_subtypes",

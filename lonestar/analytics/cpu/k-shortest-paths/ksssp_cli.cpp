@@ -66,7 +66,7 @@ static cll::opt<AlgoReachability> algoReachability(
     cll::values(
         clEnumVal(AlgoReachability::asyncLevel, "async"), 
         clEnumVal(AlgoReachability::syncLevel, "syncLevel")),
-    cll::init(syncLevel));
+    cll::init(AlgoReachability::syncLevel));
 
 static cll::opt<bool> thread_spin(
     "threadSpin",

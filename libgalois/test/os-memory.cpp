@@ -155,7 +155,7 @@ void
 Run() {
   // Set up property manager and memory supervisor
   katana::PropertyManager property_manager;
-  uint64_t physical = katana::MemorySupervisor::Get().GetTotalSystemMemory();
+  uint64_t physical = katana::MemorySupervisor::GetTotalSystemMemory();
   katana::MemorySupervisor::Get().SetPolicy(
       std::make_unique<katana::MemoryPolicyPerformance>());
   katana::MemorySupervisor::Get().Register(&property_manager);

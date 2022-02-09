@@ -14,9 +14,9 @@ K Shortest paths
 .. autofunction:: katana.local.analytics.ksssp
 """
 
-from libc cimport bool
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t
+from libcpp cimport bool
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext

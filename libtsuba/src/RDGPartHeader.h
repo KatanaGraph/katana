@@ -141,6 +141,11 @@ public:
       RDGHandle handle, WriteGroup* writes,
       RDG::RDGVersioningPolicy retain_version) const;
 
+  // N.B. (vkarthik) - This method is used for when a WriteGroup is not needed.
+  // Uses FileFrame::Persist() to write out a binded and populated FileFrame.
+  katana::Result<void> Write(
+      RDGHandle handle, RDG::RDGVersioningPolicy retain_version) const;
+
   /// Mark all in-memory properties dirty so that they can be written
   /// out, copy out-of-memory properties
   katana::Result<void> ChangeStorageLocation(
@@ -591,6 +596,10 @@ private:
 
   static katana::Result<RDGPartHeader> MakeJson(
       const katana::Uri& partition_path);
+
+  katana::Result<std::unique_ptr<katana::FileFrame>> WriteFileFrame(
+      katana::RDGHandle handle,
+      katana::RDG::RDGVersioningPolicy retain_version) const;
 
   void set_node_entity_type_id_dictionary(
       const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap&

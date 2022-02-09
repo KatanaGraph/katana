@@ -3,6 +3,7 @@
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
 #include "RDGPartHeader.h"
+#include "RDGTopologyManager.h"
 #include "katana/CommBackend.h"
 #include "katana/Env.h"
 #include "katana/ErrorCode.h"
@@ -315,15 +316,25 @@ katana::WriteRDGPartHeader(
     katana::EntityTypeManager& node_entity_type_manager,
     katana::EntityTypeManager& edge_entity_type_manager,
     const std::string& node_entity_type_id_array_path,
-    const std::string& edge_entity_type_id_array_path,
-    const std::string& topology_path, const std::string& rdg_dir) {
-  // We need to do a bunch of stuff here
+    const std::string& edge_entity_type_id_array_path, uint64_t num_nodes,
+    uint64_t num_edges, const std::string& topology_path,
+    const std::string& rdg_dir) {
   auto manifest = RDGManifest();
   // manifest = manifest.NextVersion(1, 0, false, RDGLineage());
-  manifest.set_dir(KATANA_CHECKED(katana::Uri::Make(rdg_dir)));
-  katana::Uri part_header_uri_path = manifest.PartitionFileName(0);
-  auto part_header =
-      KATANA_CHECKED(katana::RDGPartHeader::Make(part_header_uri_path));
+  katana::Uri rdg_dir_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
+  manifest.set_dir(rdg_dir_uri);
+  manifest.set_viewtype(katana::kDefaultRDGViewType);
+  auto part_header = katana::RDGPartHeader();
+
+  // Setup partition metadata, for now assume only one partition
+  katana::PartitionMetadata part_meta;
+  part_meta.num_global_nodes_ = num_nodes;
+  part_meta.max_global_node_id_ = num_nodes - 1;
+  part_meta.num_global_edges_ = num_edges;
+  part_meta.num_edges_ = num_edges;
+  part_meta.num_nodes_ = num_nodes;
+  part_meta.num_owned_ = num_nodes;
+  part_meta.is_outgoing_edge_cut_ = true;
 
   // Create vector that is needed by part_header for prop_info, do this for both node and edges
   std::vector<katana::PropStorageInfo> node_props;
@@ -357,13 +368,26 @@ katana::WriteRDGPartHeader(
   // Set the topology metadata
   part_header.MakePartitionTopologyMetadataEntry(topology_path);
 
+  katana::RDGTopologyManager topo_manager = KATANA_CHECKED(
+      katana::RDGTopologyManager::Make(part_header.topology_metadata()));
+
+  // get the metadata we need from the topology file
+  KATANA_CHECKED(topo_manager.ExtractMetadata(
+      rdg_dir_uri, num_nodes, num_edges, /*storage_valid=*/true));
+
+  // Set storage format version to the latest one
+  // This will also prevent bumping up storage versions and leaving the dask
+  // import code in a stale state. Especially if there are large changes.
+  part_header.update_storage_format_version();
+
+  // Set partition metadata
+  part_header.set_metadata(part_meta);
+
   // Write out the part_header
-  std::unique_ptr<WriteGroup> write_group = KATANA_CHECKED(WriteGroup::Make());
   auto policy = katana::RDG::RDGVersioningPolicy::IncrementVersion;
   katana::RDGHandle handle =
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
-  KATANA_CHECKED(part_header.Write(handle, write_group.get(), policy));
-
+  KATANA_CHECKED(part_header.Write(handle, policy));
   return katana::ResultSuccess();
 }
 

@@ -160,8 +160,9 @@ KATANA_EXPORT katana::Result<void> WriteRDGPartHeader(
     katana::EntityTypeManager& node_entity_type_manager,
     katana::EntityTypeManager& edge_entity_type_manager,
     const std::string& node_entity_type_id_array_path,
-    const std::string& edge_entity_type_id_array_path,
-    const std::string& topology_path, const std::string& rdg_dir);
+    const std::string& edge_entity_type_id_array_path, uint64_t num_nodes,
+    uint64_t num_edges, const std::string& topology_path,
+    const std::string& rdg_dir);
 
 }  // namespace katana
 

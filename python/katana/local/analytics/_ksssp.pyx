@@ -22,7 +22,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libsupport.result cimport Result
+from katana.cpp.libsupport.result cimport Result, handle_result_void
 
 from katana.local import Graph, TxnContext
 

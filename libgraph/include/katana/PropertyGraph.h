@@ -64,27 +64,6 @@ class KATANA_EXPORT PropertyGraph {
   friend class PGViewCache;
   friend class PropertyGraphRetractor;
 
-  // Virtual methods
-public:
-  virtual ~PropertyGraph();
-
-private:
-  virtual std::shared_ptr<arrow::Buffer> NodeBitmask() const noexcept {
-    return nullptr;
-  }
-
-  virtual std::shared_ptr<arrow::Buffer> EdgeBitmask() const noexcept {
-    return nullptr;
-  }
-
-  /// Return the number of nodes of the original property graph.
-  virtual uint64_t NumOriginalNodes() const { return NumNodes(); }
-
-  /// Return the number of edges of the original property graph.
-  virtual uint64_t NumOriginalEdges() const { return NumEdges(); }
-
-  virtual Result<RDGTopology*> LoadTopology(const RDGTopology& shadow);
-
   // Regular methods
 public:
   using node_iterator = GraphTopology::node_iterator;
@@ -99,8 +78,8 @@ public:
 
   PropertyGraph(PropertyGraph&& other) = default;
   PropertyGraph& operator=(PropertyGraph&& other) = default;
+  virtual ~PropertyGraph();
 
-public:
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
   struct ReadOnlyPropertyView {
@@ -299,6 +278,12 @@ public:
   static Result<std::unique_ptr<katana::PropertyGraph>> Make(
       const katana::RDGManifest& rdg_manifest,
       const katana::RDGLoadOptions& opts, katana::TxnContext* txn_ctx);
+
+  /// Make a projected graph from a property graph. Shares state with
+  /// the original graph.
+  static std::unique_ptr<PropertyGraph> MakeProjectedGraph(
+      const PropertyGraph& pg, const std::vector<std::string>& node_types,
+      const std::vector<std::string>& edge_types);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.
@@ -985,6 +970,16 @@ protected:
   RDG& rdg() { return *rdg_; }
   const RDG& rdg() const { return *rdg_; }
 
+  GraphTopology::Edge OriginalToTransformedEdgeID(
+      GraphTopology::Edge edge) const {
+    return is_transformed ? original_to_transformed_edges_[edge] : edge;
+  }
+
+  GraphTopology::Node OriginalToTransformedNodeID(
+      GraphTopology::Node node) const {
+    return is_transformed ? original_to_transformed_nodes_[node] : node;
+  }
+
   // TODO(Rob): avoid exposing mutable versions of these
   //            members b/c they are NUMAArrays, and there
   //            is a potential issue of who owns and frees
@@ -1004,11 +999,13 @@ protected:
     return *edge_entity_type_ids_;
   }
 
-  // This constructor is meant to be used is situations when you want to share
-  // property and type data (including RDG) with another PropertyGraph instance,
-  // while using a new topology. The topology is assumed to maintain the correct
-  // property index mapping from its nodes/edges to the original property table.
-  PropertyGraph(const PropertyGraph& parent, GraphTopology&& topo) noexcept
+  /// Call this constructor to populate projection data.
+  PropertyGraph(
+      const PropertyGraph& parent, GraphTopology&& projected_topo,
+      NUMAArray<Node>&& original_to_transformed_nodes,
+      NUMAArray<Edge>&& original_to_transformed_edges,
+      NUMAArray<uint8_t>&& node_bitmask_data,
+      NUMAArray<uint8_t>&& edge_bitmask_data) noexcept
       : rdg_(parent.rdg_),
         file_(parent.file_),
         node_entity_type_manager_(parent.node_entity_type_manager_),
@@ -1017,9 +1014,33 @@ protected:
         node_entity_data_(node_entity_type_ids_->data()),
         edge_entity_type_ids_(parent.edge_entity_type_ids_),
         edge_entity_data_(edge_entity_type_ids_->data()),
-        pg_view_cache_(std::move(topo)) {}
+        pg_view_cache_(std::move(projected_topo)),
+        is_transformed(true),
+        original_to_transformed_nodes_(
+            std::move(original_to_transformed_nodes)),
+        original_to_transformed_edges_(
+            std::move(original_to_transformed_edges)),
+        node_bitmask_data_(std::move(node_bitmask_data)),
+        edge_bitmask_data_(std::move(edge_bitmask_data)) {
+    auto n_nodes = original_to_transformed_nodes_.size();
+    node_bitmask_ = std::make_shared<arrow::Buffer>(
+        node_bitmask_data_.data(), arrow::BitUtil::BytesForBits(n_nodes));
+
+    auto n_edges = original_to_transformed_edges_.size();
+    edge_bitmask_ = std::make_shared<arrow::Buffer>(
+        edge_bitmask_data_.data(), arrow::BitUtil::BytesForBits(n_edges));
+  }
 
 private:
+  /// this function creates an empty projection with num_new_nodes nodes
+  static std::unique_ptr<PropertyGraph> MakeEmptyEdgeProjectedGraph(
+      const PropertyGraph& pg, uint32_t num_new_nodes,
+      const DynamicBitset& bitset);
+
+  /// this function creates an empty projection
+  static std::unique_ptr<PropertyGraph> MakeEmptyProjectedGraph(
+      const PropertyGraph& pg, const DynamicBitset& bitset);
+
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
 
@@ -1038,6 +1059,28 @@ private:
 
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
+
+  /// Bitmask of nodes included in the transformation view. Should be used to construct arrow tables.
+  std::shared_ptr<arrow::Buffer> NodeBitmask() const noexcept {
+    return is_transformed ? node_bitmask_ : nullptr;
+  }
+
+  /// Bitmask of edges included in the transformation view. Should be used to construct arrow tables.
+  std::shared_ptr<arrow::Buffer> EdgeBitmask() const noexcept {
+    return is_transformed ? edge_bitmask_ : nullptr;
+  }
+
+  /// Return the number of nodes of the original property graph.
+  uint64_t NumOriginalNodes() const {
+    return is_transformed ? original_to_transformed_nodes_.size() : NumNodes();
+  }
+
+  /// Return the number of edges of the original property graph.
+  uint64_t NumOriginalEdges() const {
+    return is_transformed ? original_to_transformed_edges_.size() : NumEdges();
+  }
+
+  Result<RDGTopology*> LoadTopology(const RDGTopology& shadow);
 
   // Data
   std::shared_ptr<katana::RDG> rdg_{std::make_shared<katana::RDG>()};
@@ -1068,6 +1111,17 @@ private:
   std::vector<std::shared_ptr<EntityIndex<Edge>>> edge_indexes_;
 
   PGViewCache pg_view_cache_;
+
+  // Transformation related data.
+  bool is_transformed{false};
+
+  NUMAArray<Node> original_to_transformed_nodes_{};
+  NUMAArray<Edge> original_to_transformed_edges_{};
+
+  NUMAArray<uint8_t> node_bitmask_data_{};
+  std::shared_ptr<arrow::Buffer> node_bitmask_;
+  NUMAArray<uint8_t> edge_bitmask_data_{};
+  std::shared_ptr<arrow::Buffer> edge_bitmask_;
 };
 
 /// SortAllEdgesByDest sorts edges for each node by destination

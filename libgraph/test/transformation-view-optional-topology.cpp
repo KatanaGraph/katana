@@ -83,8 +83,8 @@ main(int argc, char** argv) {
   std::vector<std::string> edge_types;
   SplitString(edgeTypes, &edge_types);
 
-  auto pg_view = katana::TransformationView::MakeProjectedGraph(
-      pg, node_types, edge_types);
+  auto pg_view =
+      katana::PropertyGraph::MakeProjectedGraph(pg, node_types, edge_types);
 
   TestOptionalTopologyGenerationEdgeShuffleTopology(*pg_view);
   TestOptionalTopologyGenerationShuffleTopology(*pg_view);

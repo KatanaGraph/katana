@@ -176,7 +176,12 @@ OrderedCountFunc(
         it_n++;
       }
       if (dst_v == graph->OutEdgeDst(*it_n)) {
-        numTriangles_local += 1;
+        edge_iterator multi_it_n = it_n;
+        while (multi_it_n != graph->OutEdges(n).end() &&
+               graph->OutEdgeDst(*multi_it_n) == dst_v) {
+          numTriangles_local += 1;
+          multi_it_n++;
+        }
       }
     }
   }

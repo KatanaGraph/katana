@@ -26,7 +26,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_void
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph
+from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" nogil:
@@ -271,5 +271,5 @@ def ksssp(pg, str edge_weight_property_name, uint32_t start_node,
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str, 
-                                 start_node, report_node, txn_ctx, algo_reachability, num_paths, 
-                                 is_symmetric, plan))
+                                 start_node, report_node, underlying_txn_context(txn_ctx), 
+                                 algo_reachability, num_paths, is_symmetric, plan))

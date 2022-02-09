@@ -4,6 +4,8 @@
 #include "katana/analytics/sssp/sssp.h"
 
 namespace katana::analytics {
+using kSsspPlan = SsspPlan;
+
 /// Specifies algorithm used to check path reachability
 class AlgoReachability {
 public:

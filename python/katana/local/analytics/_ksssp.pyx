@@ -70,7 +70,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
 
     Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name, 
                        uint32_t start_node, uint32_t report_node, CTxnContext* txn_ctx, 
-                       AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift, 
+                       AlgoReachability algo_reachability, uint32_t num_paths, 
                        const bool& is_symmetric, _KssspPlan plan)
 
 class _KssspAlgorithm(Enum):

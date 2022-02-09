@@ -4,9 +4,35 @@
 #include "katana/analytics/sssp/sssp.h"
 
 namespace katana::analytics {
-using kSsspPlan = SsspPlan;
+/// Specifies algorithm used to check path reachability
+class AlgoReachability {
+public:
+  /// Algorithm selector for K-Shortest Path
+  enum Algorithm {
+    asyncLevel, 
+    syncLevel
+  };
 
-enum AlgoReachability { async = 0, syncLevel };
+private:
+  Algorithm algorithm_;
+
+  AlgoReachability(
+      Algorithm algorithm)
+      : algorithm_(algorithm) {}
+
+public:
+  AlgoReachability() : AlgoReachability{syncLevel}
+
+  Algorithm algorithm() const { return algorithm_; }
+
+  static AlgoReachability AsyncLevel() {
+    return {asyncLevel};
+  }
+
+  static AlgoReachability SyncLevel() {
+    return {syncLevel};
+  }
+}
 
 /// Compute the K Shortest Path for pg starting from start_node.
 /// The algorithm and delta stepping

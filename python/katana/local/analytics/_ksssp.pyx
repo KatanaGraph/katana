@@ -49,9 +49,19 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
     ptrdiff_t kDeltaEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
 cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::analytics" nogil:
-    enum AlgoReachability:
-        Async "katana::analytics::AlgoReachability::async"
-        SyncLevel "katana::analytics::AlgoReachability::syncLevel"
+    cppclass _AlgoReachability "katana::analytics::AlgoReachability":
+        enum Algorithm:
+            asyncLevel "katana::analytics::AlgoReachability::asyncLevel"
+            syncLevel "katana::analytics::AlgoReachability::syncLevel"
+
+        _AlgoReachability()
+
+        _AlgoReachability.Algorithm algorithm() const
+
+        @staticmethod
+        _AlgoReachability AsyncLevel()
+        @staticmethod
+        _AlgoReachability SyncLevel()
 
     Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name, 
                        uint32_t start_node, uint32_t report_node, CTxnContext* txn_ctx, 
@@ -147,10 +157,75 @@ cdef class KssspPlan(Plan):
         """
         return KssspPlan.make(_KssspPlan.DeltaStepBarrier(delta))
 
+
+class _KssspAlgorithmReachability(Enum):
+    """
+    The algorithms to check reachability for kSSSP
+
+    :see: :py:class: `~katana.local.analytics.AlgoReachability` constructors for algorithm documentation.
+    """
+    AsyncLevel = _AlgoReachability.Algorithm.asyncLevel
+    SyncLevel = _AlgoReachability.Algorithm.syncLevel
+
+
+cdef class AlgoReachability:
+    """
+    The algorithms available to check reachability between two nodes
+
+    Static method construct AlgoReachability using specific algorithms. 
+    """
+
+    cdef:
+        _AlgoReachability underlying_
+    
+    cdef _AlgoReachability* underlying(self) except NULL:
+        return &self.underlying_
+
+    @staticmethod
+    cdef AlgoReachability make(_AlgoReachability u):
+        f = <AlgoReachability>AlgoReachability.__new__(AlgoReachability)
+        f.underlying_ = u
+        return f
+
+    def __init__(self):
+        """
+        Construct AlgoReachability using default parameters
+        """
+        self.underlying_ = _AlgoReachability()
+        
+    algorithm = _KssspAlgorithmReachability
+
+    @property
+    def algorithm(self) -> _KssspAlgorithmReachability:
+        """
+        The selected algorithm.
+        """
+        return _KssspAlgorithmReachability(self.underlying_.algorithm())
+    
+    def __init__(self):
+        """
+        Choose an algorithm
+        """
+        super(AlgoReachability, self).__init__()
+
+    @staticmethod
+    def async_level() -> AlgoReachability:
+        """
+        Asynchronous level reachability
+        """
+        return AlgoReachability.make(_AlgoReachability.AsyncLevel())
+
+    @staticmethod
+    def sync_level() -> AlgoReachability:
+        """
+        Synchronous level reachability
+        """
+        return AlgoReachability.make(_AlgoReachability.SyncLevel())
+
     
 def ksssp(Graph pg, str edge_weight_property_name, uint32_t start_node, 
           uint32_t report_node, uint32_t num_paths, bool is_symmetric=False, 
-          AlgoReachability algo_reachability = syncLevel, 
+          AlgoReachability algo_reachability = AlgoReachability(), 
           KssspPlan plan = KssspPlan(), *, TxnContext txn_ctx = None):
     """
     Compute the K-Shortest Path on `pg` using `start_node` as source.

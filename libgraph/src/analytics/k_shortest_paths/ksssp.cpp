@@ -386,13 +386,13 @@ KssspImpl(
 
   bool reachable = true;
 
-  switch (algo_reachability) {
-  case async:
+  switch (algo_reachability.algorithm()) {
+  case AlgoReachability::asyncLevel:
     reachable = CheckReachabilityAsync<GraphTy, BFSUpdateRequest>(
         &graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{&graph},
         report_node);
     break;
-  case syncLevel:
+  case AlgoReachability::syncLevel:
     reachable = CheckReachabilitySync<GraphTy>(&graph, source, report_node);
     break;
   default:

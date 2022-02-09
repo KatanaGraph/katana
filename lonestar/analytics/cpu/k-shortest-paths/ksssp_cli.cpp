@@ -63,7 +63,9 @@ static cll::opt<SsspPlan::Algorithm> algo(
 
 static cll::opt<AlgoReachability> algoReachability(
     "algoReachability", cll::desc("Choose an algorithm for reachability:"),
-    cll::values(clEnumVal(async, "async"), clEnumVal(syncLevel, "syncLevel")),
+    cll::values(
+        clEnumVal(AlgoReachability::asyncLevel, "async"), 
+        clEnumVal(AlgoReachability::syncLevel, "syncLevel")),
     cll::init(syncLevel));
 
 static cll::opt<bool> thread_spin(
@@ -144,6 +146,18 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm selected");
   }
 
+  AlgoReachability reachability;
+  switch (algoReachability) {
+  case AlgoReachability::asyncLevel:
+    reachability = AlgoReachability::AsyncLevel();
+    break;
+  case AlgoReachability::syncLevel:
+    reachability = AlgoReachability::SyncLevel();
+    break;
+  default:
+    KATANA_LOG_FATAL("Invalid reachability algorithm selected");
+  }
+
   if (startNode >= pg->topology().size() ||
       reportNode >= pg->topology().size()) {
     KATANA_LOG_ERROR(
@@ -157,7 +171,7 @@ main(int argc, char** argv) {
 
   auto pg_result = Ksssp(
       pg.get(), edge_property_name, startNode, reportNode, &txn_ctx,
-      algoReachability, numPaths, symmetricGraph, plan);
+      reachability, numPaths, symmetricGraph, plan);
 
   if (!pg_result) {
     KATANA_LOG_FATAL("failed to run ksssp: {}", pg_result.error());

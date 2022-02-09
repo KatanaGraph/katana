@@ -64,8 +64,8 @@ static cll::opt<SsspPlan::Algorithm> algo(
 static cll::opt<AlgoReachability> algoReachability(
     "algoReachability", cll::desc("Choose an algorithm for reachability:"),
     cll::values(
-        clEnumVal(AlgoReachability::asyncLevel, "async"), 
-        clEnumVal(AlgoReachability::syncLevel, "syncLevel")),
+        clEnumValN(AlgoReachability::asyncLevel, "async"), 
+        clEnumValN(AlgoReachability::syncLevel, "syncLevel")),
     cll::init(AlgoReachability::syncLevel));
 
 static cll::opt<bool> thread_spin(

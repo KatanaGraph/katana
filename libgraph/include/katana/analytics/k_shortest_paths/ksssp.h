@@ -32,7 +32,7 @@ public:
   static AlgoReachability SyncLevel() {
     return {syncLevel};
   }
-}
+};
 
 /// Compute the K Shortest Path for pg starting from start_node.
 /// The algorithm and delta stepping

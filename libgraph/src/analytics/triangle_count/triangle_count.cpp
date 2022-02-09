@@ -162,14 +162,14 @@ OrderedCountFunc(
   size_t numTriangles_local = 0;
   for (auto edges_n : graph->OutEdges(n)) {
     Node v = graph->OutEdgeDst(edges_n);
-    if (v > n) {
+    if (v >= n) {
       break;
     }
     edge_iterator it_n = graph->OutEdges(n).begin();
 
     for (auto edges_v : graph->OutEdges(v)) {
       auto dst_v = graph->OutEdgeDst(edges_v);
-      if (dst_v > v) {
+      if (dst_v >= v) {
         break;
       }
       while (graph->OutEdgeDst(*it_n) < dst_v) {

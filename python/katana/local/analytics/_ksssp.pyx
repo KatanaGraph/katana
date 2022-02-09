@@ -109,9 +109,7 @@ cdef class KssspPlan(Plan):
         if graph is None:
             self.underlying_ = _KssspPlan()
         else:
-            if not isinstance(graph, Graph):
-                raise TypeError(graph)
-            self.underlying_ = _KssspPlan((<Graph>graph).underlying_property_graph())
+            self.underlying_ = _KssspPlan(underlying_property_graph(graph))
 
     Algorithm = _KssspAlgorithm
 

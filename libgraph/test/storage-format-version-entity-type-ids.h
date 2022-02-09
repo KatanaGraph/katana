@@ -139,12 +139,12 @@ TestConvertGraphStorageFormat(std::string& input_rdg) {
 
   katana::TxnContext txn_ctx;
 
-  katana::PropertyGraph g = LoadGraph(input_rdg);
+  katana::PropertyGraph g = LoadGraph(input_rdg, &txn_ctx);
   ValidateLDBC003EntityTypeManagers(
       g.GetNodeTypeManager(), g.GetEdgeTypeManager());
 
   std::string g2_rdg_file = StoreGraph(&g);
-  katana::PropertyGraph g2 = LoadGraph(g2_rdg_file);
+  katana::PropertyGraph g2 = LoadGraph(g2_rdg_file, &txn_ctx);
   ValidateLDBC003EntityTypeManagers(
       g2.GetNodeTypeManager(), g2.GetEdgeTypeManager());
 
@@ -173,18 +173,18 @@ TestRoundTripNewStorageFormat(std::string& input_rdg) {
   katana::TxnContext txn_ctx;
 
   // first cycle converts old->new
-  katana::PropertyGraph g = LoadGraph(input_rdg);
+  katana::PropertyGraph g = LoadGraph(input_rdg, &txn_ctx);
   ValidateLDBC003EntityTypeManagers(
       g.GetNodeTypeManager(), g.GetEdgeTypeManager());
 
   std::string g2_rdg_file = StoreGraph(&g);
-  katana::PropertyGraph g2 = LoadGraph(g2_rdg_file);
+  katana::PropertyGraph g2 = LoadGraph(g2_rdg_file, &txn_ctx);
   ValidateLDBC003EntityTypeManagers(
       g2.GetNodeTypeManager(), g2.GetEdgeTypeManager());
 
   // second cycle doesn't do any conversion, but tests storing/loading a "new format" graph
   std::string g3_rdg_file = StoreGraph(&g2);
-  katana::PropertyGraph g3 = LoadGraph(g3_rdg_file);
+  katana::PropertyGraph g3 = LoadGraph(g3_rdg_file, &txn_ctx);
   ValidateLDBC003EntityTypeManagers(
       g3.GetNodeTypeManager(), g3.GetEdgeTypeManager());
 

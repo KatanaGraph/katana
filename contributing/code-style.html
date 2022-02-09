@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+176.0.bb6f4b variable.
+            // this version, rather than using sphinx's 0.1.102.dev+177.0.4eb1ef variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -506,10 +506,17 @@ of a contributor who is responsible for fixing them (usually you)
 in the style: <code class="docutils literal notranslate"><span class="pre">TODO(thunt)</span></code>. In general <code class="docutils literal notranslate"><span class="pre">TODO</span></code> tasks involve more work to fix
 than <code class="docutils literal notranslate"><span class="pre">FIXME</span></code> tasks but the distinction isn’t enforced.</p></li>
 <li><p>Dates in comments should always take the form <code class="docutils literal notranslate"><span class="pre">YYYY-MM-DD</span></code>.</p></li>
-<li><p>In general, we try to adhere to the
-<a class="reference external" href="https://google.github.io/styleguide/cppguide.html">Google C++ Style Guide</a>.
-One exception (so far) is that when passing arguments to functions, prefer
-pointers to non-const references (which used to be a part of that guide).</p></li>
+</ul>
+<p>In general, we adhere to the <a class="reference external" href="https://google.github.io/styleguide/cppguide.html">Google C++ Style Guide</a>.</p>
+<p>One exception (so far) is that when passing arguments to functions, prefer
+pointers to non-const references (which used to be a part of that guide).</p>
+<p>In addition to the guidelines in the Google Style Guide, which are quite
+general, here is some specific guidance:</p>
+<ul class="simple">
+<li><p>When using the deprecated C++ attribute also provide an upgrade path to users
+to avoid the deprecated functionality. This can be indicated in the attribute
+itself, e.g., <code class="docutils literal notranslate"><span class="pre">[[deprecated(&quot;use</span> <span class="pre">Foo</span> <span class="pre">instead&quot;)]]</span></code>, or in the documentation
+for the deprecated function.</p></li>
 </ul>
 <p>The following are the automated style checkers that we use. The continuous
 integration process will check adherence on each Pull Request, but it is faster,
@@ -523,13 +530,13 @@ formed.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_go_lint.sh</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">golangci-lint</span></code> to check check style.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_python_format.sh</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">black</span></code> to format python code.</p></li>
 </ul>
-<p>We also have a <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> and <code class="docutils literal notranslate"><span class="pre">pylint</span></code> configuration. Both these are useful
-tools for checking your code locally but they are not currently used by continuous
-integration.</p>
+<p>We also have a <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> and <code class="docutils literal notranslate"><span class="pre">pylint</span></code> configuration. Both these are
+useful tools for checking your code locally. Although, <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> is not
+currently enforced by continuous integration.</p>
 <p>None of these checks are exhaustive (on their own or combined)!</p>
 <p>New code is expected to follow the above guidelines. But also be aware: there
 are older modules that predate these expectations (currently, older modules are
-everything that is not <code class="docutils literal notranslate"><span class="pre">libtsuba</span></code>, <code class="docutils literal notranslate"><span class="pre">libsupport</span></code> and <code class="docutils literal notranslate"><span class="pre">libquery</span></code>). In those cases,
+everything that is not <code class="docutils literal notranslate"><span class="pre">libtsuba</span></code> and <code class="docutils literal notranslate"><span class="pre">libsupport</span></code>). In those cases,
 it is acceptable to follow the convention in that module; though in general, it
 would be preferable to follow the motto of “leave the codebase in better shape
 than you found it.”</p>

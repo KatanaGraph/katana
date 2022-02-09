@@ -21,7 +21,7 @@ private:
       : algorithm_(algorithm) {}
 
 public:
-  AlgoReachability() : AlgoReachability{syncLevel}
+  AlgoReachability() : AlgoReachability{syncLevel} {}
 
   Algorithm algorithm() const { return algorithm_; }
 

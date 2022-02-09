@@ -226,7 +226,7 @@ cdef class AlgoReachability:
         return AlgoReachability.make(_AlgoReachability.SyncLevel())
 
     
-def ksssp(Graph pg, str edge_weight_property_name, uint32_t start_node, 
+def ksssp(pg, str edge_weight_property_name, uint32_t start_node, 
           uint32_t report_node, uint32_t num_paths, bool is_symmetric=False, 
           AlgoReachability algo_reachability = AlgoReachability(), 
           KssspPlan plan = KssspPlan(), *, TxnContext txn_ctx = None):

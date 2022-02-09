@@ -105,8 +105,8 @@ public:
   uint64_t previous_version() const { return previous_version_; }
   const std::string& viewtype() const { return view_type_; }
   void set_viewtype(std::string v) { view_type_ = v; }
-  const std::vector<std::string>& viewargs() const { return view_args_; }
   void set_viewargs(std::vector<std::string> v) { view_args_ = v; }
+  const std::string& view_type() const { return view_type_; }
   bool transpose() const { return transpose_; }
 
   void set_dir(katana::Uri dir) { dir_ = std::move(dir); }

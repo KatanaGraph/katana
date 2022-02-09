@@ -241,8 +241,7 @@ KATANA_EXPORT Result<void> WritePropertyGraph(
 
 // TODO(amber): Take PropertyGraph by const ref
 KATANA_EXPORT Result<void> WritePropertyGraph(
-    PropertyGraph& prop_graph, const std::string& dir,
-    katana::TxnContext* txn_ctx);
+    PropertyGraph& prop_graph, const std::string& dir);
 
 /// Convert Arrow chunked array to/from a vector of ImportData
 KATANA_EXPORT std::vector<ImportData> ArrowToImport(

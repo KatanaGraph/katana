@@ -351,17 +351,14 @@ public:
   ///
   /// \returns io_error if, for instance, a file already exists
   Result<void> Write(
-      const std::string& rdg_name, const std::string& command_line,
-      katana::TxnContext* txn_ctx);
+      const std::string& rdg_name, const std::string& command_line);
 
   /// Commit updates modified state and re-uses graph components already in storage.
   ///
   /// Like \ref Write(const std::string&, const std::string&) but can only update
   /// parts of the original read location of the graph.
-  Result<void> Commit(
-      const std::string& command_line, katana::TxnContext* txn_ctx);
-  Result<void> WriteView(
-      const std::string& command_line, katana::TxnContext* txn_ctx);
+  Result<void> Commit(const std::string& command_line);
+  Result<void> WriteView(const std::string& command_line);
 
   /// Determine if two PropertyGraphs are Equal
   /// THIS IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
@@ -988,21 +985,17 @@ private:
 
   Result<void> DoWrite(
       katana::RDGHandle handle, const std::string& command_line,
-      katana::RDG::RDGVersioningPolicy versioning_action,
-      katana::TxnContext* txn_ctx);
+      katana::RDG::RDGVersioningPolicy versioning_action);
 
   Result<void> ConductWriteOp(
       const std::string& uri, const std::string& command_line,
-      katana::RDG::RDGVersioningPolicy versioning_action,
-      katana::TxnContext* txn_ctx);
+      katana::RDG::RDGVersioningPolicy versioning_action);
 
   Result<void> WriteGraph(
-      const std::string& uri, const std::string& command_line,
-      katana::TxnContext* txn_ctx);
+      const std::string& uri, const std::string& command_line);
 
   Result<void> WriteView(
-      const std::string& uri, const std::string& command_line,
-      katana::TxnContext* txn_ctx);
+      const std::string& uri, const std::string& command_line);
 
   // Data
   std::shared_ptr<katana::RDG> rdg_{std::make_shared<katana::RDG>()};

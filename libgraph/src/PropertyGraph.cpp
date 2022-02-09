@@ -189,12 +189,7 @@ katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     const std::string& rdg_name, katana::TxnContext* txn_ctx,
     const katana::RDGLoadOptions& opts) {
-  katana::RDGManifest manifest;
-  if (txn_ctx->ManifestCached()) {
-    manifest = txn_ctx->Manifest();
-  } else {
-    manifest = KATANA_CHECKED(katana::FindManifest(rdg_name));
-  }
+  katana::RDGManifest manifest = KATANA_CHECKED(katana::FindManifest(rdg_name));
   auto rdg_handle =
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
   auto new_file = std::make_unique<katana::RDGFile>(rdg_handle);
@@ -430,8 +425,7 @@ katana::PropertyGraph::DoWriteTopologies() {
 katana::Result<void>
 katana::PropertyGraph::DoWrite(
     katana::RDGHandle handle, const std::string& command_line,
-    katana::RDG::RDGVersioningPolicy versioning_action,
-    katana::TxnContext* txn_ctx) {
+    katana::RDG::RDGVersioningPolicy versioning_action) {
   KATANA_LOG_DEBUG(
       " node array valid: {}, edge array valid: {}",
       rdg_->node_entity_type_id_array_file_storage().Valid(),
@@ -453,26 +447,21 @@ katana::PropertyGraph::DoWrite(
       handle, command_line, versioning_action,
       std::move(node_entity_type_id_array_res),
       std::move(edge_entity_type_id_array_res), GetNodeTypeManager(),
-      GetEdgeTypeManager(), txn_ctx);
+      GetEdgeTypeManager());
 }
 
 katana::Result<void>
 katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
-    katana::RDG::RDGVersioningPolicy versioning_action,
-    katana::TxnContext* txn_ctx) {
-  katana::RDGManifest manifest;
-  if (txn_ctx->ManifestCached()) {
-    manifest = txn_ctx->Manifest();
-  } else {
-    manifest = KATANA_CHECKED(katana::FindManifest(uri));
-  }
-
+    katana::RDG::RDGVersioningPolicy versioning_action) {
+  katana::RDGManifest manifest = KATANA_CHECKED(katana::FindManifest(uri));
   katana::RDGHandle rdg_handle =
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
   auto new_file = std::make_unique<katana::RDGFile>(rdg_handle);
 
-  KATANA_CHECKED(DoWrite(*new_file, command_line, versioning_action, txn_ctx));
+  if (auto res = DoWrite(*new_file, command_line, versioning_action); !res) {
+    return res.error();
+  }
 
   file_ = std::move(new_file);
 
@@ -481,43 +470,36 @@ katana::PropertyGraph::ConductWriteOp(
 
 katana::Result<void>
 katana::PropertyGraph::WriteView(
-    const std::string& uri, const std::string& command_line,
-    katana::TxnContext* txn_ctx) {
+    const std::string& uri, const std::string& command_line) {
   return ConductWriteOp(
-      uri, command_line, katana::RDG::RDGVersioningPolicy::RetainVersion,
-      txn_ctx);
+      uri, command_line, katana::RDG::RDGVersioningPolicy::RetainVersion);
 }
 
 katana::Result<void>
 katana::PropertyGraph::WriteGraph(
-    const std::string& uri, const std::string& command_line,
-    katana::TxnContext* txn_ctx) {
+    const std::string& uri, const std::string& command_line) {
   return ConductWriteOp(
-      uri, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion,
-      txn_ctx);
+      uri, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion);
 }
 
 katana::Result<void>
-katana::PropertyGraph::Commit(
-    const std::string& command_line, katana::TxnContext* txn_ctx) {
+katana::PropertyGraph::Commit(const std::string& command_line) {
   if (file_ == nullptr) {
     if (rdg_->rdg_dir().empty()) {
       return KATANA_ERROR(
           ErrorCode::InvalidArgument, "RDG commit but rdg_dir_ is empty");
     }
-    return WriteGraph(rdg_->rdg_dir().string(), command_line, txn_ctx);
+    return WriteGraph(rdg_->rdg_dir().string(), command_line);
   }
   return DoWrite(
-      *file_, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion,
-      txn_ctx);
+      *file_, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion);
 }
 
 katana::Result<void>
-katana::PropertyGraph::WriteView(
-    const std::string& command_line, katana::TxnContext* txn_ctx) {
+katana::PropertyGraph::WriteView(const std::string& command_line) {
   // WriteView occurs once, and only before any Commit/Write operation
   KATANA_LOG_DEBUG_ASSERT(file_ == nullptr);
-  return WriteView(rdg_->rdg_dir().string(), command_line, txn_ctx);
+  return WriteView(rdg_->rdg_dir().string(), command_line);
 }
 
 bool
@@ -773,12 +755,11 @@ katana::PropertyGraph::GetEdgeProperty(const std::string& name) const {
 
 katana::Result<void>
 katana::PropertyGraph::Write(
-    const std::string& rdg_name, const std::string& command_line,
-    katana::TxnContext* txn_ctx) {
+    const std::string& rdg_name, const std::string& command_line) {
   if (auto res = katana::Create(rdg_name); !res) {
     return res.error();
   }
-  return WriteGraph(rdg_name, command_line, txn_ctx);
+  return WriteGraph(rdg_name, command_line);
 }
 
 // We do this to avoid a virtual call, since this method is often on a hot path.

@@ -61,11 +61,11 @@ static cll::opt<SsspPlan::Algorithm> algo(
             "Delta stepping with barrier")),
     cll::init(SsspPlan::kDeltaTile));
 
-static cll::opt<AlgoReachability> algoReachability(
+static cll::opt<AlgoReachability::Algorithm> algoReachability(
     "algoReachability", cll::desc("Choose an algorithm for reachability:"),
     cll::values(
-        clEnumValN(AlgoReachability::asyncLevel, "async"), 
-        clEnumValN(AlgoReachability::syncLevel, "syncLevel")),
+        clEnumVal(AlgoReachability::asyncLevel, "async"), 
+        clEnumVal(AlgoReachability::syncLevel, "syncLevel")),
     cll::init(AlgoReachability::syncLevel));
 
 static cll::opt<bool> thread_spin(

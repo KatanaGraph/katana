@@ -166,7 +166,7 @@ katana::MemoryPolicyMinimal::MemoryPolicyMinimal()
 
 katana::MemoryPolicy::MemoryPolicy(
     katana::MemoryPolicy::Thresholds thresholds) {
-  physical_ = katana::MemorySupervisor::Get().GetTotalSystemMemory();
+  physical_ = katana::MemorySupervisor::GetTotalSystemMemory();
   // We divide by physical_
   if (physical_ == 0) {
     physical_ = 1;

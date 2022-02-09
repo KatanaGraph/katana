@@ -270,6 +270,6 @@ def ksssp(pg, str edge_weight_property_name, uint32_t start_node,
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Ksssp(pg.underlying_property_graph(), edge_weight_property_name_str, 
+        handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str, 
                                  start_node, report_node, txn_ctx, algo_reachability, num_paths, 
                                  is_symmetric, plan))

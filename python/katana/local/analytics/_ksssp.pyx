@@ -229,7 +229,7 @@ cdef class AlgoReachability:
 def ksssp(pg, str edge_weight_property_name, uint32_t start_node, 
           uint32_t report_node, uint32_t num_paths, bool is_symmetric=False, 
           AlgoReachability algo_reachability = AlgoReachability(), 
-          KssspPlan plan = KssspPlan(), *, TxnContext txn_ctx = None):
+          KssspPlan plan = KssspPlan(), *, txn_ctx = None):
     """
     Compute the K-Shortest Path on `pg` using `start_node` as source.
 

@@ -196,7 +196,7 @@ cdef class AlgoReachability:
         """
         self.underlying_ = _AlgoReachability()
         
-    algorithm = _KssspAlgorithmReachability
+    Algorithm = _KssspAlgorithmReachability
 
     @property
     def algorithm(self) -> _KssspAlgorithmReachability:

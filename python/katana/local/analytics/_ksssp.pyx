@@ -49,7 +49,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
     ptrdiff_t kDeltaEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
 cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::analytics" nogil:
-    enum AlgoReachability:
+    ctypedef enum AlgoReachability:
         async "katana::analytics::AlgoReachability::async"
         syncLevel "katana::analytics::AlgoReachability::syncLevel"
 

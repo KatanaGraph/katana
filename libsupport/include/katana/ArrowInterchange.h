@@ -136,7 +136,7 @@ VectorToArrowTable(const std::string& name, const std::vector<T>& source) {
   if (!nullable_table.ok()) {
     return KATANA_ERROR(
         katana::ErrorCode::ArrowError, "setting arrow column attributes: {}",
-        nullable_table);
+        nullable_table.status());
   }
   return katana::Result<std::shared_ptr<arrow::Table>>(
       nullable_table.ValueOrDie());

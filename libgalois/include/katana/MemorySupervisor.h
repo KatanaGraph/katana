@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "katana/Manager.h"
+#include "katana/MemoryPolicy.h"
 #include "katana/Result.h"
 #include "katana/config.h"
 
@@ -60,11 +61,17 @@ public:
   /// Managers are always allowed to transition from standby to active
   void StandbyToActive(Manager* manager, count_t bytes);
 
+  /// The MemoryPolicy controls decisions about memory allocation, like how
+  /// aggressively to deallocate.
+  void SetPolicy(std::unique_ptr<MemoryPolicy> policy);
+
+  /// Calls sysconf
+  static uint64_t GetTotalSystemMemory();
+
 private:
   MemorySupervisor();
   /// Make sure our state is sane, log if not
-  void Sanity();
-  void LogState(const std::string& str);
+  void SanityCheck();
 
   /// Get managers to free \p goal bytes of standby memory
   void ReclaimMemory(count_t goal);
@@ -77,6 +84,10 @@ private:
   };
   std::unordered_map<Manager*, ManagerInfo> managers_;
 
+  count_t Used() { return active_ + standby_; }
+  count_t Available() { return physical_ - Used(); }
+
+  std::unique_ptr<MemoryPolicy> policy_;
   /// Sum of all active memory across all managers
   count_t active_{};
   void ActiveMinus(ManagerInfo& info, count_t bytes);
@@ -86,14 +97,11 @@ private:
   count_t standby_{};
   void StandbyMinus(ManagerInfo& info, count_t bytes);
   void StandbyPlus(ManagerInfo& info, count_t bytes);
-  count_t Used() { return active_ + standby_; }
 
   /// The maximum amount of physical memory the MS plans to use, which should be less
   /// than or equal to the total physical memory in the machine.  There are users of
   /// memory outside our control, like the operating system.
   count_t physical_{};
-  count_t Available() { return physical_ - Used(); }
-  bool MemoryOversubscribed() { return Used() >= physical_; }
 };
 
 }  // namespace katana

@@ -27,3 +27,6 @@ add_test_unit(extra-traits)
 add_test_unit(two-level-iterator)
 add_test_unit(wakeup-overhead LINK_LIBRARIES LLVMSupport)
 add_test_unit(worklists-compile)
+
+add_executable(os-memory-test os-memory.cpp)
+target_link_libraries(os-memory-test PRIVATE Katana::galois katana_support)

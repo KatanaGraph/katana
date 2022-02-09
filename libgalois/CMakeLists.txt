@@ -20,6 +20,7 @@ set(sources
         src/gIO.cpp
         src/HWTopo.cpp
         src/Mem.cpp
+        src/MemoryPolicy.cpp
         src/MemorySupervisor.cpp
         src/NumaMem.cpp
         src/PageAlloc.cpp

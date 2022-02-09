@@ -50,7 +50,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
         _KssspPlan DeltaStepBarrier(unsigned delta)
     
     unsigned kDefaultDelta "katana::analytics::SsspPlan::kDefaultDelta"
-    ptrdiff_t kDeltaEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
+    ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
 cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::analytics" nogil:
     cppclass _AlgoReachability "katana::analytics::AlgoReachability":

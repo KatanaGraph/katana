@@ -13,6 +13,7 @@ K Shortest paths
 
 .. autofunction:: katana.local.analytics.ksssp
 """
+from enum import Enum
 
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t

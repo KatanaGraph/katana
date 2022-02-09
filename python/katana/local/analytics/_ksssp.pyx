@@ -24,7 +24,7 @@ from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result
 
-from katana.local import Graph
+from katana.local import Graph, TxnContext
 
 from katana.local._graph cimport underlying_property_graph
 from katana.local.analytics.plan cimport Plan, _Plan

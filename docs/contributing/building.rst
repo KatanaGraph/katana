@@ -4,9 +4,9 @@
 Building
 ========
 
-.. only:: internal
+.. warning:: internal
 
-   If you are building katana-enterprise make sure to also read the :doc:`enterprise build addenda <index>`.
+   If you are building katana-enterprise make sure to also read the :ref:`enterprise-building`.
 
 Setting up a Build
 ==================

@@ -22,6 +22,7 @@
 #include <arrow/table.h>
 
 #include "katana/Logging.h"
+#include "katana/ProgressTracer.h"
 #include "katana/URI.h"
 
 namespace katana {
@@ -49,6 +50,18 @@ struct CacheStats {
            total_count();
   }
   uint64_t total_count() const { return insert_count + get_count; }
+  void Log() const {
+    katana::GetTracer().GetActiveSpan().Log(
+        "cache stats",
+        {
+            {"get_per", fmt::format("{:.2f}%", get_hit_percentage())},
+            {"insert_per", fmt::format("{:.2f}%", insert_hit_percentage())},
+            {"total_per", fmt::format("{:.2f}%", total_hit_percentage())},
+            {"total_count", total_count()},
+            {"get_count", get_count},
+            {"insert_count", insert_count},
+        });
+  }
 
   uint64_t get_count{0ULL};
   uint64_t get_hit_count{0ULL};

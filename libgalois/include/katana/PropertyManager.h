@@ -33,6 +33,12 @@ public:
 
   // TODO(witchel) eliminate this by having RDG call into PropertyManager
   PropertyCache* property_cache() { return cache_.get(); }
+  katana::CacheStats GetPropertyCacheStats() const {
+    if (!cache_) {
+      return katana::CacheStats();
+    }
+    return cache_->GetStats();
+  }
 
 private:
   void MakePropertyCache();

@@ -1,6 +1,7 @@
 #ifndef KATANA_LIBKATANAPYTHONNATIVE_KATANA_PYTHON_TYPETRAITS_H_
 #define KATANA_LIBKATANAPYTHONNATIVE_KATANA_PYTHON_TYPETRAITS_H_
 
+#include <katana/OpaqueID.h>
 #include <pybind11/pybind11.h>
 
 namespace katana {
@@ -16,6 +17,14 @@ struct PythonTypeTraits<T*, Enable> {
   }
   static pybind11::object representation() { return ctypes_type(); }
 };
+
+template <typename T>
+using has_value_type_t = typename T::ValueType;
+
+template <typename IDType>
+struct PythonTypeTraits<
+    IDType, typename std::enable_if_t<is_detected_v<has_value_type_t, IDType>>>
+    : public PythonTypeTraits<typename IDType::ValueType> {};
 
 #define PYTHON_TYPE_TRAITS(T, numpy_name, ctypes_name)                         \
   template <>                                                                  \

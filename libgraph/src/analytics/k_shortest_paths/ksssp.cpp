@@ -87,7 +87,7 @@ bool
 CheckReachabilityAsync(
     GraphTy* graph, const typename GraphTy::Node& source,
     const PushWrap& push_wrap, const EdgeRange& edge_range,
-    uint32_t report_node) {
+    size_t report_node) {
   using FIFO = katana::PerSocketChunkFIFO<kChunkSize>;
   using WL = FIFO;
 
@@ -201,7 +201,7 @@ DeltaStepAlgo(
     const PushWrap& push_wrap, const EdgeRange& edge_range,
     katana::InsertBag<std::pair<Weight, Path*>>* report_paths_bag,
     katana::InsertBag<Path*>* path_pointers, PathAlloc& path_alloc,
-    uint32_t report_node, uint32_t num_paths, uint32_t step_shift) {
+    size_t report_node, size_t num_paths, uint32_t step_shift) {
   using GNode = typename GraphTy::Node;
 
   using kSSSP = katana::analytics::KSsspImplementationBase<
@@ -337,8 +337,8 @@ AddDefaultEdgeWeight(
 template <typename GraphTy, typename Weight>
 katana::Result<void>
 KssspImpl(
-    GraphTy graph, uint32_t start_node, uint32_t report_node,
-    AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift,
+    GraphTy graph, size_t start_node, size_t report_node,
+    AlgoReachability algo_reachability, size_t num_paths, uint32_t step_shift,
     kSsspPlan plan) {
   using GNode = typename GraphTy::Node;
 
@@ -478,8 +478,8 @@ template <typename Weight>
 katana::Result<void>
 kSSSPWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    uint32_t start_node, uint32_t report_node, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, uint32_t num_paths, uint32_t step_shift,
+    size_t start_node, size_t report_node, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, size_t num_paths, uint32_t step_shift,
     const bool& is_symmetric, kSsspPlan plan) {
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {
@@ -551,8 +551,8 @@ kSSSPWithWrap(
 katana::Result<void>
 katana::analytics::Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    uint32_t start_node, uint32_t report_node, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, uint32_t num_paths,
+    size_t start_node, size_t report_node, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, size_t num_paths,
     const bool& is_symmetric, kSsspPlan plan) {
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()

@@ -124,7 +124,7 @@ katana::RDGPartHeader::Make(const katana::Uri& partition_path) {
 }
 
 katana::Result<std::unique_ptr<katana::FileFrame>>
-katana::RDGPartHeader::WriteFileFrame(
+katana::RDGPartHeader::FillFileFrame(
     katana::RDGHandle handle,
     katana::RDG::RDGVersioningPolicy retain_version) const {
   std::string serialized = KATANA_CHECKED(katana::JsonDump(*this));
@@ -154,22 +154,15 @@ katana::RDGPartHeader::WriteFileFrame(
 
 katana::Result<void>
 katana::RDGPartHeader::Write(
-    katana::RDGHandle handle, katana::WriteGroup* writes,
-    katana::RDG::RDGVersioningPolicy retain_version) const {
+    katana::RDGHandle handle, katana::RDG::RDGVersioningPolicy retain_version,
+    katana::WriteGroup* writes) const {
   std::unique_ptr<FileFrame> ff =
-      KATANA_CHECKED(WriteFileFrame(handle, retain_version));
-  writes->StartStore(std::move(ff));
-  TSUBA_PTP(internal::FaultSensitivity::Normal);
-  return katana::ResultSuccess();
-}
-
-katana::Result<void>
-katana::RDGPartHeader::Write(
-    katana::RDGHandle handle,
-    katana::RDG::RDGVersioningPolicy retain_version) const {
-  std::unique_ptr<FileFrame> ff =
-      KATANA_CHECKED(WriteFileFrame(handle, retain_version));
-  KATANA_CHECKED(ff->Persist());
+      KATANA_CHECKED(FillFileFrame(handle, retain_version));
+  if (writes) {
+    writes->StartStore(std::move(ff));
+  } else {
+    KATANA_CHECKED(ff->Persist());
+  }
   TSUBA_PTP(internal::FaultSensitivity::Normal);
   return katana::ResultSuccess();
 }

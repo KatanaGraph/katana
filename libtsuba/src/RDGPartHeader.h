@@ -138,13 +138,8 @@ public:
   katana::Result<void> Validate() const;
 
   katana::Result<void> Write(
-      RDGHandle handle, WriteGroup* writes,
-      RDG::RDGVersioningPolicy retain_version) const;
-
-  // N.B. (vkarthik) - This method is used for when a WriteGroup is not needed.
-  // Uses FileFrame::Persist() to write out a binded and populated FileFrame.
-  katana::Result<void> Write(
-      RDGHandle handle, RDG::RDGVersioningPolicy retain_version) const;
+      RDGHandle handle, RDG::RDGVersioningPolicy retain_version,
+      WriteGroup* writes = nullptr) const;
 
   /// Mark all in-memory properties dirty so that they can be written
   /// out, copy out-of-memory properties
@@ -597,7 +592,7 @@ private:
   static katana::Result<RDGPartHeader> MakeJson(
       const katana::Uri& partition_path);
 
-  katana::Result<std::unique_ptr<katana::FileFrame>> WriteFileFrame(
+  katana::Result<std::unique_ptr<katana::FileFrame>> FillFileFrame(
       katana::RDGHandle handle,
       katana::RDG::RDGVersioningPolicy retain_version) const;
 

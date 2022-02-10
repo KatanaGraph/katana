@@ -320,7 +320,6 @@ katana::WriteRDGPartHeader(
     uint64_t num_edges, const std::string& topology_path,
     const std::string& rdg_dir) {
   auto manifest = RDGManifest();
-  // manifest = manifest.NextVersion(1, 0, false, RDGLineage());
   katana::Uri rdg_dir_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
   manifest.set_dir(rdg_dir_uri);
   manifest.set_viewtype(katana::kDefaultRDGViewType);
@@ -388,6 +387,29 @@ katana::WriteRDGPartHeader(
   katana::RDGHandle handle =
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
   KATANA_CHECKED(part_header.Write(handle, policy));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+katana::WriteRDGManifest(const std::string& rdg_dir, uint32_t num_hosts) {
+  auto manifest = RDGManifest();
+  katana::Uri rdg_dir_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
+  manifest.set_dir(rdg_dir_uri);
+  manifest.set_viewtype(katana::kDefaultRDGViewType);
+  manifest.set_version(1);
+  manifest.set_prev_version(1);
+  manifest.set_num_hosts(num_hosts);
+
+  // Write out the manifest file
+  // Using view_specifier in case something ever changes in the future where out-of-core import
+  // will be able to partition a graph, etc.
+  auto manifest_json = manifest.ToJsonString();
+  KATANA_CHECKED(katana::FileStore(
+      katana::RDGManifest::FileName(
+          rdg_dir_uri, manifest.view_specifier(), manifest.version())
+          .string(),
+      reinterpret_cast<const uint8_t*>(manifest_json.data()),
+      manifest_json.size()));
   return katana::ResultSuccess();
 }
 

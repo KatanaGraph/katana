@@ -402,7 +402,7 @@ KssspImpl(
   PathAlloc path_alloc;
 
   if (reachable) {
-    std::cout "Algorithm: " << plan.algorithm();
+    std::cout << "Algorithm: " << plan.algorithm() << "\n";
     switch (plan.algorithm()) {
     case kSsspPlan::kDeltaTile:
       DeltaStepAlgo<GraphTy, Weight, kSSSPSrcEdgeTile, OBIM>(

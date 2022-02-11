@@ -547,11 +547,11 @@ kSSSPWithWrap(
     }
   }
 
-  KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
+  KATANA_CHECKED(pg->ConstructNodeProperties<NodePath>(
       txn_ctx, {output_property_name}));
 
   auto graph = KATANA_CHECKED((
-      katana::TypedPropertyGraph<std::tuple<CurrentCommunityID>, std::tuple<>>::
+      katana::TypedPropertyGraph<NodePath, EdgeData<Weight>>::
           Make(pg, {output_property_name}, {})));
 
   return katana::ResultSuccess();

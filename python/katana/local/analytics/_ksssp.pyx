@@ -222,6 +222,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
           KssspPlan plan = KssspPlan().delta_tile(), *, txn_ctx = None):
     """
     Compute the K-Shortest Path on `pg` using `start_node` as source.
+
     :type pg: katana.local.Graph
     :param pg: The graph to analyze
     :type edge_weight_property_name: str
@@ -239,11 +240,14 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     :type plan: KssspPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
     :param txn_ctx: The transaction context for passing read write sets
+
     .. code-block:: python
+
         import katana.local
         from katana.example_data import get_rdg_dataset
         from katana.local import Graph
         katana.local.initialize()
+
         graph = Graph(get_rdg_dataset("ldbc_003"))
         from katana.local.analytics import ksssp
         weight_name = "workFrom"
@@ -251,6 +255,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
         report_node = 10
         num_paths = 5
         ksssp(graph, weight_name, start_node, report_node, num_paths)
+    
     """
 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")

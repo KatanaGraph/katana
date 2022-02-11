@@ -2,7 +2,7 @@
 K Shortest paths
 ----------------
 .. autoclass:: katana.local.analytics.KssspPlan
-.. autoclass:: katana.local.analytics.KssspReachability
+.. autoclass:: katana.local.analytics.AlgoReachability
 .. autoclass:: katana.local.analytics._ksssp._KssspAlgorithm
 .. autofunction:: katana.local.analytics.ksssp
 """

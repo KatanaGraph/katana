@@ -47,7 +47,7 @@ template <typename Weight>
 using EdgeWeight = katana::PODProperty<Weight>;
 
 template <typename Weight>
-using NodeData = std::tuple<NodeCount, NodePath, NodeMax<Weight>>;
+using NodeData = std::tuple<NodeCount, NodeMax<Weight>>;
 template <typename Weight>
 using EdgeData = std::tuple<EdgeWeight<Weight>>;
 

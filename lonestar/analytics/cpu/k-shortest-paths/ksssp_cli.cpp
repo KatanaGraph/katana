@@ -64,7 +64,7 @@ static cll::opt<kSsspPlan::Algorithm> algo(
 static cll::opt<AlgoReachability::Algorithm> algoReachability(
     "algoReachability", cll::desc("Choose an algorithm for reachability:"),
     cll::values(
-        clEnumVal(AlgoReachability::asyncLevel, "async"), 
+        clEnumVal(AlgoReachability::asyncLevel, "async"),
         clEnumVal(AlgoReachability::syncLevel, "syncLevel")),
     cll::init(AlgoReachability::syncLevel));
 

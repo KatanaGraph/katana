@@ -287,8 +287,9 @@ DeltaStepAlgo(
  *
  * @param path all paths found
  */
+template <typename GraphTy>
 void
-PrintPath(Graph& graph, const Path* path, uint32_t iter) {
+PrintPath(GraphTy graph, const Path* path, uint32_t iter) {
   if (path->last != nullptr) {
     PrintPath(graph, path->last, iter);
   }
@@ -453,7 +454,7 @@ KssspImpl(
 
     for (uint32_t iter = 0; iter < num; iter++) {
       const Path* path = it_report->second;
-      PrintPath(graph, path, iter);
+      PrintPath<GraphTy>(graph, path, iter);
       katana::gPrint(" ", report, "\n");
       katana::gPrint("Weight: ", it_report->first, "\n");
       it_report++;

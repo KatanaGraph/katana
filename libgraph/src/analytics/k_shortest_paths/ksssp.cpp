@@ -339,6 +339,7 @@ template <typename GraphTy, typename Weight>
 katana::Result<void>
 KssspImpl(
     GraphTy graph, size_t start_node, size_t report_node, size_t num_paths,
+    katana::InsertBag<std::pair<Weight, Path*>> *paths, 
     AlgoReachability algo_reachability, kSsspPlan plan) {
   using GNode = typename GraphTy::Node;
 
@@ -381,7 +382,6 @@ KssspImpl(
   katana::StatTimer execTime("kSSSP");
   execTime.start();
 
-  katana::InsertBag<std::pair<Weight, Path*>> paths;
   katana::InsertBag<Path*> path_pointers;
 
   bool reachable = true;
@@ -500,6 +500,8 @@ kSSSPWithWrap(
 
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
+  katana::InsertBag<std::pair<Weight, Path*>> paths;
+
   std::vector<TemporaryPropertyGuard> temp_node_properties(2);
   std::generate_n(
       temp_node_properties.begin(), temp_node_properties.size(),
@@ -522,7 +524,7 @@ kSSSPWithWrap(
         Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
     auto r = KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, algo_reachability, plan);
+        graph, start_node, report_node, num_paths, &paths, algo_reachability, plan);
 
     if (!r) {
       return r.error();
@@ -536,12 +538,16 @@ kSSSPWithWrap(
         Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
     auto r = KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, algo_reachability, plan);
+        graph, start_node, report_node, &paths, num_paths, algo_reachability, plan);
 
     if (!r) {
       return r.error();
     }
   }
+
+  /* auto graph = KATANA_CHECKED(
+      katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<EdgeData>>::
+          Make(pg, {output_property_name}, {})); */
 
   return katana::ResultSuccess();
 }

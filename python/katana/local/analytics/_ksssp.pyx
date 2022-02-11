@@ -30,25 +30,25 @@ from katana.local._graph cimport underlying_property_graph, underlying_txn_conte
 from katana.local.analytics.plan cimport Plan, _Plan
 
 cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" nogil:
-    cppclass _SsspPlan "katana::analytics::SsspPlan" (_Plan):
+    cppclass _KssspPlan "katana::analytics::SsspPlan" (_Plan):
         enum Algorithm:
             kDeltaTile "katana::analytics::SsspPlan::kDeltaTile"
             kDeltaStep "katana::analytics::SsspPlan::kDeltaStep"
             kDeltaStepBarrier "katana::analytics::SsspPlan::kDeltaStepBarrier"
 
-        _SsspPlan()
-        _SsspPlan(const _PropertyGraph * pg)
+        _KssspPlan()
+        _KssspPlan(const _PropertyGraph * pg)
 
-        _SsspPlan.Algorithm algorithm() const
+        _KssspPlan.Algorithm algorithm() const
         unsigned delta() const
         ptrdiff_t edge_tile_size() const
 
         @staticmethod
-        _SsspPlan DeltaTile(unsigned delta, ptrdiff_t edge_tile_size)
+        _KssspPlan DeltaTile(unsigned delta, ptrdiff_t edge_tile_size)
         @staticmethod
-        _SsspPlan DeltaStep(unsigned delta)
+        _KssspPlan DeltaStep(unsigned delta)
         @staticmethod
-        _SsspPlan DeltaStepBarrier(unsigned delta)
+        _KssspPlan DeltaStepBarrier(unsigned delta)
     
     unsigned kDefaultDelta "katana::analytics::SsspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
@@ -71,7 +71,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
     Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name, 
                        size_t start_node, size_t report_node, CTxnContext* txn_ctx, 
                        _AlgoReachability algo_reachability, size_t num_paths, 
-                       const bool& is_symmetric, _SsspPlan plan)
+                       const bool& is_symmetric, _KssspPlan plan)
 
 class _KssspAlgorithm(Enum):
     """
@@ -79,9 +79,9 @@ class _KssspAlgorithm(Enum):
 
     :see: :py:class`~katana.local.analytics.KssspPlan` constructor for algorithm documentation
     """
-    DeltaTile = _SsspPlan.Algorithm.kDeltaTile
-    DeltaStep = _SsspPlan.Algorithm.kDeltaStep
-    DeltaStepBarrier = _SsspPlan.Algorithm.kDeltaStepBarrier
+    DeltaTile = _KssspPlan.Algorithm.kDeltaTile
+    DeltaStep = _KssspPlan.Algorithm.kDeltaStep
+    DeltaStepBarrier = _KssspPlan.Algorithm.kDeltaStepBarrier
 
 cdef class KssspPlan(Plan):
     """
@@ -92,13 +92,13 @@ cdef class KssspPlan(Plan):
     """
 
     cdef:
-        _SsspPlan underlying_
+        _KssspPlan underlying_
     
     cdef _Plan* underlying(self) except NULL:
         return &self.underlying_
 
     @staticmethod
-    cdef KssspPlan make(_SsspPlan u):
+    cdef KssspPlan make(_KssspPlan u):
         f = <KssspPlan>KssspPlan.__new__(KssspPlan)
         f.underlying_ = u
         return f
@@ -108,9 +108,9 @@ cdef class KssspPlan(Plan):
         Construct a plan optimized for `graph` using heuristics, or using default parameter values.
         """
         if graph is None:
-            self.underlying_ = _SsspPlan()
+            self.underlying_ = _KssspPlan()
         else:
-            self.underlying_ = _SsspPlan(underlying_property_graph(graph))
+            self.underlying_ = _KssspPlan(underlying_property_graph(graph))
 
     Algorithm = _KssspAlgorithm
 
@@ -144,21 +144,21 @@ cdef class KssspPlan(Plan):
         """
         Delta stepping tiled
         """
-        return KssspPlan.make(_SsspPlan.DeltaTile(delta, edge_tile_size))
+        return KssspPlan.make(_KssspPlan.DeltaTile(delta, edge_tile_size))
 
     @staticmethod
     def delta_step(unsigned delta = kDefaultDelta) -> KssspPlan:
         """
         Delta stepping (non-tiled)
         """
-        return KssspPlan.make(_SsspPlan.DeltaStep(delta))
+        return KssspPlan.make(_KssspPlan.DeltaStep(delta))
 
     @staticmethod
     def delta_step_barrier(unsigned delta = kDefaultDelta) -> KssspPlan:
         """
         Delta stepping with barrier
         """
-        return KssspPlan.make(_SsspPlan.DeltaStepBarrier(delta))
+        return KssspPlan.make(_KssspPlan.DeltaStepBarrier(delta))
 
 
 class _KssspAlgorithmReachability(Enum):

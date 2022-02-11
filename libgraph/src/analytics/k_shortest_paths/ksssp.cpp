@@ -38,6 +38,8 @@ struct Path {
 
 struct NodeCount : public katana::AtomicPODProperty<uint32_t> {};
 
+struct NodePath : public katana::AtomicPODProperty<std::string> {};
+
 template <typename Weight>
 struct NodeMax : public katana::AtomicPODProperty<Weight> {};
 
@@ -286,12 +288,13 @@ DeltaStepAlgo(
  * @param path all paths found
  */
 void
-PrintPath(const Path* path) {
+PrintPath(Graph& graph, const Path* path, uint32_t iter) {
   if (path->last != nullptr) {
-    PrintPath(path->last);
+    PrintPath(graph, path->last, iter);
   }
 
   katana::gPrint(" ", path->parent);
+  graph.template GetData<NodePath>(path->parent) += " " + std::to_string(iter);
 }
 
 /**
@@ -430,6 +433,10 @@ KssspImpl(
   execTime.stop();
   page_alloc.Report();
 
+  katana::do_all(katana::iterate(graph), [&](const typename Graph::Nde& n) {
+    graph.template GetData<NodePath>(n) = "";
+  });
+
   if (reachable) {
     std::multimap<Weight, Path*> paths_map;
 
@@ -446,7 +453,7 @@ KssspImpl(
 
     for (uint32_t iter = 0; iter < num; iter++) {
       const Path* path = it_report->second;
-      PrintPath(path);
+      PrintPath(graph, path, iter);
       katana::gPrint(" ", report, "\n");
       katana::gPrint("Weight: ", it_report->first, "\n");
       it_report++;
@@ -496,7 +503,7 @@ kSSSPWithWrap(
 
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
-  /* std::vector<TemporaryPropertyGuard> temp_node_properties(2);
+  std::vector<TemporaryPropertyGuard> temp_node_properties(2);
   std::generate_n(
       temp_node_properties.begin(), temp_node_properties.size(),
       [&]() { return TemporaryPropertyGuard{pg->NodeMutablePropertyView()}; });
@@ -505,31 +512,40 @@ kSSSPWithWrap(
   std::transform(
       temp_node_properties.begin(), temp_node_properties.end(),
       temp_node_property_names.begin(),
-      [](const TemporaryPropertyGuard& p) { return p.name(); }); */
+      [](const TemporaryPropertyGuard& p) { return p.name(); });
 
   KATANA_CHECKED(pg->ConstructNodeProperties<NodeData<Weight>>(
-      txn_ctx, {output_property_name}));
+      txn_ctx, {temp_node_property_names}));
 
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Default, NodeData<Weight>,
         EdgeData<Weight>>;
     Graph graph = KATANA_CHECKED(
-        Graph::Make(pg, {output_property_name}, {edge_weight_property_name}));
+        Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
-    return KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, algo_reachability, plan);
+    KATANA_CHECKED(KssspImpl<Graph, Weight>(
+        graph, start_node, report_node, num_paths, algo_reachability, plan));
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData<Weight>,
         EdgeData<Weight>>;
 
     Graph graph = KATANA_CHECKED(
-        Graph::Make(pg, {output_property_name}, {edge_weight_property_name}));
+        Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
-    return KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, algo_reachability, plan);
+    KATANA_CHECKED(KssspImpl<Graph, Weight>(
+        graph, start_node, report_node, num_paths, algo_reachability, plan));
   }
+
+  KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<CurrentCommunityID>>(
+      txn_ctx, {output_property_name}));
+
+  auto graph = KATANA_CHECKED((
+      katana::TypedPropertyGraph<std::tuple<CurrentCommunityID>, std::tuple<>>::
+          Make(pg, {output_property_name}, {})));
+
+  return katana::ResultSuccess();
 }
 
 /**

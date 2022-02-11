@@ -51,15 +51,15 @@ static cll::opt<uint32_t> numPaths(
               "value 1)"),
     cll::init(1));
 
-static cll::opt<SsspPlan::Algorithm> algo(
+static cll::opt<kSsspPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value auto):"),
     cll::values(
-        clEnumValN(SsspPlan::kDeltaTile, "DeltaTile", "Delta stepping tiled"),
-        clEnumValN(SsspPlan::kDeltaStep, "DeltaStep", "Delta stepping"),
+        clEnumValN(kSsspPlan::kDeltaTile, "DeltaTile", "Delta stepping tiled"),
+        clEnumValN(kSsspPlan::kDeltaStep, "DeltaStep", "Delta stepping"),
         clEnumValN(
-            SsspPlan::kDeltaStepBarrier, "DeltaStepBarrier",
+            kSsspPlan::kDeltaStepBarrier, "DeltaStepBarrier",
             "Delta stepping with barrier")),
-    cll::init(SsspPlan::kDeltaTile));
+    cll::init(kSsspPlan::kDeltaTile));
 
 static cll::opt<AlgoReachability::Algorithm> algoReachability(
     "algoReachability", cll::desc("Choose an algorithm for reachability:"),
@@ -75,13 +75,13 @@ static cll::opt<bool> thread_spin(
     cll::init(false));
 
 std::string
-AlgorithmName(SsspPlan::Algorithm algorithm) {
+AlgorithmName(kSsspPlan::Algorithm algorithm) {
   switch (algorithm) {
-  case SsspPlan::kDeltaTile:
+  case kSsspPlan::kDeltaTile:
     return "DeltaTile";
-  case SsspPlan::kDeltaStep:
+  case kSsspPlan::kDeltaStep:
     return "DeltaStep";
-  case SsspPlan::kDeltaStepBarrier:
+  case kSsspPlan::kDeltaStepBarrier:
     return "DeltaStepBarrier";
   default:
     return "Unknown";
@@ -122,7 +122,7 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  if (algo == SsspPlan::kDeltaStep || algo == SsspPlan::kDeltaTile) {
+  if (algo == kSsspPlan::kDeltaStep || algo == kSsspPlan::kDeltaTile) {
     katana::gInfo("Using delta-step of ", (1 << stepShift), "\n");
     KATANA_LOG_WARN(
         "Performance varies considerably due to delta parameter.\n");
@@ -131,16 +131,16 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
-  SsspPlan plan;
+  kSsspPlan plan;
   switch (algo) {
-  case SsspPlan::kDeltaTile:
-    plan = SsspPlan::DeltaTile(stepShift);
+  case kSsspPlan::kDeltaTile:
+    plan = kSsspPlan::DeltaTile(stepShift);
     break;
-  case SsspPlan::kDeltaStep:
-    plan = SsspPlan::DeltaStep(stepShift);
+  case kSsspPlan::kDeltaStep:
+    plan = kSsspPlan::DeltaStep(stepShift);
     break;
-  case SsspPlan::kDeltaStepBarrier:
-    plan = SsspPlan::DeltaStepBarrier(stepShift);
+  case kSsspPlan::kDeltaStepBarrier:
+    plan = kSsspPlan::DeltaStepBarrier(stepShift);
     break;
   default:
     KATANA_LOG_FATAL("Invalid algorithm selected");

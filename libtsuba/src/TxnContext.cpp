@@ -20,7 +20,7 @@ katana::TxnContext::Commit() {
         return katana::ResultSuccess();
       }));
 
-      manifest_uptodate_[manifest_file] = true;
+      manifest_uptodate_[rdg_dir] = true;
     }
   }
   return katana::ResultSuccess();

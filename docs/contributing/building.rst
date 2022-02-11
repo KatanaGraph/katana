@@ -123,21 +123,7 @@ If you want to compile with ``clang`` instead of ``gcc``, make sure ``libstdc++-
 
    sudo apt-get install libstdc++-11-dev
 
-Python
-======
-
-To use the Python libraries from the build directory, use
-``$BUILD_DIR/python_env.sh``. You can either use this script as a launcher,
-
-.. code-block:: bash
-
-   $BUILD_DIR/python_env.sh python
-
-or source it into your shell,
-
-.. code-block:: bash
-
-   . $BUILD_DIR/python_env.sh
+.. include:: lang_spec.rst
 
 Resolving Common Build Issues
 =============================

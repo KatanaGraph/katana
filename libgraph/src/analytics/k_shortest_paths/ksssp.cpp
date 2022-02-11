@@ -47,7 +47,7 @@ template <typename Weight>
 using EdgeWeight = katana::PODProperty<Weight>;
 
 template <typename Weight>
-using NodeData = std::tuple<NodeCount, NodeMax<Weight>>;
+using NodeData = std::tuple<NodeCount, NodePath, NodeMax<Weight>>;
 template <typename Weight>
 using EdgeData = std::tuple<EdgeWeight<Weight>>;
 
@@ -577,7 +577,7 @@ kSSSPWithWrap(
     std::multimap<Weight, Path*> paths_map;
 
     for (auto pair : paths) {
-      paths_map.insert(std:make_pair(pair.first, pair.second))
+      paths_map.insert(std::make_pair(pair.first, pair.second))
     }
 
     katana::do_all(katana::iterate(graph), [&](const typename Graph::Node& n) {

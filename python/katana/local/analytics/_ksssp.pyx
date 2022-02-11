@@ -22,6 +22,7 @@ from katana.local import Graph, TxnContext
 from katana.local._graph cimport underlying_property_graph, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
+
 cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" nogil:
     cppclass _KssspPlan "katana::analytics::SsspPlan" (_Plan):
         enum Algorithm:

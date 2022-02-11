@@ -351,6 +351,34 @@ public:
   template <typename integer>
   void AppendOffsets(std::vector<integer>* vec) const;
 
+  DynamicBitset& operator|=(const DynamicBitset& other) {
+    KATANA_LOG_ASSERT(size() == other.size());
+    bitwise_or(other);
+    return *this;
+  }
+
+  DynamicBitset& operator&=(const DynamicBitset& other) {
+    KATANA_LOG_ASSERT(size() == other.size());
+    bitwise_and(other);
+    return *this;
+  }
+
+  bool operator==(const DynamicBitset& other) const { return Equals(other); }
+
+  bool operator!=(const DynamicBitset& other) const { return !Equals(other); }
+
+  bool Equals(const DynamicBitset& other) const {
+    if (size() != other.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < size(); i++) {
+      if (test(i) != other.test(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   //TODO(emcginnis): DynamicBitset is not actually memory copyable, remove this
   //! this is defined to
   using tt_is_copyable = int;

@@ -115,7 +115,7 @@ release = katana.__version__
 author = "Katana Graph"
 
 # TODO(ddn): Get this from katana.libgalois.version
-copyright = "Katana Graph, Inc. 2021"
+copyright = "Katana Graph, Inc. 2022"
 
 # -- Options for extensions --------------------------------------------------
 

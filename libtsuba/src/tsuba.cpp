@@ -9,6 +9,7 @@
 #include "katana/FileView.h"
 #include "katana/Plugin.h"
 #include "katana/Signals.h"
+#include "katana/URI.h"
 #include "katana/file.h"
 
 namespace {

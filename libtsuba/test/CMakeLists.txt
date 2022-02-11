@@ -94,3 +94,21 @@ add_executable(${test_name} storage-format-version/v3-uint16-entity-type-ids.cpp
 target_link_libraries(${test_name} katana_tsuba)
 target_include_directories(${test_name} PRIVATE ../src)
 add_test(NAME ${name} COMMAND ${test_name} ${RDG_LDBC_003_V3})
+
+
+
+set(name storage-format-version-v4-v5-optional-datastructure-rdk)
+set(test_name ${name}-test)
+add_test_dataset_fixture(${PROJECT_BINARY_DIR} ${RDG_LDBC_003} -${name} tmp_input_location input-setup-fixture-group)
+add_executable(${test_name} storage-format-version/v5-optional-datastructure-rdk.cpp)
+target_link_libraries(${test_name} katana_tsuba)
+target_link_libraries(${test_name} katana_galois)
+target_include_directories(${test_name} PRIVATE ../src)
+add_test(NAME ${name} COMMAND ${test_name} ${tmp_input_location})
+set_tests_properties(${name} PROPERTIES
+  ENVIRONMENT KATANA_ENABLE_EXPERIMENTAL=UnstableRDGStorageFormat)
+set_property(TEST ${name} APPEND PROPERTY LABELS quick)
+set_tests_properties(${name} PROPERTIES LABELS quick)
+set_property(TEST ${name}
+  APPEND PROPERTY
+  FIXTURES_REQUIRED ${input-setup-fixture-group})

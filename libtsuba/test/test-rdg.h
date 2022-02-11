@@ -1,8 +1,10 @@
 #ifndef KATANA_LIBTSUBA_TESTRDG_H_
 #define KATANA_LIBTSUBA_TESTRDG_H_
 
+#include <filesystem>
 #include <string>
 
+#include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/RDG.h"
 #include "katana/RDGManifest.h"
@@ -78,6 +80,31 @@ LoadRDG(const std::string& rdg_name) {
       KATANA_CHECKED(katana::RDG::Make(rdg_file, katana::RDGLoadOptions()));
 
   return katana::RDG(std::move(rdg));
+}
+
+katana::Result<std::string>
+find_file(const std::string& search_path, const std::string& substring) {
+  KATANA_LOG_VASSERT(
+      search_path.find("file://") == std::string::npos,
+      "Function cannot handle paths with the file:// prefix");
+
+  const std::filesystem::directory_iterator end;
+  try {
+    for (std::filesystem::directory_iterator iter{search_path}; iter != end;
+         iter++) {
+      const std::string file_name = iter->path().filename();
+      if (std::filesystem::is_regular_file(*iter)) {
+        if (file_name.find(substring)) {
+          return (iter->path().string());
+        }
+      }
+    }
+  } catch (std::exception&) {
+  }
+  return KATANA_ERROR(
+      katana::ErrorCode::InvalidArgument,
+      "Unable to find file in in {} containing substring {}", search_path,
+      substring);
 }
 
 #endif

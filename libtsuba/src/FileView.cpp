@@ -67,7 +67,7 @@ katana::FileView::Bind(
     std::string_view filename, uint64_t begin, uint64_t end, bool resolve) {
   StatBuf buf;
   filename_ = filename;
-  KATANA_CHECKED(FileStat(filename_, &buf));
+  KATANA_CHECKED_CONTEXT(FileStat(filename_, &buf), "{}", filename);
 
   uint64_t in_end = std::min<uint64_t>(end, static_cast<uint64_t>(buf.size));
   if (in_end < begin) {

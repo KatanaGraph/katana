@@ -329,17 +329,15 @@ AddDefaultEdgeWeight(
  * @param graph typed graph
  * @param start_node Beginning node in graph
  * @param report_node Final node to look for
- * @param algo_reachability Algorithm to to calculate if path is reachable
  * @param num_paths Number of paths to look for
- * @param step_shift Shift value for deltastep
+ * @param algo_reachability Algorithm to to calculate if path is reachable
  * @param plan Algorithm to get path
  */
 template <typename GraphTy, typename Weight>
 katana::Result<void>
 KssspImpl(
-    GraphTy graph, size_t start_node, size_t report_node,
-    AlgoReachability algo_reachability, size_t num_paths, uint32_t step_shift,
-    kSsspPlan plan) {
+    GraphTy graph, size_t start_node, size_t report_node, size_t num_paths,
+    AlgoReachability algo_reachability, kSsspPlan plan) {
   using GNode = typename GraphTy::Node;
 
   using kSSSP = katana::analytics::KSsspImplementationBase<
@@ -408,20 +406,20 @@ KssspImpl(
       DeltaStepAlgo<GraphTy, Weight, kSSSPSrcEdgeTile, OBIM>(
           &graph, source, kSSSPSrcEdgeTilePushWrap{&graph}, kSSSPTileRangeFn(),
           &paths, &path_pointers, path_alloc, report_node, num_paths,
-          step_shift);
+          plan.delta());
       break;
     case kSsspPlan::kDeltaStep:
       DeltaStepAlgo<GraphTy, Weight, kSSSPUpdateRequest, OBIM>(
           &graph, source, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
           &paths, &path_pointers, path_alloc, report_node, num_paths,
-          step_shift);
+          plan.delta());
       break;
     case kSsspPlan::kDeltaStepBarrier:
       katana::gInfo("Using OBIM with barrier\n");
       DeltaStepAlgo<GraphTy, Weight, kSSSPUpdateRequest, OBIM_Barrier>(
           &graph, source, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
           &paths, &path_pointers, path_alloc, report_node, num_paths,
-          step_shift);
+          plan.delta());
       break;
 
     default:
@@ -469,19 +467,18 @@ KssspImpl(
  * @param edge_weight_property_name edge weights
  * @param start_node Beginning node in graph
  * @param report_node Final node to look for
- * @param algo_reachability Algorithm to to calculate if path is reachable
  * @param num_paths Number of paths to look for
- * @param step_shift Shift value for deltastep
  * @param is_symmetric Whether or not the path is symmetric
+ * @param algo_reachability Algorithm to to calculate if path is reachable
  * @param plan Algorithm to get path
  */
 template <typename Weight>
 katana::Result<void>
 kSSSPWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    size_t start_node, size_t report_node, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, size_t num_paths, uint32_t step_shift,
-    const bool& is_symmetric, kSsspPlan plan) {
+    size_t start_node, size_t report_node, size_t num_paths, 
+    const bool& is_symmetric, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, kSsspPlan plan) {
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {
     return KATANA_ERROR(
@@ -521,8 +518,7 @@ kSSSPWithWrap(
         Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
     return KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, algo_reachability, num_paths,
-        step_shift, plan);
+        graph, start_node, report_node, num_paths, algo_reachability, plan);
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData<Weight>,
@@ -532,8 +528,7 @@ kSSSPWithWrap(
         Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
     return KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, algo_reachability, num_paths,
-        step_shift, plan);
+        graph, start_node, report_node, num_paths, algo_reachability, plan);
   }
 }
 
@@ -544,44 +539,44 @@ kSSSPWithWrap(
  * @param edge_weight_property_name edge weights
  * @param start_node Beginning node in graph
  * @param report_node Final node to look for
- * @param algo_reachability Algorithm to calculate if path is reachable
  * @param num_paths Number of paths to look for
  * @param is_symmetric Whether or not the path is symmetric
+ * @param algo_reachability Algorithm to calculate if path is reachable
  * @param plan Algorithm to get path
  */
 katana::Result<void>
 katana::analytics::Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    size_t start_node, size_t report_node, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, size_t num_paths,
-    const bool& is_symmetric, kSsspPlan plan) {
+    size_t start_node, size_t report_node, size_t num_paths, 
+    const bool& is_symmetric, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, kSsspPlan plan) {
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()
               ->id()) {
   case arrow::UInt32Type::type_id:
     return kSSSPWithWrap<uint32_t>(
-        pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
+        pg, edge_weight_property_name, start_node, report_node, num_paths, 
+        is_symmetric, txn_ctx, algo_reachability, plan);
   case arrow::Int32Type::type_id:
     return kSSSPWithWrap<int32_t>(
-        pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
+        pg, edge_weight_property_name, start_node, report_node, num_paths, 
+        is_symmetric, txn_ctx, algo_reachability, plan);
   case arrow::UInt64Type::type_id:
     return kSSSPWithWrap<uint64_t>(
-        pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
+        pg, edge_weight_property_name, start_node, report_node, num_paths, 
+        is_symmetric, txn_ctx, algo_reachability, plan);
   case arrow::Int64Type::type_id:
     return kSSSPWithWrap<int64_t>(
-        pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
+        pg, edge_weight_property_name, start_node, report_node, num_paths, 
+        is_symmetric, txn_ctx, algo_reachability, plan);
   case arrow::FloatType::type_id:
     return kSSSPWithWrap<float>(
-        pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
+        pg, edge_weight_property_name, start_node, report_node, num_paths, 
+        is_symmetric, txn_ctx, algo_reachability, plan);
   case arrow::DoubleType::type_id:
     return kSSSPWithWrap<double>(
-        pg, edge_weight_property_name, start_node, report_node, txn_ctx,
-        algo_reachability, num_paths, plan.delta(), is_symmetric, plan);
+        pg, edge_weight_property_name, start_node, report_node, num_paths, 
+        is_symmetric, txn_ctx, algo_reachability, plan);
   default:
     return KATANA_ERROR(
         katana::ErrorCode::TypeError, "Unsupported type: {}",

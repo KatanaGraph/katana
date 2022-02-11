@@ -170,8 +170,8 @@ main(int argc, char** argv) {
   katana::TxnContext txn_ctx;
 
   auto pg_result = Ksssp(
-      pg.get(), edge_property_name, startNode, reportNode, &txn_ctx,
-      reachability, numPaths, symmetricGraph, plan);
+      pg.get(), edge_property_name, startNode, reportNode, numPaths,
+      symmetricGraph, &txn_ctx, reachability, plan);
 
   if (!pg_result) {
     KATANA_LOG_FATAL("failed to run ksssp: {}", pg_result.error());

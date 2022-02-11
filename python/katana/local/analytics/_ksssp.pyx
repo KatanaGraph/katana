@@ -69,9 +69,9 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
         _AlgoReachability SyncLevel()
 
     Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name, 
-                       size_t start_node, size_t report_node, CTxnContext* txn_ctx, 
-                       _AlgoReachability algo_reachability, size_t num_paths, 
-                       const bool& is_symmetric, _KssspPlan plan)
+                       size_t start_node, size_t report_node, size_t num_paths, 
+                       const bool& is_symmetric, CTxnContext* txn_ctx, 
+                       _AlgoReachability algo_reachability, _KssspPlan plan)
 
 class _KssspAlgorithm(Enum):
     """
@@ -271,6 +271,6 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str, 
-                                 start_node, report_node, underlying_txn_context(txn_ctx), 
-                                 algo_reachability.underlying_, num_paths, is_symmetric, 
+                                 start_node, report_node, num_paths, is_symmetric, 
+                                 underlying_txn_context(txn_ctx), algo_reachability.underlying_,  
                                  plan.underlying_))

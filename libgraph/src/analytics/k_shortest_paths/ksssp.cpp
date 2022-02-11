@@ -296,73 +296,6 @@ PrintPath(const Path* path) {
   katana::gPrint(" ", path->parent);
 }
 
-template <typename GraphTy>
-bool
-GetReachability(GraphTy *graph, AlgoReachability algo_reachability, 
-                typename GraphTy::Node source, size_t report_node) {
-  using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
-  using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFnUndirected;
-  using BFSUpdateRequest = typename BFS::UpdateRequest;
-  using BFSReqPushWrap = typename BFS::ReqPushWrap;
-
-  switch (algo_reachability.algorithm()) {
-  case AlgoReachability::asyncLevel:
-    return CheckReachabilityAsync<GraphTy, BFSUpdateRequest>(
-        graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{graph},
-        report_node);
-    break;
-  case AlgoReachability::syncLevel:
-    return CheckReachabilitySync<GraphTy>(graph, source, report_node);
-    break;
-  default:
-    std::abort();
-  }
-}
-
-template <typename GraphTy, typename Weight>
-void
-PrintPaths(GraphTy graph, const Path* paths, katana::InsertBag<Path*> path_pointers, 
-           AlgoReachability algo_reachability, size_t start_node, size_t report_node, 
-           size_t num_paths) {
-  using GNode = typename GraphTy::Node;
-  auto it = graph.begin();
-  std::advance(it, start_node);
-  GNode source = *it;
-  it = graph.begin();
-  std::advance(it, report_node);
-  GNode report = *it;
-
-  bool reachable = GetReachability(*graph, algo_reachability, source, report_node);
-
-  if (reachable) {
-
-    std::multimap<Weight, Path*> paths_map;
-
-    for (auto pair : *paths) {
-      paths_map.insert(std::make_pair(pair.first, pair.second));
-    }
-
-    katana::gPrint("Node ", report, " has these k paths:\n");
-
-    uint32_t num =
-        (paths_map.size() > num_paths) ? num_paths : paths_map.size();
-
-    auto it_report = paths_map.begin();
-
-    for (uint32_t iter = 0; iter < num; iter++) {
-      const Path* path = it_report->second;
-      PrintPath(path);
-      katana::gPrint(" ", report, "\n");
-      katana::gPrint("Weight: ", it_report->first, "\n");
-      it_report++;
-    }
-
-    katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
-      path_alloc.DeletePath(p);
-    });
-  }
-}
-
 /**
  * Adds edge weights if there are none
  *
@@ -425,9 +358,17 @@ KssspImpl(
   using OBIM_Barrier = typename katana::OrderedByIntegerMetric<
       kSSSPUpdateRequestIndexer, PSchunk>::template with_barrier<true>::type;
 
+  using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
+  using BFSUpdateRequest = typename BFS::UpdateRequest;
+  using BFSReqPushWrap = typename BFS::ReqPushWrap;
+  using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFnUndirected;
+
   auto it = graph.begin();
   std::advance(it, start_node);
   GNode source = *it;
+  it = graph.begin();
+  std::advance(it, report_node);
+  GNode report = *it;
 
   size_t approxNodeData = graph.size() * 64;
   katana::Prealloc(1, approxNodeData);
@@ -443,7 +384,20 @@ KssspImpl(
 
   katana::InsertBag<Path*> path_pointers;
 
-  bool reachable = GetReachability(&graph, algo_reachability, source, report_node);
+  bool reachable = true;
+
+  switch (algo_reachability.algorithm()) {
+  case AlgoReachability::asyncLevel:
+    reachable = CheckReachabilityAsync<GraphTy, BFSUpdateRequest>(
+        &graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{&graph},
+        report_node);
+    break;
+  case AlgoReachability::syncLevel:
+    reachable = CheckReachabilitySync<GraphTy>(&graph, source, report_node);
+    break;
+  default:
+    std::abort();
+  }
 
   PathAlloc path_alloc;
 
@@ -478,7 +432,32 @@ KssspImpl(
   execTime.stop();
   page_alloc.Report();
 
-  PrintPaths(graph, paths, path_pointers, start_node, algo_reachability, start_node, report_node, num_paths);
+  if (reachable) {
+    std::multimap<Weight, Path*> paths_map;
+
+    for (auto pair : *paths) {
+      paths_map.insert(std::make_pair(pair.first, pair.second));
+    }
+
+    katana::gPrint("Node ", report, " has these k paths:\n");
+
+    uint32_t num =
+        (paths_map.size() > num_paths) ? num_paths : paths_map.size();
+
+    auto it_report = paths_map.begin();
+
+    for (uint32_t iter = 0; iter < num; iter++) {
+      const Path* path = it_report->second;
+      PrintPath(path);
+      katana::gPrint(" ", report, "\n");
+      katana::gPrint("Weight: ", it_report->first, "\n");
+      it_report++;
+    }
+
+    katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
+      path_alloc.DeletePath(p);
+    });
+  }
 
   return katana::ResultSuccess();
 }

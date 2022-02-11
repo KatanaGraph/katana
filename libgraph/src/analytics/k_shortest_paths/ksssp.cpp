@@ -520,26 +520,33 @@ kSSSPWithWrap(
   KATANA_CHECKED(pg->ConstructNodeProperties<NodeData<Weight>>(
       txn_ctx, {temp_node_property_names}));
 
-  typename GraphType;
-  
   if (is_symmetric) {
-    GraphType = katana::PropertyGraphViews::Default;
-  }
-  else { 
-    GraphType = katana::PropertyGraphViews::Undirected;
-  }
+    using Graph = katana::TypedPropertyGraphView<
+        katana::PropertyGraphViews::Default, NodeData<Weight>,
+        EdgeData<Weight>>;
+    Graph graph = KATANA_CHECKED(
+        Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
-  using Graph = katana::TypedPropertyGraphView<
-      GraphType, NodeData<Weight>, EdgeData<Weight>>;
+    auto r = KssspImpl<Graph, Weight>(
+        graph, start_node, report_node, num_paths, algo_reachability, plan);
 
-  Graph graph = KATANA_CHECKED(
-      Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
+    if (!r) {
+      return r.error();
+    }
+  } else {
+    using Graph = katana::TypedPropertyGraphView<
+        katana::PropertyGraphViews::Undirected, NodeData<Weight>,
+        EdgeData<Weight>>;
 
-  auto r = KssspImpl<Graph, Weight>(
-      graph, start_node, report_node, num_paths, algo_reachability, plan);
+    Graph graph = KATANA_CHECKED(
+        Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
-  if (!r) {
-    return r.error();
+    auto r = KssspImpl<Graph, Weight>(
+        graph, start_node, report_node, num_paths, algo_reachability, plan);
+
+    if (!r) {
+      return r.error();
+    }
   }
 
   return katana::ResultSuccess();

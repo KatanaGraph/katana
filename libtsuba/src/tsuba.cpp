@@ -3,7 +3,6 @@
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
 #include "RDGPartHeader.h"
-#include "RDGTopologyManager.h"
 #include "katana/CommBackend.h"
 #include "katana/Env.h"
 #include "katana/ErrorCode.h"
@@ -365,14 +364,9 @@ katana::WriteRDGPartHeader(
       edge_entity_type_id_array_path);
 
   // Set the topology metadata
-  part_header.MakePartitionTopologyMetadataEntry(topology_path);
-
-  katana::RDGTopologyManager topo_manager = KATANA_CHECKED(
-      katana::RDGTopologyManager::Make(part_header.topology_metadata()));
-
-  // get the metadata we need from the topology file
-  KATANA_CHECKED(topo_manager.ExtractMetadata(
-      rdg_dir_uri, num_nodes, num_edges, /*storage_valid=*/true));
+  PartitionTopologyMetadataEntry* topology_metadata_entry =
+      part_header.MakePartitionTopologyMetadataEntry(topology_path);
+  topology_metadata_entry->FillCSRMetadataEntry(num_nodes, num_edges);
 
   // Set storage format version to the latest one
   // This will also prevent bumping up storage versions and leaving the dask

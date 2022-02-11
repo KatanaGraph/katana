@@ -9,6 +9,11 @@
 
 namespace katana {
 
+struct RDGManifestInfo {
+  Uri manifest_file;
+  RDGManifest rdg_manifest;
+};
+
 class KATANA_EXPORT TxnContext {
 public:
   /// Create a transaction context. By default it commits changes when the context is destroyed. This is useful when calling from transaction unaware code like tests.
@@ -84,14 +89,12 @@ public:
 
   void SetTopologyWrite() { topology_write_ = true; }
 
-  void SetManifestFile(const Uri& manifest_file) {
-    manifest_file_ = manifest_file;
-  }
-
-  void SetManifest(const RDGManifest& rdg_manifest) {
-    rdg_manifest_ = rdg_manifest;
-    manifest_cached_ = true;
-    manifest_uptodate_ = false;
+  void SetManifestInfo(
+      const Uri& rdg_dir, const Uri& manifest_file,
+      const RDGManifest& rdg_manifest) {
+    RDGManifestInfo info = {manifest_file, rdg_manifest};
+    manifest_info_[rdg_dir] = info;
+    manifest_uptodate_[rdg_dir] = false;
   }
 
   const std::set<std::string>& NodePropertyRead() const {
@@ -118,11 +121,13 @@ public:
 
   bool TopologyWrite() const { return topology_write_; }
 
-  bool ManifestCached() const { return manifest_cached_; }
+  inline bool ManifestCached(const Uri& manifest_file) const {
+    return manifest_info_.count(manifest_file);
+  }
 
-  const Uri& ManifestFile() const { return manifest_file_; };
-
-  const RDGManifest& Manifest() const { return rdg_manifest_; }
+  const RDGManifestInfo& ManifestInfo(const Uri& rdg_dir) {
+    return manifest_info_.at(rdg_dir);
+  }
 
   katana::Result<void> Commit();
 
@@ -137,10 +142,8 @@ private:
   bool topology_write_{false};
 
   bool auto_commit_{true};
-  bool manifest_cached_{false};
-  bool manifest_uptodate_{true};
-  Uri manifest_file_;
-  RDGManifest rdg_manifest_;
+  std::unordered_map<Uri, RDGManifestInfo, Uri::Hash> manifest_info_;
+  std::unordered_map<Uri, bool, Uri::Hash> manifest_uptodate_;
 };
 
 }  // namespace katana

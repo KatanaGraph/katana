@@ -47,7 +47,7 @@ template <typename Weight>
 using EdgeWeight = katana::PODProperty<Weight>;
 
 template <typename Weight>
-using NodeData = std::tuple<NodeCount, NodeMax<Weight>, NodePath>;
+using NodeData = std::tuple<NodeCount, NodeMax<Weight>>;
 template <typename Weight>
 using EdgeData = std::tuple<EdgeWeight<Weight>>;
 
@@ -502,9 +502,11 @@ kSSSPWithWrap(
         pg, temporary_edge_property.name(), txn_ctx));
   }
 
+  std::cout << output_property_name << "\n";
+
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
-/*   std::vector<TemporaryPropertyGuard> temp_node_properties(2);
+  std::vector<TemporaryPropertyGuard> temp_node_properties(2);
   std::generate_n(
       temp_node_properties.begin(), temp_node_properties.size(),
       [&]() { return TemporaryPropertyGuard{pg->NodeMutablePropertyView()}; });
@@ -513,49 +515,25 @@ kSSSPWithWrap(
   std::transform(
       temp_node_properties.begin(), temp_node_properties.end(),
       temp_node_property_names.begin(),
-      [](const TemporaryPropertyGuard& p) { return p.name(); }); */
-
-  std::vector<std::string> temp_node_property_names(
-    output_property_name);
+      [](const TemporaryPropertyGuard& p) { return p.name(); });
 
   KATANA_CHECKED(pg->ConstructNodeProperties<NodeData<Weight>>(
       txn_ctx, {temp_node_property_names}));
 
-  if (is_symmetric) {
-    using Graph = katana::TypedPropertyGraphView<
-        katana::PropertyGraphViews::Default, NodeData<Weight>,
-        EdgeData<Weight>>;
-    Graph graph = KATANA_CHECKED(
-        Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
+  using GraphType = (is_symmetric) ? katana::PropertyGraphViews::Default : katana::PropertyGraphViews::Undirected;
 
-    auto r = KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, algo_reachability, plan);
+  using Graph = katana::TypedPropertyGraphView<
+      GraphType, NodeData<Weight>, EdgeData<Weight>>;
 
-    if (!r) {
-      return r.error();
-    }
-  } else {
-    using Graph = katana::TypedPropertyGraphView<
-        katana::PropertyGraphViews::Undirected, NodeData<Weight>,
-        EdgeData<Weight>>;
+  Graph graph = KATANA_CHECKED(
+      Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
-    Graph graph = KATANA_CHECKED(
-        Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
+  auto r = KssspImpl<Graph, Weight>(
+      graph, start_node, report_node, num_paths, algo_reachability, plan);
 
-    auto r = KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, algo_reachability, plan);
-
-    if (!r) {
-      return r.error();
-    }
+  if (!r) {
+    return r.error();
   }
-
-  /* KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<NodePath>>(
-      txn_ctx, {output_property_name}));
-
-  auto graph = KATANA_CHECKED((
-      katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<>>::
-          Make(pg, {output_property_name}, {}))); */
 
   return katana::ResultSuccess();
 }

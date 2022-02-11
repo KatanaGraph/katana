@@ -43,7 +43,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
         _KssspPlan DeltaStep(unsigned delta)
         @staticmethod
         _KssspPlan DeltaStepBarrier(unsigned delta)
-    
+
     unsigned kDefaultDelta "katana::analytics::SsspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
@@ -62,14 +62,14 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
         @staticmethod
         _AlgoReachability SyncLevel()
 
-    Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name, 
-                       size_t start_node, size_t report_node, size_t num_paths, 
-                       const bool& is_symmetric, CTxnContext* txn_ctx, 
+    Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name,
+                       size_t start_node, size_t report_node, size_t num_paths,
+                       const bool& is_symmetric, CTxnContext* txn_ctx,
                        _AlgoReachability algo_reachability, _KssspPlan plan)
 
 class _KssspAlgorithm(Enum):
     """
-    The concrete algorithms available for Ksssp. 
+    The concrete algorithms available for Ksssp.
     :see: :py:class`~katana.local.analytics.KssspPlan` constructor for algorithm documentation
     """
     DeltaTile = _KssspPlan.Algorithm.kDeltaTile
@@ -85,7 +85,7 @@ cdef class KssspPlan(Plan):
 
     cdef:
         _KssspPlan underlying_
-    
+
     cdef _Plan* underlying(self) except NULL:
         return &self.underlying_
 
@@ -121,7 +121,7 @@ cdef class KssspPlan(Plan):
     @property
     def edge_tile_size(self) -> int:
         """
-        The edge tile size. 
+        The edge tile size.
         """
         return self.underlying_.edge_tile_size()
 
@@ -165,12 +165,12 @@ class _KssspAlgorithmReachability(Enum):
 cdef class AlgoReachability:
     """
     The algorithms available to check reachability between two nodes
-    Static method construct AlgoReachability using specific algorithms. 
+    Static method construct AlgoReachability using specific algorithms.
     """
 
     cdef:
         _AlgoReachability underlying_
-    
+
     cdef _AlgoReachability* underlying(self) except NULL:
         return &self.underlying_
 
@@ -185,7 +185,7 @@ cdef class AlgoReachability:
         Construct AlgoReachability using default parameters
         """
         self.underlying_ = _AlgoReachability()
-        
+
     Algorithm = _KssspAlgorithmReachability
 
     @property
@@ -194,7 +194,7 @@ cdef class AlgoReachability:
         The selected algorithm.
         """
         return _KssspAlgorithmReachability(self.underlying_.algorithm())
-    
+
     def __init__(self):
         """
         Choose an algorithm
@@ -215,10 +215,10 @@ cdef class AlgoReachability:
         """
         return AlgoReachability.make(_AlgoReachability.SyncLevel())
 
-    
-def ksssp(pg, str edge_weight_property_name, size_t start_node, 
-          size_t report_node, size_t num_paths, bool is_symmetric=False, 
-          AlgoReachability algo_reachability = AlgoReachability(), 
+
+def ksssp(pg, str edge_weight_property_name, size_t start_node,
+          size_t report_node, size_t num_paths, bool is_symmetric=False,
+          AlgoReachability algo_reachability = AlgoReachability(),
           KssspPlan plan = KssspPlan().delta_tile(), *, txn_ctx = None):
     """
     Compute the K-Shortest Path on `pg` using `start_node` as source.
@@ -233,11 +233,11 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     :type num_paths: int
     :param num_paths: Number of paths to look for
     :type is_symmetric: bool
-    :param is_symmetric: Whether or not the path is symmetric. Defaults to false. 
+    :param is_symmetric: Whether or not the path is symmetric. Defaults to false.
     :type algo_reachability: AlgoReachability
     :param algo_reachability: The algorithm to calcualte if path is reachable. Default is syncLevel
     :type plan: KssspPlan
-    :param plan: The execution plan to use. Defaults to heuristically selecting the plan. 
+    :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
     :param txn_ctx: The transaction context for passing read write sets
     .. code-block:: python
         import katana.local
@@ -256,7 +256,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str, 
-                                 start_node, report_node, num_paths, is_symmetric, 
-                                 underlying_txn_context(txn_ctx), algo_reachability.underlying_,  
+        handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
+                                 start_node, report_node, num_paths, is_symmetric,
+                                 underlying_txn_context(txn_ctx), algo_reachability.underlying_,
                                  plan.underlying_))

@@ -179,6 +179,9 @@ Style
 * Do not number headings of step titles in step by step guide. For substep
   sequences, use numbered bullet points under a given step title.
 * Write in the second person: "Delete your database."
+* Assertions should be kept to hidden code cells when not part of a method.
+  Enclose the assertion in an individual code cell and add
+  `"nbsphinx": "hidden"` to that cell's metadata.
 
 How-to template
 ===============
@@ -252,7 +255,7 @@ must be fully executable with no errors or warnings.
 Orphaned Notebooks
 ==================
 
-This means that it doesn’t appear in a toctree (see ``index.rst``),
+This means that it doesn't appear in a toctree (see ``index.rst``),
 but other pages can still link to it.
 
 Orphaned notebookes require the following to be added to the notebook's JSON

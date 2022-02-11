@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+185.0.96c966 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+186.0.a76c0e variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -780,6 +780,9 @@ punctuation).</p></li>
 <li><p>Do not number headings of step titles in step by step guide. For substep
 sequences, use numbered bullet points under a given step title.</p></li>
 <li><p>Write in the second person: “Delete your database.”</p></li>
+<li><p>Assertions should be kept to hidden code cells when not part of a method.
+Enclose the assertion in an individual code cell and add
+<cite>“nbsphinx”: “hidden”</cite> to that cell’s metadata.</p></li>
 </ul>
 </section>
 <section id="how-to-template">

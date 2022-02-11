@@ -559,9 +559,9 @@ kSSSPWithWrap(
     }
   }
 
-  auto graph = KATANA_CHECKED(
+  /* auto graph = KATANA_CHECKED((
       katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<EdgeData>>::
-          Make(pg, {output_property_name}, {}));
+          Make(pg, {output_property_name}, {}))); */
 
   
 

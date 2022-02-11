@@ -329,8 +329,9 @@ template <typename GraphTy>
 bool
 GetReachability(
     GraphTy graph, AlgoReachability algo_reachability, size_t start_node, 
-    size_t report_node
-) {
+    size_t report_node) {
+  using GNode = typename GraphTy::Node;
+
   using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
   using BFSUpdateRequest = typename BFS::UpdateRequest;
   using BFSReqPushWrap = typename BFS::ReqPushWrap;

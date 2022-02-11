@@ -41,9 +41,9 @@ public:
 /// parameter can be specified, but have reasonable defaults.
 KATANA_EXPORT Result<void> Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    size_t start_node, size_t report_node, katana::TxnContext* txn_ctx,
-    AlgoReachability algo_reachability, size_t num_paths,
-    const bool& is_symmetric, kSsspPlan plan = {});
+    size_t start_node, size_t report_node, size_t num_paths,
+    const bool& is_symmetric, katana::TxnContext* txn_ctx,
+    AlgoReachability algo_reachability, kSsspPlan plan = {});
 }  // namespace katana::analytics
 
 #endif

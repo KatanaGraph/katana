@@ -538,7 +538,7 @@ kSSSPWithWrap(
         Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
     auto r = KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, &paths, num_paths, algo_reachability, plan);
+        graph, start_node, report_node, num_paths, &paths, algo_reachability, plan);
 
     if (!r) {
       return r.error();

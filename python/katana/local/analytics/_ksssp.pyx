@@ -108,7 +108,7 @@ cdef class KssspPlan(Plan):
         Construct a plan optimized for `graph` using heuristics, or using default parameter values.
         """
         if graph is None:
-            self.underlying_ = _KssspPlan()
+            self.underlying_ = _KssspPlan.DeltaTile(delta, edge_tile_size)
         else:
             self.underlying_ = _KssspPlan(underlying_property_graph(graph))
 

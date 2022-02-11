@@ -47,7 +47,7 @@ template <typename Weight>
 using EdgeWeight = katana::PODProperty<Weight>;
 
 template <typename Weight>
-using NodeData = std::tuple<NodeCount, NodeMax<Weight>>;
+using NodeData = std::tuple<NodeCount, NodeMax<Weight>, NodePath>;
 template <typename Weight>
 using EdgeData = std::tuple<EdgeWeight<Weight>>;
 
@@ -547,12 +547,12 @@ kSSSPWithWrap(
     }
   }
 
-  KATANA_CHECKED(pg->ConstructNodeProperties<NodePath>(
+  /* KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<NodePath>>(
       txn_ctx, {output_property_name}));
 
   auto graph = KATANA_CHECKED((
-      katana::TypedPropertyGraph<NodePath, std::tuple<>>::
-          Make(pg, {output_property_name}, {})));
+      katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<>>::
+          Make(pg, {output_property_name}, {}))); */
 
   return katana::ResultSuccess();
 }

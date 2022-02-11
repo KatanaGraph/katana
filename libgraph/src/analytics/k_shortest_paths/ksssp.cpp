@@ -504,7 +504,7 @@ kSSSPWithWrap(
 
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
-  std::vector<TemporaryPropertyGuard> temp_node_properties(2);
+/*   std::vector<TemporaryPropertyGuard> temp_node_properties(2);
   std::generate_n(
       temp_node_properties.begin(), temp_node_properties.size(),
       [&]() { return TemporaryPropertyGuard{pg->NodeMutablePropertyView()}; });
@@ -513,7 +513,10 @@ kSSSPWithWrap(
   std::transform(
       temp_node_properties.begin(), temp_node_properties.end(),
       temp_node_property_names.begin(),
-      [](const TemporaryPropertyGuard& p) { return p.name(); });
+      [](const TemporaryPropertyGuard& p) { return p.name(); }); */
+
+  std::vector<std::string> temp_node_property_names(
+    output_property_name);
 
   KATANA_CHECKED(pg->ConstructNodeProperties<NodeData<Weight>>(
       txn_ctx, {temp_node_property_names}));

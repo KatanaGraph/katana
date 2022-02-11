@@ -321,11 +321,17 @@ GetReachability(GraphTy *graph, AlgoReachability algo_reachability,
 
 template <typename GraphTy, typename Weight>
 void
-PrintPaths(GraphTy graph, const Path* paths, AlgoReachability algo_reachability, size_t start_node, size_t report_node, size_t num_paths) {
+PrintPaths(GraphTy graph, const Path* paths, katana::InsertBag<Path*> path_pointers, 
+           AlgoReachability algo_reachability, size_t start_node, size_t report_node, 
+           size_t num_paths) {
   using GNode = typename GraphTy::Node;
   auto it = graph.begin();
   std::advance(it, start_node);
   GNode source = *it;
+  it = graph.begin();
+  std::advance(it, report_node);
+  GNode report = *it;
+
   bool reachable = GetReachability(*graph, algo_reachability, source, report_node);
 
   if (reachable) {
@@ -422,9 +428,6 @@ KssspImpl(
   auto it = graph.begin();
   std::advance(it, start_node);
   GNode source = *it;
-  it = graph.begin();
-  std::advance(it, report_node);
-  GNode report = *it;
 
   size_t approxNodeData = graph.size() * 64;
   katana::Prealloc(1, approxNodeData);
@@ -475,7 +478,7 @@ KssspImpl(
   execTime.stop();
   page_alloc.Report();
 
-  PrintPaths(graph, paths, start_node, algo_reachability, start_node, report_node, num_paths);
+  PrintPaths(graph, paths, path_pointers, start_node, algo_reachability, start_node, report_node, num_paths);
 
   return katana::ResultSuccess();
 }

@@ -524,8 +524,12 @@ kSSSPWithWrap(
     Graph graph = KATANA_CHECKED(
         Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
-    KATANA_CHECKED(KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, algo_reachability, plan));
+    auto r = KssspImpl<Graph, Weight>(
+        graph, start_node, report_node, num_paths, algo_reachability, plan);
+
+    if (!r) {
+      return r.error();
+    }
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData<Weight>,
@@ -534,8 +538,12 @@ kSSSPWithWrap(
     Graph graph = KATANA_CHECKED(
         Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
-    KATANA_CHECKED(KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, algo_reachability, plan));
+    auto r = KssspImpl<Graph, Weight>(
+        graph, start_node, report_node, num_paths, algo_reachability, plan);
+
+    if (!r) {
+      return r.error();
+    }
   }
 
   KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<CurrentCommunityID>>(

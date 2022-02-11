@@ -592,7 +592,7 @@ kSSSPWithWrap(
     for (uint32_t iter = 0; iter < num; iter++) {
       const Path* path = it_report->second;
       MapPath<Graph>(graph, path, iter);
-      graph.template GetData<NodePath>(n) += " " + std::to_string(report_node);
+      graph.template GetData<NodePath>(report_node) += " " + std::to_string(iter);
       it_report++;
     }
   }

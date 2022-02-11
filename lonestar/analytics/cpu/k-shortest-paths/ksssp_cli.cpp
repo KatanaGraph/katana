@@ -169,6 +169,7 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
 
+  std::string node_distance_prop = "distance-" + std::to_string(start_node);
   auto pg_result = Ksssp(
       pg.get(), edge_property_name, startNode, reportNode, numPaths,
       symmetricGraph, &txn_ctx, reachability, plan);

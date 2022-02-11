@@ -69,9 +69,9 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
         _AlgoReachability SyncLevel()
 
     Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name, 
-                       size_t start_node, size_t report_node, size_t num_paths, 
-                       const bool& is_symmetric, CTxnContext* txn_ctx, 
-                       _AlgoReachability algo_reachability, _KssspPlan plan)
+                       const string& output_property_name, size_t start_node, 
+                       size_t report_node, size_t num_paths, const bool& is_symmetric, 
+                       CTxnContext* txn_ctx, _AlgoReachability algo_reachability, _KssspPlan plan)
 
 class _KssspAlgorithm(Enum):
     """
@@ -226,7 +226,7 @@ cdef class AlgoReachability:
         return AlgoReachability.make(_AlgoReachability.SyncLevel())
 
     
-def ksssp(pg, str edge_weight_property_name, size_t start_node, 
+def ksssp(pg, str edge_weight_property_name, str output_property_name, size_t start_node, 
           size_t report_node, size_t num_paths, bool is_symmetric=False, 
           AlgoReachability algo_reachability = AlgoReachability(), 
           KssspPlan plan = KssspPlan().delta_tile(), *, txn_ctx = None):
@@ -268,9 +268,10 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     """
 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
+    cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
         handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str, 
-                                 start_node, report_node, num_paths, is_symmetric, 
-                                 underlying_txn_context(txn_ctx), algo_reachability.underlying_,  
-                                 plan.underlying_))
+                                 output_property_name_str, start_node, report_node, num_paths, 
+                                 is_symmetric, underlying_txn_context(txn_ctx), 
+                                 algo_reachability.underlying_, plan.underlying_))

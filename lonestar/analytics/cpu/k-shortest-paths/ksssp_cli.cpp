@@ -171,8 +171,8 @@ main(int argc, char** argv) {
 
   std::string node_distance_prop = "distance-" + std::to_string(start_node);
   auto pg_result = Ksssp(
-      pg.get(), edge_property_name, startNode, reportNode, numPaths,
-      symmetricGraph, &txn_ctx, reachability, plan);
+      pg.get(), edge_property_name, node_distance_prop, startNode, reportNode, 
+      numPaths, symmetricGraph, &txn_ctx, reachability, plan);
 
   if (!pg_result) {
     KATANA_LOG_FATAL("failed to run ksssp: {}", pg_result.error());

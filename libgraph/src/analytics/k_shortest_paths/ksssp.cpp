@@ -325,6 +325,35 @@ AddDefaultEdgeWeight(
   return katana::ResultSuccess();
 }
 
+template <typename GraphTy>
+bool
+GetReachability(
+    GraphTy graph, AlgoReachability algo_reachability, size_t start_node, 
+    size_t report_node
+) {
+  using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
+  using BFSUpdateRequest = typename BFS::UpdateRequest;
+  using BFSReqPushWrap = typename BFS::ReqPushWrap;
+  using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFnUndirected;
+
+  auto it = graph.begin();
+  std::advance(it, start_node);
+  GNode source = *it;
+
+  switch (algo_reachability.algorithm()) {
+  case AlgoReachability::asyncLevel:
+    return CheckReachabilityAsync<GraphTy, BFSUpdateRequest>(
+        &graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{&graph},
+        report_node);
+    break;
+  case AlgoReachability::syncLevel:
+    return CheckReachabilitySync<GraphTy>(&graph, source, report_node);
+    break;
+  default:
+    std::abort();
+  }
+}
+
 /**
  * Sets up and runs implementation of ksssp
  *
@@ -339,8 +368,8 @@ template <typename GraphTy, typename Weight>
 katana::Result<void>
 KssspImpl(
     GraphTy graph, size_t start_node, size_t report_node, size_t num_paths,
-    katana::InsertBag<std::pair<Weight, Path*>> *paths, 
-    AlgoReachability algo_reachability, kSsspPlan plan) {
+    katana::InsertBag<std::pair<Weight, Path*>> *paths, bool reachable, 
+    kSsspPlan plan) {
   using GNode = typename GraphTy::Node;
 
   using kSSSP = katana::analytics::KSsspImplementationBase<
@@ -357,11 +386,6 @@ KssspImpl(
       katana::OrderedByIntegerMetric<kSSSPUpdateRequestIndexer, PSchunk>;
   using OBIM_Barrier = typename katana::OrderedByIntegerMetric<
       kSSSPUpdateRequestIndexer, PSchunk>::template with_barrier<true>::type;
-
-  using BFS = BfsSsspImplementationBase<GraphTy, unsigned int, false>;
-  using BFSUpdateRequest = typename BFS::UpdateRequest;
-  using BFSReqPushWrap = typename BFS::ReqPushWrap;
-  using BFSOutEdgeRangeFn = typename BFS::OutEdgeRangeFnUndirected;
 
   auto it = graph.begin();
   std::advance(it, start_node);
@@ -383,21 +407,6 @@ KssspImpl(
   execTime.start();
 
   katana::InsertBag<Path*> path_pointers;
-
-  bool reachable = true;
-
-  switch (algo_reachability.algorithm()) {
-  case AlgoReachability::asyncLevel:
-    reachable = CheckReachabilityAsync<GraphTy, BFSUpdateRequest>(
-        &graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{&graph},
-        report_node);
-    break;
-  case AlgoReachability::syncLevel:
-    reachable = CheckReachabilitySync<GraphTy>(&graph, source, report_node);
-    break;
-  default:
-    std::abort();
-  }
 
   PathAlloc path_alloc;
 
@@ -516,6 +525,8 @@ kSSSPWithWrap(
   KATANA_CHECKED(pg->ConstructNodeProperties<NodeData<Weight>>(
       txn_ctx, {temp_node_property_names}));
 
+  bool reachable;
+
   if (is_symmetric) {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Default, NodeData<Weight>,
@@ -523,8 +534,9 @@ kSSSPWithWrap(
     Graph graph = KATANA_CHECKED(
         Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
+    reachable = GetReachability(graph, algo_reachability, start_node, report_node);
     auto r = KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, &paths, algo_reachability, plan);
+        graph, start_node, report_node, num_paths, &paths, reachable, plan);
 
     if (!r) {
       return r.error();
@@ -537,8 +549,9 @@ kSSSPWithWrap(
     Graph graph = KATANA_CHECKED(
         Graph::Make(pg, {temp_node_property_names}, {edge_weight_property_name}));
 
+    reachable = GetReachability(graph, algo_reachability, start_node, report_node);
     auto r = KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, &paths, algo_reachability, plan);
+        graph, start_node, report_node, num_paths, &paths, reachable, plan);
 
     if (!r) {
       return r.error();

@@ -434,7 +434,7 @@ KssspImpl(
   execTime.stop();
   page_alloc.Report();
 
-  katana::do_all(katana::iterate(graph), [&](const typename Graph::Nde& n) {
+  katana::do_all(katana::iterate(graph), [&](const typename GraphTy::Node& n) {
     graph.template GetData<NodePath>(n) = "";
   });
 

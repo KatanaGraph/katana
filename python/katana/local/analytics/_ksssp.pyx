@@ -259,12 +259,12 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
         katana.local.initialize()
 
         graph = Graph(get_rdg_dataset("ldbc_003"))
-        from katana.analytics import ksssp
+        from katana.local.analytics import ksssp
         weight_name = "workFrom"
         start_node = 0
         report_node = 10
         num_paths = 5
-        ksssp(graph, weight_name, start_node, report_node)
+        ksssp(graph, weight_name, start_node, report_node, num_paths)
     """
 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")

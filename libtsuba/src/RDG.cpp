@@ -96,8 +96,6 @@ SetTnxContextManifest(
   new_manifest.set_viewtype(handle.impl_->rdg_manifest().viewtype());
   new_manifest.set_viewargs(handle.impl_->rdg_manifest().viewargs());
 
-  KATANA_LOG_VERBOSE("new manifest version {}", new_manifest.version());
-
   // wait for all the work we queued to finish
   KATANA_CHECKED_CONTEXT(desc->Finish(), "at least one async write failed");
 
@@ -107,9 +105,15 @@ SetTnxContextManifest(
   auto manifest_file = katana::RDGManifest::FileName(
       handle.impl_->rdg_manifest().dir(),
       handle.impl_->rdg_manifest().viewtype(), new_manifest.version());
-  handle.impl_->set_rdg_manifest(std::move(new_manifest));
 
-  txn_ctx->SetManifestInfo(new_manifest.dir(), manifest_file, new_manifest);
+  KATANA_LOG_DEBUG(
+      "new manifest version {}, dir {}, file {}", new_manifest.version(),
+      handle.impl_->rdg_manifest().dir(), manifest_file);
+
+  txn_ctx->SetManifestInfo(
+      handle.impl_->rdg_manifest().dir(), manifest_file, new_manifest);
+
+  handle.impl_->set_rdg_manifest(std::move(new_manifest));
   return katana::ResultSuccess();
 }
 

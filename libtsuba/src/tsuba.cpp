@@ -75,9 +75,12 @@ katana::FindManifest(const std::string& rdg_name) {
 katana::Result<katana::RDGManifest>
 katana::FindManifest(const std::string& rdg_name, katana::TxnContext* txn_ctx) {
   katana::Uri uri = KATANA_CHECKED(katana::Uri::Make(rdg_name));
-  katana::Uri rdg_dir = uri.DirName();
-  if (txn_ctx && txn_ctx->ManifestCached(rdg_dir)) {
-    return txn_ctx->ManifestInfo(rdg_dir).rdg_manifest;
+  if (RDGManifest::IsManifestUri(uri)) {
+    uri = uri.DirName();
+  }
+
+  if (txn_ctx && txn_ctx->ManifestCached(uri)) {
+    return txn_ctx->ManifestInfo(uri).rdg_manifest;
   } else {
     return KATANA_CHECKED(katana::FindManifest(rdg_name));
   }

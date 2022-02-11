@@ -48,10 +48,6 @@ struct KATANA_EXPORT RDGLoadOptions {
   /// List of edge properties that should be loaded
   /// nullptr means all edge properties will be loaded
   std::optional<std::vector<std::string>> edge_properties{std::nullopt};
-  // Each table should only contain a single column.
-  // Callback provides a pointer to the RDG so we can evict
-  // even before the PropertyGraph is created.
-  katana::PropertyCache* prop_cache{nullptr};
 
   /// Build a default options struct the default behavior is:
   ///  * load the partition associated with this host
@@ -320,13 +316,6 @@ public:
 
   void set_view_name(const std::string& v) { view_type_ = v; }
 
-  const katana::PropertyCache* prop_cache() const { return prop_cache_; }
-  katana::PropertyCache* prop_cache() { return prop_cache_; }
-
-  void set_prop_cache(katana::PropertyCache* prop_cache) {
-    prop_cache_ = prop_cache;
-  }
-
   // Returns katana::ResultErrno if the RDKLSHIndexPrimitive is not found on disk
   katana::Result<std::optional<katana::RDKLSHIndexPrimitive>>
   LoadRDKLSHIndexPrimitive();
@@ -376,8 +365,6 @@ private:
   //
 
   std::unique_ptr<RDGCore> core_;
-  // Optional property cache
-  katana::PropertyCache* prop_cache_{nullptr};
 };
 
 }  // namespace katana

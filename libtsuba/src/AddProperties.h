@@ -17,8 +17,9 @@ KATANA_EXPORT katana::Result<std::shared_ptr<arrow::Table>> LoadPropertySlice(
     const std::string& expected_name, const katana::Uri& file_path,
     int64_t offset, int64_t length);
 
+// is_property is true for properties and false for RDG metadata
 KATANA_EXPORT katana::Result<void> AddProperties(
-    const katana::Uri& uri, katana::PropertyCache* cache, katana::RDG* rdg,
+    const katana::Uri& uri, bool is_property,
     const std::vector<katana::PropStorageInfo*>& properties, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn);

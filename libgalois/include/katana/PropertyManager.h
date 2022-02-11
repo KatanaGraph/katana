@@ -15,30 +15,26 @@ public:
   ~PropertyManager();
   /// Returns the coarse category of memory use
   ///   e.g., property for the property manager
-  static const std::string memory_category;
-  const std::string& MemoryCategory() const override { return memory_category; }
+  static const std::string name_;
+  const std::string& Name() const override { return name_; }
   count_t FreeStandbyMemory(count_t goal) override;
 
-  /// Client wants a property, see if we have it in the cache and if so return it and make the memory active.
+  /// Client wants a property, see if we have it in the cache and if so return it and
+  /// make the memory active.
   /// Returns nullptr if manager does not have it in the cache
   std::shared_ptr<arrow::Table> GetProperty(const katana::Uri& property_path);
 
-  /// The property data has come into memory from storage, so account for the new, active memory
-  void PropertyLoadedCallback(const std::shared_ptr<arrow::Table>& property);
+  /// The property data has come into memory from storage, so account for the new,
+  /// active memory
+  void PropertyLoadedActive(
+      const std::shared_ptr<arrow::Table>& property) const;
 
   /// We are done with the property.  Put it in the cache if we have room.
   void PutProperty(
       const katana::Uri& property_path,
       const std::shared_ptr<arrow::Table>& property);
 
-  // TODO(witchel) eliminate this by having RDG call into PropertyManager
-  PropertyCache* property_cache() { return cache_.get(); }
-  katana::CacheStats GetPropertyCacheStats() const {
-    if (!cache_) {
-      return katana::CacheStats();
-    }
-    return cache_->GetStats();
-  }
+  CacheStats GetPropertyCacheStats() const { return cache_->GetStats(); }
 
 private:
   void MakePropertyCache();

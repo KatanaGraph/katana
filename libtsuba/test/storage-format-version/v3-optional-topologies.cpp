@@ -4,10 +4,12 @@
 
 #include "../test-rdg.h"
 #include "katana/Logging.h"
+#include "katana/ProgressTracer.h"
 #include "katana/RDG.h"
 #include "katana/RDGManifest.h"
 #include "katana/RDGTopology.h"
 #include "katana/Result.h"
+#include "katana/TextTracer.h"
 #include "katana/URI.h"
 
 /*
@@ -328,6 +330,9 @@ main(int argc, char* argv[]) {
   if (auto init_good = katana::InitTsuba(); !init_good) {
     KATANA_LOG_FATAL("katana::InitTsuba: {}", init_good.error());
   }
+  katana::ProgressTracer::Set(katana::TextTracer::Make());
+  katana::ProgressScope host_scope =
+      katana::GetTracer().StartActiveSpan("rdg-slice test");
 
   if (argc <= 1) {
     KATANA_LOG_FATAL("missing rdg file directory");

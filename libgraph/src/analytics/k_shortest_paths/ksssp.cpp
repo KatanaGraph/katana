@@ -565,7 +565,7 @@ kSSSPWithWrap(
     }
   }
 
-  using Graph = katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<EdgeData<Weight>>>
+  using Graph = katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<EdgeData<Weight>>>;
 
   KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<NodePath>(
       txn_ctx, {output_property_name}));

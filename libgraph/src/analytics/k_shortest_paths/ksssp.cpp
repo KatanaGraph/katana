@@ -520,7 +520,7 @@ kSSSPWithWrap(
   KATANA_CHECKED(pg->ConstructNodeProperties<NodeData<Weight>>(
       txn_ctx, {temp_node_property_names}));
 
-  using GraphType = (is_symmetric) ? katana::PropertyGraphViews::Default : katana::PropertyGraphViews::Undirected;
+  typename GraphType = (is_symmetric) ? katana::PropertyGraphViews::Default : katana::PropertyGraphViews::Undirected;
 
   using Graph = katana::TypedPropertyGraphView<
       GraphType, NodeData<Weight>, EdgeData<Weight>>;

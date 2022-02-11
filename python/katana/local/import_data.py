@@ -8,7 +8,8 @@ from typing import Collection, Dict, Optional, Union
 import numba
 import numpy as np
 
-from katana.local_native import Graph, TxnContext, from_csr, from_graphml_native
+from katana.local import EntityTypeArray
+from katana.local_native import Graph, TxnContext, _from_csr_and_raw_types, from_csr, from_graphml_native
 from katana.native_interfacing.buffer_access import to_numpy
 
 __all__ = [
@@ -47,7 +48,7 @@ def from_edge_list_matrix(edges: np.ndarray) -> Graph:
 
 
 @numba.njit()
-def _fill_indices(sort_order: np.ndarray, sources: np.ndarray, indices: np.ndarray):
+def _fill_indices(sort_order: Optional[np.ndarray], sources: np.ndarray, indices: np.ndarray):
     last_source = 0
     # Code is duplicated because numba cannot perform type based cloning within a function and cannot pass ranges
     # into a function.
@@ -69,18 +70,38 @@ def _fill_indices(sort_order: np.ndarray, sources: np.ndarray, indices: np.ndarr
 
 
 def from_edge_list_arrays(
-    sources: np.ndarray, destinations: np.ndarray, property_dict: Dict[str, np.ndarray] = None, **properties: np.ndarray
+    sources: np.ndarray,
+    destinations: np.ndarray,
+    property_dict: Dict[str, np.ndarray] = None,
+    *,
+    node_types: EntityTypeArray = None,
+    edge_types: EntityTypeArray = None,
+    **properties: np.ndarray,
 ) -> Graph:
     """
     Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.
 
     This preserves node IDs, but **not** edge IDs.
     """
-    return _from_edge_list_arrays_impl(sources, destinations, property_dict, edges_sorted=False, properties=properties)
+    return _from_edge_list_arrays_impl(
+        sources,
+        destinations,
+        property_dict,
+        edges_sorted=False,
+        properties=properties,
+        node_types=node_types,
+        edge_types=edge_types,
+    )
 
 
 def from_sorted_edge_list_arrays(
-    sources: np.ndarray, destinations: np.ndarray, property_dict: Dict[str, np.ndarray] = None, **properties: np.ndarray
+    sources: np.ndarray,
+    destinations: np.ndarray,
+    property_dict: Dict[str, np.ndarray] = None,
+    *,
+    node_types: EntityTypeArray = None,
+    edge_types: EntityTypeArray = None,
+    **properties: np.ndarray,
 ) -> Graph:
     """
     Convert an **sorted** edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`. The
@@ -88,11 +109,26 @@ def from_sorted_edge_list_arrays(
 
     This preserves node IDs and edge IDs.
     """
-    return _from_edge_list_arrays_impl(sources, destinations, property_dict, edges_sorted=True, properties=properties)
+    return _from_edge_list_arrays_impl(
+        sources,
+        destinations,
+        property_dict,
+        edges_sorted=True,
+        properties=properties,
+        node_types=node_types,
+        edge_types=edge_types,
+    )
 
 
 def _from_edge_list_arrays_impl(
-    sources: np.ndarray, destinations: np.ndarray, property_dict: Dict[str, np.ndarray], edges_sorted: bool, properties,
+    sources: np.ndarray,
+    destinations: np.ndarray,
+    property_dict: Dict[str, np.ndarray] = None,
+    *,
+    edges_sorted: bool,
+    properties,
+    node_types: EntityTypeArray = None,
+    edge_types: EntityTypeArray = None,
 ) -> Graph:
     """
     Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.
@@ -112,6 +148,9 @@ def _from_edge_list_arrays_impl(
     if not n_edges:
         raise ValueError("Must have at least one edge")
 
+    if edge_types and len(edge_types) != n_edges:
+        raise ValueError(f"the length of edge_types {len(edge_types)} is not equal to the number of edges {n_edges}")
+
     if len(destinations) != n_edges:
         raise ValueError("Sources and destinations must have the same length")
 
@@ -124,6 +163,9 @@ def _from_edge_list_arrays_impl(
 
     n_nodes = max(np.max(sources), np.max(destinations)) + 1
 
+    if node_types and len(node_types) != n_nodes:
+        raise ValueError(f"the length of node_types {len(node_types)} is not equal to the number of nodes {n_nodes}")
+
     if not edges_sorted:
         sort_order = sources.argsort()
         csr_destinations = destinations[sort_order]
@@ -134,9 +176,24 @@ def _from_edge_list_arrays_impl(
     csr_indices = np.empty(n_nodes, dtype=np.uint64)
     _fill_indices(sort_order, sources, csr_indices)
 
-    graph = from_csr(csr_indices, csr_destinations)
+    def reorder_edge_array_if_needed(a):
+        return a if edges_sorted else a[sort_order]
+
+    if node_types is not None or edge_types is not None:
+        node_types = node_types or EntityTypeArray(n_nodes)
+        edge_types = edge_types or EntityTypeArray(n_edges)
+        graph = _from_csr_and_raw_types(
+            csr_indices,
+            csr_destinations,
+            node_types._data,
+            reorder_edge_array_if_needed(edge_types._data),
+            node_types,
+            edge_types,
+        )
+    else:
+        graph = from_csr(csr_indices, csr_destinations)
     if properties:
-        graph.add_edge_property(properties if edges_sorted else {n: p[sort_order] for n, p in properties.items()})
+        graph.add_edge_property({n: reorder_edge_array_if_needed(p) for n, p in properties.items()})
     return graph
 
 
@@ -145,6 +202,9 @@ def from_edge_list_dataframe(
     source_column: Union[str, int] = "source",
     destination_column: Union[str, int] = "destination",
     property_columns: Optional[Collection[Union[str, int]]] = None,
+    *,
+    node_types: EntityTypeArray = None,
+    edge_types: EntityTypeArray = None,
 ):
     """
     Convert an edge list in the form of a dataframe-like object into a :py:class:`~katana.local.Graph` with edge
@@ -161,7 +221,9 @@ def from_edge_list_dataframe(
         property_columns = set(df) - {source_column, destination_column}
 
     edge_properties = {col_name: df[col_name] for col_name in property_columns}
-    return from_edge_list_arrays(df[source_column], df[destination_column], **edge_properties)
+    return from_edge_list_arrays(
+        df[source_column], df[destination_column], **edge_properties, node_types=node_types, edge_types=edge_types
+    )
 
 
 def from_graphml(path: Union[str, pathlib.Path], chunk_size: int = 25000, *, txn_ctx=None):

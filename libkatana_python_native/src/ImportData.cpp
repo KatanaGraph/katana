@@ -2,12 +2,26 @@
 #include <pybind11/pybind11.h>
 
 #include "katana/GraphML.h"
+#include "katana/ParallelSTL.h"
 #include "katana/python/CythonIntegration.h"
 #include "katana/python/ErrorHandling.h"
 #include "katana/python/PropertyGraphPython.h"
 #include "katana/python/PythonModuleInitializers.h"
 
 namespace py = pybind11;
+
+namespace {
+
+katana::GraphTopology
+TopologyFromCSR(
+    const py::array_t<katana::PropertyGraph::Edge>& edge_indices,
+    const py::array_t<katana::PropertyGraph::Node>& edge_destinations) {
+  return katana::GraphTopology(
+      edge_indices.data(), edge_indices.size(), edge_destinations.data(),
+      edge_destinations.size());
+}
+
+}  // namespace
 
 void
 katana::python::InitImportData(py::module& m) {
@@ -25,9 +39,8 @@ katana::python::InitImportData(py::module& m) {
       [](py::array_t<PropertyGraph::Edge> edge_indices,
          py::array_t<PropertyGraph::Node> edge_destinations)
           -> Result<std::shared_ptr<PropertyGraph>> {
-        return KATANA_CHECKED(katana::PropertyGraph::Make(GraphTopology(
-            edge_indices.data(), edge_indices.size(), edge_destinations.data(),
-            edge_destinations.size())));
+        return KATANA_CHECKED(katana::PropertyGraph::Make(
+            TopologyFromCSR(edge_indices, edge_destinations)));
       },
       R"""(
       Create a new `Graph` from a raw Compressed Sparse Row representation.
@@ -40,4 +53,32 @@ katana::python::InitImportData(py::module& m) {
           integer.
       :returns: the new :py:class:`~katana.local.Graph`
       )""");
+
+  m.def(
+      "_from_csr_and_raw_types",
+      [](const py::array_t<PropertyGraph::Edge> edge_indices,
+         const py::array_t<PropertyGraph::Node> edge_destinations,
+         const py::array_t<EntityTypeID> node_types,
+         const py::array_t<EntityTypeID> edge_types,
+         const EntityTypeManager& node_type_manager,
+         const EntityTypeManager& edge_type_manager)
+          -> Result<std::shared_ptr<PropertyGraph>> {
+        NUMAArray<EntityTypeID> node_types_owned;
+        node_types_owned.allocateBlocked(node_types.size());
+        katana::ParallelSTL::copy(
+            node_types.data(), node_types.data() + node_types.size(),
+            node_types_owned.begin());
+        NUMAArray<EntityTypeID> edge_types_owned;
+        edge_types_owned.allocateBlocked(edge_types.size());
+        katana::ParallelSTL::copy(
+            edge_types.data(), edge_types.data() + edge_types.size(),
+            edge_types_owned.begin());
+        EntityTypeManager node_type_manager_owned = node_type_manager;
+        EntityTypeManager edge_type_manager_owned = edge_type_manager;
+        return KATANA_CHECKED(katana::PropertyGraph::Make(
+            TopologyFromCSR(edge_indices, edge_destinations),
+            std::move(node_types_owned), std::move(edge_types_owned),
+            std::move(node_type_manager_owned),
+            std::move(edge_type_manager_owned)));
+      });
 }

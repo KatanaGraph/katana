@@ -8,9 +8,10 @@ import pandas
 import pytest
 
 from katana.example_data import get_misc_dataset
-from katana.local import Graph
+from katana.local import EntityTypeArray, Graph
 from katana.local.import_data import (
     from_adjacency_matrix,
+    from_csr,
     from_edge_list_arrays,
     from_edge_list_dataframe,
     from_edge_list_matrix,
@@ -61,6 +62,31 @@ def test_trivial_arrays_unsorted():
         ],
     )
     assert [g.get_edge_dst(i) for i in range(g.num_edges())] == [1, 2, 0]
+
+
+def test_typed_arrays_unsorted():
+    g = from_edge_list_arrays(
+        np.array([0, 10, 1]), np.array([1, 0, 2]), edge_types=EntityTypeArray.from_type_names(["A", "B", "A"])
+    )
+    edge_types = g.edge_types
+    assert g.get_edge_type(0) == edge_types.atomic_types["A"]
+    assert g.get_edge_type(1) == edge_types.atomic_types["A"]
+    assert g.get_edge_type(2) == edge_types.atomic_types["B"]
+
+
+def test_multi_typed_arrays():
+    g = from_edge_list_arrays(
+        np.array([0, 3, 1]),
+        np.array([1, 0, 2]),
+        node_types=EntityTypeArray.from_type_name_sets([{"A", "B"}, {"B"}, {"A"}, {"A", "C"}]),
+    )
+    node_types = g.node_types
+    assert g.get_node_type(0) == node_types.get_non_atomic_entity_type(
+        [node_types.atomic_types["A"], node_types.atomic_types["B"]]
+    )
+    assert g.does_node_have_type(0, node_types.atomic_types["A"])
+    assert g.does_node_have_type(3, node_types.atomic_types["A"])
+    assert g.get_node_type(1) == node_types.atomic_types["B"]
 
 
 def test_trivial_arrays_sorted():
@@ -153,6 +179,42 @@ def test_dataframe():
     )
     assert [g.get_edge_dst(i) for i in range(g.num_edges())] == [1, 2, 0]
     assert list(g.get_edge_property("prop").to_numpy()) == [1, 2, 3]
+
+
+def test_typed_dataframe():
+    df = pandas.DataFrame(
+        dict(source=[0, 1, 10], destination=[1, 2, 0], prop=[1, 2, 3], types=pandas.Categorical(["A", "B", "A"]))
+    )
+    g = from_edge_list_dataframe(
+        df[["source", "destination", "prop"]], edge_types=EntityTypeArray.from_type_names(df["types"])
+    )
+    assert [g.get_edge_dst(i) for i in range(g.num_edges())] == [1, 2, 0]
+    assert [str(g.get_edge_type(i)) for i in range(g.num_edges())] == ["A", "B", "A"]
+
+
+def test_from_csr():
+    pg = from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
+    assert pg.num_nodes() == 2
+    assert pg.num_edges() == 1
+    # assert list(pg.out_edge_ids(0)) == [0]
+    assert pg.get_edge_dst(0) == 1
+
+
+def test_from_csr_int16():
+    pg = from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
+    assert pg.num_nodes() == 2
+    assert pg.num_edges() == 1
+    # assert list(pg.out_edge_ids(0)) == [0]
+    assert pg.get_edge_dst(0) == 1
+
+
+def test_from_csr_k3():
+    pg = from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
+    assert pg.num_nodes() == 3
+    assert pg.num_edges() == 6
+    # assert list(pg.out_edge_ids(2)) == [4, 5]
+    assert pg.get_edge_dst(4) == 0
+    assert pg.get_edge_dst(5) == 1
 
 
 @pytest.mark.required_env("KATANA_TEST_DATASETS")

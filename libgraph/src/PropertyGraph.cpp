@@ -189,14 +189,8 @@ katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     const std::string& rdg_name, katana::TxnContext* txn_ctx,
     const katana::RDGLoadOptions& opts) {
-  katana::Uri rdg_uri = KATANA_CHECKED(katana::Uri::Make(rdg_name));
-  katana::Uri rdg_dir = rdg_uri.DirName();
-  katana::RDGManifest manifest;
-  if (txn_ctx->ManifestCached(rdg_dir)) {
-    manifest = txn_ctx->ManifestInfo(rdg_dir).rdg_manifest;
-  } else {
-    manifest = KATANA_CHECKED(katana::FindManifest(rdg_name));
-  }
+  katana::RDGManifest manifest =
+      KATANA_CHECKED(katana::FindManifest(rdg_name, txn_ctx));
   auto rdg_handle =
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
   auto new_file = std::make_unique<katana::RDGFile>(rdg_handle);
@@ -463,14 +457,8 @@ katana::PropertyGraph::ConductWriteOp(
     const std::string& uri, const std::string& command_line,
     katana::RDG::RDGVersioningPolicy versioning_action,
     katana::TxnContext* txn_ctx) {
-  katana::Uri rdg_uri = KATANA_CHECKED(katana::Uri::Make(uri));
-  katana::Uri rdg_dir = rdg_uri.DirName();
-  katana::RDGManifest manifest;
-  if (txn_ctx->ManifestCached(rdg_dir)) {
-    manifest = txn_ctx->ManifestInfo(rdg_dir).rdg_manifest;
-  } else {
-    manifest = KATANA_CHECKED(katana::FindManifest(uri));
-  }
+  katana::RDGManifest manifest =
+      KATANA_CHECKED(katana::FindManifest(uri, txn_ctx));
 
   katana::RDGHandle rdg_handle =
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));

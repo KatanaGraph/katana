@@ -16,6 +16,7 @@ namespace katana {
 
 class RDGHandleImpl;
 class RDGManifest;
+class TxnContext;
 
 /// RDGHandle is an opaque indentifier for an RDG.
 struct RDGHandle {
@@ -56,6 +57,9 @@ OpenFlagsValid(uint32_t flags) {
 
 KATANA_EXPORT katana::Result<RDGManifest> FindManifest(
     const std::string& rdg_name);
+
+KATANA_EXPORT katana::Result<katana::RDGManifest> FindManifest(
+    const std::string& rdg_name, katana::TxnContext* txn_ctx);
 
 KATANA_EXPORT katana::Result<RDGHandle> Open(
     RDGManifest rdg_manifest, uint32_t flags);

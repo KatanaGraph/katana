@@ -255,7 +255,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
         report_node = 10
         num_paths = 5
         ksssp(graph, weight_name, start_node, report_node, num_paths)
-    
+
     """
 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")

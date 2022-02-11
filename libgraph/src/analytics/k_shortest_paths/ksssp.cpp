@@ -407,20 +407,20 @@ KssspImpl(
     case kSsspPlan::kDeltaTile:
       DeltaStepAlgo<GraphTy, Weight, kSSSPSrcEdgeTile, OBIM>(
           &graph, source, kSSSPSrcEdgeTilePushWrap{&graph}, kSSSPTileRangeFn(),
-          &paths, &path_pointers, path_alloc, report_node, num_paths,
+          paths, &path_pointers, path_alloc, report_node, num_paths,
           plan.delta());
       break;
     case kSsspPlan::kDeltaStep:
       DeltaStepAlgo<GraphTy, Weight, kSSSPUpdateRequest, OBIM>(
           &graph, source, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
-          &paths, &path_pointers, path_alloc, report_node, num_paths,
+          paths, &path_pointers, path_alloc, report_node, num_paths,
           plan.delta());
       break;
     case kSsspPlan::kDeltaStepBarrier:
       katana::gInfo("Using OBIM with barrier\n");
       DeltaStepAlgo<GraphTy, Weight, kSSSPUpdateRequest, OBIM_Barrier>(
           &graph, source, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
-          &paths, &path_pointers, path_alloc, report_node, num_paths,
+          paths, &path_pointers, path_alloc, report_node, num_paths,
           plan.delta());
       break;
 
@@ -435,7 +435,7 @@ KssspImpl(
   if (reachable) {
     std::multimap<Weight, Path*> paths_map;
 
-    for (auto pair : paths) {
+    for (auto pair : *paths) {
       paths_map.insert(std::make_pair(pair.first, pair.second));
     }
 

@@ -296,6 +296,16 @@ PrintPath(const Path* path) {
   katana::gPrint(" ", path->parent);
 }
 
+template <typename GraphTy>
+void
+MapPath(GraphTy graph, const Path* path, uint32_t iter) {
+  if (path->last != nullptr) {
+    MapPath<GraphTy>(graph, path, iter);
+  }
+
+  graph.template GetData<NodePath>(path->parent) += " " + std::to_string(iter);
+}
+
 /**
  * Adds edge weights if there are none
  *
@@ -463,10 +473,6 @@ KssspImpl(
       katana::gPrint("Weight: ", it_report->first, "\n");
       it_report++;
     }
-
-    /* katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
-      path_alloc.DeletePath(p);
-    }); */
   }
 
   return katana::ResultSuccess();
@@ -559,11 +565,37 @@ kSSSPWithWrap(
     }
   }
 
-  /* auto graph = KATANA_CHECKED((
-      katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<EdgeData>>::
-          Make(pg, {output_property_name}, {}))); */
+  using Graph = katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<EdgeData>>
 
-  
+  KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<NodePath>(
+      txn_ctx, {output_property_name}));
+
+  auto graph = KATANA_CHECKED((
+      Graph::Make(pg, {output_property_name}, {edge_weight_property_name})));
+
+  if (reachable) {
+    std::multimap<Weight, Path*> paths_map;
+
+    for (auto pair : paths) {
+      paths_map.insert(std:make_pair(pair.first, pair.second))
+    }
+
+    katana::do_all(katana::iterate(graph), [&](const typename Graph::Node& n) {
+      graph.template GetData<NodePath>(n) = "";
+    });
+
+    uint32_t num =
+        (paths_map.size() > num_paths) ? num_paths : paths_map.size();
+
+    auto it_report = paths_map.begin();
+
+    for (uint32_t iter = 0; iter < num; iter++) {
+      const Path* path = it_report->second;
+      MapPath<Graph>(graph, path, iter);
+      graph.template GetData<NodePath>(n) += " " + std::to_string(report_node);
+      it_report++;
+    }
+  }
 
   return katana::ResultSuccess();
 }

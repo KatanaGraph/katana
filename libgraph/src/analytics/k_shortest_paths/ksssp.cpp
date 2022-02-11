@@ -476,7 +476,7 @@ template <typename Weight>
 katana::Result<void>
 kSSSPWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    std::string& output_property_name, size_t start_node, size_t report_node, 
+    const std::string& output_property_name, size_t start_node, size_t report_node, 
     size_t num_paths, const bool& is_symmetric, katana::TxnContext* txn_ctx,
     AlgoReachability algo_reachability, kSsspPlan plan) {
   if (!edge_weight_property_name.empty() &&

@@ -5,8 +5,6 @@ on:
     branches:
       - 'master'
       - 'release/*'
-    paths-ignore:
-      - 'docs/**'
   pull_request:
     paths-ignore:
       - 'docs/**'
@@ -19,6 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # If this job becomes a required check, make sure to sync with `cpp_bypass.yaml`
   do_cpp:
     if: |
       github.event_name != 'pull_request' ||
@@ -30,6 +29,7 @@ jobs:
       - name: Info
         run: echo "will build"
 
+  # If this job becomes a required check, make sure to sync with `cpp_bypass.yaml`
   do_cpp_test:
     needs:
       - do_cpp
@@ -44,9 +44,7 @@ jobs:
       - name: Info
         run: echo "will build"
 
-  ###################################################################
-  # lint
-  ###################################################################
+  # Make sure to keep in sync with "lint" in `cpp_bypass.yaml` 
   lint:
     needs: do_cpp
     runs-on: ${{matrix.os}}
@@ -99,9 +97,7 @@ jobs:
     - name: Check docs
       run: .github/workflows/check_docs.sh $HOME/build
 
-  ###################################################################
-  # build_and_test
-  ###################################################################
+  # Make sure to keep in sync with "build_and_test" in `cpp_bypass.yaml`
   build_and_test:
     needs: do_cpp_test
     runs-on: ${{matrix.os}}

@@ -4,10 +4,6 @@
 Building
 ========
 
-.. only:: internal
-
-   If you are building katana-enterprise make sure to also read the :doc:`enterprise build addenda <index>`.
-
 Setting up a Build
 ==================
 
@@ -50,23 +46,7 @@ See the `Conda User Guide <https://docs.conda.io/projects/conda/en/latest/user-g
    it will install a conflicting version of pyarrow. Conda can handle all
    required dependencies itself.
 
-You will need to log out and back in again to ensure conda is properly
-configured. Then, create and activate the development environment:
-
-.. code-block:: bash
-
-   SRC_DIR=<repo/root>
-   conda config --add channels conda-forge
-   # For library compatibility reasons, prefer taking dependencies from
-   # higher priority channels even if newer versions exist in lower priority
-   # channels.
-   conda config --set channel_priority strict
-   # Create the environment
-   conda create --name katana-dev
-   # Install the dependencies
-   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
-   conda activate katana-dev
-   conda install numactl-devel-cos6-x86_64 # For x86_64 builds
+.. include:: conda_dev_env.rst
 
 The ``conda env update`` line can be run later to update your environment. Deactivate your environment
 ``conda deactivate``, then run the update commands, then reactivate ``conda activate katana-dev``.
@@ -81,7 +61,6 @@ The ``conda env update`` line can be run later to update your environment. Deact
    # please perform the following manual clean-up:
    conda env update --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
    rm /tmp/cuda-installer.log
-
 
 Now, run ``cmake`` to configure your build directory and ``make`` to build Katana.
 

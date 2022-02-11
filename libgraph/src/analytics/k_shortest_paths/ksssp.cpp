@@ -464,9 +464,9 @@ KssspImpl(
       it_report++;
     }
 
-    katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
+    /* katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
       path_alloc.DeletePath(p);
-    });
+    }); */
   }
 
   return katana::ResultSuccess();
@@ -559,9 +559,11 @@ kSSSPWithWrap(
     }
   }
 
-  /* auto graph = KATANA_CHECKED(
+  auto graph = KATANA_CHECKED(
       katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<EdgeData>>::
-          Make(pg, {output_property_name}, {})); */
+          Make(pg, {output_property_name}, {}));
+
+  
 
   return katana::ResultSuccess();
 }

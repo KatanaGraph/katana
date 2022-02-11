@@ -567,7 +567,7 @@ kSSSPWithWrap(
 
   using Graph = katana::TypedPropertyGraph<std::tuple<NodePath>, std::tuple<EdgeData<Weight>>>;
 
-  KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<NodePath>(
+  KATANA_CHECKED(pg->ConstructNodeProperties<std::tuple<NodePath>>(
       txn_ctx, {output_property_name}));
 
   auto graph = KATANA_CHECKED((
@@ -577,7 +577,7 @@ kSSSPWithWrap(
     std::multimap<Weight, Path*> paths_map;
 
     for (auto pair : paths) {
-      paths_map.insert(std::make_pair(pair.first, pair.second))
+      paths_map.insert(std::make_pair(pair.first, pair.second));
     }
 
     katana::do_all(katana::iterate(graph), [&](const typename Graph::Node& n) {

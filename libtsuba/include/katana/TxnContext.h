@@ -121,8 +121,8 @@ public:
 
   bool TopologyWrite() const { return topology_write_; }
 
-  inline bool ManifestCached(const Uri& manifest_file) const {
-    return manifest_info_.count(manifest_file);
+  inline bool ManifestCached(const Uri& rdg_dir) const {
+    return manifest_info_.count(rdg_dir);
   }
 
   const RDGManifestInfo& ManifestInfo(const Uri& rdg_dir) {

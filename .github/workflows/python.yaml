@@ -306,8 +306,13 @@ jobs:
             - added|modified: '**.py'  
     - name: Check for lint
       run: |
-        . .github/workflows/activate_miniconda.sh
-        ./scripts/check_python_lint.sh ${{ steps.filter.outputs.python_files }}
+        if [ "${{ steps.filter.outputs.python }}" == "true" ]
+        then
+           . .github/workflows/activate_miniconda.sh
+           ./scripts/check_python_lint.sh ${{ steps.filter.outputs.python_files }}
+        else
+           echo "No Python files were changed."
+        fi
 
   build_and_test:
     needs: do_python_test

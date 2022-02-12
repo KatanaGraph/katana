@@ -295,10 +295,19 @@ jobs:
       run: |
         . .github/workflows/activate_miniconda.sh
         ./scripts/check_python_format.sh python test scripts
+    - name: Find changed Python files
+      uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        base: ${{ github.ref }}
+        list-files: shell
+        filters: |
+          python:
+            - added|modified: '**.py'  
     - name: Check for lint
       run: |
         . .github/workflows/activate_miniconda.sh
-        ./scripts/check_python_lint.sh python test scripts
+        ./scripts/check_python_lint.sh ${{ steps.filter.outputs.python_files }}
 
   build_and_test:
     needs: do_python_test

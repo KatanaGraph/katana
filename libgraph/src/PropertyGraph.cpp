@@ -218,6 +218,16 @@ katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
+    const katana::Uri& rdg_dir, katana::GraphTopology&& topo_to_assign) {
+  return Make(
+      rdg_dir, std::move(topo_to_assign),
+      MakeDefaultEntityTypeIDArray(topo_to_assign.NumNodes()),
+      MakeDefaultEntityTypeIDArray(topo_to_assign.NumEdges()),
+      EntityTypeManager{}, EntityTypeManager{});
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
     katana::GraphTopology&& topo_to_assign,
     NUMAArray<EntityTypeID>&& node_entity_type_ids,
     NUMAArray<EntityTypeID>&& edge_entity_type_ids,

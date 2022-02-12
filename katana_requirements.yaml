@@ -110,6 +110,9 @@ cmake:
   labels:
     - apt
     - conda/dev
+  version_overrides:
+    conda/dev: ">=3.17,<3.22a0"
+    conda: ">=3.17,<3.22a0"
 conan:
   version: [ 1.40, null ]
   labels:

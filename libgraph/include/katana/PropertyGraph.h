@@ -266,10 +266,16 @@ public:
       const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
   /// Make a property graph from topology
+  // [deprecated("please provide a storage prefix")]
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign);
 
-  /// [[deprecated("You should provide a rdg dir")]]
+  /// Make a property graph from topology
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      const Uri& rdg_dir, GraphTopology&& topo_to_assign);
+
+  /// Make a property graph from topology and type arrays
+  // [deprecated("please provide a storage prefix")]
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign, EntityTypeIDArray&& node_entity_type_ids,
       EntityTypeIDArray&& edge_entity_type_ids,

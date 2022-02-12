@@ -753,6 +753,12 @@ katana::PropertyGraph::GetNodeProperty(const std::string& name) const {
       ErrorCode::PropertyNotFound, "node property does not exist: {}", name);
 }
 
+katana::Result<katana::Uri>
+katana::PropertyGraph::GetNodePropertyStorageLocation(
+    const std::string& name) const {
+  return rdg_->GetNodePropertyStorageLocation(name);
+}
+
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 katana::PropertyGraph::GetEdgeProperty(const std::string& name) const {
   auto ret = rdg_->edge_properties()->GetColumnByName(name);
@@ -761,6 +767,12 @@ katana::PropertyGraph::GetEdgeProperty(const std::string& name) const {
   }
   return KATANA_ERROR(
       ErrorCode::PropertyNotFound, "edge property does not exist: {}", name);
+}
+
+katana::Result<katana::Uri>
+katana::PropertyGraph::GetEdgePropertyStorageLocation(
+    const std::string& name) const {
+  return rdg_->GetEdgePropertyStorageLocation(name);
 }
 
 katana::Result<void>

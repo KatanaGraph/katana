@@ -33,6 +33,7 @@
 #include "katana/JSON.h"
 #include "katana/Logging.h"
 #include "katana/ParquetWriter.h"
+#include "katana/ProgressTracer.h"
 #include "katana/RDGTopology.h"
 #include "katana/ReadGroup.h"
 #include "katana/Result.h"
@@ -107,9 +108,14 @@ SetTnxContextManifest(
       handle.impl_->rdg_manifest().dir(),
       handle.impl_->rdg_manifest().viewtype(), new_manifest.version());
 
-  KATANA_LOG_DEBUG(
-      "new manifest version {}, dir {}, file {}", new_manifest.version(),
-      handle.impl_->rdg_manifest().dir(), manifest_file);
+  auto& tracer = katana::GetTracer();
+  tracer.GetActiveSpan().Log(
+      "new manifest",
+      {
+          {"new_version", new_manifest.version()},
+          {"manifest_dir", handle.impl_->rdg_manifest().dir().string()},
+          {"manifest_file", manifest_file.string()},
+      });
 
   txn_ctx->SetManifestInfo(
       handle.impl_->rdg_manifest().dir(), manifest_file, new_manifest);

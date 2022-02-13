@@ -177,7 +177,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+192.0.3ac064 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+193.0.2aec4e variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -1916,12 +1916,12 @@ function checkPageExistsAndRedirect(event) {
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph17AddEdgePropertiesERKNSt10shared_ptrIN5arrow5TableEEEPN6katana10TxnContextE">katana::PropertyGraph::AddEdgeProperties (C++ function)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph17AddNodePropertiesERKNSt10shared_ptrIN5arrow5TableEEEPN6katana10TxnContextE">katana::PropertyGraph::AddNodeProperties (C++ function)</a>
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph5beginEv">katana::PropertyGraph::begin (C++ function)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/cxx/property-graph.html#_CPPv4I0EN6katana13PropertyGraph9BuildViewE6PGViewv">katana::PropertyGraph::BuildView (C++ function)</a>
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph6CommitERKNSt6stringE">katana::PropertyGraph::Commit (C++ function)</a>
@@ -1996,6 +1996,8 @@ function checkPageExistsAndRedirect(event) {
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph19GetEdgePropertyNameE7int32_t">katana::PropertyGraph::GetEdgePropertyName (C++ function)</a>
 </li>
+      <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph30GetEdgePropertyStorageLocationERKNSt6stringE">katana::PropertyGraph::GetEdgePropertyStorageLocation (C++ function)</a>
+</li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4I0EN6katana13PropertyGraph20GetEdgePropertyTypedE6ResultINSt10shared_ptrIN5arrow11CTypeTraitsI1TE9ArrayTypeEEEERKNSt6stringE">katana::PropertyGraph::GetEdgePropertyTyped (C++ function)</a>
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph17GetEdgeSupertypesE12EntityTypeID">katana::PropertyGraph::GetEdgeSupertypes (C++ function)</a>
@@ -2015,6 +2017,8 @@ function checkPageExistsAndRedirect(event) {
       <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph20GetNodePropertyIndexERK4Node">katana::PropertyGraph::GetNodePropertyIndex (C++ function)</a>
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph19GetNodePropertyNameE7int32_t">katana::PropertyGraph::GetNodePropertyName (C++ function)</a>
+</li>
+      <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph30GetNodePropertyStorageLocationERKNSt6stringE">katana::PropertyGraph::GetNodePropertyStorageLocation (C++ function)</a>
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4I0EN6katana13PropertyGraph20GetNodePropertyTypedE6ResultINSt10shared_ptrIN5arrow11CTypeTraitsI1TE9ArrayTypeEEEERKNSt6stringE">katana::PropertyGraph::GetNodePropertyTyped (C++ function)</a>
 </li>
@@ -2180,6 +2184,8 @@ function checkPageExistsAndRedirect(event) {
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph20ReadOnlyPropertyView11GetPropertyERKNSt6stringE">katana::PropertyGraph::ReadOnlyPropertyView::GetProperty (C++ function)</a>, <a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph20ReadOnlyPropertyView11GetPropertyEi">[1]</a>
 </li>
+      <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph20ReadOnlyPropertyView26GetPropertyStorageLocationERKNSt6stringE">katana::PropertyGraph::ReadOnlyPropertyView::GetPropertyStorageLocation (C++ function)</a>
+</li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4NK6katana13PropertyGraph20ReadOnlyPropertyView13loaded_schemaEv">katana::PropertyGraph::ReadOnlyPropertyView::loaded_schema (C++ function)</a>
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph20ReadOnlyPropertyView16loaded_schema_fnE">katana::PropertyGraph::ReadOnlyPropertyView::loaded_schema_fn (C++ member)</a>
@@ -2189,6 +2195,8 @@ function checkPageExistsAndRedirect(event) {
       <li><a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph20ReadOnlyPropertyView15property_fn_strE">katana::PropertyGraph::ReadOnlyPropertyView::property_fn_str (C++ member)</a>
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph20ReadOnlyPropertyView15property_num_fnE">katana::PropertyGraph::ReadOnlyPropertyView::property_num_fn (C++ member)</a>
+</li>
+      <li><a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph20ReadOnlyPropertyView23property_storage_fn_strE">katana::PropertyGraph::ReadOnlyPropertyView::property_storage_fn_str (C++ member)</a>
 </li>
       <li><a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph18RemoveEdgePropertyERKNSt6stringEPN6katana10TxnContextE">katana::PropertyGraph::RemoveEdgeProperty (C++ function)</a>, <a href="reference/cxx/property-graph.html#_CPPv4N6katana13PropertyGraph18RemoveEdgePropertyEiPN6katana10TxnContextE">[1]</a>
 </li>

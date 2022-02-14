@@ -144,7 +144,7 @@ main(int argc, char** argv) {
     plan = KssspPlan::DeltaStep(reachability, stepShift);
     break;
   case KssspPlan::kDeltaStepBarrier:
-    plan = KssspPlan::DeltaBarrier(reachability, stepShift);
+    plan = KssspPlan::DeltaStepBarrier(reachability, stepShift);
     break;
   default:
     KATANA_LOG_FATAL("Invalid algorithm selected");
@@ -163,7 +163,7 @@ main(int argc, char** argv) {
 
   auto pg_result = Ksssp(
       pg.get(), edge_property_name, startNode, reportNode, numPaths,
-      symmetricGraph, &txn_ctx, reachability, plan);
+      symmetricGraph, &txn_ctx, plan);
 
   if (!pg_result) {
     KATANA_LOG_FATAL("failed to run ksssp: {}", pg_result.error());

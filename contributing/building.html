@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+197.0.99a019 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+198.0.456d64 variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -560,7 +560,6 @@ function checkPageExistsAndRedirect(event) {
                 
   <section id="building">
 <span id="id1"></span><h1>Building<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h1>
-<p>If you are building katana-enterprise make sure to also read the <a class="reference internal" href="index.html"><span class="doc">enterprise build addenda</span></a>.</p>
 <section id="setting-up-a-build">
 <h2>Setting up a Build<a class="headerlink" href="#setting-up-a-build" title="Permalink to this headline">¶</a></h2>
 <p>The Katana repo supports both Conan and Conda for installing additional library
@@ -616,7 +615,16 @@ conda install numactl-devel-cos6-x86_64 <span class="c1"># For x86_64 builds</sp
 <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">deactivate</span></code>, then run the update commands, then reactivate <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">katana-dev</span></code>.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Not all conda installation scripts are well-behaved. In particular, the default behavior of the <code class="docutils literal notranslate"><span class="pre">cudatoolkit-dev</span></code> package’s post-installation script is to write a log to the hard-coded path <code class="docutils literal notranslate"><span class="pre">/tmp/cuda-installer.log</span></code> and not delete it. Once one user on a system has written this file all other users will fail to install the package because they won’t be able to write the log file. The only known workaround is to manually delete the log file. It is best practice to delete your own log file immediately after you have updated your environment. If you are on a system where someone else has written the log file and you can’t overwrite it please contact that user to delete it. You may also contact a user with root privileges.</p>
+<p>Not all conda installation scripts are well-behaved. In particular, the
+default behavior of the <code class="docutils literal notranslate"><span class="pre">cudatoolkit-dev</span></code> package’s post-installation
+script is to write a log to the hard-coded path <code class="docutils literal notranslate"><span class="pre">/tmp/cuda-installer.log</span></code>
+and not delete it. Once one user on a system has written this file all other
+users will fail to install the package because they won’t be able to write
+the log file. The only known workaround is to manually delete the log file.
+It is best practice to delete your own log file immediately after you have
+updated your environment. If you are on a system where someone else has
+written the log file and you can’t overwrite it please contact that user to
+delete it. You may also contact a user with root privileges.</p>
 </div>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># If you are sharing a system with other users,</span>
 <span class="c1"># please perform the following manual clean-up:</span>

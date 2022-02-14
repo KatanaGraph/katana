@@ -403,21 +403,21 @@ KssspImpl(
     switch (plan.algorithm()) {
     case kSsspPlan::kDeltaTile:
       DeltaStepAlgo<GraphTy, Weight, kSSSPSrcEdgeTile, OBIM>(
-          &graph, source, kSSSPSrcEdgeTilePushWrap{&graph}, kSSSPTileRangeFn(),
-          &paths, &path_pointers, path_alloc, report, num_paths,
+          &graph, source, report, kSSSPSrcEdgeTilePushWrap{&graph}, kSSSPTileRangeFn(),
+          &paths, &path_pointers, path_alloc, num_paths,
           plan.delta());
       break;
     case kSsspPlan::kDeltaStep:
       DeltaStepAlgo<GraphTy, Weight, kSSSPUpdateRequest, OBIM>(
-          &graph, source, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
-          &paths, &path_pointers, path_alloc, report, num_paths,
+          &graph, source, report, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
+          &paths, &path_pointers, path_alloc, num_paths,
           plan.delta());
       break;
     case kSsspPlan::kDeltaStepBarrier:
       katana::gInfo("Using OBIM with barrier\n");
       DeltaStepAlgo<GraphTy, Weight, kSSSPUpdateRequest, OBIM_Barrier>(
-          &graph, source, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
-          &paths, &path_pointers, path_alloc, report, num_paths,
+          &graph, source, report, kSSSPReqPushWrap(), kSSSPOutEdgeRangeFn{&graph},
+          &paths, &path_pointers, path_alloc, num_paths,
           plan.delta());
       break;
 

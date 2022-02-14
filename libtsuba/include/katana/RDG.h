@@ -180,10 +180,20 @@ public:
   katana::Result<void> UnloadNodeProperty(int i);
   katana::Result<void> UnloadNodeProperty(const std::string& name);
 
+  /// report where this property is being stored; Will return an error if the
+  /// property is not clean or absent
+  katana::Result<Uri> GetNodePropertyStorageLocation(
+      const std::string& name) const;
+
   /// Ensure the edge property at index `i` was written back to storage
   /// then free its memory
   katana::Result<void> UnloadEdgeProperty(int i);
   katana::Result<void> UnloadEdgeProperty(const std::string& name);
+
+  /// report where this property is being stored; Will return an error if the
+  /// property is not clean or absent
+  katana::Result<Uri> GetEdgePropertyStorageLocation(
+      const std::string& name) const;
 
   /// Load node property with a particular name and insert it into the
   /// property table at index. If index is invalid, the property is put

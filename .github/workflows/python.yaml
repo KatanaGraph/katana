@@ -85,9 +85,9 @@ jobs:
     - name: Cache ccache objects
       uses: actions/cache@v2
       with:
-        key: ${{matrix.os}}-ccache-${{github.sha}}
+        key: ${{matrix.os}}-ccache-arrow-6-v1-${{github.sha}}
         restore-keys: |
-          ${{matrix.os}}-ccache-
+          ${{matrix.os}}-ccache-arrow-6-v1-
         path: ~/.ccache
 
     ###
@@ -328,9 +328,9 @@ jobs:
       - name: Cache ccache objects
         uses: actions/cache@v2
         with:
-          key: ${{matrix.os}}-ccache-dev-${{github.sha}}
+          key: ${{matrix.os}}-ccache-dev-arrow-6-v1-${{github.sha}}
           restore-keys: |
-            ${{matrix.os}}-ccache-dev-
+            ${{matrix.os}}-ccache-dev-arrow-6-v1-
           path: ~/.ccache
 
       ###
@@ -358,6 +358,7 @@ jobs:
         run: |
           . .github/workflows/activate_miniconda.sh
           mamba env update --quiet --file=conda_recipe/environment.yml
+          mamba list
 
       ###
       # Standard CMake build process

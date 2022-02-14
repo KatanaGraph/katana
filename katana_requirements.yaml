@@ -110,6 +110,9 @@ cmake:
   labels:
     - apt
     - conda/dev
+  version_overrides:
+    conda/dev: ">=3.17,<3.22a0"
+    conda: ">=3.17,<3.22a0"
 conan:
   version: [ 1.40, null ]
   labels:
@@ -205,11 +208,11 @@ libarrow-python:
     conda: null
     pip: null
     apt: libarrow-python-dev
-  version: &arrow_version [ 4, 5 ]
+  version: &arrow_version [ 6, 7 ]
   labels:
     - apt
   version_overrides: &arrow_version_overrides
-    apt: "=4.0.1-1"
+    apt: "=6.0.1-1"
 libarrow:
   name_overrides:
     conan: arrow
@@ -315,7 +318,7 @@ packaging:
     - conda
     - pip/dev
 pandas:
-  version: [ 1.1, 2 ]
+  version: [ 1.1, 1.4 ]
   labels:
     - conda
     - pip
@@ -333,7 +336,7 @@ parquet-cpp:
     - conda
     - apt
   version_overrides:
-    apt: "=4.0.1-1"
+    apt: "=6.0.1-1"
 pyarrow:
   name_overrides:
     apt: null

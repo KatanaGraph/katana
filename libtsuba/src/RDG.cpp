@@ -699,6 +699,28 @@ UnloadProperty(
   return KATANA_CHECKED(props->RemoveColumn(i));
 }
 
+katana::Result<katana::Uri>
+GetStorageLocationIfValid(
+    const std::string& name,
+    const std::vector<katana::PropStorageInfo>& prop_info_list) {
+  auto psi_it = std::find_if(
+      prop_info_list.begin(), prop_info_list.end(),
+      [&](const katana::PropStorageInfo& psi) { return psi.name() == name; });
+  if (psi_it == prop_info_list.end()) {
+    return KATANA_ERROR(
+        katana::ErrorCode::PropertyNotFound, "no property named {}",
+        std::quoted(name));
+  }
+
+  if (!(psi_it->IsAbsent() || psi_it->IsClean())) {
+    return KATANA_ERROR(
+        katana::ErrorCode::AssertionFailed, "the property exists but is dirty");
+  }
+  // TODO(thunt) there's really no reason why we shouldn't always use uri
+  auto path = KATANA_CHECKED(katana::Uri::Make(psi_it->path()));
+  return path;
+}
+
 katana::Result<std::shared_ptr<arrow::Table>>
 LoadProperty(
     const std::shared_ptr<arrow::Table>& props, const std::string name, int i,
@@ -776,6 +798,12 @@ katana::RDG::UnloadNodeProperty(const std::string& name) {
       std::quoted(name));
 }
 
+katana::Result<katana::Uri>
+katana::RDG::GetNodePropertyStorageLocation(const std::string& name) const {
+  return GetStorageLocationIfValid(
+      name, core_->part_header().node_prop_info_list());
+}
+
 katana::Result<void>
 katana::RDG::UnloadEdgeProperty(int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(UnloadProperty(
@@ -783,6 +811,12 @@ katana::RDG::UnloadEdgeProperty(int i) {
       rdg_dir()));
   core_->set_edge_properties(std::move(new_props));
   return katana::ResultSuccess();
+}
+
+katana::Result<katana::Uri>
+katana::RDG::GetEdgePropertyStorageLocation(const std::string& name) const {
+  return GetStorageLocationIfValid(
+      name, core_->part_header().edge_prop_info_list());
 }
 
 katana::Result<void>

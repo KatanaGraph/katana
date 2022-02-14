@@ -112,6 +112,8 @@ public:
         int i) const;
     Result<std::shared_ptr<arrow::ChunkedArray>> (
         PropertyGraph::*property_fn_str)(const std::string& str) const;
+    Result<Uri> (PropertyGraph::*property_storage_fn_str)(
+        const std::string& str) const;
     int32_t (PropertyGraph::*property_num_fn)() const;
 
     std::shared_ptr<arrow::Schema> loaded_schema() const {
@@ -129,6 +131,10 @@ public:
     Result<std::shared_ptr<arrow::ChunkedArray>> GetProperty(
         const std::string& str) const {
       return (const_g->*property_fn_str)(str);
+    }
+
+    Result<Uri> GetPropertyStorageLocation(const std::string& str) const {
+      return (const_g->*property_storage_fn_str)(str);
     }
 
     int32_t GetNumProperties() const { return (const_g->*property_num_fn)(); }
@@ -266,10 +272,16 @@ public:
       const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
   /// Make a property graph from topology
+  // [deprecated("please provide a storage prefix")]
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign);
 
-  /// [[deprecated("You should provide a rdg dir")]]
+  /// Make a property graph from topology
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      const Uri& rdg_dir, GraphTopology&& topo_to_assign);
+
+  /// Make a property graph from topology and type arrays
+  // [deprecated("please provide a storage prefix")]
   static Result<std::unique_ptr<PropertyGraph>> Make(
       GraphTopology&& topo_to_assign, EntityTypeIDArray&& node_entity_type_ids,
       EntityTypeIDArray&& edge_entity_type_ids,
@@ -643,6 +655,8 @@ public:
   Result<std::shared_ptr<arrow::ChunkedArray>> GetNodeProperty(
       const std::string& name) const;
 
+  Result<Uri> GetNodePropertyStorageLocation(const std::string& name) const;
+
   std::string GetNodePropertyName(int32_t i) const {
     return loaded_node_schema()->field(i)->name();
   }
@@ -653,6 +667,8 @@ public:
   std::string GetEdgePropertyName(int32_t i) const {
     return loaded_edge_schema()->field(i)->name();
   }
+
+  Result<Uri> GetEdgePropertyStorageLocation(const std::string& name) const;
 
   /// Get a node property by name and cast it to a type.
   ///
@@ -827,6 +843,8 @@ public:
                 .full_schema_fn = &PropertyGraph::full_node_schema,
                 .property_fn_int = &PropertyGraph::GetNodeProperty,
                 .property_fn_str = &PropertyGraph::GetNodeProperty,
+                .property_storage_fn_str =
+                    &PropertyGraph::GetNodePropertyStorageLocation,
                 .property_num_fn = &PropertyGraph::GetNumNodeProperties,
             },
         .g = this,
@@ -846,6 +864,8 @@ public:
         .full_schema_fn = &PropertyGraph::full_node_schema,
         .property_fn_int = &PropertyGraph::GetNodeProperty,
         .property_fn_str = &PropertyGraph::GetNodeProperty,
+        .property_storage_fn_str =
+            &PropertyGraph::GetNodePropertyStorageLocation,
         .property_num_fn = &PropertyGraph::GetNumNodeProperties,
     };
   }
@@ -859,6 +879,8 @@ public:
                 .full_schema_fn = &PropertyGraph::full_edge_schema,
                 .property_fn_int = &PropertyGraph::GetEdgeProperty,
                 .property_fn_str = &PropertyGraph::GetEdgeProperty,
+                .property_storage_fn_str =
+                    &PropertyGraph::GetEdgePropertyStorageLocation,
                 .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
             },
         .g = this,
@@ -878,6 +900,8 @@ public:
         .full_schema_fn = &PropertyGraph::full_edge_schema,
         .property_fn_int = &PropertyGraph::GetEdgeProperty,
         .property_fn_str = &PropertyGraph::GetEdgeProperty,
+        .property_storage_fn_str =
+            &PropertyGraph::GetEdgePropertyStorageLocation,
         .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
     };
   }

@@ -68,7 +68,7 @@ public:
       Reachability reachability = kDefaultReach,
       unsigned delta = kDefaultDelta, 
       ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
-    return {kCPU, kDeltaTile, reachability, delta, edge_tile_size}
+    return {kCPU, kDeltaTile, reachability, delta, edge_tile_size};
   }
 
   static KssspPlan DeltaStep(
@@ -82,7 +82,7 @@ public:
       unsigned delta = kDefaultDelta) {
     return {kCPU, kDeltaStepBarrier, reachability, delta, 0};
   }
-}
+};
 
 /// Compute the K Shortest Path for pg starting from start_node.
 /// The algorithm and delta stepping

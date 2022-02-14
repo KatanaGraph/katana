@@ -61,7 +61,7 @@ static cll::opt<KssspPlan::Algorithm> algo(
             "Delta stepping with barrier")),
     cll::init(KssspPlan::kDeltaTile));
 
-static cll::opt<AlgoReachability::Algorithm> reachability(
+static cll::opt<KssspPlan::Reachability> reachability(
     "reachability", cll::desc("Choose an algorithm for reachability:"),
     cll::values(
         clEnumVal(KssspPlan::asyncLevel, "async"),

@@ -22,7 +22,7 @@ public:
     syncLevel,
   };
 
-  static const Reachability kDefaultReach = syncLevel
+  static const Reachability kDefaultReach = syncLevel;
   static const int kDefaultDelta = 13;
   static const int kDefaultEdgeTileSize = 512;
 
@@ -62,7 +62,7 @@ public:
   unsigned delta() const { return delta_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
 
-  static KssspPLan DeltaTile(
+  static KssspPlan DeltaTile(
       Reachability reachability = kDefaultReach,
       unsigned delta = kDefaultDelta, 
       ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {

@@ -5,10 +5,12 @@
 #include "../test-rdg.h"
 #include "katana/Experimental.h"
 #include "katana/Logging.h"
+#include "katana/ProgressTracer.h"
 #include "katana/RDG.h"
 #include "katana/RDGManifest.h"
 #include "katana/RDGStorageFormatVersion.h"
 #include "katana/Result.h"
+#include "katana/TextTracer.h"
 #include "katana/URI.h"
 
 namespace fs = boost::filesystem;
@@ -53,6 +55,9 @@ main(int argc, char* argv[]) {
   if (argc <= 2) {
     KATANA_LOG_FATAL("missing rdg file directory");
   }
+  katana::ProgressTracer::Set(katana::TextTracer::Make());
+  katana::ProgressScope host_scope = katana::GetTracer().StartActiveSpan(
+      "unstable-storage-format-version-flag-off test");
 
   // Ensure the feature flag is not set
   KATANA_LOG_ASSERT(!KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat));

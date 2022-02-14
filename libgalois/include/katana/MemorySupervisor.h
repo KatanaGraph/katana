@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include "katana/Cache.h"
 #include "katana/Manager.h"
 #include "katana/MemoryPolicy.h"
 #include "katana/Result.h"
@@ -22,6 +23,8 @@ namespace katana {
 /// Clients are trusted to call the proper functions or the MS will make
 /// bad decisions.
 
+class PropertyManager;
+
 class KATANA_EXPORT MemorySupervisor {
 public:
   MemorySupervisor(const MemorySupervisor&) = delete;
@@ -35,35 +38,32 @@ public:
     return mm_;
   }
 
-  /// Let the MS know about this manager.
-  void Register(Manager* manager);
-
-  /// This manager is defunct.
-  /// \p manager must have zero active and standby memory.
-  void Unregister(Manager* manager);
-
   /// Inform MS of allocation of \p bytes for active memory
   /// Application cannot continue if it does not get memory
-  void BorrowActive(Manager* manager, count_t bytes);
+  void BorrowActive(const std::string& name, count_t bytes);
   /// Request permission to allocate \p bytes for standby memory
   /// Returns the number of bytes granted, possibly 0
-  count_t BorrowStandby(Manager* manager, count_t goal);
+  count_t BorrowStandby(const std::string& name, count_t goal);
 
   /// Notify MS that manager freed \p bytes of active memory.
-  void ReturnActive(Manager* manager, count_t bytes);
+  void ReturnActive(const std::string& name, count_t bytes);
   /// Notify MS that manager freed \p bytes of standby memory.
-  void ReturnStandby(Manager* manager, count_t bytes);
+  void ReturnStandby(const std::string& name, count_t bytes);
 
-  /// Manager \p manager wants to transition \p bytes from active to standby
+  /// Manager \p name wants to transition \p bytes from active to standby
   /// Returns the number of standby bytes allowed by MS, possibly 0.
-  count_t ActiveToStandby(Manager* manager, count_t bytes);
-  /// Manager \p manager transitions \p bytes from standby to active.
+  count_t ActiveToStandby(const std::string& name, count_t bytes);
+  /// Manager \p name transitions \p bytes from standby to active.
   /// Managers are always allowed to transition from standby to active
-  void StandbyToActive(Manager* manager, count_t bytes);
+  void StandbyToActive(const std::string& name, count_t bytes);
 
   /// The MemoryPolicy controls decisions about memory allocation, like how
   /// aggressively to deallocate.
   void SetPolicy(std::unique_ptr<MemoryPolicy> policy);
+
+  /// Provide access to a property manager, which manages the property cache
+  PropertyManager* GetPropertyManager();
+  CacheStats GetPropertyCacheStats() const;
 
   /// Calls sysconf
   static uint64_t GetTotalSystemMemory();
@@ -75,14 +75,13 @@ private:
 
   /// Get managers to free \p goal bytes of standby memory
   void ReclaimMemory(count_t goal);
-  bool CheckRegistered(Manager* manager);
 
   struct ManagerInfo {
-    ManagerInfo() {}
+    std::unique_ptr<Manager> manager_;
     count_t active{};
     count_t standby{};
   };
-  std::unordered_map<Manager*, ManagerInfo> managers_;
+  std::unordered_map<std::string, ManagerInfo> managers_;
 
   count_t Used() { return active_ + standby_; }
   count_t Available() { return physical_ - Used(); }

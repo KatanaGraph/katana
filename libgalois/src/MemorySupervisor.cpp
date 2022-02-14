@@ -2,8 +2,10 @@
 
 #include <fstream>
 
+#include "katana/Cache.h"
 #include "katana/MemoryPolicy.h"
 #include "katana/ProgressTracer.h"
+#include "katana/PropertyManager.h"
 #include "katana/Time.h"
 
 using katana::count_t;
@@ -37,34 +39,41 @@ void
 katana::MemorySupervisor::SanityCheck() {
   count_t manager_active{};
   count_t manager_standby{};
-  bool logit = false;
-  for (auto& [manager, info] : managers_) {
+  for (auto& [name, info] : managers_) {
     manager_active += info.active;
     manager_standby += info.standby;
   }
   if (manager_active != active_ || manager_standby != standby_) {
-    logit = true;
+    LogState(sanity_str, active_, standby_);
+    katana::GetTracer().GetActiveSpan().Log(
+        "active/standby mismatch with manager totals",
+        {
+            {"manager_active", manager_active},
+            {"manager_standby", manager_standby},
+        });
+
     KATANA_LOG_WARN(
         "manager active {} manager standby {}", manager_active,
         manager_standby);
   }
   if (active_ < 0) {
+    LogState(sanity_str, active_, standby_);
     KATANA_LOG_ASSERT(false);
-    logit = true;
   }
   if (standby_ < 0) {
-    KATANA_LOG_ASSERT(false);
-    logit = true;
-  }
-  if (logit) {
     LogState(sanity_str, active_, standby_);
+    KATANA_LOG_ASSERT(false);
   }
 }
 
 katana::MemorySupervisor::MemorySupervisor() {
   physical_ = GetTotalSystemMemory();
-  policy_ = std::make_unique<katana::MemoryPolicyPerformance>(
-      MemoryPolicyPerformance());
+  policy_ = std::make_unique<katana::MemoryPolicyMinimal>();
+  // Memory supervisor creates managers
+  auto pr = std::make_unique<PropertyManager>();
+  const auto& name = pr->Name();
+  managers_[name].manager_ = std::move(pr);
+
   auto& tracer = katana::GetTracer();
   tracer.GetActiveSpan().Log(
       "memory manager",
@@ -93,39 +102,6 @@ katana::MemorySupervisor::ActivePlus(ManagerInfo& info, count_t bytes) {
   active_ += bytes;
 }
 
-bool
-katana::MemorySupervisor::CheckRegistered(Manager* manager) {
-  auto it = managers_.find(manager);
-  if (it == managers_.end()) {
-    KATANA_LOG_WARN(
-        "manager {} is not registered", std::quoted(manager->MemoryCategory()));
-    return false;
-  }
-  return true;
-}
-
-void
-katana::MemorySupervisor::Register(Manager* manager) {
-  managers_[manager] = ManagerInfo();
-}
-
-void
-katana::MemorySupervisor::Unregister(Manager* manager) {
-  if (!CheckRegistered(manager)) {
-    return;
-  }
-  auto& info = managers_.at(manager);
-  if (info.active > 0 || info.standby > 0) {
-    KATANA_LOG_WARN(
-        "Unregister for manager {} with active {} standby {}\n",
-        std::quoted(manager->MemoryCategory()), info.active, info.standby);
-    LogState(unregister_str, active_, standby_);
-  }
-  ActiveMinus(info, info.active);
-  StandbyMinus(info, info.standby);
-  managers_.erase(manager);
-}
-
 void
 katana::MemorySupervisor::ReclaimMemory(count_t goal) {
   if (goal <= 0) {
@@ -133,9 +109,9 @@ katana::MemorySupervisor::ReclaimMemory(count_t goal) {
   }
   count_t reclaimed = 0;
   // TODO(witchel) policies should include reclaim in proportion to current use
-  for (auto& [manager, info] : managers_) {
+  for (auto& [name, info] : managers_) {
     // Manager implementation of FreeStandbyMemory calls MemorySupervisor::ReturnStandby
-    auto got = manager->FreeStandbyMemory(goal - reclaimed);
+    auto got = info.manager_->FreeStandbyMemory(goal - reclaimed);
     reclaimed += got;
     if (reclaimed >= goal) {
       break;
@@ -144,11 +120,14 @@ katana::MemorySupervisor::ReclaimMemory(count_t goal) {
 }
 
 void
-katana::MemorySupervisor::BorrowActive(Manager* manager, count_t bytes) {
-  if (!CheckRegistered(manager)) {
+katana::MemorySupervisor::BorrowActive(const std::string& name, count_t bytes) {
+  auto it = managers_.find(name);
+  if (it == managers_.end()) {
+    KATANA_LOG_WARN("no manager with name {}\n", name);
     return;
   }
-  auto& info = managers_.at(manager);
+  auto& info = it->second;
+
   ActivePlus(info, bytes);
   count_t try_reclaim = policy_->ReclaimForMemoryPressure(active_, standby_);
   ReclaimMemory(try_reclaim);
@@ -158,17 +137,21 @@ katana::MemorySupervisor::BorrowActive(Manager* manager, count_t bytes) {
 }
 
 count_t
-katana::MemorySupervisor::BorrowStandby(Manager* manager, count_t goal) {
-  if (!CheckRegistered(manager)) {
+katana::MemorySupervisor::BorrowStandby(const std::string& name, count_t goal) {
+  auto it = managers_.find(name);
+  if (it == managers_.end()) {
+    KATANA_LOG_WARN("no manager with name {}\n", name);
     return 0;
   }
+  auto& info = it->second;
+
   count_t try_reclaim = policy_->ReclaimForMemoryPressure(active_, standby_);
   ReclaimMemory(try_reclaim);
 
   if (policy_->MemoryPressureHigh(active_, standby_)) {
     return 0;
   }
-  auto& info = managers_.at(manager);
+
   StandbyPlus(info, goal);
 
   KillCheck(policy_.get(), active_, standby_);
@@ -176,11 +159,14 @@ katana::MemorySupervisor::BorrowStandby(Manager* manager, count_t goal) {
 }
 
 void
-katana::MemorySupervisor::ReturnActive(Manager* manager, count_t bytes) {
-  if (!CheckRegistered(manager)) {
+katana::MemorySupervisor::ReturnActive(const std::string& name, count_t bytes) {
+  auto it = managers_.find(name);
+  if (it == managers_.end()) {
+    KATANA_LOG_WARN("no manager with name {}\n", name);
     return;
   }
-  auto& info = managers_.at(manager);
+  auto& info = it->second;
+
   ActiveMinus(info, bytes);
 
   SanityCheck();
@@ -188,11 +174,15 @@ katana::MemorySupervisor::ReturnActive(Manager* manager, count_t bytes) {
 }
 
 void
-katana::MemorySupervisor::ReturnStandby(Manager* manager, count_t bytes) {
-  if (!CheckRegistered(manager)) {
+katana::MemorySupervisor::ReturnStandby(
+    const std::string& name, count_t bytes) {
+  auto it = managers_.find(name);
+  if (it == managers_.end()) {
+    KATANA_LOG_WARN("no manager with name {}\n", name);
     return;
   }
-  auto& info = managers_.at(manager);
+  auto& info = it->second;
+
   StandbyMinus(info, bytes);
 
   SanityCheck();
@@ -200,11 +190,15 @@ katana::MemorySupervisor::ReturnStandby(Manager* manager, count_t bytes) {
 }
 
 count_t
-katana::MemorySupervisor::ActiveToStandby(Manager* manager, count_t bytes) {
-  if (!CheckRegistered(manager)) {
+katana::MemorySupervisor::ActiveToStandby(
+    const std::string& name, count_t bytes) {
+  auto it = managers_.find(name);
+  if (it == managers_.end()) {
+    KATANA_LOG_WARN("no manager with name {}\n", name);
     return 0;
   }
-  auto& info = managers_.at(manager);
+  auto& info = it->second;
+
   ActiveMinus(info, bytes);
   StandbyPlus(info, bytes);
   count_t try_reclaim = policy_->ReclaimForMemoryPressure(active_, standby_);
@@ -222,11 +216,15 @@ katana::MemorySupervisor::ActiveToStandby(Manager* manager, count_t bytes) {
 }
 
 void
-katana::MemorySupervisor::StandbyToActive(Manager* manager, count_t bytes) {
-  if (!CheckRegistered(manager)) {
+katana::MemorySupervisor::StandbyToActive(
+    const std::string& name, count_t bytes) {
+  auto it = managers_.find(name);
+  if (it == managers_.end()) {
+    KATANA_LOG_WARN("no manager with name {}\n", name);
     return;
   }
-  auto& info = managers_.at(manager);
+  auto& info = it->second;
+
   ActivePlus(info, bytes);
   StandbyMinus(info, bytes);
   count_t try_reclaim = policy_->ReclaimForMemoryPressure(active_, standby_);
@@ -239,6 +237,32 @@ katana::MemorySupervisor::StandbyToActive(Manager* manager, count_t bytes) {
 void
 katana::MemorySupervisor::SetPolicy(std::unique_ptr<MemoryPolicy> policy) {
   policy_.swap(policy);
+}
+
+katana::CacheStats
+katana::MemorySupervisor::GetPropertyCacheStats() const {
+  auto name = PropertyManager::name_;
+  auto it = managers_.find(name);
+  if (it == managers_.end()) {
+    KATANA_LOG_WARN("no manager with name {}\n", name);
+    return katana::CacheStats();
+  }
+  const auto& info = it->second;
+  auto* pm = dynamic_cast<PropertyManager*>(info.manager_.get());
+  return pm->GetPropertyCacheStats();
+}
+
+katana::PropertyManager*
+katana::MemorySupervisor::GetPropertyManager() {
+  auto name = PropertyManager::name_;
+  auto it = managers_.find(name);
+  if (it == managers_.end()) {
+    KATANA_LOG_WARN("no manager with name {}\n", name);
+    return nullptr;
+  }
+  const auto& info = it->second;
+  auto* pm = dynamic_cast<PropertyManager*>(info.manager_.get());
+  return pm;
 }
 
 uint64_t

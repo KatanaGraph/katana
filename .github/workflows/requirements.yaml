@@ -6,6 +6,8 @@ on:
       - 'master'
       - 'release/*'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
 
 # Cancel any previous runs with the same key.
 concurrency:

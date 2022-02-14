@@ -1,0 +1,67 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'release/*'
+  pull_request:
+    paths:
+      - 'docs/**'
+
+# Cancel any previous runs with the same key.
+concurrency:
+  # Example key: Repository Structure CI-refs/pull/1381/merge
+  #   or Repository Structure CI-<owner>-<sha> for pushes
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || format('{0}-{1}', github.repository_owner, github.sha) }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-20.04
+        build_type:
+        - Debug
+    steps:
+      - run: 'echo "lint not required" '
+
+  build_and_test:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-20.04
+        build_type:
+        - Debug
+        - Release
+        - Sanitizer
+        cxx:
+        - g++
+        - g++-9
+        - clang++-10
+        - clang++-12
+        # Only build and test the following configurations a subset of
+        # configurations to reduce the total number of concurrent jobs.
+        #
+        # The key "include" exists but only allows for the refinement of an
+        # existing matrix "job" (i.e., point in the product space) by adding
+        # more variables. Fallback to "exclude".
+        exclude:
+            # Ubuntu ({g++-9,clang++-10} [most])
+        - os: ubuntu-20.04
+          build_type: Sanitizer
+          cxx: g++
+        - os: ubuntu-20.04
+          build_type: Sanitizer
+          cxx: g++-9
+        - os: ubuntu-20.04
+          build_type: Debug
+          cxx: clang++-10
+        - os: ubuntu-20.04
+          build_type: Debug
+          cxx: clang++-12
+    steps:
+      - run: 'echo "build_and_test not required" '

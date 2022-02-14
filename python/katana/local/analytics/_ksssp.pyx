@@ -234,7 +234,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     :type num_paths: int
     :param num_paths: Number of paths to look for
     :type is_symmetric: bool
-    :param is_symmetric: Whether or not the path is symmetric. Defaults to false.
+    :param is_symmetric: Whether or not the graph is symmetric. Defaults to false.
     :type algo_reachability: AlgoReachability
     :param algo_reachability: The algorithm to calcualte if path is reachable. Default is syncLevel
     :type plan: KssspPlan

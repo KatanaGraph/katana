@@ -538,7 +538,6 @@ SSSPWithWrap(
   if (!graph) {
     return graph.error();
   }
-
   return Sssp(graph.value(), start_node, plan);
 }
 
@@ -550,6 +549,25 @@ katana::analytics::Sssp(
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     SsspPlan plan) {
+  if (!edge_weight_property_name.empty() &&
+      !pg->HasEdgeProperty(edge_weight_property_name)) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "Edge Property: {} Not found",
+        edge_weight_property_name);
+  }
+  // If edge property name empty, add int64_t property
+  // add initialize it to 1.
+  if (edge_weight_property_name.empty()) {
+    TemporaryPropertyGuard temporary_edge_property{
+        pg->EdgeMutablePropertyView()};
+    using EdgeWeightType = int64_t;
+    KATANA_CHECKED(katana::analytics::AddDefaultEdgeWeight<EdgeWeightType>(
+        pg, temporary_edge_property.name(), 1, txn_ctx));
+
+    return SSSPWithWrap<EdgeWeightType>(
+        pg, start_node, temporary_edge_property.name(), output_property_name,
+        plan, txn_ctx);
+  }
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()
               ->id()) {
@@ -626,7 +644,26 @@ katana::Result<void>
 katana::analytics::SsspAssertValid(
     katana::PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
-    const std::string& output_property_name) {
+    const std::string& output_property_name, katana::TxnContext* txn_ctx) {
+  if (!edge_weight_property_name.empty() &&
+      !pg->HasEdgeProperty(edge_weight_property_name)) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "Edge Property: {} Not found",
+        edge_weight_property_name);
+  }
+  // If edge property name empty, add int64_t property
+  // add initialize it to 1.
+  if (edge_weight_property_name.empty()) {
+    TemporaryPropertyGuard temporary_edge_property{
+        pg->EdgeMutablePropertyView()};
+    using EdgeWeightType = int64_t;
+    KATANA_CHECKED(katana::analytics::AddDefaultEdgeWeight<EdgeWeightType>(
+        pg, temporary_edge_property.name(), 1, txn_ctx));
+
+    return SsspValidateImpl<EdgeWeightType>(
+        pg, start_node, temporary_edge_property.name(), output_property_name);
+  }
+
   switch (
       KATANA_CHECKED(pg->GetNodeProperty(output_property_name))->type()->id()) {
   case arrow::UInt32Type::type_id:

@@ -295,35 +295,6 @@ PrintPath(const Path* path) {
 }
 
 /**
- * Adds edge weights if there are none
- *
- * @param pg property graph
- * @param edge_weight_property_name edge weights
- */
-template <typename EdgeWeightType>
-static katana::Result<void>
-AddDefaultEdgeWeight(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    katana::TxnContext* txn_ctx) {
-  using EdgeData = std::tuple<EdgeWeightType>;
-
-  if (auto res = pg->ConstructEdgeProperties<EdgeData>(
-          txn_ctx, {edge_weight_property_name});
-      !res) {
-    return res.error();
-  }
-
-  auto typed_graph =
-      KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
-          pg, {}, {edge_weight_property_name})));
-  katana::do_all(
-      katana::iterate(typed_graph.OutEdges()),
-      [&](auto e) { typed_graph.template GetEdgeData<EdgeWeightType>(e) = 1; },
-      katana::steal(), katana::loopname("InitEdgeWeight"));
-  return katana::ResultSuccess();
-}
-
-/**
  * Sets up and runs implementation of ksssp
  *
  * @param graph typed graph
@@ -538,9 +509,9 @@ katana::analytics::Ksssp(
   if (edge_weight_property_name.empty()) {
     TemporaryPropertyGuard temporary_edge_property{
         pg->EdgeMutablePropertyView()};
-    struct EdgeWt : public katana::PODProperty<int64_t> {};
-    KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
-        pg, temporary_edge_property.name(), txn_ctx));
+    using EdgeWeightType = int64_t;
+    KATANA_CHECKED(katana::analytics::AddDefaultEdgeWeight<EdgeWeightType>(
+        pg, temporary_edge_property.name(), 1, txn_ctx));
     return kSSSPWithWrap<int64_t>(
         pg, temporary_edge_property.name(), start_node, report_node, num_paths,
         is_symmetric, txn_ctx, plan);

@@ -82,7 +82,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
         const string& edge_weight_property_name, const string& output_property_name, CTxnContext* txn_ctx, _SsspPlan plan)
 
     Result[void] SsspAssertValid(_PropertyGraph* pg, size_t start_node,
-                                 const string& edge_weight_property_name, const string& output_property_name);
+                                 const string& edge_weight_property_name, const string& output_property_name, CTxnContext* txn_ctx);
 
     cppclass _SsspStatistics  "katana::analytics::SsspStatistics":
         uint64_t n_reached_nodes
@@ -284,7 +284,7 @@ def sssp(pg, size_t start_node, str edge_weight_property_name, str output_proper
         handle_result_void(Sssp(underlying_property_graph(pg), start_node, edge_weight_property_name_str,
                                 output_property_name_str, underlying_txn_context(txn_ctx), plan.underlying_))
 
-def sssp_assert_valid(pg, size_t start_node, str edge_weight_property_name, str output_property_name):
+def sssp_assert_valid(pg, size_t start_node, str edge_weight_property_name, str output_property_name, txn_ctx = None):
     """
     Raise an exception if the SSSP results in `pg` with the given parameters appear to be incorrect. This is not an
     exhaustive check, just a sanity check.
@@ -294,7 +294,7 @@ def sssp_assert_valid(pg, size_t start_node, str edge_weight_property_name, str 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_assert(SsspAssertValid(underlying_property_graph(pg), start_node, edge_weight_property_name_str, output_property_name_str))
+        handle_result_assert(SsspAssertValid(underlying_property_graph(pg), start_node, edge_weight_property_name_str, output_property_name_str, underlying_txn_context(txn_ctx)))
 
 
 cdef _SsspStatistics handle_result_SsspStatistics(Result[_SsspStatistics] res) nogil except *:

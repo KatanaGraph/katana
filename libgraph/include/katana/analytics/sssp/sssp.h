@@ -130,7 +130,7 @@ KATANA_EXPORT Result<void> Sssp(
 KATANA_EXPORT Result<void> SsspAssertValid(
     PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
-    const std::string& output_property_name);
+    const std::string& output_property_name, katana::TxnContext* txn_ctx);
 
 struct KATANA_EXPORT SsspStatistics {
   /// The number of nodes reachable from the source node.

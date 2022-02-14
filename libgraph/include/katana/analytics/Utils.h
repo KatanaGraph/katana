@@ -9,8 +9,8 @@
 
 #include "arrow/util/bitmap.h"
 #include "katana/ErrorCode.h"
+#include "katana/PropertyGraph.h"
 #include "katana/Result.h"
-#include "katana/TransformationView.h"
 
 namespace katana::analytics {
 

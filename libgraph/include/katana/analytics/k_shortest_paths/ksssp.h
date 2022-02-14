@@ -37,7 +37,7 @@ private:
   ptrdiff_t edge_tile_size_;
 
   KssspPlan(
-      Architecture architecture, Algoirthm algorithm, Reachability reachability, 
+      Architecture architecture, Algorithm algorithm, Reachability reachability, 
       unsigned delta, ptrdiff_t edge_tile_size)
       : Plan(architecture), 
         algorithm_(algorithm), 
@@ -51,9 +51,9 @@ public:
   KssspPlan(const katana::PropertyGraph* pg) : Plan(kCPU) {
     bool isPowerLaw = IsApproximateDegreeDistributionPowerLaw(*pg);
     if (isPowerLaw) {
-      *this = DeltaStepSync();
+      *this = DeltaStep();
     } else {
-      *this = DeltaStepBarrierSync();
+      *this = DeltaStepBarrier();
     }
   }
 
@@ -71,13 +71,13 @@ public:
     return {kCPU, kDeltaTile, reachability, delta, edge_tile_size}
   }
 
-  static SsspPlan DeltaStep(
+  static KssspPlan DeltaStep(
       Reachability reachability = kDefaultReach,
       unsigned delta = kDefaultDelta) {
     return {kCPU, kDeltaStep, reachability, delta, 0};
   }
 
-  static SsspPlan DeltaStepBarrier(
+  static KssspPlan DeltaStepBarrier(
       Reachability reachability = kDefaultReach,
       unsigned delta = kDefaultDelta) {
     return {kCPU, kDeltaStepBarrier, reachability, delta, 0};

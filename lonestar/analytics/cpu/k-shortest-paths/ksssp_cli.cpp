@@ -51,22 +51,22 @@ static cll::opt<uint32_t> numPaths(
               "value 1)"),
     cll::init(1));
 
-static cll::opt<kSsspPlan::Algorithm> algo(
-    "algo", cll::desc("Choose an algorithm (default value auto):"),
+static cll::opt<KssspPlan::Algorithm> algo(
+    "algo", cll::desc("Choose an algorithm (default value kDeltaStep):"),
     cll::values(
-        clEnumValN(kSsspPlan::kDeltaTile, "DeltaTile", "Delta stepping tiled"),
-        clEnumValN(kSsspPlan::kDeltaStep, "DeltaStep", "Delta stepping"),
+        clEnumValN(KssspPlan::kDeltaTile, "DeltaTile", "Delta stepping tiled"),
+        clEnumValN(KssspPlan::kDeltaStep, "DeltaStep", "Delta stepping"),
         clEnumValN(
-            kSsspPlan::kDeltaStepBarrier, "DeltaStepBarrier",
+            KssspPlan::kDeltaStepBarrier, "DeltaStepBarrier",
             "Delta stepping with barrier")),
-    cll::init(kSsspPlan::kDeltaTile));
+    cll::init(KssspPlan::kDeltaTile));
 
-static cll::opt<AlgoReachability::Algorithm> algoReachability(
-    "algoReachability", cll::desc("Choose an algorithm for reachability:"),
+static cll::opt<AlgoReachability::Algorithm> reachability(
+    "reachability", cll::desc("Choose an algorithm for reachability:"),
     cll::values(
-        clEnumVal(AlgoReachability::asyncLevel, "async"),
-        clEnumVal(AlgoReachability::syncLevel, "syncLevel")),
-    cll::init(AlgoReachability::syncLevel));
+        clEnumVal(KssspPlan::asyncLevel, "async"),
+        clEnumVal(KssspPlan::syncLevel, "syncLevel")),
+    cll::init(KssspPlan::syncLevel));
 
 static cll::opt<bool> thread_spin(
     "threadSpin",
@@ -75,13 +75,13 @@ static cll::opt<bool> thread_spin(
     cll::init(false));
 
 std::string
-AlgorithmName(kSsspPlan::Algorithm algorithm) {
+AlgorithmName(KssspPlan::Algorithm algorithm) {
   switch (algorithm) {
-  case kSsspPlan::kDeltaTile:
+  case KssspPlan::kDeltaTile:
     return "DeltaTile";
-  case kSsspPlan::kDeltaStep:
+  case KssspPlan::kDeltaStep:
     return "DeltaStep";
-  case kSsspPlan::kDeltaStepBarrier:
+  case KssspPlan::kDeltaStepBarrier:
     return "DeltaStepBarrier";
   default:
     return "Unknown";
@@ -122,7 +122,7 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  if (algo == kSsspPlan::kDeltaStep || algo == kSsspPlan::kDeltaTile) {
+  if (algo == KssspPlan::kDeltaStep || algo == KssspPlan::kDeltaTile) {
     katana::gInfo("Using delta-step of ", (1 << stepShift), "\n");
     KATANA_LOG_WARN(
         "Performance varies considerably due to delta parameter.\n");
@@ -131,31 +131,23 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
-  kSsspPlan plan;
+  if (reachability != KssspPlan::asyncLevel || reachability != KssspPlan::syncLevel) {
+    KATANA_LOG_FATAL("Invalid reachability algorithm selected");
+  }
+
+  KssspPlan plan;
   switch (algo) {
-  case kSsspPlan::kDeltaTile:
-    plan = kSsspPlan::DeltaTile(stepShift);
+  case KssspPlan::kDeltaTile:
+    plan = KssspPlan::DeltaTile(reachability, stepShift);
     break;
-  case kSsspPlan::kDeltaStep:
-    plan = kSsspPlan::DeltaStep(stepShift);
+  case KssspPlan::kDeltaStep:
+    plan = KssspPlan::DeltaStep(reachability, stepShift);
     break;
-  case kSsspPlan::kDeltaStepBarrier:
-    plan = kSsspPlan::DeltaStepBarrier(stepShift);
+  case KssspPlan::kDeltaStepBarrier:
+    plan = KssspPlan::DeltaBarrier(reachability, stepShift);
     break;
   default:
     KATANA_LOG_FATAL("Invalid algorithm selected");
-  }
-
-  AlgoReachability reachability;
-  switch (algoReachability) {
-  case AlgoReachability::asyncLevel:
-    reachability = AlgoReachability::AsyncLevel();
-    break;
-  case AlgoReachability::syncLevel:
-    reachability = AlgoReachability::SyncLevel();
-    break;
-  default:
-    KATANA_LOG_FATAL("Invalid reachability algorithm selected");
   }
 
   if (startNode >= pg->topology().size() ||

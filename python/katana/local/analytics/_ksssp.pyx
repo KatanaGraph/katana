@@ -23,49 +23,40 @@ from katana.local._graph cimport underlying_property_graph, underlying_txn_conte
 from katana.local.analytics.plan cimport Plan, _Plan
 
 
-cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" nogil:
-    cppclass _KssspPlan "katana::analytics::SsspPlan" (_Plan):
+cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::analytics" nogil:
+    cppclass _KssspPlan "katana::analytics::KssspPlan" (_Plan):
         enum Algorithm:
-            kDeltaTile "katana::analytics::SsspPlan::kDeltaTile"
-            kDeltaStep "katana::analytics::SsspPlan::kDeltaStep"
-            kDeltaStepBarrier "katana::analytics::SsspPlan::kDeltaStepBarrier"
+            kDeltaTile "katana::analytics::KssspPlan::kDeltaTile"
+            kDeltaStep "katana::analytics::KssspPlan::kDeltaStep"
+            kDeltaStepBarrier "katana::analytics::KssspPlan::kDeltaStepBarrier"
+
+        enum Reachability:
+            asyncLevel "katana::analytics::KssspPlan::asyncLevel"
+            syncLevel "katana::analytics::KssspPlan::syncLevel"
 
         _KssspPlan()
         _KssspPlan(const _PropertyGraph * pg)
 
         _KssspPlan.Algorithm algorithm() const
+        _KssspPlan.Reachability reachability() const
         unsigned delta() const
         ptrdiff_t edge_tile_size() const
 
         @staticmethod
-        _KssspPlan DeltaTile(unsigned delta, ptrdiff_t edge_tile_size)
+        _KssspPlan DeltaTile(_KssspPlan.reachability reachability, unsigned delta, ptrdiff_t edge_tile_size)
         @staticmethod
-        _KssspPlan DeltaStep(unsigned delta)
+        _KssspPlan DeltaStep(_KssspPlan.reachability reachability, unsigned delta)
         @staticmethod
-        _KssspPlan DeltaStepBarrier(unsigned delta)
+        _KssspPlan DeltaStepBarrier(_KssspPlan.reachability reachability, unsigned delta)
 
-    unsigned kDefaultDelta "katana::analytics::SsspPlan::kDefaultDelta"
-    ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
-
-cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::analytics" nogil:
-    cppclass _AlgoReachability "katana::analytics::AlgoReachability":
-        enum Algorithm:
-            asyncLevel "katana::analytics::AlgoReachability::asyncLevel"
-            syncLevel "katana::analytics::AlgoReachability::syncLevel"
-
-        _AlgoReachability()
-
-        _AlgoReachability.Algorithm algorithm() const
-
-        @staticmethod
-        _AlgoReachability AsyncLevel()
-        @staticmethod
-        _AlgoReachability SyncLevel()
+    _KssspPlan.Reachability kDefaultReach "katana::analytics:KssspPlan::kDefaultReach"
+    unsigned kDefaultDelta "katana::analytics::KssspPlan::kDefaultDelta"
+    ptrdiff_t kDefaultEdgeTileSize "katana::analytics::KssspPlan::kDefaultEdgeTileSize"
 
     Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name,
                        size_t start_node, size_t report_node, size_t num_paths,
                        const bool& is_symmetric, CTxnContext* txn_ctx,
-                       _AlgoReachability algo_reachability, _KssspPlan plan)
+                       _KssspPlan plan)
 
 class _KssspAlgorithm(Enum):
     """
@@ -75,6 +66,14 @@ class _KssspAlgorithm(Enum):
     DeltaTile = _KssspPlan.Algorithm.kDeltaTile
     DeltaStep = _KssspPlan.Algorithm.kDeltaStep
     DeltaStepBarrier = _KssspPlan.Algorithm.kDeltaStepBarrier
+
+class _KssspReachability(Enum):
+    """
+    The algorithms to check reachability for kSSSP
+    :see: :py:class: `~katana.local.analytics.AlgoReachability` constructors for algorithm documentation.
+    """
+    AsyncLevel = _KssspPlan.Reachability.asyncLevel
+    SyncLevel = _KssspPlan.Reachability.syncLevel
 
 cdef class KssspPlan(Plan):
     """
@@ -105,6 +104,7 @@ cdef class KssspPlan(Plan):
             self.underlying_ = _KssspPlan(underlying_property_graph(graph))
 
     Algorithm = _KssspAlgorithm
+    Reachability = _KssspReachability
 
     @property
     def algorithm(self) -> _KssspAlgorithm:
@@ -112,6 +112,14 @@ cdef class KssspPlan(Plan):
         The selected algorithm.
         """
         return _KssspAlgorithm(self.underlying_.algorithm())
+
+    @property
+    def reachability(self) -> _KssspReachability:
+        """
+        The selected reachability method
+        """
+        return _KssspReachability(self.underlying_.reachability())
+
     @property
     def delta(self) -> int:
         """
@@ -132,94 +140,31 @@ cdef class KssspPlan(Plan):
         super(KssspPlan, self).__init__()
 
     @staticmethod
-    def delta_tile(unsigned delta = kDefaultDelta, ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) -> KssspPlan:
+    def delta_tile(_KssspReachability reachability = KDefaultReach, unsigned delta = kDefaultDelta, 
+                   ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) -> KssspPlan:
         """
         Delta stepping tiled
         """
-        return KssspPlan.make(_KssspPlan.DeltaTile(delta, edge_tile_size))
+        return KssspPlan.make(_KssspPlan.DeltaTile(reachability, delta, edge_tile_size))
 
     @staticmethod
-    def delta_step(unsigned delta = kDefaultDelta) -> KssspPlan:
+    def delta_step(_KssspReachability reachability = KDefaultReach, unsigned delta = kDefaultDelta) -> KssspPlan:
         """
         Delta stepping (non-tiled)
         """
-        return KssspPlan.make(_KssspPlan.DeltaStep(delta))
+        return KssspPlan.make(_KssspPlan.DeltaStep(reachability, delta))
 
     @staticmethod
-    def delta_step_barrier(unsigned delta = kDefaultDelta) -> KssspPlan:
+    def delta_step_barrier(_KssspReachability reachability = KDefaultReach, unsigned delta = kDefaultDelta) -> KssspPlan:
         """
         Delta stepping with barrier
         """
-        return KssspPlan.make(_KssspPlan.DeltaStepBarrier(delta))
-
-
-class _KssspAlgorithmReachability(Enum):
-    """
-    The algorithms to check reachability for kSSSP
-    :see: :py:class: `~katana.local.analytics.AlgoReachability` constructors for algorithm documentation.
-    """
-    AsyncLevel = _AlgoReachability.Algorithm.asyncLevel
-    SyncLevel = _AlgoReachability.Algorithm.syncLevel
-
-
-cdef class AlgoReachability:
-    """
-    The algorithms available to check reachability between two nodes
-    Static method construct AlgoReachability using specific algorithms.
-    """
-
-    cdef:
-        _AlgoReachability underlying_
-
-    cdef _AlgoReachability* underlying(self) except NULL:
-        return &self.underlying_
-
-    @staticmethod
-    cdef AlgoReachability make(_AlgoReachability u):
-        f = <AlgoReachability>AlgoReachability.__new__(AlgoReachability)
-        f.underlying_ = u
-        return f
-
-    def __init__(self):
-        """
-        Construct AlgoReachability using default parameters
-        """
-        self.underlying_ = _AlgoReachability()
-
-    Algorithm = _KssspAlgorithmReachability
-
-    @property
-    def algorithm(self) -> _KssspAlgorithmReachability:
-        """
-        The selected algorithm.
-        """
-        return _KssspAlgorithmReachability(self.underlying_.algorithm())
-
-    def __init__(self):
-        """
-        Choose an algorithm
-        """
-        super(AlgoReachability, self).__init__()
-
-    @staticmethod
-    def async_level() -> AlgoReachability:
-        """
-        Asynchronous level reachability
-        """
-        return AlgoReachability.make(_AlgoReachability.AsyncLevel())
-
-    @staticmethod
-    def sync_level() -> AlgoReachability:
-        """
-        Synchronous level reachability
-        """
-        return AlgoReachability.make(_AlgoReachability.SyncLevel())
+        return KssspPlan.make(_KssspPlan.DeltaStepBarrier(reachability, delta))
 
 
 def ksssp(pg, str edge_weight_property_name, size_t start_node,
           size_t report_node, size_t num_paths, bool is_symmetric=False,
-          AlgoReachability algo_reachability = AlgoReachability(),
-          KssspPlan plan = KssspPlan().delta_tile(), *, txn_ctx = None):
+          KssspPlan plan = KssspPlan(), *, txn_ctx = None):
     """
     Compute the K-Shortest Path on `pg` using `start_node` as source.
 
@@ -235,8 +180,6 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     :param num_paths: Number of paths to look for
     :type is_symmetric: bool
     :param is_symmetric: Whether or not the graph is symmetric. Defaults to false.
-    :type algo_reachability: AlgoReachability
-    :param algo_reachability: The algorithm to calcualte if path is reachable. Default is syncLevel
     :type plan: KssspPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
     :param txn_ctx: The transaction context for passing read write sets
@@ -263,5 +206,4 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     with nogil:
         handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
                                  start_node, report_node, num_paths, is_symmetric,
-                                 underlying_txn_context(txn_ctx), algo_reachability.underlying_,
-                                 plan.underlying_))
+                                 underlying_txn_context(txn_ctx), plan.underlying_))

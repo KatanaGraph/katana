@@ -75,7 +75,7 @@ main(int argc, char** argv) {
     katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
   }
 
-  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+  auto pg_projected_view = katana::PropertyGraph::MakeProjectedGraph(
       *pg.get(), vec_node_types, vec_edge_types);
 
   std::cout << "Projected graph has: "

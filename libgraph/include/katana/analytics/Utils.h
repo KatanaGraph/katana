@@ -11,6 +11,7 @@
 #include "katana/ErrorCode.h"
 #include "katana/PropertyGraph.h"
 #include "katana/Result.h"
+#include "katana/TypedPropertyGraph.h"
 
 namespace katana::analytics {
 
@@ -112,6 +113,32 @@ public:
 
 KATANA_EXPORT void SplitStringByComma(
     std::string& str, std::vector<std::string>* vec);
-}  // namespace katana::analytics
 
+template <typename EdgeWeightType>
+static katana::Result<void>
+AddDefaultEdgeWeight(
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const EdgeWeightType& default_val, katana::TxnContext* txn_ctx) {
+  struct EdgeWt : public katana::PODProperty<EdgeWeightType> {};
+  using EdgeData = std::tuple<EdgeWt>;
+
+  if (auto res = pg->ConstructEdgeProperties<EdgeData>(
+          txn_ctx, {edge_weight_property_name});
+      !res) {
+    return res.error();
+  }
+
+  auto typed_graph =
+      KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
+          pg, {}, {edge_weight_property_name})));
+  katana::do_all(
+      katana::iterate(typed_graph.OutEdges()),
+      [&](auto e) {
+        typed_graph.template GetEdgeData<EdgeWt>(e) = default_val;
+      },
+      katana::steal(), katana::loopname("SetDefaultWeight"));
+  return katana::ResultSuccess();
+
+}  // namespace katana::analytics
+}  // namespace katana::analytics
 #endif

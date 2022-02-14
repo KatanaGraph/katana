@@ -80,7 +80,7 @@ katana::GraphTopology::Copy(const GraphTopology& that) noexcept {
   return katana::GraphTopology(
       that.adj_indices_.data(), that.adj_indices_.size(), that.dests_.data(),
       that.dests_.size(), that.edge_prop_indices_.data(),
-      that.edge_prop_indices_.data());
+      that.node_prop_indices_.data());
 }
 
 katana::GraphTopology::PropertyIndex
@@ -122,12 +122,14 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
 
   AdjIndexVec out_indices;
   EdgeDestVec out_dests;
-  PropIndexVec edge_prop_indices;
   AdjIndexVec out_dests_offset;
+  PropIndexVec edge_prop_indices;
+  PropIndexVec node_prop_indices;
 
   out_indices.allocateInterleaved(topology.NumNodes());
   out_dests.allocateInterleaved(topology.NumEdges());
   edge_prop_indices.allocateInterleaved(topology.NumEdges());
+
   out_dests_offset.allocateInterleaved(topology.NumNodes());
 
   katana::ParallelSTL::fill(out_indices.begin(), out_indices.end(), Edge{0});
@@ -178,13 +180,19 @@ katana::EdgeShuffleTopology::MakeTransposeCopy(
       },
       katana::steal(), katana::no_stats());
 
+  // Node property indexes do not change for EdgeShuffleTopology.
+  const PropertyIndex* from = topology.node_prop_indices_.data();
+  if (from) {
+    node_prop_indices.allocateInterleaved(topology.NumNodes());
+    katana::ParallelSTL::copy(
+        &from[0], &from[topology.NumNodes()], node_prop_indices.begin());
+  }
+
   return std::make_shared<EdgeShuffleTopology>(EdgeShuffleTopology{
       katana::RDGTopology::TransposeKind::kYes,
-      katana::RDGTopology::EdgeSortKind::kAny,
-      std::move(out_indices),
-      std::move(out_dests),
-      std::move(edge_prop_indices),
-      {}});
+      katana::RDGTopology::EdgeSortKind::kAny, std::move(out_indices),
+      std::move(out_dests), std::move(edge_prop_indices),
+      std::move(node_prop_indices)});
 }
 
 std::shared_ptr<katana::EdgeShuffleTopology>

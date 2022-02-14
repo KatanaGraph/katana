@@ -630,29 +630,6 @@ public:
 
 template <typename EdgeWeightType>
 static katana::Result<void>
-AddDefaultEdgeWeight(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
-    katana::TxnContext* txn_ctx) {
-  using EdgeData = std::tuple<EdgeWeightType>;
-
-  if (auto res = pg->ConstructEdgeProperties<EdgeData>(
-          txn_ctx, {edge_weight_property_name});
-      !res) {
-    return res.error();
-  }
-
-  auto typed_graph =
-      KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
-          pg, {}, {edge_weight_property_name})));
-  katana::do_all(
-      katana::iterate(typed_graph.OutEdges()),
-      [&](auto e) { typed_graph.template GetEdgeData<EdgeWeightType>(e) = 1; },
-      katana::steal(), katana::loopname("InitEdgeWeight"));
-  return katana::ResultSuccess();
-}
-
-template <typename EdgeWeightType>
-static katana::Result<void>
 LeidenClusteringWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& output_property_name, const bool& is_symmetric,
@@ -740,9 +717,11 @@ katana::analytics::LeidenClustering(
   if (edge_weight_property_name.empty()) {
     TemporaryPropertyGuard temporary_edge_property{
         pg->EdgeMutablePropertyView()};
-    struct EdgeWt : public katana::PODProperty<int64_t> {};
-    KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
-        pg, temporary_edge_property.name(), txn_ctx));
+
+    using EdgeWeightType = int64_t;
+    KATANA_CHECKED(katana::analytics::AddDefaultEdgeWeight<EdgeWeightType>(
+        pg, temporary_edge_property.name(), 1, txn_ctx));
+
     return LeidenClusteringWithWrap<int64_t>(
         pg, temporary_edge_property.name(), output_property_name, is_symmetric,
         plan, txn_ctx);
@@ -915,9 +894,10 @@ katana::analytics::LeidenClusteringStatistics::Compute(
   if (edge_weight_property_name.empty()) {
     TemporaryPropertyGuard temporary_edge_property{
         pg->EdgeMutablePropertyView()};
-    struct EdgeWt : public katana::PODProperty<int64_t> {};
-    KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
-        pg, temporary_edge_property.name(), txn_ctx));
+
+    using EdgeWeightType = int64_t;
+    KATANA_CHECKED(katana::analytics::AddDefaultEdgeWeight<EdgeWeightType>(
+        pg, temporary_edge_property.name(), 1, txn_ctx));
 
     auto modularity_result = CalModularityWrap<int64_t>(
         pg, temporary_edge_property.name(), property_name);

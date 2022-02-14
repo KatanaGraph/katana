@@ -177,7 +177,7 @@ main(int argc, char** argv) {
     katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
   }
 
-  auto pg_projected_view = katana::TransformationView::MakeProjectedGraph(
+  auto pg_projected_view = katana::PropertyGraph::MakeProjectedGraph(
       *pg.get(), vec_node_types, vec_edge_types);
 
   std::cout << "Projected graph has: "
@@ -268,6 +268,7 @@ main(int argc, char** argv) {
     if (!pg_result) {
       KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
     }
+    std::cout << "---------------> sssp done\n";
 
     auto stats_result =
         SsspStatistics::Compute(pg_projected_view.get(), node_distance_prop);
@@ -276,6 +277,7 @@ main(int argc, char** argv) {
     }
     auto stats = stats_result.value();
     stats.Print();
+    std::cout << "---------------> sssp statistics done\n";
 
     if (!skipVerify) {
       if (stats.n_reached_nodes < pg_projected_view->topology().NumNodes()) {
@@ -286,7 +288,7 @@ main(int argc, char** argv) {
       }
       if (auto r = SsspAssertValid(
               pg_projected_view.get(), startNode, edge_property_name,
-              node_distance_prop);
+              node_distance_prop, &txn_ctx);
           r) {
         std::cout << "Verification successful.\n";
       } else {

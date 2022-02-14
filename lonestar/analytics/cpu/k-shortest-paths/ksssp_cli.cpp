@@ -131,7 +131,7 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
-  if (reachability != KssspPlan::asyncLevel || reachability != KssspPlan::syncLevel) {
+  if (reachability != KssspPlan::asyncLevel && reachability != KssspPlan::syncLevel) {
     KATANA_LOG_FATAL("Invalid reachability algorithm selected");
   }
 

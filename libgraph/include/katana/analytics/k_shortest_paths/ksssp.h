@@ -1,7 +1,9 @@
 #ifndef KATANA_LIBGRAPH_KATANA_ANALYTICS_KSHORTESTPATHS_KSSSP_H_
 #define KATANA_LIBGRAPH_KATANA_ANALYTICS_KSHORTESTPATHS_KSSSP_H_
 
+#include "katana/AtomicHelpers.h"
 #include "katana/analytics/Plan.h"
+#include "katana/analytics/Utils.h"
 
 namespace katana::analytics {
 

@@ -43,11 +43,11 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
         ptrdiff_t edge_tile_size() const
 
         @staticmethod
-        _KssspPlan DeltaTile(_KssspPlan.reachability reachability, unsigned delta, ptrdiff_t edge_tile_size)
+        _KssspPlan DeltaTile(_KssspPlan.Reachability reachability, unsigned delta, ptrdiff_t edge_tile_size)
         @staticmethod
-        _KssspPlan DeltaStep(_KssspPlan.reachability reachability, unsigned delta)
+        _KssspPlan DeltaStep(_KssspPlan.Reachability reachability, unsigned delta)
         @staticmethod
-        _KssspPlan DeltaStepBarrier(_KssspPlan.reachability reachability, unsigned delta)
+        _KssspPlan DeltaStepBarrier(_KssspPlan.Reachability reachability, unsigned delta)
 
     _KssspPlan.Reachability kDefaultReach "katana::analytics:KssspPlan::kDefaultReach"
     unsigned kDefaultDelta "katana::analytics::KssspPlan::kDefaultDelta"

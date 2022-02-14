@@ -41,7 +41,15 @@ set(KATANA_USE_JEMALLOC OFF CACHE BOOL "Use jemalloc")
 set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
-set(BUILD_TESTING ON CACHE BOOL "Build tests")
+set(BUILD_TESTING ON CACHE BOOL "Build/run tests")
+
+if (BUILD_TESTING)
+  set(KATANA_LANG_TESTING_DEFAULT "cpp;python")
+else()
+  set(KATANA_LANG_TESTING_DEFAULT "")
+endif()
+set(KATANA_LANG_TESTING "${KATANA_LANG_TESTING_DEFAULT}" CACHE STRING "Semi-colon separated list of languages to test. Default: cpp;python if BUILD_TESTING, none otherwise")
+
 set(BUILD_DOCS "" CACHE STRING "Build documentation with make doc. Supported values: <unset>, external, internal. external docs hide '*-draft*' and '*-internal* documentation pages and directories when building documentation")
 # Set here to override the cmake default of "/usr/local" because
 # "/usr/local/lib" is not a default search location for ld.so
@@ -67,6 +75,19 @@ set(KATANA_NUM_DOC_THREADS "" CACHE STRING "Maximum number of threads to use whe
 set(KATANA_USE_DEPRECATED_ERROR OFF CACHE BOOL "If set, when treating warnings as errors also treat deprecated declarations as errors")
 
 ###### Configure (users don't need to go beyond here) ######
+
+if (BUILD_TESTING AND KATANA_LANG_TESTING STREQUAL "")
+  message(FATAL_ERROR "BUILD_TESTING (${BUILD_TESTING}) and KATANA_LANG_TESTING (${KATANA_LANG_TESTING}) disagree. "
+          "If BUILD_TESTING is enabled at least one language must be included in KATANA_LANG_TESTING.")
+endif()
+if (NOT BUILD_TESTING AND NOT (KATANA_LANG_TESTING STREQUAL ""))
+  message(WARNING "BUILD_TESTING is disabled (${BUILD_TESTING}) so KATANA_LANG_TESTING (${KATANA_LANG_TESTING}) is ignored.")
+endif()
+if (NOT BUILD_TESTING)
+  set(KATANA_LANG_TESTING "")
+endif()
+
+message(STATUS "Testing for languages: ${KATANA_LANG_TESTING}")
 
 # Without these, build tree shared libraries are not used on a machine where Katana is already installed
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--disable-new-dtags")
@@ -367,7 +388,7 @@ else()
 endif()
 
 # Testing-only dependencies
-if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND cpp IN_LIST KATANA_LANG_TESTING)
   find_package(benchmark REQUIRED)
 endif ()
 

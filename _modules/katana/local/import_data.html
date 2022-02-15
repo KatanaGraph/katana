@@ -177,7 +177,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+202.0.06b8b8 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+203.0.e0bc6d variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -487,7 +487,8 @@ function checkPageExistsAndRedirect(event) {
 <span class="kn">import</span> <span class="nn">numba</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">katana.local_native</span> <span class="kn">import</span> <span class="n">Graph</span><span class="p">,</span> <span class="n">TxnContext</span><span class="p">,</span> <span class="n">from_csr</span><span class="p">,</span> <span class="n">from_graphml_native</span>
+<span class="kn">from</span> <span class="nn">katana.local</span> <span class="kn">import</span> <span class="n">EntityTypeArray</span>
+<span class="kn">from</span> <span class="nn">katana.local_native</span> <span class="kn">import</span> <span class="n">Graph</span><span class="p">,</span> <span class="n">TxnContext</span><span class="p">,</span> <span class="n">_from_csr_and_raw_types</span><span class="p">,</span> <span class="n">from_csr</span><span class="p">,</span> <span class="n">from_graphml_native</span>
 <span class="kn">from</span> <span class="nn">katana.native_interfacing.buffer_access</span> <span class="kn">import</span> <span class="n">to_numpy</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
@@ -526,7 +527,7 @@ function checkPageExistsAndRedirect(event) {
 
 
 <span class="nd">@numba</span><span class="o">.</span><span class="n">njit</span><span class="p">()</span>
-<span class="k">def</span> <span class="nf">_fill_indices</span><span class="p">(</span><span class="n">sort_order</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_fill_indices</span><span class="p">(</span><span class="n">sort_order</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
     <span class="n">last_source</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="c1"># Code is duplicated because numba cannot perform type based cloning within a function and cannot pass ranges</span>
     <span class="c1"># into a function.</span>
@@ -548,18 +549,38 @@ function checkPageExistsAndRedirect(event) {
 
 
 <div class="viewcode-block" id="from_edge_list_arrays"><a class="viewcode-back" href="../../../reference/python/katana.local.import_data.html#katana.local.import_data.from_edge_list_arrays">[docs]</a><span class="k">def</span> <span class="nf">from_edge_list_arrays</span><span class="p">(</span>
-    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">properties</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">node_types</span><span class="p">:</span> <span class="n">EntityTypeArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">edge_types</span><span class="p">:</span> <span class="n">EntityTypeArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">properties</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Graph</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.</span>
 
 <span class="sd">    This preserves node IDs, but **not** edge IDs.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_from_edge_list_arrays_impl</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">destinations</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">,</span> <span class="n">edges_sorted</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="n">properties</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">_from_edge_list_arrays_impl</span><span class="p">(</span>
+        <span class="n">sources</span><span class="p">,</span>
+        <span class="n">destinations</span><span class="p">,</span>
+        <span class="n">property_dict</span><span class="p">,</span>
+        <span class="n">edges_sorted</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">properties</span><span class="o">=</span><span class="n">properties</span><span class="p">,</span>
+        <span class="n">node_types</span><span class="o">=</span><span class="n">node_types</span><span class="p">,</span>
+        <span class="n">edge_types</span><span class="o">=</span><span class="n">edge_types</span><span class="p">,</span>
+    <span class="p">)</span></div>
 
 
 <span class="k">def</span> <span class="nf">from_sorted_edge_list_arrays</span><span class="p">(</span>
-    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">properties</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">node_types</span><span class="p">:</span> <span class="n">EntityTypeArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">edge_types</span><span class="p">:</span> <span class="n">EntityTypeArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">properties</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Graph</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert an **sorted** edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`. The</span>
@@ -567,11 +588,26 @@ function checkPageExistsAndRedirect(event) {
 
 <span class="sd">    This preserves node IDs and edge IDs.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_from_edge_list_arrays_impl</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">destinations</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">,</span> <span class="n">edges_sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="n">properties</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_from_edge_list_arrays_impl</span><span class="p">(</span>
+        <span class="n">sources</span><span class="p">,</span>
+        <span class="n">destinations</span><span class="p">,</span>
+        <span class="n">property_dict</span><span class="p">,</span>
+        <span class="n">edges_sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">properties</span><span class="o">=</span><span class="n">properties</span><span class="p">,</span>
+        <span class="n">node_types</span><span class="o">=</span><span class="n">node_types</span><span class="p">,</span>
+        <span class="n">edge_types</span><span class="o">=</span><span class="n">edge_types</span><span class="p">,</span>
+    <span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_from_edge_list_arrays_impl</span><span class="p">(</span>
-    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">edges_sorted</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">properties</span><span class="p">,</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">destinations</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">property_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">edges_sorted</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">properties</span><span class="p">,</span>
+    <span class="n">node_types</span><span class="p">:</span> <span class="n">EntityTypeArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">edge_types</span><span class="p">:</span> <span class="n">EntityTypeArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Graph</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert an edge list represented as two parallel arrays into a :py:class:`~katana.local.Graph`.</span>
@@ -591,6 +627,9 @@ function checkPageExistsAndRedirect(event) {
     <span class="k">if</span> <span class="ow">not</span> <span class="n">n_edges</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must have at least one edge&quot;</span><span class="p">)</span>
 
+    <span class="k">if</span> <span class="n">edge_types</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_types</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_edges</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the length of edge_types </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">edge_types</span><span class="p">)</span><span class="si">}</span><span class="s2"> is not equal to the number of edges </span><span class="si">{</span><span class="n">n_edges</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">destinations</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_edges</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Sources and destinations must have the same length&quot;</span><span class="p">)</span>
 
@@ -603,6 +642,9 @@ function checkPageExistsAndRedirect(event) {
 
     <span class="n">n_nodes</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sources</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">destinations</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
 
+    <span class="k">if</span> <span class="n">node_types</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_types</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_nodes</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;the length of node_types </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">node_types</span><span class="p">)</span><span class="si">}</span><span class="s2"> is not equal to the number of nodes </span><span class="si">{</span><span class="n">n_nodes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="ow">not</span> <span class="n">edges_sorted</span><span class="p">:</span>
         <span class="n">sort_order</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span>
         <span class="n">csr_destinations</span> <span class="o">=</span> <span class="n">destinations</span><span class="p">[</span><span class="n">sort_order</span><span class="p">]</span>
@@ -613,9 +655,24 @@ function checkPageExistsAndRedirect(event) {
     <span class="n">csr_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">)</span>
     <span class="n">_fill_indices</span><span class="p">(</span><span class="n">sort_order</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">csr_indices</span><span class="p">)</span>
 
-    <span class="n">graph</span> <span class="o">=</span> <span class="n">from_csr</span><span class="p">(</span><span class="n">csr_indices</span><span class="p">,</span> <span class="n">csr_destinations</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">reorder_edge_array_if_needed</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">a</span> <span class="k">if</span> <span class="n">edges_sorted</span> <span class="k">else</span> <span class="n">a</span><span class="p">[</span><span class="n">sort_order</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">node_types</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">edge_types</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">node_types</span> <span class="o">=</span> <span class="n">node_types</span> <span class="ow">or</span> <span class="n">EntityTypeArray</span><span class="p">(</span><span class="n">n_nodes</span><span class="p">)</span>
+        <span class="n">edge_types</span> <span class="o">=</span> <span class="n">edge_types</span> <span class="ow">or</span> <span class="n">EntityTypeArray</span><span class="p">(</span><span class="n">n_edges</span><span class="p">)</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="n">_from_csr_and_raw_types</span><span class="p">(</span>
+            <span class="n">csr_indices</span><span class="p">,</span>
+            <span class="n">csr_destinations</span><span class="p">,</span>
+            <span class="n">node_types</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span>
+            <span class="n">reorder_edge_array_if_needed</span><span class="p">(</span><span class="n">edge_types</span><span class="o">.</span><span class="n">_data</span><span class="p">),</span>
+            <span class="n">node_types</span><span class="p">,</span>
+            <span class="n">edge_types</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="n">from_csr</span><span class="p">(</span><span class="n">csr_indices</span><span class="p">,</span> <span class="n">csr_destinations</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">properties</span><span class="p">:</span>
-        <span class="n">graph</span><span class="o">.</span><span class="n">add_edge_property</span><span class="p">(</span><span class="n">properties</span> <span class="k">if</span> <span class="n">edges_sorted</span> <span class="k">else</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">p</span><span class="p">[</span><span class="n">sort_order</span><span class="p">]</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">add_edge_property</span><span class="p">({</span><span class="n">n</span><span class="p">:</span> <span class="n">reorder_edge_array_if_needed</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
     <span class="k">return</span> <span class="n">graph</span>
 
 
@@ -624,6 +681,9 @@ function checkPageExistsAndRedirect(event) {
     <span class="n">source_column</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span>
     <span class="n">destination_column</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;destination&quot;</span><span class="p">,</span>
     <span class="n">property_columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Collection</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">node_types</span><span class="p">:</span> <span class="n">EntityTypeArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">edge_types</span><span class="p">:</span> <span class="n">EntityTypeArray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert an edge list in the form of a dataframe-like object into a :py:class:`~katana.local.Graph` with edge</span>
@@ -640,7 +700,9 @@ function checkPageExistsAndRedirect(event) {
         <span class="n">property_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-</span> <span class="p">{</span><span class="n">source_column</span><span class="p">,</span> <span class="n">destination_column</span><span class="p">}</span>
 
     <span class="n">edge_properties</span> <span class="o">=</span> <span class="p">{</span><span class="n">col_name</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">col_name</span> <span class="ow">in</span> <span class="n">property_columns</span><span class="p">}</span>
-    <span class="k">return</span> <span class="n">from_edge_list_arrays</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">source_column</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">destination_column</span><span class="p">],</span> <span class="o">**</span><span class="n">edge_properties</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">from_edge_list_arrays</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">[</span><span class="n">source_column</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">destination_column</span><span class="p">],</span> <span class="o">**</span><span class="n">edge_properties</span><span class="p">,</span> <span class="n">node_types</span><span class="o">=</span><span class="n">node_types</span><span class="p">,</span> <span class="n">edge_types</span><span class="o">=</span><span class="n">edge_types</span>
+    <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="from_graphml"><a class="viewcode-back" href="../../../reference/python/katana.local.import_data.html#katana.local.import_data.from_graphml">[docs]</a><span class="k">def</span> <span class="nf">from_graphml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">],</span> <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">txn_ctx</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>

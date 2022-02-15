@@ -197,9 +197,10 @@ def setup_install_arguments(parser):
 
 def get_apt_version():
     version_information_str = str(subprocess.check_output(["apt-get", "-v"], stderr=subprocess.DEVNULL), "UTF-8")
-    version_match = re.match(r"apt ([0-9.]+) \(.*\)", version_information_str)
+    version_match = re.match(r"apt ([0-9.]+)(?:ubuntu[0-9.]+)? \(.*\)", version_information_str)
     if not version_match:
         raise RuntimeError(f"apt-get returned unexpected version information:\n{version_information_str}")
+
     return Version(version_match.group(1))
 
 

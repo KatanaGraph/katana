@@ -19,14 +19,7 @@ public:
     return owner == other.owner && type_id == other.type_id;
   }
 
-  std::string ToString() const {
-    auto r = owner->GetAtomicTypeName(type_id);
-    if (r) {
-      return r.value();
-    } else {
-      return fmt::format("<non-atomic type {}>", type_id);
-    }
-  }
+  std::string ToString() const;
 
   static std::unique_ptr<EntityType> Make(
       const katana::EntityTypeManager* self, katana::EntityTypeID id);

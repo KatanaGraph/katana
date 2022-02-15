@@ -11,6 +11,7 @@ from katana.local._shared_mem_sys import initialize
 from katana.local.barrier import Barrier, SimpleBarrier, get_fast_barrier
 from katana.local.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.local.dynamic_bitset import DynamicBitset
+from katana.local.entity_type_array import EntityTypeArray
 from katana.local_native import (
     AtomicEntityType,
     EntityType,
@@ -48,6 +49,7 @@ __all__ = [
     "EntityType",
     "AtomicEntityType",
     "EntityTypeManager",
+    "EntityTypeArray",
 ]
 
 Graph.out_edges = graph_adds.out_edges

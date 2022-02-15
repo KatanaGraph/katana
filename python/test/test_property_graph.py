@@ -5,9 +5,8 @@ import pandas
 import pyarrow
 import pytest
 
-from katana import GaloisError, do_all, do_all_operator
+from katana import do_all, do_all_operator
 from katana.local import Graph
-from katana.local.import_data import from_csr
 
 
 def test_load(graph):
@@ -211,31 +210,6 @@ def test_upsert_edge_property_dict(graph):
     graph.upsert_edge_property({prop: range(graph.num_edges())})
     assert len(graph.loaded_edge_schema()) == 3
     assert graph.get_edge_property(prop).combine_chunks() == pyarrow.array(range(graph.num_edges()))
-
-
-def test_from_csr():
-    pg = from_csr(np.array([1, 1], dtype=np.uint32), np.array([1], dtype=np.uint64))
-    assert pg.num_nodes() == 2
-    assert pg.num_edges() == 1
-    # assert list(pg.out_edge_ids(0)) == [0]
-    assert pg.get_edge_dst(0) == 1
-
-
-def test_from_csr_int16():
-    pg = from_csr(np.array([1, 1], dtype=np.int16), np.array([1], dtype=np.int16))
-    assert pg.num_nodes() == 2
-    assert pg.num_edges() == 1
-    # assert list(pg.out_edge_ids(0)) == [0]
-    assert pg.get_edge_dst(0) == 1
-
-
-def test_from_csr_k3():
-    pg = from_csr(np.array([2, 4, 6]), np.array([1, 2, 0, 2, 0, 1]))
-    assert pg.num_nodes() == 3
-    assert pg.num_edges() == 6
-    # assert list(pg.out_edge_ids(2)) == [4, 5]
-    assert pg.get_edge_dst(4) == 0
-    assert pg.get_edge_dst(5) == 1
 
 
 def test_load_invalid_path():

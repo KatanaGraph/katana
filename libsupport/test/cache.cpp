@@ -109,7 +109,7 @@ TestLRUExplicit(const std::vector<katana::Uri>& keys) {
 
   KATANA_LOG_ASSERT(keyit != keys.begin());
   cache.Insert(*keyit--, SizeOneValue());
-  size_t key_count = std::distance(keyit, keys.end()) - 1;
+  int64_t key_count = std::distance(keyit, keys.end()) - 1;
   KATANA_LOG_ASSERT(cache.size() == key_count);
 
   KATANA_LOG_ASSERT(keyit != keys.begin());
@@ -152,8 +152,8 @@ TestLRUExplicit(const std::vector<katana::Uri>& keys) {
 
 void
 TestLRUBytes(const std::vector<katana::Uri>& keys) {
-  size_t byte_size = 4;
-  KATANA_LOG_ASSERT((byte_size + 1) < keys.size());
+  int64_t byte_size = 4;
+  KATANA_LOG_ASSERT((byte_size + 1) < static_cast<int64_t>(keys.size()));
   katana::Cache<CacheValue> cache(
       byte_size, [](const CacheValue& value) { return BytesInValue(value); });
 
@@ -184,7 +184,7 @@ TestLRUBytes(const std::vector<katana::Uri>& keys) {
 }
 
 void
-TestLRUSize(size_t lru_size, const std::vector<katana::Uri>& keys) {
+TestLRUSize(int64_t lru_size, const std::vector<katana::Uri>& keys) {
   katana::Cache<CacheValue> cache(lru_size);
   KATANA_LOG_VASSERT(
       cache.capacity() == lru_size, "capcity {} allocated {}", cache.capacity(),
@@ -200,7 +200,7 @@ TestLRUSize(size_t lru_size, const std::vector<katana::Uri>& keys) {
       cache.size() == lru_size, "size {} allocated {}", cache.size(), lru_size);
 
   // Make sure we have the LRU elements and only them.
-  KATANA_LOG_ASSERT((lru_size + 1) < keys.size());
+  KATANA_LOG_ASSERT((lru_size + 1) < static_cast<int64_t>(keys.size()));
 
   AssertLRUElements(keys.end(), lru_size, cache);
 
@@ -214,7 +214,7 @@ TestLRUSize(size_t lru_size, const std::vector<katana::Uri>& keys) {
 
 int
 main(int argc, char** argv) {
-  constexpr size_t lru_size = 10;
+  constexpr int64_t lru_size = 10;
 
   uint64_t size = 11 * lru_size;
   if (argc > 1) {

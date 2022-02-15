@@ -7,20 +7,20 @@
 
 namespace katana::analytics {
 
-/// A computational plan for KSSSP, specifying the algorithm, 
-/// path reachability, and any parametrs associated with it. 
+/// A computational plan for KSSSP, specifying the algorithm,
+/// path reachability, and any parametrs associated with it.
 class KssspPlan : public Plan {
 public:
   /// Algorithm selectros for K Shortest Paths
   enum Algorithm {
-    kDeltaTile, 
-    kDeltaStep, 
+    kDeltaTile,
+    kDeltaStep,
     kDeltaStepBarrier,
   };
 
   /// Specifices algorithm used for path reachability
   enum Reachability {
-    asyncLevel, 
+    asyncLevel,
     syncLevel,
   };
 
@@ -29,7 +29,7 @@ public:
   static const int kDefaultEdgeTileSize = 512;
 
   // Don't allow people to directly construct these, so as to have only one
-  // consistent way to configure. 
+  // consistent way to configure.
 private:
   Algorithm algorithm_;
   Reachability reachability_;
@@ -37,12 +37,12 @@ private:
   ptrdiff_t edge_tile_size_;
 
   KssspPlan(
-      Architecture architecture, Algorithm algorithm, Reachability reachability, 
+      Architecture architecture, Algorithm algorithm, Reachability reachability,
       unsigned delta, ptrdiff_t edge_tile_size)
-      : Plan(architecture), 
-        algorithm_(algorithm), 
+      : Plan(architecture),
+        algorithm_(algorithm),
         reachability_(reachability),
-        delta_(delta), 
+        delta_(delta),
         edge_tile_size_(edge_tile_size) {}
 
 public:
@@ -65,8 +65,7 @@ public:
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
 
   static KssspPlan DeltaTile(
-      Reachability reachability = kDefaultReach,
-      unsigned delta = kDefaultDelta, 
+      Reachability reachability = kDefaultReach, unsigned delta = kDefaultDelta,
       ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
     return {kCPU, kDeltaTile, reachability, delta, edge_tile_size};
   }
@@ -90,8 +89,7 @@ public:
 KATANA_EXPORT Result<void> Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
-    const bool& is_symmetric, katana::TxnContext* txn_ctx,
-    KssspPlan plan = {});
+    const bool& is_symmetric, katana::TxnContext* txn_ctx, KssspPlan plan = {});
 }  // namespace katana::analytics
 
 #endif

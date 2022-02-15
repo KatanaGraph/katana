@@ -473,8 +473,7 @@ katana::Result<void>
 kSSSPWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
-    const bool& is_symmetric, katana::TxnContext* txn_ctx,
-    KssspPlan plan) {
+    const bool& is_symmetric, katana::TxnContext* txn_ctx, KssspPlan plan) {
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {
     return KATANA_ERROR(
@@ -543,8 +542,7 @@ katana::Result<void>
 katana::analytics::Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
-    const bool& is_symmetric, katana::TxnContext* txn_ctx,
-    KssspPlan plan) {
+    const bool& is_symmetric, katana::TxnContext* txn_ctx, KssspPlan plan) {
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()
               ->id()) {

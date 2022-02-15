@@ -43,7 +43,7 @@ set_common_katana_library_options(katana_tsuba ALWAYS_SHARED)
 target_link_libraries(katana_tsuba PUBLIC katana_support)
 target_link_libraries(katana_tsuba PUBLIC katana_galois)
 
-if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
+if(KATANA_IS_MAIN_PROJECT AND cpp IN_LIST KATANA_LANG_TESTING)
   add_subdirectory(test)
 endif()
 

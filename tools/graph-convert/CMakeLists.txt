@@ -92,6 +92,6 @@ install(TARGETS graph-properties-convert
 )
 add_dependencies(tools graph-properties-convert)
 
-if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
+if(KATANA_IS_MAIN_PROJECT AND cpp IN_LIST KATANA_LANG_TESTING)
   add_subdirectory(test)
 endif()

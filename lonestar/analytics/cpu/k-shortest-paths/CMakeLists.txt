@@ -13,10 +13,10 @@ add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RD
 add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value --reachability=syncLevel --algo=DeltaStep)
 add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value --reachability=syncLevel --algo=DeltaStepBarrier)
 
-add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value -symmetricGraph --reachability=asyncLevel --algo=DeltaTile)
-add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value -symmetricGraph --reachability=asyncLevel --algo=DeltaStep)
-add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value -symmetricGraph --reachability=asyncLevel --algo=DeltaStepBarrier)
+add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value "-symmetricGraph" --reachability=asyncLevel --algo=DeltaTile)
+add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value "-symmetricGraph" --reachability=asyncLevel --algo=DeltaStep)
+add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value "-symmetricGraph" --reachability=asyncLevel --algo=DeltaStepBarrier)
 
-add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value -symmetricGraph --reachability=syncLevel --algo=DeltaTile)
-add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value -symmetricGraph --reachability=syncLevel --algo=DeltaStep)
-add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value -symmetricGraph --reachability=syncLevel --algo=DeltaStepBarrier)
+add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value "-symmetricGraph" --reachability=syncLevel --algo=DeltaTile)
+add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value "-symmetricGraph" --reachability=syncLevel --algo=DeltaStep)
+add_test_scale(small k-shortest-paths-cpu NO_VERIFY INPUT rmat15 INPUT_URI "${RDG_RMAT15}" --edgePropertyName=value "-symmetricGraph" --reachability=syncLevel --algo=DeltaStepBarrier)

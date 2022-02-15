@@ -85,6 +85,13 @@ katana::python::InitEntityTypeManager(py::module_& m) {
           "add_atomic_entity_type",
           &katana::EntityTypeManager::AddAtomicEntityType)
       .def(
+          "get_or_add_entity_type_id",
+          [](katana::EntityTypeManager* self,
+             const std::string& name) -> Result<EntityType> {
+            return EntityType{
+                self, KATANA_CHECKED(self->GetOrAddEntityTypeID(name))};
+          })
+      .def(
           "get_non_atomic_entity_type",
           [](katana::EntityTypeManager* self,
              std::vector<EntityType> types) -> Result<EntityType> {

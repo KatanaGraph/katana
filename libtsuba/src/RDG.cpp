@@ -355,7 +355,7 @@ katana::RDG::DoStore(
 
   // writing metadata
   KATANA_CHECKED(
-      core_->part_header().Write(handle, write_group.get(), versioning_action));
+      core_->part_header().Write(handle, versioning_action, write_group.get()));
 
   // Update lineage and commit
   core_->AddCommandLine(command_line);

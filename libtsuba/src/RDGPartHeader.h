@@ -138,8 +138,8 @@ public:
   katana::Result<void> Validate() const;
 
   katana::Result<void> Write(
-      RDGHandle handle, WriteGroup* writes,
-      RDG::RDGVersioningPolicy retain_version) const;
+      RDGHandle handle, RDG::RDGVersioningPolicy retain_version,
+      WriteGroup* writes = nullptr) const;
 
   /// Mark all in-memory properties dirty so that they can be written
   /// out, copy out-of-memory properties
@@ -591,6 +591,10 @@ private:
 
   static katana::Result<RDGPartHeader> MakeJson(
       const katana::Uri& partition_path);
+
+  katana::Result<std::unique_ptr<katana::FileFrame>> FillFileFrame(
+      katana::RDGHandle handle,
+      katana::RDG::RDGVersioningPolicy retain_version) const;
 
   void set_node_entity_type_id_dictionary(
       const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap&

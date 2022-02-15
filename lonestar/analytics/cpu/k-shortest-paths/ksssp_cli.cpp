@@ -65,7 +65,8 @@ static cll::opt<KssspPlan::Reachability> reachability(
     "reachability", cll::desc("Choose an algorithm for reachability:"),
     cll::values(
         clEnumValN(KssspPlan::asyncLevel, "async", "Asynchronous reachability"),
-        clEnumValN(KssspPlan::syncLevel, "syncLevel", "Synchronous reachability")),
+        clEnumValN(
+            KssspPlan::syncLevel, "syncLevel", "Synchronous reachability")),
     cll::init(KssspPlan::syncLevel));
 
 static cll::opt<bool> thread_spin(

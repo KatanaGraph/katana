@@ -140,7 +140,7 @@ cdef class KssspPlan(Plan):
         super(KssspPlan, self).__init__()
 
     @staticmethod
-    def delta_tile(_KssspPlan.Reachability reachability = kDefaultReach, unsigned delta = kDefaultDelta, 
+    def delta_tile(_KssspPlan.Reachability reachability = kDefaultReach, unsigned delta = kDefaultDelta,
                    ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) -> KssspPlan:
         """
         Delta stepping tiled

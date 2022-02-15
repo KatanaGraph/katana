@@ -2,8 +2,8 @@
 K Shortest paths
 ----------------
 .. autoclass:: katana.local.analytics.KssspPlan
-.. autoclass:: katana.local.analytics.AlgoReachability
 .. autoclass:: katana.local.analytics._ksssp._KssspAlgorithm
+.. autoclass:: katana.local.analytics._ksssp._KssspReachability
 .. autofunction:: katana.local.analytics.ksssp
 """
 from enum import Enum

@@ -12,7 +12,7 @@ namespace katana {
 
 /// Track multiple, outstanding async writes and provide a mechanism to ensure
 /// that they have all completed
-class ReadGroup {
+class KATANA_EXPORT ReadGroup {
 public:
   static katana::Result<std::unique_ptr<ReadGroup>> Make();
 

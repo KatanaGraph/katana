@@ -322,6 +322,105 @@ katana::CopyRDG(
   return katana::ResultSuccess();
 }
 
+katana::Result<void>
+katana::WriteRDGPartHeader(
+    std::vector<katana::RDGPropInfo> node_properties,
+    std::vector<katana::RDGPropInfo> edge_properties,
+    katana::EntityTypeManager& node_entity_type_manager,
+    katana::EntityTypeManager& edge_entity_type_manager,
+    const std::string& node_entity_type_id_array_path,
+    const std::string& edge_entity_type_id_array_path, uint64_t num_nodes,
+    uint64_t num_edges, const std::string& topology_path,
+    const std::string& rdg_dir) {
+  auto manifest = RDGManifest();
+  katana::Uri rdg_dir_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
+  manifest.set_dir(rdg_dir_uri);
+  manifest.set_viewtype(katana::kDefaultRDGViewType);
+  auto part_header = katana::RDGPartHeader();
+
+  // Setup partition metadata, for now assume only one partition
+  katana::PartitionMetadata part_meta;
+  part_meta.num_global_nodes_ = num_nodes;
+  part_meta.max_global_node_id_ = num_nodes - 1;
+  part_meta.num_global_edges_ = num_edges;
+  part_meta.num_edges_ = num_edges;
+  part_meta.num_nodes_ = num_nodes;
+  part_meta.num_owned_ = num_nodes;
+  part_meta.is_outgoing_edge_cut_ = true;
+
+  // Create vector that is needed by part_header for prop_info, do this for both node and edges
+  std::vector<katana::PropStorageInfo> node_props;
+  node_props.reserve(node_properties.size());
+  for (auto rdg_prop_info : node_properties) {
+    node_props.emplace_back(katana::PropStorageInfo(
+        rdg_prop_info.property_name, rdg_prop_info.property_path));
+  }
+
+  std::vector<katana::PropStorageInfo> edge_props;
+  edge_props.reserve(edge_properties.size());
+  for (auto rdg_prop_info : edge_properties) {
+    edge_props.emplace_back(katana::PropStorageInfo(
+        rdg_prop_info.property_name, rdg_prop_info.property_path));
+  }
+
+  // Set the node and edge prop info lists
+  part_header.set_node_prop_info_list(std::move(node_props));
+  part_header.set_edge_prop_info_list(std::move(edge_props));
+
+  // Set the entity type managers for nodes and edges
+  part_header.StoreNodeEntityTypeManager(node_entity_type_manager);
+  part_header.StoreEdgeEntityTypeManager(edge_entity_type_manager);
+
+  // Set the paths for the entity type id arrays
+  part_header.set_node_entity_type_id_array_path(
+      node_entity_type_id_array_path);
+  part_header.set_edge_entity_type_id_array_path(
+      edge_entity_type_id_array_path);
+
+  // Set the topology metadata
+  PartitionTopologyMetadataEntry* topology_metadata_entry =
+      part_header.MakePartitionTopologyMetadataEntry(topology_path);
+  topology_metadata_entry->FillCSRMetadataEntry(num_nodes, num_edges);
+
+  // Set storage format version to the latest one
+  // This will also prevent bumping up storage versions and leaving the dask
+  // import code in a stale state. Especially if there are large changes.
+  part_header.update_storage_format_version();
+
+  // Set partition metadata
+  part_header.set_metadata(part_meta);
+
+  // Write out the part_header
+  auto policy = katana::RDG::RDGVersioningPolicy::IncrementVersion;
+  katana::RDGHandle handle =
+      KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
+  KATANA_CHECKED(part_header.Write(handle, policy));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+katana::WriteRDGManifest(const std::string& rdg_dir, uint32_t num_hosts) {
+  auto manifest = RDGManifest();
+  katana::Uri rdg_dir_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
+  manifest.set_dir(rdg_dir_uri);
+  manifest.set_viewtype(katana::kDefaultRDGViewType);
+  manifest.set_version(1);
+  manifest.set_prev_version(1);
+  manifest.set_num_hosts(num_hosts);
+
+  // Write out the manifest file
+  // Using view_specifier in case something ever changes in the future where out-of-core import
+  // will be able to partition a graph, etc.
+  auto manifest_json = manifest.ToJsonString();
+  KATANA_CHECKED(katana::FileStore(
+      katana::RDGManifest::FileName(
+          rdg_dir_uri, manifest.view_specifier(), manifest.version())
+          .string(),
+      reinterpret_cast<const uint8_t*>(manifest_json.data()),
+      manifest_json.size()));
+  return katana::ResultSuccess();
+}
+
 /// Create a file name for the default CSR topology
 katana::Uri
 katana::MakeTopologyFileName(katana::RDGHandle handle) {

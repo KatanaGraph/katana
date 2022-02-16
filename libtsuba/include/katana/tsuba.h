@@ -147,6 +147,36 @@ using EntityTypeIDToSetOfEntityTypeIDsStorageMap =
 /// can be increased if required
 constexpr size_t kMaxNumTopologies = 64;
 
+/// RDGPropInfo details the property name and its respective path in the RDG dir.
+struct RDGPropInfo {
+  std::string property_name;
+  std::string property_path;
+};
+
+// N.B. This is a temporary interface used to write RDG part header given some
+// amount of information regarding properties, type manager, etc. The primary consumer
+// of this interface is the out-of-core import path, which currently writes out property
+// and type information on its own. I do NOT advise that anyone use this method without
+// understanding the assumptions it makes.
+// TODO (vkarthik): get rid of this interface and have a proper unified one
+KATANA_EXPORT katana::Result<void> WriteRDGPartHeader(
+    std::vector<katana::RDGPropInfo> node_properties,
+    std::vector<katana::RDGPropInfo> edge_properties,
+    katana::EntityTypeManager& node_entity_type_manager,
+    katana::EntityTypeManager& edge_entity_type_manager,
+    const std::string& node_entity_type_id_array_path,
+    const std::string& edge_entity_type_id_array_path, uint64_t num_nodes,
+    uint64_t num_edges, const std::string& topology_path,
+    const std::string& rdg_dir);
+
+// N.B. This is also a temporary interface used to write out RDG manifest files for
+// out-of-core CSV import.
+// TODO (vkarthik): I think this interface should get removed and manifests should be
+// written through the Go server. Need to figure out how to do this properly for
+// python operations.
+KATANA_EXPORT katana::Result<void> WriteRDGManifest(
+    const std::string& rdg_dir, uint32_t num_hosts);
+
 }  // namespace katana
 
 #endif

@@ -49,7 +49,7 @@ add_subdirectory(libtsuba)
 add_subdirectory(libgalois)
 add_subdirectory(libgraph)
 
-if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
+if(KATANA_IS_MAIN_PROJECT AND cpp IN_LIST KATANA_LANG_TESTING)
   add_subdirectory(lonestar)
 else()
   # If we are not testing, only build lonestar targets if they are required by
@@ -71,7 +71,7 @@ if (python IN_LIST KATANA_LANG_BINDINGS)
                                DEPENDS Katana::support arrow::arrow Katana::galois Katana::graph Katana::python_native
                                       pybind11::headers
                                COMPONENT python)
-  if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
+  if(KATANA_IS_MAIN_PROJECT AND python IN_LIST KATANA_LANG_TESTING)
     add_python_setuptools_tests(katana_python PATH python/test)
   endif()
   add_katana_sphinx_target(katana_python)

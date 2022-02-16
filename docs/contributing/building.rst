@@ -4,10 +4,6 @@
 Building
 ========
 
-.. only:: internal
-
-   If you are building katana-enterprise make sure to also read the :doc:`enterprise build addenda <index>`.
-
 Setting up a Build
 ==================
 
@@ -50,38 +46,12 @@ See the `Conda User Guide <https://docs.conda.io/projects/conda/en/latest/user-g
    it will install a conflicting version of pyarrow. Conda can handle all
    required dependencies itself.
 
-You will need to log out and back in again to ensure conda is properly
-configured. Then, create and activate the development environment:
-
-.. code-block:: bash
-
-   SRC_DIR=<repo/root>
-   conda config --add channels conda-forge
-   # For library compatibility reasons, prefer taking dependencies from
-   # higher priority channels even if newer versions exist in lower priority
-   # channels.
-   conda config --set channel_priority strict
-   # Create the environment
-   conda create --name katana-dev
-   # Install the dependencies
-   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
-   conda activate katana-dev
-   conda install numactl-devel-cos6-x86_64 # For x86_64 builds
+.. include:: conda_dev_env.rst
 
 The ``conda env update`` line can be run later to update your environment. Deactivate your environment
 ``conda deactivate``, then run the update commands, then reactivate ``conda activate katana-dev``.
 
-.. warning::
-
-   Not all conda installation scripts are well-behaved. In particular, the default behavior of the ``cudatoolkit-dev`` package's post-installation script is to write a log to the hard-coded path ``/tmp/cuda-installer.log`` and not delete it. Once one user on a system has written this file all other users will fail to install the package because they won't be able to write the log file. The only known workaround is to manually delete the log file. It is best practice to delete your own log file immediately after you have updated your environment. If you are on a system where someone else has written the log file and you can't overwrite it please contact that user to delete it. You may also contact a user with root privileges.
-
-.. code-block:: bash
-
-   # If you are sharing a system with other users,
-   # please perform the following manual clean-up:
-   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
-   rm /tmp/cuda-installer.log
-
+.. include:: cuda_workaround.rst
 
 Now, run ``cmake`` to configure your build directory and ``make`` to build Katana.
 
@@ -153,21 +123,7 @@ If you want to compile with ``clang`` instead of ``gcc``, make sure ``libstdc++-
 
    sudo apt-get install libstdc++-11-dev
 
-Python
-======
-
-To use the Python libraries from the build directory, use
-``$BUILD_DIR/python_env.sh``. You can either use this script as a launcher,
-
-.. code-block:: bash
-
-   $BUILD_DIR/python_env.sh python
-
-or source it into your shell,
-
-.. code-block:: bash
-
-   . $BUILD_DIR/python_env.sh
+.. include:: lang_spec.rst
 
 Resolving Common Build Issues
 =============================

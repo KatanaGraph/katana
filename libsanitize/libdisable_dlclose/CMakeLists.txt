@@ -9,4 +9,6 @@ target_sources(katana_disable_dlclose PRIVATE
 
 set_common_katana_library_options(katana_disable_dlclose ALWAYS_SHARED)
 
-add_subdirectory(test)
+if(KATANA_IS_MAIN_PROJECT AND cpp IN_LIST KATANA_LANG_TESTING)
+  add_subdirectory(test)
+endif()

@@ -93,6 +93,21 @@ public:
     node_sort_state_ = node_sort_state;
   }
 
+  void FillCSRMetadataEntry(uint64_t num_nodes, uint64_t num_edges) {
+    Update(
+        num_edges, num_nodes,
+        /*edge_index_to_property_index_map_present=*/false,
+        /*node_index_to_property_index_map_present=*/false,
+        /*edge_condensed_type_id_map_size_=*/0,
+        /*edge_condensed_type_id_map_present=*/false,
+        /*node_condensed_type_id_map_size_=*/0,
+        /*node_condensed_type_id_map_present=*/false,
+        katana::RDGTopology::TopologyKind::kCSR,
+        katana::RDGTopology::TransposeKind::kNo,
+        katana::RDGTopology::EdgeSortKind::kAny,
+        katana::RDGTopology::NodeSortKind::kAny);
+  }
+
   void set_invalid() { invalid_ = true; }
 };
 

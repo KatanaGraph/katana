@@ -83,7 +83,7 @@ if(VTune_FOUND)
   target_link_libraries(katana_galois PRIVATE ${VTune_LIBRARIES})
 endif()
 
-if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
+if(KATANA_IS_MAIN_PROJECT AND cpp IN_LIST KATANA_LANG_TESTING)
   add_subdirectory(test)
 endif()
 

@@ -29,16 +29,38 @@ public:
   /// Notify other tasks that there was a failure; e.g., with MPI_Abort
   virtual void NotifyFailure() = 0;
 
+  /// The number of tasks involved
+  uint32_t num() const { return Num; }
+
+  /// The id number of this task
+  uint32_t rank() const { return Rank; }
+
+  /// The local rank of this task (process ordinal number within within its machine)
+  uint32_t local_rank() const { return LocalRank; }
+
   // TODO(thunt): Num and ID were chosen because of NetworkInterface. Changing
   // them is very disruptive so I'll defer for a time in the future where we're
   // not worried about upstream and can global replace.
 
-  /// The number of tasks involved
+  /// The number of tasks involved.
+  ///
+  /// Direct access to this field is deprecated.
   uint32_t Num{1};
   /// The id number of this task
+  ///
+  /// Direct access to this field is deprecated.
   uint32_t Rank{0};
   /// The local rank of this task (process ordinal number within within its machine)
+  ///
+  /// Direct access to this field is deprecated.
   uint32_t LocalRank{0};
+
+protected:
+  void Initialize(uint32_t num, uint32_t rank, uint32_t local_rank) {
+    Num = num;
+    Rank = rank;
+    LocalRank = local_rank;
+  }
 };
 
 class KATANA_EXPORT NullCommBackend : public CommBackend {

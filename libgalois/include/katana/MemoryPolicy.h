@@ -35,6 +35,7 @@ public:
 
   /// Utility function to find out our OOM score from Linux
   static uint64_t OOMScore();
+
   struct MemInfo;
   struct Thresholds {
     double high_used_ratio_threshold;

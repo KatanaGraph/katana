@@ -114,6 +114,7 @@ public:
   void set_prev_version(uint64_t prev_version) {
     previous_version_ = prev_version;
   }
+  void set_num_hosts(uint32_t num_hosts) { num_hosts_ = num_hosts; }
 
   std::string view_specifier() const {
     if (view_args_.size())

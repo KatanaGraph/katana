@@ -14,7 +14,7 @@ namespace katana {
 
 /// Track multiple, outstanding async writes and provide a mechanism to ensure
 /// that they have all completed
-class WriteGroup {
+class KATANA_EXPORT WriteGroup {
   struct AsyncOp {
     std::future<katana::CopyableResult<void>> result;
     std::string location;

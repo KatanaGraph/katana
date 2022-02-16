@@ -348,7 +348,7 @@ katana::RDG::DoStore(
 
   // writing metadata
   KATANA_CHECKED(
-      core_->part_header().Write(handle, write_group.get(), versioning_action));
+      core_->part_header().Write(handle, versioning_action, write_group.get()));
 
   // Update lineage and commit
   core_->AddCommandLine(command_line);
@@ -369,7 +369,7 @@ katana::RDG::DoMake(
 
   // populating node properties
   KATANA_CHECKED(AddProperties(
-      metadata_dir, prop_cache_, this, node_props_to_be_loaded, &grp,
+      metadata_dir, true /*is_property*/, node_props_to_be_loaded, &grp,
       [rdg = this](
           const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
         std::shared_ptr<arrow::Table> prop_table =
@@ -389,7 +389,7 @@ katana::RDG::DoMake(
 
   // populating edge properties
   KATANA_CHECKED(AddProperties(
-      metadata_dir, prop_cache_, this, edge_props_to_be_loaded, &grp,
+      metadata_dir, true /*is_property*/, edge_props_to_be_loaded, &grp,
       [rdg = this](
           const std::shared_ptr<arrow::Table>& props) -> katana::Result<void> {
         std::shared_ptr<arrow::Table> prop_table =
@@ -443,7 +443,7 @@ katana::RDG::DoMake(
 
   // populating partition metadata
   KATANA_CHECKED(AddProperties(
-      metadata_dir, nullptr, nullptr, part_info, &grp,
+      metadata_dir, false /*is_property*/, part_info, &grp,
       [rdg = this](const std::shared_ptr<arrow::Table>& props) {
         return rdg->core_->AddPartitionMetadataArray(props);
       }));
@@ -506,8 +506,8 @@ katana::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   RDG rdg(std::make_unique<RDGCore>(std::move(part_header)));
   // rdg.DoMake will try to lookup in the property cache, and it
   // needs a valid rdg_dir
-  rdg.prop_cache_ = opts.prop_cache;
   rdg.set_rdg_dir(manifest.dir());
+  KATANA_LOG_ASSERT(!manifest.dir().empty());
 
   std::vector<PropStorageInfo*> node_props = KATANA_CHECKED(
       rdg.core_->part_header().SelectNodeProperties(opts.node_properties));
@@ -714,7 +714,6 @@ GetStorageLocationIfValid(
 katana::Result<std::shared_ptr<arrow::Table>>
 LoadProperty(
     const std::shared_ptr<arrow::Table>& props, const std::string name, int i,
-    katana::PropertyCache* cache, katana::RDG* rdg,
     std::vector<katana::PropStorageInfo>* prop_info_list,
     const katana::Uri& dir) {
   auto psi_it = std::find_if(
@@ -738,15 +737,9 @@ LoadProperty(
   std::shared_ptr<arrow::Table> new_table;
 
   KATANA_CHECKED(katana::AddProperties(
-      dir, cache, rdg, {&prop_info}, nullptr,
+      dir, true /*is_property*/, {&prop_info}, nullptr,
       [i, &props, &new_table](
           const std::shared_ptr<arrow::Table>& col) -> katana::Result<void> {
-        // props is derived from rdg and cache, and AddProperties may update
-        // rdg and cache which in turn may transitively change props. Defer
-        // observations about props (e.g., props->num_columns) until the
-        // callback executes.
-        //
-        // TODO(ddn): Rethink this loopy design.
         int idx = i;
         if (props->num_columns() > 0) {
           if (idx < 0 || idx > props->num_columns()) {
@@ -824,8 +817,8 @@ katana::RDG::UnloadEdgeProperty(const std::string& name) {
 katana::Result<void>
 katana::RDG::LoadNodeProperty(const std::string& name, int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
-      node_properties(), name, i, prop_cache_, this,
-      &core_->part_header().node_prop_info_list(), rdg_dir()));
+      node_properties(), name, i, &core_->part_header().node_prop_info_list(),
+      rdg_dir()));
   core_->set_node_properties(std::move(new_props));
   return katana::ResultSuccess();
 }
@@ -833,8 +826,8 @@ katana::RDG::LoadNodeProperty(const std::string& name, int i) {
 katana::Result<void>
 katana::RDG::LoadEdgeProperty(const std::string& name, int i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(LoadProperty(
-      edge_properties(), name, i, prop_cache_, this,
-      &core_->part_header().edge_prop_info_list(), rdg_dir()));
+      edge_properties(), name, i, &core_->part_header().edge_prop_info_list(),
+      rdg_dir()));
   core_->set_edge_properties(std::move(new_props));
   return katana::ResultSuccess();
 }

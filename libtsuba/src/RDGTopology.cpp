@@ -278,16 +278,7 @@ katana::RDGTopology::MapMetadataExtract(
   edge_sort_state_ = EdgeSortKind::kAny;
   node_sort_state_ = NodeSortKind::kAny;
 
-  // update our metadata entry with what we loaded, must do this since the metadata was incomplete before
-  metadata_entry_->Update(
-      num_edges_, num_nodes_,
-      /*edge_index_to_property_index_map_present=*/false,
-      /*node_index_to_property_index_map_present=*/false,
-      /*edge_condensed_type_id_map_size_=*/0,
-      /*edge_condensed_type_id_map_present=*/false,
-      /*node_condensed_type_id_map_size_=*/0,
-      /*node_condensed_type_id_map_present=*/false, topology_state_,
-      transpose_state_, edge_sort_state_, node_sort_state_);
+  metadata_entry_->FillCSRMetadataEntry(num_nodes_, num_edges_);
 
   KATANA_LOG_DEBUG(
       "Extracted Metadata from topology file: num_edges = {}, num_nodes = {}",

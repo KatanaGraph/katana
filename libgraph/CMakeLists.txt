@@ -18,7 +18,6 @@ set(sources
         src/PropertyViews.cpp
         src/SharedMemSys.cpp
         src/TopologyGeneration.cpp
-        src/TransformationView.cpp
         src/analytics/Utils.cpp
         src/analytics/betweenness_centrality/betweenness_centrality.cpp
         src/analytics/betweenness_centrality/level.cpp
@@ -60,7 +59,7 @@ target_link_libraries(katana_graph PUBLIC LibXml2::LibXml2)
 
 set_common_katana_library_options(katana_graph)
 
-if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
+if(KATANA_IS_MAIN_PROJECT AND cpp IN_LIST KATANA_LANG_TESTING)
   add_subdirectory(test)
 endif()
 

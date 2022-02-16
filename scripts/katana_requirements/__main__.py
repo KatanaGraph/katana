@@ -197,9 +197,10 @@ def setup_install_arguments(parser):
 
 def get_apt_version():
     version_information_str = str(subprocess.check_output(["apt-get", "-v"], stderr=subprocess.DEVNULL), "UTF-8")
-    version_match = re.match(r"apt ([0-9.]+) \(.*\)", version_information_str)
+    version_match = re.match(r"apt ([0-9.]+)(?:ubuntu[0-9.]+)? \(.*\)", version_information_str)
     if not version_match:
         raise RuntimeError(f"apt-get returned unexpected version information:\n{version_information_str}")
+
     return Version(version_match.group(1))
 
 
@@ -249,17 +250,26 @@ def install_package_list(args, packages: List[Package], data: Requirements, sile
     elif format == OutputFormat.PIP:
         command = [sys.executable, "-m", "pip", "install"]
     elif format == OutputFormat.CONDA:
-        mamba_or_conda = "conda"
+        mamba_or_conda = ["conda"]
         if has_mamba():
-            mamba_or_conda = "mamba"
-        command = [mamba_or_conda, "install", "--quiet", "--override-channels"] + [
-            v for c in ps.channels for v in ["-c", c]
-        ]
+            mamba_or_conda = ["mamba", "conda"]
+        for installer in mamba_or_conda:
+            command = [installer, "install", "--quiet", "--override-channels"] + [
+                v for c in ps.channels for v in ["-c", c]
+            ]
+
+            # TODO(amp): This duplicates some code from below.
+            try:
+                command += args.argument
+                execute_subprocess(command + [p.format(ps) for p in packages], silent)
+                return
+            except subprocess.CalledProcessError:
+                print(f"Retrying with a different installer program from {mamba_or_conda}")
+        raise RuntimeError("Failed to install conda packages.")
     else:
         raise ValueError(f"{format.value} installation not supported from this command.")
 
     command += args.argument
-
     execute_subprocess(command + [p.format(ps) for p in packages], silent)
 
 

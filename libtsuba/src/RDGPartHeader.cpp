@@ -123,20 +123,20 @@ katana::RDGPartHeader::Make(const katana::Uri& partition_path) {
   return KATANA_CHECKED(MakeJson(partition_path));
 }
 
-katana::Result<void>
-katana::RDGPartHeader::Write(
-    katana::RDGHandle handle, katana::WriteGroup* writes,
+katana::Result<std::unique_ptr<katana::FileFrame>>
+katana::RDGPartHeader::FillFileFrame(
+    katana::RDGHandle handle,
     katana::RDG::RDGVersioningPolicy retain_version) const {
   std::string serialized = KATANA_CHECKED(katana::JsonDump(*this));
-
   // POSIX files end with newlines
   serialized = serialized + "\n";
-
   TSUBA_PTP(internal::FaultSensitivity::Normal);
-  auto ff = std::make_unique<FileFrame>();
+
+  auto ff = std::make_unique<katana::FileFrame>();
   KATANA_CHECKED(ff->Init(serialized.size()));
   if (auto res = ff->Write(serialized.data(), serialized.size()); !res.ok()) {
-    return KATANA_ERROR(ArrowToKatana(res.code()), "arrow error: {}", res);
+    return KATANA_ERROR(
+        katana::ArrowToKatana(res.code()), "arrow error: {}", res);
   }
 
   auto next_version =
@@ -144,12 +144,25 @@ katana::RDGPartHeader::Write(
           ? handle.impl_->rdg_manifest().version()
           : (handle.impl_->rdg_manifest().version() + 1);
   KATANA_LOG_DEBUG("Next verison: {}", next_version);
-  ff->Bind(RDGManifest::PartitionFileName(
+  ff->Bind(katana::RDGManifest::PartitionFileName(
                handle.impl_->rdg_manifest().viewtype(),
-               handle.impl_->rdg_manifest().dir(), Comm()->Rank, next_version)
+               handle.impl_->rdg_manifest().dir(), katana::Comm()->Rank,
+               next_version)
                .string());
+  return katana::MakeResult(std::move(ff));
+}
 
-  writes->StartStore(std::move(ff));
+katana::Result<void>
+katana::RDGPartHeader::Write(
+    katana::RDGHandle handle, katana::RDG::RDGVersioningPolicy retain_version,
+    katana::WriteGroup* writes) const {
+  std::unique_ptr<FileFrame> ff =
+      KATANA_CHECKED(FillFileFrame(handle, retain_version));
+  if (writes) {
+    writes->StartStore(std::move(ff));
+  } else {
+    KATANA_CHECKED(ff->Persist());
+  }
   TSUBA_PTP(internal::FaultSensitivity::Normal);
   return katana::ResultSuccess();
 }

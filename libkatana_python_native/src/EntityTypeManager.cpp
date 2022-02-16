@@ -35,11 +35,23 @@ katana::python::EntityType::Make(
   }
 }
 
+std::string
+katana::python::EntityType::ToString() const {
+  if (type_id == kUnknownEntityType) {
+    return "<no type>";
+  }
+  auto r = owner->GetAtomicTypeName(type_id);
+  if (r) {
+    return r.value();
+  } else {
+    return fmt::format("<non-atomic type {}>", type_id);
+  }
+}
+
 void
 katana::python::InitEntityTypeManager(py::module_& m) {
   py::class_<EntityType> entity_type_cls(m, "EntityType");
   katana::DefConventions(entity_type_cls)
-      // Expose a field, read only
       .def_readonly("id", &EntityType::type_id)
       .def("__hash__", [](EntityType* self) { return self->type_id; });
 
@@ -63,7 +75,6 @@ katana::python::InitEntityTypeManager(py::module_& m) {
             return ret;
             // pybind11 automatically extends the lifetime of self until ret is freed.
           })
-      // Overloads work similarly to C++.
       .def(
           "is_subtype_of",
           [](const katana::EntityTypeManager* self, EntityType sub_type,
@@ -83,7 +94,18 @@ katana::python::InitEntityTypeManager(py::module_& m) {
           py::arg("sub_type"), py::arg("super_type"))
       .def(
           "add_atomic_entity_type",
-          &katana::EntityTypeManager::AddAtomicEntityType)
+          [](katana::EntityTypeManager* self,
+             const std::string& name) -> Result<EntityType> {
+            return EntityType{
+                self, KATANA_CHECKED(self->AddAtomicEntityType(name))};
+          })
+      .def(
+          "get_or_add_atomic_entity_type",
+          [](katana::EntityTypeManager* self,
+             const std::string& name) -> Result<EntityType> {
+            return EntityType{
+                self, KATANA_CHECKED(self->GetOrAddEntityTypeID(name))};
+          })
       .def(
           "get_non_atomic_entity_type",
           [](katana::EntityTypeManager* self,
@@ -96,8 +118,9 @@ katana::python::InitEntityTypeManager(py::module_& m) {
       .def(
           "get_or_add_non_atomic_entity_type",
           [](katana::EntityTypeManager* self,
-             std::vector<EntityType> types) -> Result<EntityType> {
-            auto set_of_type_ids = GetSetOfEntityTypeIds(types);
+             py::object types) -> Result<EntityType> {
+            auto set_of_type_ids = GetSetOfEntityTypeIds(
+                py::cast<std::vector<EntityType>>(py::list(types)));
             return EntityType{
                 self, KATANA_CHECKED(
                           self->GetOrAddNonAtomicEntityType(set_of_type_ids))};
@@ -136,5 +159,9 @@ katana::python::InitEntityTypeManager(py::module_& m) {
             return ret;
           })
       .def("num_atomic_types", &katana::EntityTypeManager::GetNumAtomicTypes)
-      .def("num_types", &katana::EntityTypeManager::GetNumEntityTypes);
+      .def("num_types", &katana::EntityTypeManager::GetNumEntityTypes)
+      .def_property_readonly(
+          "unknown_type", [](katana::EntityTypeManager* self) {
+            return EntityType{self, katana::kUnknownEntityType};
+          });
 }

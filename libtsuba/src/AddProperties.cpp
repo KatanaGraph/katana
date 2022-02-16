@@ -7,12 +7,13 @@
 #include <arrow/type_fwd.h>
 
 #include "katana/ArrowInterchange.h"
-#include "katana/Cache.h"
 #include "katana/ErrorCode.h"
 #include "katana/FileView.h"
 #include "katana/Logging.h"
+#include "katana/MemorySupervisor.h"
 #include "katana/ParquetReader.h"
 #include "katana/ProgressTracer.h"
+#include "katana/PropertyManager.h"
 #include "katana/Result.h"
 #include "katana/Time.h"
 
@@ -72,7 +73,7 @@ katana::LoadPropertySlice(
 
 katana::Result<void>
 katana::AddProperties(
-    const katana::Uri& uri, katana::PropertyCache* cache, katana::RDG* rdg,
+    const katana::Uri& uri, bool is_property,
     const std::vector<katana::PropStorageInfo*>& properties, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn) {
@@ -82,30 +83,26 @@ katana::AddProperties(
           ErrorCode::AlreadyExists, "property {} must be absent to be added",
           std::quoted(prop->name()));
     }
-    // If we have a cache, check it.
-    if (cache != nullptr) {
-      auto& tracer = katana::GetTracer();
-      katana::Uri cache_key(rdg->rdg_dir().Join(prop->path()));
-      std::optional<std::shared_ptr<arrow::Table>> column_table =
-          cache->GetAndEvict(cache_key);
-      KATANA_LOG_ASSERT(!rdg->rdg_dir().empty());
-      if (column_table.has_value()) {
-        std::shared_ptr<arrow::Table> props = column_table.value();
-        KATANA_LOG_ASSERT(props != nullptr);
+    if (is_property) {
+      PropertyManager* pm =
+          katana::MemorySupervisor::Get().GetPropertyManager();
+      KATANA_LOG_DEBUG_ASSERT(pm);
+      KATANA_LOG_DEBUG_ASSERT(!uri.empty());
+      const katana::Uri& cache_key = uri.Join(prop->path());
+      std::shared_ptr<arrow::Table> props = pm->GetProperty(cache_key);
+      if (props) {
         KATANA_CHECKED_CONTEXT(
             add_fn(props), "adding {}", std::quoted(prop->name()));
         prop->WasLoaded(props->field(0)->type());
-        auto& tracer = katana::GetTracer();
-        auto cache_stats = cache->GetStats();
-        tracer.GetActiveSpan().Log(
+        auto cache_stats = pm->GetPropertyCacheStats();
+        katana::GetTracer().GetActiveSpan().Log(
             "addproperties property cache hit",
             {
                 {"name", prop->name()},
                 {"path", cache_key.string()},
-                {"load_factor_percent",
-                 fmt::format(
-                     "{:.1f}%", 100.0 * static_cast<float>(cache->size()) /
-                                    cache->capacity())},
+                {"counts", fmt::format(
+                               "get {} insert {}", cache_stats.get_count,
+                               cache_stats.insert_count)},
                 {"hit_rate", fmt::format(
                                  "total: {:.1f}% get: {:.1f}% insert: {:.1f}%",
                                  cache_stats.total_hit_percentage(),
@@ -113,13 +110,12 @@ katana::AddProperties(
                                  cache_stats.insert_hit_percentage())},
             });
         return katana::ResultSuccess();
-      } else {
-        tracer.GetActiveSpan().Log(
-            "addproperties property cache miss", {
-                                                     {"name", prop->name()},
-                                                 });
       }
     }
+    katana::GetTracer().GetActiveSpan().Log(
+        "addproperties property cache miss", {
+                                                 {"name", prop->name()},
+                                             });
     const katana::Uri& path = uri.Join(prop->path());
 
     std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
@@ -130,44 +126,16 @@ katana::AddProperties(
               return KATANA_CHECKED_CONTEXT(
                   LoadProperties(prop->name(), path), "error loading {}", path);
             });
-    auto on_complete = [add_fn, prop, cache,
-                        rdg](const std::shared_ptr<arrow::Table>& props)
+    auto on_complete = [add_fn, is_property,
+                        prop](const std::shared_ptr<arrow::Table>& props)
         -> katana::CopyableResult<void> {
-      if (cache != nullptr) {
-        auto& tracer = katana::GetTracer();
-        // Do not put uint8 types in property cache.  Users cannot create uint8
-        // properties via Cypher, but they can create them via parquet import.
-        if (props->column(0)->type()->Equals(arrow::uint8())) {
-          KATANA_WARN_ONCE(
-              "deprecated graph format; type is uint8: {}",
-              props->field(0)->name());
-          KATANA_LOG_VASSERT(
-              !rdg->IsEntityTypeIDsOutsideProperties(),
-              "storage_format_version >= 2 RDG may not have uint8 type "
-              "properties");
-        } else {
-          // Only match properties from the same RDG prefix
-          katana::Uri cache_key(rdg->rdg_dir().Join(prop->path()));
-          cache->Insert(cache_key, props);
-          tracer.GetActiveSpan().Log(
-              "addproperties property cache insert",
-              {
-                  {"name", prop->name()},
-                  {"approx_size", katana::ApproxTableMemUse(props)},
-                  {"approx_size_human",
-                   katana::BytesToStr(
-                       "{:.2f}{}", katana::ApproxTableMemUse(props))},
-              });
-        }
-      }
       KATANA_CHECKED_CONTEXT(
           add_fn(props), "adding {}", std::quoted(prop->name()));
       prop->WasLoaded(props->field(0)->type());
-      if (prop->type()->Equals(arrow::uint8())) {
-        KATANA_LOG_VASSERT(
-            !rdg->IsEntityTypeIDsOutsideProperties(),
-            "storage_format_version >= 2 RDG may not have uint8 type "
-            "properties");
+      PropertyManager* pm =
+          katana::MemorySupervisor::Get().GetPropertyManager();
+      if (is_property) {
+        pm->PropertyLoadedActive(props);
       }
       return katana::CopyableResultSuccess();
     };

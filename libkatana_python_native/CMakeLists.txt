@@ -10,6 +10,7 @@ set(sources
     src/ImportData.cpp
     src/PropertyGraph.cpp
     src/ErrorHandling.cpp
+    src/RDGInterface.cpp
     )
 
 target_sources(katana_python_native PRIVATE ${sources})
@@ -22,6 +23,7 @@ target_include_directories(katana_python_native PUBLIC
 target_link_libraries(katana_python_native PUBLIC katana_galois)
 target_link_libraries(katana_python_native PUBLIC katana_graph)
 target_link_libraries(katana_python_native PUBLIC katana_support)
+target_link_libraries(katana_python_native PUBLIC katana_tsuba)
 
 set_common_katana_library_options(katana_python_native)
 

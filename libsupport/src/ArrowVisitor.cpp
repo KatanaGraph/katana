@@ -12,7 +12,7 @@ public:
   using ResultType = katana::Result<void>;
 
   using AcceptTypes =
-      std::tuple<katana::AcceptAllArrowTypes, katana::AcceptAllArrowTypes>;
+      std::tuple<katana::AcceptExtendedArrowTypes, katana::AcceptAllArrowTypes>;
 
   template <typename ScalarArrowType>
   static constexpr bool MatchNull = arrow::is_null_type<ScalarArrowType>::value;
@@ -41,13 +41,18 @@ public:
       arrow::is_struct_type<ScalarArrowType>::value&&
           arrow::is_struct_type<BuilderArrowType>::value;
 
+  template <typename ScalarArrowType>
+  static constexpr bool MatchExtension =
+      arrow::is_extension_type<ScalarArrowType>::value;
+
   template <typename ScalarArrowType, typename BuilderArrowType>
   static constexpr bool MatchFailed =
       !(MatchNull<ScalarArrowType> ||
         MatchPrimitive<ScalarArrowType, BuilderArrowType> ||
         MatchString<ScalarArrowType, BuilderArrowType> ||
         MatchList<ScalarArrowType, BuilderArrowType> ||
-        MatchStruct<ScalarArrowType, BuilderArrowType>);
+        MatchStruct<ScalarArrowType, BuilderArrowType> ||
+        MatchExtension<ScalarArrowType>);
 
   template <
       typename ScalarArrowType, typename BuilderArrowType, typename ScalarType,
@@ -121,6 +126,21 @@ public:
           visitor, *scalar.value.at(f), builder->field_builder(f)));
     }
 
+    return katana::ResultSuccess();
+  }
+
+  template <
+      typename ScalarArrowType, typename BuilderArrowType, typename ScalarType,
+      typename BuilderType>
+  std::enable_if_t<MatchExtension<ScalarArrowType>, ResultType> Call(
+      const ScalarType& scalar, BuilderType* builder) {
+    if (!scalar.is_valid) {
+      KATANA_CHECKED(builder->AppendNull());
+      return katana::ResultSuccess();
+    }
+
+    AppendScalarToBuilderVisitor visitor;
+    KATANA_CHECKED(katana::VisitArrow(visitor, *scalar.value, builder));
     return katana::ResultSuccess();
   }
 

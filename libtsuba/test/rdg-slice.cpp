@@ -1,6 +1,8 @@
+#include "katana/ProgressTracer.h"
 #include "katana/RDGManifest.h"
 #include "katana/RDGSlice.h"
 #include "katana/Result.h"
+#include "katana/TextTracer.h"
 
 namespace {
 // This test tests the following:
@@ -108,6 +110,9 @@ TestAll(const std::string& path_to_manifest) {
 int
 main(int argc, char* argv[]) {
   KATANA_LOG_ASSERT(katana::InitTsuba());
+  katana::ProgressTracer::Set(katana::TextTracer::Make());
+  katana::ProgressScope host_scope =
+      katana::GetTracer().StartActiveSpan("rdg-slice test");
 
   if (argc <= 1) {
     KATANA_LOG_FATAL("rdg-part-header <ldbc003 prefix>");

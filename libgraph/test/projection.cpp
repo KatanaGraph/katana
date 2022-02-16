@@ -4,9 +4,9 @@
 
 #include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
+#include "katana/PropertyGraph.h"
 #include "katana/RDG.h"
 #include "katana/SharedMemSys.h"
-#include "katana/TransformationView.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
@@ -68,7 +68,7 @@ main(int argc, char** argv) {
   std::vector<std::string> edge_types;
   SplitString(edgeTypes, &edge_types);
 
-  auto pg_view = katana::TransformationView::MakeProjectedGraph(
+  auto pg_view = katana::PropertyGraph::MakeProjectedGraph(
       full_graph, node_types, edge_types);
 
   katana::analytics::TemporaryPropertyGuard temp_node_property{

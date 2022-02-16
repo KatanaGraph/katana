@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+206.0.2457f7 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+207.0.1e45cb variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -544,6 +544,11 @@ function checkPageExistsAndRedirect(event) {
    <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#k-truss">
      k-Truss
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#k-shortest-paths">
+     K Shortest paths
     </a>
    </li>
    <li class="toc-h3 nav-item toc-entry">
@@ -3330,6 +3335,264 @@ This property must not already exist.</p></li>
 <dd class="field-odd"><p>AssertionError</p>
 </dd>
 </dl>
+</dd></dl>
+
+</section>
+<span class="target" id="module-katana.local.analytics._ksssp"></span><section id="k-shortest-paths">
+<h3>K Shortest paths<a class="headerlink" href="#k-shortest-paths" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.analytics.</span></span><span class="sig-name descname"><span class="pre">KssspPlan</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan" title="Permalink to this definition">¶</a></dt>
+<dd><p>A computational <a class="reference internal" href="#plan"><span class="std std-ref">Plans</span></a> for K-Shortest Paths
+Static method construct KssspPlans using specific algorithms with their required parameters. All parameters are
+opetional and have resonable defaults</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.Algorithm">
+<span class="sig-name descname"><span class="pre">Algorithm</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.Algorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#katana.local.analytics._ksssp._KssspAlgorithm" title="katana.local.analytics._ksssp._KssspAlgorithm"><code class="xref py py-class docutils literal notranslate"><span class="pre">katana.local.analytics._ksssp._KssspAlgorithm</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.Reachability">
+<span class="sig-name descname"><span class="pre">Reachability</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.Reachability" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#katana.local.analytics._ksssp._KssspReachability" title="katana.local.analytics._ksssp._KssspReachability"><code class="xref py py-class docutils literal notranslate"><span class="pre">katana.local.analytics._ksssp._KssspReachability</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.analytics.KssspPlan.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Choose an algorithm using heuristics</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.delta_step">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delta_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reachability</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#katana.local.analytics._ksssp.KssspPlan" title="katana.local.analytics._ksssp.KssspPlan"><span class="pre">katana.local.analytics._ksssp.KssspPlan</span></a></span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.delta_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delta stepping (non-tiled)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.delta_step_barrier">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delta_step_barrier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reachability</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#katana.local.analytics._ksssp.KssspPlan" title="katana.local.analytics._ksssp.KssspPlan"><span class="pre">katana.local.analytics._ksssp.KssspPlan</span></a></span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.delta_step_barrier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delta stepping with barrier</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.delta_tile">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delta_tile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reachability</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_tile_size</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#katana.local.analytics._ksssp.KssspPlan" title="katana.local.analytics._ksssp.KssspPlan"><span class="pre">katana.local.analytics._ksssp.KssspPlan</span></a></span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.delta_tile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delta stepping tiled</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.algorithm">
+<span class="sig-name descname"><span class="pre">algorithm</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.algorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>The selected algorithm.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.architecture">
+<span class="sig-name descname"><span class="pre">architecture</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.architecture" title="Permalink to this definition">¶</a></dt>
+<dd><p>The architecture on which the algorithm will run.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.delta">
+<span class="sig-name descname"><span class="pre">delta</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.delta" title="Permalink to this definition">¶</a></dt>
+<dd><p>The exponent of the delta step size (2 based). A delta of 4 will produce a real delta step size of 16</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.edge_tile_size">
+<span class="sig-name descname"><span class="pre">edge_tile_size</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.edge_tile_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>The edge tile size.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.reachability">
+<span class="sig-name descname"><span class="pre">reachability</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.reachability" title="Permalink to this definition">¶</a></dt>
+<dd><p>The selected reachability method</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp._KssspAlgorithm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.analytics._ksssp.</span></span><span class="sig-name descname"><span class="pre">_KssspAlgorithm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.analytics._ksssp._KssspAlgorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>The concrete algorithms available for Ksssp.
+:see: :py:class`~katana.local.analytics.KssspPlan` constructor for algorithm documentation</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp._KssspAlgorithm.DeltaStep">
+<span class="sig-name descname"><span class="pre">DeltaStep</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#katana.local.analytics._ksssp._KssspAlgorithm.DeltaStep" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp._KssspAlgorithm.DeltaStepBarrier">
+<span class="sig-name descname"><span class="pre">DeltaStepBarrier</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#katana.local.analytics._ksssp._KssspAlgorithm.DeltaStepBarrier" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp._KssspAlgorithm.DeltaTile">
+<span class="sig-name descname"><span class="pre">DeltaTile</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#katana.local.analytics._ksssp._KssspAlgorithm.DeltaTile" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp._KssspReachability">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.analytics._ksssp.</span></span><span class="sig-name descname"><span class="pre">_KssspReachability</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.analytics._ksssp._KssspReachability" title="Permalink to this definition">¶</a></dt>
+<dd><p>The algorithms to check reachability for kSSSP
+:see: :py:class: <cite>~katana.local.analytics.AlgoReachability</cite> constructors for algorithm documentation.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp._KssspReachability.AsyncLevel">
+<span class="sig-name descname"><span class="pre">AsyncLevel</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#katana.local.analytics._ksssp._KssspReachability.AsyncLevel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp._KssspReachability.SyncLevel">
+<span class="sig-name descname"><span class="pre">SyncLevel</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#katana.local.analytics._ksssp._KssspReachability.SyncLevel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="katana.local.analytics.ksssp">
+<span class="sig-prename descclassname"><span class="pre">katana.local.analytics.</span></span><span class="sig-name descname"><span class="pre">ksssp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_weight_property_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_paths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_symmetric=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plan=&lt;katana.local.analytics._ksssp.KssspPlan</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx=None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.analytics.ksssp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the K-Shortest Path on <cite>pg</cite> using <cite>start_node</cite> as source.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pg</strong> (<a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><em>katana.local.Graph</em></a>) – The graph to analyze</p></li>
+<li><p><strong>edge_weight_property_name</strong> (<em>str</em>) – The input property containing edge weights.</p></li>
+<li><p><strong>start_node</strong> (<em>Node ID</em>) – The source node</p></li>
+<li><p><strong>report_node</strong> (<em>Node ID</em>) – The destination node</p></li>
+<li><p><strong>num_paths</strong> (<em>int</em>) – Number of paths to look for</p></li>
+<li><p><strong>is_symmetric</strong> (<em>bool</em>) – Whether or not the graph is symmetric. Defaults to false.</p></li>
+<li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.KssspPlan" title="katana.local.analytics.KssspPlan"><em>KssspPlan</em></a>) – The execution plan to use. Defaults to heuristically selecting the plan.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets</p></li>
+</ul>
+</dd>
+</dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">katana.local</span>
+<span class="kn">from</span> <span class="nn">katana.example_data</span> <span class="kn">import</span> <span class="n">get_rdg_dataset</span>
+<span class="kn">from</span> <span class="nn">katana.local</span> <span class="kn">import</span> <span class="n">Graph</span>
+<span class="n">katana</span><span class="o">.</span><span class="n">local</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+
+<span class="n">graph</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">(</span><span class="n">get_rdg_dataset</span><span class="p">(</span><span class="s2">&quot;ldbc_003&quot;</span><span class="p">))</span>
+<span class="kn">from</span> <span class="nn">katana.local.analytics</span> <span class="kn">import</span> <span class="n">ksssp</span>
+<span class="n">weight_name</span> <span class="o">=</span> <span class="s2">&quot;workFrom&quot;</span>
+<span class="n">start_node</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">report_node</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">num_paths</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">ksssp</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">weight_name</span><span class="p">,</span> <span class="n">start_node</span><span class="p">,</span> <span class="n">report_node</span><span class="p">,</span> <span class="n">num_paths</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.analytics._ksssp.</span></span><span class="sig-name descname"><span class="pre">KssspPlan</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan" title="Permalink to this definition">¶</a></dt>
+<dd><p>A computational <a class="reference internal" href="#plan"><span class="std std-ref">Plans</span></a> for K-Shortest Paths
+Static method construct KssspPlans using specific algorithms with their required parameters. All parameters are
+opetional and have resonable defaults</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.Algorithm">
+<span class="sig-name descname"><span class="pre">Algorithm</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.Algorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#katana.local.analytics._ksssp._KssspAlgorithm" title="katana.local.analytics._ksssp._KssspAlgorithm"><code class="xref py py-class docutils literal notranslate"><span class="pre">katana.local.analytics._ksssp._KssspAlgorithm</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.Reachability">
+<span class="sig-name descname"><span class="pre">Reachability</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.Reachability" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#katana.local.analytics._ksssp._KssspReachability" title="katana.local.analytics._ksssp._KssspReachability"><code class="xref py py-class docutils literal notranslate"><span class="pre">katana.local.analytics._ksssp._KssspReachability</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Choose an algorithm using heuristics</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.delta_step">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delta_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reachability</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#katana.local.analytics._ksssp.KssspPlan" title="katana.local.analytics._ksssp.KssspPlan"><span class="pre">katana.local.analytics._ksssp.KssspPlan</span></a></span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.delta_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delta stepping (non-tiled)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.delta_step_barrier">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delta_step_barrier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reachability</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#katana.local.analytics._ksssp.KssspPlan" title="katana.local.analytics._ksssp.KssspPlan"><span class="pre">katana.local.analytics._ksssp.KssspPlan</span></a></span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.delta_step_barrier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delta stepping with barrier</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.delta_tile">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delta_tile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reachability</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_tile_size</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#katana.local.analytics._ksssp.KssspPlan" title="katana.local.analytics._ksssp.KssspPlan"><span class="pre">katana.local.analytics._ksssp.KssspPlan</span></a></span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.delta_tile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delta stepping tiled</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.algorithm">
+<span class="sig-name descname"><span class="pre">algorithm</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.algorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>The selected algorithm.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.architecture">
+<span class="sig-name descname"><span class="pre">architecture</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.architecture" title="Permalink to this definition">¶</a></dt>
+<dd><p>The architecture on which the algorithm will run.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.delta">
+<span class="sig-name descname"><span class="pre">delta</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.delta" title="Permalink to this definition">¶</a></dt>
+<dd><p>The exponent of the delta step size (2 based). A delta of 4 will produce a real delta step size of 16</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.edge_tile_size">
+<span class="sig-name descname"><span class="pre">edge_tile_size</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.edge_tile_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>The edge tile size.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.reachability">
+<span class="sig-name descname"><span class="pre">reachability</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.reachability" title="Permalink to this definition">¶</a></dt>
+<dd><p>The selected reachability method</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="katana.local.analytics._ksssp.ksssp">
+<span class="sig-prename descclassname"><span class="pre">katana.local.analytics._ksssp.</span></span><span class="sig-name descname"><span class="pre">ksssp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_weight_property_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_paths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_symmetric=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plan=&lt;katana.local.analytics._ksssp.KssspPlan</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txn_ctx=None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.local.analytics._ksssp.ksssp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the K-Shortest Path on <cite>pg</cite> using <cite>start_node</cite> as source.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pg</strong> (<a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><em>katana.local.Graph</em></a>) – The graph to analyze</p></li>
+<li><p><strong>edge_weight_property_name</strong> (<em>str</em>) – The input property containing edge weights.</p></li>
+<li><p><strong>start_node</strong> (<em>Node ID</em>) – The source node</p></li>
+<li><p><strong>report_node</strong> (<em>Node ID</em>) – The destination node</p></li>
+<li><p><strong>num_paths</strong> (<em>int</em>) – Number of paths to look for</p></li>
+<li><p><strong>is_symmetric</strong> (<em>bool</em>) – Whether or not the graph is symmetric. Defaults to false.</p></li>
+<li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._ksssp.KssspPlan" title="katana.local.analytics._ksssp.KssspPlan"><em>KssspPlan</em></a>) – The execution plan to use. Defaults to heuristically selecting the plan.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets</p></li>
+</ul>
+</dd>
+</dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">katana.local</span>
+<span class="kn">from</span> <span class="nn">katana.example_data</span> <span class="kn">import</span> <span class="n">get_rdg_dataset</span>
+<span class="kn">from</span> <span class="nn">katana.local</span> <span class="kn">import</span> <span class="n">Graph</span>
+<span class="n">katana</span><span class="o">.</span><span class="n">local</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+
+<span class="n">graph</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">(</span><span class="n">get_rdg_dataset</span><span class="p">(</span><span class="s2">&quot;ldbc_003&quot;</span><span class="p">))</span>
+<span class="kn">from</span> <span class="nn">katana.local.analytics</span> <span class="kn">import</span> <span class="n">ksssp</span>
+<span class="n">weight_name</span> <span class="o">=</span> <span class="s2">&quot;workFrom&quot;</span>
+<span class="n">start_node</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">report_node</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">num_paths</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">ksssp</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">weight_name</span><span class="p">,</span> <span class="n">start_node</span><span class="p">,</span> <span class="n">report_node</span><span class="p">,</span> <span class="n">num_paths</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

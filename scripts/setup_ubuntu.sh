@@ -93,11 +93,13 @@ if [ "$VERSION" == "21" ]; then
     curl "http://archive.ubuntu.com/ubuntu/pool/main/r/re2/libre2-5_20200101+dfsg-1build1_amd64.deb" \
          --output /tmp/libre2-5.deb
     apt install -yq /tmp/libre2-5.deb && rm /tmp/libre2-5.deb
-else
-    curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-$RELEASE_CODENAME.deb" \
-         --output /tmp/apache-arrow-apt-source-latest.deb
 fi
+
+curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-$RELEASE_CODENAME.deb" \
+     --output /tmp/apache-arrow-apt-source-latest.deb
+
 apt install -yq /tmp/apache-arrow-apt-source-latest.deb && rm /tmp/apache-arrow-apt-source-latest.deb
+
 
 #
 # Install dependencies

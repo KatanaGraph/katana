@@ -71,8 +71,8 @@ class KatanaPluginLoader(MetaPathFinder):
                 raise ImportError(
                     f"module {fullname} already exists while trying to insert {aliased_name} at that name."
                 )
-        module.__name__ = fullname
-        module.__package__ = fullname
+        # You might want to set module.__name__ and module.__package__ here. You should not as it can confuse the
+        # module loading machinery and cause things to be loaded a second time.
         sys.modules[fullname] = module
         installed_plugins.append(
             getattr(module, "__katana_plugin_metadata__", PluginMetadata(fullname, None, None, None, None))

@@ -1,5 +1,8 @@
+#include "v6-optional-datastructure-rdk.h"
+
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <vector>
 
 #include <boost/filesystem.hpp>
@@ -17,107 +20,6 @@
 #include "katana/Result.h"
 #include "katana/TextTracer.h"
 #include "katana/URI.h"
-
-std::vector<std::map<uint64_t, std::vector<uint64_t>>>
-GenerateHashes() {
-  std::vector<std::map<uint64_t, std::vector<uint64_t>>> hashes(128);
-  for (uint64_t i = 0; i < 128; i++) {
-    for (uint64_t j = 0; j < 64; j++) {
-      std::map<uint64_t, std::vector<uint64_t>> tmp;
-      tmp[j] = {i, j, i + j};
-      hashes.emplace_back(tmp);
-    }
-  }
-  return hashes;
-}
-
-std::vector<katana::DynamicBitset>
-GenerateFingerprints() {
-  std::vector<katana::DynamicBitset> fingerprints;
-
-  for (size_t i = 0; i < 4; i++) {
-    katana::DynamicBitset bset;
-    for (size_t j = 0; j < i; j++) {
-      bset.resize(j + 1);
-      bset.set(j);
-    }
-    fingerprints.emplace_back(std::move(bset));
-  }
-
-  return fingerprints;
-}
-
-std::vector<std::string>
-GenerateSmiles() {
-  std::vector<std::string> smiles = {"smile1", "smile2", "smile3", "smile4"};
-  return smiles;
-}
-
-std::vector<std::vector<std::uint64_t>>
-GenerateIndices() {
-  std::vector<std::vector<std::uint64_t>> indices(
-      128, std::vector<uint64_t>(64));
-  for (size_t i = 0; i < 128; i++) {
-    for (size_t j = 0; j < 64; j++) {
-      indices[i][j] = i + j;
-    }
-  }
-  return indices;
-}
-
-katana::RDKLSHIndexPrimitive
-GenerateLSHIndex() {
-  katana::RDKLSHIndexPrimitive index;
-
-  std::vector<katana::DynamicBitset> fingerprints = GenerateFingerprints();
-  index.set_num_hashes_per_bucket(16);
-  index.set_num_buckets(96);
-  index.set_fingerprint_length(42);
-  index.set_num_fingerprints(fingerprints.size());
-  index.set_hash_structure(GenerateHashes());
-  index.set_fingerprints(std::move(fingerprints));
-  index.set_smiles(GenerateSmiles());
-  return index;
-}
-
-void
-ValidateLSHIndex(katana::RDKLSHIndexPrimitive& index) {
-  KATANA_LOG_ASSERT(index.num_hashes_per_bucket() == 16);
-  KATANA_LOG_ASSERT(index.num_buckets() == 96);
-  KATANA_LOG_ASSERT(index.fingerprint_length() == 42);
-  KATANA_LOG_ASSERT(index.num_fingerprints() == 4);
-  KATANA_LOG_ASSERT(index.hash_structure() == GenerateHashes());
-  KATANA_LOG_ASSERT(index.fingerprints() == GenerateFingerprints());
-  KATANA_LOG_ASSERT(index.smiles() == GenerateSmiles());
-}
-
-katana::RDKSubstructureIndexPrimitive
-GenerateSubstructIndex() {
-  katana::RDKSubstructureIndexPrimitive index;
-
-  std::vector<katana::DynamicBitset> fingerprints = GenerateFingerprints();
-  auto smiles = GenerateSmiles();
-  auto indices = GenerateIndices();
-  KATANA_LOG_VASSERT(
-      smiles.size() == fingerprints.size(), "smiles = {}, finger  = {}",
-      smiles.size(), fingerprints.size());
-
-  index.set_fp_size(indices.size());
-  index.set_num_entries(smiles.size());
-  index.set_index(std::move(indices));
-  index.set_fingerprints(std::move(fingerprints));
-  index.set_smiles(std::move(smiles));
-  return index;
-}
-
-void
-ValidateSubstructIndex(katana::RDKSubstructureIndexPrimitive& index) {
-  KATANA_LOG_ASSERT(index.fp_size() == 128);
-  KATANA_LOG_ASSERT(index.num_entries() == 4);
-  KATANA_LOG_ASSERT(index.index() == GenerateIndices());
-  KATANA_LOG_ASSERT(index.fingerprints() == GenerateFingerprints());
-  KATANA_LOG_ASSERT(index.smiles() == GenerateSmiles());
-}
 
 /*
  * Tests: Optional Datastructure, RDKLSHIndexPrimitive, RDKSubstructureIndexPrimitive functionality
@@ -229,6 +131,7 @@ TestLoadFail(const std::string& rdg_dir) {
   // rdg must have only one of these manifests available for this test to function propertly
   std::string path =
       KATANA_CHECKED(find_file(rdg_dir2, "rdk_lsh_index_manifest"));
+  KATANA_LOG_DEBUG("replacing manifest file at {}", path);
   std::filesystem::remove(path);
   ff->Bind(path);
   KATANA_CHECKED(ff->Persist());
@@ -236,7 +139,8 @@ TestLoadFail(const std::string& rdg_dir) {
   // expect this to fail
   auto res = rdg2.LoadRDKLSHIndexPrimitive();
   if (res) {
-    KATANA_LOG_ASSERT("Loading the garbage manifest should fail!");
+    KATANA_LOG_FATAL("Loading the bad index should fail");
+    return KATANA_ERROR(katana::ErrorCode::InvalidArgument, "should fail");
   }
 
   return katana::ResultSuccess();
@@ -255,9 +159,6 @@ main(int argc, char* argv[]) {
   katana::ProgressTracer::Set(katana::TextTracer::Make());
   katana::ProgressScope host_scope =
       katana::GetTracer().StartActiveSpan("rdg-slice test");
-
-  // Ensure the feature flag is actually set
-  KATANA_LOG_ASSERT(KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat));
 
   const std::string& rdg = argv[1];
 

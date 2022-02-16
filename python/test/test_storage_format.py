@@ -60,6 +60,7 @@ def test_storage_format_unchanged_local():
 # json file filename substrings
 manifest_filename_substring = "_rdg.manifest"
 part_header_filename_substring = "part_vers"
+optional_manifest_filename_substring = "_manifest"
 
 
 def list_diff(li1, li2):
@@ -171,6 +172,8 @@ def validate_rdg_storage_format_subset(subset_path, superset_path, verbose=False
     """
     manifest_files = []
     part_header_files = []
+    # handle json files with names containing uuids differently
+    uuid_json_files = []
     compare_paths = []
 
     file_paths = [x for x in subset_path.glob("**/*") if x.is_file()]
@@ -181,6 +184,8 @@ def validate_rdg_storage_format_subset(subset_path, superset_path, verbose=False
             manifest_files.append(path)
         elif part_header_filename_substring in path.name:
             part_header_files.append(path)
+        elif optional_manifest_filename_substring in path.name:
+            uuid_json_files.append(path)
         else:
             # all json files that we do not recognize will end up getting compared as normal files
             compare_paths.append(path)
@@ -193,14 +198,29 @@ def validate_rdg_storage_format_subset(subset_path, superset_path, verbose=False
         for superset_file in superset_path.glob(f"{subset_no_rand}*"):
             if filecmp.cmp(subset_file, superset_file, shallow=False):
                 if verbose:
-                    print(f"{subset_file} in {subset_path} is equal to {superset_file} in {superset_path}")
+                    print(f"[{subset_file}] in [{subset_path}] is equal to [{superset_file}] in [{superset_path}]")
                 found = True
 
         if not found:
-            print(f"Failed to find matching file for {subset_no_rand}-* in {superset_path}")
+            print(f"Failed to find matching file for {subset_file} in {superset_path}")
             return False
 
-    # compare the json files
+    # compare the json files that have file names containing random strings
+    filecmp.clear_cache()
+    for subset_file in uuid_json_files:
+        subset_no_rand = remove_rand_string(subset_file.name)
+        found = False
+        for superset_file in superset_path.glob(f"{subset_no_rand}*"):
+            if json_match(subset_file, superset_file):
+                if verbose:
+                    print(f"[{subset_file}] in [{subset_path}] is equal to [{superset_file}] in [{superset_path}]")
+                found = True
+
+        if not found:
+            print(f"Failed to find matching file for {subset_file} in {superset_path}")
+            return False
+
+    # compare the standard json files
     for manifest in manifest_files:
         if verbose:
             print(f"checking json manifest files {manifest}, {superset_path / manifest.name}")
@@ -210,7 +230,7 @@ def validate_rdg_storage_format_subset(subset_path, superset_path, verbose=False
 
     for part_header in part_header_files:
         if verbose:
-            print(f"checking json part_header files {part_header}, {superset_path / part_header.name}")
+            print(f"checking json part_header files [{part_header}], [{superset_path / part_header.name}]")
         if not json_match(part_header, superset_path / part_header.name, verbose):
             print(f"json part_header file {part_header} does not match {superset_path / part_header.name}")
             return False

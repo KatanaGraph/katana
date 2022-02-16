@@ -10,6 +10,7 @@
 #include "katana/FileView.h"
 #include "katana/JSON.h"
 #include "katana/ParquetReader.h"
+#include "katana/RDGOptionalDatastructure.h"
 #include "katana/Result.h"
 #include "katana/tsuba.h"
 
@@ -215,10 +216,28 @@ AddPropertySubFiles(std::set<std::string>& fnames, std::string full_path) {
   }
   return katana::ResultSuccess();
 }
+
+katana::Result<void>
+AddOptionalDatastructureSubfiles(
+    std::set<std::string>& fnames, std::string full_path) {
+  katana::FileView fv;
+  KATANA_CHECKED(fv.Bind(full_path, true));
+  katana::RDGOptionalDatastructure data;
+  KATANA_CHECKED(
+      katana::JsonParse<katana::RDGOptionalDatastructure>(fv, &data));
+
+  // copy over any extra files the optional datastructure relies on
+  // Assumes that all OptionalDatastructures properly extend the RDGOptionalDatastructure class
+  for (const auto& file : data.paths()) {
+    fnames.emplace(file.second);
+  }
+  return katana::ResultSuccess();
+}
+
 }  // namespace
 
 // Return the set of file names that hold this RDG's data by reading partition files
-// Useful to garbage collect unused files
+// Useful to garbage collect unused files, and copy an RDG to a new location
 katana::Result<std::set<std::string>>
 katana::RDGManifest::FileNames() {
   std::set<std::string> fnames{};
@@ -238,6 +257,7 @@ katana::RDGManifest::FileNames() {
           version(), view_specifier(), header_res.error());
     } else {
       auto header = std::move(header_res.value());
+
       for (const auto& node_prop : header.node_prop_info_list()) {
         fnames.emplace(node_prop.path());
         KATANA_CHECKED(AddPropertySubFiles(
@@ -263,6 +283,12 @@ katana::RDGManifest::FileNames() {
 
       for (size_t i = 0; i < header.topology_metadata()->num_entries(); i++) {
         fnames.emplace(header.topology_metadata()->Entries().at(i).path_);
+      }
+
+      for (auto it : header.optional_datastructure_manifests()) {
+        fnames.emplace(it.first);
+        KATANA_CHECKED(AddOptionalDatastructureSubfiles(
+            fnames, katana::Uri::JoinPath(dir().string(), it.second)));
       }
     }
   }

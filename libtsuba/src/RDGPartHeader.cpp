@@ -345,42 +345,25 @@ katana::to_json(json& j, const katana::RDGPartHeader& header) {
         "RDGPartHeader.unstable_storage_format_ is true");
   }
 
-  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
-    j = json{
-        {kNodePropertyKey, header.node_prop_info_list_},
-        {kEdgePropertyKey, header.edge_prop_info_list_},
-        {kPartPropertyFilesKey, header.part_prop_info_list_},
-        {kPartPropertyMetaKey, header.metadata_},
-        {kStorageFormatVersionKey, header.storage_format_version_},
-        {kUnstableStorageFormatFlagKey, header.unstable_storage_format_},
-        {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
-        {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
-        {kNodeEntityTypeIDDictionaryKey,
-         header.node_entity_type_id_dictionary_},
-        {kEdgeEntityTypeIDDictionaryKey,
-         header.edge_entity_type_id_dictionary_},
-        {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
-        {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
-        {kPartitionTopologyMetadataKey, header.topology_metadata_},
-        {kOptionalDatastructuresKey, header.optional_datastructure_manifests_}};
-  } else {
-    j = json{
-        {kNodePropertyKey, header.node_prop_info_list_},
-        {kEdgePropertyKey, header.edge_prop_info_list_},
-        {kPartPropertyFilesKey, header.part_prop_info_list_},
-        {kPartPropertyMetaKey, header.metadata_},
-        {kStorageFormatVersionKey, header.storage_format_version_},
-        {kUnstableStorageFormatFlagKey, header.unstable_storage_format_},
-        {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
-        {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
-        {kNodeEntityTypeIDDictionaryKey,
-         header.node_entity_type_id_dictionary_},
-        {kEdgeEntityTypeIDDictionaryKey,
-         header.edge_entity_type_id_dictionary_},
-        {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
-        {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
-        {kPartitionTopologyMetadataKey, header.topology_metadata_}};
-  }
+  KATANA_LOG_DEBUG(
+      "Storing paths to {} optional datastructure manifests",
+      header.optional_datastructure_manifests_.size());
+
+  j = json{
+      {kNodePropertyKey, header.node_prop_info_list_},
+      {kEdgePropertyKey, header.edge_prop_info_list_},
+      {kPartPropertyFilesKey, header.part_prop_info_list_},
+      {kPartPropertyMetaKey, header.metadata_},
+      {kStorageFormatVersionKey, header.storage_format_version_},
+      {kUnstableStorageFormatFlagKey, header.unstable_storage_format_},
+      {kNodeEntityTypeIDArrayPathKey, header.node_entity_type_id_array_path_},
+      {kEdgeEntityTypeIDArrayPathKey, header.edge_entity_type_id_array_path_},
+      {kNodeEntityTypeIDDictionaryKey, header.node_entity_type_id_dictionary_},
+      {kEdgeEntityTypeIDDictionaryKey, header.edge_entity_type_id_dictionary_},
+      {kNodeEntityTypeIDNameKey, header.node_entity_type_id_name_},
+      {kEdgeEntityTypeIDNameKey, header.edge_entity_type_id_name_},
+      {kPartitionTopologyMetadataKey, header.topology_metadata_},
+      {kOptionalDatastructuresKey, header.optional_datastructure_manifests_}};
 }
 
 void
@@ -478,11 +461,13 @@ katana::from_json(const json& j, katana::RDGPartHeader& header) {
     header.topology_metadata_.Append(entry);
   }
 
-  // Version N added optional data structures
-  // TODO(emcginnis) unstable for now
-  if (header.unstable_storage_format_) {
+  // Version 6 added optional data structures
+  if (header.storage_format_version_ >= kPartitionStorageFormatVersion6) {
     j.at(kOptionalDatastructuresKey)
         .get_to(header.optional_datastructure_manifests_);
+    KATANA_LOG_DEBUG(
+        "Loaded {} optional datastructure manifests",
+        header.optional_datastructure_manifests_.size());
   }
 }
 

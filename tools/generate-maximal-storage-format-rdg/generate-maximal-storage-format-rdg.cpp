@@ -2,9 +2,13 @@
 
 #include <boost/filesystem.hpp>
 
+#include "../../libtsuba/test/storage-format-version/v6-optional-datastructure-rdk.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/RDG.h"
+#include "katana/RDKLSHIndexPrimitive.h"
+#include "katana/RDKSubstructureIndexPrimitive.h"
+#include "katana/Result.h"
 #include "katana/SharedMemSys.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
@@ -53,21 +57,59 @@ StoreGraph(katana::PropertyGraph* g, std::string& output_path) {
   return output_path;
 }
 
-void
+/// Load/store cycle the provided RDG to cleanly relocate the graph without
+/// Carrying along stale files
+katana::PropertyGraph
+CleanRelocateGraphLoad(const std::string& rdg_file) {
+  katana::PropertyGraph g_orig = LoadGraph(rdg_file);
+  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  KATANA_LOG_ASSERT(uri_res);
+  std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
+  std::string tmp_path = StoreGraph(&g_orig, tmp_rdg_dir);
+
+  katana::PropertyGraph g = LoadGraph(tmp_path);
+  return g;
+}
+
+/// Load/store cycle the provided RDG to cleanly relocate the graph without
+/// Carrying along stale files
+std::string
+CleanRelocateGraphStore(katana::PropertyGraph* g, std::string& output_path) {
+  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  KATANA_LOG_ASSERT(uri_res);
+  std::string tmp_rdg_dir_2(uri_res.value().path());  // path() because local
+  std::string g_tmp_rdg_file = StoreGraph(g, tmp_rdg_dir_2);
+
+  katana::PropertyGraph g_new = LoadGraph(g_tmp_rdg_file);
+  std::string g_new_rdg_file = StoreGraph(&g_new, output_path);
+
+  return g_new_rdg_file;
+}
+
+katana::Result<void>
 MaximizeGraph(std::string& input_rdg, std::string& output_path) {
-  katana::PropertyGraph g = LoadGraph(input_rdg);
+  katana::PropertyGraph g_tmp = CleanRelocateGraphLoad(input_rdg);
 
   // Add calls which add optional data structures to the RDG here
-  auto generated_sorted_view_sort1 = g.BuildView<
+  auto generated_sorted_view_sort1 = g_tmp.BuildView<
       katana::PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID>();
   auto generated_sorted_view_sort2 =
-      g.BuildView<katana::PropertyGraphViews::EdgesSortedByDestID>();
+      g_tmp.BuildView<katana::PropertyGraphViews::EdgesSortedByDestID>();
   auto generated_sorted_view_sort3 =
-      g.BuildView<katana::PropertyGraphViews::EdgeTypeAwareBiDir>();
+      g_tmp.BuildView<katana::PropertyGraphViews::EdgeTypeAwareBiDir>();
 
-  std::string g2_rdg_file = StoreGraph(&g, output_path);
+  katana::RDKLSHIndexPrimitive lsh = GenerateLSHIndex();
+  katana::RDKSubstructureIndexPrimitive substruct = GenerateSubstructIndex();
+
+  KATANA_CHECKED(g_tmp.WriteRDKLSHIndexPrimitive(lsh));
+  KATANA_CHECKED(g_tmp.WriteRDKSubstructureIndexPrimitive(substruct));
+
+  std::string g2_rdg_file = CleanRelocateGraphStore(&g_tmp, output_path);
+
   KATANA_LOG_WARN(
       "maximized version of {} stored at {}", input_rdg, g2_rdg_file);
+
+  return katana::ResultSuccess();
 }
 
 int
@@ -77,7 +119,10 @@ main(int argc, char** argv) {
   cll::ParseCommandLineOptions(argc, argv);
 
   KATANA_LOG_ASSERT(!InputFile.empty());
-  MaximizeGraph(InputFile, OutputFile);
+  auto res = MaximizeGraph(InputFile, OutputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("failed to generate maximal graph");
+  }
 
   return 0;
 }

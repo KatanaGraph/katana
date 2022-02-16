@@ -74,6 +74,7 @@ WriteRDG(katana::RDG&& rdg_, std::string out_dir) {
 
 katana::Result<katana::RDG>
 LoadRDG(const std::string& rdg_name) {
+  KATANA_LOG_WARN("Loading RDG at location {}", rdg_name);
   katana::RDGManifest manifest = KATANA_CHECKED(katana::FindManifest(rdg_name));
   katana::RDGFile rdg_file{
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite))};
@@ -89,13 +90,14 @@ find_file(const std::string& search_path, const std::string& substring) {
       search_path.find("file://") == std::string::npos,
       "Function cannot handle paths with the file:// prefix");
 
+  KATANA_LOG_DEBUG("finding file matching {}", substring);
   const std::filesystem::directory_iterator end;
   try {
     for (std::filesystem::directory_iterator iter{search_path}; iter != end;
          iter++) {
-      const std::string file_name = iter->path().filename();
+      const std::string file_name = iter->path().filename().string();
       if (std::filesystem::is_regular_file(*iter)) {
-        if (file_name.find(substring)) {
+        if (file_name.find(substring) != std::string::npos) {
           return (iter->path().string());
         }
       }

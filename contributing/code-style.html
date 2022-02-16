@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+208.0.5f24f1 variable.
+            // this version, rather than using sphinx's 0.1.102.dev+209.0.754e7f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -529,10 +529,11 @@ formed.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_go_format.sh</span> <span class="pre">[-fix]</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">gofmt</span></code> to format go code.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_go_lint.sh</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">golangci-lint</span></code> to check check style.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_python_format.sh</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">black</span></code> to format python code.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_python_lint.sh</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">pylint</span></code> to format python code.</p></li>
 </ul>
-<p>We also have a <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> and <code class="docutils literal notranslate"><span class="pre">pylint</span></code> configuration. Both these are
-useful tools for checking your code locally. Although, <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> is not
-currently enforced by continuous integration.</p>
+<p>We also have a <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> configuration, which is a useful tool for checking
+your code locally. <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> is not currently enforced by continuous
+integration.</p>
 <p>None of these checks are exhaustive (on their own or combined)!</p>
 <p>New code is expected to follow the above guidelines. But also be aware: there
 are older modules that predate these expectations (currently, older modules are

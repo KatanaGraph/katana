@@ -542,8 +542,8 @@ katana::analytics::Ksssp(
     KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
         pg, temporary_edge_property.name(), txn_ctx));
     return kSSSPWithWrap<int64_t>(
-        pg, temporary_edge_property.name(), start_node, report_node, 
-        num_paths, is_symmetric, txn_ctx, plan);
+        pg, temporary_edge_property.name(), start_node, report_node, num_paths,
+        is_symmetric, txn_ctx, plan);
   }
 
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))

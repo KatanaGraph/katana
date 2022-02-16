@@ -474,21 +474,6 @@ kSSSPWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
     const bool& is_symmetric, katana::TxnContext* txn_ctx, KssspPlan plan) {
-  if (!edge_weight_property_name.empty() &&
-      !pg->HasEdgeProperty(edge_weight_property_name)) {
-    return KATANA_ERROR(
-        katana::ErrorCode::NotFound, "Edge Property: {} Not found",
-        edge_weight_property_name);
-  }
-
-  if (edge_weight_property_name.empty()) {
-    TemporaryPropertyGuard temporary_edge_property{
-        pg->EdgeMutablePropertyView()};
-    struct EdgeWt : public katana::PODProperty<int64_t> {};
-    KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
-        pg, temporary_edge_property.name(), txn_ctx));
-  }
-
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
   std::vector<TemporaryPropertyGuard> temp_node_properties(2);
@@ -543,6 +528,24 @@ katana::analytics::Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
     const bool& is_symmetric, katana::TxnContext* txn_ctx, KssspPlan plan) {
+  if (!edge_weight_property_name.empty() &&
+      !pg->HasEdgeProperty(edge_weight_property_name)) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "Edge Property: {} Not found",
+        edge_weight_property_name);
+  }
+
+  if (edge_weight_property_name.empty()) {
+    TemporaryPropertyGuard temporary_edge_property{
+        pg->EdgeMutablePropertyView()};
+    struct EdgeWt : public katana::PODProperty<int64_t> {};
+    KATANA_CHECKED(AddDefaultEdgeWeight<EdgeWt>(
+        pg, temporary_edge_property.name(), txn_ctx));
+    return kSSSPWithWrap<int64_t>(
+        pg, temporary_edge_property.name(), start_node, report_node, 
+        num_paths, is_symmetric, txn_ctx, plan);
+  }
+
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
               ->type()
               ->id()) {

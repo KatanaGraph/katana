@@ -31,6 +31,9 @@ disable = "all"
 #
 # disable = [
 #   # TODO(ddn): Should re-enable at some point
+#   "missing-function-docstring",
+#   "missing-class-docstring",
+#   "missing-module-docstring",
 #   "unused-wildcard-import",
 #   "wildcard-import",
 #
@@ -205,9 +208,6 @@ enable = [
   "missing-format-argument-key",
   "missing-format-attribute",
   "missing-format-string-key",
-  "missing-function-docstring",
-  "missing-class-docstring",
-  "missing-module-docstring",
   "missing-kwoa",
   "missing-parentheses-for-call-in-test",
   "mixed-format-string",

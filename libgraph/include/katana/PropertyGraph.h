@@ -62,7 +62,6 @@ DefaultPropertyNames() {
 /// comprise the physical representation of the logical property graph.
 class KATANA_EXPORT PropertyGraph {
   friend class PGViewCache;
-  friend class PropertyGraphRetractor;
 
   // Regular methods
 public:
@@ -728,11 +727,11 @@ public:
   Result<void> ConstructNodeProperties(
       katana::TxnContext* txn_ctx, const std::vector<std::string>& names =
                                        DefaultPropertyNames<NodeProps>()) {
-    auto bit_mask = NodeBitmask();
     auto num_nodes = NumOriginalNodes();
     auto res_table =
-        bit_mask ? katana::AllocateTable<NodeProps>(num_nodes, names, bit_mask)
-                 : katana::AllocateTable<NodeProps>(num_nodes, names);
+        is_transformed
+            ? katana::AllocateTable<NodeProps>(num_nodes, names, node_bitmask_)
+            : katana::AllocateTable<NodeProps>(num_nodes, names);
     if (!res_table) {
       return res_table.error();
     }
@@ -744,11 +743,11 @@ public:
   Result<void> ConstructEdgeProperties(
       katana::TxnContext* txn_ctx, const std::vector<std::string>& names =
                                        DefaultPropertyNames<EdgeProps>()) {
-    auto bit_mask = EdgeBitmask();
     auto num_edges = NumOriginalEdges();
     auto res_table =
-        bit_mask ? katana::AllocateTable<EdgeProps>(num_edges, names, bit_mask)
-                 : katana::AllocateTable<EdgeProps>(num_edges, names);
+        is_transformed
+            ? katana::AllocateTable<EdgeProps>(num_edges, names, edge_bitmask_)
+            : katana::AllocateTable<EdgeProps>(num_edges, names);
     if (!res_table) {
       return res_table.error();
     }
@@ -1002,6 +1001,8 @@ protected:
     return *edge_entity_type_ids_;
   }
 
+  const uint8_t* NodeBitmask() noexcept { return node_bitmask_data_.data(); }
+
   /// Call this constructor to populate projection data.
   PropertyGraph(
       const PropertyGraph& parent, GraphTopology&& projected_topo,
@@ -1038,7 +1039,10 @@ private:
   /// this function creates an empty projection with num_new_nodes nodes
   static std::unique_ptr<PropertyGraph> MakeEmptyEdgeProjectedGraph(
       const PropertyGraph& pg, uint32_t num_new_nodes,
-      const DynamicBitset& bitset);
+      const DynamicBitset& nodes_bitset,
+      NUMAArray<Node>&& original_to_projected_nodes_mapping,
+      NUMAArray<GraphTopology::PropertyIndex>&&
+          projected_to_original_nodes_mapping);
 
   /// this function creates an empty projection
   static std::unique_ptr<PropertyGraph> MakeEmptyProjectedGraph(
@@ -1066,16 +1070,6 @@ private:
   Result<void> WriteView(
       const std::string& uri, const std::string& command_line,
       katana::TxnContext* txn_ctx);
-
-  /// Bitmask of nodes included in the transformation view. Should be used to construct arrow tables.
-  std::shared_ptr<arrow::Buffer> NodeBitmask() const noexcept {
-    return is_transformed ? node_bitmask_ : nullptr;
-  }
-
-  /// Bitmask of edges included in the transformation view. Should be used to construct arrow tables.
-  std::shared_ptr<arrow::Buffer> EdgeBitmask() const noexcept {
-    return is_transformed ? edge_bitmask_ : nullptr;
-  }
 
   /// Return the number of nodes of the original property graph.
   uint64_t NumOriginalNodes() const {

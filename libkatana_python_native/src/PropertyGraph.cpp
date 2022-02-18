@@ -717,6 +717,7 @@ void
 DefTxnContext(py::module& m) {
   py::class_<katana::TxnContext> cls(m, "TxnContext");
   cls.def(py::init<>());
+  cls.def("commit", &katana::TxnContext::Commit);
   katana::DefKatanaAddress(cls);
 }
 

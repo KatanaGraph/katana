@@ -23,6 +23,7 @@ cdef extern from "katana/RDG.h" namespace "katana" nogil:
 cdef extern from "katana/TxnContext.h" namespace "katana" nogil:
     cdef cppclass TxnContext:
         TxnContext()
+        Result[void] Commit()
 
 
 # Omit the exception specifications here to

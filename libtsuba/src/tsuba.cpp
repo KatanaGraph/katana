@@ -387,6 +387,12 @@ katana::WriteRDGPartHeader(
   // import code in a stale state. Especially if there are large changes.
   part_header.update_storage_format_version();
 
+  // all rdgs stored while the unstable rdg storage format flag is set
+  // are considered to be in the unstable rdg storage format
+  if (KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
+    part_header.set_unstable_storage_format();
+  }
+
   // Set partition metadata
   part_header.set_metadata(part_meta);
 

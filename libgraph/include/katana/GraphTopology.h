@@ -598,6 +598,9 @@ public:
   void invalidate() noexcept { is_valid_ = false; };
 
   const EntityTypeID* index_to_type_map_data() const noexcept {
+    if (index_to_type_map_.empty()) {
+      return nullptr;
+    }
     return &index_to_type_map_[0];
   }
 

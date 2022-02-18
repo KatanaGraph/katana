@@ -2,9 +2,11 @@
 Utilities which download example data for testing and experimentation.
 """
 
+import logging
 import os
 import shutil
 import subprocess
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -18,6 +20,8 @@ __all__ = ["get_rdg_dataset_at_version", "get_rdg_dataset", "get_csv_dataset", "
 # TODO(emcginnis) it would be really really nice if this got updated automatically
 # when the submodule ref held by open katana is updated
 DATASETS_SHA = "9934dddf3e37ecc14a21cfc814b117eac0266156"
+
+logger = logging.getLogger(__name__)
 
 
 def get_rdg_dataset_at_version(rdg_name, storage_format_version, as_url=False):
@@ -105,17 +109,31 @@ def _get_dataset(rel_path):
     since we might have downloaded the datasets, and our cache could be invalid
     try re-downloading the datasets if we are unable to locate rel_path
     """
-    try:
-        datasets_path = _get_test_datasets_directory()
-    except ValueError:
-        # try to re-download the datasets
-        datasets_path = _get_test_datasets_directory(invalidate_cache=True)
+    max_attempts = 5
+    invalidate_cache = False
+    last_exception = None
 
-    path = datasets_path / rel_path
-    if not path.exists():
-        raise ValueError(f"Dataset does not exist at {path}")
+    for count in range(max_attempts + 1):
+        try:
+            # lame backoff, costs nothing on first attempt
+            time.sleep(count)
+            datasets_path = _get_test_datasets_directory(invalidate_cache=invalidate_cache)
+            path = datasets_path / rel_path
 
-    return path
+            if path.exists():
+                return path
+
+            logger.info(f"path {path} does not exist, but no exception, trying again")
+            last_exception = None
+        except ValueError as e:
+            logger.info(f"Observed {e} while getting test datasets, ignoring and trying again")
+            last_exception = e
+
+        invalidate_cache = True
+
+    raise ValueError(
+        f"Dataset does not exist at {path} after {max_attempts} attempts, last exception was: {last_exception}"
+    )
 
 
 def _get_test_datasets_directory(invalidate_cache=False) -> Path:
@@ -173,13 +191,13 @@ def _get_test_datasets_directory(invalidate_cache=False) -> Path:
         if validate_path(cache_path, validate_sha=False):
             if not invalidate_cache:
                 return cache_path
-            # cleanup anything leftover
-            if cache_path.exists():
-                try:
-                    shutil.rmtree(cache_path)
-                except OSError:
-                    cache_path.unlink()
 
+        # failed to validate, cleanup just in case
+        if cache_path.exists():
+            try:
+                shutil.rmtree(cache_path)
+            finally:
+                cache_path.unlink(missing_ok=True)
         # download a fresh copy
         base_cache_path.mkdir(parents=True, exist_ok=True)
         fn, _headers = urllib.request.urlretrieve(

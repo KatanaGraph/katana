@@ -110,6 +110,22 @@ using List = std::list<T, FixedSizeAllocator<T>>;
 template <typename T, typename C = std::less<T>>
 using Set = std::set<T, C, FixedSizeAllocator<T>>;
 
+//! [STL multiset using katana FixedSizeAllocator]
+//! specializes std::multiset to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators that allocate in
+//! multiples of (huge) pages by acquiring a global lock, and divide the pages
+//! into fixed size blocks. Each per-thread allocator maintains a pool of free
+//! blocks. When an object is allocated, it gets a block from the pool of the
+//! thread that allocated it. When an object is deallocated, its block of
+//! memory is added to the pool of the thread that deallocated it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
+template <typename T, typename C = std::less<T>>
+using MultiSet = std::multiset<T, C, FixedSizeAllocator<T>>;
+
 //! [STL unordered_set using katana Pow2BlockAllocator]
 //! specializes std::unordered_set to use katana concurrent, scaleable allocator:
 //! the allocator is composed of thread-local allocators that allocate in

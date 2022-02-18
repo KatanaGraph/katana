@@ -73,6 +73,20 @@ katana::FindManifest(const std::string& rdg_name) {
   return manifest;
 }
 
+katana::Result<katana::RDGManifest>
+katana::FindManifest(const std::string& rdg_name, katana::TxnContext* txn_ctx) {
+  katana::Uri uri = KATANA_CHECKED(katana::Uri::Make(rdg_name));
+  if (RDGManifest::IsManifestUri(uri)) {
+    uri = uri.DirName();
+  }
+
+  if (txn_ctx && txn_ctx->ManifestCached(uri)) {
+    return txn_ctx->ManifestInfo(uri).rdg_manifest;
+  } else {
+    return KATANA_CHECKED(katana::FindManifest(rdg_name));
+  }
+}
+
 katana::Result<katana::RDGHandle>
 katana::Open(RDGManifest rdg_manifest, uint32_t flags) {
   if (!OpenFlagsValid(flags)) {

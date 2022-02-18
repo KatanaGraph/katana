@@ -628,14 +628,16 @@ DefPropertyGraph(py::module& m) {
   cls.def(
       "write",
       [](PropertyGraph& self, const std::string* path,
-         const std::string& provenance) {
+         const std::string& provenance, TxnContext* txn_ctx) {
+        TxnContextArgumentHandler txn_handler(txn_ctx);
         if (path) {
-          return self.Write(*path, provenance);
+          return self.Write(*path, provenance, txn_handler.get());
         }
-        return self.Commit(provenance);
+        return self.Commit(provenance, txn_handler.get());
       },
       py::arg("path") = py::none(),
       py::arg("provenance") = py::str("katana.local"),
+      py::arg("txn_ctx") = TxnContextArgumentHandler::default_value,
       py::call_guard<py::gil_scoped_release>(),
       R"""(
       Write the property graph to the specified path or URL (or the original path it was loaded from if path is
@@ -715,6 +717,7 @@ void
 DefTxnContext(py::module& m) {
   py::class_<katana::TxnContext> cls(m, "TxnContext");
   cls.def(py::init<>());
+  cls.def("commit", &katana::TxnContext::Commit);
   katana::DefKatanaAddress(cls);
 }
 

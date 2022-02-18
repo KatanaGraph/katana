@@ -154,7 +154,7 @@ ParseWild(katana::TxnContext* txn_ctx) {
   }
   case katana::SourceType::kKatana:
     if (auto r = katana::WritePropertyGraph(
-            *ConvertKatana(input_filename, txn_ctx), output_directory);
+            *ConvertKatana(input_filename, txn_ctx), output_directory, txn_ctx);
         !r) {
       KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
     }

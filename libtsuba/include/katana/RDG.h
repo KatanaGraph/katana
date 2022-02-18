@@ -104,7 +104,8 @@ public:
       std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
       std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
       const katana::EntityTypeManager& node_entity_type_manager,
-      const katana::EntityTypeManager& edge_entity_type_manager);
+      const katana::EntityTypeManager& edge_entity_type_manager,
+      katana::TxnContext* txn_ctx);
 
   /// @brief Store new version of the RDG with lineage based on command line.
   /// @param handle :: handle indicating where to store RDG
@@ -118,24 +119,26 @@ public:
       std::unique_ptr<FileFrame> node_entity_type_id_array_ff,
       std::unique_ptr<FileFrame> edge_entity_type_id_array_ff,
       const katana::EntityTypeManager& node_entity_type_manager,
-      const katana::EntityTypeManager& edge_entity_type_manager) {
+      const katana::EntityTypeManager& edge_entity_type_manager,
+      katana::TxnContext* txn_ctx) {
     return Store(
         handle, command_line, IncrementVersion,
         std::move(node_entity_type_id_array_ff),
         std::move(edge_entity_type_id_array_ff), node_entity_type_manager,
-        edge_entity_type_manager);
+        edge_entity_type_manager, txn_ctx);
   }
 
   /// @brief Store new version of RDG with lineage based on command line.
   /// @param handle :: handle indicating where to store RDG
   /// @param command_line :: added to metadata to track lineage of RDG
   katana::Result<void> Store(
-      RDGHandle handle, const std::string& command_line) {
+      RDGHandle handle, const std::string& command_line,
+      katana::TxnContext* txn_ctx) {
     katana::EntityTypeManager node_entity_type_manager;
     katana::EntityTypeManager edge_entity_type_manager;
     return Store(
         handle, command_line, IncrementVersion, nullptr, nullptr,
-        node_entity_type_manager, edge_entity_type_manager);
+        node_entity_type_manager, edge_entity_type_manager, txn_ctx);
   }
 
   /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
@@ -145,12 +148,12 @@ public:
   /// 'RDG::RDGVersioningPolicy::RetainVersion' to indicate whether RDG version is changing with this store.
   katana::Result<void> Store(
       RDGHandle handle, const std::string& command_line,
-      RDGVersioningPolicy versioning_action) {
+      RDGVersioningPolicy versioning_action, katana::TxnContext* txn_ctx) {
     katana::EntityTypeManager node_entity_type_manager;
     katana::EntityTypeManager edge_entity_type_manager;
     return Store(
         handle, command_line, versioning_action, nullptr, nullptr,
-        node_entity_type_manager, edge_entity_type_manager);
+        node_entity_type_manager, edge_entity_type_manager, txn_ctx);
   }
 
   katana::Result<void> AddNodeProperties(
@@ -350,7 +353,7 @@ private:
   katana::Result<void> DoStore(
       RDGHandle handle, const std::string& command_line,
       RDGVersioningPolicy versioning_action,
-      std::unique_ptr<WriteGroup> write_group);
+      std::unique_ptr<WriteGroup> write_group, katana::TxnContext* txn_ctx);
 
   katana::Result<void> DoStoreNodeEntityTypeIDArray(
       RDGHandle handle, std::unique_ptr<FileFrame> node_entity_type_id_array_ff,

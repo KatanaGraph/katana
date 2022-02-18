@@ -73,6 +73,12 @@ VisitArrowCast(const arrow::Array& array) {
 
 inline arrow::Type::type
 GetArrowTypeID(const arrow::ArrayBuilder* builder) {
+  if (builder->type()->id() == arrow::Type::EXTENSION) {
+    auto et = std::dynamic_pointer_cast<arrow::ExtensionType>(builder->type());
+    if (et) {
+      return et->storage_type()->id();
+    }
+  }
   return builder->type()->id();
 }
 

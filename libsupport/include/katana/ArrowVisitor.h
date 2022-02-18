@@ -78,7 +78,7 @@ GetArrowTypeID(const arrow::ArrayBuilder* builder) {
     return id;
   }
   const auto& ext = static_cast<const arrow::ExtensionType&>(*builder->type());
-  return ext.storage_id();
+  return ext.storage_type()->id();
 }
 
 template <typename T>

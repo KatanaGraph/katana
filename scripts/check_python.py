@@ -32,6 +32,9 @@ if __name__ == "__main__":
         "--verbose", "-v", default=False, action="store_true", help="Verbosely print what I am doing.",
     )
     parser.add_argument(
+        "--pydocstyle", default=False, action="store_true", help="Run pydocstyle and other explicitly requested commands.",
+    )
+    parser.add_argument(
         "--pylint", default=False, action="store_true", help="Run pylint and other explicitly requested commands.",
     )
     parser.add_argument(
@@ -52,7 +55,8 @@ if __name__ == "__main__":
     parser.add_argument("roots", type=str, nargs="+", help="The root paths to search from, or files to check.")
     args = parser.parse_args()
 
-    if not args.pylint and not args.black and not args.isort:
+    if not args.pydocstyle and not args.pylint and not args.black and not args.isort:
+        args.pydocstyle = True
         args.pylint = True
         args.black = True
         args.isort = True
@@ -86,6 +90,7 @@ if __name__ == "__main__":
     isort_cmd = [os.environ.get("ISORT", "isort"), f"--settings-file={git_root}/pyproject.toml"]
     isort_check_cmd = isort_cmd + ["--diff", "--check"]
     lint_cmd = [os.environ.get("PYLINT", "pylint"), "-j", "0", f"--rcfile={git_root}/pyproject.toml"]
+    pydocstyle_cmd = [os.environ.get("PYDOCSTYLE", "pydocstyle"), f"--config={git_root}/pyproject.toml"]
 
     if args.black and not args.no_versions:
         subprocess.check_call([os.environ.get("BLACK", "black"), "--version"])
@@ -93,6 +98,8 @@ if __name__ == "__main__":
         subprocess.check_call([os.environ.get("ISORT", "isort"), "--version"])
     if args.pylint and not args.no_versions:
         subprocess.check_call([os.environ.get("PYLINT", "pylint"), "--version"])
+    if args.pydocstyle and not args.no_versions:
+        subprocess.check_call([os.environ.get("PYDOCSTYLE", "pydocstyle"), "--version"])
 
     def check_file(file_path: Path, cmd_prefix: List[str], fix: bool, verbose: bool):
         if fix:
@@ -120,6 +127,8 @@ if __name__ == "__main__":
                 tasks.append(executor.submit(check_file, file_name, isort_check_cmd, args.fix, args.verbose))
         if file_name.suffix[1:] not in pylint_unsupported_suffixes and args.pylint:
             tasks.append(executor.submit(check_file, file_name, lint_cmd, args.fix, args.verbose))
+        if args.pydocstyle:
+            tasks.append(executor.submit(check_file, file_name, pydocstyle_cmd, args.fix, args.verbose))
 
     # We are definitely IO bound so use double the number of CPUs.
     with futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() * 2) as executor:

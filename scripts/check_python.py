@@ -72,6 +72,7 @@ if __name__ == "__main__":
     file_suffixes = {"py", "pyx", "pxd", "pyi"}
     black_unsupported_suffixes = {"pyx", "pxd"}
     pylint_unsupported_suffixes = {"pyx", "pxd"}
+    pydocstyle_unsupported_suffixes = {"pyx", "pxd"}
 
     def is_excluded(f):
         # Check the patterns against the path, the absolute, path and every prefix of the absolute path.
@@ -127,7 +128,7 @@ if __name__ == "__main__":
                 tasks.append(executor.submit(check_file, file_name, isort_check_cmd, args.fix, args.verbose))
         if file_name.suffix[1:] not in pylint_unsupported_suffixes and args.pylint:
             tasks.append(executor.submit(check_file, file_name, lint_cmd, args.fix, args.verbose))
-        if args.pydocstyle:
+        if file_name.suffix[1:] not in pydocstyle_unsupported_suffixes and args.pydocstyle:
             tasks.append(executor.submit(check_file, file_name, pydocstyle_cmd, args.fix, args.verbose))
 
     # We are definitely IO bound so use double the number of CPUs.

@@ -211,8 +211,8 @@ katana::FileFrame::PaddedWrite(
       "adding {} bytes of padding. nbytes = {}, byte_boundry = {}",
       num_padding_bytes, nbytes, byte_boundry);
   if (num_padding_bytes > 0) {
-    uint8_t padding[num_padding_bytes];
-    aro_sts = Write(&padding, num_padding_bytes * sizeof(uint8_t));
+    std::vector<uint8_t> padding(num_padding_bytes, 0);
+    aro_sts = Write(padding.data(), padding.size() * sizeof(uint8_t));
     if (!aro_sts.ok()) {
       return katana::ArrowToKatana(aro_sts.code());
     }

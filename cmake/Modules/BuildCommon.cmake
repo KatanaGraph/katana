@@ -68,7 +68,6 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "" CACHE STRING "Semi-colon separated list of D
 ###### Developer features ######
 set(KATANA_PER_ROUND_STATS OFF CACHE BOOL "Report statistics of each round of execution")
 set(KATANA_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a single machine) for running the tests.")
-set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: min(number of physical cores, 8))")
 set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 set(KATANA_NUM_DOC_THREADS "" CACHE STRING "Maximum number of threads to use when reading / writing with Sphinx (default: min(number of physical cores, 4))")

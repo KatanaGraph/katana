@@ -19,6 +19,9 @@ line-length = 120
 profile = "black"
 line_length = 120
 
+[tool.pydocstyle]
+convention = "google"
+
 [tool.pylint.format]
 max-line-length = 120
 

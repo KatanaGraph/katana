@@ -1,6 +1,7 @@
 #ifndef KATANA_LIBSUPPORT_KATANA_TEXTTRACER_H_
 #define KATANA_LIBSUPPORT_KATANA_TEXTTRACER_H_
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,6 +10,9 @@
 #include "katana/config.h"
 
 namespace katana {
+
+using Clock = std::chrono::high_resolution_clock;
+using TimePoint = std::chrono::time_point<Clock>;
 
 class KATANA_EXPORT TextTracer : public ProgressTracer {
 public:
@@ -75,6 +79,7 @@ private:
 
   TextContext context_;
   std::string span_name_;
+  TimePoint start_time_;
 };
 
 }  // namespace katana

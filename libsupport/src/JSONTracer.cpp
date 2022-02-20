@@ -114,15 +114,15 @@ std::string
 BuildJSON(
     const std::string& trace_id, const std::string& span_data,
     const std::string& log_data, const std::string& tag_data,
-    const std::string& host_data) {
+    const std::string& host_data, uint64_t duration) {
   fmt::memory_buffer buf;
   uint32_t host_id = katana::ProgressTracer::Get().GetHostID();
   static auto begin = katana::Now();
   auto msec_since_begin = katana::UsSince(begin) / 1000;
 
   fmt::format_to(
-      std::back_inserter(buf), R"({{"host":{},"offset_ms":{})", host_id,
-      msec_since_begin);
+      std::back_inserter(buf), R"({{"host":{},"offset_ms":{},"span_ms":{})",
+      host_id, msec_since_begin, duration);
   if (!log_data.empty()) {
     fmt::format_to(std::back_inserter(buf), ",{}", log_data);
   }
@@ -202,9 +202,11 @@ katana::JSONSpan::SetTags(const katana::Tags& tags) {
   std::string log_data;
   std::string tag_data = GetTagsJSON(tags);
   std::string host_data;
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
   std::string output_json = BuildJSON(
-      GetContext().GetTraceID(), span_data, log_data, tag_data, host_data);
+      GetContext().GetTraceID(), span_data, log_data, tag_data, host_data,
+      msec_since_start);
   OutputJSON(out_callback_, output_json);
 }
 
@@ -214,9 +216,11 @@ katana::JSONSpan::Log(const std::string& message, const katana::Tags& tags) {
   std::string log_data = GetLogJSON(message);
   std::string tag_data = GetTagsJSON(tags);
   std::string host_data;
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
   std::string output_json = BuildJSON(
-      GetContext().GetTraceID(), span_data, log_data, tag_data, host_data);
+      GetContext().GetTraceID(), span_data, log_data, tag_data, host_data,
+      msec_since_start);
   OutputJSON(out_callback_, output_json);
 }
 
@@ -225,7 +229,9 @@ katana::JSONSpan::JSONSpan(
     OutputCB out_callback)
     : ProgressSpan(std::move(parent)),
       context_(JSONContext{"", ""}),
-      out_callback_(std::move(out_callback)) {
+      out_callback_(std::move(out_callback)),
+      span_name_(span_name),
+      start_time_(katana::Now()) {
   std::string parent_span_id{"null"};
   std::string trace_id;
   std::string host_data;
@@ -245,9 +251,10 @@ katana::JSONSpan::JSONSpan(
   std::string span_data = GetSpanJSON(span_id, span_name, parent_span_id);
   std::string log_data = GetLogJSON(message);
   std::string tag_data;
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
-  std::string output_json =
-      BuildJSON(trace_id, span_data, log_data, tag_data, host_data);
+  std::string output_json = BuildJSON(
+      trace_id, span_data, log_data, tag_data, host_data, msec_since_start);
   OutputJSON(out_callback_, output_json);
 }
 
@@ -256,7 +263,9 @@ katana::JSONSpan::JSONSpan(
     OutputCB out_callback)
     : ProgressSpan(nullptr),
       context_(JSONContext{"", ""}),
-      out_callback_(std::move(out_callback)) {
+      out_callback_(std::move(out_callback)),
+      span_name_(span_name),
+      start_time_(katana::Now()) {
   std::string parent_span_id = parent.GetSpanID();
   std::string trace_id = parent.GetTraceID();
   std::string span_id = GenerateID();
@@ -268,9 +277,10 @@ katana::JSONSpan::JSONSpan(
   std::string span_data = GetSpanJSON(span_id, span_name, parent_span_id);
   std::string log_data = GetLogJSON(message);
   std::string tag_data;
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
-  std::string output_json =
-      BuildJSON(trace_id, span_data, log_data, tag_data, host_data);
+  std::string output_json = BuildJSON(
+      trace_id, span_data, log_data, tag_data, host_data, msec_since_start);
   OutputJSON(out_callback_, output_json);
 }
 
@@ -291,14 +301,16 @@ katana::JSONSpan::Make(
 
 void
 katana::JSONSpan::Close() {
-  std::string message{"finished"};
+  std::string message = "finished " + span_name_;
 
   std::string span_data = GetSpanJSON(GetContext().GetSpanID(), true);
   std::string log_data = GetLogJSON(message);
   std::string tag_data;
   std::string host_data;
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
   std::string output_json = BuildJSON(
-      GetContext().GetTraceID(), span_data, log_data, tag_data, host_data);
+      GetContext().GetTraceID(), span_data, log_data, tag_data, host_data,
+      msec_since_start);
   OutputJSON(out_callback_, output_json);
 }

@@ -49,7 +49,7 @@ GetTagsText(const katana::Tags& tags) {
 std::string
 BuildText(
     const std::string& message, const std::string& tag_data,
-    const std::string& host_data) {
+    const std::string& host_data, uint64_t duration) {
   fmt::memory_buffer buf;
   uint32_t host_id = katana::ProgressTracer::Get().GetHostID();
   static auto begin = katana::Now();
@@ -57,9 +57,9 @@ BuildText(
 
   fmt::format_to(
       std::back_inserter(buf),
-      "TRACE: host={} ms={} max_mem_gb={:.3f} mem_gb={:.3f} "
+      "TRACE: host={} ms={} span_ms={} max_mem_gb={:.3f} mem_gb={:.3f} "
       "arrow_mem_gb={:.3f}",
-      host_id, msec_since_begin,
+      host_id, msec_since_begin, duration,
       katana::ProgressTracer::GetMaxMem() / 1024.0 / 1024.0,
       katana::ProgressTracer::ParseProcSelfRssBytes() / 1024.0 / 1024.0 /
           1024.0,
@@ -127,8 +127,10 @@ katana::TextSpan::SetTags(const katana::Tags& tags) {
   std::string message = "tags for " + span_name_;
   std::string tags_data = GetTagsText(tags);
   std::string host_data;
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
-  std::string output_Text = BuildText(message, tags_data, host_data);
+  std::string output_Text =
+      BuildText(message, tags_data, host_data, msec_since_start);
   OutputText(output_Text);
 }
 
@@ -136,8 +138,10 @@ void
 katana::TextSpan::Log(const std::string& message, const katana::Tags& tags) {
   std::string tags_data = GetTagsText(tags);
   std::string host_data;
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
-  std::string output_Text = BuildText(message, tags_data, host_data);
+  std::string output_Text =
+      BuildText(message, tags_data, host_data, msec_since_start);
   OutputText(output_Text);
 }
 
@@ -145,15 +149,18 @@ katana::TextSpan::TextSpan(
     const std::string& span_name, std::shared_ptr<katana::ProgressSpan> parent)
     : ProgressSpan(std::move(parent)),
       context_(TextContext{"0", "0"}),
-      span_name_(span_name) {
+      span_name_(span_name),
+      start_time_(katana::Now()) {
   std::string message = "starting " + span_name;
   std::string tags_data;
   std::string host_data;
   if (GetParentSpan() == nullptr) {
     host_data = GetHostStatsText();
   }
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
-  std::string output_Text = BuildText(message, tags_data, host_data);
+  std::string output_Text =
+      BuildText(message, tags_data, host_data, msec_since_start);
   OutputText(output_Text);
 }
 
@@ -162,12 +169,15 @@ katana::TextSpan::TextSpan(
     [[maybe_unused]] const katana::ProgressContext& parent)
     : ProgressSpan(nullptr),
       context_(TextContext{"0", "0"}),
-      span_name_(span_name) {
+      span_name_(span_name),
+      start_time_(katana::Now()) {
   std::string message = "starting " + span_name;
   std::string tags_data;
   std::string host_data = GetHostStatsText();
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
-  std::string output_Text = BuildText(message, tags_data, host_data);
+  std::string output_Text =
+      BuildText(message, tags_data, host_data, msec_since_start);
   OutputText(output_Text);
 }
 
@@ -189,7 +199,9 @@ katana::TextSpan::Close() {
   std::string message = "finished " + span_name_;
   std::string tags_data;
   std::string host_data;
+  auto msec_since_start = katana::UsSince(start_time_) / 1000;
 
-  std::string output_Text = BuildText(message, tags_data, host_data);
+  std::string output_Text =
+      BuildText(message, tags_data, host_data, msec_since_start);
   OutputText(output_Text);
 }

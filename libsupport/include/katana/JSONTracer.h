@@ -1,6 +1,7 @@
 #ifndef KATANA_LIBSUPPORT_KATANA_JSONTRACER_H_
 #define KATANA_LIBSUPPORT_KATANA_JSONTRACER_H_
 
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <string>
@@ -11,6 +12,8 @@
 
 namespace katana {
 
+using Clock = std::chrono::high_resolution_clock;
+using TimePoint = std::chrono::time_point<Clock>;
 using OutputCB = std::function<void(const std::string&)>;
 
 class KATANA_EXPORT JSONTracer : public ProgressTracer {
@@ -88,6 +91,8 @@ private:
 
   JSONContext context_;
   OutputCB out_callback_;
+  std::string span_name_;
+  TimePoint start_time_;
 };
 
 }  // namespace katana

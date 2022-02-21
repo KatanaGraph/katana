@@ -117,7 +117,7 @@ fi
 # Use the requirements tool to install apt packages with: apt-get satisfy --allow-downgrades --yes --quiet
 "$REPO_ROOT"/scripts/requirements install --arg=--allow-downgrades --arg=--yes --arg=--quiet --label apt --label apt/dev --packaging-system "apt$PKG_SYS_SUFFIX"
 # Use the requirements tool to install pip packages with: python3 -m pip --upgrade
-run_as_original_user "$REPO_ROOT"/scripts/requirements install --label pip --label pip/dev --packaging-system "pip$PKG_SYS_SUFFIX"
+run_as_original_user "$REPO_ROOT"/scripts/requirements install --label pip --label pip/dev --arg=--ignore-installed --packaging-system "pip$PKG_SYS_SUFFIX"
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then

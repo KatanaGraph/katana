@@ -117,6 +117,9 @@ DoJoinPath(std::string_view dir, std::string_view file) {
   return fmt::format("{}{}", dir, file);
 }
 
+// As defined by https://www.rfc-editor.org/rfc/rfc3986,
+// we encode characters outside this list
+// "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;="
 bool
 ShouldURLEncode(int c) {
   if ('a' <= c && c <= 'z') {
@@ -140,10 +143,55 @@ ShouldURLEncode(int c) {
   if (c == '~') {
     return false;
   }
-
-  // We encode whole paths, so in addition to the standard unencoded characters
-  // above, we should not encode '/' either.
+  if (c == ':') {
+    return false;
+  }
   if (c == '/') {
+    return false;
+  }
+  if (c == '?') {
+    return false;
+  }
+  if (c == '#') {
+    return false;
+  }
+  if (c == '[') {
+    return false;
+  }
+  if (c == ']') {
+    return false;
+  }
+  if (c == '@') {
+    return false;
+  }
+  if (c == '!') {
+    return false;
+  }
+  if (c == '$') {
+    return false;
+  }
+  if (c == '&') {
+    return false;
+  }
+  if (c == '\'') {
+    return false;
+  }
+  if (c == '(') {
+    return false;
+  }
+  if (c == ')') {
+    return false;
+  }
+  if (c == '*') {
+    return false;
+  }
+  if (c == '+') {
+    return false;
+  }
+  if (c == ',') {
+    return false;
+  }
+  if (c == ';') {
     return false;
   }
 

@@ -325,3 +325,23 @@ def test_types(graph):
         "IS_PART_OF": 9,
     }
     assert graph.edge_types.is_subtype_of(0, 1) is True
+
+
+def test_projected(graph):
+    projected_graph = graph.project([])
+    assert projected_graph.num_nodes() == 0
+    assert projected_graph.num_edges() == 0
+    projected_graph = graph.project([graph.node_types.atomic_types["Person"]])
+    assert projected_graph.num_nodes() == 45
+    assert projected_graph.num_edges() == 58
+    projected_graph = graph.project([graph.node_types.atomic_types["Person"]], edge_types=[])
+    assert projected_graph.num_nodes() == 45
+    assert projected_graph.num_edges() == 0
+    projected_graph = graph.project(
+        [graph.node_types.atomic_types["Message"]], [graph.edge_types.atomic_types["REPLY_OF"]]
+    )
+    assert projected_graph.num_nodes() == 3928
+    assert projected_graph.num_edges() == 371
+    projected_graph = graph.project(edge_types=[graph.edge_types.atomic_types["REPLY_OF"]])
+    assert projected_graph.num_nodes() == 29946
+    assert projected_graph.num_edges() == 371

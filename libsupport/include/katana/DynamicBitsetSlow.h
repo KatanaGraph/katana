@@ -14,6 +14,97 @@
 
 namespace katana {
 
+/// An iterator over dynamic bitsets.
+///
+/// Increment is an optimized linear search over the bitset, so iteration is
+/// O(N) where N is the size of the bitset, not O(|S|) where |S| is the number
+/// of set bits in the bit set.
+
+// TODO(amp): This is a template so it can be used for both DynamicBitsetSlow
+//  and DynamicBitset. This can be made a simple class once DynamicBitsetSlow
+//  is removed.
+template <typename DynamicBitsetType>
+class KATANA_EXPORT DynamicBitsetIterator
+    : public std::iterator<
+          std::forward_iterator_tag, uint64_t, int64_t, const uint64_t*,
+          uint64_t> {
+  const DynamicBitsetType* underlying_;
+  uint64_t array_index_;
+  uint8_t bit_offset_;
+
+public:
+  DynamicBitsetIterator(
+      const DynamicBitsetType* underlying, uint64_t array_index,
+      uint8_t bit_offset)
+      : underlying_(underlying),
+        array_index_(array_index),
+        bit_offset_(bit_offset) {}
+
+  DynamicBitsetIterator& operator++() {
+    // Step forward one to the bit we want to examine first.
+    bit_offset_++;
+    if (bit_offset_ > DynamicBitsetType::kNumBitsInUint64) {
+      bit_offset_ = 0;
+      array_index_++;
+    }
+
+    const auto& bitvec = underlying_->get_vec();
+    const size_t size = underlying_->size();
+
+    // Used only to make sure we stop on the last real used bit in cases where
+    // the number of bits is not a multiple of kNumBitsInUint64.
+    uint64_t current_bit_index = **this;
+
+    // The following code is optimized to make the search process fast for
+    // sparse bitsets. It's performance for densely filled bitsets should be
+    // good too.
+
+    // Iterate forward word by word
+    for (; array_index_ < bitvec.size(); array_index_++) {
+      uint64_t word = bitvec[array_index_].load(std::memory_order_relaxed);
+      // For each word we check if it is non-zero (that is it contains a 1 bit)
+      if (word != 0) {
+        // Iterate over the bits in the work
+        uint64_t bit_mask = uint64_t{1} << bit_offset_;
+        for (; bit_offset_ < DynamicBitsetType::kNumBitsInUint64 &&
+               current_bit_index < size;
+             bit_offset_++, current_bit_index++, bit_mask <<= 1) {
+          // Check if the bit is set. If it is we have reached where we need to be
+          if ((word & bit_mask) != 0) {
+            return *this;
+          }
+        }
+        // Reset bit_offset_ here so that we start from our last bit_offset_ and
+        // only reset when we roll over to the next word.
+        bit_offset_ = 0;
+      }
+    }
+    bit_offset_ = 0;
+    array_index_ = bitvec.size();
+    return *this;
+  }
+
+  DynamicBitsetIterator operator++(int) {
+    auto r = *this;
+    ++(*this);
+    return r;
+  }
+
+  reference operator*() const {
+    return array_index_ * DynamicBitsetType::kNumBitsInUint64 + bit_offset_;
+  }
+
+  bool operator==(const DynamicBitsetIterator& other) {
+    return underlying_ == other.underlying_ &&
+           array_index_ == other.array_index_ &&
+           bit_offset_ == other.bit_offset_;
+  }
+
+  bool operator!=(const DynamicBitsetIterator& other) {
+    return !(*this == other);
+  }
+};
+
 //TODO(emcginnis): Remove this class entirely when DynamicBitset is available to libsupport
 /**
  * Concurrent, thread safe, serial implementation of a dynamically allocated bitset
@@ -24,6 +115,8 @@ class KATANA_EXPORT DynamicBitsetSlow {
   size_t num_bits_{0};
 
 public:
+  using iterator = DynamicBitsetIterator<DynamicBitsetSlow>;
+
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
   explicit DynamicBitsetSlow(
@@ -74,6 +167,18 @@ public:
    * bitset
    */
   auto& get_vec() { return bitvec_; }
+
+  iterator begin() const {
+    iterator bit0{this, 0, 0};
+    if (test(0)) {
+      // If bit 0 is set then we have the right iterator
+      return bit0;
+    }
+    // Otherwise, increment to find the first set bit.
+    return ++bit0;
+  }
+
+  iterator end() const { return {this, bitvec_.size(), 0}; }
 
   /**
    * Resizes the bitset.

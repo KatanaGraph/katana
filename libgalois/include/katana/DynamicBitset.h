@@ -34,6 +34,7 @@
 #include <boost/mpl/has_xxx.hpp>
 
 #include "katana/AtomicWrapper.h"
+#include "katana/DynamicBitsetSlow.h"
 #include "katana/Galois.h"
 #include "katana/PODVector.h"
 #include "katana/config.h"
@@ -45,6 +46,7 @@ namespace katana {
 class KATANA_EXPORT DynamicBitset {
 public:  // types
   using TItem = katana::CopyableAtomic<uint64_t>;
+  using iterator = DynamicBitsetIterator<DynamicBitset>;
 
 private:  // variables
   katana::PODVector<TItem> bitvec_;
@@ -91,6 +93,18 @@ public:
    * bitset
    */
   auto& get_vec() { return bitvec_; }
+
+  iterator begin() const {
+    iterator bit0{this, 0, 0};
+    if (test(0)) {
+      // If bit 0 is set then we have the right iterator
+      return bit0;
+    }
+    // Otherwise, increment to find the first set bit.
+    return ++bit0;
+  }
+
+  iterator end() const { return {this, bitvec_.size(), 0}; }
 
   /**
    * Resizes the bitset.

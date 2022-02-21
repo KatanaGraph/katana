@@ -279,11 +279,21 @@ public:
       const katana::RDGManifest& rdg_manifest,
       const katana::RDGLoadOptions& opts, katana::TxnContext* txn_ctx);
 
-  /// Make a projected graph from a property graph. Shares state with
-  /// the original graph.
-  static std::unique_ptr<PropertyGraph> MakeProjectedGraph(
+  [[deprecated]] static std::unique_ptr<PropertyGraph> MakeProjectedGraph(
       const PropertyGraph& pg, const std::vector<std::string>& node_types,
       const std::vector<std::string>& edge_types);
+
+  /// Make a projected graph from a property graph. Shares state with
+  /// the original graph.
+  static Result<std::unique_ptr<PropertyGraph>> MakeProjectedGraph(
+      const PropertyGraph& pg, const std::vector<std::string>* node_types,
+      const std::vector<std::string>* edge_types);
+
+  /// Make a projected graph from a property graph. Shares state with
+  /// the original graph.
+  static Result<std::unique_ptr<PropertyGraph>> MakeProjectedGraph(
+      const PropertyGraph& pg, const SetOfEntityTypeIDs* node_types,
+      const SetOfEntityTypeIDs* edge_types);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.

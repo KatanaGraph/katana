@@ -131,71 +131,32 @@ ShouldURLEncode(int c) {
   if ('0' <= c && c <= '9') {
     return false;
   }
-  if (c == '-') {
+  switch (c) {
+  case '-':
+  case '.':
+  case '_':
+  case '~':
+  case ':':
+  case '/':
+  case '?':
+  case '#':
+  case '[':
+  case ']':
+  case '@':
+  case '!':
+  case '$':
+  case '&':
+  case '\'':
+  case '(':
+  case ')':
+  case '*':
+  case '+':
+  case ',':
+  case ';':
     return false;
+  default:
+    return true;
   }
-  if (c == '.') {
-    return false;
-  }
-  if (c == '_') {
-    return false;
-  }
-  if (c == '~') {
-    return false;
-  }
-  if (c == ':') {
-    return false;
-  }
-  if (c == '/') {
-    return false;
-  }
-  if (c == '?') {
-    return false;
-  }
-  if (c == '#') {
-    return false;
-  }
-  if (c == '[') {
-    return false;
-  }
-  if (c == ']') {
-    return false;
-  }
-  if (c == '@') {
-    return false;
-  }
-  if (c == '!') {
-    return false;
-  }
-  if (c == '$') {
-    return false;
-  }
-  if (c == '&') {
-    return false;
-  }
-  if (c == '\'') {
-    return false;
-  }
-  if (c == '(') {
-    return false;
-  }
-  if (c == ')') {
-    return false;
-  }
-  if (c == '*') {
-    return false;
-  }
-  if (c == '+') {
-    return false;
-  }
-  if (c == ',') {
-    return false;
-  }
-  if (c == ';') {
-    return false;
-  }
-
-  return true;
 }
 
 // ToHex converts a char between 0 and 15 to an ASCII character from 0 to F.

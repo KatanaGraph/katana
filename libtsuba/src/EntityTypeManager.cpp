@@ -156,9 +156,12 @@ katana::EntityTypeManager::AddNonAtomicEntityType(
   type_id_set_resized.resize(SetOfEntityTypeIDsSize_);
   entity_type_id_to_atomic_entity_type_ids_.emplace_back(type_id_set_resized);
 
-  SetOfEntityTypeIDs empty_set;
-  empty_set.resize(SetOfEntityTypeIDsSize_);
-  atomic_entity_type_id_to_entity_type_ids_.emplace_back(empty_set);
+  {
+    SetOfEntityTypeIDs empty_set;
+    empty_set.resize(SetOfEntityTypeIDsSize_);
+    atomic_entity_type_id_to_entity_type_ids_.emplace_back(
+        std::move(empty_set));
+  }
 
   for (size_t atomic_entity_type_id = 0;
        atomic_entity_type_id < type_id_set.size(); ++atomic_entity_type_id) {
@@ -261,7 +264,7 @@ katana::EntityTypeManager::AddAtomicEntityType(const std::string& name) {
   entity_type_id_to_atomic_entity_type_ids_.emplace_back(entity_type_ids);
   atomic_entity_type_id_to_entity_type_ids_.emplace_back(entity_type_ids);
 
-  return Result<EntityTypeID>(new_entity_type_id);
+  return MakeResult(std::move(new_entity_type_id));
 }
 
 void
@@ -525,7 +528,7 @@ katana::EntityTypeManager::EntityTypeToTypeNameSet(
         ErrorCode::InvalidArgument,
         "no string representation for invalid type");
   }
-  auto type_set = GetAtomicSubtypes(type_id);
+  const auto& type_set = GetAtomicSubtypes(type_id);
   for (size_t idx = 0; idx < type_set.size(); ++idx) {
     if (type_set.test(idx)) {
       auto name = GetAtomicTypeName(idx);

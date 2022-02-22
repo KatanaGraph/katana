@@ -7,6 +7,7 @@ add_dependencies(lib katana_tsuba)
 set(sources
   src/AddProperties.cpp
   src/AsyncOpGroup.cpp
+  src/EntityTypeManager.cpp
   src/FaultTest.cpp
   src/file.cpp
   src/FileFrame.cpp

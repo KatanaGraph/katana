@@ -368,8 +368,10 @@ katana::WriteRDGPartHeader(
   part_header.set_edge_prop_info_list(std::move(edge_props));
 
   // Set the entity type managers for nodes and edges
-  part_header.StoreNodeEntityTypeManager(node_entity_type_manager);
-  part_header.StoreEdgeEntityTypeManager(edge_entity_type_manager);
+  KATANA_CHECKED(
+      part_header.StoreNodeEntityTypeManager(node_entity_type_manager));
+  KATANA_CHECKED(
+      part_header.StoreEdgeEntityTypeManager(edge_entity_type_manager));
 
   // Set the paths for the entity type id arrays
   part_header.set_node_entity_type_id_array_path(

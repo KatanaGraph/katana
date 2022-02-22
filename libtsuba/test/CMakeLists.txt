@@ -43,6 +43,13 @@ set_tests_properties(${name} PROPERTIES FIXTURES_REQUIRED parquet-ready LABELS q
 add_test(NAME ${clean_name} COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_CURRENT_BINARY_DIR}/parquet-test-wd")
 set_tests_properties(${clean_name} PROPERTIES FIXTURES_SETUP parquet-ready LABELS quick)
 
+add_executable(type-manager-test type-manager.cpp)
+target_link_libraries(type-manager-test katana_tsuba)
+add_test(NAME type-manager-test COMMAND "$<TARGET_FILE:type-manager-test>")
+set_tests_properties(type-manager-test PROPERTIES ENVIRONMENT
+  KATANA_DO_NOT_BIND_THREADS=1 LABELS quick)
+
+
 ## Storage Format Version Unstable Flag tests
 set(unstable_rdg_path ${PROJECT_BINARY_DIR}/Testing/Temporary/unstable_rdg)
 set(group ${name}-fixture)

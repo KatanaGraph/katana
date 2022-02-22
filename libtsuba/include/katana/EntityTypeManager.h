@@ -63,6 +63,13 @@ using EntityTypeIDToAtomicTypeNameMap =
     std::unordered_map<EntityTypeID, std::string>;
 using TypeNameSet = std::set<std::string>;
 
+/// A set of EntityTypeIDs for use in storage
+using StorageSetOfEntityTypeIDs = std::vector<katana::EntityTypeID>;
+
+/// A map from EntityTypeID to a set of EntityTypeIDs
+using EntityTypeIDToSetOfEntityTypeIDsStorageMap =
+    std::unordered_map<katana::EntityTypeID, StorageSetOfEntityTypeIDs>;
+
 class KATANA_EXPORT EntityTypeManager {
   // TODO (scober): add iterator over all types
   // TODO (scober): add iterator over all atomic types
@@ -142,6 +149,120 @@ public:
     //Must ensure all sets are at least big enough to fit all EntityTypeIDs
     size_t num_entity_types = entity_type_id_to_atomic_entity_type_ids_.size();
     ResizeSetOfEntityTypeIDsMaps(num_entity_types - 1);
+  }
+
+  static Result<katana::EntityTypeManager> Make(
+      const EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict,
+      const EntityTypeIDToAtomicTypeNameMap& id_name) {
+    katana::EntityTypeIDToAtomicTypeNameMap manager_name_map;
+    katana::EntityTypeIDToSetOfEntityTypeIDsMap manager_type_id_map;
+    katana::EntityTypeID cur_entity_type_id = 0;
+
+    // convert id_name -> EntityTypeID Name map
+    manager_name_map = id_name;
+
+    // convert id_dict -> EntityTypeID map
+    size_t num_entity_type_ids = id_dict.size();
+    manager_type_id_map.resize(num_entity_type_ids);
+
+    // Max EntityTypeID is 1 less than the number of entity type ids
+    size_t set_size =
+        katana::EntityTypeManager::CalculateSetOfEntityTypeIDsSize(
+            num_entity_type_ids - 1);
+
+    for (const auto& pair : id_dict) {
+      cur_entity_type_id = pair.first;
+      katana::SetOfEntityTypeIDs cur_set;
+      cur_set.resize(set_size);
+
+      for (const auto& id : pair.second) {
+        cur_set.set(id);
+      }
+      manager_type_id_map.at(cur_entity_type_id) = cur_set;
+    }
+
+    if (manager_type_id_map.size() != id_dict.size()) {
+      return KATANA_ERROR(
+          ErrorCode::AssertionFailed, "internal invariant did not hold");
+    }
+
+    if (manager_name_map.size() != id_name.size()) {
+      return KATANA_ERROR(
+          ErrorCode::AssertionFailed, "internal invariant did not hold");
+    }
+
+    KATANA_CHECKED(ValidateDictBitset(manager_type_id_map, id_dict));
+
+    auto manager = katana::EntityTypeManager(
+        std::move(manager_name_map), std::move(manager_type_id_map));
+
+    if (manager.GetNumEntityTypes() != id_dict.size()) {
+      return KATANA_ERROR(
+          ErrorCode::AssertionFailed, "internal invariant did not hold");
+    }
+
+    if (manager.GetEntityTypeIDToAtomicTypeNameMap().size() != id_name.size()) {
+      return KATANA_ERROR(
+          ErrorCode::AssertionFailed, "internal invariant did not hold");
+    }
+
+    KATANA_CHECKED(ValidateDictBitset(
+        manager.GetEntityTypeIDToAtomicEntityTypeIDs(), id_dict));
+
+    return katana::Result<katana::EntityTypeManager>(std::move(manager));
+  }
+
+  /// Extract the EntityType information from an EntityTypeManager and convert it for storage
+  Result<void> ExtractEntityTypeInfo(
+      katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap* id_dict,
+      katana::EntityTypeIDToAtomicTypeNameMap* id_name) const {
+    static_assert(
+        katana::kDefaultSetOfEntityTypeIDsSize == 256,
+        "Default SetOfEntityTypeIDslSize has changed. storage_format_version "
+        "must be bumped as newly stored EntityTypeID sets may be incompatible "
+        "with other version of katana");
+
+    // ensure we are passed a sane EntityTypeManager
+    if (GetNumEntityTypes() > SetOfEntityTypeIDsSize()) {
+      return KATANA_ERROR(
+          ErrorCode::AssertionFailed, "internal invariant did not hold");
+    }
+
+    katana::EntityTypeIDToSetOfEntityTypeIDsMap manager_type_id_sets =
+        GetEntityTypeIDToAtomicEntityTypeIDs();
+
+    size_t num_entity_types = manager_type_id_sets.size();
+    for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
+      auto cur_id = katana::EntityTypeID(i);
+      katana::StorageSetOfEntityTypeIDs empty_set;
+      id_dict->emplace(std::make_pair(cur_id, empty_set));
+    }
+    for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
+      auto cur_id = katana::EntityTypeID(i);
+      if (manager_type_id_sets.at(i).size() != SetOfEntityTypeIDsSize()) {
+        return KATANA_ERROR(
+            ErrorCode::AssertionFailed,
+            "all sets to be stored must be the same size");
+      }
+      for (size_t j = 0, nj = num_entity_types; j < nj; ++j) {
+        if (manager_type_id_sets.at(i).test(j)) {
+          if (cur_id == katana::kUnknownEntityType ||
+              katana::EntityTypeID(j) == katana::kUnknownEntityType) {
+            return KATANA_ERROR(
+                ErrorCode::AssertionFailed,
+                "kUnknownEntityType cannot map to itself as an "
+                "AtomicEntityTypeID");
+          }
+          // if we have seen this EntityTypeID already, add to its set
+          id_dict->at(cur_id).emplace_back(katana::EntityTypeID(j));
+        }
+      }
+    }
+
+    // Convert EntityTypeID name map
+    *id_name = GetEntityTypeIDToAtomicTypeNameMap();
+    KATANA_CHECKED(ValidateDictBitset(manager_type_id_sets, *id_dict));
+    return ResultSuccess();
   }
 
   /// This function can be used to convert "old style" graphs (storage format 1,
@@ -477,6 +598,31 @@ public:
   std::string PrintEntityTypes() const;
 
 private:
+  static Result<void> ValidateDictBitset(
+      const katana::EntityTypeIDToSetOfEntityTypeIDsMap& manager_map,
+      const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict) {
+    if (id_dict.empty()) {
+      return KATANA_ERROR(
+          ErrorCode::AssertionFailed, "internal invariant did not hold");
+    }
+    for (const auto& pair : id_dict) {
+      katana::EntityTypeID cur_id = pair.first;
+      katana::StorageSetOfEntityTypeIDs cur_id_set = pair.second;
+
+      for (auto& id : cur_id_set) {
+        if (manager_map.at(cur_id).size() == 0) {
+          return KATANA_ERROR(
+              ErrorCode::AssertionFailed, "internal invariant did not hold");
+        }
+        if (!manager_map.at(cur_id).test(id)) {
+          return KATANA_ERROR(
+              ErrorCode::AssertionFailed, "internal invariant did not hold");
+        }
+      }
+    }
+    return ResultSuccess();
+  }
+
   // Used by AssignEntityTypeIDsFromProperties()
   template <typename ArrowType>
   struct PropertyColumn {

@@ -19,7 +19,7 @@ __all__ = ["get_rdg_dataset_at_version", "get_rdg_dataset", "get_csv_dataset", "
 # git sha of the datasets repo to download/cache if it is not available locally in the source
 # TODO(emcginnis) it would be really really nice if this got updated automatically
 # when the submodule ref held by open katana is updated
-DATASETS_SHA = "9934dddf3e37ecc14a21cfc814b117eac0266156"
+DATASETS_SHA = "219aaa51568c45e4c9599a160ee2b95265b06310"
 
 logger = logging.getLogger(__name__)
 

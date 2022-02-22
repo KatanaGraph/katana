@@ -22,6 +22,8 @@ namespace katana {
 
 const std::string kOptionalDatastructureRDKLSHIndexPrimitive =
     "kg.v1.rdk_lsh_index";
+const std::string kOptionalDatastructureRDKLSHIndexPrimitiveFilename =
+    "rdk_lsh_index_manifest";
 
 class KATANA_EXPORT RDKLSHIndexPrimitive
     : private katana::RDGOptionalDatastructure {
@@ -35,7 +37,8 @@ public:
 
   katana::Result<std::string> Write(katana::Uri rdg_dir_path) {
     // Write out our json manifest
-    katana::Uri manifest_path = rdg_dir_path.RandFile("rdk_lsh_index_manifest");
+    katana::Uri manifest_path = rdg_dir_path.RandFile(
+        kOptionalDatastructureRDKLSHIndexPrimitiveFilename);
     KATANA_CHECKED(WriteManifest(manifest_path.string()));
     return manifest_path.BaseName();
   }

@@ -478,9 +478,15 @@ public:
     if (search != optional_datastructure_manifests_.end()) {
       return search->second;
     }
-    KATANA_LOG_DEBUG(
+    KATANA_LOG_WARN(
         "No optional datastructure manifest available matching [{}]",
         optional_datastructure_name);
+    KATANA_LOG_WARN(
+        "Available optional datastructures, size  = {}:",
+        optional_datastructure_manifests_.size());
+    for (auto it : optional_datastructure_manifests_) {
+      KATANA_LOG_WARN("    {} : {}", it.first, it.second);
+    }
     return std::nullopt;
   }
 
@@ -489,7 +495,21 @@ public:
       const std::string& optional_datastructure_path) {
     optional_datastructure_manifests_.emplace(
         optional_datastructure_name, optional_datastructure_path);
+    KATANA_LOG_DEBUG(
+        "Appended optional datastructure manifest {}, at path {}, total count "
+        "= {}",
+        optional_datastructure_name, optional_datastructure_path,
+        optional_datastructure_manifests_.size());
   }
+
+  const std::unordered_map<std::string, std::string>&
+  optional_datastructure_manifests() const {
+    return optional_datastructure_manifests_;
+  }
+
+  /// Return the set of file names that hold this partitions data
+  /// Useful to garbage collect unused files, and copy an RDG to a new location
+  katana::Result<std::set<std::string>> FileNames();
 
   friend void to_json(nlohmann::json& j, const RDGPartHeader& header);
   friend void from_json(const nlohmann::json& j, RDGPartHeader& header);

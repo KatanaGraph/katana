@@ -147,7 +147,7 @@ public:
   std::string ToJsonString() const;
 
   /// Return the set of file names that hold this RDG's data by reading partition files
-  /// Useful to garbage collect unused files
+  /// Useful to garbage collect unused files, and copy an RDG to a new location
   katana::Result<std::set<std::string>> FileNames();
 
   // Required by nlohmann

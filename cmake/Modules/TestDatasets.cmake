@@ -6,7 +6,7 @@ set(MISC_TEST_DATASETS ${KATANA_TEST_DATASETS}/misc_datasets)
 
 ## latest supported rdg storage_format_version
 #TODO(emcginnis) get this envar in RDGPartHeader.h instead of having to hard code it here and there
-set(KATANA_RDG_STORAGE_FORMAT_VERSION "5")
+set(KATANA_RDG_STORAGE_FORMAT_VERSION "6")
 
 
 ## returns path to the specified rdg dataset at the specified storage_format_version
@@ -85,3 +85,4 @@ rdg_dataset(RDG_GNN_K5_SINGLE "gnn_k5_single")
 # Used the latest storage_format_version RDGs defined above instead
 rdg_dataset_at_version(RDG_LDBC_003_V1 "ldbc_003" "1")
 rdg_dataset_at_version(RDG_LDBC_003_V3 "ldbc_003" "3")
+rdg_dataset_at_version(RDG_LDBC_003_V5 "ldbc_003" "5")

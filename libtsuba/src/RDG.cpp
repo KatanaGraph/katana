@@ -1079,12 +1079,6 @@ katana::RDG::edge_entity_type_id_array() const {
 
 katana::Result<std::optional<katana::RDKLSHIndexPrimitive>>
 katana::RDG::LoadRDKLSHIndexPrimitive() {
-  if (!KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument,
-        "The UnstableRDGStorageFormat feature flag must be set to use this "
-        "feature");
-  }
   std::optional<std::string> res =
       KATANA_CHECKED(core_->part_header().OptionalDatastructureManifest(
           kOptionalDatastructureRDKLSHIndexPrimitive));
@@ -1100,12 +1094,6 @@ katana::RDG::LoadRDKLSHIndexPrimitive() {
 
 katana::Result<void>
 katana::RDG::WriteRDKLSHIndexPrimitive(katana::RDKLSHIndexPrimitive& index) {
-  if (!KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument,
-        "The UnstableRDGStorageFormat feature flag must be set to use this "
-        "feature");
-  }
   std::string path = KATANA_CHECKED(index.Write(rdg_dir()));
   core_->part_header().AppendOptionalDatastructureManifest(
       kOptionalDatastructureRDKLSHIndexPrimitive, path);
@@ -1115,12 +1103,6 @@ katana::RDG::WriteRDKLSHIndexPrimitive(katana::RDKLSHIndexPrimitive& index) {
 
 katana::Result<std::optional<katana::RDKSubstructureIndexPrimitive>>
 katana::RDG::LoadRDKSubstructureIndexPrimitive() {
-  if (!KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument,
-        "The UnstableRDGStorageFormat feature flag must be set to use this "
-        "feature");
-  }
   std::optional<std::string> res =
       KATANA_CHECKED(core_->part_header().OptionalDatastructureManifest(
           kOptionalDatastructureRDKSubstructureIndexPrimitive));
@@ -1138,12 +1120,6 @@ katana::RDG::LoadRDKSubstructureIndexPrimitive() {
 katana::Result<void>
 katana::RDG::WriteRDKSubstructureIndexPrimitive(
     katana::RDKSubstructureIndexPrimitive& index) {
-  if (!KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat)) {
-    return KATANA_ERROR(
-        ErrorCode::InvalidArgument,
-        "The UnstableRDGStorageFormat feature flag must be set to use this "
-        "feature");
-  }
   std::string path = KATANA_CHECKED(index.Write(rdg_dir()));
   core_->part_header().AppendOptionalDatastructureManifest(
       kOptionalDatastructureRDKSubstructureIndexPrimitive, path);

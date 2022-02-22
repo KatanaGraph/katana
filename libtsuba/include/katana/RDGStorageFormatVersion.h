@@ -13,11 +13,12 @@ static const uint32_t kPartitionStorageFormatVersion2 = 2;
 static const uint32_t kPartitionStorageFormatVersion3 = 3;
 static const uint32_t kPartitionStorageFormatVersion4 = 4;
 static const uint32_t kPartitionStorageFormatVersion5 = 5;
+static const uint32_t kPartitionStorageFormatVersion6 = 6;
 
 /// kLatestPartitionStorageFormatVersion to be bumped any time
 /// the on disk format of RDGPartHeader changes
 static const uint32_t kLatestPartitionStorageFormatVersion =
-    kPartitionStorageFormatVersion5;
+    kPartitionStorageFormatVersion6;
 
 };  // namespace katana
 

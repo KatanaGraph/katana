@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.1.102.dev+221.0.42d08d variable.
+            // this version, rather than using sphinx's 0.1.102.dev+223.0.95ad4c variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -752,6 +752,23 @@ is an error and will raise an exception.</p></li>
 <p>Getting an edges source is an O(log(N)) operation to avoid storing an O(E) table of edge sources.</p>
 <p>This operation may copy some or all of the underlying data to create the resulting dataframe. If <cite>nodes</cite>, is
 contiguous and compact (just a starting node and an ending node with stride 1) data will not be copied.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="katana.local.Graph.project">
+<span class="sig-name descname"><span class="pre">project</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#katana.local.Graph" title="katana.local_native.Graph"><span class="pre">katana.local_native.Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">std::shared_ptr&lt;katana::PropertyGraph&gt;</span></span></span><a class="headerlink" href="#katana.local.Graph.project" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a projected view of the graph which only contains nodes or edges of
+specific types.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node_types</strong> (<em>Optional</em><em>[</em><em>Iterable</em><em>[</em><em>EntityType</em><em>]</em><em>]</em>) – A set of node types to include in the projected graph,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> to keep all nodes.</p></li>
+<li><p><strong>edge_types</strong> (<em>Optional</em><em>[</em><em>Iterable</em><em>[</em><em>EntityType</em><em>]</em><em>]</em>) – A set of edge types to include in the projected graph,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> to keep all edges on the selected nodes.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">

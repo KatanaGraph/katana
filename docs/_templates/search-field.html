@@ -1,0 +1,9 @@
+
+
+<form class="bd-search d-flex align-items-center" action="{{ pathto('search') }}" method="get">
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="7" cy="7" r="6.5" stroke="black"/>
+        <line x1="11.7071" y1="12" x2="15.9497" y2="16.2426" stroke="black" stroke-linecap="round"/>
+    </svg>
+    <input type="search" class="form-control" name="q" id="search-input" placeholder="{{ _(theme_search_bar_text) }}" aria-label="{{ theme_search_bar_text }}" autocomplete="off" >
+</form>

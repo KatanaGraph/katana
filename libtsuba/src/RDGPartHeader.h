@@ -346,26 +346,12 @@ public:
     return edge_entity_type_id_dictionary_;
   }
 
-  void ValidateDictBitset(
-      const katana::EntityTypeIDToSetOfEntityTypeIDsMap& manager_map,
-      const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict) const {
-    KATANA_LOG_ASSERT(!id_dict.empty());
-    for (const auto& pair : id_dict) {
-      katana::EntityTypeID cur_id = pair.first;
-      katana::StorageSetOfEntityTypeIDs cur_id_set = pair.second;
-
-      for (auto& id : cur_id_set) {
-        KATANA_LOG_ASSERT(manager_map.at(cur_id).size() != 0);
-        KATANA_LOG_ASSERT(manager_map.at(cur_id).test(id));
-      }
-    }
-  }
-
-  void StoreNodeEntityTypeManager(const katana::EntityTypeManager& manager) {
+  Result<void> StoreNodeEntityTypeManager(
+      const katana::EntityTypeManager& manager) {
     katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap id_dict;
     katana::EntityTypeIDToAtomicTypeNameMap id_name;
 
-    ConvertEntityTypeManager(manager, &id_dict, &id_name);
+    KATANA_CHECKED(manager.ExtractEntityTypeInfo(&id_dict, &id_name));
 
     if (!id_dict.empty()) {
       set_node_entity_type_id_dictionary(id_dict);
@@ -377,13 +363,16 @@ public:
     } else {
       KATANA_LOG_WARN("converted node id_name is empty, not setting!");
     }
+
+    return ResultSuccess();
   }
 
-  void StoreEdgeEntityTypeManager(const katana::EntityTypeManager& manager) {
+  Result<void> StoreEdgeEntityTypeManager(
+      const katana::EntityTypeManager& manager) {
     katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap id_dict;
     katana::EntityTypeIDToAtomicTypeNameMap id_name;
 
-    ConvertEntityTypeManager(manager, &id_dict, &id_name);
+    KATANA_CHECKED(manager.ExtractEntityTypeInfo(&id_dict, &id_name));
 
     if (!id_dict.empty()) {
       set_edge_entity_type_id_dictionary(id_dict);
@@ -395,62 +384,17 @@ public:
     } else {
       KATANA_LOG_WARN("converted edge id_name is empty, not setting!");
     }
-  }
 
-  katana::Result<katana::EntityTypeManager> GetEntityTypeManager(
-      const katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap& id_dict,
-      const katana::EntityTypeIDToAtomicTypeNameMap& id_name) const {
-    katana::EntityTypeIDToAtomicTypeNameMap manager_name_map;
-    katana::EntityTypeIDToSetOfEntityTypeIDsMap manager_type_id_map;
-    katana::EntityTypeID cur_entity_type_id = 0;
-
-    // convert id_name -> EntityTypeID Name map
-    manager_name_map = id_name;
-
-    // convert id_dict -> EntityTypeID map
-    size_t num_entity_type_ids = id_dict.size();
-    manager_type_id_map.resize(num_entity_type_ids);
-
-    // Max EntityTypeID is 1 less than the number of entity type ids
-    size_t set_size =
-        katana::EntityTypeManager::CalculateSetOfEntityTypeIDsSize(
-            num_entity_type_ids - 1);
-
-    for (const auto& pair : id_dict) {
-      cur_entity_type_id = pair.first;
-      katana::SetOfEntityTypeIDs cur_set;
-      cur_set.resize(set_size);
-
-      for (const auto& id : pair.second) {
-        cur_set.set(id);
-      }
-      manager_type_id_map.at(cur_entity_type_id) = cur_set;
-    }
-
-    KATANA_LOG_ASSERT(manager_type_id_map.size() == id_dict.size());
-    KATANA_LOG_ASSERT(manager_name_map.size() == id_name.size());
-
-    ValidateDictBitset(manager_type_id_map, id_dict);
-
-    auto manager = katana::EntityTypeManager(
-        std::move(manager_name_map), std::move(manager_type_id_map));
-
-    KATANA_LOG_ASSERT(manager.GetNumEntityTypes() == id_dict.size());
-    KATANA_LOG_ASSERT(
-        manager.GetEntityTypeIDToAtomicTypeNameMap().size() == id_name.size());
-
-    ValidateDictBitset(manager.GetEntityTypeIDToAtomicEntityTypeIDs(), id_dict);
-
-    return katana::Result<katana::EntityTypeManager>(std::move(manager));
+    return ResultSuccess();
   }
 
   katana::Result<katana::EntityTypeManager> GetNodeEntityTypeManager() {
-    return GetEntityTypeManager(
+    return EntityTypeManager::Make(
         node_entity_type_id_dictionary_, node_entity_type_id_name_);
   }
 
   katana::Result<katana::EntityTypeManager> GetEdgeEntityTypeManager() {
-    return GetEntityTypeManager(
+    return EntityTypeManager::Make(
         edge_entity_type_id_dictionary_, edge_entity_type_id_name_);
   }
 
@@ -515,53 +459,6 @@ public:
   friend void from_json(const nlohmann::json& j, RDGPartHeader& header);
 
 private:
-  /// Extract the EntityType information from an EntityTypeManager and convert it for storage
-  void ConvertEntityTypeManager(
-      const katana::EntityTypeManager& manager,
-      katana::EntityTypeIDToSetOfEntityTypeIDsStorageMap* id_dict,
-      katana::EntityTypeIDToAtomicTypeNameMap* id_name) const {
-    static_assert(
-        katana::kDefaultSetOfEntityTypeIDsSize == 256,
-        "Default SetOfEntityTypeIDslSize has changed. storage_format_version "
-        "must be bumped as newly stored EntityTypeID sets may be incompatible "
-        "with other version of katana");
-
-    // ensure we are passed a sane EntityTypeManager
-    KATANA_LOG_ASSERT(
-        manager.GetNumEntityTypes() <= manager.SetOfEntityTypeIDsSize());
-
-    katana::EntityTypeIDToSetOfEntityTypeIDsMap manager_type_id_sets =
-        manager.GetEntityTypeIDToAtomicEntityTypeIDs();
-
-    size_t num_entity_types = manager_type_id_sets.size();
-    for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
-      auto cur_id = katana::EntityTypeID(i);
-      katana::StorageSetOfEntityTypeIDs empty_set;
-      id_dict->emplace(std::make_pair(cur_id, empty_set));
-    }
-    for (size_t i = 0, ni = num_entity_types; i < ni; ++i) {
-      auto cur_id = katana::EntityTypeID(i);
-      KATANA_LOG_VASSERT(
-          manager_type_id_sets.at(i).size() == manager.SetOfEntityTypeIDsSize(),
-          "All sets to be stored must be the same size");
-      for (size_t j = 0, nj = num_entity_types; j < nj; ++j) {
-        if (manager_type_id_sets.at(i).test(j)) {
-          KATANA_LOG_VASSERT(
-              cur_id != katana::kUnknownEntityType &&
-                  katana::EntityTypeID(j) != katana::kUnknownEntityType,
-              "kUnknownEntityType cannot map to itself as an "
-              "AtomicEntityTypeID");
-          // if we have seen this EntityTypeID already, add to its set
-          id_dict->at(cur_id).emplace_back(katana::EntityTypeID(j));
-        }
-      }
-    }
-
-    // Convert EntityTypeID name map
-    *id_name = manager.GetEntityTypeIDToAtomicTypeNameMap();
-    ValidateDictBitset(manager_type_id_sets, *id_dict);
-  }
-
   static katana::Result<std::vector<PropStorageInfo*>> DoSelectProperties(
       std::vector<PropStorageInfo>* storage_info,
       const std::vector<std::string>& names) {

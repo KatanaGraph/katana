@@ -604,8 +604,10 @@ katana::RDG::Store(
   KATANA_CHECKED(DoStoreEdgeEntityTypeIDArray(
       handle, std::move(edge_entity_type_id_array_ff), desc));
 
-  core_->part_header().StoreNodeEntityTypeManager(node_entity_type_manager);
-  core_->part_header().StoreEdgeEntityTypeManager(edge_entity_type_manager);
+  KATANA_CHECKED(core_->part_header().StoreNodeEntityTypeManager(
+      node_entity_type_manager));
+  KATANA_CHECKED(core_->part_header().StoreEdgeEntityTypeManager(
+      edge_entity_type_manager));
 
   return DoStore(
       handle, command_line, versioning_action, std::move(desc), txn_ctx);

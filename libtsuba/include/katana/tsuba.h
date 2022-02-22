@@ -136,13 +136,6 @@ KATANA_EXPORT katana::Result<void> InitTsuba();
 
 KATANA_EXPORT katana::Result<void> FiniTsuba();
 
-/// A set of EntityTypeIDs for use in storage
-using StorageSetOfEntityTypeIDs = std::vector<katana::EntityTypeID>;
-
-/// A map from EntityTypeID to a set of EntityTypeIDs
-using EntityTypeIDToSetOfEntityTypeIDsStorageMap =
-    std::unordered_map<katana::EntityTypeID, StorageSetOfEntityTypeIDs>;
-
 /// Dictactes the max number of RDGTopologies PartitionTopologyMetadataEntries
 /// can be increased if required
 constexpr size_t kMaxNumTopologies = 64;

@@ -112,10 +112,12 @@ KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
 ListViewsOfVersion(
     const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
 
-/// deprecated; duplicate of ListViewsOfVersion maintained for compatibility
-KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
-ListAvailableViews(
-    const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
+/// duplicate of ListViewsOfVersion maintained for compatibility
+[[deprecated]] KATANA_EXPORT
+    katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
+    ListAvailableViews(
+        const std::string& rdg_dir,
+        std::optional<uint64_t> version = std::nullopt);
 
 KATANA_EXPORT katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>
 CreateSrcDestFromViewsForCopy(

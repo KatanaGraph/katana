@@ -84,8 +84,8 @@ main(int argc, char** argv) {
   SplitString(edgeTypes, &edge_types);
 
   auto pg_view_res = katana::PropertyGraph::MakeProjectedGraph(
-      pg, node_types.empty() ? nullptr : &node_types,
-      edge_types.empty() ? nullptr : &edge_types);
+      pg, node_types.empty() ? std::nullopt : std::make_optional(node_types),
+      edge_types.empty() ? std::nullopt : std::make_optional(edge_types));
   if (!pg_view_res) {
     KATANA_LOG_FATAL("Failed to construct projection: {}", pg_view_res.error());
   }

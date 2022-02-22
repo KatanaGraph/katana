@@ -123,18 +123,8 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  std::vector<std::string> vec_node_types;
-  if (node_types != "") {
-    katana::analytics::SplitStringByComma(node_types, &vec_node_types);
-  }
-
-  std::vector<std::string> vec_edge_types;
-  if (edge_types != "") {
-    katana::analytics::SplitStringByComma(edge_types, &vec_edge_types);
-  }
-
-  auto pg_projected_view = katana::PropertyGraph::MakeProjectedGraph(
-      *pg.get(), vec_node_types, vec_edge_types);
+  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+      ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
             << pg_projected_view->topology().NumNodes() << " nodes, "

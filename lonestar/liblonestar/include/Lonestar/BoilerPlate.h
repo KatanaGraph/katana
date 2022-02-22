@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef LONESTAR_BOILERPLATE_H
-#define LONESTAR_BOILERPLATE_H
+#ifndef KATANA_LONESTAR_LIBLONESTAR_LONESTAR_BOILERPLATE_H_
+#define KATANA_LONESTAR_LIBLONESTAR_LONESTAR_BOILERPLATE_H_
 
 #include "Lonestar/Utils.h"
 #include "katana/Galois.h"
@@ -45,4 +45,7 @@ std::unique_ptr<katana::SharedMemSys> LonestarStart(
     int argc, char** argv, const char* app, const char* desc, const char* url,
     llvm::cl::opt<std::string>* input);
 std::unique_ptr<katana::SharedMemSys> LonestarStart(int argc, char** argv);
+
+std::unique_ptr<katana::PropertyGraph> ProjectPropertyGraphForArguments(
+    const std::unique_ptr<katana::PropertyGraph>& pg);
 #endif

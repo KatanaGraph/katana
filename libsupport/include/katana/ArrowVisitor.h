@@ -73,7 +73,12 @@ VisitArrowCast(const arrow::Array& array) {
 
 inline arrow::Type::type
 GetArrowTypeID(const arrow::ArrayBuilder* builder) {
-  return builder->type()->id();
+  arrow::Type::type id = builder->type()->id();
+  if (id != arrow::Type::EXTENSION) {
+    return id;
+  }
+  const auto& ext = static_cast<const arrow::ExtensionType&>(*builder->type());
+  return ext.storage_type()->id();
 }
 
 template <typename T>

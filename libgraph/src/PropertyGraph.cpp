@@ -270,23 +270,16 @@ katana::PropertyGraph::Make(
 std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeEmptyEdgeProjectedGraph(
     const PropertyGraph& pg, uint32_t num_new_nodes,
-    const DynamicBitset& bitset) {
+    const DynamicBitset& nodes_bitset,
+    NUMAArray<Node>&& original_to_projected_nodes_mapping,
+    NUMAArray<GraphTopology::PropertyIndex>&&
+        projected_to_original_nodes_mapping) {
   const auto& topology = pg.topology();
 
   NUMAArray<Edge> out_indices;
   out_indices.allocateInterleaved(num_new_nodes);
 
   NUMAArray<Node> out_dests;
-  NUMAArray<Node> original_to_projected_nodes_mapping;
-  original_to_projected_nodes_mapping.allocateInterleaved(topology.NumNodes());
-  katana::ParallelSTL::fill(
-      original_to_projected_nodes_mapping.begin(),
-      original_to_projected_nodes_mapping.end(),
-      static_cast<Node>(topology.NumNodes()));
-
-  NUMAArray<GraphTopology::PropertyIndex> projected_to_original_nodes_mapping;
-  projected_to_original_nodes_mapping.allocateInterleaved(num_new_nodes);
-
   NUMAArray<Edge> original_to_projected_edges_mapping;
   NUMAArray<GraphTopology::PropertyIndex> projected_to_original_edges_mapping;
 
@@ -298,7 +291,7 @@ katana::PropertyGraph::MakeEmptyEdgeProjectedGraph(
   NUMAArray<uint8_t> node_bitmask;
   node_bitmask.allocateInterleaved((topology.NumNodes() + 7) / 8);
 
-  FillBitMask(topology.NumNodes(), bitset, &node_bitmask);
+  FillBitMask(topology.NumNodes(), nodes_bitset, &node_bitmask);
 
   NUMAArray<uint8_t> edge_bitmask;
   edge_bitmask.allocateInterleaved((topology.NumEdges() + 7) / 8);
@@ -317,8 +310,18 @@ katana::PropertyGraph::MakeEmptyEdgeProjectedGraph(
 
 std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeEmptyProjectedGraph(
-    const katana::PropertyGraph& pg, const katana::DynamicBitset& bitset) {
-  return MakeEmptyEdgeProjectedGraph(pg, 0, bitset);
+    const katana::PropertyGraph& pg,
+    const katana::DynamicBitset& nodes_bitset) {
+  const auto& topology = pg.topology();
+  NUMAArray<Node> original_to_projected_nodes_mapping;
+  original_to_projected_nodes_mapping.allocateInterleaved(topology.NumNodes());
+  katana::ParallelSTL::fill(
+      original_to_projected_nodes_mapping.begin(),
+      original_to_projected_nodes_mapping.end(),
+      static_cast<Node>(topology.NumNodes()));
+
+  return MakeEmptyEdgeProjectedGraph(
+      pg, 0, nodes_bitset, std::move(original_to_projected_nodes_mapping), {});
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -515,7 +518,10 @@ katana::PropertyGraph::MakeProjectedGraph(
     if (num_new_edges == 0) {
       // no edge selected
       // return empty graph with only selected nodes
-      return MakeEmptyEdgeProjectedGraph(pg, num_new_nodes, bitset_nodes);
+      return MakeEmptyEdgeProjectedGraph(
+          pg, num_new_nodes, bitset_nodes,
+          std::move(original_to_projected_nodes_mapping),
+          std::move(projected_to_original_nodes_mapping));
     }
   }
 

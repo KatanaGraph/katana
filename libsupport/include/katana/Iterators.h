@@ -323,6 +323,36 @@ MakeDisjointRangesEnd(
       DisjointRangesIterator<I>::RangeKind::kSecond);
 }
 
+template <typename T>
+constexpr auto
+Enumerate(T&& iterable) {
+  static_assert(
+      std::is_same_v<
+          decltype(std::begin(std::declval<T>())),
+          decltype(std::end(std::declval<T>()))>,
+      "Enumerate can only accept an iterable.");
+
+  struct iterator {
+    size_t i;
+    using TIter = decltype(::std::begin(::std::declval<T>()));
+    TIter iter;
+    bool operator!=(const iterator& other) const { return iter != other.iter; }
+    void operator++() {
+      ++i;
+      ++iter;
+    }
+    auto operator*() const { return std::tie(i, *iter); }
+  };
+
+  struct iterable_wrapper {
+    T iterable;
+    auto begin() { return iterator{0, std::begin(iterable)}; }
+    auto end() { return iterator{0, std::end(iterable)}; }
+  };
+
+  return iterable_wrapper{std::forward<T>(iterable)};
+}
+
 }  // end namespace katana
 
 #endif

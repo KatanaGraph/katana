@@ -209,18 +209,20 @@ DefPropertyGraph(py::module& m) {
       "project",
       [](PropertyGraph& self, py::object node_types,
          py::object edge_types) -> Result<std::shared_ptr<PropertyGraph>> {
-        katana::SetOfEntityTypeIDs node_type_ids;
+        std::optional<katana::SetOfEntityTypeIDs> node_type_ids;
         if (!node_types.is_none()) {
-          node_type_ids.resize(self.GetNodeTypeManager().GetNumEntityTypes());
+          node_type_ids = katana::SetOfEntityTypeIDs();
+          node_type_ids->resize(self.GetNodeTypeManager().GetNumEntityTypes());
           for (auto& t : node_types) {
-            node_type_ids.set(py::cast<EntityType>(t).type_id);
+            node_type_ids->set(py::cast<EntityType>(t).type_id);
           }
         }
-        katana::SetOfEntityTypeIDs edge_type_ids;
+        std::optional<katana::SetOfEntityTypeIDs> edge_type_ids;
         if (!edge_types.is_none()) {
-          edge_type_ids.resize(self.GetEdgeTypeManager().GetNumEntityTypes());
+          edge_type_ids = katana::SetOfEntityTypeIDs();
+          edge_type_ids->resize(self.GetEdgeTypeManager().GetNumEntityTypes());
           for (auto& t : edge_types) {
-            edge_type_ids.set(py::cast<EntityType>(t).type_id);
+            edge_type_ids->set(py::cast<EntityType>(t).type_id);
           }
         }
 
@@ -228,8 +230,7 @@ DefPropertyGraph(py::module& m) {
             guard;  // graph projection may copy or load data.
         // is_none is safe without the GIL because it is just a pointer compare.
         return KATANA_CHECKED(PropertyGraph::MakeProjectedGraph(
-            self, node_types.is_none() ? nullptr : &node_type_ids,
-            edge_types.is_none() ? nullptr : &edge_type_ids));
+            self, node_type_ids, edge_type_ids));
       },
       py::arg("node_types") = py::none(), py::arg("edge_types") = py::none(),
       R"""(

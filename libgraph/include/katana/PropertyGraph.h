@@ -286,14 +286,15 @@ public:
   /// Make a projected graph from a property graph. Shares state with
   /// the original graph.
   static Result<std::unique_ptr<PropertyGraph>> MakeProjectedGraph(
-      const PropertyGraph& pg, const std::vector<std::string>* node_types,
-      const std::vector<std::string>* edge_types);
+      const PropertyGraph& pg,
+      std::optional<std::vector<std::string>> node_types,
+      std::optional<std::vector<std::string>> edge_types);
 
   /// Make a projected graph from a property graph. Shares state with
   /// the original graph.
   static Result<std::unique_ptr<PropertyGraph>> MakeProjectedGraph(
-      const PropertyGraph& pg, const SetOfEntityTypeIDs* node_types,
-      const SetOfEntityTypeIDs* edge_types);
+      const PropertyGraph& pg, std::optional<SetOfEntityTypeIDs> node_types,
+      std::optional<SetOfEntityTypeIDs> edge_types);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.

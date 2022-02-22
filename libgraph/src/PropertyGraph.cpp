@@ -352,37 +352,35 @@ katana::PropertyGraph::MakeProjectedGraph(
     const PropertyGraph& pg, const std::vector<std::string>& node_types,
     const std::vector<std::string>& edge_types) {
   auto ret = MakeProjectedGraph(
-      pg, node_types.empty() ? nullptr : &node_types,
-      edge_types.empty() ? nullptr : &edge_types);
+      pg, node_types.empty() ? std::nullopt : std::make_optional(node_types),
+      edge_types.empty() ? std::nullopt : std::make_optional(edge_types));
   KATANA_LOG_VASSERT(ret.has_value(), "{}", ret.error());
   return std::move(ret.value());
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::MakeProjectedGraph(
-    const PropertyGraph& pg, const std::vector<std::string>* node_types,
-    const std::vector<std::string>* edge_types) {
-  SetOfEntityTypeIDs node_type_ids;
+    const PropertyGraph& pg, std::optional<std::vector<std::string>> node_types,
+    std::optional<std::vector<std::string>> edge_types) {
+  std::optional<SetOfEntityTypeIDs> node_type_ids;
   if (node_types) {
-    node_type_ids =
-        KATANA_CHECKED(pg.GetNodeTypeManager().GetEntityTypeIDs(*node_types));
+    node_type_ids = KATANA_CHECKED(
+        pg.GetNodeTypeManager().GetEntityTypeIDs(node_types.value()));
   }
-  SetOfEntityTypeIDs edge_type_ids;
+  std::optional<SetOfEntityTypeIDs> edge_type_ids;
   if (edge_types) {
-    edge_type_ids =
-        KATANA_CHECKED(pg.GetEdgeTypeManager().GetEntityTypeIDs(*edge_types));
+    edge_type_ids = KATANA_CHECKED(
+        pg.GetEdgeTypeManager().GetEntityTypeIDs(edge_types.value()));
   }
-  return MakeProjectedGraph(
-      pg, node_types ? &node_type_ids : nullptr,
-      edge_types ? &edge_type_ids : nullptr);
+  return MakeProjectedGraph(pg, node_type_ids, edge_type_ids);
 }
 
 /// Make a projected graph from a property graph. Shares state with
 /// the original graph.
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::MakeProjectedGraph(
-    const PropertyGraph& pg, const SetOfEntityTypeIDs* node_types,
-    const SetOfEntityTypeIDs* edge_types) {
+    const PropertyGraph& pg, std::optional<SetOfEntityTypeIDs> node_types,
+    std::optional<SetOfEntityTypeIDs> edge_types) {
   const auto& topology = pg.topology();
   if (topology.empty()) {
     return std::make_unique<PropertyGraph>();
@@ -413,7 +411,7 @@ katana::PropertyGraph::MakeProjectedGraph(
     katana::GAccumulator<uint32_t> accum_num_new_nodes;
 
     katana::do_all(katana::iterate(topology.Nodes()), [&](auto src) {
-      for (auto type : *node_types) {
+      for (auto type : node_types.value()) {
         if (pg.DoesNodeHaveType(src, type)) {
           accum_num_new_nodes += 1;
           bitset_nodes.set(src);
@@ -499,7 +497,7 @@ katana::PropertyGraph::MakeProjectedGraph(
           for (Edge e : topology.OutEdges(old_src)) {
             auto dest = topology.OutEdgeDst(e);
             if (bitset_nodes.test(dest)) {
-              for (auto type : *edge_types) {
+              for (auto type : edge_types.value()) {
                 if (pg.DoesEdgeHaveTypeFromTopoIndex(e, type)) {
                   accum_num_new_edges += 1;
                   bitset_edges.set(e);

@@ -205,6 +205,46 @@ DefPropertyGraph(py::module& m) {
   katana::DefWithNumba<&PropertyGraph::NumNodes>(cls, "num_nodes");
   katana::DefWithNumba<&PropertyGraph::NumEdges>(cls, "num_edges");
 
+  cls.def(
+      "project",
+      [](PropertyGraph& self, py::object node_types,
+         py::object edge_types) -> Result<std::shared_ptr<PropertyGraph>> {
+        std::optional<katana::SetOfEntityTypeIDs> node_type_ids;
+        if (!node_types.is_none()) {
+          node_type_ids = katana::SetOfEntityTypeIDs();
+          node_type_ids->resize(self.GetNodeTypeManager().GetNumEntityTypes());
+          for (auto& t : node_types) {
+            node_type_ids->set(py::cast<EntityType>(t).type_id);
+          }
+        }
+        std::optional<katana::SetOfEntityTypeIDs> edge_type_ids;
+        if (!edge_types.is_none()) {
+          edge_type_ids = katana::SetOfEntityTypeIDs();
+          edge_type_ids->resize(self.GetEdgeTypeManager().GetNumEntityTypes());
+          for (auto& t : edge_types) {
+            edge_type_ids->set(py::cast<EntityType>(t).type_id);
+          }
+        }
+
+        py::gil_scoped_release
+            guard;  // graph projection may copy or load data.
+        // is_none is safe without the GIL because it is just a pointer compare.
+        return KATANA_CHECKED(PropertyGraph::MakeProjectedGraph(
+            self, node_type_ids, edge_type_ids));
+      },
+      py::arg("node_types") = py::none(), py::arg("edge_types") = py::none(),
+      R"""(
+      Get a projected view of the graph which only contains nodes or edges of
+      specific types.
+
+      :type node_types: Optional[Iterable[EntityType]]
+      :param node_types: A set of node types to include in the projected graph,
+        or ``None`` to keep all nodes.
+      :type edge_types: Optional[Iterable[EntityType]]
+      :param edge_types: A set of edge types to include in the projected graph,
+        or ``None`` to keep all edges on the selected nodes.
+      )""");
+
   // GetLocalNodeID(NodeHandle) -> LocalNodeID  - local node ID
   cls.def(
       "get_local_node_id",

@@ -83,8 +83,13 @@ main(int argc, char** argv) {
   std::vector<std::string> edge_types;
   SplitString(edgeTypes, &edge_types);
 
-  auto pg_view =
-      katana::PropertyGraph::MakeProjectedGraph(pg, node_types, edge_types);
+  auto pg_view_res = katana::PropertyGraph::MakeProjectedGraph(
+      pg, node_types.empty() ? std::nullopt : std::make_optional(node_types),
+      edge_types.empty() ? std::nullopt : std::make_optional(edge_types));
+  if (!pg_view_res) {
+    KATANA_LOG_FATAL("Failed to construct projection: {}", pg_view_res.error());
+  }
+  auto pg_view = std::move(pg_view_res.value());
 
   TestOptionalTopologyGenerationEdgeShuffleTopology(*pg_view);
   TestOptionalTopologyGenerationShuffleTopology(*pg_view);

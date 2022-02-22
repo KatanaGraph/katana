@@ -351,6 +351,36 @@ std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeProjectedGraph(
     const PropertyGraph& pg, const std::vector<std::string>& node_types,
     const std::vector<std::string>& edge_types) {
+  auto ret = MakeProjectedGraph(
+      pg, node_types.empty() ? std::nullopt : std::make_optional(node_types),
+      edge_types.empty() ? std::nullopt : std::make_optional(edge_types));
+  KATANA_LOG_VASSERT(ret.has_value(), "{}", ret.error());
+  return std::move(ret.value());
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::MakeProjectedGraph(
+    const PropertyGraph& pg, std::optional<std::vector<std::string>> node_types,
+    std::optional<std::vector<std::string>> edge_types) {
+  std::optional<SetOfEntityTypeIDs> node_type_ids;
+  if (node_types) {
+    node_type_ids = KATANA_CHECKED(
+        pg.GetNodeTypeManager().GetEntityTypeIDs(node_types.value()));
+  }
+  std::optional<SetOfEntityTypeIDs> edge_type_ids;
+  if (edge_types) {
+    edge_type_ids = KATANA_CHECKED(
+        pg.GetEdgeTypeManager().GetEntityTypeIDs(edge_types.value()));
+  }
+  return MakeProjectedGraph(pg, node_type_ids, edge_type_ids);
+}
+
+/// Make a projected graph from a property graph. Shares state with
+/// the original graph.
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::MakeProjectedGraph(
+    const PropertyGraph& pg, std::optional<SetOfEntityTypeIDs> node_types,
+    std::optional<SetOfEntityTypeIDs> edge_types) {
   const auto& topology = pg.topology();
   if (topology.empty()) {
     return std::make_unique<PropertyGraph>();
@@ -366,7 +396,7 @@ katana::PropertyGraph::MakeProjectedGraph(
   NUMAArray<Node> original_to_projected_nodes_mapping;
   original_to_projected_nodes_mapping.allocateInterleaved(topology.NumNodes());
 
-  if (node_types.empty()) {
+  if (!node_types) {
     num_new_nodes = topology.NumNodes();
     // set all nodes
     katana::do_all(katana::iterate(topology.Nodes()), [&](auto src) {
@@ -378,21 +408,14 @@ katana::PropertyGraph::MakeProjectedGraph(
         original_to_projected_nodes_mapping.begin(),
         original_to_projected_nodes_mapping.end(), Node{0});
 
-    std::set<katana::EntityTypeID> node_entity_type_ids;
-
-    for (auto node_type : node_types) {
-      auto entity_type_id = pg.GetNodeEntityTypeID(node_type);
-      node_entity_type_ids.insert(entity_type_id);
-    }
-
     katana::GAccumulator<uint32_t> accum_num_new_nodes;
 
     katana::do_all(katana::iterate(topology.Nodes()), [&](auto src) {
-      for (auto type : node_entity_type_ids) {
+      for (auto type : node_types.value()) {
         if (pg.DoesNodeHaveType(src, type)) {
           accum_num_new_nodes += 1;
           bitset_nodes.set(src);
-          // this sets the correspondign entry in the array to 1
+          // this sets the corresponding entry in the array to 1
           // will perform a prefix sum on this array later on
           original_to_projected_nodes_mapping[src] = 1;
           return;
@@ -444,7 +467,7 @@ katana::PropertyGraph::MakeProjectedGraph(
   // initializes the edge-index array to all zeros
   katana::ParallelSTL::fill(out_indices.begin(), out_indices.end(), Edge{0});
 
-  if (edge_types.empty()) {
+  if (!edge_types) {
     katana::GAccumulator<uint32_t> accum_num_new_edges;
     // set all edges incident to projected nodes
     katana::do_all(
@@ -464,13 +487,6 @@ katana::PropertyGraph::MakeProjectedGraph(
 
     num_new_edges = accum_num_new_edges.reduce();
   } else {
-    std::set<katana::EntityTypeID> edge_entity_type_ids;
-
-    for (auto edge_type : edge_types) {
-      auto entity_type_id = pg.GetEdgeEntityTypeID(edge_type);
-      edge_entity_type_ids.insert(entity_type_id);
-    }
-
     katana::GAccumulator<uint32_t> accum_num_new_edges;
 
     katana::do_all(
@@ -481,7 +497,7 @@ katana::PropertyGraph::MakeProjectedGraph(
           for (Edge e : topology.OutEdges(old_src)) {
             auto dest = topology.OutEdgeDst(e);
             if (bitset_nodes.test(dest)) {
-              for (auto type : edge_entity_type_ids) {
+              for (auto type : edge_types.value()) {
                 if (pg.DoesEdgeHaveTypeFromTopoIndex(e, type)) {
                   accum_num_new_edges += 1;
                   bitset_edges.set(e);

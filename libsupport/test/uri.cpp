@@ -20,6 +20,8 @@ TestMake() {
   // this
   KATANA_LOG_ASSERT(Str2Uri("s3:///some/path//").path() == "/some/path/");
   KATANA_LOG_ASSERT(Str2Uri("s3://some/path").path() == "some/path");
+  KATANA_LOG_ASSERT(
+      Str2Uri("hdfs://somehost:8020/path").path() == "somehost:8020/path");
 
   KATANA_LOG_ASSERT(Str2Uri("path").BaseName() == "path");
   KATANA_LOG_ASSERT(Str2Uri("path///////").StripSep().path() == "path");
@@ -41,6 +43,9 @@ TestJoinPath() {
       katana::Uri::JoinPath("/some/long///", "/path") == "/some/long/path");
   KATANA_LOG_ASSERT(
       katana::Uri::JoinPath("/some/long///", "//path") == "/some/long/path");
+  KATANA_LOG_ASSERT(
+      katana::Uri::JoinPath("/host:8020/long///", "//path") ==
+      "/host:8020/long/path");
 }
 
 void
@@ -66,6 +71,8 @@ TestDecode() {
 
   KATANA_LOG_ASSERT(
       katana::Uri::Decode("/%20with/%20spaces") == "/ with/ spaces");
+  KATANA_LOG_ASSERT(
+      katana::Uri::Decode("host%3A8020/path") == "host:8020/path");
 }
 
 }  // namespace

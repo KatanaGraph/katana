@@ -774,7 +774,9 @@ katana::PropertyGraph::DoWrite(
       rdg_->node_entity_type_id_array_file_storage().Valid(),
       rdg_->edge_entity_type_id_array_file_storage().Valid());
 
-  KATANA_CHECKED(DoWriteTopologies());
+  if (!is_transformed) {
+    KATANA_CHECKED(DoWriteTopologies());
+  }
 
   //TODO(emcginnis): we don't actually have any lifetime tracking for the in memory
   // entity_type_id arrays, which means we don't actually know when the array

@@ -5,6 +5,7 @@ requires = [
   "wheel",
   "Cython (>=0.29.12)",
   "jinja2",
+  "markupsafe (<2.1)",
   "pyarrow (>=1.0,<3.0.dev)",
   "numpy",
   "packaging",

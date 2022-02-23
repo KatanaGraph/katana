@@ -187,9 +187,10 @@ BuildArray(std::vector<T>& data) {
   using Builder = typename arrow::CTypeTraits<T>::BuilderType;
 
   Builder builder;
-  auto append_status = builder.AppendValues(data);
-  KATANA_LOG_ASSERT(append_status.ok());
-
+  if (!data.empty()) {
+    auto append_status = builder.AppendValues(data);
+    KATANA_LOG_ASSERT(append_status.ok());
+  }
   std::shared_ptr<arrow::Array> array;
   auto finish_status = builder.Finish(&array);
   KATANA_LOG_ASSERT(finish_status.ok());

@@ -9,6 +9,7 @@
 #include "katana/ErrorCode.h"
 #include "katana/FileView.h"
 #include "katana/JSON.h"
+#include "katana/Logging.h"
 #include "katana/ParquetReader.h"
 #include "katana/RDGOptionalDatastructure.h"
 #include "katana/Result.h"
@@ -286,7 +287,7 @@ katana::RDGManifest::FileNames() {
       }
 
       for (auto it : header.optional_datastructure_manifests()) {
-        fnames.emplace(it.first);
+        fnames.emplace(it.second);
         KATANA_CHECKED(AddOptionalDatastructureSubfiles(
             fnames, katana::Uri::JoinPath(dir().string(), it.second)));
       }

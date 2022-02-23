@@ -345,9 +345,13 @@ katana::to_json(json& j, const katana::RDGPartHeader& header) {
         "RDGPartHeader.unstable_storage_format_ is true");
   }
 
-  KATANA_LOG_DEBUG(
+  KATANA_LOG_WARN(
       "Storing paths to {} optional datastructure manifests",
       header.optional_datastructure_manifests_.size());
+
+  KATANA_LOG_WARN(
+      "storing RDG at storage_format_version {}",
+      header.storage_format_version_);
 
   j = json{
       {kNodePropertyKey, header.node_prop_info_list_},
@@ -382,6 +386,10 @@ katana::from_json(const json& j, katana::RDGPartHeader& header) {
   } else {
     header.storage_format_version_ = kPartitionStorageFormatVersion1;
   }
+
+  KATANA_LOG_WARN(
+      "loading RDG with storage_format_version {}",
+      header.storage_format_version_);
 
   // load the unstable_storage_format flag if it is present in the RDG
   // RDGs created before support for unstable_storage_format was added do not have this flag.
@@ -465,7 +473,7 @@ katana::from_json(const json& j, katana::RDGPartHeader& header) {
   if (header.storage_format_version_ >= kPartitionStorageFormatVersion6) {
     j.at(kOptionalDatastructuresKey)
         .get_to(header.optional_datastructure_manifests_);
-    KATANA_LOG_DEBUG(
+    KATANA_LOG_WARN(
         "Loaded {} optional datastructure manifests",
         header.optional_datastructure_manifests_.size());
   }

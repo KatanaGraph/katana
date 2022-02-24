@@ -194,10 +194,8 @@ def _get_test_datasets_directory(invalidate_cache=False) -> Path:
 
         # failed to validate, cleanup just in case
         if cache_path.exists():
-            try:
-                shutil.rmtree(cache_path)
-            finally:
-                cache_path.unlink(missing_ok=True)
+            shutil.rmtree(cache_path, ignore_errors=True)
+
         # download a fresh copy
         base_cache_path.mkdir(parents=True, exist_ok=True)
         fn, _headers = urllib.request.urlretrieve(

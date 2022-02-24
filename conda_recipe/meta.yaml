@@ -32,6 +32,7 @@ requirements:
     - pyarrow {{ arrow_cpp }}
   host:
     - jinja2 {{ jinja2 }}
+    - markupsafe {{ markupsafe }}
     - cython {{ cython }}
     - pyarrow {{ arrow_cpp }}
     - pybind11 {{ pybind11 }}
@@ -129,6 +130,7 @@ outputs:
       host:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - jinja2 {{ jinja2 }}
+        - markupsafe {{ markupsafe }}
         - cython {{ cython }}
         - pyarrow {{ arrow_cpp }}
         - numba {{ numba }}

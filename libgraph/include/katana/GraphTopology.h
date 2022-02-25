@@ -1163,31 +1163,26 @@ public:
     return Base::out().DoesEdgeTypeExist(edge_type);
   }
 
+  using Base::InDegree;
+  using Base::InEdges;
+  using Base::OutDegree;
   using Base::OutEdges;
 
   auto OutEdges(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::out().OutEdges(N, edge_type);
   }
 
-  auto OutEdges(Node N) const noexcept { return Base::out().OutEdges(N); }
-
   auto InEdges(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::in().OutEdges(N, edge_type);
   }
-
-  auto InEdges(Node N) const noexcept { return Base::in().OutEdges(N); }
 
   auto OutDegree(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::out().OutDegree(N, edge_type);
   }
 
-  auto OutDegree(Node N) const noexcept { return Base::out().OutDegree(N); }
-
   auto InDegree(Node N, const EntityTypeID& edge_type) const noexcept {
     return Base::in().OutDegree(N, edge_type);
   }
-
-  auto InDegree(Node N) const noexcept { return Base::in().OutDegree(N); }
 
   auto FindAllEdges(
       const Node& src, const Node& dst,

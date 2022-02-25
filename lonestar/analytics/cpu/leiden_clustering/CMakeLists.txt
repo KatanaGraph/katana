@@ -11,4 +11,4 @@ add_test_scale(small leiden-clustering-cpu NO_VERIFY INPUT rmat10 INPUT_URI "${R
 ## Test TranformView
 add_test_scale(small leiden-clustering-cpu NO_VERIFY INPUT ldbc003 INPUT_URI "${RDG_LDBC_003}" --node_types=Person --algo=Deterministic) 
 #FIXME: Hangs in node property construction with edge projection
-#add_test_scale(small leiden-clustering-cpu NO_VERIFY INPUT ldbc003 INPUT_URI "${RDG_LDBC_003}" --edge_types=CONTAINER_OF --algo=Deterministic) 
+add_test_scale(small leiden-clustering-cpu NO_VERIFY INPUT ldbc003 INPUT_URI "${RDG_LDBC_003}" --edge_types=CONTAINER_OF --algo=Deterministic) 

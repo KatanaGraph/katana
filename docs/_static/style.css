@@ -192,7 +192,7 @@ input#search-input::placeholder{
 
 #version_switcher_button{
 	border-radius: 2px;
-	background-color: rgba(61, 107, 245, 1);
+	background-color: rgba(45, 29, 61, 1);
 	border: none;
 }
 
@@ -220,6 +220,10 @@ input#search-input::placeholder{
 }
 
 @media (min-width: 960px){
+	main {
+		max-width: 50% !important;
+	}
+
 	.navbar .container-xl {
 		justify-content: start;
 	}

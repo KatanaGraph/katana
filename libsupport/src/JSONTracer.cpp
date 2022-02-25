@@ -101,7 +101,8 @@ GetLogJSON(const std::string& message) {
   fmt::format_to(
       std::back_inserter(buf),
       R"("log":{{"msg":"{}","timestamp_us":{},"max_mem_gb":{:.3f},"mem_gb":{:.3f},"arrow_mem_gb":{:.3f}}})",
-      message, usec_ts, katana::ProgressTracer::GetMaxMem() / 1024.0 / 1024.0,
+      message, usec_ts,
+      katana::ProgressTracer::GetMaxMemBytes() / 1024.0 / 1024.0 / 1024.0,
       katana::ProgressTracer::ParseProcSelfRssBytes() / 1024.0 / 1024.0 /
           1024.0,
       arrow::default_memory_pool()->bytes_allocated() / 1024.0 / 1024.0 /

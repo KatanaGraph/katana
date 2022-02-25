@@ -1,10 +1,12 @@
-#ifndef KATANA_LIBGLUON_KATANA_STORAGEBACKEDARROWTABLE_H_
-#define KATANA_LIBGLUON_KATANA_STORAGEBACKEDARROWTABLE_H_
+#ifndef KATANA_LIBTSUBA_KATANA_STORAGEBACKEDARROWTABLE_H_
+#define KATANA_LIBTSUBA_KATANA_STORAGEBACKEDARROWTABLE_H_
 
 #include <memory>
+#include <set>
 #include <unordered_map>
 
 #include <arrow/api.h>
+#include <arrow/compute/api.h>
 
 #include "katana/ErrorCode.h"
 #include "katana/StorageBackedArrowArray.h"
@@ -15,6 +17,9 @@ namespace katana {
 // TODO(thunt): move this to tsuba
 
 class KATANA_EXPORT StorageBackedArrowTable {
+  using ColumnMap =
+      std::unordered_map<std::string, std::shared_ptr<StorageBackedArrowArray>>;
+
 public:
   StorageBackedArrowTable(const StorageBackedArrowTable& no_copy) = delete;
   StorageBackedArrowTable& operator=(const StorageBackedArrowTable& no_copy) =
@@ -96,6 +101,16 @@ public:
   Result<std::shared_ptr<StorageBackedArrowTable>> AppendNulls(
       int64_t num_nulls);
 
+  /// Register what column names and indices for rows an iterator will return.
+  /// Currently, only iterators respect deferred take
+  /// Pass an empty set and a nullptr to reset a deferred take.
+  void DeferredTake(
+      std::set<std::string>&& names,
+      const std::shared_ptr<arrow::Array>& take_indexes) {
+    deferred_take_names_ = std::move(names);
+    deferred_take_indexes_ = std::move(take_indexes);
+  }
+
   bool HasColumn(const std::string& name) const {
     return (columns_.find(name) != columns_.end());
   }
@@ -131,6 +146,88 @@ public:
   /// group to overlap them; use the wait group to make sure writing succeeds
   /// in that case
   Result<URI> Persist(WriteGroup* wg = nullptr);
+
+  /// An iterator that first returns in memory columns, then returns on-storage
+  /// columns.
+  // TODO(witchel) add prefetching and group reads
+  class iterator {
+  public:
+    iterator(StorageBackedArrowTable& sbat)
+        : in_mem_pass_(true),
+          colmap_ref_(sbat.columns_),
+          deferred_take_names_(sbat.deferred_take_names_) {
+      deferred_take_indexes_ = sbat.deferred_take_indexes_;
+      it_ = colmap_ref_.begin();
+    }
+    static iterator MakeEnd(StorageBackedArrowTable& sbat) {
+      auto it = iterator(sbat);
+      it.in_mem_pass_ = false;
+      it.it_ = it.colmap_ref_.end();
+      return it;
+    }
+
+    // Use an iterator over the column map, but do it twice, first for
+    // in-memory arrays
+    iterator operator++() {
+      if (in_mem_pass_) {
+        while (++it_ != colmap_ref_.end() &&
+               (deferred_take_names_.empty() ||
+                deferred_take_names_.find(it_->first) !=
+                    deferred_take_names_.end())) {
+          if (it_->second->IsMaterialized()) {
+            visited.insert(it_->first);
+            return *this;
+          }
+        }
+        it_ = colmap_ref_.begin();
+      }
+      in_mem_pass_ = false;
+      if (it_ == colmap_ref_.end()) {
+        return *this;
+      }
+      while (++it_ != colmap_ref_.end() &&
+             visited.find(it_->first) == visited.end() &&
+             (deferred_take_names_.empty() ||
+              deferred_take_names_.find(it_->first) !=
+                  deferred_take_names_.end())) {
+        visited.insert(it_->first);
+        return *this;
+      }
+      return *this;
+    }
+    bool operator!=(const iterator& other) const {
+      return (in_mem_pass_ == false) && it_ != other.it_;
+    }
+    std::pair<std::string, std::shared_ptr<arrow::Array>> operator*() const {
+      auto res = it_->second->GetArray(/*de_chunk*/ true);
+      if (!res) {
+        KATANA_LOG_WARN("iterator error {}", res.error());
+        return {"error", nullptr};
+      }
+      auto arr = res.value()->chunk(0);
+      if (deferred_take_indexes_) {
+        auto arrow_res = arrow::compute::Take(
+            arr, deferred_take_indexes_,
+            arrow::compute::TakeOptions::BoundsCheck());
+        if (!arrow_res.ok()) {
+          KATANA_LOG_WARN("iterator error {}", arrow_res.status());
+          return {"error", nullptr};
+        }
+        arr = arrow_res.ValueOrDie().make_array();
+      }
+      return {it_->first, arr};
+    }
+
+  private:
+    bool in_mem_pass_{true};
+    std::set<std::string> visited;
+    ColumnMap::iterator it_;
+    ColumnMap& colmap_ref_;
+    const std::set<std::string>& deferred_take_names_;
+    std::shared_ptr<arrow::Array> deferred_take_indexes_;
+  };
+  iterator begin() { return iterator(*this); }
+  iterator end() { return iterator::MakeEnd(*this); }
 
 private:
   StorageBackedArrowTable(URI storage_location, int64_t num_rows)
@@ -169,12 +266,14 @@ private:
 
   URI storage_location_;
 
-  std::unordered_map<std::string, std::shared_ptr<StorageBackedArrowArray>>
-      columns_;
+  ColumnMap columns_;
 
   std::shared_ptr<arrow::Schema> schema_;
 
   int64_t num_rows_;
+
+  std::set<std::string> deferred_take_names_;
+  std::shared_ptr<arrow::Array> deferred_take_indexes_;
 };
 
 }  // namespace katana

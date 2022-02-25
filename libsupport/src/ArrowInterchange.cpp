@@ -52,7 +52,7 @@ ApproxArrayDataMemUse(const std::shared_ptr<arrow::ArrayData>& data) {
 katana::Result<std::shared_ptr<arrow::Table>>
 katana::TakeRows(
     const std::shared_ptr<arrow::Table>& original,
-    const std::shared_ptr<arrow::BooleanArray> picker) {
+    const std::shared_ptr<arrow::BooleanArray>& picker) {
   arrow::compute::FilterOptions opts(arrow::compute::FilterOptions::DROP);
   arrow::Datum filtered =
       KATANA_CHECKED(arrow::compute::Filter(original, picker, opts));

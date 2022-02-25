@@ -303,7 +303,7 @@ ApproxTableMemUse(const std::shared_ptr<arrow::Table>& table);
 
 KATANA_EXPORT Result<std::shared_ptr<arrow::Table>> TakeRows(
     const std::shared_ptr<arrow::Table>& original,
-    const std::shared_ptr<arrow::BooleanArray> picker);
+    const std::shared_ptr<arrow::BooleanArray>& picker);
 
 }  // namespace katana
 

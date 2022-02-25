@@ -76,4 +76,3 @@ table EntityTypeManager {
   id_to_set_of_ids : [EntityTypeIDSet];
   id_to_name : [EntityTypeIDName];
 }
-

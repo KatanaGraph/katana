@@ -149,6 +149,22 @@ FillBitMask(
   });
 }
 
+katana::Result<std::shared_ptr<arrow::Table>>
+GetCommonPropertyValues(
+    const std::shared_ptr<arrow::Array>& take_indexes,
+    std::set<std::string>&& names,
+    std::shared_ptr<katana::StorageBackedArrowTable> prop_table) {
+  prop_table->DeferredTake(std::move(names), take_indexes);
+  std::vector<std::shared_ptr<arrow::Field>> fields;
+  std::vector<std::shared_ptr<arrow::Array>> arrs;
+  auto foo = arrow::Field("", arrow::null());
+  for (const auto& [name, arr] : *prop_table) {
+    fields.push_back(std::make_shared<arrow::Field>(name, arr->type()));
+    arrs.push_back(arr);
+  }
+  return arrow::Table::Make(arrow::schema(fields), arrs);
+}
+
 }  // namespace
 
 katana::PropertyGraph::~PropertyGraph() = default;
@@ -1092,6 +1108,64 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
   return std::string(buf.begin(), buf.end());
 }
 
+katana::Result<std::shared_ptr<katana::StorageBackedArrowTable>>
+katana::PropertyGraph::BuildPropertyTable(
+    const katana::URI& storage_location,
+    const katana::URI& old_storage_location,
+    const katana::PropertyGraph::ReadOnlyPropertyView& pv) {
+  auto full_schema = pv.full_schema();
+  auto loaded_schema = pv.loaded_schema();
+
+  std::unordered_set<std::string> in_memory_props;
+  std::vector<std::string> prop_names;
+  std::vector<std::shared_ptr<katana::StorageBackedArrowArray>> prop_columns;
+  for (const auto& field : loaded_schema->fields()) {
+    prop_names.emplace_back(field->name());
+    in_memory_props.emplace(field->name());
+
+    auto lspg_prop_storage = storage_location.Join(field->name());
+    auto location_res = pv.GetPropertyStorageLocation(field->name());
+    auto prop_uri = location_res ? location_res.value()
+                                 : lspg_prop_storage.RandFile(field->name());
+
+    // TODO(thunt) a bummer  that this doesn't return the full path
+    // fix this when it does
+    prop_uri = old_storage_location.Join(prop_uri.path());
+
+    auto lazy_array = std::make_shared<katana::LazyArrowArray>(
+        KATANA_CHECKED(pv.GetProperty(field->name())), prop_uri,
+        /*on_disk=*/bool{location_res});
+
+    prop_columns.emplace_back(
+        KATANA_CHECKED(katana::StorageBackedArrowArray::Make(
+            lspg_prop_storage, std::move(lazy_array))));
+  }
+
+  for (const auto& field : full_schema->fields()) {
+    if (in_memory_props.find(field->name()) != in_memory_props.end()) {
+      continue;
+    }
+    prop_names.emplace_back(field->name());
+
+    auto lspg_prop_storage = storage_location.Join(field->name());
+    auto prop_uri =
+        KATANA_CHECKED(pv.GetPropertyStorageLocation(field->name()));
+
+    // TODO(thunt) a bummer  that this doesn't return the full path
+    // fix this when it does
+    prop_uri = old_storage_location.Join(prop_uri.path());
+
+    auto lazy_array = KATANA_CHECKED(katana::LazyArrowArray::Make(prop_uri));
+
+    prop_columns.emplace_back(
+        KATANA_CHECKED(katana::StorageBackedArrowArray::Make(
+            lspg_prop_storage, std::move(lazy_array))));
+  }
+
+  return katana::StorageBackedArrowTable::Make(
+      storage_location, prop_names, prop_columns);
+}
+
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 katana::PropertyGraph::GetNodeProperty(const std::string& name) const {
   auto ret = rdg_->node_properties()->GetColumnByName(name);
@@ -1282,6 +1356,26 @@ katana::PropertyGraph::EnsureEdgePropertyLoaded(const std::string& name) {
     return katana::ResultSuccess();
   }
   return LoadEdgeProperty(name);
+}
+
+katana::Result<std::shared_ptr<arrow::Table>>
+katana::PropertyGraph::GetNodePropertyValues(
+    std::set<std::string>&& names,
+    const std::shared_ptr<arrow::Array>& take_indexes) {
+  return GetCommonPropertyValues(
+      take_indexes, std::move(names),
+      KATANA_CHECKED(BuildPropertyTable(
+          rdg_dir(), rdg_dir(), NodeReadOnlyPropertyView())));
+}
+
+katana::Result<std::shared_ptr<arrow::Table>>
+katana::PropertyGraph::GetEdgePropertyValues(
+    std::set<std::string>&& names,
+    const std::shared_ptr<arrow::Array>& take_indexes) {
+  return GetCommonPropertyValues(
+      take_indexes, std::move(names),
+      KATANA_CHECKED(BuildPropertyTable(
+          rdg_dir(), rdg_dir(), EdgeReadOnlyPropertyView())));
 }
 
 // Build an index over nodes.

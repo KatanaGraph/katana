@@ -564,6 +564,12 @@ public:
     return node_entity_data_[idx];
   }
 
+  /// \return a lazily constructed property table
+  katana::Result<std::shared_ptr<katana::StorageBackedArrowTable>>
+  BuildPropertyTable(
+      const katana::URI& storage_location,
+      const katana::URI& old_storage_location, const ReadOnlyPropertyView& pv);
+
   /// \return returns the most specific node entity type for @param node
   EntityTypeID GetTypeOfNodeFromPropertyIndex(
       GraphTopology::PropertyIndex prop_index) const {
@@ -828,6 +834,19 @@ public:
   void DropNodeProperties() { rdg_->DropNodeProperties(); }
   /// Remove all edge properties
   void DropEdgeProperties() { rdg_->DropEdgeProperties(); }
+
+  /// Given a set of node property names and an array of node property indexes,
+  /// return a table where each row corresponds to a property index and each column is
+  /// a property.
+  Result<std::shared_ptr<arrow::Table>> GetNodePropertyValues(
+      std::set<std::string>&& names,
+      const std::shared_ptr<arrow::Array>& take_indexes);
+  /// Given a set of edge property names and an array of edge property indexes,
+  /// return a table where each row corresponds to a property index and each column is
+  /// a property.
+  Result<std::shared_ptr<arrow::Table>> GetEdgePropertyValues(
+      std::set<std::string>&& names,
+      const std::shared_ptr<arrow::Array>& take_indexes);
 
   MutablePropertyView NodeMutablePropertyView() {
     return MutablePropertyView{

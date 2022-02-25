@@ -41,7 +41,7 @@ set(sources
   src/StorageBackedArrowTable.cpp
   src/TxnContext.cpp
   src/WriteGroup.cpp
-  src/tsuba.cpp  
+  src/tsuba.cpp
   ${tsuba_fb_cpp}
 )
 

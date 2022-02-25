@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBGLUON_KATANA_LAZYARROWARRAY_H_
-#define KATANA_LIBGLUON_KATANA_LAZYARROWARRAY_H_
+#ifndef KATANA_LIBTSUBA_KATANA_LAZYARROWARRAY_H_
+#define KATANA_LIBTSUBA_KATANA_LAZYARROWARRAY_H_
 
 #include <arrow/api.h>
 
@@ -34,6 +34,12 @@ public:
         uri_(std::move(uri)),
         on_disk_(on_disk) {}
 
+  LazyArrowArray(
+      const std::shared_ptr<arrow::Array>& array, const URI& uri,
+      bool on_disk = false)
+      : LazyArrowArray(
+            std::make_shared<arrow::ChunkedArray>(array), uri, on_disk) {}
+
   static Result<std::unique_ptr<LazyArrowArray>> Make(URI uri) {
     auto reader = KATANA_CHECKED(katana::ParquetReader::Make());
     auto schema = KATANA_CHECKED(reader->GetSchema(uri));
@@ -49,8 +55,12 @@ public:
 
   Result<std::shared_ptr<arrow::ChunkedArray>> Get() {
     if (!array_) {
+      // TODO(Rob): would be better to use katana::AddProperties
+      //            or katana::LoadProperties here
       auto reader = KATANA_CHECKED(katana::ParquetReader::Make());
-      array_ = KATANA_CHECKED(reader->ReadColumn(uri_, 0))->column(0);
+      auto table = KATANA_CHECKED(reader->ReadTable(uri_));
+      KATANA_LOG_DEBUG_ASSERT(table->num_columns() == 1);
+      array_ = table->column(0);
     }
     return array_;
   }

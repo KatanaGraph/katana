@@ -131,6 +131,47 @@ BuildLoadArrowArray(
       .Union();
 }
 
+Result<flatbuffers::Offset<void>>
+BuildLoadArrowArrayAndStorageBackedArrowArray(
+    const katana::URI& storage_prefix, const katana::URI& other_uri,
+    const katana::LazyArrowArray& data, katana::fbs::ArrayAction action,
+    flatbuffers::FlatBufferBuilder* builder) {
+  auto storage_loc_fb = katana::UriToFB(storage_prefix, data.uri(), builder);
+  auto serialized_type = KATANA_CHECKED(Serialize(data.type()));
+  auto other_storage_loc_fb =
+      katana::UriToFB(storage_prefix, other_uri, builder);
+  auto other_array_loc_fb = katana::fbs::CreateStorageBackedArrowColumn(
+      *builder, builder->CreateString("other array"), other_storage_loc_fb);
+  return katana::fbs::CreateLoadArrowArrayAndStorageBackedArrowArray(
+             *builder, data.length(), builder->CreateString(serialized_type),
+             action, storage_loc_fb, other_array_loc_fb)
+      .Union();
+}
+
+Result<flatbuffers::Offset<void>>
+BuildLoadTwoArrowArrays(
+    const katana::URI& storage_prefix, const katana::LazyArrowArray& first,
+    const katana::LazyArrowArray& second, katana::fbs::ArrayAction action,
+    flatbuffers::FlatBufferBuilder* builder) {
+  auto first_storage_loc_fb =
+      katana::UriToFB(storage_prefix, first.uri(), builder);
+  auto second_storage_loc_fb =
+      katana::UriToFB(storage_prefix, second.uri(), builder);
+  auto first_serialized_type = KATANA_CHECKED(Serialize(first.type()));
+  auto second_serialized_type = KATANA_CHECKED(Serialize(second.type()));
+
+  auto first_loc_fb = katana::fbs::CreateLoadArrowArray(
+      *builder, first.length(), builder->CreateString(first_serialized_type),
+      action, first_storage_loc_fb);
+  auto second_loc_fb = katana::fbs::CreateLoadArrowArray(
+      *builder, second.length(), builder->CreateString(second_serialized_type),
+      action, second_storage_loc_fb);
+
+  return katana::fbs::CreateLoadTwoArrowArrays(
+             *builder, first_loc_fb, second_loc_fb)
+      .Union();
+}
+
 class DeferredAppend
     : public katana::StorageBackedArrowArray::DeferredOperation {
 public:
@@ -261,30 +302,14 @@ private:
   int64_t num_nulls_;
 };
 
-class DeferredTakeAppend
+class DeferredTakeAppendCommon
     : public katana::StorageBackedArrowArray::DeferredOperation {
 public:
-  DeferredTakeAppend(
+  DeferredTakeAppendCommon(
       katana::URI storage_location,
-      std::shared_ptr<katana::LazyArrowArray> indexes)
+      std::shared_ptr<katana::LazyArrowArray> data)
       : storage_location_(std::move(storage_location)),
-        data_(std::move(indexes)) {}
-
-  Result<void> Apply(katana::StorageBackedArrowArray* to_apply) final {
-    auto data =
-        KATANA_CHECKED(arrow::compute::Take(
-                           base_array(to_apply), KATANA_CHECKED(data_->Get()),
-                           arrow::compute::TakeOptions::BoundsCheck()))
-            .chunked_array();
-    KATANA_CHECKED(Append(to_apply, data));
-    if (!data_->IsOnDisk()) {
-      // no reason to keep indexes around, we can just store the data
-      data_ = std::make_shared<katana::LazyArrowArray>(
-          data, storage_location_.RandFile("take-result"));
-      store_result_ = true;
-    }
-    return katana::ResultSuccess();
-  }
+        data_(std::move(data)) {}
 
   int64_t LengthDelta() const final { return data_->length(); }
 
@@ -307,6 +332,51 @@ public:
     return katana::ResultSuccess();
   }
 
+protected:
+  Result<void> ApplyCommon(
+      katana::StorageBackedArrowArray* to_apply,
+      const std::function<Result<std::shared_ptr<arrow::ChunkedArray>>(void)>&
+          take_source) {
+    std::shared_ptr<arrow::ChunkedArray> to_append;
+
+    if (store_result_) {
+      to_append = KATANA_CHECKED(data_->Get());
+    } else {
+      to_append =
+          KATANA_CHECKED(arrow::compute::Take(
+                             KATANA_CHECKED(take_source()),
+                             KATANA_CHECKED(data_->Get()),
+                             arrow::compute::TakeOptions::BoundsCheck()))
+              .chunked_array();
+
+      // no reason to keep indexes around, we can just store the data
+      data_ = std::make_shared<katana::LazyArrowArray>(
+          to_append, storage_location_.RandFile("take-result"));
+      store_result_ = true;
+    }
+
+    KATANA_CHECKED(Append(to_apply, to_append));
+
+    return katana::ResultSuccess();
+  }
+
+  katana::URI storage_location_;
+  std::shared_ptr<katana::LazyArrowArray> data_;
+  bool store_result_{false};
+};
+
+class DeferredTakeAppend : public DeferredTakeAppendCommon {
+public:
+  DeferredTakeAppend(
+      katana::URI storage_location,
+      std::shared_ptr<katana::LazyArrowArray> data)
+      : DeferredTakeAppendCommon(std::move(storage_location), std::move(data)) {
+  }
+
+  Result<void> Apply(katana::StorageBackedArrowArray* to_apply) final {
+    return ApplyCommon(to_apply, [&]() { return base_array(to_apply); });
+  }
+
   Result<void> Unload(katana::WriteGroup* wg) final {
     return data_->Unload(wg);
   }
@@ -326,23 +396,114 @@ public:
         katana::fbs::ArrowStorageOperation::LoadArrowArray));
     return katana::ResultSuccess();
   }
+};
 
-  static Result<std::unique_ptr<DeferredTakeAppend>> FromFB(
-      const katana::URI& storage_location,
-      const katana::fbs::LoadArrowArrayT* fb) {
-    std::shared_ptr<arrow::DataType> type;
-    KATANA_CHECKED(Deserialize(fb->serialized_type, &type));
-    auto data = std::make_shared<katana::LazyArrowArray>(
-        type, fb->length,
-        KATANA_CHECKED(UriFromFB(storage_location, *fb->location)));
-    return std::make_unique<DeferredTakeAppend>(
-        storage_location, std::move(data));
+// NB (scober):
+// It is unfortunate to have TakeAppend and TakeAppendOther be separate
+// operations, but the unified approach causes aliasing issues that required
+// deep changes to StorageBackedArrowArray (see Persist, where having source_
+// point to the operation log this operation is a part of would cause an
+// infinite recursive loop when calling source_->Persist).
+class DeferredTakeAppendOther : public DeferredTakeAppendCommon {
+public:
+  DeferredTakeAppendOther(
+      katana::URI storage_location,
+      std::shared_ptr<katana::LazyArrowArray> data,
+      std::shared_ptr<katana::StorageBackedArrowArray> source)
+      : DeferredTakeAppendCommon(std::move(storage_location), std::move(data)),
+        source_(std::move(source)) {}
+
+  Result<void> Apply(katana::StorageBackedArrowArray* to_apply) final {
+    return ApplyCommon(
+        to_apply, [&]() -> Result<std::shared_ptr<arrow::ChunkedArray>> {
+          auto datum_max = KATANA_CHECKED(arrow::compute::CallFunction(
+              "max", {KATANA_CHECKED(data_->Get())}));
+          int64_t max = datum_max.scalar_as<arrow::Int64Scalar>().value;
+
+          return source_->GetSlice(0, max + 1);
+        });
+  }
+
+  Result<void> Unload(katana::WriteGroup* wg) final {
+    KATANA_CHECKED(data_->Unload(wg));
+    return source_->Unload(wg);
+  }
+
+  Result<void> Persist(
+      const katana::URI& storage_prefix,
+      flatbuffers::FlatBufferBuilder* builder,
+      std::vector<flatbuffers::Offset<void>>* entries,
+      std::vector<uint8_t>* entry_types, katana::WriteGroup* wg) final {
+    KATANA_CHECKED(data_->Persist(wg));
+
+    if (store_result_) {
+      entries->emplace_back(KATANA_CHECKED(BuildLoadArrowArray(
+          storage_prefix, *data_, katana::fbs::ArrayAction::Append, builder)));
+      entry_types->emplace_back(static_cast<uint8_t>(
+          katana::fbs::ArrowStorageOperation::LoadArrowArray));
+    } else {
+      auto source_uri = KATANA_CHECKED(source_->Persist(wg));
+      entries->emplace_back(
+          KATANA_CHECKED(BuildLoadArrowArrayAndStorageBackedArrowArray(
+              storage_prefix, source_uri, *data_,
+              katana::fbs::ArrayAction::TakeAndAppend, builder)));
+      entry_types->emplace_back(
+          static_cast<uint8_t>(katana::fbs::ArrowStorageOperation::
+                                   LoadArrowArrayAndStorageBackedArrowArray));
+    }
+
+    return katana::ResultSuccess();
   }
 
 private:
-  katana::URI storage_location_;
-  std::shared_ptr<katana::LazyArrowArray> data_;
-  bool store_result_{false};
+  std::shared_ptr<katana::StorageBackedArrowArray> source_;
+};
+
+class DeferredTakeAppendArray : public DeferredTakeAppendCommon {
+public:
+  DeferredTakeAppendArray(
+      katana::URI storage_location,
+      std::shared_ptr<katana::LazyArrowArray> indexes,
+      std::shared_ptr<katana::LazyArrowArray> source)
+      : DeferredTakeAppendCommon(
+            std::move(storage_location), std::move(indexes)),
+        source_(std::move(source)) {}
+
+  Result<void> Apply(katana::StorageBackedArrowArray* to_apply) final {
+    return ApplyCommon(to_apply, [&]() { return source_->Get(); });
+  }
+
+  Result<void> Unload(katana::WriteGroup* wg) final {
+    KATANA_CHECKED(data_->Unload(wg));
+    return source_->Unload(wg);
+  }
+
+  Result<void> Persist(
+      const katana::URI& storage_prefix,
+      flatbuffers::FlatBufferBuilder* builder,
+      std::vector<flatbuffers::Offset<void>>* entries,
+      std::vector<uint8_t>* entry_types, katana::WriteGroup* wg) final {
+    KATANA_CHECKED(data_->Persist(wg));
+
+    if (store_result_) {
+      entries->emplace_back(KATANA_CHECKED(BuildLoadArrowArray(
+          storage_prefix, *data_, katana::fbs::ArrayAction::Append, builder)));
+      entry_types->emplace_back(static_cast<uint8_t>(
+          katana::fbs::ArrowStorageOperation::LoadArrowArray));
+    } else {
+      KATANA_CHECKED(source_->Persist(wg));
+      entries->emplace_back(KATANA_CHECKED(BuildLoadTwoArrowArrays(
+          storage_prefix, *source_, *data_,
+          katana::fbs::ArrayAction::TakeAndAppend, builder)));
+      entry_types->emplace_back(static_cast<uint8_t>(
+          katana::fbs::ArrowStorageOperation::LoadTwoArrowArrays));
+    }
+
+    return katana::ResultSuccess();
+  }
+
+private:
+  std::shared_ptr<katana::LazyArrowArray> source_;
 };
 
 template <typename IntType>
@@ -361,6 +522,10 @@ Result<std::unique_ptr<katana::StorageBackedArrowArray::DeferredOperation>>
 katana::StorageBackedArrowArray::DeferredOperation::FromFB(
     const katana::URI& storage_location,
     const fbs::ArrowStorageOperationUnion* fb_op) {
+  if (const auto* ptr = fb_op->AsAppendNulls(); ptr) {
+    return std::make_unique<DeferredAppendNulls>(ptr->length);
+  }
+
   if (const auto* ptr = fb_op->AsLoadArrowArray(); ptr) {
     std::shared_ptr<arrow::DataType> type;
     KATANA_CHECKED(Deserialize(ptr->serialized_type, &type));
@@ -377,11 +542,36 @@ katana::StorageBackedArrowArray::DeferredOperation::FromFB(
     default:
       break;
     }
-    return KATANA_ERROR(ErrorCode::AssertionFailed, "unkown array action");
+    return KATANA_ERROR(ErrorCode::AssertionFailed, "unknown array action");
   }
 
-  if (const auto* ptr = fb_op->AsAppendNulls(); ptr) {
-    return std::make_unique<DeferredAppendNulls>(ptr->length);
+  if (const auto* ptr = fb_op->AsLoadArrowArrayAndStorageBackedArrowArray();
+      ptr) {
+    std::shared_ptr<arrow::DataType> type;
+    KATANA_CHECKED(Deserialize(ptr->serialized_type, &type));
+    auto indexes = std::make_shared<katana::LazyArrowArray>(
+        type, ptr->length,
+        KATANA_CHECKED(UriFromFB(storage_location, *ptr->location)));
+    auto source = KATANA_CHECKED(
+        katana::StorageBackedArrowArray::FromStorage(KATANA_CHECKED(
+            UriFromFB(storage_location, *ptr->storage_backed_array->uri))));
+    return std::make_unique<DeferredTakeAppendOther>(
+        storage_location, std::move(indexes), std::move(source));
+  }
+
+  if (const auto* ptr = fb_op->AsLoadTwoArrowArrays(); ptr) {
+    std::shared_ptr<arrow::DataType> first_type;
+    std::shared_ptr<arrow::DataType> second_type;
+    KATANA_CHECKED(Deserialize(ptr->first->serialized_type, &first_type));
+    KATANA_CHECKED(Deserialize(ptr->second->serialized_type, &second_type));
+    auto source = std::make_shared<katana::LazyArrowArray>(
+        first_type, ptr->first->length,
+        KATANA_CHECKED(UriFromFB(storage_location, *ptr->first->location)));
+    auto indexes = std::make_shared<katana::LazyArrowArray>(
+        second_type, ptr->second->length,
+        KATANA_CHECKED(UriFromFB(storage_location, *ptr->second->location)));
+    return std::make_unique<DeferredTakeAppendArray>(
+        storage_location, std::move(indexes), std::move(source));
   }
 
   return KATANA_ERROR(ErrorCode::AssertionFailed, "could not handle op type");
@@ -469,9 +659,26 @@ katana::StorageBackedArrowArray::AppendNulls(
 Result<std::shared_ptr<katana::StorageBackedArrowArray>>
 katana::StorageBackedArrowArray::TakeAppend(
     const std::shared_ptr<StorageBackedArrowArray>& self,
-    const std::shared_ptr<arrow::Array>& indexes) {
-  return AppendOp<DeferredTakeAppend>(
-      self, self->storage_location_, self->MakeLazyWrapper(indexes));
+    const std::shared_ptr<LazyArrowArray>& indexes) {
+  return AppendOp<DeferredTakeAppend>(self, self->storage_location_, indexes);
+}
+
+Result<std::shared_ptr<katana::StorageBackedArrowArray>>
+katana::StorageBackedArrowArray::TakeAppend(
+    const std::shared_ptr<StorageBackedArrowArray>& self,
+    const std::shared_ptr<LazyArrowArray>& indexes,
+    const std::shared_ptr<StorageBackedArrowArray>& source) {
+  return AppendOp<DeferredTakeAppendOther>(
+      self, self->storage_location_, indexes, source);
+}
+
+Result<std::shared_ptr<katana::StorageBackedArrowArray>>
+katana::StorageBackedArrowArray::TakeAppend(
+    const std::shared_ptr<StorageBackedArrowArray>& self,
+    const std::shared_ptr<LazyArrowArray>& indexes,
+    const std::shared_ptr<LazyArrowArray>& source) {
+  return AppendOp<DeferredTakeAppendArray>(
+      self, self->storage_location_, indexes, source);
 }
 
 Result<std::shared_ptr<arrow::ChunkedArray>>
@@ -482,6 +689,23 @@ katana::StorageBackedArrowArray::GetArray(bool de_chunk) {
         KATANA_CHECKED(arrow::Concatenate(materialized_->chunks())));
   }
   return materialized_;
+}
+
+Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::StorageBackedArrowArray::GetSlice(
+    int64_t offset, int64_t length, bool de_chunk) {
+  if (offset < 0 || length < 0) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "offset and length must be non-negative (got {} and {})", offset,
+        length);
+  }
+  KATANA_CHECKED(ApplyOp(offset + length));
+  if (de_chunk && materialized_ && materialized_->num_chunks() > 1) {
+    materialized_ = std::make_shared<arrow::ChunkedArray>(
+        KATANA_CHECKED(arrow::Concatenate(materialized_->chunks())));
+  }
+  return materialized_->Slice(offset, length);
 }
 
 Result<void>
@@ -603,8 +827,8 @@ katana::StorageBackedArrowArray::MakeWithOp(
 }
 
 Result<void>
-katana::StorageBackedArrowArray::ApplyOp() {
-  if (IsMaterialized()) {
+katana::StorageBackedArrowArray::ApplyOp(int64_t max_bound) {
+  if (IsMaterialized(max_bound)) {
     return ResultSuccess();
   }
 
@@ -613,12 +837,22 @@ katana::StorageBackedArrowArray::ApplyOp() {
       auto opts = arrow::compute::CastOptions();
       opts.to_type = type();
       materialized_ =
-          KATANA_CHECKED(
-              arrow::compute::Cast(
-                  KATANA_CHECKED(prefix_->GetArray(/*de_chunk=*/false)), opts))
-              .chunked_array();
+          max_bound < 0
+              ? KATANA_CHECKED(
+                    arrow::compute::Cast(
+                        KATANA_CHECKED(prefix_->GetArray(/*de_chunk=*/false)),
+                        opts))
+                    .chunked_array()
+              : KATANA_CHECKED(arrow::compute::Cast(
+                                   KATANA_CHECKED(prefix_->GetSlice(
+                                       0, max_bound, /*de_chunk=*/false)),
+                                   opts))
+                    .chunked_array();
     } else {
-      materialized_ = KATANA_CHECKED(prefix_->GetArray(/*de_chunk=*/false));
+      materialized_ =
+          max_bound < 0 ? KATANA_CHECKED(prefix_->GetArray(/*de_chunk=*/false))
+                        : KATANA_CHECKED(prefix_->GetSlice(
+                              0, max_bound, /*de_chunk=*/false));
     }
   }
 
@@ -627,6 +861,9 @@ katana::StorageBackedArrowArray::ApplyOp() {
     if (!res) {
       materialized_.reset();
       return res;
+    }
+    if (IsMaterialized(max_bound)) {
+      break;
     }
   }
   return ResultSuccess();

@@ -114,7 +114,9 @@ public:
 
   static uint64_t ParseProcSelfRssBytes();
   static HostStats GetHostStats();
-  static long GetMaxMem();
+  /// NB: This is expressed in kilobytes (KB)
+  [[deprecated("convert to GetMaxMemBytes")]] static long GetMaxMem();
+  static uint64_t GetMaxMemBytes();
   static std::string GetValue(const Value& value);
 
   /// StartActiveSpan creates a new span. If there is not an active span,

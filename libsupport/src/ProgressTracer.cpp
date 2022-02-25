@@ -99,6 +99,13 @@ katana::ProgressTracer::GetMaxMem() {
   return rusage.ru_maxrss;
 }
 
+uint64_t
+katana::ProgressTracer::GetMaxMemBytes() {
+  struct rusage rusage;
+  getrusage(RUSAGE_SELF, &rusage);
+  return rusage.ru_maxrss * static_cast<uint64_t>(1024);
+}
+
 std::string
 katana::ProgressTracer::GetValue(const katana::Value& value) {
   if (std::holds_alternative<std::string>(value)) {

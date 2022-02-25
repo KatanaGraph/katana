@@ -60,7 +60,7 @@ BuildText(
       "TRACE: host={} ms={} max_mem_gb={:.3f} mem_gb={:.3f} "
       "arrow_mem_gb={:.3f}",
       host_id, msec_since_begin,
-      katana::ProgressTracer::GetMaxMem() / 1024.0 / 1024.0,
+      katana::ProgressTracer::GetMaxMemBytes() / 1024.0 / 1024.0 / 1024.0,
       katana::ProgressTracer::ParseProcSelfRssBytes() / 1024.0 / 1024.0 /
           1024.0,
       arrow::default_memory_pool()->bytes_allocated() / 1024.0 / 1024.0 /

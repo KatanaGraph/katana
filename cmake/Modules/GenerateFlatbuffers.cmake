@@ -8,7 +8,6 @@ function(generate_cpp_flatbuffers output_var fb_files)
     list(APPEND fb_cpp ${output})
   endforeach()
 
-  # TODO (witchel), does this work for a list of fb_cpp?
   add_custom_command(
     OUTPUT ${fb_cpp}
     COMMAND "${FLATC}"

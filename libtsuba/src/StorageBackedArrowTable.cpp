@@ -259,11 +259,16 @@ Result<void>
 katana::StorageBackedArrowTable::FillOtherColumns(
     StorageBackedArrowTable* new_table,
     const std::shared_ptr<arrow::Array>& take_indexes) {
+  auto lazy_wrapper =
+      take_indexes
+          ? std::make_shared<LazyArrowArray>(
+                take_indexes, storage_location_.RandFile("take-indexes"))
+          : std::shared_ptr<LazyArrowArray>();
   for (const auto& [name, col] : columns_) {
     if (new_table->columns_.find(name) == new_table->columns_.end()) {
-      if (take_indexes) {
+      if (lazy_wrapper) {
         new_table->columns_.emplace(
-            name, KATANA_CHECKED(katana::TakeAppend(col, take_indexes)));
+            name, KATANA_CHECKED(katana::TakeAppend(col, lazy_wrapper)));
       } else {
         new_table->columns_.emplace(
             name, KATANA_CHECKED(katana::AppendNulls(

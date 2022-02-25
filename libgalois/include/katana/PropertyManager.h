@@ -23,14 +23,14 @@ public:
   /// Client wants a property, see if we have it in the cache and if so return it and
   /// make the memory active.
   /// Returns nullptr if manager does not have it in the cache
-  std::shared_ptr<arrow::Table> GetProperty(const katana::Uri& property_path);
+  std::shared_ptr<arrow::Table> GetProperty(const katana::URI& property_path);
 
   /// The property data has come into memory from storage.
   void PropertyLoadedActive(const std::shared_ptr<arrow::Table>& property);
 
   /// We are done with the property.  Put it in the cache if we have room.
   void PutProperty(
-      const katana::Uri& property_path,
+      const katana::URI& property_path,
       const std::shared_ptr<arrow::Table>& property);
 
   CacheStats GetPropertyCacheStats() const { return cache_->GetStats(); }

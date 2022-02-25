@@ -130,7 +130,7 @@ public:
   /// "s3://example_file/table.parquet.part_000000000" and rows 10-end are
   /// in "s3://example_file/table.parquet.part_000000001"
   static Result<std::unique_ptr<BlockedParquetReader>> Make(
-      const katana::Uri& uri, bool preload) {
+      const katana::URI& uri, bool preload) {
     std::shared_ptr<katana::FileView> fv;
     auto builder_res = BuildReader(uri.string(), preload, &fv);
 
@@ -366,7 +366,7 @@ katana::ParquetReader::Make(ReadOpts opts) {
 
 Result<std::shared_ptr<arrow::Table>>
 katana::ParquetReader::ReadTable(
-    const katana::Uri& uri, std::optional<katana::ParquetReader::Slice> slice) {
+    const katana::URI& uri, std::optional<katana::ParquetReader::Slice> slice) {
   bool preload = true;
   if (slice) {
     if (slice->offset < 0 || slice->length < 0) {
@@ -382,37 +382,37 @@ katana::ParquetReader::ReadTable(
 }
 
 katana::Result<std::shared_ptr<arrow::Schema>>
-katana::ParquetReader::GetSchema(const katana::Uri& uri) {
+katana::ParquetReader::GetSchema(const katana::URI& uri) {
   auto bpr = KATANA_CHECKED(BlockedParquetReader::Make(uri, false));
   return FixSchema(KATANA_CHECKED(bpr->ReadSchema()));
 }
 
 Result<std::shared_ptr<arrow::Table>>
-katana::ParquetReader::ReadColumn(const katana::Uri& uri, int32_t column_idx) {
+katana::ParquetReader::ReadColumn(const katana::URI& uri, int32_t column_idx) {
   auto bpr = KATANA_CHECKED(BlockedParquetReader::Make(uri, false));
   return FixTable(KATANA_CHECKED(bpr->ReadTable({column_idx})));
 }
 
 Result<std::shared_ptr<arrow::Table>>
 katana::ParquetReader::ReadTable(
-    const katana::Uri& uri, const std::vector<int32_t>& column_indexes,
+    const katana::URI& uri, const std::vector<int32_t>& column_indexes,
     std::optional<katana::ParquetReader::Slice> slice) {
   auto bpr = KATANA_CHECKED(BlockedParquetReader::Make(uri, false));
   return FixTable(KATANA_CHECKED(bpr->ReadTable(column_indexes, slice)));
 }
 
 Result<int32_t>
-katana::ParquetReader::NumColumns(const katana::Uri& uri) {
+katana::ParquetReader::NumColumns(const katana::URI& uri) {
   return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->NumColumns();
 }
 
 Result<int64_t>
-katana::ParquetReader::NumRows(const katana::Uri& uri) {
+katana::ParquetReader::NumRows(const katana::URI& uri) {
   return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->NumRows();
 }
 
 Result<std::vector<std::string>>
-katana::ParquetReader::GetFiles(const katana::Uri& uri) {
+katana::ParquetReader::GetFiles(const katana::URI& uri) {
   return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->GetFiles();
 }
 

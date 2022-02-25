@@ -9,7 +9,7 @@ namespace fs = boost::filesystem;
 
 katana::Result<void>
 TestFileNames(const std::string& path) {
-  auto uri = KATANA_CHECKED(katana::Uri::MakeFromFile(path));
+  auto uri = KATANA_CHECKED(katana::URI::MakeFromFile(path));
   auto manifest = KATANA_CHECKED(katana::RDGManifest::Make(uri));
 
   fs::path p = path;

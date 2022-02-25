@@ -49,7 +49,7 @@ const std::regex katana::RDGManifest::kManifestVersion(
     "katana_vers(?:([0-9]+))_(?:([0-9A-Za-z-]+))\\.manifest$");
 
 katana::Result<katana::RDGManifest>
-katana::RDGManifest::MakeFromStorage(const katana::Uri& uri) {
+katana::RDGManifest::MakeFromStorage(const katana::URI& uri) {
   katana::FileView fv;
 
   KATANA_CHECKED(fv.Bind(uri.string(), true));
@@ -79,7 +79,7 @@ katana::RDGManifest::MakeFromStorage(const katana::Uri& uri) {
 
 katana::Result<katana::RDGManifest>
 katana::RDGManifest::Make(
-    const katana::Uri& uri, const std::string& view_type, uint64_t version) {
+    const katana::URI& uri, const std::string& view_type, uint64_t version) {
   return MakeFromStorage(FileName(uri, view_type, version));
 }
 
@@ -89,7 +89,7 @@ katana::RDGManifest::Make(RDGHandle handle) {
 }
 
 katana::Result<katana::RDGManifest>
-katana::RDGManifest::Make(const katana::Uri& uri) {
+katana::RDGManifest::Make(const katana::URI& uri) {
   auto rdg_manifest = MakeFromStorage(uri);
   return rdg_manifest;
 }
@@ -103,22 +103,22 @@ katana::RDGManifest::PartitionFileName(
       ToNodeString(node_id));
 }
 
-katana::Uri
+katana::URI
 katana::RDGManifest::PartitionFileName(
-    const katana::Uri& uri, uint32_t node_id, uint64_t version) {
+    const katana::URI& uri, uint32_t node_id, uint64_t version) {
   return uri.Join(
       PartitionFileName(katana::kDefaultRDGViewType, node_id, version));
 }
 
-katana::Uri
+katana::URI
 katana::RDGManifest::PartitionFileName(
-    const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
+    const std::string& view_type, const katana::URI& uri, uint32_t node_id,
     uint64_t version) {
   KATANA_LOG_DEBUG_ASSERT(!IsManifestUri(uri));
   return uri.Join(PartitionFileName(view_type, node_id, version));
 }
 
-katana::Uri
+katana::URI
 katana::RDGManifest::PartitionFileName(uint32_t host_id) const {
   return RDGManifest::PartitionFileName(
       view_specifier(), dir_, host_id, version());
@@ -132,9 +132,9 @@ katana::RDGManifest::ToJsonString() const {
 }
 
 // e.g., rdg_dir == s3://witchel-tests-east2/fault/simple/
-katana::Uri
+katana::URI
 katana::RDGManifest::FileName(
-    const katana::Uri& uri, const std::string& view_name, uint64_t version) {
+    const katana::URI& uri, const std::string& view_name, uint64_t version) {
   KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsManifestUri(uri));
   KATANA_LOG_ASSERT(!view_name.empty());
   return uri.Join(fmt::format(
@@ -143,7 +143,7 @@ katana::RDGManifest::FileName(
 
 // if it doesn't name a manifest file, assume it's meant to be a managed URI
 bool
-katana::RDGManifest::IsManifestUri(const katana::Uri& uri) {
+katana::RDGManifest::IsManifestUri(const katana::URI& uri) {
   bool res = std::regex_match(uri.BaseName(), kManifestVersion);
   return res;
 }
@@ -208,10 +208,10 @@ namespace {
 katana::Result<void>
 AddPropertySubFiles(std::set<std::string>& fnames, std::string full_path) {
   auto reader = KATANA_CHECKED(katana::ParquetReader::Make());
-  auto uri_path = KATANA_CHECKED(katana::Uri::Make(full_path));
+  auto uri_path = KATANA_CHECKED(katana::URI::Make(full_path));
   auto sub_files = KATANA_CHECKED(reader->GetFiles(uri_path));
   for (const auto& sub_file : sub_files) {
-    auto sub_file_uri = KATANA_CHECKED(katana::Uri::Make(sub_file));
+    auto sub_file_uri = KATANA_CHECKED(katana::URI::Make(sub_file));
     fnames.emplace(
         sub_file_uri.BaseName());  // Only want the file name without dir
   }
@@ -248,7 +248,7 @@ katana::RDGManifest::FileNames() {
     // directory instead of handle.impl_->rdg_manifest.path for the partition files
     fnames.emplace(PartitionFileName(view_specifier(), i, version()));
 
-    auto header_uri = KATANA_CHECKED(katana::Uri::Make(fmt::format(
+    auto header_uri = KATANA_CHECKED(katana::URI::Make(fmt::format(
         "{}/{}", dir(), PartitionFileName(view_specifier(), i, version()))));
     auto header_res = RDGPartHeader::Make(header_uri);
 
@@ -262,17 +262,17 @@ katana::RDGManifest::FileNames() {
       for (const auto& node_prop : header.node_prop_info_list()) {
         fnames.emplace(node_prop.path());
         KATANA_CHECKED(AddPropertySubFiles(
-            fnames, katana::Uri::JoinPath(dir().string(), node_prop.path())));
+            fnames, katana::URI::JoinPath(dir().string(), node_prop.path())));
       }
       for (const auto& edge_prop : header.edge_prop_info_list()) {
         fnames.emplace(edge_prop.path());
         KATANA_CHECKED(AddPropertySubFiles(
-            fnames, katana::Uri::JoinPath(dir().string(), edge_prop.path())));
+            fnames, katana::URI::JoinPath(dir().string(), edge_prop.path())));
       }
       for (const auto& part_prop : header.part_prop_info_list()) {
         fnames.emplace(part_prop.path());
         KATANA_CHECKED(AddPropertySubFiles(
-            fnames, katana::Uri::JoinPath(dir().string(), part_prop.path())));
+            fnames, katana::URI::JoinPath(dir().string(), part_prop.path())));
       }
       // Duplicates eliminated by set
       if (const auto& n = header.node_entity_type_id_array_path(); !n.empty()) {
@@ -289,7 +289,7 @@ katana::RDGManifest::FileNames() {
       for (auto it : header.optional_datastructure_manifests()) {
         fnames.emplace(it.second);
         KATANA_CHECKED(AddOptionalDatastructureSubfiles(
-            fnames, katana::Uri::JoinPath(dir().string(), it.second)));
+            fnames, katana::URI::JoinPath(dir().string(), it.second)));
       }
     }
   }

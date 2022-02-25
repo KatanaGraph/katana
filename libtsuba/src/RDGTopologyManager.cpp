@@ -54,7 +54,7 @@ katana::RDGTopologyManager::Make(PartitionTopologyMetadata* topology_metadata) {
 
 katana::Result<void>
 katana::RDGTopologyManager::DoStore(
-    katana::RDGHandle handle, const katana::Uri& current_rdg_dir,
+    katana::RDGHandle handle, const katana::URI& current_rdg_dir,
     std::unique_ptr<katana::WriteGroup>& write_group) {
   KATANA_LOG_VASSERT(num_topologies_ >= 1, "must have at least 1 topology");
   KATANA_LOG_DEBUG("Storing {} RDGTopologies", num_topologies_);

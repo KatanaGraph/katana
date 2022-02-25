@@ -71,7 +71,7 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   auto type_construction_result = g->ConstructEntityTypeIDs(&txn_ctx);
   KATANA_LOG_ASSERT(type_construction_result);
 
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
@@ -183,7 +183,7 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   auto type_construction_result = g->ConstructEntityTypeIDs(&txn_ctx);
   KATANA_LOG_ASSERT(type_construction_result);
 
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
@@ -279,7 +279,7 @@ TestRoundTrip() {
   auto add_edge_result = g->AddEdgeProperties(edge_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_edge_result);
 
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string rdg_dir(uri_res.value().path());  // path() because local
 
@@ -351,7 +351,7 @@ TestRoundTrip() {
 
 void
 TestGarbageMetadata() {
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string temp_dir(uri_res.value().path());  // path because local
 
@@ -398,7 +398,7 @@ MakePFGFile(const std::string& n1name) {
   auto add_edge_result = g->AddEdgeProperties(edge_props, &txn_ctx);
   KATANA_LOG_ASSERT(add_edge_result);
 
-  auto unique_result = katana::Uri::MakeRand("/tmp/propertygraphtests");
+  auto unique_result = katana::URI::MakeRand("/tmp/propertygraphtests");
   KATANA_LOG_ASSERT(unique_result);
   std::string rdg_file(
       std::move(unique_result.value().path()));  // path() for local

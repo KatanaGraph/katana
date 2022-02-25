@@ -62,7 +62,7 @@ StoreGraph(katana::PropertyGraph* g, std::string& output_path) {
 katana::PropertyGraph
 CleanRelocateGraphLoad(const std::string& rdg_file) {
   katana::PropertyGraph g_orig = LoadGraph(rdg_file);
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
   std::string tmp_path = StoreGraph(&g_orig, tmp_rdg_dir);
@@ -75,7 +75,7 @@ CleanRelocateGraphLoad(const std::string& rdg_file) {
 /// Carrying along stale files
 std::string
 CleanRelocateGraphStore(katana::PropertyGraph* g, std::string& output_path) {
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string tmp_rdg_dir_2(uri_res.value().path());  // path() because local
   std::string g_tmp_rdg_file = StoreGraph(g, tmp_rdg_dir_2);

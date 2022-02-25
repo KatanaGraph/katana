@@ -43,7 +43,7 @@ EnsureDirectories(const std::string& path) {
 
 katana::Result<std::string>
 GetPath(const std::string& uri) {
-  auto u = KATANA_CHECKED(katana::Uri::Make(uri));
+  auto u = KATANA_CHECKED(katana::URI::Make(uri));
   return u.path();
 }
 
@@ -230,7 +230,7 @@ katana::LocalStorage::Delete(
     rmdir(dir.c_str());
   } else {
     for (const auto& file : files) {
-      auto path = katana::Uri::JoinPath(dir, file);
+      auto path = katana::URI::JoinPath(dir, file);
       unlink(path.c_str());
     }
   }

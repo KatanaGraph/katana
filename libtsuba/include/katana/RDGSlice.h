@@ -66,7 +66,7 @@ public:
   GetPerPartitionCounts(RDGHandle handle);
 
   // metadata sorts of things
-  const katana::Uri& rdg_dir() const;
+  const katana::URI& rdg_dir() const;
   uint32_t partition_id() const;
 
   // properties and friends
@@ -148,7 +148,7 @@ private:
   katana::Result<void> DoMake(
       const std::optional<std::vector<std::string>>& node_props,
       const std::optional<std::vector<std::string>>& edge_props,
-      const katana::Uri& metadata_dir, const SliceArg& slice);
+      const katana::URI& metadata_dir, const SliceArg& slice);
 
   //
   // Data

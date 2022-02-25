@@ -90,7 +90,7 @@ public:
         int i) const;
     Result<std::shared_ptr<arrow::ChunkedArray>> (
         PropertyGraph::*property_fn_str)(const std::string& str) const;
-    Result<Uri> (PropertyGraph::*property_storage_fn_str)(
+    Result<URI> (PropertyGraph::*property_storage_fn_str)(
         const std::string& str) const;
     int32_t (PropertyGraph::*property_num_fn)() const;
 
@@ -111,7 +111,7 @@ public:
       return (const_g->*property_fn_str)(str);
     }
 
-    Result<Uri> GetPropertyStorageLocation(const std::string& str) const {
+    Result<URI> GetPropertyStorageLocation(const std::string& str) const {
       return (const_g->*property_storage_fn_str)(str);
     }
 
@@ -256,7 +256,7 @@ public:
 
   /// Make a property graph from topology
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      const Uri& rdg_dir, GraphTopology&& topo_to_assign);
+      const URI& rdg_dir, GraphTopology&& topo_to_assign);
 
   /// Make a property graph from topology and type arrays
   // [deprecated("please provide a storage prefix")]
@@ -268,7 +268,7 @@ public:
 
   /// Make a property graph from topology and type arrays
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      const Uri& rdg_dir, GraphTopology&& topo_to_assign,
+      const URI& rdg_dir, GraphTopology&& topo_to_assign,
       EntityTypeIDArray&& node_entity_type_ids,
       EntityTypeIDArray&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,
@@ -650,7 +650,7 @@ public:
   Result<std::shared_ptr<arrow::ChunkedArray>> GetNodeProperty(
       const std::string& name) const;
 
-  Result<Uri> GetNodePropertyStorageLocation(const std::string& name) const;
+  Result<URI> GetNodePropertyStorageLocation(const std::string& name) const;
 
   std::string GetNodePropertyName(int32_t i) const {
     return loaded_node_schema()->field(i)->name();
@@ -663,7 +663,7 @@ public:
     return loaded_edge_schema()->field(i)->name();
   }
 
-  Result<Uri> GetEdgePropertyStorageLocation(const std::string& name) const;
+  Result<URI> GetEdgePropertyStorageLocation(const std::string& name) const;
 
   /// Get a node property by name and cast it to a type.
   ///

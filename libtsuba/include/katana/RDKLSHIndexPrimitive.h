@@ -29,15 +29,15 @@ class KATANA_EXPORT RDKLSHIndexPrimitive
     : private katana::RDGOptionalDatastructure {
 public:
   static katana::Result<RDKLSHIndexPrimitive> Load(
-      const katana::Uri& rdg_dir_path, const std::string& path) {
+      const katana::URI& rdg_dir_path, const std::string& path) {
     RDKLSHIndexPrimitive index =
         KATANA_CHECKED(LoadJson(rdg_dir_path.Join(path).string()));
     return index;
   }
 
-  katana::Result<std::string> Write(katana::Uri rdg_dir_path) {
+  katana::Result<std::string> Write(katana::URI rdg_dir_path) {
     // Write out our json manifest
-    katana::Uri manifest_path = rdg_dir_path.RandFile(
+    katana::URI manifest_path = rdg_dir_path.RandFile(
         kOptionalDatastructureRDKLSHIndexPrimitiveFilename);
     KATANA_CHECKED(WriteManifest(manifest_path.string()));
     return manifest_path.BaseName();

@@ -245,7 +245,7 @@ katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const katana::Uri& rdg_dir, katana::GraphTopology&& topo_to_assign) {
+    const katana::URI& rdg_dir, katana::GraphTopology&& topo_to_assign) {
   return Make(
       rdg_dir, std::move(topo_to_assign),
       MakeDefaultEntityTypeIDArray(topo_to_assign.NumNodes()),
@@ -326,7 +326,7 @@ katana::PropertyGraph::MakeEmptyProjectedGraph(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const katana::Uri& rdg_dir, katana::GraphTopology&& topo_to_assign,
+    const katana::URI& rdg_dir, katana::GraphTopology&& topo_to_assign,
     NUMAArray<EntityTypeID>&& node_entity_type_ids,
     NUMAArray<EntityTypeID>&& edge_entity_type_ids,
     EntityTypeManager&& node_type_manager,
@@ -1096,7 +1096,7 @@ katana::PropertyGraph::GetNodeProperty(const std::string& name) const {
       ErrorCode::PropertyNotFound, "node property does not exist: {}", name);
 }
 
-katana::Result<katana::Uri>
+katana::Result<katana::URI>
 katana::PropertyGraph::GetNodePropertyStorageLocation(
     const std::string& name) const {
   return rdg_->GetNodePropertyStorageLocation(name);
@@ -1112,7 +1112,7 @@ katana::PropertyGraph::GetEdgeProperty(const std::string& name) const {
       ErrorCode::PropertyNotFound, "edge property does not exist: {}", name);
 }
 
-katana::Result<katana::Uri>
+katana::Result<katana::URI>
 katana::PropertyGraph::GetEdgePropertyStorageLocation(
     const std::string& name) const {
   return rdg_->GetEdgePropertyStorageLocation(name);

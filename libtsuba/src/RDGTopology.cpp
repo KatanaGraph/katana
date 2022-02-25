@@ -64,7 +64,7 @@ katana::RDGTopology::metadata_entry_valid() const {
 }
 
 katana::Result<void>
-katana::RDGTopology::Bind(const katana::Uri& metadata_dir, bool resolve) {
+katana::RDGTopology::Bind(const katana::URI& metadata_dir, bool resolve) {
   if (file_store_bound_) {
     KATANA_LOG_WARN("topology already bound, nothing to do");
     return katana::ResultSuccess();
@@ -74,7 +74,7 @@ katana::RDGTopology::Bind(const katana::Uri& metadata_dir, bool resolve) {
         ErrorCode::InvalidArgument, "Cannot bind topology with empty path");
   }
 
-  katana::Uri t_path = metadata_dir.Join(path());
+  katana::URI t_path = metadata_dir.Join(path());
   KATANA_LOG_DEBUG(
       "binding to entire topology file at path {}", t_path.string());
   KATANA_CHECKED(file_storage_.Bind(t_path.string(), resolve));
@@ -87,13 +87,13 @@ katana::RDGTopology::Bind(const katana::Uri& metadata_dir, bool resolve) {
 
 katana::Result<void>
 katana::RDGTopology::Bind(
-    const katana::Uri& metadata_dir, uint64_t begin, uint64_t end,
+    const katana::URI& metadata_dir, uint64_t begin, uint64_t end,
     bool resolve) {
   if (path().empty()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "Cannot bind topology with empty path");
   }
-  katana::Uri t_path = metadata_dir.Join(path());
+  katana::URI t_path = metadata_dir.Join(path());
   KATANA_LOG_DEBUG(
       "binding from {} to {} with topology file at path {}", begin, end,
       t_path.string());
@@ -293,7 +293,7 @@ katana::RDGTopology::MapMetadataExtract(
 
 katana::Result<void>
 katana::RDGTopology::DoStore(
-    RDGHandle handle, const katana::Uri& current_rdg_dir,
+    RDGHandle handle, const katana::URI& current_rdg_dir,
     std::unique_ptr<katana::WriteGroup>& write_group) {
   KATANA_LOG_VASSERT(!invalid_, "tried to store an invalid RDGTopology");
 
@@ -454,7 +454,7 @@ katana::RDGTopology::DoStore(
 
     //TODO: emcginnis need different naming schemes for the optional topologies?
     // add "epi_npi_eti_nti" to name?
-    katana::Uri path_uri = MakeTopologyFileName(handle);
+    katana::URI path_uri = MakeTopologyFileName(handle);
     ff->Bind(path_uri.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     write_group->StartStore(std::move(ff));
@@ -489,7 +489,7 @@ katana::RDGTopology::DoStore(
         topology_state_, transpose_state_, edge_sort_state_, node_sort_state_);
 
     //TODO: emcginnis need different naming schemes for the optional topologies
-    katana::Uri path_uri = MakeTopologyFileName(handle);
+    katana::URI path_uri = MakeTopologyFileName(handle);
 
     // file store must be bound to make a copy of it in a new location
     if (!file_store_bound_) {
@@ -500,7 +500,7 @@ katana::RDGTopology::DoStore(
         return KATANA_ERROR(
             ErrorCode::InvalidArgument, "Cannot bind topology with empty path");
       }
-      katana::Uri t_path = current_rdg_dir.Join(old_path);
+      katana::URI t_path = current_rdg_dir.Join(old_path);
 
       KATANA_LOG_DEBUG(
           "binding to entire topology file at path {} for relocation",

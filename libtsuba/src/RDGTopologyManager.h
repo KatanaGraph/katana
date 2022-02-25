@@ -53,7 +53,7 @@ public:
   }
 
   katana::Result<void> DoStore(
-      RDGHandle handle, const katana::Uri& current_rdg_dir,
+      RDGHandle handle, const katana::URI& current_rdg_dir,
       std::unique_ptr<katana::WriteGroup>& write_group);
 
   /// Extract metadata from an previous storage format topology
@@ -61,7 +61,7 @@ public:
   /// *ONLY USE THIS FOR BACKWARDS COMPATIBILITY*
   /// bool storage_valid: used to control whether this topology should be written out on store. If storage is valid, no need to write the topology out to a file.
   katana::Result<void> ExtractMetadata(
-      const katana::Uri& metadata_dir, uint64_t num_nodes, uint64_t num_edges,
+      const katana::URI& metadata_dir, uint64_t num_nodes, uint64_t num_edges,
       bool storage_valid = false) {
     KATANA_LOG_WARN(
         "Extracting metadata from csr topology. Store the graph to avoid this "

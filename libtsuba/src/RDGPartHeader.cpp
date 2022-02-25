@@ -62,10 +62,10 @@ const char* kOptionalDatastructuresKey = "kg.v1.optional_datastructures";
 
 katana::Result<void>
 CopyProperty(
-    katana::PropStorageInfo* prop, const katana::Uri& old_location,
-    const katana::Uri& new_location) {
-  katana::Uri old_path = old_location.Join(prop->path());
-  katana::Uri new_path = new_location.Join(prop->path());
+    katana::PropStorageInfo* prop, const katana::URI& old_location,
+    const katana::URI& new_location) {
+  katana::URI old_path = old_location.Join(prop->path());
+  katana::URI new_path = new_location.Join(prop->path());
   katana::FileView fv;
 
   KATANA_CHECKED(fv.Bind(old_path.string(), true));
@@ -104,7 +104,7 @@ const int kPartitionMatchHostIndex = 3;
 }  // namespace
 
 katana::Result<katana::RDGPartHeader>
-katana::RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
+katana::RDGPartHeader::MakeJson(const katana::URI& partition_path) {
   katana::FileView fv;
   KATANA_CHECKED(fv.Bind(partition_path.string(), true));
 
@@ -119,7 +119,7 @@ katana::RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
 }
 
 katana::Result<katana::RDGPartHeader>
-katana::RDGPartHeader::Make(const katana::Uri& partition_path) {
+katana::RDGPartHeader::Make(const katana::URI& partition_path) {
   return KATANA_CHECKED(MakeJson(partition_path));
 }
 
@@ -177,7 +177,7 @@ katana::RDGPartHeader::ParseHostFromPartitionFile(const std::string& file) {
 }
 
 bool
-katana::RDGPartHeader::IsPartitionFileUri(const katana::Uri& uri) {
+katana::RDGPartHeader::IsPartitionFileUri(const katana::URI& uri) {
   bool res = std::regex_match(uri.BaseName(), kPartitionFile);
   return res;
 }
@@ -265,7 +265,7 @@ katana::RDGPartHeader::Validate() const {
 
 katana::Result<void>
 katana::RDGPartHeader::ChangeStorageLocation(
-    const katana::Uri& old_location, const katana::Uri& new_location) {
+    const katana::URI& old_location, const katana::URI& new_location) {
   for (PropStorageInfo& prop : node_prop_info_list_) {
     if (prop.IsAbsent()) {
       KATANA_CHECKED(CopyProperty(&prop, old_location, new_location));

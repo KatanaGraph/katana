@@ -18,26 +18,26 @@
 namespace {
 
 // get scheme and path, always drop trailing slash
-const std::regex kUriRegex("^(?:([a-zA-Z0-9]+)://)?(.+?)/?$");
+const std::regex kURIRegex("^(?:([a-zA-Z0-9]+)://)?(.+?)/?$");
 
 // This function does not recognize any path seperator other than kSepChar. This
 // could be a problem for Windows or "non-standard S3" paths.
 std::string
 ExtractFileName(std::string_view path) {
   size_t last_slash =
-      path.find_last_of(katana::Uri::kSepChar, std::string::npos);
+      path.find_last_of(katana::URI::kSepChar, std::string::npos);
   size_t name_end_plus1 = path.length();
   if (last_slash == std::string::npos) {
     return std::string(path);
   }
   if (last_slash == (path.length() - 1)) {
     // Find end of file name
-    while (last_slash > 0 && path[last_slash] == katana::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] == katana::URI::kSepChar) {
       last_slash--;
     }
     name_end_plus1 =
         last_slash + 1;  // name_end_plus1 points to last slash in group
-    while (last_slash > 0 && path[last_slash] != katana::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] != katana::URI::kSepChar) {
       last_slash--;
     }
   }
@@ -49,21 +49,21 @@ ExtractFileName(std::string_view path) {
 std::string
 ExtractDirName(std::string_view path) {
   size_t last_slash =
-      path.find_last_of(katana::Uri::kSepChar, std::string::npos);
+      path.find_last_of(katana::URI::kSepChar, std::string::npos);
   if (last_slash == std::string::npos) {
     return "";
   }
   if (last_slash == (path.length() - 1)) {
     // Find end of file name
-    while (last_slash > 0 && path[last_slash] == katana::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] == katana::URI::kSepChar) {
       last_slash--;
     }
     // Find first slash before file name
-    while (last_slash > 0 && path[last_slash] != katana::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] != katana::URI::kSepChar) {
       last_slash--;
     }
     // Find first slash after directory name
-    while (last_slash > 0 && path[last_slash] == katana::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] == katana::URI::kSepChar) {
       last_slash--;
     }
     last_slash++;
@@ -82,15 +82,15 @@ AddRandComponent(const std::string& str) {
 std::string
 NewPath(std::string_view dir, std::string_view prefix) {
   std::string name(prefix);
-  if (prefix.front() == katana::Uri::kSepChar) {
+  if (prefix.front() == katana::URI::kSepChar) {
     name = name.substr(1, std::string::npos);
   }
   name = AddRandComponent(name);
   std::string p{dir};
-  if (p.back() == katana::Uri::kSepChar) {
+  if (p.back() == katana::URI::kSepChar) {
     p = p.substr(0, p.length() - 1);
   }
-  return p.append(1, katana::Uri::kSepChar).append(name);
+  return p.append(1, katana::URI::kSepChar).append(name);
 }
 
 std::string
@@ -98,22 +98,22 @@ DoJoinPath(std::string_view dir, std::string_view file) {
   if (dir.empty()) {
     return std::string(file);
   }
-  if (dir[dir.size() - 1] != katana::Uri::kSepChar) {
-    if (file[0] != katana::Uri::kSepChar) {
-      return fmt::format("{}{}{}", dir, katana::Uri::kSepChar, file);
+  if (dir[dir.size() - 1] != katana::URI::kSepChar) {
+    if (file[0] != katana::URI::kSepChar) {
+      return fmt::format("{}{}{}", dir, katana::URI::kSepChar, file);
     }
-    while (file[1] == katana::Uri::kSepChar) {
+    while (file[1] == katana::URI::kSepChar) {
       file.remove_prefix(1);
     }
     return fmt::format("{}{}", dir, file);
   }
-  while (dir[dir.size() - 2] == katana::Uri::kSepChar) {
+  while (dir[dir.size() - 2] == katana::URI::kSepChar) {
     dir.remove_suffix(1);
   }
-  while (file[0] == katana::Uri::kSepChar) {
+  while (file[0] == katana::URI::kSepChar) {
     file.remove_prefix(1);
   }
-  KATANA_LOG_ASSERT(dir[dir.size() - 1] == katana::Uri::kSepChar);
+  KATANA_LOG_ASSERT(dir[dir.size() - 1] == katana::URI::kSepChar);
   return fmt::format("{}{}", dir, file);
 }
 
@@ -225,9 +225,7 @@ URLDecode(const std::string& s) {
 
 }  // namespace
 
-namespace katana {
-
-Uri::Uri(std::string scheme, std::string path)
+katana::URI::URI(std::string scheme, std::string path)
     : scheme_(std::move(scheme)), path_(std::move(path)) {
   encoded_ = scheme_ + "://" + URLEncode(path_);
 
@@ -235,19 +233,19 @@ Uri::Uri(std::string scheme, std::string path)
   KATANA_LOG_DEBUG_ASSERT(!path_.empty());
 }
 
-Result<Uri>
-Uri::MakeFromFile(const std::string& str) {
+katana::Result<katana::URI>
+katana::URI::MakeFromFile(const std::string& str) {
   std::vector<char> path(PATH_MAX + 1);
   if (realpath(str.c_str(), path.data()) == nullptr) {
-    return Uri(kFileScheme, str);
+    return URI(kFileScheme, str);
   }
-  return Uri(kFileScheme, path.data());
+  return URI(kFileScheme, path.data());
 }
 
-Result<Uri>
-Uri::Make(const std::string& str) {
+katana::Result<katana::URI>
+katana::URI::Make(const std::string& str) {
   std::smatch sub_match;
-  if (!std::regex_match(str, sub_match, kUriRegex)) {
+  if (!std::regex_match(str, sub_match, kURIRegex)) {
     if (str.empty()) {
       return KATANA_ERROR(
           ErrorCode::InvalidArgument, "can't make URI from empty string");
@@ -261,11 +259,11 @@ Uri::Make(const std::string& str) {
     return MakeFromFile(path);
   }
 
-  return Uri(scheme, URLDecode(path));
+  return URI(scheme, URLDecode(path));
 }
 
-Result<Uri>
-Uri::MakeRand(const std::string& str) {
+katana::Result<katana::URI>
+katana::URI::MakeRand(const std::string& str) {
   auto res = Make(AddRandComponent(str));
   if (!res) {
     return res.error();
@@ -274,17 +272,17 @@ Uri::MakeRand(const std::string& str) {
 }
 
 std::string
-Uri::JoinPath(const std::string& dir, const std::string& file) {
+katana::URI::JoinPath(const std::string& dir, const std::string& file) {
   return DoJoinPath(dir, file);
 }
 
 std::string
-Uri::Decode(const std::string& uri) {
+katana::URI::Decode(const std::string& uri) {
   return URLDecode(uri);
 }
 
 bool
-Uri::empty() const {
+katana::URI::empty() const {
   if (scheme_.empty()) {
     KATANA_LOG_DEBUG_ASSERT(path_.empty());
     return true;
@@ -293,58 +291,56 @@ Uri::empty() const {
 }
 
 std::string
-Uri::BaseName() const {
+katana::URI::BaseName() const {
   return ExtractFileName(path());
 }
 
-Uri
-Uri::DirName() const {
-  return Uri(scheme_, ExtractDirName(path()));
+katana::URI
+katana::URI::DirName() const {
+  return URI(scheme_, ExtractDirName(path()));
 }
 
-Uri
-Uri::Join(std::string_view to_join) const {
+katana::URI
+katana::URI::Join(std::string_view to_join) const {
   if (empty()) {
-    return Uri();
+    return URI();
   }
-  return Uri(scheme_, DoJoinPath(path_, to_join));
+  return URI(scheme_, DoJoinPath(path_, to_join));
 }
 
-Uri
-Uri::StripSep() const {
+katana::URI
+katana::URI::StripSep() const {
   std::string path = path_;
   while (path[path.size() - 1] == kSepChar) {
     path.pop_back();
   }
-  return Uri(scheme_, path);
+  return URI(scheme_, path);
 }
 
-Uri
-Uri::RandFile(std::string_view prefix) const {
+katana::URI
+katana::URI::RandFile(std::string_view prefix) const {
   if (empty()) {
-    return Uri();
+    return URI();
   }
-  return Uri(scheme_, NewPath(path_, prefix));
+  return URI(scheme_, NewPath(path_, prefix));
 }
 
 bool
-operator==(const Uri& lhs, const Uri& rhs) {
+katana::operator==(const katana::URI& lhs, const katana::URI& rhs) {
   return (lhs.scheme() == rhs.scheme()) && (lhs.path() == rhs.path());
 }
 
 bool
-operator!=(const Uri& lhs, const Uri& rhs) {
+katana::operator!=(const katana::URI& lhs, const katana::URI& rhs) {
   return !(lhs == rhs);
 }
 
-Uri
-Uri::operator+(char rhs) const {
-  return Uri(scheme_, path_ + rhs);
+katana::URI
+katana::URI::operator+(char rhs) const {
+  return URI(scheme_, path_ + rhs);
 }
 
-Uri
-Uri::operator+(const std::string& rhs) const {
-  return Uri(scheme_, path_ + rhs);
+katana::URI
+katana::URI::operator+(const std::string& rhs) const {
+  return URI(scheme_, path_ + rhs);
 }
-
-}  // namespace katana

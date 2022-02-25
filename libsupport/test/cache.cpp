@@ -49,7 +49,7 @@ SizeFiveValue() {
 
 void
 InsertRandom(
-    const std::vector<katana::Uri>& keys, katana::Cache<CacheValue>& cache) {
+    const std::vector<katana::URI>& keys, katana::Cache<CacheValue>& cache) {
   for (const auto& key : keys) {
     cache.Insert(key, RandomValue());
     KATANA_LOG_ASSERT(cache.LRUPosition(key) == 0);
@@ -58,7 +58,7 @@ InsertRandom(
 
 void
 AssertLRUElements(
-    std::vector<katana::Uri>::const_iterator endit, size_t num,
+    std::vector<katana::URI>::const_iterator endit, size_t num,
     katana::Cache<CacheValue>& cache) {
   for (auto it = endit - num; it < endit; ++it) {
     KATANA_LOG_ASSERT(cache.Get(*it).has_value());
@@ -73,12 +73,12 @@ AssertLRUElements(
 
 // NB: The code that runs after this function assumes that exactly 4 size 1 elements
 // have been inserted.
-std::vector<katana::Uri>::const_iterator
+std::vector<katana::URI>::const_iterator
 TestBasicLRU(
-    const std::vector<katana::Uri>& keys, katana::Cache<CacheValue>& cache) {
-  auto uri_res = katana::Uri::Make("not gonna happen");
+    const std::vector<katana::URI>& keys, katana::Cache<CacheValue>& cache) {
+  auto uri_res = katana::URI::Make("not gonna happen");
   KATANA_LOG_ASSERT(uri_res);
-  katana::Uri badKey = uri_res.value();
+  katana::URI badKey = uri_res.value();
   KATANA_LOG_ASSERT(!cache.Get(badKey).has_value());
   KATANA_LOG_ASSERT(cache.LRUPosition(badKey) == -1L);
   auto keyit = --keys.end();
@@ -101,7 +101,7 @@ TestBasicLRU(
 }
 
 void
-TestLRUExplicit(const std::vector<katana::Uri>& keys) {
+TestLRUExplicit(const std::vector<katana::URI>& keys) {
   katana::Cache<CacheValue> cache(
       [](const CacheValue& value) { return BytesInValue(value); });
 
@@ -151,7 +151,7 @@ TestLRUExplicit(const std::vector<katana::Uri>& keys) {
 }
 
 void
-TestLRUBytes(const std::vector<katana::Uri>& keys) {
+TestLRUBytes(const std::vector<katana::URI>& keys) {
   int64_t byte_size = 4;
   KATANA_LOG_ASSERT((byte_size + 1) < static_cast<int64_t>(keys.size()));
   katana::Cache<CacheValue> cache(
@@ -184,7 +184,7 @@ TestLRUBytes(const std::vector<katana::Uri>& keys) {
 }
 
 void
-TestLRUSize(int64_t lru_size, const std::vector<katana::Uri>& keys) {
+TestLRUSize(int64_t lru_size, const std::vector<katana::URI>& keys) {
   katana::Cache<CacheValue> cache(lru_size);
   KATANA_LOG_VASSERT(
       cache.capacity() == lru_size, "capcity {} allocated {}", cache.capacity(),
@@ -224,9 +224,9 @@ main(int argc, char** argv) {
     size = 1000000;
   }
 
-  std::vector<katana::Uri> keys(size);
+  std::vector<katana::URI> keys(size);
   for (size_t i = 0; i < size; ++i) {
-    auto uri_res = katana::Uri::Make(katana::RandomAlphanumericString(16));
+    auto uri_res = katana::URI::Make(katana::RandomAlphanumericString(16));
     KATANA_LOG_ASSERT(uri_res);
     keys[i] = uri_res.value();
   }

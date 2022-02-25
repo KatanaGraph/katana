@@ -26,8 +26,8 @@ FileList(const std::string& dir) {
   return files;
 }
 
-katana::Result<katana::Uri>
-FindAnyManifestForLatestVersion(const katana::Uri& name) {
+katana::Result<katana::URI>
+FindAnyManifestForLatestVersion(const katana::URI& name) {
   KATANA_LOG_DEBUG_ASSERT(!katana::RDGManifest::IsManifestUri(name));
   std::vector<std::string> file_list = KATANA_CHECKED(FileList(name.string()));
 
@@ -54,7 +54,7 @@ FindAnyManifestForLatestVersion(const katana::Uri& name) {
 
 katana::Result<katana::RDGManifest>
 katana::FindManifest(const std::string& rdg_name) {
-  katana::Uri uri = KATANA_CHECKED(katana::Uri::Make(rdg_name));
+  katana::URI uri = KATANA_CHECKED(katana::URI::Make(rdg_name));
 
   if (RDGManifest::IsManifestUri(uri)) {
     RDGManifest manifest = KATANA_CHECKED(katana::RDGManifest::Make(uri));
@@ -75,7 +75,7 @@ katana::FindManifest(const std::string& rdg_name) {
 
 katana::Result<katana::RDGManifest>
 katana::FindManifest(const std::string& rdg_name, katana::TxnContext* txn_ctx) {
-  katana::Uri uri = KATANA_CHECKED(katana::Uri::Make(rdg_name));
+  katana::URI uri = KATANA_CHECKED(katana::URI::Make(rdg_name));
   if (RDGManifest::IsManifestUri(uri)) {
     uri = uri.DirName();
   }
@@ -105,7 +105,7 @@ katana::Close(RDGHandle handle) {
 
 katana::Result<void>
 katana::Create(const std::string& name) {
-  katana::Uri uri = KATANA_CHECKED(katana::Uri::Make(name));
+  katana::URI uri = KATANA_CHECKED(katana::URI::Make(name));
 
   KATANA_LOG_DEBUG_ASSERT(!RDGManifest::IsManifestUri(uri));
   // the default construction is the empty RDG
@@ -148,7 +148,7 @@ ParseManifestName(
 katana::Result<std::pair<uint64_t, std::vector<katana::RDGView>>>
 katana::ListViewsOfVersion(
     const std::string& rdg_dir, std::optional<uint64_t> version) {
-  auto rdg_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
+  auto rdg_uri = KATANA_CHECKED(katana::URI::Make(rdg_dir));
   std::vector<std::string> files = KATANA_CHECKED(FileList(rdg_uri.string()));
 
   std::vector<katana::RDGView> views_found;
@@ -179,7 +179,7 @@ katana::ListViewsOfVersion(
       continue;
     }
 
-    katana::Uri manifest_path = rdg_uri.Join(file);
+    katana::URI manifest_path = rdg_uri.Join(file);
 
     const RDGManifest& manifest =
         KATANA_CHECKED(RDGManifest::Make(manifest_path));
@@ -218,15 +218,15 @@ katana::ListAvailableViews(
   return ListViewsOfVersion(rdg_dir, version);
 }
 
-katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>
+katana::Result<std::vector<std::pair<katana::URI, katana::URI>>>
 katana::CreateSrcDestFromViewsForCopy(
     const std::string& src_dir, const std::string& dst_dir, uint64_t version) {
-  std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files;
+  std::vector<std::pair<katana::URI, katana::URI>> src_dst_files;
 
   // List out all the files in a given view
   auto rdg_views = KATANA_CHECKED(katana::ListAvailableViews(src_dir, version));
   for (const auto& rdg_view : rdg_views.second) {
-    auto rdg_view_uri = KATANA_CHECKED(katana::Uri::Make(rdg_view.view_path));
+    auto rdg_view_uri = KATANA_CHECKED(katana::URI::Make(rdg_view.view_path));
     auto rdg_manifest_res = katana::RDGManifest::Make(rdg_view_uri);
     if (!rdg_manifest_res) {
       KATANA_LOG_WARN(
@@ -239,8 +239,8 @@ katana::CreateSrcDestFromViewsForCopy(
 
     auto fnames = KATANA_CHECKED(rdg_manifest.FileNames());
     for (auto fname : fnames) {
-      auto src_file_path = katana::Uri::JoinPath(src_dir, fname);
-      auto src_file_uri = KATANA_CHECKED(katana::Uri::Make(src_file_path));
+      auto src_file_path = katana::URI::JoinPath(src_dir, fname);
+      auto src_file_uri = KATANA_CHECKED(katana::URI::Make(src_file_path));
 
       // Skip manifests for now, will be handled at the end
       if (katana::RDGManifest::IsManifestUri(src_file_uri)) {
@@ -251,18 +251,18 @@ katana::CreateSrcDestFromViewsForCopy(
       // If we have a partition file, the dst path should be based on PartitionFileName using rdg manifest info
       // We're batching this now because we want to rely on having the RDG manifest file in case things
       // change in the future.
-      katana::Uri dst_file_uri;
+      katana::URI dst_file_uri;
       if (katana::RDGPartHeader::IsPartitionFileUri(src_file_uri)) {
         auto host_id =
             KATANA_CHECKED(katana::RDGPartHeader::ParseHostFromPartitionFile(
                 src_file_uri.BaseName()));
-        auto dst_dir_uri = KATANA_CHECKED(katana::Uri::Make(dst_dir));
+        auto dst_dir_uri = KATANA_CHECKED(katana::URI::Make(dst_dir));
         dst_file_uri = katana::RDGManifest::PartitionFileName(
             rdg_manifest.view_specifier(), dst_dir_uri, host_id,
             1 /* version */);
       } else {
-        auto dst_file_path = katana::Uri::JoinPath(dst_dir, fname);
-        dst_file_uri = KATANA_CHECKED(katana::Uri::Make(dst_file_path));
+        auto dst_file_path = katana::URI::JoinPath(dst_dir, fname);
+        dst_file_uri = KATANA_CHECKED(katana::URI::Make(dst_file_path));
       }
       src_dst_files.push_back(std::make_pair(src_file_uri, dst_file_uri));
     }
@@ -275,9 +275,9 @@ katana::CreateSrcDestFromViewsForCopy(
     rdg_manifest.set_prev_version(1);
 
     auto dst_rdg_manifest_path =
-        katana::Uri::JoinPath(dst_dir, rdg_manifest.FileName().BaseName());
+        katana::URI::JoinPath(dst_dir, rdg_manifest.FileName().BaseName());
     auto dst_rdg_manifest_uri =
-        KATANA_CHECKED(katana::Uri::Make(dst_rdg_manifest_path));
+        KATANA_CHECKED(katana::URI::Make(dst_rdg_manifest_path));
     src_dst_files.push_back(
         std::make_pair(rdg_manifest_uri, dst_rdg_manifest_uri));
   }
@@ -286,7 +286,7 @@ katana::CreateSrcDestFromViewsForCopy(
 
 katana::Result<void>
 katana::CopyRDG(
-    std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files) {
+    std::vector<std::pair<katana::URI, katana::URI>> src_dst_files) {
   // TODO(vkarthik): add do_all loop
   std::vector<uint64_t> manifest_uri_idxs;
   for (uint64_t i = 0; i < src_dst_files.size(); i++) {
@@ -333,7 +333,7 @@ katana::WriteRDGPartHeader(
     uint64_t num_edges, const std::string& topology_path,
     const std::string& rdg_dir) {
   auto manifest = RDGManifest();
-  katana::Uri rdg_dir_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
+  katana::URI rdg_dir_uri = KATANA_CHECKED(katana::URI::Make(rdg_dir));
   manifest.set_dir(rdg_dir_uri);
   manifest.set_viewtype(katana::kDefaultRDGViewType);
   auto part_header = katana::RDGPartHeader();
@@ -409,7 +409,7 @@ katana::WriteRDGPartHeader(
 katana::Result<void>
 katana::WriteRDGManifest(const std::string& rdg_dir, uint32_t num_hosts) {
   auto manifest = RDGManifest();
-  katana::Uri rdg_dir_uri = KATANA_CHECKED(katana::Uri::Make(rdg_dir));
+  katana::URI rdg_dir_uri = KATANA_CHECKED(katana::URI::Make(rdg_dir));
   manifest.set_dir(rdg_dir_uri);
   manifest.set_viewtype(katana::kDefaultRDGViewType);
   manifest.set_version(1);
@@ -430,22 +430,22 @@ katana::WriteRDGManifest(const std::string& rdg_dir, uint32_t num_hosts) {
 }
 
 /// Create a file name for the default CSR topology
-katana::Uri
+katana::URI
 katana::MakeTopologyFileName(katana::RDGHandle handle) {
   return GetRDGDir(handle).RandFile("topology");
 }
 
-katana::Uri
+katana::URI
 katana::MakeNodeEntityTypeIDArrayFileName(katana::RDGHandle handle) {
   return GetRDGDir(handle).RandFile("node_entity_type_id_array");
 }
 
-katana::Uri
+katana::URI
 katana::MakeEdgeEntityTypeIDArrayFileName(katana::RDGHandle handle) {
   return GetRDGDir(handle).RandFile("edge_entity_type_id_array");
 }
 
-katana::Uri
+katana::URI
 katana::GetRDGDir(katana::RDGHandle handle) {
   return handle.impl_->rdg_manifest().dir();
 }

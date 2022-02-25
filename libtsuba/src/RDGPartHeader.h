@@ -133,7 +133,7 @@ class KATANA_EXPORT RDGPartHeader {
 public:
   RDGPartHeader() = default;
 
-  static katana::Result<RDGPartHeader> Make(const katana::Uri& partition_path);
+  static katana::Result<RDGPartHeader> Make(const katana::URI& partition_path);
 
   katana::Result<void> Validate() const;
 
@@ -144,10 +144,10 @@ public:
   /// Mark all in-memory properties dirty so that they can be written
   /// out, copy out-of-memory properties
   katana::Result<void> ChangeStorageLocation(
-      const katana::Uri& old_location, const katana::Uri& new_location);
+      const katana::URI& old_location, const katana::URI& new_location);
 
   katana::Result<void> ValidateEntityTypeIDStructures() const;
-  static bool IsPartitionFileUri(const katana::Uri& uri);
+  static bool IsPartitionFileUri(const katana::URI& uri);
   // TODO(vkarthik): Move this somewhere else because this depends on the Parse function here. Might
   // need to reorganize all the parsing properly.
   static katana::Result<uint64_t> ParseHostFromPartitionFile(
@@ -507,7 +507,7 @@ private:
   }
 
   static katana::Result<RDGPartHeader> MakeJson(
-      const katana::Uri& partition_path);
+      const katana::URI& partition_path);
 
   katana::Result<std::unique_ptr<katana::FileFrame>> FillFileFrame(
       katana::RDGHandle handle,

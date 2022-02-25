@@ -159,7 +159,7 @@ katana::Result<void>
 katana::RDGSlice::DoMake(
     const std::optional<std::vector<std::string>>& node_props,
     const std::optional<std::vector<std::string>>& edge_props,
-    const katana::Uri& metadata_dir, const SliceArg& slice) {
+    const katana::URI& metadata_dir, const SliceArg& slice) {
   slice_arg_ = slice;
 
   ReadGroup grp;
@@ -178,9 +178,9 @@ katana::RDGSlice::DoMake(
       slice.topo_off + slice.topo_size);
 
   if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
-    katana::Uri node_types_path = metadata_dir.Join(
+    katana::URI node_types_path = metadata_dir.Join(
         core_->part_header().node_entity_type_id_array_path());
-    katana::Uri edge_types_path = metadata_dir.Join(
+    katana::URI edge_types_path = metadata_dir.Join(
         core_->part_header().edge_entity_type_id_array_path());
 
     // NB: we add sizeof(EntityTypeIDArrayHeader) to every range element because
@@ -311,7 +311,7 @@ katana::RDGSlice::Make(
     const std::optional<std::vector<std::string>>& node_props,
     const std::optional<std::vector<std::string>>& edge_props) {
   const RDGManifest& manifest = handle.impl_->rdg_manifest();
-  katana::Uri partition_path(manifest.PartitionFileName(partition_id));
+  katana::URI partition_path(manifest.PartitionFileName(partition_id));
 
   auto part_header = KATANA_CHECKED(RDGPartHeader::Make(partition_path));
 
@@ -325,7 +325,7 @@ katana::RDGSlice::Make(
 
 katana::Result<std::pair<std::vector<size_t>, std::vector<size_t>>>
 katana::RDGSlice::GetPerPartitionCounts(RDGHandle handle) {
-  katana::Uri part_0_part_file =
+  katana::URI part_0_part_file =
       handle.impl_->rdg_manifest().PartitionFileName(0);
   auto part_0_header = KATANA_CHECKED_CONTEXT(
       RDGPartHeader::Make(part_0_part_file),
@@ -336,13 +336,13 @@ katana::RDGSlice::GetPerPartitionCounts(RDGHandle handle) {
       handle.impl_->rdg_manifest().num_hosts());
   std::vector<size_t> num_edges_per_host(
       handle.impl_->rdg_manifest().num_hosts());
-  katana::Uri dir = handle.impl_->rdg_manifest().dir();
+  katana::URI dir = handle.impl_->rdg_manifest().dir();
   std::vector<PropStorageInfo*> part_props = KATANA_CHECKED_CONTEXT(
       part_0_header.SelectPartitionProperties(),
       "getting partition metadata property storage locations");
   for (PropStorageInfo* prop : part_props) {
     if (prop->name() == RDGCore::kHostToOwnedGlobalNodeIDsPropName) {
-      katana::Uri path = dir.Join(prop->path());
+      katana::URI path = dir.Join(prop->path());
       auto nodes_table = KATANA_CHECKED_CONTEXT(
           LoadProperties(prop->name(), path),
           "getting host to owned nodes for per host node count");
@@ -363,7 +363,7 @@ katana::RDGSlice::GetPerPartitionCounts(RDGHandle handle) {
       }
     }
     if (prop->name() == RDGCore::kHostToOwnedGlobalEdgeIDsPropName) {
-      katana::Uri path = dir.Join(prop->path());
+      katana::URI path = dir.Join(prop->path());
       auto edges_table = KATANA_CHECKED_CONTEXT(
           LoadProperties(prop->name(), path),
           "getting host to owned edges for per host edge count");
@@ -388,7 +388,7 @@ katana::RDGSlice::GetPerPartitionCounts(RDGHandle handle) {
   return {num_nodes_per_host, num_edges_per_host};
 }
 
-const katana::Uri&
+const katana::URI&
 katana::RDGSlice::rdg_dir() const {
   return core_->rdg_dir();
 }

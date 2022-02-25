@@ -25,7 +25,7 @@ katana::PropertyManager::PropertyManager() { MakePropertyCache(); }
 katana::PropertyManager::~PropertyManager() { cache_.reset(); }
 
 std::shared_ptr<arrow::Table>
-katana::PropertyManager::GetProperty(const katana::Uri& property_path) {
+katana::PropertyManager::GetProperty(const katana::URI& property_path) {
   auto property = cache_->GetAndEvict(property_path);
   if (property.has_value()) {
     auto bytes =
@@ -65,7 +65,7 @@ katana::PropertyManager::PropertyLoadedActive(
 
 void
 katana::PropertyManager::PutProperty(
-    const katana::Uri& property_path,
+    const katana::URI& property_path,
     const std::shared_ptr<arrow::Table>& property) {
   auto bytes = static_cast<count_t>(katana::ApproxTableMemUse(property));
   cache_->Insert(property_path, property);

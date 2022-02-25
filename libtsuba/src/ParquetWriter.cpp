@@ -124,7 +124,7 @@ katana::ParquetWriter::Make(
 }
 
 katana::Result<void>
-katana::ParquetWriter::WriteToUri(const katana::Uri& uri, WriteGroup* group) {
+katana::ParquetWriter::WriteToUri(const katana::URI& uri, WriteGroup* group) {
   try {
     return StoreParquet(uri, group);
   } catch (const std::exception& exp) {
@@ -149,7 +149,7 @@ katana::ParquetWriter::StandardArrowProperties() {
 /// Store the arrow table in a file
 katana::Result<void>
 katana::ParquetWriter::StoreParquet(
-    std::shared_ptr<arrow::Table> table, const katana::Uri& uri,
+    std::shared_ptr<arrow::Table> table, const katana::URI& uri,
     katana::WriteGroup* desc) {
   auto writer_props = StandardWriterProperties();
   auto arrow_props = StandardArrowProperties();
@@ -187,7 +187,7 @@ katana::ParquetWriter::StoreParquet(
 
 katana::Result<void>
 katana::ParquetWriter::StoreParquet(
-    const katana::Uri& uri, katana::WriteGroup* desc) {
+    const katana::URI& uri, katana::WriteGroup* desc) {
   if (!opts_.write_blocked) {
     KATANA_LOG_ASSERT(tables_.size() == 1);
     return StoreParquet(tables_[0], uri, desc);

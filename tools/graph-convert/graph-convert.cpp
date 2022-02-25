@@ -2913,7 +2913,7 @@ struct Gr2Kg : public Conversion {
         KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
     katana::RDGFile handle(std::move(rdg_handle));
 
-    katana::Uri top_file_name = katana::MakeTopologyFileName(handle);
+    katana::URI top_file_name = katana::MakeTopologyFileName(handle);
     if (auto res = katana::FileRemoteCopy(
             in_file_name, top_file_name.string(), 0, new_size);
         !res) {

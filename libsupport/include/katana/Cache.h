@@ -71,7 +71,7 @@ struct CacheStats {
 
 template <typename Value>
 class KATANA_EXPORT Cache {
-  using Key = katana::Uri;
+  using Key = katana::URI;
   using ListType = std::list<Key>;
   struct MapValue {
     Value value;

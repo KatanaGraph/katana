@@ -20,7 +20,7 @@ LoadGraph(const std::string& rdg_file) {
 
 std::string
 StoreGraph(katana::PropertyGraph* g) {
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
   std::string command_line;

@@ -14,8 +14,8 @@
 // transition PropStorageInfos stored within a RDGPartHeader.
 katana::Result<void>
 TestPropInfoLists(const std::string& path_to_header) {
-  katana::Uri path_to_header_uri =
-      KATANA_CHECKED(katana::Uri::Make(path_to_header));
+  katana::URI path_to_header_uri =
+      KATANA_CHECKED(katana::URI::Make(path_to_header));
   katana::RDGPartHeader under_test =
       KATANA_CHECKED(katana::RDGPartHeader::Make(path_to_header_uri));
 

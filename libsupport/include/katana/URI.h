@@ -11,19 +11,19 @@
 
 namespace katana {
 
-class KATANA_EXPORT Uri {
+class KATANA_EXPORT URI {
 public:
   static constexpr const char kSepChar = '/';
   static constexpr const char* kFileScheme = "file";
 
-  Uri() = default;
+  URI() = default;
 
   /// build a URI based on str. If no scheme is given, str is assumed to be a
   /// file path which and scheme is assumed to be `file://`
-  static Result<Uri> Make(const std::string& str);
-  static Result<Uri> MakeFromFile(const std::string& str);
+  static Result<URI> Make(const std::string& str);
+  static Result<URI> MakeFromFile(const std::string& str);
   /// Append a '-' and then a random string to input
-  static Result<Uri> MakeRand(const std::string& str);
+  static Result<URI> MakeRand(const std::string& str);
 
   static std::string JoinPath(const std::string& dir, const std::string& file);
 
@@ -32,7 +32,7 @@ public:
 
   /// Hash URI
   struct Hash {
-    std::size_t operator()(const Uri& uri) const {
+    std::size_t operator()(const URI& uri) const {
       return std::hash<std::string>{}(uri.path_);
     }
   };
@@ -51,36 +51,38 @@ public:
   bool empty() const;
 
   // it's convenient to treat URIs like paths sometimes
-  Uri DirName() const;
+  URI DirName() const;
   std::string BaseName() const;
   // Join new component with a kSepChar
-  Uri Join(std::string_view to_join) const;
-  Uri StripSep() const;
+  URI Join(std::string_view to_join) const;
+  URI StripSep() const;
 
   /// generate a new uri that is this uri with `prefix-XXXXX` appended where
   /// XXXX is a random alpha numeric string
-  Uri RandFile(std::string_view prefix) const;
+  URI RandFile(std::string_view prefix) const;
 
-  Uri operator+(char rhs) const;
-  Uri operator+(const std::string& rhs) const;
+  URI operator+(char rhs) const;
+  URI operator+(const std::string& rhs) const;
 
 private:
-  Uri(std::string scheme, std::string path);
+  URI(std::string scheme, std::string path);
 
   std::string scheme_;
   std::string path_;
   std::string encoded_;
 };
 
-KATANA_EXPORT bool operator==(const Uri& lhs, const Uri& rhs);
-KATANA_EXPORT bool operator!=(const Uri& lhs, const Uri& rhs);
+KATANA_EXPORT bool operator==(const URI& lhs, const URI& rhs);
+KATANA_EXPORT bool operator!=(const URI& lhs, const URI& rhs);
+
+[[deprecated("use URI")]] typedef URI Uri;
 
 }  // namespace katana
 
 template <>
-struct KATANA_EXPORT fmt::formatter<katana::Uri> : formatter<std::string> {
+struct KATANA_EXPORT fmt::formatter<katana::URI> : formatter<std::string> {
   template <typename FormatContext>
-  auto format(const katana::Uri& uri, FormatContext& ctx) {
+  auto format(const katana::URI& uri, FormatContext& ctx) {
     return formatter<std::string>::format(uri.string(), ctx);
   }
 };

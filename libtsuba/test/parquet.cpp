@@ -21,7 +21,7 @@ MakeArrayOfStrings() {
 katana::Result<void>
 TestLargeStringRoundTrip(const std::string& dir) {
   auto uri =
-      KATANA_CHECKED(katana::Uri::Make(dir)).Join("large_string.parquet");
+      KATANA_CHECKED(katana::URI::Make(dir)).Join("large_string.parquet");
 
   auto string_array = KATANA_CHECKED(MakeArrayOfStrings());
   auto writer =

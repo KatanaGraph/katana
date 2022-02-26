@@ -4,7 +4,6 @@
 
 #include "katana/Cache.h"
 #include "katana/MemoryPolicy.h"
-#include "katana/ProgressTracer.h"
 #include "katana/PropertyManager.h"
 #include "katana/Time.h"
 
@@ -17,18 +16,19 @@ const std::string oversubscribed_str = "memory manager oversubscribed";
 const std::string unregister_str = "memory manager unregister";
 
 void
-LogState(const std::string& str, count_t active, count_t standby) {
+LogState(const std::string& str, count_t standby, count_t bytes_reclaimed) {
   katana::GetTracer().GetActiveSpan().Log(
       str, {
-               {"active", active},
                {"standby", standby},
+               {"reclaimed", bytes_reclaimed},
            });
 }
 
 void
-KillCheck(katana::MemoryPolicy* policy, count_t active, count_t standby) {
-  if (policy->KillSelfForLackOfMemory(active, standby)) {
-    LogState(oversubscribed_str, active, standby);
+KillCheck(
+    katana::MemoryPolicy* policy, count_t standby, count_t bytes_reclaimed) {
+  if (policy->KillSelfForLackOfMemory(standby)) {
+    LogState(oversubscribed_str, standby, bytes_reclaimed);
     KATANA_LOG_FATAL("out of memory");
   }
 }
@@ -37,32 +37,22 @@ KillCheck(katana::MemoryPolicy* policy, count_t active, count_t standby) {
 
 void
 katana::MemorySupervisor::SanityCheck() {
-  count_t manager_active{};
   count_t manager_standby{};
   for (auto& [name, info] : managers_) {
-    manager_active += info.active;
     manager_standby += info.standby;
   }
-  if (manager_active != active_ || manager_standby != standby_) {
-    LogState(sanity_str, active_, standby_);
+  if (manager_standby != standby_) {
+    LogState(sanity_str, standby_, bytes_reclaimed_);
     katana::GetTracer().GetActiveSpan().Log(
-        "active/standby mismatch with manager totals",
+        "standby mismatch with manager totals",
         {
-            {"manager_active", manager_active},
             {"manager_standby", manager_standby},
         });
 
-    KATANA_LOG_WARN(
-        "manager active {} manager standby {}", manager_active,
-        manager_standby);
-  }
-  if (active_ < 0) {
-    LogState(sanity_str, active_, standby_);
-    // TODO(witchel)
-    // KATANA_LOG_ASSERT(false);
+    KATANA_LOG_WARN("manager standby {}", manager_standby);
   }
   if (standby_ < 0) {
-    LogState(sanity_str, active_, standby_);
+    LogState(sanity_str, standby_, bytes_reclaimed_);
     KATANA_LOG_ASSERT(false);
   }
 }
@@ -92,16 +82,6 @@ katana::MemorySupervisor::StandbyPlus(ManagerInfo& info, count_t bytes) {
   info.standby += bytes;
   standby_ += bytes;
 }
-void
-katana::MemorySupervisor::ActiveMinus(ManagerInfo& info, count_t bytes) {
-  info.active -= bytes;
-  active_ -= bytes;
-}
-void
-katana::MemorySupervisor::ActivePlus(ManagerInfo& info, count_t bytes) {
-  info.active += bytes;
-  active_ += bytes;
-}
 
 void
 katana::MemorySupervisor::ReclaimMemory(count_t goal) {
@@ -111,34 +91,20 @@ katana::MemorySupervisor::ReclaimMemory(count_t goal) {
   count_t reclaimed = 0;
   // TODO(witchel) policies should include reclaim in proportion to current use
   for (auto& [name, info] : managers_) {
-    // Manager implementation of FreeStandbyMemory calls MemorySupervisor::ReturnStandby
+    // Manager implementation of FreeStandbyMemory calls
+    // MemorySupervisor::ReturnStandby, so we see calls into the MemorySupervisor from
+    // here.
     auto got = info.manager_->FreeStandbyMemory(goal - reclaimed);
     reclaimed += got;
     if (reclaimed >= goal) {
       break;
     }
   }
-}
-
-void
-katana::MemorySupervisor::BorrowActive(const std::string& name, count_t bytes) {
-  auto it = managers_.find(name);
-  if (it == managers_.end()) {
-    KATANA_LOG_WARN("no manager with name {}\n", name);
-    return;
-  }
-  auto& info = it->second;
-
-  ActivePlus(info, bytes);
-  count_t try_reclaim = policy_->ReclaimForMemoryPressure(active_, standby_);
-  ReclaimMemory(try_reclaim);
-
-  SanityCheck();
-  KillCheck(policy_.get(), active_, standby_);
+  bytes_reclaimed_ += reclaimed;
 }
 
 count_t
-katana::MemorySupervisor::BorrowStandby(const std::string& name, count_t goal) {
+katana::MemorySupervisor::GetStandby(const std::string& name, count_t goal) {
   auto it = managers_.find(name);
   if (it == managers_.end()) {
     KATANA_LOG_WARN("no manager with name {}\n", name);
@@ -146,37 +112,20 @@ katana::MemorySupervisor::BorrowStandby(const std::string& name, count_t goal) {
   }
   auto& info = it->second;
 
-  count_t try_reclaim = policy_->ReclaimForMemoryPressure(active_, standby_);
-  ReclaimMemory(try_reclaim);
-
-  if (policy_->MemoryPressureHigh(active_, standby_)) {
+  CheckPressure();
+  if (policy_->IsMemoryPressureHigh(standby_)) {
     return 0;
   }
 
   StandbyPlus(info, goal);
 
-  KillCheck(policy_.get(), active_, standby_);
+  SanityCheck();
+  KillCheck(policy_.get(), standby_, bytes_reclaimed_);
   return std::min(goal, Available());
 }
 
 void
-katana::MemorySupervisor::ReturnActive(const std::string& name, count_t bytes) {
-  auto it = managers_.find(name);
-  if (it == managers_.end()) {
-    KATANA_LOG_WARN("no manager with name {}\n", name);
-    return;
-  }
-  auto& info = it->second;
-
-  ActiveMinus(info, bytes);
-
-  SanityCheck();
-  KillCheck(policy_.get(), active_, standby_);
-}
-
-void
-katana::MemorySupervisor::ReturnStandby(
-    const std::string& name, count_t bytes) {
+katana::MemorySupervisor::PutStandby(const std::string& name, count_t bytes) {
   auto it = managers_.find(name);
   if (it == managers_.end()) {
     KATANA_LOG_WARN("no manager with name {}\n", name);
@@ -187,33 +136,26 @@ katana::MemorySupervisor::ReturnStandby(
   StandbyMinus(info, bytes);
 
   SanityCheck();
-  KillCheck(policy_.get(), active_, standby_);
+  // No pressure check or kill check because we are reducing memory use and this is
+  // probably called in response to ReclaimMemory, above, which will call KillCheck
+  // when complete.
 }
 
-count_t
+void
 katana::MemorySupervisor::ActiveToStandby(
     const std::string& name, count_t bytes) {
   auto it = managers_.find(name);
   if (it == managers_.end()) {
     KATANA_LOG_WARN("no manager with name {}\n", name);
-    return 0;
+    return;
   }
   auto& info = it->second;
 
-  ActiveMinus(info, bytes);
   StandbyPlus(info, bytes);
-  count_t try_reclaim = policy_->ReclaimForMemoryPressure(active_, standby_);
-  ReclaimMemory(try_reclaim);
 
-  if (policy_->MemoryPressureHigh(active_, standby_)) {
-    SanityCheck();
-    KillCheck(policy_.get(), active_, standby_);
-    return 0;
-  }
-
+  CheckPressure();
   SanityCheck();
-  KillCheck(policy_.get(), active_, standby_);
-  return bytes;
+  KillCheck(policy_.get(), standby_, bytes_reclaimed_);
 }
 
 void
@@ -226,18 +168,24 @@ katana::MemorySupervisor::StandbyToActive(
   }
   auto& info = it->second;
 
-  ActivePlus(info, bytes);
   StandbyMinus(info, bytes);
-  count_t try_reclaim = policy_->ReclaimForMemoryPressure(active_, standby_);
-  ReclaimMemory(try_reclaim);
 
+  CheckPressure();
   SanityCheck();
-  KillCheck(policy_.get(), active_, standby_);
+  KillCheck(policy_.get(), standby_, bytes_reclaimed_);
+}
+
+void
+katana::MemorySupervisor::CheckPressure() {
+  count_t try_reclaim = policy_->ReclaimForMemoryPressure(standby_);
+  ReclaimMemory(try_reclaim);
 }
 
 void
 katana::MemorySupervisor::SetPolicy(std::unique_ptr<MemoryPolicy> policy) {
   policy_.swap(policy);
+  CheckPressure();
+  SanityCheck();
 }
 
 katana::CacheStats
@@ -251,6 +199,11 @@ katana::MemorySupervisor::GetPropertyCacheStats() const {
   const auto& info = it->second;
   auto* pm = dynamic_cast<PropertyManager*>(info.manager_.get());
   return pm->GetPropertyCacheStats();
+}
+
+void
+katana::MemorySupervisor::LogMemoryStats(const std::string& message) {
+  policy_->LogMemoryStats(message, standby_);
 }
 
 katana::PropertyManager*

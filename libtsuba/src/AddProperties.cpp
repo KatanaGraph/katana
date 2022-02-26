@@ -136,6 +136,13 @@ katana::AddProperties(
           katana::MemorySupervisor::Get().GetPropertyManager();
       if (is_property) {
         pm->PropertyLoadedActive(props);
+      } else {
+        katana::GetTracer().GetActiveSpan().Log(
+            "addproperties property cache callback non-property",
+            {
+                {"name", prop->name()},
+                {"file_name", prop->path()},
+            });
       }
       return katana::CopyableResultSuccess();
     };

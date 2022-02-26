@@ -5,6 +5,7 @@
 
 #include "katana/Cache.h"
 #include "katana/Manager.h"
+#include "katana/Time.h"
 
 namespace katana {
 
@@ -24,10 +25,8 @@ public:
   /// Returns nullptr if manager does not have it in the cache
   std::shared_ptr<arrow::Table> GetProperty(const katana::Uri& property_path);
 
-  /// The property data has come into memory from storage, so account for the new,
-  /// active memory
-  void PropertyLoadedActive(
-      const std::shared_ptr<arrow::Table>& property) const;
+  /// The property data has come into memory from storage.
+  void PropertyLoadedActive(const std::shared_ptr<arrow::Table>& property);
 
   /// We are done with the property.  Put it in the cache if we have room.
   void PutProperty(
@@ -35,10 +34,24 @@ public:
       const std::shared_ptr<arrow::Table>& property);
 
   CacheStats GetPropertyCacheStats() const { return cache_->GetStats(); }
+  void LogMemoryStats(const std::string& message);
+  struct Stats {
+    void Log() const {
+      katana::GetTracer().GetActiveSpan().Log(
+          "property manager stats",
+          {
+              {"bytes_loaded", bytes_loaded},
+              {"gb_loaded", katana::ToGB(bytes_loaded)},
+          });
+    }
+    count_t bytes_loaded{0LL};
+  };
+  Stats GetStats() const { return stats; }
 
 private:
   void MakePropertyCache();
   std::unique_ptr<PropertyCache> cache_;
+  Stats stats;
 };
 
 }  // namespace katana

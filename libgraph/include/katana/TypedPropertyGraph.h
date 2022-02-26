@@ -76,9 +76,12 @@ public:
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_col_index>(node_view_)
-        .GetValue(pg_->GetNodePropertyIndex(node));
+    auto& property = std::get<prop_col_index>(node_view_);
+    auto idx = pg_->GetNodePropertyIndex(node);
+    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
+    return property.GetValue(idx);
   }
+
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
     return GetData<NodeIndex>(*node);
@@ -93,9 +96,12 @@ public:
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_col_index>(node_view_)
-        .GetValue(pg_->GetNodePropertyIndex(node));
+    const auto& property = std::get<prop_col_index>(node_view_);
+    auto idx = pg_->GetNodePropertyIndex(node);
+    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
+    return property.GetValue(idx);
   }
+
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(
       const node_iterator& node) const {
@@ -111,8 +117,10 @@ public:
   template <typename EdgeIndex>
   PropertyReferenceType<EdgeIndex> GetEdgeData(const edge_iterator& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_)
-        .GetValue(pg_->GetEdgePropertyIndexFromOutEdge(*edge));
+    auto& property = std::get<prop_col_index>(edge_view_);
+    auto idx = pg_->GetEdgePropertyIndexFromOutEdge(*edge);
+    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
+    return property.GetValue(idx);
   }
 
   /**
@@ -125,8 +133,10 @@ public:
   PropertyConstReferenceType<EdgeIndex> GetEdgeData(
       const edge_iterator& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
-    return std::get<prop_col_index>(edge_view_)
-        .GetValue(pg_->GetEdgePropertyIndexFromOutEdge(*edge));
+    const auto& property = std::get<prop_col_index>(edge_view_);
+    auto idx = pg_->GetEdgePropertyIndexFromOutEdge(*edge);
+    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
+    return property.GetValue(idx);
   }
 
   /**
@@ -210,8 +220,10 @@ public:
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_col_index>(node_view_)
-        .GetValue(PGView::GetNodePropertyIndex(node));
+    auto& property = std::get<prop_col_index>(node_view_);
+    auto idx = PGView::GetNodePropertyIndex(node);
+    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
+    return property.GetValue(idx);
   }
 
   /**
@@ -223,8 +235,10 @@ public:
   template <typename NodeIndex>
   PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_col_index>(node_view_)
-        .GetValue(PGView::GetNodePropertyIndex(node));
+    const auto& property = std::get<prop_col_index>(node_view_);
+    auto idx = PGView::GetNodePropertyIndex(node);
+    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
+    return property.GetValue(idx);
   }
 
   /**
@@ -236,14 +250,17 @@ public:
   template <typename EdgeIndex>
   PropertyReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
+    auto& property = std::get<prop_col_index>(edge_view_);
 
+    typename PGView::PropertyIndex idx = 0;
     if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
-      return std::get<prop_col_index>(edge_view_)
-          .GetValue(PGView::GetEdgePropertyIndexFromUndirectedEdge(edge));
+      idx = PGView::GetEdgePropertyIndexFromUndirectedEdge(edge);
     } else {
-      return std::get<prop_col_index>(edge_view_)
-          .GetValue(PGView::GetEdgePropertyIndexFromOutEdge(edge));
+      idx = PGView::GetEdgePropertyIndexFromOutEdge(edge);
     }
+
+    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
+    return property.GetValue(idx);
   }
 
   /**
@@ -255,14 +272,17 @@ public:
   template <typename EdgeIndex>
   PropertyConstReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
+    const auto& property = std::get<prop_col_index>(edge_view_);
 
+    typename PGView::PropertyIndex idx = 0;
     if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
-      return std::get<prop_col_index>(edge_view_)
-          .GetValue(PGView::GetEdgePropertyIndexFromUndirectedEdge(edge));
+      idx = PGView::GetEdgePropertyIndexFromUndirectedEdge(edge);
     } else {
-      return std::get<prop_col_index>(edge_view_)
-          .GetValue(PGView::GetEdgePropertyIndexFromOutEdge(edge));
+      idx = PGView::GetEdgePropertyIndexFromOutEdge(edge);
     }
+
+    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
+    return property.GetValue(idx);
   }
 
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(

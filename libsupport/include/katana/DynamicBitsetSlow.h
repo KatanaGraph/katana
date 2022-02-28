@@ -114,6 +114,24 @@ class KATANA_EXPORT DynamicBitsetSlow {
   katana::PODVector<katana::CopyableAtomic<uint64_t>> bitvec_;
   size_t num_bits_{0};
 
+  /// DynamicBitsetSlow must maintain the invariant that the unused bits in the last
+  /// element of bitvec_ are 0. This invariant is required for count() to return
+  /// the correct value and also simplifies resizing bitsets to larger sizes.
+  /// Most mutating methods maintain this invariant (for example, bitwise_and()
+  /// will bitwise and the last entries of its operands together and if the
+  /// inputs both have 0s in the unused bits the output will as well) but
+  /// bitwise_not() must explicitly restore this invariant.
+  void RestoreTrailingBitsInvariant() {
+    if (size() > 0) {
+      KATANA_LOG_DEBUG_ASSERT(!bitvec_.empty());
+
+      size_t last_entry_offset =
+          size() % (CHAR_BIT * sizeof(decltype(bitvec_)::value_type));
+      uint64_t last_entry_mask = (1UL << last_entry_offset) - 1;
+      bitvec_.back() = bitvec_.back() & last_entry_mask;
+    }
+  }
+
 public:
   using iterator = DynamicBitsetIterator<DynamicBitsetSlow>;
 

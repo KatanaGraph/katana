@@ -41,6 +41,8 @@ katana::DynamicBitset::bitwise_not() {
   katana::do_all(
       katana::iterate(size_t{0}, bitvec_.size()),
       [&](size_t i) { bitvec_[i] = ~bitvec_[i]; }, katana::no_stats());
+
+  RestoreTrailingBitsInvariant();
 }
 
 void

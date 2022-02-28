@@ -12,7 +12,7 @@
 	--pst-font-size-h4: 21px;
 	--pst-font-size-h5: 18px;
 	--pst-font-size-h6: 16px;
-	--pst-font-size-base: 16px;
+	--pst-font-size-base: 17px;
 	--pst-font-size-milli: 12px;
 	/*	 Color   */
 	--pst-color-primary: 0, 0, 0;
@@ -37,16 +37,20 @@ body {
 h1{
 	margin-bottom: 35px;
 	font-weight: 500;
-	letter-spacing: 0.05em;
+	letter-spacing: 0.03em;
 }
 h2, h3 {
 	font-weight: 400;
-	letter-spacing: 0.05em;
+	letter-spacing: 0.03em;
 	margin-bottom: 30px;
 }
-h5, h6, p, span {
+h4, h5, h6, p, span {
 	font-weight: 300;
 	letter-spacing: 0.03em;
+}
+
+code span {
+	font-weight: 500;
 }
 
 h5, h6, p {
@@ -54,6 +58,10 @@ h5, h6, p {
 }
 main {
 	max-width: 800px !important;
+}
+
+main a {
+	font-weight: 400;
 }
 
 footer p {
@@ -92,6 +100,10 @@ div.nboutput.container div.output_area {
 	font-size: 14px;
 	font-weight: 400;
 	padding-right: 15px;
+}
+
+.navbar-light .navbar-nav>.active>.nav-link {
+	font-weight: 500;
 }
 
 button.navbar-toggler {
@@ -192,7 +204,7 @@ input#search-input::placeholder{
 
 #version_switcher_button{
 	border-radius: 2px;
-	background-color: rgba(45, 29, 61, 1);
+	background-color: rgb(135, 84, 245);
 	border: none;
 }
 
@@ -220,10 +232,10 @@ input#search-input::placeholder{
 }
 
 @media (min-width: 960px){
+
 	main {
 		max-width: 50% !important;
 	}
-
 	.navbar .container-xl {
 		justify-content: start;
 	}
@@ -244,5 +256,11 @@ input#search-input::placeholder{
 
 	.navbar-collapse {
 		border-left: 1px solid rgba(187, 187, 187, 1);
+	}
+}
+
+@media (min-width: 2500px){
+	main {
+		max-width: 1200px !important;
 	}
 }

@@ -198,11 +198,11 @@ public:
 
   /// Bind a topology file to the file_storage object, bind entire file
   katana::Result<void> Bind(
-      const katana::Uri& metadata_dir, bool resolve = true);
+      const katana::URI& metadata_dir, bool resolve = true);
 
   /// Bind a topology file to the file_storage object, bind specific offset
   katana::Result<void> Bind(
-      const katana::Uri& metadata_dir, uint64_t begin, uint64_t end,
+      const katana::URI& metadata_dir, uint64_t begin, uint64_t end,
       bool resolve);
 
   /// Map takes the file buffer of a topology file and extracts the
@@ -249,7 +249,7 @@ public:
       uint64_t num_nodes, uint64_t num_edges, bool storage_valid = false);
 
   katana::Result<void> DoStore(
-      RDGHandle handle, const katana::Uri& current_rdg_dir,
+      RDGHandle handle, const katana::URI& current_rdg_dir,
       std::unique_ptr<katana::WriteGroup>& write_group);
 
   bool Equals(const RDGTopology& other) const;

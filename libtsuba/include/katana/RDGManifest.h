@@ -20,7 +20,7 @@ static const char* kDefaultRDGViewType = "rdg";
 class KATANA_EXPORT RDGManifest {
   static const std::regex kManifestVersion;
 
-  katana::Uri dir_;  // not persisted; inferred from name
+  katana::URI dir_;  // not persisted; inferred from name
 
   //
   // Persisted
@@ -36,9 +36,9 @@ class KATANA_EXPORT RDGManifest {
   std::string view_type_;
   std::vector<std::string> view_args_;
 
-  RDGManifest(katana::Uri dir)
+  RDGManifest(katana::URI dir)
       : dir_(std::move(dir)), view_type_(kDefaultRDGViewType) {}
-  RDGManifest(katana::Uri dir, const std::string& view_type)
+  RDGManifest(katana::URI dir, const std::string& view_type)
       : dir_(std::move(dir)) {
     view_type_ = kDefaultRDGViewType;
     if (!view_type.empty()) {
@@ -48,7 +48,7 @@ class KATANA_EXPORT RDGManifest {
 
   RDGManifest(
       uint64_t version, uint64_t previous_version, uint32_t num_hosts,
-      uint32_t policy_id, bool transpose, katana::Uri dir, RDGLineage lineage)
+      uint32_t policy_id, bool transpose, katana::URI dir, RDGLineage lineage)
       : dir_(std::move(dir)),
         version_(version),
         previous_version_(previous_version),
@@ -57,7 +57,7 @@ class KATANA_EXPORT RDGManifest {
         transpose_(transpose),
         lineage_(std::move(lineage)) {}
 
-  static katana::Result<RDGManifest> MakeFromStorage(const katana::Uri& uri);
+  static katana::Result<RDGManifest> MakeFromStorage(const katana::URI& uri);
 
   static std::string PartitionFileName(
       const std::string& view_type, uint32_t node_id, uint64_t version);
@@ -88,7 +88,7 @@ public:
   /// \param uri a uri that either names a registered RDG or an explicit
   ///    rdg file
   /// \returns the constructed RDGManifest and the directory of its contents
-  static katana::Result<RDGManifest> Make(const katana::Uri& uri);
+  static katana::Result<RDGManifest> Make(const katana::URI& uri);
 
   /// Create an RDGManifest
   /// \param uri is a storage prefix where the RDG is stored
@@ -96,9 +96,9 @@ public:
   /// \param version is the version of the RDG to load
   /// \returns the constructed RDGManifest and the directory of its contents
   static katana::Result<RDGManifest> Make(
-      const katana::Uri& uri, const std::string& view_type, uint64_t version);
+      const katana::URI& uri, const std::string& view_type, uint64_t version);
 
-  const katana::Uri& dir() const { return dir_; }
+  const katana::URI& dir() const { return dir_; }
   uint64_t version() const { return version_; }
   uint32_t num_hosts() const { return num_hosts_; }
   uint32_t policy_id() const { return policy_id_; }
@@ -109,7 +109,7 @@ public:
   void set_viewargs(std::vector<std::string> v) { view_args_ = v; }
   bool transpose() const { return transpose_; }
 
-  void set_dir(katana::Uri dir) { dir_ = std::move(dir); }
+  void set_dir(katana::URI dir) { dir_ = std::move(dir); }
   void set_version(uint64_t version) { version_ = version; }
   void set_prev_version(uint64_t prev_version) {
     previous_version_ = prev_version;
@@ -122,19 +122,19 @@ public:
     return view_type_;
   }
 
-  katana::Uri PartitionFileName(uint32_t host_id) const;
+  katana::URI PartitionFileName(uint32_t host_id) const;
 
-  katana::Uri FileName() { return FileName(dir_, view_specifier(), version_); }
+  katana::URI FileName() { return FileName(dir_, view_specifier(), version_); }
 
   // Canonical naming
-  static katana::Uri FileName(
-      const katana::Uri& uri, const std::string& view_type, uint64_t version);
+  static katana::URI FileName(
+      const katana::URI& uri, const std::string& view_type, uint64_t version);
 
-  static katana::Uri PartitionFileName(
-      const katana::Uri& uri, uint32_t node_id, uint64_t version);
+  static katana::URI PartitionFileName(
+      const katana::URI& uri, uint32_t node_id, uint64_t version);
 
-  static katana::Uri PartitionFileName(
-      const std::string& view_type, const katana::Uri& uri, uint32_t node_id,
+  static katana::URI PartitionFileName(
+      const std::string& view_type, const katana::URI& uri, uint32_t node_id,
       uint64_t version);
 
   static katana::Result<uint64_t> ParseVersionFromName(const std::string& file);
@@ -143,7 +143,7 @@ public:
   static katana::Result<std::vector<std::string>> ParseViewArgsFromName(
       const std::string& file);
 
-  static bool IsManifestUri(const katana::Uri& uri);
+  static bool IsManifestUri(const katana::URI& uri);
   std::string ToJsonString() const;
 
   /// Return the set of file names that hold this RDG's data by reading partition files

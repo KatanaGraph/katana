@@ -188,6 +188,10 @@ jinja2:
   version: [ 2.11, null ]
   labels:
     - conda/dev
+markupsafe:
+  version: [ 2.0, 2.1 ]
+  labels:
+    - conda/dev
 jupyter:
   version: [ 1, null ]
   labels:

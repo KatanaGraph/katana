@@ -29,7 +29,7 @@ namespace katana {
 
 struct CacheStats {
   float get_hit_percentage() const {
-    if (get_count == 0ULL) {
+    if (get_count == 0LL) {
       return 0.0;
     }
     return 100.0 * static_cast<float>(get_hit_count) / get_count;
@@ -63,15 +63,15 @@ struct CacheStats {
         });
   }
 
-  uint64_t get_count{0ULL};
-  uint64_t get_hit_count{0ULL};
-  uint64_t insert_count{0ULL};
-  uint64_t insert_hit_count{0ULL};
+  int64_t get_count{0LL};
+  int64_t get_hit_count{0LL};
+  int64_t insert_count{0LL};
+  int64_t insert_hit_count{0LL};
 };
 
 template <typename Value>
 class KATANA_EXPORT Cache {
-  using Key = katana::Uri;
+  using Key = katana::URI;
   using ListType = std::list<Key>;
   struct MapValue {
     Value value;
@@ -86,7 +86,7 @@ class KATANA_EXPORT Cache {
 
 public:
   /// Construct an LRU cache that has a fixed number of entries.
-  Cache(size_t capacity)  // number of entries
+  Cache(int64_t capacity)  // number of entries
       : policy_(ReplacementPolicy::kLRUSize),
         capacity_(capacity),
         value_to_bytes_(nullptr) {
@@ -94,8 +94,8 @@ public:
   }
   /// Construct an LRU cache that holds fixed number of bytes.
   Cache(
-      size_t capacity,  // bytes of entries
-      std::function<size_t(const Value& value)> value_to_bytes)
+      int64_t capacity,  // bytes of entries
+      std::function<int64_t(const Value& value)> value_to_bytes)
       : policy_(ReplacementPolicy::kLRUBytes),
         capacity_(capacity),
         value_to_bytes_(std::move(value_to_bytes)) {
@@ -106,9 +106,11 @@ public:
   }
   /// Construct an LRU cache that holds whatever we put in it and only evicts when we
   /// explicitly tell it to do so.
-  Cache(std::function<size_t(const Value& value)> value_to_bytes)
+  /// NB: The way we use this, the insert hit rate is always 0 because we GetAndEvict and
+  /// then possibly insert back.
+  Cache(std::function<int64_t(const Value& value)> value_to_bytes)
       : policy_(ReplacementPolicy::kLRUExplicit),
-        capacity_(std::numeric_limits<size_t>::max()),
+        capacity_(std::numeric_limits<int64_t>::max()),
         value_to_bytes_(std::move(value_to_bytes)) {
     KATANA_LOG_VASSERT(
         value_to_bytes_ != nullptr,
@@ -117,7 +119,7 @@ public:
 
   /// Returns the size of the cache (in number of elements or size of elements,
   /// depending on the replacement policy).
-  size_t size() const {
+  int64_t size() const {
     if (policy_ == ReplacementPolicy::kLRUSize) {
       return key_to_value_.size();
     }
@@ -126,9 +128,9 @@ public:
 
   /// Returns the capacity (in number of elements or size of elements, depending on
   /// the replacement policy).
-  size_t capacity() const {
+  int64_t capacity() const {
     if (policy_ == ReplacementPolicy::kLRUExplicit) {
-      return std::numeric_limits<size_t>::max();
+      return std::numeric_limits<int64_t>::max();
     }
     return capacity_;
   }
@@ -145,8 +147,8 @@ public:
 
   /// Try to reclaim \p goal bytes (#entries), evicting least recently used entries to
   /// do it.  Returns the number of bytes actually evicted.
-  size_t Reclaim(size_t goal) {
-    size_t reclaimed{};
+  int64_t Reclaim(int64_t goal) {
+    int64_t reclaimed{};
     while (!empty() && reclaimed < goal) {
       reclaimed += EvictLastOne();
     }
@@ -161,7 +163,7 @@ public:
     cache_stats_.insert_count++;
     auto mapit = key_to_value_.find(key);
     if (mapit == key_to_value_.end()) {
-      size_t approx_bytes{};
+      int64_t approx_bytes{};
       if (value_to_bytes_ != nullptr) {
         approx_bytes = value_to_bytes_(value);
         if (approx_bytes > capacity_) {
@@ -279,12 +281,12 @@ private:
 
   ReplacementPolicy policy_;
   // for kLRUSize number of entries kLRUBytes it is byte total
-  size_t capacity_{0};
-  size_t total_bytes_{0};
+  int64_t capacity_{0};
+  int64_t total_bytes_{0};
   // Hit statistics for gets and inserts
   CacheStats cache_stats_;
 
-  std::function<size_t(const Value& value)> value_to_bytes_;
+  std::function<int64_t(const Value& value)> value_to_bytes_;
 };
 
 // The property cache contains properties NOT in use by the graph and never contains a

@@ -67,20 +67,20 @@ KATANA_EXPORT katana::Result<RDGHandle> Open(
 /// Generate a new canonically named topology file name in the
 /// directory associated with handle. Exported to support
 /// out-of-core conversion
-KATANA_EXPORT katana::Uri MakeTopologyFileName(RDGHandle handle);
+KATANA_EXPORT katana::URI MakeTopologyFileName(RDGHandle handle);
 
 /// Generate a new canonically named node_entity_type_id file name in the
 /// directory associated with handle. Exported to support
 /// out-of-core conversion
-KATANA_EXPORT katana::Uri MakeNodeEntityTypeIDArrayFileName(RDGHandle handle);
+KATANA_EXPORT katana::URI MakeNodeEntityTypeIDArrayFileName(RDGHandle handle);
 
 /// Generate a new canonically named edge_entity_type_id file name in the
 /// directory associated with handle. Exported to support
 /// out-of-core conversion
-KATANA_EXPORT katana::Uri MakeEdgeEntityTypeIDArrayFileName(RDGHandle handle);
+KATANA_EXPORT katana::URI MakeEdgeEntityTypeIDArrayFileName(RDGHandle handle);
 
 /// Get the storage directory associated with this handle
-KATANA_EXPORT katana::Uri GetRDGDir(RDGHandle handle);
+KATANA_EXPORT katana::URI GetRDGDir(RDGHandle handle);
 
 /// Close an RDGHandle object
 KATANA_EXPORT katana::Result<void> Close(RDGHandle handle);
@@ -117,7 +117,7 @@ KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
 ListAvailableViews(
     const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
 
-KATANA_EXPORT katana::Result<std::vector<std::pair<katana::Uri, katana::Uri>>>
+KATANA_EXPORT katana::Result<std::vector<std::pair<katana::URI, katana::URI>>>
 CreateSrcDestFromViewsForCopy(
     const std::string& src_dir, const std::string& dst_dir, uint64_t version);
 
@@ -128,7 +128,7 @@ CreateSrcDestFromViewsForCopy(
 /// \param src_dst_files is a vector of src-dest pairs for individual RDG files
 /// \returns a Result to indicate whether the method succeeded or failed
 KATANA_EXPORT katana::Result<void> CopyRDG(
-    std::vector<std::pair<katana::Uri, katana::Uri>> src_dst_files);
+    std::vector<std::pair<katana::URI, katana::URI>> src_dst_files);
 
 // Setup and tear down
 KATANA_EXPORT katana::Result<void> InitTsuba(katana::CommBackend* comm);

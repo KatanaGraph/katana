@@ -79,8 +79,8 @@ public:
   katana::Result<void> AddPartitionMetadataArray(
       const std::shared_ptr<arrow::Table>& props);
 
-  const katana::Uri& rdg_dir() const { return rdg_dir_; }
-  void set_rdg_dir(const katana::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
+  const katana::URI& rdg_dir() const { return rdg_dir_; }
+  void set_rdg_dir(const katana::URI& rdg_dir) { rdg_dir_ = rdg_dir; }
 
   uint32_t partition_id() const { return partition_id_; }
   void set_partition_id(uint32_t partition_id) { partition_id_ = partition_id; }
@@ -215,7 +215,7 @@ public:
   }
   RDGTopologyManager& topology_manager() { return topology_manager_; }
 
-  katana::Result<void> MakeTopologyManager(const katana::Uri& metadata_dir) {
+  katana::Result<void> MakeTopologyManager(const katana::URI& metadata_dir) {
     RDGTopologyManager topo_manager = KATANA_CHECKED(
         katana::RDGTopologyManager::Make(part_header_.topology_metadata()));
     topology_manager_ = std::move(topo_manager);
@@ -248,7 +248,7 @@ public:
   /// Marks the topologies storage as valid, since we are just telling the
   /// RDG about where the topology is located and not actually loading it for use.
   katana::Result<void> RegisterCSRTopologyFile(
-      const std::string& new_topo_path, const katana::Uri& rdg_dir,
+      const std::string& new_topo_path, const katana::URI& rdg_dir,
       uint64_t num_nodes, uint64_t num_edges) {
     // get the topology a metadata entry and add it to our entries set
     part_header_.MakePartitionTopologyMetadataEntry(new_topo_path);
@@ -309,7 +309,7 @@ private:
   std::shared_ptr<arrow::ChunkedArray> local_to_global_id_;
 
   /// name of the graph that was used to load this RDG
-  katana::Uri rdg_dir_;
+  katana::URI rdg_dir_;
   /// which partition of the graph was loaded
   uint32_t partition_id_{std::numeric_limits<uint32_t>::max()};
   // How this graph was derived from the previous version

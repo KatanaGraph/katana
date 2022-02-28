@@ -6,9 +6,9 @@
 
 namespace {
 
-katana::Uri
+katana::URI
 Str2Uri(const std::string& str) {
-  auto path_res = katana::Uri::Make(str);
+  auto path_res = katana::URI::Make(str);
   KATANA_LOG_ASSERT(path_res);
   return path_res.value();
 }
@@ -30,21 +30,21 @@ TestMake() {
 void
 TestJoinPath() {
   KATANA_LOG_ASSERT(
-      katana::Uri::JoinPath("/some/long", "path") == "/some/long/path");
+      katana::URI::JoinPath("/some/long", "path") == "/some/long/path");
   KATANA_LOG_ASSERT(
-      katana::Uri::JoinPath("/some/long/", "path") == "/some/long/path");
+      katana::URI::JoinPath("/some/long/", "path") == "/some/long/path");
   KATANA_LOG_ASSERT(
-      katana::Uri::JoinPath("/some/long", "/path") == "/some/long/path");
+      katana::URI::JoinPath("/some/long", "/path") == "/some/long/path");
   KATANA_LOG_ASSERT(
-      katana::Uri::JoinPath("/some/long//", "path") == "/some/long/path");
+      katana::URI::JoinPath("/some/long//", "path") == "/some/long/path");
   KATANA_LOG_ASSERT(
-      katana::Uri::JoinPath("/some/long///", "path") == "/some/long/path");
+      katana::URI::JoinPath("/some/long///", "path") == "/some/long/path");
   KATANA_LOG_ASSERT(
-      katana::Uri::JoinPath("/some/long///", "/path") == "/some/long/path");
+      katana::URI::JoinPath("/some/long///", "/path") == "/some/long/path");
   KATANA_LOG_ASSERT(
-      katana::Uri::JoinPath("/some/long///", "//path") == "/some/long/path");
+      katana::URI::JoinPath("/some/long///", "//path") == "/some/long/path");
   KATANA_LOG_ASSERT(
-      katana::Uri::JoinPath("/host:8020/long///", "//path") ==
+      katana::URI::JoinPath("/host:8020/long///", "//path") ==
       "/host:8020/long/path");
 }
 
@@ -67,12 +67,12 @@ TestEncode() {
 
 void
 TestDecode() {
-  KATANA_LOG_ASSERT(katana::Uri::Decode("/ with/ spaces") == "/ with/ spaces");
+  KATANA_LOG_ASSERT(katana::URI::Decode("/ with/ spaces") == "/ with/ spaces");
 
   KATANA_LOG_ASSERT(
-      katana::Uri::Decode("/%20with/%20spaces") == "/ with/ spaces");
+      katana::URI::Decode("/%20with/%20spaces") == "/ with/ spaces");
   KATANA_LOG_ASSERT(
-      katana::Uri::Decode("host%3A8020/path") == "host:8020/path");
+      katana::URI::Decode("host%3A8020/path") == "host:8020/path");
 }
 
 }  // namespace

@@ -123,10 +123,11 @@ def _get_dataset(rel_path):
             if path.exists():
                 return path
 
-            logger.info(f"path {path} does not exist, but no exception, trying again")
+            logger.warning(f"path {path} does not exist, but no exception, trying again")
             last_exception = None
-        except ValueError as e:
-            logger.info(f"Observed {e} while getting test datasets, ignoring and trying again")
+        # pylint: disable=broad-except
+        except Exception as e:
+            logger.warning(f"Observed {e} while getting test datasets, ignoring and trying again")
             last_exception = e
 
         invalidate_cache = True
@@ -192,12 +193,9 @@ def _get_test_datasets_directory(invalidate_cache=False) -> Path:
             if not invalidate_cache:
                 return cache_path
 
-        # failed to validate, cleanup just in case
-        if cache_path.exists():
-            try:
-                shutil.rmtree(cache_path)
-            finally:
-                cache_path.unlink(missing_ok=True)
+        # clean up anything left over
+        shutil.rmtree(cache_path, ignore_errors=True)
+
         # download a fresh copy
         base_cache_path.mkdir(parents=True, exist_ok=True)
         fn, _headers = urllib.request.urlretrieve(

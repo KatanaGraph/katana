@@ -41,7 +41,7 @@ public:
   /// read table from storage
   ///   \param uri an identifier for a parquet file
   katana::Result<std::shared_ptr<arrow::Table>> ReadTable(
-      const katana::Uri& uri, std::optional<Slice> slice = std::nullopt);
+      const katana::URI& uri, std::optional<Slice> slice = std::nullopt);
 
   /// read part of a table from storage
   ///   \param uri an identifier for a parquet file
@@ -49,12 +49,12 @@ public:
   ///      in the table in the parquet file. The loaded table will only contain
   ///      columns at indexes that are true in the bitmap
   katana::Result<std::shared_ptr<arrow::Table>> ReadTable(
-      const katana::Uri& uri, const std::vector<int32_t>& column_bitmap,
+      const katana::URI& uri, const std::vector<int32_t>& column_bitmap,
       std::optional<Slice> slice = std::nullopt);
 
   /// read only the schema from a parquet file in storage
   katana::Result<std::shared_ptr<arrow::Schema>> GetSchema(
-      const katana::Uri& uri);
+      const katana::URI& uri);
 
   /// read a column part of a table from storage
   /// n.b. support for the `slice` read option is missing here
@@ -62,25 +62,25 @@ public:
   ///   \param column_idx must be a valid column index for the table in that
   ///      file
   katana::Result<std::shared_ptr<arrow::Table>> ReadColumn(
-      const katana::Uri& uri, int32_t column_idx);
+      const katana::URI& uri, int32_t column_idx);
 
   /// Get the number of columns for the table stored in a parquet file
   ///   \param uri an identifier for a parquet file
-  katana::Result<int32_t> NumColumns(const katana::Uri& uri);
+  katana::Result<int32_t> NumColumns(const katana::URI& uri);
 
   /// Get the number of rows for the table stored in a parquet file
   ///   \param uri an identifier for a parquet file
-  katana::Result<int64_t> NumRows(const katana::Uri& uri);
+  katana::Result<int64_t> NumRows(const katana::URI& uri);
 
   /// Get the files for the logical parquet table
   ///   \param uri an identifier for a parquet file
-  katana::Result<std::vector<std::string>> GetFiles(const katana::Uri& uri);
+  katana::Result<std::vector<std::string>> GetFiles(const katana::URI& uri);
 
 private:
   ParquetReader(bool make_canonical) : make_canonical_{make_canonical} {}
 
   katana::Result<std::shared_ptr<arrow::Table>> ReadFromUriSliced(
-      const katana::Uri& uri);
+      const katana::URI& uri);
 
   katana::Result<std::shared_ptr<arrow::Table>> FixTable(
       std::shared_ptr<arrow::Table>&& _table);

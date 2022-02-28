@@ -21,7 +21,7 @@ namespace {
 
 katana::Result<std::shared_ptr<arrow::Table>>
 DoLoadProperties(
-    const std::string& expected_name, const katana::Uri& file_path,
+    const std::string& expected_name, const katana::URI& file_path,
     std::optional<katana::ParquetReader::Slice> slice = std::nullopt) {
   std::unique_ptr<katana::ParquetReader> reader =
       KATANA_CHECKED(katana::ParquetReader::Make());
@@ -48,7 +48,7 @@ DoLoadProperties(
 
 katana::Result<std::shared_ptr<arrow::Table>>
 katana::LoadProperties(
-    const std::string& expected_name, const katana::Uri& file_path) {
+    const std::string& expected_name, const katana::URI& file_path) {
   try {
     return DoLoadProperties(expected_name, file_path);
   } catch (const std::exception& exp) {
@@ -59,7 +59,7 @@ katana::LoadProperties(
 
 katana::Result<std::shared_ptr<arrow::Table>>
 katana::LoadPropertySlice(
-    const std::string& expected_name, const katana::Uri& file_path,
+    const std::string& expected_name, const katana::URI& file_path,
     int64_t offset, int64_t length) {
   try {
     return DoLoadProperties(
@@ -73,7 +73,7 @@ katana::LoadPropertySlice(
 
 katana::Result<void>
 katana::AddProperties(
-    const katana::Uri& uri, bool is_property,
+    const katana::URI& uri, bool is_property,
     const std::vector<katana::PropStorageInfo*>& properties, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
         add_fn) {
@@ -88,7 +88,7 @@ katana::AddProperties(
           katana::MemorySupervisor::Get().GetPropertyManager();
       KATANA_LOG_DEBUG_ASSERT(pm);
       KATANA_LOG_DEBUG_ASSERT(!uri.empty());
-      const katana::Uri& cache_key = uri.Join(prop->path());
+      const katana::URI& cache_key = uri.Join(prop->path());
       std::shared_ptr<arrow::Table> props = pm->GetProperty(cache_key);
       if (props) {
         KATANA_CHECKED_CONTEXT(
@@ -116,7 +116,7 @@ katana::AddProperties(
         "addproperties property cache miss", {
                                                  {"name", prop->name()},
                                              });
-    const katana::Uri& path = uri.Join(prop->path());
+    const katana::URI& path = uri.Join(prop->path());
 
     std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
         std::async(
@@ -136,6 +136,13 @@ katana::AddProperties(
           katana::MemorySupervisor::Get().GetPropertyManager();
       if (is_property) {
         pm->PropertyLoadedActive(props);
+      } else {
+        katana::GetTracer().GetActiveSpan().Log(
+            "addproperties property cache callback non-property",
+            {
+                {"name", prop->name()},
+                {"file_name", prop->path()},
+            });
       }
       return katana::CopyableResultSuccess();
     };
@@ -154,7 +161,7 @@ katana::AddProperties(
 
 katana::Result<void>
 katana::AddPropertySlice(
-    const katana::Uri& dir,
+    const katana::URI& dir,
     const std::vector<katana::PropStorageInfo*>& properties,
     std::pair<uint64_t, uint64_t> range, ReadGroup* grp,
     const std::function<katana::Result<void>(std::shared_ptr<arrow::Table>)>&
@@ -167,7 +174,7 @@ katana::AddPropertySlice(
           ErrorCode::AlreadyExists, "property {} must be absent to be added",
           std::quoted(prop->name()));
     }
-    const katana::Uri& path = dir.Join(prop->path());
+    const katana::URI& path = dir.Join(prop->path());
 
     std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
         std::async(

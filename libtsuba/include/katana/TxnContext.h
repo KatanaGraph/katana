@@ -10,7 +10,7 @@
 namespace katana {
 
 struct RDGManifestInfo {
-  Uri manifest_file;
+  URI manifest_file;
   RDGManifest rdg_manifest;
 };
 
@@ -31,53 +31,53 @@ public:
 
   void InsertNodePropertyRead(
       const std::string& rdg_dir, const std::string& name) {
-    node_properties_read_.insert(Uri::JoinPath(rdg_dir, name));
+    node_properties_read_.insert(URI::JoinPath(rdg_dir, name));
   }
 
   template <typename Container>
   void InsertNodePropertyRead(
       const std::string& rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      node_properties_read_.insert(Uri::JoinPath(rdg_dir, name));
+      node_properties_read_.insert(URI::JoinPath(rdg_dir, name));
     }
   }
 
   void InsertNodePropertyWrite(
       const std::string& rdg_dir, const std::string& name) {
-    node_properties_write_.insert(Uri::JoinPath(rdg_dir, name));
+    node_properties_write_.insert(URI::JoinPath(rdg_dir, name));
   }
 
   template <typename Container>
   void InsertNodePropertyWrite(
       const std::string& rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      node_properties_write_.insert(Uri::JoinPath(rdg_dir, name));
+      node_properties_write_.insert(URI::JoinPath(rdg_dir, name));
     }
   }
 
   void InsertEdgePropertyRead(
       const std::string& rdg_dir, const std::string& name) {
-    edge_properties_read_.insert(Uri::JoinPath(rdg_dir, name));
+    edge_properties_read_.insert(URI::JoinPath(rdg_dir, name));
   }
 
   template <typename Container>
   void InsertEdgePropertyRead(
       const std::string& rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      edge_properties_read_.insert(Uri::JoinPath(rdg_dir, name));
+      edge_properties_read_.insert(URI::JoinPath(rdg_dir, name));
     }
   }
 
   void InsertEdgePropertyWrite(
       const std::string& rdg_dir, const std::string& name) {
-    edge_properties_write_.insert(Uri::JoinPath(rdg_dir, name));
+    edge_properties_write_.insert(URI::JoinPath(rdg_dir, name));
   }
 
   template <typename Container>
   void InsertEdgePropertyWrite(
       const std::string& rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      edge_properties_write_.insert(Uri::JoinPath(rdg_dir, name));
+      edge_properties_write_.insert(URI::JoinPath(rdg_dir, name));
     }
   }
 
@@ -90,7 +90,7 @@ public:
   void SetTopologyWrite() { topology_write_ = true; }
 
   void SetManifestInfo(
-      const Uri& rdg_dir, const Uri& manifest_file,
+      const URI& rdg_dir, const URI& manifest_file,
       const RDGManifest& rdg_manifest) {
     RDGManifestInfo info = {manifest_file, rdg_manifest};
     manifest_info_[rdg_dir] = info;
@@ -121,11 +121,11 @@ public:
 
   bool TopologyWrite() const { return topology_write_; }
 
-  inline bool ManifestCached(const Uri& rdg_dir) const {
+  inline bool ManifestCached(const URI& rdg_dir) const {
     return manifest_info_.count(rdg_dir) > 0;
   }
 
-  const RDGManifestInfo& ManifestInfo(const Uri& rdg_dir) {
+  const RDGManifestInfo& ManifestInfo(const URI& rdg_dir) {
     return manifest_info_.at(rdg_dir);
   }
 
@@ -142,8 +142,8 @@ private:
   bool topology_write_{false};
 
   bool auto_commit_{true};
-  std::unordered_map<Uri, RDGManifestInfo, Uri::Hash> manifest_info_;
-  std::unordered_map<Uri, bool, Uri::Hash> manifest_uptodate_;
+  std::unordered_map<URI, RDGManifestInfo, URI::Hash> manifest_info_;
+  std::unordered_map<URI, bool, URI::Hash> manifest_uptodate_;
 };
 
 }  // namespace katana

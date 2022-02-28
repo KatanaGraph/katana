@@ -6,9 +6,9 @@
 katana::Result<void>
 katana::TxnContext::Commit() {
   for (auto info : manifest_info_) {
-    Uri rdg_dir = info.first;
+    URI rdg_dir = info.first;
     if (!manifest_uptodate_.at(rdg_dir)) {
-      Uri manifest_file = info.second.manifest_file;
+      URI manifest_file = info.second.manifest_file;
       KATANA_LOG_DEBUG_ASSERT(!manifest_file.empty());
       KATANA_CHECKED(katana::OneHostOnly([&]() -> katana::Result<void> {
         std::string curr_s = info.second.rdg_manifest.ToJsonString();

@@ -47,12 +47,12 @@ namespace {
 
 katana::Result<std::string>
 StoreArrowArrayAtName(
-    const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
+    const std::shared_ptr<arrow::ChunkedArray>& array, const katana::URI& dir,
     const std::string& name, katana::WriteGroup* desc) {
   std::unique_ptr<katana::ParquetWriter> writer =
       KATANA_CHECKED(katana::ParquetWriter::Make(array, name));
 
-  katana::Uri new_path = dir.RandFile(name);
+  katana::URI new_path = dir.RandFile(name);
   KATANA_CHECKED_CONTEXT(
       writer->WriteToUri(new_path, desc), "writing to: {}", new_path);
   return new_path.BaseName();
@@ -61,7 +61,7 @@ StoreArrowArrayAtName(
 katana::Result<void>
 WriteProperties(
     const arrow::Table& props, std::vector<katana::PropStorageInfo*> prop_info,
-    const katana::Uri& dir, katana::WriteGroup* desc) {
+    const katana::URI& dir, katana::WriteGroup* desc) {
   const auto& schema = props.schema();
 
   std::vector<std::string> next_paths;
@@ -129,7 +129,7 @@ katana::RDGFile::~RDGFile() {
 }
 
 katana::Result<std::vector<katana::PropStorageInfo>>
-katana::RDG::WritePartArrays(const katana::Uri& dir, katana::WriteGroup* desc) {
+katana::RDG::WritePartArrays(const katana::URI& dir, katana::WriteGroup* desc) {
   std::vector<katana::PropStorageInfo> next_properties;
 
   KATANA_LOG_DEBUG(
@@ -213,7 +213,7 @@ katana::RDG::DoStoreNodeEntityTypeIDArray(
 
   if (node_entity_type_id_array_ff) {
     // we have an update, store the passed in memory state
-    katana::Uri path_uri = MakeNodeEntityTypeIDArrayFileName(handle);
+    katana::URI path_uri = MakeNodeEntityTypeIDArrayFileName(handle);
     node_entity_type_id_array_ff->Bind(path_uri.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     write_group->StartStore(std::move(node_entity_type_id_array_ff));
@@ -224,7 +224,7 @@ katana::RDG::DoStoreNodeEntityTypeIDArray(
     KATANA_LOG_DEBUG("persisting node_entity_type_id_array in new location");
     // we don't have an update, but we are persisting in a new location
     // store our in memory state
-    katana::Uri path_uri = MakeNodeEntityTypeIDArrayFileName(handle);
+    katana::URI path_uri = MakeNodeEntityTypeIDArrayFileName(handle);
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     // depends on `node_entity_type_id_array_` outliving writes
@@ -261,7 +261,7 @@ katana::RDG::DoStoreEdgeEntityTypeIDArray(
 
   if (edge_entity_type_id_array_ff) {
     // we have an update, store the passed in memory state
-    katana::Uri path_uri = MakeEdgeEntityTypeIDArrayFileName(handle);
+    katana::URI path_uri = MakeEdgeEntityTypeIDArrayFileName(handle);
     edge_entity_type_id_array_ff->Bind(path_uri.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     write_group->StartStore(std::move(edge_entity_type_id_array_ff));
@@ -272,7 +272,7 @@ katana::RDG::DoStoreEdgeEntityTypeIDArray(
     KATANA_LOG_DEBUG("persisting edge_entity_type_id_array in new location");
     // we don't have an update, but we are persisting in a new location
     // store our in memory state
-    katana::Uri path_uri = MakeEdgeEntityTypeIDArrayFileName(handle);
+    katana::URI path_uri = MakeEdgeEntityTypeIDArrayFileName(handle);
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     // depends on `edge_entity_type_id_array_` outliving writes
@@ -364,7 +364,7 @@ katana::Result<void>
 katana::RDG::DoMake(
     const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
     const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
-    const katana::Uri& metadata_dir) {
+    const katana::URI& metadata_dir) {
   ReadGroup grp;
 
   // populating node properties
@@ -418,12 +418,12 @@ katana::RDG::DoMake(
   KATANA_LOG_VASSERT(csr != nullptr, "csr topology is null");
 
   if (core_->part_header().IsEntityTypeIDsOutsideProperties()) {
-    katana::Uri node_entity_type_id_array_path = metadata_dir.Join(
+    katana::URI node_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().node_entity_type_id_array_path());
     KATANA_CHECKED(core_->node_entity_type_id_array_file_storage().Bind(
         node_entity_type_id_array_path.string(), true));
 
-    katana::Uri edge_entity_type_id_array_path = metadata_dir.Join(
+    katana::URI edge_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().edge_entity_type_id_array_path());
     KATANA_CHECKED(core_->edge_entity_type_id_array_file_storage().Bind(
         edge_entity_type_id_array_path.string(), true));
@@ -497,7 +497,7 @@ katana::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   uint32_t partition_id_to_load =
       opts.partition_id_to_load.value_or(Comm()->Rank);
 
-  katana::Uri partition_path = manifest.PartitionFileName(partition_id_to_load);
+  katana::URI partition_path = manifest.PartitionFileName(partition_id_to_load);
 
   RDGPartHeader part_header = KATANA_CHECKED_CONTEXT(
       RDGPartHeader::Make(partition_path), "failed to read path {}",
@@ -663,7 +663,7 @@ katana::Result<std::shared_ptr<arrow::Table>>
 UnloadProperty(
     const std::shared_ptr<arrow::Table>& props, int i,
     std::vector<katana::PropStorageInfo>* prop_info_list,
-    const katana::Uri& dir) {
+    const katana::URI& dir) {
   if (i < 0 || i > props->num_columns()) {
     return KATANA_ERROR(
         katana::ErrorCode::InvalidArgument, "property index out of bounds");
@@ -691,7 +691,7 @@ UnloadProperty(
   return KATANA_CHECKED(props->RemoveColumn(i));
 }
 
-katana::Result<katana::Uri>
+katana::Result<katana::URI>
 GetStorageLocationIfValid(
     const std::string& name,
     const std::vector<katana::PropStorageInfo>& prop_info_list) {
@@ -709,7 +709,7 @@ GetStorageLocationIfValid(
         katana::ErrorCode::AssertionFailed, "the property exists but is dirty");
   }
   // TODO(thunt) there's really no reason why we shouldn't always use uri
-  auto path = KATANA_CHECKED(katana::Uri::Make(psi_it->path()));
+  auto path = KATANA_CHECKED(katana::URI::Make(psi_it->path()));
   return path;
 }
 
@@ -717,7 +717,7 @@ katana::Result<std::shared_ptr<arrow::Table>>
 LoadProperty(
     const std::shared_ptr<arrow::Table>& props, const std::string name, int i,
     std::vector<katana::PropStorageInfo>* prop_info_list,
-    const katana::Uri& dir) {
+    const katana::URI& dir) {
   auto psi_it = std::find_if(
       prop_info_list->begin(), prop_info_list->end(),
       [&](const katana::PropStorageInfo& psi) { return psi.name() == name; });
@@ -783,7 +783,7 @@ katana::RDG::UnloadNodeProperty(const std::string& name) {
       std::quoted(name));
 }
 
-katana::Result<katana::Uri>
+katana::Result<katana::URI>
 katana::RDG::GetNodePropertyStorageLocation(const std::string& name) const {
   return GetStorageLocationIfValid(
       name, core_->part_header().node_prop_info_list());
@@ -798,7 +798,7 @@ katana::RDG::UnloadEdgeProperty(int i) {
   return katana::ResultSuccess();
 }
 
-katana::Result<katana::Uri>
+katana::Result<katana::URI>
 katana::RDG::GetEdgePropertyStorageLocation(const std::string& name) const {
   return GetStorageLocationIfValid(
       name, core_->part_header().edge_prop_info_list());
@@ -884,12 +884,12 @@ katana::RDG::set_part_metadata(const katana::PartitionMetadata& metadata) {
   core_->part_header().set_metadata(metadata);
 }
 
-const katana::Uri&
+const katana::URI&
 katana::RDG::rdg_dir() const {
   return core_->rdg_dir();
 }
 void
-katana::RDG::set_rdg_dir(const katana::Uri& rdg_dir) {
+katana::RDG::set_rdg_dir(const katana::URI& rdg_dir) {
   return core_->set_rdg_dir(rdg_dir);
 }
 
@@ -993,8 +993,8 @@ katana::RDG::set_local_to_global_id(
 
 katana::Result<void>
 katana::RDG::AddCSRTopologyByFile(
-    const katana::Uri& new_top, uint64_t num_nodes, uint64_t num_edges) {
-  katana::Uri dir = new_top.DirName();
+    const katana::URI& new_top, uint64_t num_nodes, uint64_t num_edges) {
+  katana::URI dir = new_top.DirName();
   if (dir != rdg_dir()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
@@ -1030,8 +1030,8 @@ katana::RDG::UnbindNodeEntityTypeIDArrayFileStorage() {
 
 katana::Result<void>
 katana::RDG::SetNodeEntityTypeIDArrayFile(
-    const katana::Uri& new_type_id_array) {
-  katana::Uri dir = new_type_id_array.DirName();
+    const katana::URI& new_type_id_array) {
+  katana::URI dir = new_type_id_array.DirName();
   if (dir != rdg_dir()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,
@@ -1063,8 +1063,8 @@ katana::RDG::UnbindEdgeEntityTypeIDArrayFileStorage() {
 
 katana::Result<void>
 katana::RDG::SetEdgeEntityTypeIDArrayFile(
-    const katana::Uri& new_type_id_array) {
-  katana::Uri dir = new_type_id_array.DirName();
+    const katana::URI& new_type_id_array) {
+  katana::URI dir = new_type_id_array.DirName();
   if (dir != rdg_dir()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument,

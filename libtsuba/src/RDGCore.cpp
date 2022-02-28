@@ -109,7 +109,7 @@ AddProperties(
 }
 
 katana::Result<void>
-EnsureTypeLoaded(const katana::Uri& rdg_dir, katana::PropStorageInfo* psi) {
+EnsureTypeLoaded(const katana::URI& rdg_dir, katana::PropStorageInfo* psi) {
   if (!psi->type()) {
     auto reader = KATANA_CHECKED(katana::ParquetReader::Make());
     KATANA_LOG_ASSERT(psi->IsAbsent());
@@ -135,7 +135,7 @@ schemify(const std::vector<katana::PropStorageInfo>& prop_info_list) {
 
 katana::Result<katana::NUMAArray<katana::EntityTypeID>>
 LoadIDArray(
-    size_t begin, size_t end, const katana::Uri& types_path,
+    size_t begin, size_t end, const katana::URI& types_path,
     const katana::RDGPartHeader& part_header) {
   katana::NUMAArray<katana::EntityTypeID> types;
 
@@ -340,7 +340,7 @@ katana::RDGCore::node_entity_type_id_array(size_t begin, size_t end) const {
   }
   end = std::min(end, size_t{part_header().metadata().num_nodes_});
 
-  katana::Uri node_types_path =
+  katana::URI node_types_path =
       rdg_dir_.Join(part_header().node_entity_type_id_array_path());
 
   return KATANA_CHECKED(
@@ -354,7 +354,7 @@ katana::RDGCore::edge_entity_type_id_array(size_t begin, size_t end) const {
   }
   end = std::min(end, size_t{part_header().metadata().num_edges_});
 
-  katana::Uri edge_types_path =
+  katana::URI edge_types_path =
       rdg_dir_.Join(part_header().edge_entity_type_id_array_path());
 
   return KATANA_CHECKED(

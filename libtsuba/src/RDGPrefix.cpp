@@ -17,7 +17,7 @@ katana::RDGPrefix::DoMakePrefix(
     return RDGPrefix{};
   }
 
-  katana::Uri t_path = manifest.dir().Join(part_header.csr_topology_path());
+  katana::URI t_path = manifest.dir().Join(part_header.csr_topology_path());
 
   CSRTopologyHeader gr_header;
   KATANA_CHECKED_CONTEXT(

@@ -38,6 +38,7 @@ dependencies:
  - isort>=5.9.3,<5.10a0
  - jemalloc>=5.2.1
  - jinja2>=2.11
+ - markupsafe<2.1
  - jupyter>=1
  - jupyter_client>=6,<7a0
  - jupyter_core>=4.7

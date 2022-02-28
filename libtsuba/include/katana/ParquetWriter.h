@@ -55,7 +55,7 @@ public:
   /// \param uri the storage location to write to
   /// \param group optional write group to group this write operation with
   katana::Result<void> WriteToUri(
-      const katana::Uri& uri, WriteGroup* group = nullptr);
+      const katana::URI& uri, WriteGroup* group = nullptr);
 
 private:
   ParquetWriter(
@@ -67,10 +67,10 @@ private:
   std::shared_ptr<parquet::ArrowWriterProperties> StandardArrowProperties();
 
   katana::Result<void> StoreParquet(
-      const katana::Uri& uri, katana::WriteGroup* desc);
+      const katana::URI& uri, katana::WriteGroup* desc);
 
   katana::Result<void> StoreParquet(
-      std::shared_ptr<arrow::Table> table, const katana::Uri& uri,
+      std::shared_ptr<arrow::Table> table, const katana::URI& uri,
       katana::WriteGroup* desc);
 
   std::vector<std::shared_ptr<arrow::Table>> tables_;

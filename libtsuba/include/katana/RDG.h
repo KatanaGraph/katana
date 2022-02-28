@@ -178,7 +178,7 @@ public:
 
   /// report where this property is being stored; Will return an error if the
   /// property is not clean or absent
-  katana::Result<Uri> GetNodePropertyStorageLocation(
+  katana::Result<URI> GetNodePropertyStorageLocation(
       const std::string& name) const;
 
   /// Ensure the edge property at index `i` was written back to storage
@@ -188,7 +188,7 @@ public:
 
   /// report where this property is being stored; Will return an error if the
   /// property is not clean or absent
-  katana::Result<Uri> GetEdgePropertyStorageLocation(
+  katana::Result<URI> GetEdgePropertyStorageLocation(
       const std::string& name) const;
 
   /// Load node property with a particular name and insert it into the
@@ -227,7 +227,7 @@ public:
   /// \param num_nodes is the number of nodes in the topology file, used for validation
   /// \param num_edges is the number of edges in the topology file, used for validation
   katana::Result<void> AddCSRTopologyByFile(
-      const katana::Uri& new_top, uint64_t num_nodes, uint64_t num_edges);
+      const katana::URI& new_top, uint64_t num_nodes, uint64_t num_edges);
 
   /// Ask this RDG if it has a topology matching the fields in shadow
   /// If it does, the RDG returns the topology
@@ -240,7 +240,7 @@ public:
   /// \param new_type_id_array must exist and be in the correct directory for
   /// this RDG but it need not be writable
   katana::Result<void> SetNodeEntityTypeIDArrayFile(
-      const katana::Uri& new_type_id_array);
+      const katana::URI& new_type_id_array);
 
   katana::Result<void> UnbindEdgeEntityTypeIDArrayFileStorage();
 
@@ -249,14 +249,14 @@ public:
   /// \param new_type_id_array must exist and be in the correct directory for
   /// this RDG but it need not be writable
   katana::Result<void> SetEdgeEntityTypeIDArrayFile(
-      const katana::Uri& new_type_id_array);
+      const katana::URI& new_type_id_array);
 
   //
   // accessors and mutators
   //
 
-  const katana::Uri& rdg_dir() const;
-  void set_rdg_dir(const katana::Uri& rdg_dir);
+  const katana::URI& rdg_dir() const;
+  void set_rdg_dir(const katana::URI& rdg_dir);
 
   uint32_t partition_id() const;
 
@@ -342,13 +342,13 @@ private:
   katana::Result<void> DoMake(
       const std::vector<PropStorageInfo*>& node_props_to_be_loaded,
       const std::vector<PropStorageInfo*>& edge_props_to_be_loaded,
-      const katana::Uri& metadata_dir);
+      const katana::URI& metadata_dir);
 
   static katana::Result<RDG> Make(
       const RDGManifest& manifest, const RDGLoadOptions& opts);
 
   katana::Result<std::vector<katana::PropStorageInfo>> WritePartArrays(
-      const katana::Uri& dir, katana::WriteGroup* desc);
+      const katana::URI& dir, katana::WriteGroup* desc);
 
   katana::Result<void> DoStore(
       RDGHandle handle, const std::string& command_line,

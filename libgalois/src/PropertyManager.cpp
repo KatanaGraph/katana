@@ -4,7 +4,6 @@
 #include "katana/Logging.h"
 #include "katana/MemorySupervisor.h"
 #include "katana/ProgressTracer.h"
-#include "katana/Time.h"
 
 const std::string katana::PropertyManager::name_ = "property";
 
@@ -26,14 +25,14 @@ katana::PropertyManager::PropertyManager() { MakePropertyCache(); }
 katana::PropertyManager::~PropertyManager() { cache_.reset(); }
 
 std::shared_ptr<arrow::Table>
-katana::PropertyManager::GetProperty(const katana::Uri& property_path) {
+katana::PropertyManager::GetProperty(const katana::URI& property_path) {
   auto property = cache_->GetAndEvict(property_path);
   if (property.has_value()) {
     auto bytes =
         static_cast<count_t>(katana::ApproxTableMemUse(property.value()));
     MemorySupervisor::Get().StandbyToActive(Name(), bytes);
     katana::GetTracer().GetActiveSpan().Log(
-        "property cache get evict",
+        "property cache get",
         {
             {"storage_name", property_path.BaseName()},
             {"approx_size_gb",
@@ -41,8 +40,9 @@ katana::PropertyManager::GetProperty(const katana::Uri& property_path) {
         });
     return property.value();
   }
+  MemorySupervisor::Get().CheckPressure();
   katana::GetTracer().GetActiveSpan().Log(
-      "property cache get evict not found",
+      "property cache get not found",
       {
           {"storage_name", property_path.BaseName()},
       });
@@ -52,34 +52,34 @@ katana::PropertyManager::GetProperty(const katana::Uri& property_path) {
 
 void
 katana::PropertyManager::PropertyLoadedActive(
-    const std::shared_ptr<arrow::Table>& property) const {
+    const std::shared_ptr<arrow::Table>& property) {
   KATANA_LOG_DEBUG_ASSERT(property);
-  auto bytes = static_cast<count_t>(katana::ApproxTableMemUse(property));
-  MemorySupervisor::Get().BorrowActive(Name(), bytes);
+  auto sz = katana::ApproxTableMemUse(property);
+  stats.bytes_loaded += sz;
+  katana::GetTracer().GetActiveSpan().Log(
+      "property cache loaded active", {
+                                          {"name", property->field(0)->name()},
+                                          {"approx_size_gb", ToGB(sz)},
+                                      });
 }
 
 void
 katana::PropertyManager::PutProperty(
-    const katana::Uri& property_path,
+    const katana::URI& property_path,
     const std::shared_ptr<arrow::Table>& property) {
   auto bytes = static_cast<count_t>(katana::ApproxTableMemUse(property));
-  auto granted = MemorySupervisor::Get().ActiveToStandby(Name(), bytes);
-  if (granted >= static_cast<count_t>(bytes)) {
-    cache_->Insert(property_path, property);
-    katana::GetTracer().GetActiveSpan().Log(
-        "property cache insert",
-        {
-            {"storage_name", property_path.BaseName()},
-            {"approx_size_gb", ToGB(katana::ApproxTableMemUse(property))},
-        });
-  } else {
-    MemorySupervisor::Get().ReturnActive(Name(), bytes);
-  }
+  cache_->Insert(property_path, property);
+  katana::GetTracer().GetActiveSpan().Log(
+      "property cache insert",
+      {
+          {"storage_name", property_path.BaseName()},
+          {"approx_size_gb", ToGB(katana::ApproxTableMemUse(property))},
+      });
+  MemorySupervisor::Get().ActiveToStandby(Name(), bytes);
 }
 
 katana::count_t
 katana::PropertyManager::FreeStandbyMemory(count_t goal) {
-  count_t total = 0;
   auto scope = katana::GetTracer().StartActiveSpan("free standby memory");
   scope.span().Log(
       "before", {
@@ -87,18 +87,13 @@ katana::PropertyManager::FreeStandbyMemory(count_t goal) {
                     {"cache_gb", ToGB(cache_->size())},
                 });
 
-  if (goal >= static_cast<count_t>(cache_->size())) {
-    total = static_cast<count_t>(cache_->size());
-    MemorySupervisor::Get().ReturnStandby(Name(), std::min(goal, total));
-    cache_->clear();
-  } else {
-    total = static_cast<count_t>(cache_->Reclaim(goal));
-    MemorySupervisor::Get().ReturnStandby(Name(), std::min(goal, total));
-  }
+  auto reclaim = static_cast<count_t>(cache_->Reclaim(goal));
+  MemorySupervisor::Get().PutStandby(Name(), reclaim);
+
   scope.span().Log(
       "after", {
-                   {"reclaimed_gb", ToGB(total)},
+                   {"reclaimed_gb", ToGB(reclaim)},
                    {"cache_gb", ToGB(cache_->size())},
                });
-  return total;
+  return reclaim;
 }

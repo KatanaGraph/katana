@@ -49,7 +49,7 @@ katana::Result<std::string>
 WriteRDG(
     katana::RDG&& rdg_, katana::EntityTypeManager node_entity_type_manager,
     katana::EntityTypeManager edge_entity_type_manager) {
-  auto uri_res = katana::Uri::MakeRand("/tmp/propertyfilegraph");
+  auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
   std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
 

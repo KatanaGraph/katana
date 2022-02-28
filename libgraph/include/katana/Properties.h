@@ -439,6 +439,8 @@ public:
     return array_.IsValid(i);
   }
 
+  size_t size() const { return array_.length(); }
+
   value_type GetValue(size_t i) const {
     KATANA_LOG_DEBUG_ASSERT(IsValid(i));
     return array_.Value(i);
@@ -471,6 +473,8 @@ public:
   }
 
   bool IsValid(size_t i) const { return array_.IsValid(i); }
+
+  size_t size() const { return array_.length(); }
 
   value_type GetValue(size_t i) const {
     KATANA_LOG_DEBUG_ASSERT(IsValid(i));
@@ -631,6 +635,8 @@ public:
         array, internal::GetMutableValuesWorkAround<T>(
                    double_array_pointer->data(), 1, 0));
   }
+
+  size_t size() const { return array_.length(); }
 
   reference GetValue(size_t index) {
     return ArrayRef(ptr_ + array_.value_offset(index), N);

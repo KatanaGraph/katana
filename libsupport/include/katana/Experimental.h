@@ -1,37 +1,48 @@
 #ifndef KATANA_LIBSUPPORT_KATANA_EXPERIMENTAL_H_
 #define KATANA_LIBSUPPORT_KATANA_EXPERIMENTAL_H_
 
+#include <iomanip>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "katana/Logging.h"
 #include "katana/config.h"
 
-namespace katana {
-namespace internal {
+namespace katana::internal {
 
 /// ExperimentalFeature tracks the state of feature flags set in the environment;
 /// It is not intended to be used directly; please see the macro KATANA_EXPERIMENTAL_FEATURE
 /// below
 class KATANA_EXPORT ExperimentalFeature {
 public:
-  static const ExperimentalFeature* Register(
-      const std::string& feature_name, const std::string& filename,
-      int line_number);
+  ExperimentalFeature(const char* name, const char* filename, int line_number)
+      : name_(name), filename_(filename), line_number_(line_number) {
+    std::lock_guard<std::mutex> lock(registered_features_mutex_);
+    registered_features_.emplace(name_, this);
+  }
 
-  /// report the feature flags that were checked on codepaths that were executed and
-  /// the flag was set to true
+  static bool IsEnabled(const char* feature_name) {
+    auto it = registered_features_.find(feature_name);
+    if (it == registered_features_.end()) {
+      KATANA_LOG_DEBUG_VASSERT(
+          false, "reference to unregistered feature flag {}", feature_name);
+      return false;
+    }
+    it->second->CheckEnv();
+    return it->second->is_enabled_;
+  }
+
+  /// report the feature flags that were enabled
   static std::vector<std::string> ReportEnabled();
 
-  /// report the feature flags that were used but stayed false
+  /// report the feature flags that were disabled
   static std::vector<std::string> ReportDisabled();
 
   /// report the feature flags that were provided but did not match any registered flag
   static std::vector<std::string> ReportUnrecognized();
-
-  bool IsEnabled() const { return is_enabled_; }
 
   ExperimentalFeature(const ExperimentalFeature& no_copy) = delete;
   ExperimentalFeature& operator=(const ExperimentalFeature& no_copy) = delete;
@@ -44,13 +55,6 @@ public:
   int line_number() const { return line_number_; }
 
 private:
-  ExperimentalFeature(std::string name, std::string filename, int line_number)
-      : name_(std::move(name)),
-        filename_(std::move(filename)),
-        line_number_(line_number) {
-    CheckEnv();
-  }
-
   void CheckEnv();
 
   std::string name_;
@@ -59,12 +63,11 @@ private:
   bool is_enabled_{};
 
   static std::mutex registered_features_mutex_;
-  static std::unordered_map<std::string, std::unique_ptr<ExperimentalFeature>>
+  static std::unordered_map<std::string, ExperimentalFeature*>
       registered_features_;
 };
 
-}  // namespace internal
-}  // namespace katana
+}  // namespace katana::internal
 
 /// KATANA_EXPERIMENTAL_FEATURE creates a flag that can be set from the environment.
 /// The macro takes a feature_name which should be an unquoted, unique string that
@@ -104,10 +107,13 @@ private:
 /// detailing what the feature does and the state of tests to avoid regressions.
 #define KATANA_EXPERIMENTAL_FEATURE(feature_name)                              \
   namespace katana::internal {                                                 \
-  class ExperimentalFeature;                                                   \
-  static const auto* const katana_experimental_feature_ptr_##feature_name =    \
-      ::katana::internal::ExperimentalFeature::Register(                       \
-          #feature_name, __FILE__, __LINE__);                                  \
+  class KATANA_EXPORT ExperimentalFeature##feature_name                        \
+      : public ExperimentalFeature {                                           \
+  public:                                                                      \
+    ExperimentalFeature##feature_name()                                        \
+        : ExperimentalFeature(#feature_name, __FILE__, __LINE__) {}            \
+  };                                                                           \
+  const ExperimentalFeature##feature_name kFeatureFlag##feature_name;          \
   }                                                                            \
   static_assert(                                                               \
       std::is_same<                                                            \
@@ -116,7 +122,14 @@ private:
       "KATANA_EXPERIMENTAL_FEATURE must not be inside a namespace block")
 
 #define KATANA_EXPERIMENTAL_ENABLED(feature_name)                              \
-  (::katana::internal::katana_experimental_feature_ptr_##feature_name          \
-       ->IsEnabled())
+  (std::invoke([]() {                                                          \
+    static std::once_flag oflag;                                               \
+    static bool enabled;                                                       \
+    std::call_once(oflag, [&]() {                                              \
+      enabled =                                                                \
+          ::katana::internal::ExperimentalFeature::IsEnabled(#feature_name);   \
+    });                                                                        \
+    return enabled;                                                            \
+  }))
 
 #endif

@@ -1,10 +1,6 @@
 name: C/C++ CI
 
 on:
-  push:
-    branches:
-      - 'master'
-      - 'release/*'
   pull_request:
     paths:
       - 'docs/**'

@@ -489,16 +489,11 @@ struct ClusteringImplementationBase {
  */
   static katana::Result<std::unique_ptr<katana::PropertyGraph>>
   DuplicateGraphWithSameTopo(const katana::PropertyGraph& pfg_from) {
-    const katana::GraphTopology& topology_from = pfg_from.topology();
-
-    katana::GraphTopology topo_copy = GraphTopology::Copy(topology_from);
-
-    auto pfg_to_res = katana::PropertyGraph::Make(std::move(topo_copy));
-    if (!pfg_to_res) {
-      return pfg_to_res.error();
-    }
-    return std::unique_ptr<katana::PropertyGraph>(
-        std::move(pfg_to_res.value()));
+    // The resulting PropertyGraph is detached from the property table of the input graph.
+    // Thus any property index indirection of the original topology has to be dropped.
+    katana::GraphTopology topo_copy =
+        GraphTopology::CopyWithoutPropertyIndexes(pfg_from.topology());
+    return katana::PropertyGraph::Make(std::move(topo_copy));
   }
 
   /**

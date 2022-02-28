@@ -83,6 +83,14 @@ katana::GraphTopology::Copy(const GraphTopology& that) noexcept {
       that.node_prop_indices_.data());
 }
 
+katana::GraphTopology
+katana::GraphTopology::CopyWithoutPropertyIndexes(
+    const GraphTopology& that) noexcept {
+  return katana::GraphTopology(
+      that.adj_indices_.data(), that.adj_indices_.size(), that.dests_.data(),
+      that.dests_.size(), nullptr, nullptr);
+}
+
 katana::GraphTopology::PropertyIndex
 katana::GraphTopology::GetEdgePropertyIndexFromOutEdge(
     const Edge& eid) const noexcept {

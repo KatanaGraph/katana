@@ -82,6 +82,9 @@ public:
 
   static GraphTopology Copy(const GraphTopology& that) noexcept;
 
+  static GraphTopology CopyWithoutPropertyIndexes(
+      const GraphTopology& that) noexcept;
+
   uint64_t NumNodes() const noexcept { return adj_indices_.size(); }
 
   uint64_t NumEdges() const noexcept { return dests_.size(); }

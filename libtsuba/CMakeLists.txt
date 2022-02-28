@@ -17,6 +17,7 @@ set(sources
   src/LocalStorage.cpp
   src/ParquetReader.cpp
   src/ParquetWriter.cpp
+  src/PartitionTopologyMetadata.cpp
   src/RDG.cpp
   src/RDGCore.cpp
   src/RDGHandleImpl.cpp
@@ -25,13 +26,13 @@ set(sources
   src/RDGPartHeader.cpp
   src/RDGPrefix.cpp
   src/RDGSlice.cpp
+  src/RDGStorageFormatVersion.cpp
   src/RDGTopology.cpp
   src/RDGTopologyManager.cpp
-  src/PartitionTopologyMetadata.cpp
   src/ReadGroup.cpp
-  src/tsuba.cpp
   src/TxnContext.cpp
   src/WriteGroup.cpp
+  src/tsuba.cpp
 )
 
 target_sources(katana_tsuba PRIVATE ${sources})

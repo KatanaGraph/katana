@@ -224,7 +224,7 @@ katana::CreateSrcDestFromViewsForCopy(
   std::vector<std::pair<katana::URI, katana::URI>> src_dst_files;
 
   // List out all the files in a given view
-  auto rdg_views = KATANA_CHECKED(katana::ListAvailableViews(src_dir, version));
+  auto rdg_views = KATANA_CHECKED(ListViewsOfVersion(src_dir, version));
   for (const auto& rdg_view : rdg_views.second) {
     auto rdg_view_uri = KATANA_CHECKED(katana::URI::Make(rdg_view.view_path));
     auto rdg_manifest_res = katana::RDGManifest::Make(rdg_view_uri);
@@ -238,7 +238,7 @@ katana::CreateSrcDestFromViewsForCopy(
     auto rdg_manifest = std::move(rdg_manifest_res.value());
 
     auto fnames = KATANA_CHECKED(rdg_manifest.FileNames());
-    for (auto fname : fnames) {
+    for (const auto& fname : fnames) {
       auto src_file_path = katana::URI::JoinPath(src_dir, fname);
       auto src_file_uri = KATANA_CHECKED(katana::URI::Make(src_file_path));
 
@@ -264,7 +264,7 @@ katana::CreateSrcDestFromViewsForCopy(
         auto dst_file_path = katana::URI::JoinPath(dst_dir, fname);
         dst_file_uri = KATANA_CHECKED(katana::URI::Make(dst_file_path));
       }
-      src_dst_files.push_back(std::make_pair(src_file_uri, dst_file_uri));
+      src_dst_files.emplace_back(std::make_pair(src_file_uri, dst_file_uri));
     }
 
     // We add the manifest file to the vector
@@ -278,7 +278,7 @@ katana::CreateSrcDestFromViewsForCopy(
         katana::URI::JoinPath(dst_dir, rdg_manifest.FileName().BaseName());
     auto dst_rdg_manifest_uri =
         KATANA_CHECKED(katana::URI::Make(dst_rdg_manifest_path));
-    src_dst_files.push_back(
+    src_dst_files.emplace_back(
         std::make_pair(rdg_manifest_uri, dst_rdg_manifest_uri));
   }
   return src_dst_files;

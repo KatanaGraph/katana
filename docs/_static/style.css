@@ -224,22 +224,6 @@ input#search-input::placeholder{
 	border: 1px solid rgba(0,0,0,.125);
 }
 
-@media (min-width: 1200px) {
-	#navbar-start {
-		padding-left: 5%;
-	}
-
-}
-
-@media (min-width: 960px){
-
-	main {
-		max-width: 50% !important;
-	}
-	.navbar .container-xl {
-		justify-content: start;
-	}
-}
 
 @media (min-width: 720px) {
 	.container-xl {
@@ -256,6 +240,22 @@ input#search-input::placeholder{
 
 	.navbar-collapse {
 		border-left: 1px solid rgba(187, 187, 187, 1);
+	}
+}
+
+@media (min-width: 960px){
+
+	main {
+		max-width: 50% !important;
+	}
+	.navbar .container-xl {
+		justify-content: start;
+	}
+}
+
+@media (min-width: 1200px) {
+	#navbar-start {
+		padding-left: 5%;
 	}
 }
 

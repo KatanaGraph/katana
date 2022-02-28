@@ -30,6 +30,8 @@ katana::DynamicBitsetSlow::bitwise_not() {
   for (size_t i = 0; i < bitvec_.size(); i++) {
     bitvec_[i] = ~bitvec_[i];
   }
+
+  RestoreTrailingBitsInvariant();
 }
 
 void

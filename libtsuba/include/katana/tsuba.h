@@ -113,7 +113,7 @@ ListViewsOfVersion(
     const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
 
 /// duplicate of ListViewsOfVersion maintained for compatibility
-[[deprecated]] KATANA_EXPORT
+[[deprecated("use ListViewsOfVersion() instead")]] KATANA_EXPORT
     katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
     ListAvailableViews(
         const std::string& rdg_dir,

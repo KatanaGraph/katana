@@ -10,7 +10,6 @@ Contributing
    building
    git-style
    code-style
-   restructured-text
    testing
    performance
    documentation

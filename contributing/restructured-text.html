@@ -6,43 +6,43 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>C++ Library &#8212; Katana</title>
+    <title>Restructured Text &#8212; Katana</title>
     
-    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
   
     
     <link rel="stylesheet"
-      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
     <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
     <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
   
     
       
   
     
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/style.css" />
     
-    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
   
-    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/jquery.js"></script>
-    <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/doctools.js"></script>
-    <script src="../../_static/clipboard.min.js"></script>
-    <script src="../../_static/copybutton.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
-    <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Arrow" href="arrow.html" />
-    <link rel="prev" title="Reference" href="../index.html" />
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Testing" href="testing.html" />
+    <link rel="prev" title="Code Style" href="code-style.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -73,8 +73,8 @@
         
         
 
-<a class="navbar-brand" href="../../index.html">
-  <img src="../../_static/logo.png" class="logo" alt="logo">
+<a class="navbar-brand" href="../index.html">
+  <img src="../_static/logo.png" class="logo" alt="logo">
 </a>
 
 
@@ -102,25 +102,25 @@
             <div class="navbar-center-item">
                 <ul id="navbar-main-elements" class="navbar-nav">
     <li class="toctree-l1 nav-item">
- <a class="reference internal nav-link" href="../../getting-started/index.html">
+ <a class="reference internal nav-link" href="../getting-started/index.html">
   Getting Started
  </a>
 </li>
 
 <li class="toctree-l1 nav-item">
- <a class="reference internal nav-link" href="../../user-guides/index.html">
+ <a class="reference internal nav-link" href="../user-guides/index.html">
   User Guides
  </a>
 </li>
 
-<li class="toctree-l1 current active nav-item">
- <a class="reference internal nav-link" href="../index.html">
+<li class="toctree-l1 nav-item">
+ <a class="reference internal nav-link" href="../reference/index.html">
   Reference
  </a>
 </li>
 
-<li class="toctree-l1 nav-item">
- <a class="reference internal nav-link" href="../../contributing/index.html">
+<li class="toctree-l1 current active nav-item">
+ <a class="reference internal nav-link" href="index.html">
   Contributing
  </a>
 </li>
@@ -146,7 +146,7 @@
 
 <!-- NOTE: this JS must live here (not in our global JS file) because it relies
      on being processed by Jinja before it is run (specifically for replacing
-     variables reference/cxx/index and {'json_url': 'https://docs.k9h.dev/switcher.json', 'url_template': 'https://docs.k9h.dev/{version}/', 'version_match': 'latest'}.
+     variables contributing/restructured-text and {'json_url': 'https://docs.k9h.dev/switcher.json', 'url_template': 'https://docs.k9h.dev/{version}/', 'version_match': 'latest'}.
 -->
 
 <script type="text/javascript">
@@ -160,7 +160,7 @@ function buildURL(entry) {
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
-    const currentFilePath = "reference/cxx/index.html",
+    const currentFilePath = "contributing/restructured-text.html",
           tryUrl = event.target.getAttribute("href");
     let otherDocsHomepage = tryUrl.replace(currentFilePath, "");
     $.ajax({
@@ -181,7 +181,7 @@ function checkPageExistsAndRedirect(event) {
 // Populate the version switcher from the JSON config file
 (function () {
     $.getJSON("https://docs.k9h.dev/switcher.json", function(data, textStatus, jqXHR) {
-        const currentFilePath = "reference/cxx/index.html";
+        const currentFilePath = "contributing/restructured-text.html";
         // create links to the corresponding page in the other docs versions
         $.each(data, function(index, entry) {
             // if no custom name specified (e.g., "latest"), use version string
@@ -229,7 +229,7 @@ function checkPageExistsAndRedirect(event) {
             <div class="col-12 col-md-3 bd-sidebar">
               <div class="sidebar-start-items">
 
-<form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+<form class="bd-search d-flex align-items-center" action="../search.html" method="get">
     <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="7" cy="7" r="6.5" stroke="black"/>
         <line x1="11.7071" y1="12" x2="15.9497" y2="16.2426" stroke="black" stroke-linecap="round"/>
@@ -239,12 +239,12 @@ function checkPageExistsAndRedirect(event) {
     <div class="bd-toc-item active">
       <ul class="current nav bd-sidenav">
  <li class="toctree-l1">
-  <a class="reference internal" href="../../getting-started/index.html">
+  <a class="reference internal" href="../getting-started/index.html">
    Getting Started
   </a>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../../user-guides/index.html">
+  <a class="reference internal" href="../user-guides/index.html">
    User Guides
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
@@ -254,71 +254,71 @@ function checkPageExistsAndRedirect(event) {
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../user-guides/algorithms_in_python.html">
+    <a class="reference internal" href="../user-guides/algorithms_in_python.html">
      Implementing an Algorithm in Katana Python
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../user-guides/hello_world.html">
+    <a class="reference internal" href="../user-guides/hello_world.html">
      First steps in Katana on One Host
     </a>
    </li>
   </ul>
  </li>
- <li class="toctree-l1 current active has-children">
-  <a class="reference internal" href="../index.html">
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../reference/index.html">
    Reference
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
   <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul class="current">
-   <li class="toctree-l2 current active has-children">
-    <a class="current reference internal" href="#">
+  <ul>
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../reference/cxx/index.html">
      C++ Library
     </a>
-    <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
     <label for="toctree-checkbox-3">
      <i class="fas fa-chevron-down">
      </i>
     </label>
     <ul>
      <li class="toctree-l3">
-      <a class="reference internal" href="arrow.html">
+      <a class="reference internal" href="../reference/cxx/arrow.html">
        Arrow
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="error-handling.html">
+      <a class="reference internal" href="../reference/cxx/error-handling.html">
        Error Handling
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="logging.html">
+      <a class="reference internal" href="../reference/cxx/logging.html">
        Logging
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="property-graph.html">
+      <a class="reference internal" href="../reference/cxx/property-graph.html">
        Property Graph
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="strings.html">
+      <a class="reference internal" href="../reference/cxx/strings.html">
        Strings
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="tracing.html">
+      <a class="reference internal" href="../reference/cxx/tracing.html">
        Tracing
       </a>
      </li>
     </ul>
    </li>
    <li class="toctree-l2 has-children">
-    <a class="reference internal" href="../python/index.html">
+    <a class="reference internal" href="../reference/python/index.html">
      Python Library
     </a>
     <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
@@ -328,12 +328,12 @@ function checkPageExistsAndRedirect(event) {
     </label>
     <ul>
      <li class="toctree-l3">
-      <a class="reference internal" href="../python/katana.html">
+      <a class="reference internal" href="../reference/python/katana.html">
        Katana
       </a>
      </li>
      <li class="toctree-l3 has-children">
-      <a class="reference internal" href="../python/katana.local.html">
+      <a class="reference internal" href="../reference/python/katana.local.html">
        Katana Local API
       </a>
       <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
@@ -343,64 +343,64 @@ function checkPageExistsAndRedirect(event) {
       </label>
       <ul>
        <li class="toctree-l4">
-        <a class="reference internal" href="../python/katana.local.graph.html">
+        <a class="reference internal" href="../reference/python/katana.local.graph.html">
          Graphs
         </a>
        </li>
        <li class="toctree-l4">
-        <a class="reference internal" href="../python/katana.local.analytics.html">
+        <a class="reference internal" href="../reference/python/katana.local.analytics.html">
          Analytics
         </a>
        </li>
        <li class="toctree-l4">
-        <a class="reference internal" href="../python/katana.local.import_data.html">
+        <a class="reference internal" href="../reference/python/katana.local.import_data.html">
          Import Data
         </a>
        </li>
        <li class="toctree-l4">
-        <a class="reference internal" href="../python/katana.local.atomic.html">
+        <a class="reference internal" href="../reference/python/katana.local.atomic.html">
          Atomic Operations
         </a>
        </li>
        <li class="toctree-l4">
-        <a class="reference internal" href="../python/katana.local.datastructures.html">
+        <a class="reference internal" href="../reference/python/katana.local.datastructures.html">
          Data Structures
         </a>
        </li>
       </ul>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="../python/katana.local.analytics.html">
+      <a class="reference internal" href="../reference/python/katana.local.analytics.html">
        Analytics
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="../python/katana.local.atomic.html">
+      <a class="reference internal" href="../reference/python/katana.local.atomic.html">
        Atomic Operations
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="../python/katana.local.datastructures.html">
+      <a class="reference internal" href="../reference/python/katana.local.datastructures.html">
        Data Structures
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="../python/katana.local.graph.html">
+      <a class="reference internal" href="../reference/python/katana.local.graph.html">
        Graphs
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="../python/katana.local.import_data.html">
+      <a class="reference internal" href="../reference/python/katana.local.import_data.html">
        Import Data
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="../python/katana.timer.html">
+      <a class="reference internal" href="../reference/python/katana.timer.html">
        Performance Timers
       </a>
      </li>
      <li class="toctree-l3">
-      <a class="reference internal" href="../python/katana.bug.html">
+      <a class="reference internal" href="../reference/python/katana.bug.html">
        Bug Reporting Tools
       </a>
      </li>
@@ -408,78 +408,78 @@ function checkPageExistsAndRedirect(event) {
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../../contributing/index.html">
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
    Contributing
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" type="checkbox"/>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" type="checkbox"/>
   <label for="toctree-checkbox-6">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul>
+  <ul class="current">
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/history.html">
+    <a class="reference internal" href="history.html">
      History
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/codebase-overview.html">
+    <a class="reference internal" href="codebase-overview.html">
      Quick Overview of the Codebase
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/building.html">
+    <a class="reference internal" href="building.html">
      Building
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/git-style.html">
+    <a class="reference internal" href="git-style.html">
      Git Style
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/code-style.html">
+    <a class="reference internal" href="code-style.html">
      Code Style
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/restructured-text.html">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      Restructured Text
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/testing.html">
+    <a class="reference internal" href="testing.html">
      Testing
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/performance.html">
+    <a class="reference internal" href="performance.html">
      Performance
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/documentation.html">
+    <a class="reference internal" href="documentation.html">
      Documentation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/releases.html">
+    <a class="reference internal" href="releases.html">
      Releases
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/tips-tricks.html">
+    <a class="reference internal" href="tips-tricks.html">
      Helpful Tips and Tricks
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/rdg-storage-format.html">
+    <a class="reference internal" href="rdg-storage-format.html">
      Katana RDG Storage Format
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../contributing/how_to_template.html">
+    <a class="reference internal" href="how_to_template.html">
      How-to guide template
     </a>
    </li>
@@ -525,26 +525,123 @@ function checkPageExistsAndRedirect(event) {
               
               <div>
                 
-  <section id="c-library">
-<h1>C++ Library<a class="headerlink" href="#c-library" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="arrow.html">Arrow</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="arrow.html#inspecting-arrow-data">Inspecting Arrow Data</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="error-handling.html">Error Handling</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="error-handling.html#returning-errors">Returning Errors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="error-handling.html#results">Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="error-handling.html#error-codes">Error Codes</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="property-graph.html">Property Graph</a></li>
-<li class="toctree-l1"><a class="reference internal" href="strings.html">Strings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing</a></li>
-</ul>
+  <section id="restructured-text">
+<h1>Restructured Text<a class="headerlink" href="#restructured-text" title="Permalink to this headline">¶</a></h1>
+<p>Most documentation is written in Restructured Text (<code class="docutils literal notranslate"><span class="pre">.rst</span></code>) format, which is
+similar to Markdown (<code class="docutils literal notranslate"><span class="pre">.md</span></code>) in spirit but has a slightly different syntax.</p>
+<table class="table" id="id1">
+<caption><span class="caption-text">Summary of differences between Restructured Text and Markdown</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Restructured Text</p></td>
+<td><p>Markdown</p></td>
+</tr>
+<tr class="row-even"><td><p>Inline code</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>The ``Foo`` function
+</pre></div>
 </div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>The `Foo` function
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Code blocks</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">code</span><span class="o">-</span><span class="n">block</span><span class="p">::</span> <span class="n">python</span>
+
+   <span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+     <span class="k">pass</span>
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>```
+def foo():
+  pass
+```
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>External links</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Visit `my link &lt;https://invalid/&gt;`_
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Visit</span> <span class="p">[</span><span class="n">my</span> <span class="n">link</span><span class="p">](</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">invalid</span><span class="o">/</span><span class="p">)</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Internal links</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.. _label:
+
+See :ref:`label`
+</pre></div>
+</div>
+</td>
+<td><p>(Not applicable)</p></td>
+</tr>
+<tr class="row-even"><td><p>Sections</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====</span>
+<span class="n">Part</span>
+<span class="o">====</span>
+
+<span class="o">*******</span>
+<span class="n">Chapter</span>
+<span class="o">*******</span>
+
+<span class="n">Section</span>
+<span class="o">=======</span>
+
+<span class="n">Subsection</span>
+<span class="o">----------</span>
+
+<span class="n">Subsubsection</span>
+<span class="o">^^^^^^^^^^^^^</span>
+
+<span class="n">Paragraphs</span>
+<span class="sd">&quot;&quot;&quot;&quot;&quot;&quot;</span><span class="s2">&quot;&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Level 1</span>
+
+<span class="c1">## Level 2</span>
+
+<span class="c1">### Level 3</span>
+
+<span class="c1">#### Level 4</span>
+
+<span class="c1">##### Level 5</span>
+
+<span class="c1">###### Level 6</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Conditional Include</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">only</span><span class="p">::</span> <span class="n">internal</span>
+
+   <span class="n">Text</span> <span class="n">to</span> <span class="n">only</span> <span class="n">include</span> <span class="n">when</span> <span class="n">internal</span> <span class="ow">is</span> <span class="nb">set</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>The only condition currently defined is <code class="docutils literal notranslate"><span class="pre">internal</span></code>. Conditional
+including has limited scope as it cannot include other directives nor
+alter the section structure. The body of the directive is always parsed,
+so references must be valid regardless of the condition.</p>
+</td>
+<td><p>(Not applicable)</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html">https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html</a></p></li>
+</ul>
 </section>
 
 
@@ -557,7 +654,7 @@ function checkPageExistsAndRedirect(event) {
       </div>
     </div>
   
-    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
   <footer class="footer mt-5 mt-md-0">
   <div class="container">
     

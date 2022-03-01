@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>&lt;no title&gt; &#8212; Katana</title>
+    <title>Restructured Text &#8212; Katana</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -40,6 +40,8 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Testing" href="testing.html" />
+    <link rel="prev" title="Code Style" href="code-style.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -94,7 +96,7 @@
  </a>
 </li>
 
-<li class="toctree-l1 nav-item">
+<li class="toctree-l1 current active nav-item">
  <a class="reference internal nav-link" href="index.html">
   Contributing
  </a>
@@ -121,7 +123,7 @@
 
 <!-- NOTE: this JS must live here (not in our global JS file) because it relies
      on being processed by Jinja before it is run (specifically for replacing
-     variables contributing/cuda_workaround and {'json_url': 'https://docs.k9h.dev/switcher.json', 'url_template': 'https://docs.k9h.dev/{version}/', 'version_match': 'latest'}.
+     variables contributing/restructured-text and {'json_url': 'https://docs.k9h.dev/switcher.json', 'url_template': 'https://docs.k9h.dev/{version}/', 'version_match': 'latest'}.
 -->
 
 <script type="text/javascript">
@@ -135,7 +137,7 @@ function buildURL(entry) {
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
-    const currentFilePath = "contributing/cuda_workaround.html",
+    const currentFilePath = "contributing/restructured-text.html",
           tryUrl = event.target.getAttribute("href");
     let otherDocsHomepage = tryUrl.replace(currentFilePath, "");
     $.ajax({
@@ -156,7 +158,7 @@ function checkPageExistsAndRedirect(event) {
 // Populate the version switcher from the JSON config file
 (function () {
     $.getJSON("https://docs.k9h.dev/switcher.json", function(data, textStatus, jqXHR) {
-        const currentFilePath = "contributing/cuda_workaround.html";
+        const currentFilePath = "contributing/restructured-text.html";
         // create links to the corresponding page in the other docs versions
         $.each(data, function(index, entry) {
             // if no custom name specified (e.g., "latest"), use version string
@@ -207,7 +209,7 @@ function checkPageExistsAndRedirect(event) {
   <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
 </form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
     <div class="bd-toc-item active">
-      <ul class="nav bd-sidenav">
+      <ul class="current nav bd-sidenav">
  <li class="toctree-l1">
   <a class="reference internal" href="../getting-started/index.html">
    Getting Started
@@ -378,16 +380,16 @@ function checkPageExistsAndRedirect(event) {
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
+ <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="index.html">
    Contributing
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" type="checkbox"/>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" type="checkbox"/>
   <label for="toctree-checkbox-6">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul>
+  <ul class="current">
    <li class="toctree-l2">
     <a class="reference internal" href="history.html">
      History
@@ -413,8 +415,8 @@ function checkPageExistsAndRedirect(event) {
      Code Style
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="restructured-text.html">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      Restructured Text
     </a>
    </li>
@@ -473,14 +475,9 @@ function checkPageExistsAndRedirect(event) {
               
               <div class="toc-item">
                 
-<div class="tocsection onthispage pt-5 pb-3">
-    <i class="fas fa-list"></i> On this page
-</div>
 
 <nav id="bd-toc-nav">
-    <ul class="simple visible nav section-nav flex-column">
-</ul>
-
+    
 </nav>
               </div>
               
@@ -500,25 +497,124 @@ function checkPageExistsAndRedirect(event) {
               
               <div>
                 
-  <div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Not all conda installation scripts are well-behaved. In particular, the
-default behavior of the <code class="docutils literal notranslate"><span class="pre">cudatoolkit-dev</span></code> package’s post-installation
-script is to write a log to the hard-coded path <code class="docutils literal notranslate"><span class="pre">/tmp/cuda-installer.log</span></code>
-and not delete it. Once one user on a system has written this file all other
-users will fail to install the package because they won’t be able to write
-the log file. The only known workaround is to manually delete the log file.
-It is best practice to delete your own log file immediately after you have
-updated your environment. If you are on a system where someone else has
-written the log file and you can’t overwrite it please contact that user to
-delete it. You may also contact a user with root privileges.</p>
-</div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># If you are sharing a system with other users,</span>
-<span class="c1"># please perform the following manual clean-up:</span>
-conda env update --name katana-dev --file <span class="nv">$SRC_DIR</span>/conda_recipe/environment.yml
-rm /tmp/cuda-installer.log
+  <section id="restructured-text">
+<h1>Restructured Text<a class="headerlink" href="#restructured-text" title="Permalink to this headline">¶</a></h1>
+<p>Most documentation is written in Restructured Text (<code class="docutils literal notranslate"><span class="pre">.rst</span></code>) format, which is
+similar to Markdown (<code class="docutils literal notranslate"><span class="pre">.md</span></code>) in spirit but has a slightly different syntax.</p>
+<table class="table" id="id1">
+<caption><span class="caption-text">Summary of differences between Restructured Text and Markdown</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td></td>
+<td><p>Restructured Text</p></td>
+<td><p>Markdown</p></td>
+</tr>
+<tr class="row-even"><td><p>Inline code</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>The ``Foo`` function
 </pre></div>
 </div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>The `Foo` function
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Code blocks</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">code</span><span class="o">-</span><span class="n">block</span><span class="p">::</span> <span class="n">python</span>
+
+   <span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+     <span class="k">pass</span>
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>```
+def foo():
+  pass
+```
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>External links</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Visit `my link &lt;https://invalid/&gt;`_
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Visit</span> <span class="p">[</span><span class="n">my</span> <span class="n">link</span><span class="p">](</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">invalid</span><span class="o">/</span><span class="p">)</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Internal links</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.. _label:
+
+See :ref:`label`
+</pre></div>
+</div>
+</td>
+<td><p>(Not applicable)</p></td>
+</tr>
+<tr class="row-even"><td><p>Sections</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====</span>
+<span class="n">Part</span>
+<span class="o">====</span>
+
+<span class="o">*******</span>
+<span class="n">Chapter</span>
+<span class="o">*******</span>
+
+<span class="n">Section</span>
+<span class="o">=======</span>
+
+<span class="n">Subsection</span>
+<span class="o">----------</span>
+
+<span class="n">Subsubsection</span>
+<span class="o">^^^^^^^^^^^^^</span>
+
+<span class="n">Paragraphs</span>
+<span class="sd">&quot;&quot;&quot;&quot;&quot;&quot;</span><span class="s2">&quot;&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Level 1</span>
+
+<span class="c1">## Level 2</span>
+
+<span class="c1">### Level 3</span>
+
+<span class="c1">#### Level 4</span>
+
+<span class="c1">##### Level 5</span>
+
+<span class="c1">###### Level 6</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>Conditional Include</p></td>
+<td><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">only</span><span class="p">::</span> <span class="n">internal</span>
+
+   <span class="n">Text</span> <span class="n">to</span> <span class="n">only</span> <span class="n">include</span> <span class="n">when</span> <span class="n">internal</span> <span class="ow">is</span> <span class="nb">set</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>The only condition currently defined is <code class="docutils literal notranslate"><span class="pre">internal</span></code>. Conditional
+including has limited scope as it cannot include other directives nor
+alter the section structure. The body of the directive is always parsed,
+so references must be valid regardless of the condition.</p>
+</td>
+<td><p>(Not applicable)</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html">https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html</a></p></li>
+</ul>
+</section>
 
 
               </div>

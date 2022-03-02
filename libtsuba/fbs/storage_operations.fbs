@@ -1,0 +1,79 @@
+namespace katana.fbs;
+
+enum ArrayAction : byte {
+  Append = 0,
+  TakeAndAppend = 1,
+}
+
+enum URIType : byte {
+  Relative = 0,
+  Absolute = 1,
+}
+
+table StorageLocation {
+  location_type : URIType;
+  uri : string;
+}
+
+table LoadArrowArray {
+  length : long;
+  serialized_type : string;
+  action : ArrayAction;
+  location : StorageLocation;
+}
+
+table AppendNulls {
+  length : long;
+}
+
+table LoadArrowArrayAndStorageBackedArrowArray {
+  length : long;
+  serialized_type : string;
+  action : ArrayAction;
+  location : StorageLocation;
+  storage_backed_array: StorageBackedArrowColumn;
+}
+
+table LoadTwoArrowArrays {
+  first: LoadArrowArray;
+  second: LoadArrowArray;
+}
+
+union ArrowStorageOperation {
+  LoadArrowArray,
+  AppendNulls,
+  LoadArrowArrayAndStorageBackedArrowArray,
+  LoadTwoArrowArrays,
+}
+
+table StorageBackedArrowArray {
+  length : long;
+  serialized_type : string;
+  ops : [ArrowStorageOperation];
+}
+
+table StorageBackedArrowColumn {
+ name : string;
+ uri : StorageLocation;
+}
+
+table StorageBackedArrowTable {
+  num_rows : long;
+  columns : [StorageBackedArrowColumn];
+}
+
+table EntityTypeIDSet {
+  entity_type : uint16;
+  type_set : [uint16];
+}
+
+table EntityTypeIDName {
+  entity_type : uint16;
+  name : string;
+}
+
+table EntityTypeManager {
+  id_to_set_of_ids : [EntityTypeIDSet];
+  id_to_name : [EntityTypeIDName];
+}
+

@@ -214,7 +214,11 @@ katana::CreateSrcDestFromViewsForCopy(
   std::vector<std::pair<katana::URI, katana::URI>> src_dst_files;
 
   // List out all the files in a given view
+<<<<<<< HEAD
   auto rdg_views = KATANA_CHECKED(ListViewsOfVersion(src_uri, version));
+=======
+  auto rdg_views = KATANA_CHECKED(katana::ListViewsOfVersion(src_dir, version));
+>>>>>>> 99840fb9a (Move flatbuffers and Arrow storage classes to libtsuba)
   for (const auto& rdg_view : rdg_views.second) {
     auto rdg_manifest_res = katana::RDGManifest::Make(rdg_view.view_path);
     if (!rdg_manifest_res) {

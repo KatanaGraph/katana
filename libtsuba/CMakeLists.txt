@@ -1,8 +1,15 @@
 add_library(katana_tsuba SHARED)
 add_library(Katana::tsuba ALIAS katana_tsuba)
 set_target_properties(katana_tsuba PROPERTIES EXPORT_NAME tsuba)
-
 add_dependencies(lib katana_tsuba)
+
+include(GenerateFlatbuffers)
+
+set(fb_files
+  fbs/storage_operations.fbs
+)
+
+generate_cpp_flatbuffers(tsuba_fb_cpp "${fb_files}")
 
 set(sources
   src/AddProperties.cpp
@@ -30,13 +37,17 @@ set(sources
   src/RDGTopology.cpp
   src/RDGTopologyManager.cpp
   src/ReadGroup.cpp
+  src/StorageBackedArrowArray.cpp
+  src/StorageBackedArrowTable.cpp
   src/TxnContext.cpp
   src/WriteGroup.cpp
-  src/tsuba.cpp
+  src/tsuba.cpp  
+  ${tsuba_fb_cpp}
 )
 
 target_sources(katana_tsuba PRIVATE ${sources})
 
+target_include_directories(katana_tsuba PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(katana_tsuba PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -45,6 +56,7 @@ set_common_katana_library_options(katana_tsuba ALWAYS_SHARED)
 
 target_link_libraries(katana_tsuba PUBLIC katana_support)
 target_link_libraries(katana_tsuba PUBLIC katana_galois)
+target_link_libraries(katana_tsuba PUBLIC flatbuffers::flatbuffers)
 
 if(KATANA_IS_MAIN_PROJECT AND cpp IN_LIST KATANA_LANG_TESTING)
   add_subdirectory(test)

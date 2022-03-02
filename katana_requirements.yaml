@@ -175,6 +175,16 @@ fmt:
   labels:
     - conan
     - conda
+flatc:
+  version: [1.12.0, null]
+  labels:
+    - conan
+    - conda
+flatbuffers:
+  version: [1.12.0, null]
+  labels:
+    - conan
+    - conda
 isort:
   version: [ 5.9.3, 5.10 ]
   labels:

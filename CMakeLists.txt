@@ -44,6 +44,18 @@ if(KATANA_USE_GPU)
   endif()
 endif()
 
+find_package(Flatbuffers REQUIRED)
+
+# TODO (rashid): Replace below `find_program` calls for flatc
+# with find_program(... REQUIRED) when cmake version is bumped to >=3.18
+message(CHECK_START "Looking for flatc")
+find_program(FLATC flatc)
+if(FLATC)
+  message(CHECK_PASS "found ${FLATC}")
+else()
+  message(FATAL_ERROR "Could NOT find flatc")
+endif()
+
 add_subdirectory(libsupport)
 add_subdirectory(libtsuba)
 add_subdirectory(libgalois)
@@ -115,3 +127,4 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   katana_reformat_cpack_dependencies()
   include(CPack)
 endif()
+

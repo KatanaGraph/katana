@@ -21,6 +21,7 @@
 #include "katana/RDG.h"
 #include "katana/RDGTopology.h"
 #include "katana/Result.h"
+#include "katana/StorageBackedArrowTable.h"
 #include "katana/config.h"
 
 namespace katana {

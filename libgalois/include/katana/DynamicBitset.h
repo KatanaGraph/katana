@@ -378,6 +378,15 @@ public:
   std::vector<integer> GetOffsets() const;
 
   /**
+   * Returns a vector containing the set bits in this bitset in order
+   * from left to right; parallel region friendly.
+   *
+   * @returns vector with offsets into set bits
+   */
+  template <typename integer>
+  std::vector<integer> GetOffsetsSerial() const;
+
+  /**
    * Given a vector, appends the set bits in this bitset in order
    * from left to right into the vector.
    * Do NOT call in a parallel region as it uses katana::on_each.
@@ -423,6 +432,12 @@ std::vector<uint32_t> DynamicBitset::GetOffsets() const;
 
 template <>
 std::vector<uint64_t> DynamicBitset::GetOffsets() const;
+
+template <>
+std::vector<uint32_t> DynamicBitset::GetOffsetsSerial() const;
+
+template <>
+std::vector<uint64_t> DynamicBitset::GetOffsetsSerial() const;
 
 template <>
 void DynamicBitset::AppendOffsets(std::vector<uint32_t>* offsets) const;

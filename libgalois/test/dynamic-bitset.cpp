@@ -136,6 +136,106 @@ const Invariant NotValues =
 const std::vector<Invariant> invariants = {NotAndCount, NotValues};
 
 katana::Result<void>
+CountAndOffsetsTest() {
+  int num_threads = 4;
+  katana::setActiveThreads(num_threads);
+
+  std::vector<uint64_t> set_bits;
+  katana::DynamicBitset test_bitset;
+  test_bitset.resize(130);
+
+  //////////////////////////////////////////////////////////////////////////////
+  // single bit
+  //////////////////////////////////////////////////////////////////////////////
+
+  test_bitset.set(64);
+  KATANA_LOG_ASSERT(test_bitset.test(64));
+
+  KATANA_LOG_ASSERT(test_bitset.count() == 1);
+  KATANA_LOG_ASSERT(test_bitset.SerialCount() == 1);
+
+  set_bits = test_bitset.GetOffsets<uint64_t>();
+  KATANA_LOG_ASSERT(set_bits.size() == 1);
+  KATANA_LOG_ASSERT(set_bits[0] == 64);
+  set_bits = test_bitset.GetOffsetsSerial<uint64_t>();
+  KATANA_LOG_ASSERT(set_bits.size() == 1);
+  KATANA_LOG_ASSERT(set_bits[0] == 64);
+
+  //////////////////////////////////////////////////////////////////////////////
+  // two bits
+  //////////////////////////////////////////////////////////////////////////////
+
+  test_bitset.set(63);
+  KATANA_LOG_ASSERT(test_bitset.test(63));
+
+  KATANA_LOG_ASSERT(test_bitset.count() == 2);
+  KATANA_LOG_ASSERT(test_bitset.SerialCount() == 2);
+
+  // offsets are going to be returned ordered
+  set_bits = test_bitset.GetOffsets<uint64_t>();
+  KATANA_LOG_ASSERT(set_bits.size() == 2);
+  KATANA_LOG_ASSERT(set_bits[0] == 63);
+  KATANA_LOG_ASSERT(set_bits[1] == 64);
+  set_bits = test_bitset.GetOffsetsSerial<uint64_t>();
+  KATANA_LOG_ASSERT(set_bits.size() == 2);
+  KATANA_LOG_ASSERT(set_bits[0] == 63);
+  KATANA_LOG_ASSERT(set_bits[1] == 64);
+
+  //////////////////////////////////////////////////////////////////////////////
+  // three bits
+  //////////////////////////////////////////////////////////////////////////////
+
+  test_bitset.set(129);
+  KATANA_LOG_ASSERT(test_bitset.test(129));
+
+  KATANA_LOG_ASSERT(test_bitset.count() == 3);
+  KATANA_LOG_ASSERT(test_bitset.SerialCount() == 3);
+
+  set_bits = test_bitset.GetOffsets<uint64_t>();
+  KATANA_LOG_ASSERT(set_bits.size() == 3);
+  KATANA_LOG_ASSERT(set_bits[0] == 63);
+  KATANA_LOG_ASSERT(set_bits[1] == 64);
+  KATANA_LOG_ASSERT(set_bits[2] == 129);
+  set_bits = test_bitset.GetOffsetsSerial<uint64_t>();
+  KATANA_LOG_ASSERT(set_bits.size() == 3);
+  KATANA_LOG_ASSERT(set_bits[0] == 63);
+  KATANA_LOG_ASSERT(set_bits[1] == 64);
+  KATANA_LOG_ASSERT(set_bits[2] == 129);
+
+  //////////////////////////////////////////////////////////////////////////////
+  // one full int and 2 bits
+  //////////////////////////////////////////////////////////////////////////////
+
+  for (size_t i = 0; i < 64; i++) {
+    test_bitset.set(i);
+  }
+  katana::do_all(katana::iterate(0, 64), [&](auto i) {
+    KATANA_LOG_ASSERT(test_bitset.test(i));
+  });
+
+  KATANA_LOG_ASSERT(test_bitset.count() == 66);
+  KATANA_LOG_ASSERT(test_bitset.SerialCount() == 66);
+
+  set_bits = test_bitset.GetOffsets<uint64_t>();
+  KATANA_LOG_ASSERT(set_bits.size() == 66);
+  for (size_t i = 0; i < 64; i++) {
+    KATANA_LOG_ASSERT(set_bits[i] == i);
+  }
+  KATANA_LOG_ASSERT(set_bits[64] == 64);
+  KATANA_LOG_ASSERT(set_bits[65] == 129);
+
+  set_bits = test_bitset.GetOffsetsSerial<uint64_t>();
+  KATANA_LOG_ASSERT(set_bits.size() == 66);
+  for (size_t i = 0; i < 64; i++) {
+    KATANA_LOG_ASSERT(set_bits[i] == i);
+  }
+  KATANA_LOG_ASSERT(set_bits[64] == 64);
+  KATANA_LOG_ASSERT(set_bits[65] == 129);
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
 TestAll() {
   for (const auto& generator : test_case_generators) {
     for (const auto& invariant : invariants) {
@@ -143,6 +243,8 @@ TestAll() {
       KATANA_CHECKED(invariant(&bitset));
     }
   }
+
+  KATANA_CHECKED(CountAndOffsetsTest());
 
   return katana::ResultSuccess();
 }

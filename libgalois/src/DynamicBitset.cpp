@@ -27,6 +27,51 @@
 
 KATANA_EXPORT katana::DynamicBitset katana::EmptyBitset;
 
+namespace {
+// This namespace contains bit tricks
+
+/// Counts the number of set bits in a uint64.
+inline uint64_t
+CountSetBits(uint64_t int_to_count) {
+#ifdef __GNUC__
+  return __builtin_popcountll(int_to_count);
+#else
+  int_to_count = int_to_count - ((int_to_count >> 1) & 0x5555555555555555UL);
+  int_to_count = (int_to_count & 0x3333333333333333UL) +
+                 ((int_to_count >> 2) & 0x3333333333333333UL);
+  return (((int_to_count + (int_to_count >> 4)) & 0xF0F0F0F0F0F0F0FUL) *
+          0x101010101010101UL) >>
+         56;
+#endif
+}
+
+/// Counts trailing 0s in an int
+inline uint64_t
+CountTrailingZeroes(uint64_t int_to_count) {
+#ifdef __GNUC__
+  return __builtin_ctzll(int_to_count);
+#else
+  // TODO(l-hoang) replace with something more concrete and don't make compiler
+  // optimize (if it optimizes this at all)?
+  uint64_t mask = uint64_t{1};
+  uint8_t current_trailing_zeros = 0;
+
+  while (current_trailing_zeros < 64) {
+    if ((mask & int_to_count) == mask) {
+      return current_trailing_zeros;
+    }
+    mask <<= 1;
+    current_trailing_zeros++;
+  }
+
+  KATANA_LOG_FATAL(
+      "dev error: this function shouldn't have been called with 0");
+  return -1;
+#endif
+}
+
+}  // namespace
+
 void
 katana::DynamicBitset::bitwise_or(const DynamicBitset& other) {
   KATANA_LOG_DEBUG_ASSERT(size() == other.size());
@@ -96,17 +141,7 @@ katana::DynamicBitset::count() const {
   katana::GAccumulator<size_t> ret;
   katana::do_all(
       katana::iterate(bitvec_.begin(), bitvec_.end()),
-      [&](uint64_t n) {
-#ifdef __GNUC__
-        ret += __builtin_popcountll(n);
-#else
-        n = n - ((n >> 1) & 0x5555555555555555UL);
-        n = (n & 0x3333333333333333UL) + ((n >> 2) & 0x3333333333333333UL);
-        ret += (((n + (n >> 4)) & 0xF0F0F0F0F0F0F0FUL) * 0x101010101010101UL) >>
-               56;
-#endif
-      },
-      katana::no_stats());
+      [&](uint64_t n) { ret += CountSetBits(n); }, katana::no_stats());
   return ret.reduce();
 }
 
@@ -114,72 +149,132 @@ size_t
 katana::DynamicBitset::SerialCount() const {
   size_t ret = 0;
   for (uint64_t n : bitvec_) {
-#ifdef __GNUC__
-    ret += __builtin_popcountll(n);
-#else
-    n = n - ((n >> 1) & 0x5555555555555555UL);
-    n = (n & 0x3333333333333333UL) + ((n >> 2) & 0x3333333333333333UL);
-    ret += (((n + (n >> 4)) & 0xF0F0F0F0F0F0F0FUL) * 0x101010101010101UL) >> 56;
-#endif
+    ret += CountSetBits(n);
   }
   return ret;
 }
 
 namespace {
+
 template <typename Integer>
 void
 ComputeOffsets(
-    const katana::DynamicBitset& bitset, std::vector<Integer>* offsets) {
-  // TODO uint32_t is somewhat dangerous; change in the future
-  uint32_t activeThreads = katana::getActiveThreads();
-  std::vector<Integer> tPrefixBitCounts(activeThreads);
+    const katana::DynamicBitset& bitset, std::vector<Integer>* set_elements) {
+  uint32_t active_threads = katana::getActiveThreads();
+  std::vector<Integer> thread_prefix_bit_counts(active_threads);
+
+  const katana::PODVector<katana::DynamicBitset::TItem>& underlying_bitvec =
+      bitset.get_vec();
 
   // count how many bits are set on each thread
   katana::on_each([&](unsigned tid, unsigned nthreads) {
     auto [start, end] =
-        katana::block_range(size_t{0}, bitset.size(), tid, nthreads);
-
+        katana::block_range(size_t{0}, underlying_bitvec.size(), tid, nthreads);
     Integer count = 0;
-    for (Integer i = start; i < end; ++i) {
-      if (bitset.test(i)) {
-        ++count;
-      }
+    for (uint64_t bitvec_index = start; bitvec_index < end; ++bitvec_index) {
+      count += CountSetBits(underlying_bitvec[bitvec_index]);
     }
-
-    tPrefixBitCounts[tid] = count;
+    thread_prefix_bit_counts[tid] = count;
   });
 
   // calculate prefix sum of bits per thread
-  for (uint32_t i = 1; i < activeThreads; ++i) {
-    tPrefixBitCounts[i] += tPrefixBitCounts[i - 1];
+  for (uint32_t i = 1; i < active_threads; ++i) {
+    thread_prefix_bit_counts[i] += thread_prefix_bit_counts[i - 1];
   }
-
   // total num of set bits
-  Integer bitsetCount = tPrefixBitCounts[activeThreads - 1];
+  Integer bitset_count = thread_prefix_bit_counts[active_threads - 1];
 
   // calculate the indices of the set bits and save them to the offset
   // vector
-  if (bitsetCount > 0) {
-    size_t cur_size = offsets->size();
-    offsets->resize(cur_size + bitsetCount);
+  if (bitset_count > 0) {
+    size_t cur_size = set_elements->size();
+    set_elements->resize(cur_size + bitset_count);
+
     katana::on_each([&](unsigned tid, unsigned nthreads) {
-      auto [start, end] =
-          katana::block_range(size_t{0}, bitset.size(), tid, nthreads);
+      auto [start, end] = katana::block_range(
+          size_t{0}, underlying_bitvec.size(), tid, nthreads);
+
       Integer index = cur_size;
       if (tid != 0) {
-        index += tPrefixBitCounts[tid - 1];
+        index += thread_prefix_bit_counts[tid - 1];
       }
 
-      for (Integer i = start; i < end; ++i) {
-        if (bitset.test(i)) {
-          offsets->at(index) = i;
-          ++index;
+      for (uint64_t bitvec_index = start; bitvec_index < end; ++bitvec_index) {
+        // get set bits and add
+        uint64_t current_num = underlying_bitvec[bitvec_index];
+        uint64_t offset =
+            bitvec_index * katana::DynamicBitset::kNumBitsInUint64;
+
+        if (current_num == 0) {
+          // nothing to add
+          continue;
+        }
+
+        if (current_num == 1) {
+          // trailing 0s indicate location of set bit
+          set_elements->at(index++) = offset + CountTrailingZeroes(current_num);
+        } else if (current_num == std::numeric_limits<uint64_t>::max()) {
+          // add all
+          for (size_t i = 0; i < katana::DynamicBitset::kNumBitsInUint64; i++) {
+            set_elements->at(index++) = offset + i;
+          }
+        } else {
+          // add only set parts
+          for (size_t i = 0; i < katana::DynamicBitset::kNumBitsInUint64; i++) {
+            if (bitset.test(offset + i)) {
+              set_elements->at(index++) = offset + i;
+            }
+          }
         }
       }
     });
   }
 }
-}  //namespace
+
+template <typename Integer>
+void
+ComputeOffsetsSerial(
+    const katana::DynamicBitset& bitset, std::vector<Integer>* set_elements) {
+  const katana::PODVector<katana::DynamicBitset::TItem>& underlying_bitvec =
+      bitset.get_vec();
+  set_elements->reserve(bitset.SerialCount());
+
+  // loop through each int of the bitset invidiually
+  for (size_t bit_index = 0; bit_index < underlying_bitvec.size();
+       bit_index++) {
+    uint64_t int_to_examine = underlying_bitvec[bit_index];
+
+    if (int_to_examine == 0) {
+      // nothing set, skip
+      continue;
+    }
+
+    uint64_t offset = bit_index * katana::DynamicBitset::kNumBitsInUint64;
+
+    // TODO(l-hoang) optimize 63 set bits case? (find only 0, add the rest)
+    // optimize special corner cases case
+    if (int_to_examine == 1) {
+      // find trailing zeros gets you the set bit without needing to loop over
+      // all 64 bits
+      set_elements->emplace_back(offset + CountTrailingZeroes(int_to_examine));
+    } else if (int_to_examine == std::numeric_limits<uint64_t>::max()) {
+      // all set: add all, no testing required
+      for (size_t i = 0; i < katana::DynamicBitset::kNumBitsInUint64; i++) {
+        set_elements->emplace_back(offset + i);
+      }
+    } else {
+      // loop through all; hope is that this is rare
+      // TODO(l-hoang) is there a better way to do this, i.e. is test required?
+      for (size_t i = 0; i < katana::DynamicBitset::kNumBitsInUint64; i++) {
+        if (bitset.test(offset + i)) {
+          set_elements->emplace_back(offset + i);
+        }
+      }
+    }
+  }
+}
+
+}  // namespace
 
 template <>
 std::vector<uint32_t>
@@ -194,6 +289,22 @@ std::vector<uint64_t>
 katana::DynamicBitset::GetOffsets<uint64_t>() const {
   std::vector<uint64_t> offsets;
   ComputeOffsets<uint64_t>(*this, &offsets);
+  return offsets;
+}
+
+template <>
+std::vector<uint32_t>
+katana::DynamicBitset::GetOffsetsSerial<uint32_t>() const {
+  std::vector<uint32_t> offsets;
+  ComputeOffsetsSerial<uint32_t>(*this, &offsets);
+  return offsets;
+}
+
+template <>
+std::vector<uint64_t>
+katana::DynamicBitset::GetOffsetsSerial<uint64_t>() const {
+  std::vector<uint64_t> offsets;
+  ComputeOffsetsSerial<uint64_t>(*this, &offsets);
   return offsets;
 }
 

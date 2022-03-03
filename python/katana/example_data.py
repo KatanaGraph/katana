@@ -112,6 +112,7 @@ def _get_dataset(rel_path):
     max_attempts = 5
     invalidate_cache = False
     last_exception = None
+    path = None
 
     for count in range(max_attempts + 1):
         try:

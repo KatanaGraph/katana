@@ -10,6 +10,7 @@ const TestCaseGenerator TestBitsetEmpty = []() {
   return test;
 };
 
+// shorter than the size of one betvec entry
 const TestCaseGenerator TestBitsetOne = []() {
   katana::DynamicBitset test;
   test.resize(32);
@@ -22,8 +23,60 @@ const TestCaseGenerator TestBitsetOne = []() {
   return test;
 };
 
+// longer than the size of one betvec entry
+const TestCaseGenerator TestBitsetTwo = []() {
+  katana::DynamicBitset test;
+  test.resize(74);
+  test.reset();
+
+  for (size_t i = 0; i < test.size(); i += 3) {
+    test.set(i);
+  }
+
+  return test;
+};
+
+// only set first and last
+const TestCaseGenerator TestBitsetThree = []() {
+  katana::DynamicBitset test;
+  test.resize(74);
+  test.reset();
+
+  test.set(0);
+  test.set(73);
+
+  return test;
+};
+
+// big
+const TestCaseGenerator TestBitsetFour = []() {
+  katana::DynamicBitset test;
+  test.resize(12345);
+  test.reset();
+
+  for (size_t i = 0; i < test.size(); i += 3) {
+    test.set(i);
+  }
+
+  return test;
+};
+
+// exactly one bitvec entry
+const TestCaseGenerator TestBitsetFive = []() {
+  katana::DynamicBitset test;
+  test.resize(64);
+  test.reset();
+
+  for (size_t i = 0; i < test.size(); i += 3) {
+    test.set(i);
+  }
+
+  return test;
+};
+
 const std::vector<TestCaseGenerator> test_case_generators = {
-    TestBitsetEmpty, TestBitsetOne};
+    TestBitsetEmpty, TestBitsetOne,  TestBitsetTwo,
+    TestBitsetThree, TestBitsetFour, TestBitsetFive};
 
 const Invariant NotAndCount =
     [](katana::DynamicBitset* test) -> katana::Result<void> {
@@ -44,7 +97,43 @@ const Invariant NotAndCount =
   return katana::ResultSuccess();
 };
 
-const std::vector<Invariant> invariants = {NotAndCount};
+const Invariant NotValues =
+    [](katana::DynamicBitset* test) -> katana::Result<void> {
+  katana::DynamicBitset other;
+  other.resize(test->size());
+  other.reset();
+  for (size_t i = 0, size = test->size(); i < size; ++i) {
+    if (test->test(i)) {
+      other.set(i);
+    }
+  }
+
+  other.bitwise_not();
+
+  for (size_t i = 0, size = test->size(); i < size; ++i) {
+    if (test->test(i)) {
+      if (other.test(i)) {
+        return KATANA_ERROR(
+            katana::ErrorCode::AssertionFailed,
+            "bitwise_not failed to invert a bit - bit {} is set in original "
+            "bitset and also in notted bitset",
+            i);
+      }
+    } else {
+      if (!other.test(i)) {
+        return KATANA_ERROR(
+            katana::ErrorCode::AssertionFailed,
+            "bitwise_not failed to invert a bit - bit {} is not set in "
+            "original bitset and also not set in notted bitset",
+            i);
+      }
+    }
+  }
+
+  return katana::ResultSuccess();
+};
+
+const std::vector<Invariant> invariants = {NotAndCount, NotValues};
 
 katana::Result<void>
 TestAll() {
@@ -57,6 +146,7 @@ TestAll() {
 
   return katana::ResultSuccess();
 }
+
 }  // namespace
 
 int

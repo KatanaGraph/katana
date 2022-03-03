@@ -127,8 +127,10 @@ class KATANA_EXPORT DynamicBitsetSlow {
 
       size_t last_entry_offset =
           size() % (CHAR_BIT * sizeof(decltype(bitvec_)::value_type));
-      uint64_t last_entry_mask = (1UL << last_entry_offset) - 1;
-      bitvec_.back() = bitvec_.back() & last_entry_mask;
+      if (last_entry_offset != 0) {
+        uint64_t last_entry_mask = (1UL << last_entry_offset) - 1;
+        bitvec_.back() = bitvec_.back() & last_entry_mask;
+      }
     }
   }
 

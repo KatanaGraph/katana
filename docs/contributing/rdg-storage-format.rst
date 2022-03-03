@@ -58,14 +58,15 @@ This process will be largely determined by what new data structures are being pe
 #. Figure out the in-memory representation of the feature. Figure out how the in-memory representation will be generated from when an RDG without the new data structures is loaded.
 #. Add support for persisting the in-memory representation on disk in the RDG. Gate persisting these new data structures behind `KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat);`. When `UnstableRDGStorageFormat` is not set, the persisted RDG should look exactly like an RDG without support for the new data structures.
 #. Add support for loading the new data structures. Gate loading these new data structures behind `KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat);`. When `UnstableRDGStorageFormat` is not set, the code should behave like it loaded an RDG without the new data structures.
-#. Write tests for storing/load the new feature.
+#. Write tests for storing/loading the new feature.
 #. Stabilize the features in-memory representation
 #. Stabilize the features on-disk representation
 #. When the representations are sufficiently stable
 
    #. increase the `kLatestPartitionStorageFormatVersion` in `RDGStorageFormatVersion.h`.
    #. Mirror this change for `KATANA_RDG_STORAGE_FORMAT_VERSION` in `TestDatasets.cmake`
-   #. uprev the rdgs in the `test-datasets` repo https://github.com/KatanaGraph/test-datasets
+   #. uprev the rdgs in the `test-datasets` repo, follow the README in https://github.com/KatanaGraph/test-datasets
    #. update the version of `test-datasets` used by Katana
    #. update the `DATASETS_SHA` with the newest master sha from `test-datasets` in `example_data.py`
+   #. let the red-team/QA know that the storage format version was bumped, so that they may regenerate their datasets
 

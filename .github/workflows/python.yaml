@@ -318,7 +318,7 @@ jobs:
         if [ "${{ steps.filter.outputs.python }}" == "true" ]
         then
            . .github/workflows/activate_miniconda.sh
-           ./scripts/check_python_docstrings.sh ${{ steps.filter.outputs.python_files }}
+           pydocstyle --config=./pyproject.toml ${{ steps.filter.outputs.python_files }}
         else
            echo "No Python files were changed."
         fi

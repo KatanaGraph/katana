@@ -597,6 +597,19 @@ public:
   /// std::string PrintTypes() IS A TESTING ONLY FUNCTION, DO NOT EXPOSE THIS TO THE USER
   std::string PrintEntityTypes() const;
 
+  size_t ApproxByteCount() const {
+    size_t count = 0;
+    count += atomic_entity_type_id_to_type_name_.size() *
+             sizeof(EntityTypeIDToAtomicTypeNameMap::value_type);
+    count += atomic_type_name_to_entity_type_id_.size() *
+             sizeof(AtomicTypeNameToEntityTypeIDMap::value_type);
+    count += entity_type_id_to_atomic_entity_type_ids_.size() *
+             sizeof(EntityTypeIDToSetOfEntityTypeIDsMap::value_type);
+    count += atomic_entity_type_id_to_entity_type_ids_.size() *
+             sizeof(EntityTypeIDToSetOfEntityTypeIDsMap::value_type);
+    return count;
+  }
+
 private:
   static Result<void> ValidateDictBitset(
       const katana::EntityTypeIDToSetOfEntityTypeIDsMap& manager_map,

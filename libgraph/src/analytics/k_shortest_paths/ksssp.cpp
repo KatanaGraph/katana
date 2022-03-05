@@ -591,6 +591,8 @@ katana::analytics::KssspStatistics::Print() const {
   std::unique_ptr<katana::ParquetWriter> writer = KATANA_CHECKED_CONTEXT(
       katana::ParquetWriter::Make(table, opts), "write result");
   KATANA_CHECKED_CONTEXT(writer->WriteToUri(uri.value()), "write result");
+
+  return katana::ResultSuccess();
 }
 
 katana::Result<katana::analytics::KssspStatistics>

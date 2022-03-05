@@ -583,14 +583,14 @@ katana::analytics::Ksssp(
 katana::Result<void>
 katana::analytics::KssspStatistics::Print() const {
   // katana::URI uri = KATANA_CHECKED(URI::Make("./output.txt"));
-  katana::URI uri = KATANA_CHECKED(katana::URI::Make("./output.txt"));
+  auto uri = katana::URI::Make("./output.txt");
   auto opts = katana::ParquetWriter::WriteOpts::Defaults();
   opts.parquet_version = parquet::ParquetVersion::PARQUET_1_0;
   opts.data_page_version = parquet::ParquetDataPageVersion::V1;
 
   std::unique_ptr<katana::ParquetWriter> writer = KATANA_CHECKED_CONTEXT(
       katana::ParquetWriter::Make(table, opts), "write result");
-  KATANA_CHECKED_CONTEXT(writer->WriteToUri(uri), "write result");
+  KATANA_CHECKED_CONTEXT(writer->WriteToUri(uri.value()), "write result");
 }
 
 katana::Result<katana::analytics::KssspStatistics>

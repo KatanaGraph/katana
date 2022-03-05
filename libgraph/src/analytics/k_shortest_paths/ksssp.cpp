@@ -580,9 +580,9 @@ katana::analytics::Ksssp(
   }
 }
 
-void
+katana::Result<void>
 katana::analytics::KssspStatistics::Print() const {
-  katana::URI uri = KATANA_CHECKED(URI::Make("./output"));
+  katana::URI uri = KATANA_CHECKED(URI::Make("./output.txt"));
   auto opts = katana::ParquetWriter::WriteOpts::Defaults();
   opts.parquet_version = parquet::ParquetVersion::PARQUET_1_0;
   opts.data_page_version = parquet::ParquetDataPageVersion::V1;

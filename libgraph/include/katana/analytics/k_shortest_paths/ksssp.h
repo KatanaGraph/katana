@@ -90,7 +90,6 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::Table>> Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
     const bool& is_symmetric, katana::TxnContext* txn_ctx, KssspPlan plan = {});
-}  // namespace katana::analytics
 
 /// TODO: Add KssspAssertValid(?)
 
@@ -101,5 +100,8 @@ struct KATANA_EXPORT KssspStatistics {
 
   static katana::Result<KssspStatistics> Compute(
       std::shared_ptr<arrow::Table> table);
-}
+};
+
+}  // namespace katana::analytics
+
 #endif

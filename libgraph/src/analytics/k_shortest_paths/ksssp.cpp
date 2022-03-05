@@ -312,7 +312,7 @@ void GetPath(const Path* path, arrow::UInt64Builder& builder) {
  * @param plan Algorithm to get path
  */
 template <typename GraphTy, typename Weight>
-katana::Result<void>
+katana::Result<std::shared_ptr<arrow::Table>>
 KssspImpl(
     GraphTy graph, size_t start_node, size_t report_node, size_t num_paths,
     KssspPlan plan) {
@@ -412,8 +412,6 @@ KssspImpl(
   auto schema = std::make_shared<arrow::Schema>(schema_vector);
   std::shared_ptr<arrow::Array> arr = {};
 
-  std::shared_ptr<arrow::Table> table;
-
   if (reachable) {
     std::multimap<Weight, Path*> paths_map;
     std::unique_ptr<arrow::ArrayBuilder> builder;
@@ -453,9 +451,7 @@ KssspImpl(
     });
   } 
 
-  table = arrow::Table::Make(schema, {arr});
-
-  return katana::ResultSuccess();
+  return arrow::Table::Make(schema, {arr});
 }
 
 /**
@@ -470,7 +466,7 @@ KssspImpl(
  * @param plan Algorithm to get path
  */
 template <typename Weight>
-katana::Result<void>
+katana::Result<std::shared_ptr<arrow::Table>>
 kSSSPWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
@@ -524,7 +520,7 @@ kSSSPWithWrap(
  * @param is_symmetric Whether or not the path is symmetric
  * @param plan Algorithm to get path
  */
-katana::Result<void>
+katana::Result<std::shared_ptr<arrow::Table>>
 katana::analytics::Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,

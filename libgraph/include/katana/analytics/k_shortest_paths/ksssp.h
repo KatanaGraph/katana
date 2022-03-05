@@ -86,7 +86,7 @@ public:
 /// Compute the K Shortest Path for pg starting from start_node.
 /// The algorithm and delta stepping
 /// parameter can be specified, but have reasonable defaults.
-KATANA_EXPORT Result<void> Ksssp(
+katana::Result<std::shared_ptr<arrow::Table>> Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
     const bool& is_symmetric, katana::TxnContext* txn_ctx, KssspPlan plan = {});

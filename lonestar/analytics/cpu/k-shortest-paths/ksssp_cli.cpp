@@ -183,6 +183,15 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("failed to run ksssp: {}", pg_result.error());
   }
 
+  auto stats_result = KssspStatistics::Compute(pg_result);
+  if (!stats_result) {
+    KATANA_LOG_FATAL(
+        "Failed to compute Ksssp statistics: {}",
+        stats_result.error());
+  }
+  auto stats = stats_result.value();
+  stats.Print();
+
   totalTime.stop();
 
   return 0;

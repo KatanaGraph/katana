@@ -92,4 +92,14 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::Table>> Ksssp(
     const bool& is_symmetric, katana::TxnContext* txn_ctx, KssspPlan plan = {});
 }  // namespace katana::analytics
 
+/// TODO: Add KssspAssertValid(?)
+
+struct KATANA_EXPORT KssspStatistics {
+  std::shared_ptr<arrow::Table> table;
+
+  void Print() const;
+
+  static katana::Result<KssspStatistics> Compute(
+      std::shared_ptr<arrow::Table> table);
+}
 #endif

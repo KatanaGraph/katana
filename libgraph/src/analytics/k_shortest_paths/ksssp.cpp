@@ -578,3 +578,21 @@ katana::analytics::Ksssp(
             ->ToString());
   }
 }
+
+void
+katana::analytics::KssspStatistics::Print() const {
+  katana::URI uri = KATANA_CHECKED(URI::Make("./output"));
+  auto opts = katana::ParquetWriter::WriteOpts::Defaults();
+  opts.parquet_version = parquet::ParquetVersion::PARQUET_1_0;
+  opts.data_page_version = parquet::ParquetDataPageVersion::V1;
+
+  std::unique_ptr<katana::ParquetWriter> writer = KATANA_CHECKED_CONTEXT(
+    katana::ParquetWriter::Make(table, opts), "write result");
+  KATANA_CHECKED_CONTEXT(writer->WriteToUri(uri), "write result");
+}
+
+katana::Result<katana::analytics::KssspStatistics>
+katana::analytics::KssspStatistics::Compute(
+    std::shared_ptr<arrow::Table> table) {
+  return KssspStatistics{table};
+}

@@ -20,6 +20,7 @@
 #include "katana/analytics/k_shortest_paths/ksssp.h"
 
 #include "katana/AtomicHelpers.h"
+#include "katana/ParquetWriter.h"
 #include "katana/Reduction.h"
 #include "katana/Statistics.h"
 #include "katana/TypedPropertyGraph.h"
@@ -587,7 +588,7 @@ katana::analytics::KssspStatistics::Print() const {
   opts.data_page_version = parquet::ParquetDataPageVersion::V1;
 
   std::unique_ptr<katana::ParquetWriter> writer = KATANA_CHECKED_CONTEXT(
-    katana::ParquetWriter::Make(table, opts), "write result");
+      katana::ParquetWriter::Make(table, opts), "write result");
   KATANA_CHECKED_CONTEXT(writer->WriteToUri(uri), "write result");
 }
 

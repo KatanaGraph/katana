@@ -17,8 +17,6 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include <arrow/api.h>
-#include <arrow/result.h>
 #include <iostream>
 
 #include "Lonestar/BoilerPlate.h"

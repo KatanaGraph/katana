@@ -294,6 +294,14 @@ PrintPath(const Path* path) {
   katana::gPrint(" ", path->parent);
 }
 
+void GetPath(const Path* path, dynamic_cast<arrow::UInt64Builder&> builder) {
+  if (path->last != nullptr) {
+    GetPath(path->last, builder);
+  }
+
+  KATANA_CHECKED(builder.Append(path->parent));
+}
+
 /**
  * Sets up and runs implementation of ksssp
  *
@@ -398,12 +406,32 @@ KssspImpl(
   execTime.stop();
   page_alloc.Report();
 
+  std::vector<std::shared_ptr<arrow::Field>> schema_vector = {
+      arrow::field("path", arrow::large_list(arrow::uint64()))
+  };
+  auto schema = std::make_shared<arrow::Schema>(schema_vector);
+  std::shared_ptr<arrow::Array>> arr = {}
+
+  std::shared_ptr<arrow::Table> table;
+
   if (reachable) {
     std::multimap<Weight, Path*> paths_map;
+    std::unique_ptr<arrow::ArrayBuilder> builder;
+    KATANA_CHECKED(arrow::MakeBuilder(
+        arrow::default_memory_pool(), arrow::large_list(arrow::uint64()), 
+        &builder));
+    auto& outer_builder = dynamic_cast<arrow::LargeListBuilder&>(*builder);
+    auto& inner_builder = 
+        dynamic_cast<arrow::UInt64Builder&>(*(outer_builder.value_builder()));
 
     for (auto pair : paths) {
       paths_map.insert(std::make_pair(pair.first, pair.second));
+      KATANA_CHECKED(outer_builder.Append());
+
+      GetPath(pair->second, inner_builder);
     }
+
+    arr = KATANA_CHECKED(builder->Finish());
 
     katana::gPrint("Node ", report, " has these k paths:\n");
 
@@ -423,7 +451,9 @@ KssspImpl(
     katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
       path_alloc.DeletePath(p);
     });
-  }
+  } 
+
+  table = arrow::Table::Make(schema, {arr});
 
   return katana::ResultSuccess();
 }

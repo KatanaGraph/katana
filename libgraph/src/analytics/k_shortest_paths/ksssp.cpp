@@ -294,7 +294,7 @@ PrintPath(const Path* path) {
   katana::gPrint(" ", path->parent);
 }
 
-void GetPath(const Path* path, dynamic_cast<arrow::UInt64Builder&> builder) {
+void GetPath(const Path* path, arrow::UInt64Builder& builder) {
   if (path->last != nullptr) {
     GetPath(path->last, builder);
   }

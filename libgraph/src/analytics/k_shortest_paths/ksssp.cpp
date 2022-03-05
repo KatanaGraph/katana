@@ -410,7 +410,7 @@ KssspImpl(
       arrow::field("path", arrow::large_list(arrow::uint64()))
   };
   auto schema = std::make_shared<arrow::Schema>(schema_vector);
-  std::shared_ptr<arrow::Array>> arr = {}
+  std::shared_ptr<arrow::Array> arr = {}
 
   std::shared_ptr<arrow::Table> table;
 

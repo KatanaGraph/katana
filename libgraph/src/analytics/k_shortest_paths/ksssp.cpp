@@ -428,7 +428,7 @@ KssspImpl(
       paths_map.insert(std::make_pair(pair.first, pair.second));
       KATANA_CHECKED(outer_builder.Append());
 
-      GetPath(pair->second, inner_builder);
+      GetPath(pair.second, inner_builder);
     }
 
     arr = KATANA_CHECKED(builder->Finish());

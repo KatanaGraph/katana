@@ -299,7 +299,7 @@ void GetPath(const Path* path, arrow::UInt64Builder& builder) {
     GetPath(path->last, builder);
   }
 
-  KATANA_CHECKED(builder.Append(path->parent));
+  builder.Append(path->parent);
 }
 
 /**

@@ -581,7 +581,7 @@ katana::analytics::Ksssp(
 }
 
 void
-katana::analytics::KssspStatistics::Print(const std::ostream& os) const {
+katana::analytics::KssspStatistics::Print(std::ostream& os) const {
   auto paths = std::static_pointer_cast<arrow::ListArray>(table->column(0)->chunk(0));
   auto path = std::static_pointer_cast<arrow::UInt64Array>(paths->values());
   const uint64_t* ptr = path->raw_values();

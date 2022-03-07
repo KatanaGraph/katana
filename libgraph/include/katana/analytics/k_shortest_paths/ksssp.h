@@ -102,6 +102,7 @@ struct KATANA_EXPORT KssspStatistics {
   };
 
   std::vector<PathStats> paths;
+  size_t report_node;
 
   void Print(std::ostream& os = std::cout) const;
 

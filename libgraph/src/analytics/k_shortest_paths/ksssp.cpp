@@ -427,7 +427,7 @@ KssspImpl(
       paths_map.insert(std::make_pair(pair.first, pair.second));
       KATANA_CHECKED(outer_builder.Append());
 
-      GetPath(pair.second, inner_builder);
+      GetPath(pair.second->last, inner_builder);
       inner_builder.Append(report);
     }
 
@@ -583,11 +583,12 @@ katana::analytics::Ksssp(
 
 void
 katana::analytics::KssspStatistics::Print(std::ostream& os) const {
+  os << "Node " << report_node << " has these k paths:" << std::endl;
   for (katana::analytics::KssspStatistics::PathStats path : paths) {
     for (uint64_t node : path.path) {
       os << " " << node;
     }
-    os << std::endl << "Weight " << path.weight << std::endl;
+    os << std::endl << "Weight: " << path.weight << std::endl;
   }
 }
 
@@ -615,7 +616,7 @@ ComputeStatistics(
     j++;
   }
 
-  return KssspStatistics{paths};
+  return KssspStatistics{paths, report_node};
 }
 
 template <typename Weight>

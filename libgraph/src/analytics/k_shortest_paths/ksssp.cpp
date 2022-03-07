@@ -583,18 +583,31 @@ katana::analytics::Ksssp(
 
 void
 katana::analytics::KssspStatistics::Print(std::ostream& os) const {
-  auto paths = std::static_pointer_cast<arrow::ListArray>(table->column(0)->chunk(0));
-  auto path = std::static_pointer_cast<arrow::UInt64Array>(paths->values());
-  int64_t i = 0;
-  while (!path->IsNull(i)) {
-    os << path->Value(i) << " ";
-    i++;
+  for (std::vector<uint64_t> path : paths) {
+    for (uint64_t node : path) {
+      os << node << " ";
+    }
+    os << std::endl;
   }
-  os << std::endl;
 }
 
 katana::Result<katana::analytics::KssspStatistics>
 katana::analytics::KssspStatistics::Compute(
-    std::shared_ptr<arrow::Table> table) {
-  return KssspStatistics{table};
+    std::shared_ptr<arrow::Table> table, size_t report_node) {
+  std::vector<std::vector<uint64_t>> paths = {};
+  auto all_nodes = std::static_pointer_cast<arrow::UInt64Array>(table->column(0)->chunk(0)->values());
+  uint64_t i = 0;
+  while (i < table.rows()) {
+    std::vector<uint64_t> path = {}
+    uint64_t j = 0;
+    while (all_nodes->Value(j) != report_node) {
+      path.push_back(all_nodes->Value(j));
+      j++;
+    }
+    path.push_back(report_node);
+    i++;
+    paths.push_back(path);
+  }
+
+  return KssspStatistics{paths};
 }

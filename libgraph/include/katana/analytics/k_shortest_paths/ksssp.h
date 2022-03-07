@@ -96,12 +96,12 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::Table>> Ksssp(
 /// TODO: Add KssspAssertValid(?)
 
 struct KATANA_EXPORT KssspStatistics {
-  std::shared_ptr<arrow::Table> table;
+  std::vector<std::vector<<uint64_t>> paths;
 
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KssspStatistics> Compute(
-      std::shared_ptr<arrow::Table> table);
+      std::shared_ptr<arrow::Table> table, size_t report_node);
 };
 
 }  // namespace katana::analytics

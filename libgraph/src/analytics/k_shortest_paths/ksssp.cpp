@@ -428,6 +428,7 @@ KssspImpl(
       KATANA_CHECKED(outer_builder.Append());
 
       GetPath(pair.second, inner_builder);
+      inner_builder.Append(report);
     }
 
     arr = KATANA_CHECKED(builder->Finish());
@@ -590,7 +591,7 @@ katana::analytics::KssspStatistics::Print(std::ostream& os) const {
   } */
   int64_t i = 0;
   while (!path->IsNull(i)) {
-    os << path->Value(i);
+    os << path->Value(i) << " ";
     i++;
   }
   os << std::endl;

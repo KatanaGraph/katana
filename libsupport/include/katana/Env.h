@@ -20,7 +20,7 @@ KATANA_EXPORT bool GetEnv(const std::string& var_name);
 /// \param var_name name of the variable
 /// \param[out] ret where to store the value of environment variable
 /// \return true if environment variable set and value was successfully parsed;
-///   false otherwise
+///   false otherwise (with no change to value pointed to by \p ret)
 KATANA_EXPORT bool GetEnv(const std::string& var_name, bool* ret);
 KATANA_EXPORT bool GetEnv(const std::string& var_name, int* ret);
 KATANA_EXPORT bool GetEnv(const std::string& var_name, double* ret);

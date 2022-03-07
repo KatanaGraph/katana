@@ -24,6 +24,15 @@ public:
   static Result<URI> MakeFromFile(const std::string& str);
   /// Append a '-' and then a random string to input
   static Result<URI> MakeRand(const std::string& str);
+  /// Make a URI for a local user-configurable temporary directory
+  /// The URI will encode "/tmp" unless one of the following environment
+  /// variables is set (later list entries overrule previous entries):
+  /// 1. TMP
+  /// 2. TMPDIR
+  /// 3. KATANA_TMPDIR
+  /// The contents of the "most senior" set variable from this list will be used
+  /// if any are set.
+  static Result<URI> MakeTempDir();
 
   static std::string JoinPath(const std::string& dir, const std::string& file);
 
@@ -60,6 +69,8 @@ public:
   /// generate a new uri that is this uri with `prefix-XXXXX` appended where
   /// XXXX is a random alpha numeric string
   URI RandFile(std::string_view prefix) const;
+  /// An overload of RandFile provided for clarity at call sites
+  URI RandSubdir(std::string_view prefix) const { return RandFile(prefix); }
 
   URI operator+(char rhs) const;
   URI operator+(const std::string& rhs) const;

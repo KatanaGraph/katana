@@ -9,6 +9,7 @@
 
 #include <fmt/format.h>
 
+#include "katana/Env.h"
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Random.h"
@@ -269,6 +270,18 @@ katana::URI::MakeRand(const std::string& str) {
     return res.error();
   }
   return res.value();
+}
+
+katana::Result<katana::URI>
+katana::URI::MakeTempDir() {
+  std::string tmp_dir = "/tmp";
+
+  // NB: these are intended to be ordered by increasing specificity
+  GetEnv("TMP", &tmp_dir);
+  GetEnv("TMPDIR", &tmp_dir);
+  GetEnv("KATANA_TMPDIR", &tmp_dir);
+
+  return KATANA_CHECKED(Make(tmp_dir));
 }
 
 std::string

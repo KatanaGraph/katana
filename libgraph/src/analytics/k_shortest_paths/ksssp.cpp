@@ -281,20 +281,6 @@ DeltaStepAlgo(
   }
 }
 
-/**
- * Prints all paths recursively
- *
- * @param path all paths found
- */
-void
-PrintPath(const Path* path) {
-  if (path->last != nullptr) {
-    PrintPath(path->last);
-  }
-
-  katana::gPrint(" ", path->parent);
-}
-
 void GetPath(const Path* path, arrow::UInt64Builder& builder) {
   if (path->last->last != nullptr) {
     GetPath(path->last, builder);
@@ -414,7 +400,6 @@ KssspImpl(
   std::shared_ptr<arrow::Array> arr = {};
 
   if (reachable) {
-    std::multimap<Weight, Path*> paths_map;
     std::unique_ptr<arrow::ArrayBuilder> builder;
     KATANA_CHECKED(arrow::MakeBuilder(
         arrow::default_memory_pool(), arrow::large_list(arrow::uint64()), 
@@ -424,7 +409,6 @@ KssspImpl(
         dynamic_cast<arrow::UInt64Builder&>(*(outer_builder.value_builder()));
 
     for (auto pair : paths) {
-      paths_map.insert(std::make_pair(pair.first, pair.second));
       KATANA_CHECKED(outer_builder.Append());
 
       GetPath(pair.second, inner_builder);
@@ -432,21 +416,6 @@ KssspImpl(
     }
 
     arr = KATANA_CHECKED(builder->Finish());
-
-    katana::gPrint("Node ", report, " has these k paths:\n");
-
-    uint32_t num =
-        (paths_map.size() > num_paths) ? num_paths : paths_map.size();
-
-    auto it_report = paths_map.begin();
-
-    for (uint32_t iter = 0; iter < num; iter++) {
-      const Path* path = it_report->second;
-      PrintPath(path);
-      katana::gPrint(" ", report, "\n");
-      katana::gPrint("Weight: ", it_report->first, "\n");
-      it_report++;
-    }
 
     katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
       path_alloc.DeletePath(p);

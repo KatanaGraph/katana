@@ -96,7 +96,7 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::Table>> Ksssp(
 struct KATANA_EXPORT KssspStatistics {
   std::shared_ptr<arrow::Table> table;
 
-  katana::Result<void> Print() const;
+  void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KssspStatistics> Compute(
       std::shared_ptr<arrow::Table> table);

@@ -580,19 +580,15 @@ katana::analytics::Ksssp(
   }
 }
 
-katana::Result<void>
-katana::analytics::KssspStatistics::Print() const {
-  // katana::URI uri = KATANA_CHECKED(URI::Make("./output.txt"));
-  auto uri = URI::Make("./output.txt");
-  auto opts = katana::ParquetWriter::WriteOpts::Defaults();
-  opts.parquet_version = parquet::ParquetVersion::PARQUET_1_0;
-  opts.data_page_version = parquet::ParquetDataPageVersion::V1;
-
-  std::unique_ptr<katana::ParquetWriter> writer = KATANA_CHECKED_CONTEXT(
-      katana::ParquetWriter::Make(table, opts), "write result");
-  KATANA_CHECKED_CONTEXT(writer->WriteToUri(uri.value()), "write result");
-
-  return katana::ResultSuccess();
+void
+katana::analytics::KssspStatistics::Print(const std::ostream& os) const {
+  auto paths = std::static_pointer_cast<arrow::ListArray>(table->column(0)->chunk(0));
+  auto path = std::static_pointer_cast<arrow::UInt64Array>(paths->values());
+  const uint64_t* ptr = path->raw_values();
+  for (int64_t i = 0; i < table->num_rows(); i++) {
+    os::cout << ccv_ptr + paths->value_offset(i);
+  }
+  os::cout << endl;
 }
 
 katana::Result<katana::analytics::KssspStatistics>

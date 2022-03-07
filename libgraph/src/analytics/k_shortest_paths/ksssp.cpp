@@ -622,7 +622,8 @@ template <typename Weight>
 katana::Result<katana::analytics::KssspStatistics>
 ComputeWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
-    std::shared_ptr<arrow::Table> table, size_t report_node, const bool& is_symmetric) {
+    std::shared_ptr<arrow::Table> table, size_t report_node, 
+    const bool& is_symmetric, katana::TxnContext* txn_ctx) {
       static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
   std::vector<TemporaryPropertyGuard> temp_node_properties(2);

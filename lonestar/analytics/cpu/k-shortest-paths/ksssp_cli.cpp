@@ -183,7 +183,8 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("failed to run ksssp: {}", pg_result.error());
   }
 
-  auto stats_result = KssspStatistics::Compute(pg_result.value(), reportNode);
+  auto stats_result = KssspStatistics::Compute(
+      pg_projected_view.get(), pg_result.value(), reportNode, symmetricGraph);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute Ksssp statistics: {}",

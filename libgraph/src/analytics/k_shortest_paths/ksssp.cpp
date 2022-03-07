@@ -583,33 +583,132 @@ katana::analytics::Ksssp(
 
 void
 katana::analytics::KssspStatistics::Print(std::ostream& os) const {
-  for (std::vector<uint64_t> path : paths) {
-    for (uint64_t node : path) {
-      os << node << " ";
+  for (katana::analytics::KssspStatistics::PathStats path : paths) {
+    for (uint64_t node : path.path) {
+      os << " " << node;
     }
-    os << std::endl;
+    os << std::endl << "Weight " << path.weight << std::endl;
   }
 }
 
+template <typename GraphTy, typename Weight>
 katana::Result<katana::analytics::KssspStatistics>
-katana::analytics::KssspStatistics::Compute(
-    std::shared_ptr<arrow::Table> table, size_t report_node) {
-  std::vector<std::vector<uint64_t>> paths = {};
+ComputeStatistics(
+     GraphTy graph, std::shared_ptr<arrow::Table> table, 
+    size_t report_node) {
+  auto pg_result = katana::TypedPropertyGraph<
+
+  std::vector<katana::analytics::KssspStatistics::PathStats> paths = {};
   auto node_list = std::static_pointer_cast<arrow::ListArray>(table->column(0)->chunk(0));
   auto all_nodes = std::static_pointer_cast<arrow::UInt64Array>(node_list->values());
   int64_t i = 0;
   uint64_t j = 0;
   while (i < table->num_rows()) {
     std::vector<uint64_t> path = {};
+    katana::GAccumulator<Weight> weight;
     while (all_nodes->Value(j) != report_node) {
       path.push_back(all_nodes->Value(j));
+      weight += graph->template GetEdgeData<EdgeWeight<Weight>>(all_nodes->Value(j));
       j++;
     }
     path.push_back(report_node);
+    paths.push_back({path, double(weight.reduce())});
     i++;
     j++;
-    paths.push_back(path);
   }
 
   return KssspStatistics{paths};
+}
+
+katana::Result<katana::analytics::KssspStatistics>
+ComputeWithWrap(
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
+    std::shared_ptr<arrow::Table> table, size_t report_node, const bool& is_symmetric) {
+      static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
+
+  std::vector<TemporaryPropertyGuard> temp_node_properties(2);
+  std::generate_n(
+      temp_node_properties.begin(), temp_node_properties.size(),
+      [&]() { return TemporaryPropertyGuard{pg->NodeMutablePropertyView()}; });
+  std::vector<std::string> temp_node_property_names(
+      temp_node_properties.size());
+  std::transform(
+      temp_node_properties.begin(), temp_node_properties.end(),
+      temp_node_property_names.begin(),
+      [](const TemporaryPropertyGuard& p) { return p.name(); });
+
+  KATANA_CHECKED(pg->ConstructNodeProperties<NodeData<Weight>>(
+      txn_ctx, temp_node_property_names));
+
+  if (is_symmetric) {
+    using Graph = katana::TypedPropertyGraphView<
+        katana::PropertyGraphViews::Default, NodeData<Weight>,
+        EdgeData<Weight>>;
+    Graph graph = KATANA_CHECKED(
+        Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
+
+    return KssspImpl<Graph, Weight>(
+        graph, start_node, report_node, num_paths, plan);
+  } else {
+    using Graph = katana::TypedPropertyGraphView<
+        katana::PropertyGraphViews::Undirected, NodeData<Weight>,
+        EdgeData<Weight>>;
+
+    Graph graph = KATANA_CHECKED(
+        Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
+
+    return KssspImpl<Graph, Weight>(
+        graph, table, report_node);
+  }
+}
+
+katana::Result<katana::analytics::KssspStatistics>
+katana::analytics::KssspStatistics::Compute(
+    katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
+    std::shared_ptr<arrow::Table> table, size_t report_node, const bool& is_symmetric) {
+  if (!edge_weight_property_name.empty() &&
+      !pg->HasEdgeProperty(edge_weight_property_name)) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotFound, "Edge Property: {} Not found",
+        edge_weight_property_name);
+  }
+
+  if (edge_weight_property_name.empty()) {
+    TemporaryPropertyGuard temporary_edge_property{
+        pg->EdgeMutablePropertyView()};
+    using EdgeWeightType = int64_t;
+    KATANA_CHECKED(katana::analytics::AddDefaultEdgeWeight<EdgeWeightType>(
+        pg, temporary_edge_property.name(), 1, txn_ctx));
+    return ComputeWithWrap<int64_t>(
+        pg, temporary_edge_property.name(), table, report_node, is_symmetric);
+  }
+
+  switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+              ->type()
+              ->id()) {
+  case arrow::UInt32Type::type_id:
+    return ComputeWithWrap<uint32_t>(
+        pg, edge_weight_property_name, table, report_node, is_symmetric);
+  case arrow::Int32Type::type_id:
+    return ComputeWithWrap<int32_t>(
+        pg, edge_weight_property_name, table, report_node, is_symmetric);
+  case arrow::UInt64Type::type_id:
+    return ComputeWithWrap<uint64_t>(
+        pg, edge_weight_property_name, table, report_node, is_symmetric);
+  case arrow::Int64Type::type_id:
+    return ComputeWithWrap<int64_t>(
+        pg, edge_weight_property_name, table, report_node, is_symmetric);
+  case arrow::FloatType::type_id:
+    return ComputeWithWrap<float>(
+        pg, edge_weight_property_name, table, report_node, is_symmetric);
+  case arrow::DoubleType::type_id:
+    return ComputeWithWrap<double>(
+        pg, edge_weight_property_name, table, report_node, is_symmetric);
+  default:
+    return KATANA_ERROR(
+        katana::ErrorCode::TypeError, "Unsupported type: {}",
+        KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
+            ->type()
+            ->ToString());
+  }
 }

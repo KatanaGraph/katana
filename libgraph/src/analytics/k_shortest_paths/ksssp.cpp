@@ -296,7 +296,7 @@ PrintPath(const Path* path) {
 }
 
 void GetPath(const Path* path, arrow::UInt64Builder& builder) {
-  if (path->last != nullptr) {
+  if (path->last->last != nullptr) {
     GetPath(path->last, builder);
   }
 
@@ -427,7 +427,7 @@ KssspImpl(
       paths_map.insert(std::make_pair(pair.first, pair.second));
       KATANA_CHECKED(outer_builder.Append());
 
-      GetPath(pair.second->last, inner_builder);
+      GetPath(pair.second, inner_builder);
       inner_builder.Append(report);
     }
 

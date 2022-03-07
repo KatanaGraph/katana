@@ -99,7 +99,7 @@ struct KATANA_EXPORT KssspStatistics {
   struct PathStats {
     std::vector<uint64_t> path;
     double weight;
-  }
+  };
 
   std::vector<PathStats> paths;
 

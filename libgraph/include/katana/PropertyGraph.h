@@ -250,17 +250,31 @@ public:
       const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
   /// Make a property graph from topology
-  // [deprecated("please provide a storage prefix")]
-  static Result<std::unique_ptr<PropertyGraph>> Make(
-      GraphTopology&& topo_to_assign);
-
-  /// Make a property graph from topology
   static Result<std::unique_ptr<PropertyGraph>> Make(
       const URI& rdg_dir, GraphTopology&& topo_to_assign);
 
+  /// Make a property graph from topology and associate it with an ephemeral
+  /// storage prefix. This is approximates an in-memory graph.
+  static Result<std::unique_ptr<PropertyGraph>> MakeEphemeral(
+      GraphTopology&& topo_to_assign);
+
+  /// Make a property graph from topology
+  [[deprecated("please provide a storage prefix")]] static Result<
+      std::unique_ptr<PropertyGraph>>
+  Make(GraphTopology&& topo_to_assign);
+
+  /// Make a property graph from topology and type arrays and associate it with
+  /// an ephemeral storage prefix. This approximates an in-memory graph.
+  static Result<std::unique_ptr<PropertyGraph>> MakeEphemeral(
+      GraphTopology&& topo_to_assign, EntityTypeIDArray&& node_entity_type_ids,
+      EntityTypeIDArray&& edge_entity_type_ids,
+      EntityTypeManager&& node_type_manager,
+      EntityTypeManager&& edge_type_manager);
+
   /// Make a property graph from topology and type arrays
-  // [deprecated("please provide a storage prefix")]
-  static Result<std::unique_ptr<PropertyGraph>> Make(
+  [[deprecated("please provide a storage prefix")]] static Result<
+      std::unique_ptr<PropertyGraph>>
+  Make(
       GraphTopology&& topo_to_assign, EntityTypeIDArray&& node_entity_type_ids,
       EntityTypeIDArray&& edge_entity_type_ids,
       EntityTypeManager&& node_type_manager,

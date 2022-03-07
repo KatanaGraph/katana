@@ -13,6 +13,7 @@
 
 #include "katana/Cache.h"
 #include "katana/EntityTypeManager.h"
+#include "katana/EphemeralStoragePrefix.h"
 #include "katana/ErrorCode.h"
 #include "katana/FileFrame.h"
 #include "katana/FileView.h"
@@ -219,6 +220,16 @@ public:
   /// Load the RDG described by the metadata in handle into memory.
   static katana::Result<RDG> Make(RDGHandle handle, const RDGLoadOptions& opts);
 
+  /// Create a RDG with ephemeral backing storage - this is the closest
+  /// supported thing to an in-memory RDG
+  static katana::Result<RDG> MakeEphemeral() {
+    RDG retval;
+    retval.ephemeral_ = KATANA_CHECKED(EphemeralStoragePrefix::Make());
+    retval.set_rdg_dir(retval.ephemeral_->uri());
+
+    return retval;
+  }
+
   /// Inform this RDG of a topology file in storage at this location.
   /// Loads only enough of the topology file into memory so metadata can be extracted.
   /// Marks the topologies storage as valid, since we are just telling the
@@ -366,6 +377,15 @@ private:
   //
   // Data
   //
+
+  // Supporting "in-memory" graphs via ephemeral storage creates two problems:
+  // 1. The lifetime of the ephemeral storage location needs to be managed.
+  // 2. The ephemeral storage location needs to be tracked to prevent graphs
+  // from being committed to it.
+  // It complicates RDG to have it know about ephemerality, but it is the
+  // natural object for managing the lifetime and also the natural point to
+  // check for ephemerality during Commit.
+  std::unique_ptr<EphemeralStoragePrefix> ephemeral_;
 
   std::unique_ptr<RDGCore> core_;
 };

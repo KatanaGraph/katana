@@ -646,8 +646,8 @@ ComputeWithWrap(
     Graph graph = KATANA_CHECKED(
         Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
-    return KssspImpl<Graph, Weight>(
-        graph, start_node, report_node, num_paths, plan);
+    return ComputeStatistics<Graph, Weight>(
+        graph, table, report_node);
   } else {
     using Graph = katana::TypedPropertyGraphView<
         katana::PropertyGraphViews::Undirected, NodeData<Weight>,
@@ -656,7 +656,7 @@ ComputeWithWrap(
     Graph graph = KATANA_CHECKED(
         Graph::Make(pg, temp_node_property_names, {edge_weight_property_name}));
 
-    return KssspImpl<Graph, Weight>(
+    return ComputeStatistics<Graph, Weight>(
         graph, table, report_node);
   }
 }
@@ -664,7 +664,8 @@ ComputeWithWrap(
 katana::Result<katana::analytics::KssspStatistics>
 katana::analytics::KssspStatistics::Compute(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
-    std::shared_ptr<arrow::Table> table, size_t report_node, const bool& is_symmetric) {
+    std::shared_ptr<arrow::Table> table, size_t report_node, 
+    const bool& is_symmetric, katana::TxnContext* txn_ctx) {
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {
     return KATANA_ERROR(
@@ -679,7 +680,7 @@ katana::analytics::KssspStatistics::Compute(
     KATANA_CHECKED(katana::analytics::AddDefaultEdgeWeight<EdgeWeightType>(
         pg, temporary_edge_property.name(), 1, txn_ctx));
     return ComputeWithWrap<int64_t>(
-        pg, temporary_edge_property.name(), table, report_node, is_symmetric);
+        pg, temporary_edge_property.name(), table, report_node, is_symmetric, txn_ctx);
   }
 
   switch (KATANA_CHECKED(pg->GetEdgeProperty(edge_weight_property_name))
@@ -687,22 +688,22 @@ katana::analytics::KssspStatistics::Compute(
               ->id()) {
   case arrow::UInt32Type::type_id:
     return ComputeWithWrap<uint32_t>(
-        pg, edge_weight_property_name, table, report_node, is_symmetric);
+        pg, edge_weight_property_name, table, report_node, is_symmetric, txn_ctx);
   case arrow::Int32Type::type_id:
     return ComputeWithWrap<int32_t>(
-        pg, edge_weight_property_name, table, report_node, is_symmetric);
+        pg, edge_weight_property_name, table, report_node, is_symmetric, txn_ctx);
   case arrow::UInt64Type::type_id:
     return ComputeWithWrap<uint64_t>(
-        pg, edge_weight_property_name, table, report_node, is_symmetric);
+        pg, edge_weight_property_name, table, report_node, is_symmetric, txn_ctx);
   case arrow::Int64Type::type_id:
     return ComputeWithWrap<int64_t>(
-        pg, edge_weight_property_name, table, report_node, is_symmetric);
+        pg, edge_weight_property_name, table, report_node, is_symmetric, txn_ctx);
   case arrow::FloatType::type_id:
     return ComputeWithWrap<float>(
-        pg, edge_weight_property_name, table, report_node, is_symmetric);
+        pg, edge_weight_property_name, table, report_node, is_symmetric, txn_ctx);
   case arrow::DoubleType::type_id:
     return ComputeWithWrap<double>(
-        pg, edge_weight_property_name, table, report_node, is_symmetric);
+        pg, edge_weight_property_name, table, report_node, is_symmetric, txn_ctx);
   default:
     return KATANA_ERROR(
         katana::ErrorCode::TypeError, "Unsupported type: {}",

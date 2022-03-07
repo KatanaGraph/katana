@@ -106,7 +106,9 @@ struct KATANA_EXPORT KssspStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KssspStatistics> Compute(
-      std::shared_ptr<arrow::Table> table, size_t report_node);
+      katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
+      std::shared_ptr<arrow::Table> table, size_t report_node, 
+      const bool& is_symmetric, katana::TxnContext* txn_ctx);
 };
 
 }  // namespace katana::analytics

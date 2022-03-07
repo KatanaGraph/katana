@@ -184,7 +184,8 @@ main(int argc, char** argv) {
   }
 
   auto stats_result = KssspStatistics::Compute(
-      pg_projected_view.get(), pg_result.value(), reportNode, symmetricGraph);
+      pg_projected_view.get(), edge_property_name, pg_result.value(), 
+      reportNode, symmetricGraph, &txn_ctx);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute Ksssp statistics: {}",

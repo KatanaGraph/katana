@@ -493,7 +493,9 @@ struct ClusteringImplementationBase {
     // Thus any property index indirection of the original topology has to be dropped.
     katana::GraphTopology topo_copy =
         GraphTopology::CopyWithoutPropertyIndexes(pfg_from.topology());
-    return katana::PropertyGraph::Make(std::move(topo_copy));
+    // PR question: is this okay? My guess is that this will be written to
+    // rarely if ever?
+    return katana::PropertyGraph::MakeEphemeral(std::move(topo_copy));
   }
 
   /**
@@ -681,7 +683,8 @@ struct ClusteringImplementationBase {
 
     GraphTopology topo_next{
         std::move(prefix_edges_count), std::move(out_dests_next)};
-    auto pfg_next_res = katana::PropertyGraph::Make(std::move(topo_next));
+    auto pfg_next_res =
+        katana::PropertyGraph::MakeEphemeral(std::move(topo_next));
 
     if (!pfg_next_res) {
       return pfg_next_res.error();

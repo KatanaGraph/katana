@@ -86,7 +86,7 @@ SubGraphNodeSet(
 
   katana::GraphTopology sub_g_topo{
       std::move(out_indices), std::move(out_dests)};
-  auto sub_g_res = katana::PropertyGraph::Make(std::move(sub_g_topo));
+  auto sub_g_res = katana::PropertyGraph::MakeEphemeral(std::move(sub_g_topo));
 
   return sub_g_res;
 }

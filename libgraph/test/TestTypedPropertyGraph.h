@@ -80,7 +80,7 @@ MakeFileGraph(
   katana::GraphTopology topo{
       indices.data(), indices.size(), dests.data(), dests.size()};
 
-  auto g_res = katana::PropertyGraph::Make(std::move(topo));
+  auto g_res = katana::PropertyGraph::MakeEphemeral(std::move(topo));
   KATANA_LOG_ASSERT(g_res);
 
   std::unique_ptr<katana::PropertyGraph> g = std::move(g_res.value());

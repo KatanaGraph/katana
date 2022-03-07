@@ -22,10 +22,12 @@ TestTransposedView() {
     builder_tr.AddEdge(n2, n1);
   }
 
-  auto pg = KATANA_CHECKED(PropertyGraph::Make(builder.ConvertToCSR()));
+  auto pg =
+      KATANA_CHECKED(PropertyGraph::MakeEphemeral(builder.ConvertToCSR()));
   TransposedGraphView pg_tr_view = pg->BuildView<TransposedGraphView>();
 
-  auto pg_tr = KATANA_CHECKED(PropertyGraph::Make(builder_tr.ConvertToCSR()));
+  auto pg_tr =
+      KATANA_CHECKED(PropertyGraph::MakeEphemeral(builder_tr.ConvertToCSR()));
 
   for (Edge e : pg_tr_view.OutEdges()) {
     KATANA_LOG_VASSERT(

@@ -190,7 +190,14 @@ main(int argc, char** argv) {
         stats_result.error());
   }
   auto stats = stats_result.value();
-  stats.Print();
+  auto print_check = stats.Print();
+
+  if (!print_check) {
+    KATANA_LOG_FATAL(
+        "Failed to print Ksssp statistics: {}", 
+        stats_result.error();
+    )
+  }
 
   totalTime.stop();
 

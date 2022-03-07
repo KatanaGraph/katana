@@ -96,7 +96,7 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::Table>> Ksssp(
 /// TODO: Add KssspAssertValid(?)
 
 struct KATANA_EXPORT KssspStatistics {
-  std::vector<std::vector<<uint64_t>> paths;
+  std::vector<std::vector<uint64_t>> paths;
 
   void Print(std::ostream& os = std::cout) const;
 

@@ -598,9 +598,9 @@ katana::analytics::KssspStatistics::Compute(
   auto node_list = std::static_pointer_cast<arrow::ListArray>(table->column(0)->chunk(0));
   auto all_nodes = std::static_pointer_cast<arrow::UInt64Array>(node_list->values());
   int64_t i = 0;
+  uint64_t j = 0;
   while (i < table->num_rows()) {
     std::vector<uint64_t> path = {};
-    uint64_t j = 0;
     while (all_nodes->Value(j) != report_node) {
       path.push_back(all_nodes->Value(j));
       j++;

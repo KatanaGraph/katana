@@ -586,7 +586,7 @@ katana::analytics::KssspStatistics::Print(std::ostream& os) const {
   auto path = std::static_pointer_cast<arrow::UInt64Array>(paths->values());
   const uint64_t* ptr = path->raw_values();
   for (int64_t i = 0; i < table->num_rows(); i++) {
-    os << *(ptr + paths->value_offset(i));
+    os << *(ptr + path->value_offset(i));
   }
   os << std::endl;
 }

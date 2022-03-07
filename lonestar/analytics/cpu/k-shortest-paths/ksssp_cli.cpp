@@ -195,8 +195,7 @@ main(int argc, char** argv) {
   if (!print_check) {
     KATANA_LOG_FATAL(
         "Failed to print Ksssp statistics: {}", 
-        stats_result.error();
-    )
+        stats_result.error());
   }
 
   totalTime.stop();

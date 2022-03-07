@@ -618,6 +618,7 @@ ComputeStatistics(
   return KssspStatistics{paths};
 }
 
+template <typename Weight>
 katana::Result<katana::analytics::KssspStatistics>
 ComputeWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 

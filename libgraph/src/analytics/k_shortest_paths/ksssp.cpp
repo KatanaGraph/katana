@@ -607,6 +607,7 @@ katana::analytics::KssspStatistics::Compute(
     }
     path.push_back(report_node);
     i++;
+    j++
     paths.push_back(path);
   }
 

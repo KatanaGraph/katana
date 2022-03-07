@@ -596,8 +596,6 @@ katana::Result<katana::analytics::KssspStatistics>
 ComputeStatistics(
      GraphTy graph, std::shared_ptr<arrow::Table> table, 
     size_t report_node) {
-  auto pg_result = katana::TypedPropertyGraph<
-
   std::vector<katana::analytics::KssspStatistics::PathStats> paths = {};
   auto node_list = std::static_pointer_cast<arrow::ListArray>(table->column(0)->chunk(0));
   auto all_nodes = std::static_pointer_cast<arrow::UInt64Array>(node_list->values());

@@ -5,6 +5,7 @@ The primary user of this module is the `pybind11` code in `NumbaSupport.h`.
 
 import ctypes
 
+from katana.native_interfacing import exec_in_file
 from katana.native_interfacing.wrappers import SimpleNumbaPointerWrapper
 
 
@@ -60,3 +61,24 @@ def register_function(func: callable, invoker_ptr: int, ret_type, *arg_types) ->
     :type arg_types: `ctype` type object.
     """
     raise NotImplementedError("Top level functions are not yet supported by the numba wrapper framework.")
+
+
+def register_compact_range_method(cls: type, method_name, begin_name, end_name, *arg_types):
+    arguments = ", ".join(f"arg{i}" for i in range(len(arg_types)))
+    argument_type_checks = "True"
+    # ", ".join(f"arg{i}" for i, t in enumerate(arg_types))
+    method_overload_str = f"""
+from numba import types
+from numba.extending import overload_method
+
+@overload_method(cls._numba_type_wrapper.Type, "{method_name}")
+def overload_{begin_name}(self, {arguments}):
+    # pylint: disable=unused-argument
+    if {argument_type_checks}:
+
+        def impl(self, {arguments}):
+            return range(self.{begin_name}({arguments}), self.{end_name}({arguments}))
+
+        return impl
+"""
+    exec_in_file(f"{cls.__name__}-{method_name}.py", method_overload_str, dict(cls=cls, method_name=method_name))

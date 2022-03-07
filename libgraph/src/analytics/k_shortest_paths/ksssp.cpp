@@ -606,7 +606,7 @@ ComputeStatistics(
     katana::GAccumulator<Weight> weight;
     while (all_nodes->Value(j) != report_node) {
       path.push_back(all_nodes->Value(j));
-      weight += graph->template GetEdgeData<EdgeWeight<Weight>>(all_nodes->Value(j));
+      weight += graph.template GetEdgeData<EdgeWeight<Weight>>(all_nodes->Value(j));
       j++;
     }
     path.push_back(report_node);

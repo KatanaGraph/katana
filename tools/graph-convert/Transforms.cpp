@@ -72,7 +72,7 @@ katana::ConvertDateTime::operator()(
   for (int cidx = 0, num_chunks = chunked_array->num_chunks();
        cidx < num_chunks; ++cidx) {
     std::shared_ptr<arrow::Array> chunk = chunked_array->chunk(cidx);
-    auto array = std::dynamic_pointer_cast<arrow::StringArray>(chunk);
+    auto array = std::dynamic_pointer_cast<arrow::LargeStringArray>(chunk);
 
     if (!array) {
       KATANA_LOG_FATAL("column not string");

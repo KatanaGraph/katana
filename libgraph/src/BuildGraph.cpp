@@ -644,7 +644,7 @@ AddArray(
 void
 AddArray(
     const std::shared_ptr<arrow::ListArray>& list_vals,
-    const std::shared_ptr<arrow::StringArray>& vals, size_t index,
+    const std::shared_ptr<arrow::LargeStringArray>& vals, size_t index,
     std::shared_ptr<arrow::ListBuilder> list_builder,
     arrow::StringBuilder* type_builder, ArrowArrays* chunks,
     std::shared_ptr<arrow::Array> null_array, WriterProperties* properties,
@@ -835,9 +835,10 @@ RearrangeArray(
         "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
-  std::vector<std::shared_ptr<arrow::StringArray>> arrays;
+  std::vector<std::shared_ptr<arrow::LargeStringArray>> arrays;
   for (auto chunk : chunked_array->chunks()) {
-    arrays.emplace_back(std::static_pointer_cast<arrow::StringArray>(chunk));
+    arrays.emplace_back(
+        std::static_pointer_cast<arrow::LargeStringArray>(chunk));
   }
   std::shared_ptr<arrow::Array> null_array =
       properties->null_arrays.first.find(builder->type()->id())->second;
@@ -941,7 +942,7 @@ RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::StringBuilder>());
     auto sb = static_cast<arrow::StringBuilder*>(builder->value_builder());
-    chunks = RearrangeArray<arrow::StringBuilder, arrow::StringArray>(
+    chunks = RearrangeArray<arrow::StringBuilder, arrow::LargeStringArray>(
         builder, sb, list_chunked_array, mapping, properties);
     break;
   }

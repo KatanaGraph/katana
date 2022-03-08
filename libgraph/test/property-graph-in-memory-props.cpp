@@ -32,7 +32,7 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
 
   auto names = pg->GetNodeProperty("name").value();
   auto names_array =
-      std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
+      std::static_pointer_cast<arrow::LargeStringArray>(names->chunk(0));
 
   size_t i = 0;
   for (Node n : pg->Nodes()) {
@@ -80,7 +80,7 @@ TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
 
   auto names = pg->GetEdgeProperty("edge_name").value();
   auto names_array =
-      std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
+      std::static_pointer_cast<arrow::LargeStringArray>(names->chunk(0));
 
   size_t i = 0;
   for (Edge e : pg->OutEdges()) {

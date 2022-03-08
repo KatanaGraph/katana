@@ -549,10 +549,6 @@ struct BooleanReadOnlyProperty
           typename arrow::CTypeTraits<bool>::ArrowType,
           BooleanPropertyReadOnlyView> {};
 
-struct StringReadOnlyProperty
-    : public Property<
-          arrow::StringType, StringPropertyReadOnlyView<arrow::StringArray>> {};
-
 struct LargeStringReadOnlyProperty
     : public Property<
           arrow::LargeStringType,

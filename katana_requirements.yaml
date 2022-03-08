@@ -351,11 +351,15 @@ pyarrow:
 pydata-sphinx-theme:
   name_overrides:
     pip: "git+https://github.com/pydata/pydata-sphinx-theme.git"
-  version: [ 0.6.3, null ]
+  version: [ 0.8.0, null ]
   version_overrides:
-    pip: "@v0.6.3"
+    pip: "@v0.8.0"
   labels:
     - pip/dev
+    - conda/dev
+pydocstyle:
+  version: [ 6.1.1, null ]
+  labels:
     - conda/dev
 pygithub:
   name_overrides:

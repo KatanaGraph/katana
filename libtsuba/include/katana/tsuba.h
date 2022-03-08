@@ -18,7 +18,7 @@ class RDGHandleImpl;
 class RDGManifest;
 class TxnContext;
 
-/// RDGHandle is an opaque indentifier for an RDG.
+/// RDGHandle is an opaque identifier for an RDG.
 struct RDGHandle {
   RDGHandleImpl* impl_{};
 };
@@ -112,13 +112,6 @@ KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
 ListViewsOfVersion(
     const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
 
-/// duplicate of ListViewsOfVersion maintained for compatibility
-[[deprecated("use ListViewsOfVersion() instead")]] KATANA_EXPORT
-    katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
-    ListAvailableViews(
-        const std::string& rdg_dir,
-        std::optional<uint64_t> version = std::nullopt);
-
 KATANA_EXPORT katana::Result<std::vector<std::pair<katana::URI, katana::URI>>>
 CreateSrcDestFromViewsForCopy(
     const std::string& src_dir, const std::string& dst_dir, uint64_t version);
@@ -138,7 +131,7 @@ KATANA_EXPORT katana::Result<void> InitTsuba();
 
 KATANA_EXPORT katana::Result<void> FiniTsuba();
 
-/// Dictactes the max number of RDGTopologies PartitionTopologyMetadataEntries
+/// Dictates the max number of RDGTopologies PartitionTopologyMetadataEntries
 /// can be increased if required
 constexpr size_t kMaxNumTopologies = 64;
 

@@ -291,12 +291,17 @@ jobs:
     - name: Install dependencies
       run: |
         . .github/workflows/activate_miniconda.sh
-        mamba install -y -q -c conda-forge black=19.10b0 pylint=2.8.3
+        mamba install -y -q -c conda-forge black=19.10b0 pylint=2.8.3 pydocstyle=6.1.1
 
     - name: Check formatting
       run: |
         . .github/workflows/activate_miniconda.sh
         ./scripts/check_python_format.sh python test scripts
+
+    - name: Check for lint
+      run: |
+        . .github/workflows/activate_miniconda.sh
+        ./scripts/check_python_lint.sh python test scripts
 
     - name: Find changed Python files
       uses: dorny/paths-filter@v2
@@ -307,13 +312,13 @@ jobs:
         filters: |
           python:
             - added|modified: '!(docs/**)**.py'
-
-    - name: Check for lint
+    
+    - name: Check docstrings
       run: |
         if [ "${{ steps.filter.outputs.python }}" == "true" ]
         then
            . .github/workflows/activate_miniconda.sh
-           ./scripts/check_python_lint.sh ${{ steps.filter.outputs.python_files }}
+           pydocstyle --config=./pyproject.toml ${{ steps.filter.outputs.python_files }}
         else
            echo "No Python files were changed."
         fi

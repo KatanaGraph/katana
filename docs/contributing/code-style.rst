@@ -49,6 +49,9 @@ in terms of feedback latency, to run these checks locally first.
 
 * ``scripts/check_python_lint.sh .``: applies ``pylint`` to format python code.
 
+* ``pydocstyle --config=./pyproject.toml .``: applies ``pydocstyle`` to check
+  for correctly styled docstrings in Python *files*.
+
 We also have a ``clang-tidy`` configuration, which is a useful tool for checking
 your code locally. ``clang-tidy`` is not currently enforced by continuous
 integration.

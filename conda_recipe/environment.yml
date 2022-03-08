@@ -67,7 +67,8 @@ dependencies:
  - pkg-config>=0.29
  - pyarrow>=6,<7a0
  - pybind11>=2.6.1,<3a0
- - pydata-sphinx-theme>=0.6.3
+ - pydata-sphinx-theme>=0.8.0
+ - pydocstyle>=6.1.1
  - pygithub>=1.54,<2a0
  - pylint>=2.8.3,<2.9a0
  - pytest>=6.2

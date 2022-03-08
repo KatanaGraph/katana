@@ -237,12 +237,11 @@ DefPropertyGraph(py::module& m) {
       Get a projected view of the graph which only contains nodes or edges of
       specific types.
 
-      :type node_types: Optional[Iterable[EntityType]]
-      :param node_types: A set of node types to include in the projected graph,
-        or ``None`` to keep all nodes.
-      :type edge_types: Optional[Iterable[EntityType]]
-      :param edge_types: A set of edge types to include in the projected graph,
-        or ``None`` to keep all edges on the selected nodes.
+      Args:
+        node_types (Optional[Iterable[EntityType]]): A set of node types to include in the projected graph,
+            or ``None`` to keep all nodes.
+        edge_types (Optional[Iterable[EntityType]]): A set of edge types to include in the projected graph,
+            or ``None`` to keep all edges on the selected nodes.
       )""");
 
   // GetLocalNodeID(NodeHandle) -> LocalNodeID  - local node ID

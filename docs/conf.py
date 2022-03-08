@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_tabs.tabs",
     "sphinx_copybutton",
+    "sphinx.ext.napoleon",
 ]
 
 breathe_default_project = "katana"

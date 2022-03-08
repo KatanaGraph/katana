@@ -202,7 +202,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+0.0.302731 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+1.0.17a12f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -830,9 +830,9 @@ particular code block.</p>
 </section>
 <section id="python">
 <h3>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h3>
+<p>In general, we adhere to the <a class="reference external" href="https://google.github.io/styleguide/pyguide.html">Google Python Style Guide</a>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-   <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">   foo returns the sum of a and b.</span>
+   <span class="sd">&quot;&quot;&quot;Returns the sum of a and b.</span>
 
 <span class="sd">   Foo rounds the result away from zero. That is: if the sum is negative,</span>
 <span class="sd">   foo rounds towards negative infinity, and if sum is positive, foo rounds</span>
@@ -845,9 +845,11 @@ particular code block.</p>
 
 <span class="sd">   This function is not safe to call concurrently.</span>
 
-<span class="sd">   :param a: The first addend</span>
-<span class="sd">   :param b: The second addend</span>
-<span class="sd">   :return: The sum of a and b</span>
+<span class="sd">   Args:</span>
+<span class="sd">       a (float): The first addend</span>
+<span class="sd">       b (float): The second addend</span>
+<span class="sd">   Returns:</span>
+<span class="sd">       int: The sum of a and b</span>
 <span class="sd">   &quot;&quot;&quot;</span>
    <span class="o">...</span>
 </pre></div>

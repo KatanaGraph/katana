@@ -202,7 +202,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+0.0.302731 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+1.0.17a12f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -626,9 +626,10 @@ recommended.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="katana.DataFrame.columns">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">columns</span></span><a class="headerlink" href="#katana.DataFrame.columns" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>a sequence containing all the column names in this dataframe.</p>
+<dd><p>a sequence containing all the column names in this dataframe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>return</p>
 </dd>
 </dl>
 </dd></dl>
@@ -636,9 +637,10 @@ recommended.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="katana.DataFrame.dtypes">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#katana.DataFrame.dtypes" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>The dtype of each column as a dict mapping column names to dtypes.</p>
+<dd><p>The dtype of each column as a dict mapping column names to dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>return</p>
 </dd>
 </dl>
 </dd></dl>

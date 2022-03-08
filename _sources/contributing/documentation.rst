@@ -235,11 +235,13 @@ particular code block.
 Python
 ======
 
+In general, we adhere to the `Google Python Style Guide
+<https://google.github.io/styleguide/pyguide.html>`_.
+
 .. code-block:: python
 
    def foo(a: float, b: float) -> int:
-      """
-      foo returns the sum of a and b.
+      """Returns the sum of a and b.
 
       Foo rounds the result away from zero. That is: if the sum is negative,
       foo rounds towards negative infinity, and if sum is positive, foo rounds
@@ -252,9 +254,11 @@ Python
 
       This function is not safe to call concurrently.
 
-      :param a: The first addend
-      :param b: The second addend
-      :return: The sum of a and b
+      Args:
+          a (float): The first addend
+          b (float): The second addend
+      Returns:
+          int: The sum of a and b
       """
       ...
 

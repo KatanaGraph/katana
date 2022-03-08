@@ -202,7 +202,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+0.0.302731 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+1.0.17a12f variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -563,6 +563,8 @@ formed.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_go_lint.sh</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">golangci-lint</span></code> to check check style.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_python_format.sh</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">black</span></code> to format python code.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scripts/check_python_lint.sh</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">pylint</span></code> to format python code.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pydocstyle</span> <span class="pre">--config=./pyproject.toml</span> <span class="pre">.</span></code>: applies <code class="docutils literal notranslate"><span class="pre">pydocstyle</span></code> to check
+for correctly styled docstrings in Python <em>files</em>.</p></li>
 </ul>
 <p>We also have a <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> configuration, which is a useful tool for checking
 your code locally. <code class="docutils literal notranslate"><span class="pre">clang-tidy</span></code> is not currently enforced by continuous

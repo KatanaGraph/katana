@@ -243,8 +243,9 @@ ExtractList(std::shared_ptr<arrow::ListArray> array, int64_t index) {
   int32_t end = array->value_offset(index + 1);
 
   switch (array->value_type()->id()) {
-  case arrow::Type::STRING: {
-    auto sb = std::static_pointer_cast<arrow::StringArray>(array->values());
+  case arrow::Type::LARGE_STRING: {
+    auto sb =
+        std::static_pointer_cast<arrow::LargeStringArray>(array->values());
 
     for (int32_t s = start; s < end; s++) {
       data.AddStringElt(sb->GetString(s));
@@ -320,8 +321,8 @@ ExtractList(std::shared_ptr<arrow::ListArray> array, int64_t index) {
 std::string
 ExtractData(std::shared_ptr<arrow::Array> array, int64_t index) {
   switch (array->type()->id()) {
-  case arrow::Type::STRING: {
-    auto sb = std::static_pointer_cast<arrow::StringArray>(array);
+  case arrow::Type::LARGE_STRING: {
+    auto sb = std::static_pointer_cast<arrow::LargeStringArray>(array);
     return sb->GetString(index);
   }
   case arrow::Type::INT64: {

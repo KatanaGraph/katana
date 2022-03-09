@@ -39,6 +39,22 @@ MakeArray(const std::vector<std::optional<T>>& vec) {
   return array;
 }
 
+auto
+MakeStringArray(const std::vector<std::optional<std::string>>& vec) {
+  arrow::LargeStringBuilder builder;
+  for (auto v : vec) {
+    if (v) {
+      KATANA_LOG_ASSERT(builder.Append(*v).ok());
+    } else {
+      KATANA_LOG_ASSERT(builder.AppendNull().ok());
+    }
+  }
+  std::shared_ptr<arrow::LargeStringArray> array;
+  KATANA_LOG_ASSERT(builder.Finish(&array).ok());
+  KATANA_LOG_ASSERT(array);
+  return array;
+}
+
 template <typename ViewType, typename T, typename U>
 void
 TestSliced(
@@ -68,10 +84,10 @@ TestPOD() {
 void
 TestString() {
   using VecType = std::vector<std::optional<std::string>>;
-  using ViewType = katana::StringReadOnlyProperty::ViewType;
+  using ViewType = katana::LargeStringReadOnlyProperty::ViewType;
   VecType vec{"1", "2", std::nullopt, "3", std::nullopt, std::nullopt,
               "6", "7", "8",          "9", std::nullopt};
-  auto array = MakeArray(vec);
+  auto array = MakeStringArray(vec);
   TestSliced<ViewType>(vec, array, 0, vec.size());
   TestSliced<ViewType>(vec, array, 3, vec.size() - 3);
   TestSliced<ViewType>(vec, array, 1, vec.size() - 6);

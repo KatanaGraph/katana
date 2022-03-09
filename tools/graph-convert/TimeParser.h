@@ -30,9 +30,9 @@ public:
   /// Parse parses a string and returns a Unix timestamp in units of Duration.
   /// If the string could not be parsed, the null option is returned.
   std::optional<CType> Parse(const std::string& str);
-  /// calls Parse on each string in the StringArray, appending into the builder
+  /// calls Parse on each string in the LargeStringArray, appending into the builder
   void ParseInto(
-      const arrow::StringArray& strings, arrow::ArrayBuilder* builder);
+      const arrow::LargeStringArray& strings, arrow::ArrayBuilder* builder);
 };
 
 }  // namespace katana
@@ -116,7 +116,8 @@ katana::TimeParser<ArrowDateTimeType, Duration>::Parse(const std::string& str) {
 template <class ArrowDateTimeType, typename Duration>
 void
 katana::TimeParser<ArrowDateTimeType, Duration>::ParseInto(
-    const arrow::StringArray& strings, arrow::ArrayBuilder* untyped_builder) {
+    const arrow::LargeStringArray& strings,
+    arrow::ArrayBuilder* untyped_builder) {
   BuilderType& builder = dynamic_cast<BuilderType&>(*untyped_builder);
   if (auto st = builder.Reserve(strings.length()); !st.ok()) {
     KATANA_LOG_FATAL("builder failed to reserve space");

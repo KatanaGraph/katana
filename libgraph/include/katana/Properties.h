@@ -462,7 +462,7 @@ private:
 
 /// StringPropertyReadOnlyView provides a read-only property view over
 /// arrow::Arrays of string elements
-/// (i.e., arrow::StringArray or arrow::LargeStringArray).
+/// i.e. arrow::LargeStringArray
 template <typename ArrowArrayType>
 class StringPropertyReadOnlyView {
 public:
@@ -548,10 +548,6 @@ struct BooleanReadOnlyProperty
     : public Property<
           typename arrow::CTypeTraits<bool>::ArrowType,
           BooleanPropertyReadOnlyView> {};
-
-struct StringReadOnlyProperty
-    : public Property<
-          arrow::StringType, StringPropertyReadOnlyView<arrow::StringArray>> {};
 
 struct LargeStringReadOnlyProperty
     : public Property<

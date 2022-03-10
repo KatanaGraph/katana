@@ -22,8 +22,7 @@ dependencies:
  - clang-tools>=10
  - clang-tools>=10
  - clangxx>=10
-   # the aws-sdk cmake is incompatible with version 3.22
- - cmake>=3.17,<3.22a0
+ - cmake>=3.22.3,<4a0
  - conda-build>=3
  - conda-verify>=3
  - coverage>=5.5

@@ -60,7 +60,8 @@ DefaultPropertyNames() {
 /// The main way to load and store a property graph is via an RDG. An RDG
 /// manages the serialization of the various partitions and properties that
 /// comprise the physical representation of the logical property graph.
-class KATANA_EXPORT PropertyGraph {
+class KATANA_EXPORT PropertyGraph
+    : public std::enable_shared_from_this<PropertyGraph> {
   friend class PGViewCache;
 
   // Regular methods
@@ -230,7 +231,7 @@ public:
 
   template <typename PGView>
   PGView BuildView() noexcept {
-    return pg_view_cache_.BuildView<PGView>(this);
+    return pg_view_cache_.BuildView<PGView>(shared_from_this());
   }
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
@@ -279,19 +280,22 @@ public:
       const katana::RDGLoadOptions& opts, katana::TxnContext* txn_ctx);
 
   [[deprecated]] static std::unique_ptr<PropertyGraph> MakeProjectedGraph(
-      PropertyGraph& pg, const std::vector<std::string>& node_types,
+      const std::shared_ptr<PropertyGraph>& pg,
+      const std::vector<std::string>& node_types,
       const std::vector<std::string>& edge_types);
 
   /// Make a projected graph from a property graph. Shares state with
   /// the original graph.
   static Result<std::unique_ptr<PropertyGraph>> MakeProjectedGraph(
-      PropertyGraph& pg, std::optional<std::vector<std::string>> node_types,
+      const std::shared_ptr<PropertyGraph>& pg,
+      std::optional<std::vector<std::string>> node_types,
       std::optional<std::vector<std::string>> edge_types);
 
   /// Make a projected graph from a property graph. Shares state with
   /// the original graph.
   static Result<std::unique_ptr<PropertyGraph>> MakeProjectedGraph(
-      PropertyGraph& pg, std::optional<SetOfEntityTypeIDs> node_types,
+      const std::shared_ptr<PropertyGraph>& pg,
+      std::optional<SetOfEntityTypeIDs> node_types,
       std::optional<SetOfEntityTypeIDs> edge_types);
 
   /// \return A copy of this with the same set of properties. The copy shares no
@@ -1015,21 +1019,21 @@ protected:
 
   /// Call this constructor to populate projection data.
   PropertyGraph(
-      PropertyGraph& parent, GraphTopology&& projected_topo,
+      std::shared_ptr<PropertyGraph> parent, GraphTopology&& projected_topo,
       NUMAArray<Node>&& original_to_transformed_nodes,
       NUMAArray<Edge>&& original_to_transformed_edges,
       NUMAArray<uint8_t>&& node_bitmask_data,
       NUMAArray<uint8_t>&& edge_bitmask_data) noexcept
-      : rdg_(parent.rdg_),
-        file_(parent.file_),
-        node_entity_type_manager_(parent.node_entity_type_manager_),
-        edge_entity_type_manager_(parent.edge_entity_type_manager_),
-        node_entity_type_ids_(parent.node_entity_type_ids_),
+      : rdg_(parent->rdg_),
+        file_(parent->file_),
+        node_entity_type_manager_(parent->node_entity_type_manager_),
+        edge_entity_type_manager_(parent->edge_entity_type_manager_),
+        node_entity_type_ids_(parent->node_entity_type_ids_),
         node_entity_data_(node_entity_type_ids_->data()),
-        edge_entity_type_ids_(parent.edge_entity_type_ids_),
+        edge_entity_type_ids_(parent->edge_entity_type_ids_),
         edge_entity_data_(edge_entity_type_ids_->data()),
         pg_view_cache_(std::move(projected_topo)),
-        parent_{&parent},
+        parent_{std::move(parent)},
         original_to_transformed_nodes_(
             std::move(original_to_transformed_nodes)),
         original_to_transformed_edges_(
@@ -1046,12 +1050,12 @@ protected:
   }
 
   bool IsTransformed() const { return parent_ != nullptr; }
-  PropertyGraph* Parent() const { return parent_; }
+  std::shared_ptr<PropertyGraph>& Parent() { return parent_; }
 
 private:
   /// this function creates an empty projection with num_new_nodes nodes
   static std::unique_ptr<PropertyGraph> MakeEmptyEdgeProjectedGraph(
-      PropertyGraph& pg, uint32_t num_new_nodes,
+      const std::shared_ptr<PropertyGraph>& pg, uint32_t num_new_nodes,
       const DynamicBitset& nodes_bitset,
       NUMAArray<Node>&& original_to_projected_nodes_mapping,
       NUMAArray<GraphTopology::PropertyIndex>&&
@@ -1059,7 +1063,7 @@ private:
 
   /// this function creates an empty projection
   static std::unique_ptr<PropertyGraph> MakeEmptyProjectedGraph(
-      PropertyGraph& pg, const DynamicBitset& bitset);
+      const std::shared_ptr<PropertyGraph>& pg, const DynamicBitset& bitset);
 
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
@@ -1127,7 +1131,7 @@ private:
   PGViewCache pg_view_cache_;
 
   // Transformation related data.
-  PropertyGraph* parent_{nullptr};
+  std::shared_ptr<PropertyGraph> parent_{nullptr};
 
   NUMAArray<Node> original_to_transformed_nodes_{};
   NUMAArray<Edge> original_to_transformed_edges_{};

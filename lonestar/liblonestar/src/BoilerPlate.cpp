@@ -125,9 +125,9 @@ LonestarStart(
   return shared_mem_sys;
 }
 
-std::unique_ptr<katana::PropertyGraph>
+std::shared_ptr<katana::PropertyGraph>
 ProjectPropertyGraphForArguments(
-    const std::unique_ptr<katana::PropertyGraph>& pg) {
+    const std::shared_ptr<katana::PropertyGraph>& pg) {
   std::vector<std::string> vec_node_types;
   if (node_types != "") {
     katana::analytics::SplitStringByComma(node_types, &vec_node_types);
@@ -139,7 +139,7 @@ ProjectPropertyGraphForArguments(
   }
 
   auto pg_view_res = katana::PropertyGraph::MakeProjectedGraph(
-      *pg.get(),
+      pg,
       vec_node_types.empty() ? std::nullopt
                              : std::make_optional(vec_node_types),
       vec_edge_types.empty() ? std::nullopt
@@ -147,6 +147,6 @@ ProjectPropertyGraphForArguments(
   if (!pg_view_res) {
     KATANA_LOG_FATAL("Failed to construct projection: {}", pg_view_res.error());
   }
-  auto pg_projected_view = std::move(pg_view_res.value());
-  return pg_projected_view;
+
+  return std::move(pg_view_res.value());
 }

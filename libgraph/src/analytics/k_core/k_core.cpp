@@ -227,7 +227,7 @@ KCoreImpl(GraphTy* graph, KCorePlan algo, uint32_t k_core_number) {
 
 katana::Result<void>
 katana::analytics::KCore(
-    katana::PropertyGraph* pg, uint32_t k_core_number,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t k_core_number,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     const bool& is_symmetric, KCorePlan plan) {
   katana::analytics::TemporaryPropertyGuard temporary_property{
@@ -271,7 +271,7 @@ katana::analytics::KCore(
 // TODO (gill) Add a validity routine.
 katana::Result<void>
 katana::analytics::KCoreAssertValid(
-    [[maybe_unused]] katana::PropertyGraph* pg,
+    [[maybe_unused]] const std::shared_ptr<PropertyGraph>& pg,
     [[maybe_unused]] uint32_t k_core_number,
     [[maybe_unused]] const std::string& property_name) {
   return katana::ResultSuccess();
@@ -279,8 +279,8 @@ katana::analytics::KCoreAssertValid(
 
 katana::Result<KCoreStatistics>
 katana::analytics::KCoreStatistics::Compute(
-    katana::PropertyGraph* pg, [[maybe_unused]] uint32_t k_core_number,
-    const std::string& property_name) {
+    const std::shared_ptr<PropertyGraph>& pg,
+    [[maybe_unused]] uint32_t k_core_number, const std::string& property_name) {
   using Graph =
       katana::TypedPropertyGraph<std::tuple<KCoreNodeAlive>, std::tuple<>>;
   using GNode = Graph::Node;

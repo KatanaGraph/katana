@@ -274,11 +274,10 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
-  auto pg_result =
-      katana::TypedPropertyGraph<NodeData, EdgeData>::Make(pg.get());
+  auto pg_result = katana::TypedPropertyGraph<NodeData, EdgeData>::Make(pg);
   if (!pg_result) {
     KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }

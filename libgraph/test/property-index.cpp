@@ -143,7 +143,7 @@ TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
 
   katana::TxnContext txn_ctx;
 
-  std::unique_ptr<katana::PropertyGraph> g =
+  std::shared_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, 0, &policy, &txn_ctx);
 
   std::shared_ptr<arrow::Table> uniform_prop =
@@ -215,7 +215,7 @@ TestStringIndex(size_t num_nodes, size_t line_width) {
 
   katana::TxnContext txn_ctx;
 
-  std::unique_ptr<katana::PropertyGraph> g =
+  std::shared_ptr<katana::PropertyGraph> g =
       MakeFileGraph<int>(num_nodes, 0, &policy, &txn_ctx);
 
   std::shared_ptr<arrow::Table> uniform_prop = CreateStringProperty(

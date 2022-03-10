@@ -502,7 +502,8 @@ struct ClusteringImplementationBase {
  */
   template <typename GraphViewTy>
   static katana::Result<void> CopyEdgeProperty(
-      katana::PropertyGraph* pfg_from, katana::PropertyGraph* pfg_to,
+      const std::shared_ptr<katana::PropertyGraph>& pfg_from,
+      const std::shared_ptr<katana::PropertyGraph>& pfg_to,
       const std::string& new_edge_property_name, katana::TxnContext* txn_ctx) {
     // Remove the existing edge property
     if (pfg_to->HasEdgeProperty(new_edge_property_name)) {
@@ -548,7 +549,7 @@ struct ClusteringImplementationBase {
   template <
       typename NodeData, typename EdgeData, typename EdgeWeightType,
       typename CommunityIDType>
-  static katana::Result<std::unique_ptr<katana::PropertyGraph>> GraphCoarsening(
+  static katana::Result<std::shared_ptr<katana::PropertyGraph>> GraphCoarsening(
       const Graph& graph, katana::PropertyGraph* pfg_mutable,
       uint64_t num_unique_clusters,
       const std::vector<std::string>& temp_node_property_names,
@@ -686,7 +687,7 @@ struct ClusteringImplementationBase {
     if (!pfg_next_res) {
       return pfg_next_res.error();
     }
-    std::unique_ptr<katana::PropertyGraph> pfg_next =
+    std::shared_ptr<katana::PropertyGraph> pfg_next =
         std::move(pfg_next_res.value());
 
     if (auto result = pfg_next->ConstructNodeProperties<NodeData>(
@@ -701,7 +702,7 @@ struct ClusteringImplementationBase {
       return result.error();
     }
 
-    auto graph_result = Graph::Make(pfg_next.get());
+    auto graph_result = Graph::Make(pfg_next);
     if (!graph_result) {
       return graph_result.error();
     }
@@ -716,7 +717,7 @@ struct ClusteringImplementationBase {
         katana::no_stats());
 
     TimerGraphBuild.stop();
-    return std::unique_ptr<katana::PropertyGraph>(std::move(pfg_next));
+    return pfg_next;
   }
 
   /**

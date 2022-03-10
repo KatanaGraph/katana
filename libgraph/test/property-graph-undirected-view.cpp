@@ -8,7 +8,7 @@ struct NodeLabel : public katana::PODProperty<uint32_t> {};
 struct DegreeSum : public katana::PODProperty<uint32_t> {};
 
 void
-TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
+TestDegreeSum(const std::shared_ptr<katana::PropertyGraph>& pg) noexcept {
   katana::TxnContext txn_ctx;
   katana::Result<void> res = katana::AddNodeProperties(
       pg.get(), &txn_ctx,
@@ -28,7 +28,7 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   using Node = UndirectedView::Node;
   using Edge = UndirectedView::Edge;
 
-  auto view_res = UndirectedView::Make(pg.get(), {"label", "deg_sum"}, {});
+  auto view_res = UndirectedView::Make(pg, {"label", "deg_sum"}, {});
   KATANA_LOG_VASSERT(
       view_res, "Failed to create Undirected View. Error msg: {}",
       view_res.error());

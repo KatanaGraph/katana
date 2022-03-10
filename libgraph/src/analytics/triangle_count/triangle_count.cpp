@@ -268,7 +268,7 @@ EdgeIteratingAlgo(const SortedGraphView* graph) {
 
 katana::Result<uint64_t>
 katana::analytics::TriangleCount(
-    katana::PropertyGraph* pg, TriangleCountPlan plan) {
+    const std::shared_ptr<katana::PropertyGraph>& pg, TriangleCountPlan plan) {
   katana::StatTimer timer_graph_read("GraphReadingTime", "TriangleCount");
   katana::StatTimer timer_auto_algo("AutoRelabel", "TriangleCount");
 

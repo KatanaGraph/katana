@@ -80,8 +80,8 @@ KATANA_EXPORT extern const BetweennessCentralitySources
 ///          nodes; if this is an int process that number of source nodes.
 /// @param plan
 KATANA_EXPORT Result<void> BetweennessCentrality(
-    PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx,
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
     const BetweennessCentralitySources& sources =
         kBetweennessCentralityAllNodes,
     BetweennessCentralityPlan plan = {});
@@ -102,7 +102,8 @@ struct KATANA_EXPORT BetweennessCentralityStatistics {
   void Print(std::ostream& os = std::cout);
 
   static katana::Result<BetweennessCentralityStatistics> Compute(
-      PropertyGraph* pg, const std::string& output_property_name);
+      const std::shared_ptr<PropertyGraph>& pg,
+      const std::string& output_property_name);
 };
 
 }  // namespace katana::analytics

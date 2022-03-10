@@ -68,7 +68,8 @@ struct PropertyTuple<10> {
 
 template <size_t num_properties>
 void
-IterateProperty(benchmark::State& state, katana::PropertyGraph* g) {
+IterateProperty(
+    benchmark::State& state, const std::shared_ptr<katana::PropertyGraph>& g) {
   using P = typename PropertyTuple<num_properties>::type;
 
   auto r = katana::TypedPropertyGraph<P, P>::Make(g);
@@ -95,18 +96,18 @@ IterateProperty(benchmark::State& state) {
 
   katana::TxnContext txn_ctx;
 
-  std::unique_ptr<katana::PropertyGraph> g =
+  std::shared_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
 
   switch (num_properties) {
   case 1:
-    return IterateProperty<1>(state, g.get());
+    return IterateProperty<1>(state, g);
   case 4:
-    return IterateProperty<4>(state, g.get());
+    return IterateProperty<4>(state, g);
   case 7:
-    return IterateProperty<7>(state, g.get());
+    return IterateProperty<7>(state, g);
   case 10:
-    return IterateProperty<10>(state, g.get());
+    return IterateProperty<10>(state, g);
   default:
     KATANA_LOG_FATAL("unexpected number of properties: {}", num_properties);
   }
@@ -121,7 +122,7 @@ IterateBaseline(benchmark::State& state) {
 
   katana::TxnContext txn_ctx;
 
-  std::unique_ptr<katana::PropertyGraph> g =
+  std::shared_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
 
   for (auto _ : state) {

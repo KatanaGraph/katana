@@ -11,6 +11,7 @@ from enum import Enum
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t
 from libcpp cimport bool
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -19,7 +20,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_void
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph, underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 
@@ -53,7 +54,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
     unsigned kDefaultDelta "katana::analytics::KssspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::KssspPlan::kDefaultEdgeTileSize"
 
-    Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name,
+    Result[void] Ksssp(const shared_ptr[_PropertyGraph]& pg, const string& edge_weight_property_name,
                        size_t start_node, size_t report_node, size_t num_paths,
                        const bool& is_symmetric, CTxnContext* txn_ctx,
                        _KssspPlan plan)
@@ -204,6 +205,6 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
+        handle_result_void(Ksssp(underlying_property_graph_shared_ptr(pg), edge_weight_property_name_str,
                                  start_node, report_node, num_paths, is_symmetric,
                                  underlying_txn_context(txn_ctx), plan.underlying_))

@@ -102,13 +102,13 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -162,14 +162,13 @@ main(int argc, char** argv) {
             << " sources\n";
   katana::TxnContext txn_ctx;
   if (auto r = BetweennessCentrality(
-          pg_projected_view.get(), "betweenness_centrality", &txn_ctx, sources,
-          plan);
+          pg_projected_view, "betweenness_centrality", &txn_ctx, sources, plan);
       !r) {
     KATANA_LOG_FATAL("Couldn't run algorithm: {}", r.error());
   }
 
   auto stats_result = BetweennessCentralityStatistics::Compute(
-      pg_projected_view.get(), "betweenness_centrality");
+      pg_projected_view, "betweenness_centrality");
   if (!stats_result) {
     KATANA_LOG_FATAL("Failed to compute statistics: {}", stats_result.error());
   }

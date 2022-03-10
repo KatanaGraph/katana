@@ -94,7 +94,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
@@ -102,7 +102,7 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -128,14 +128,13 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   auto pg_result = Cdlp(
-      pg_projected_view.get(), property_name, maxIterations, &txn_ctx,
-      symmetricGraph, plan);
+      pg_projected_view, property_name, maxIterations, &txn_ctx, symmetricGraph,
+      plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run Cdlp: {}", pg_result.error());
   }
 
-  auto stats_result =
-      CdlpStatistics::Compute(pg_projected_view.get(), property_name);
+  auto stats_result = CdlpStatistics::Compute(pg_projected_view, property_name);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute Cdlp statistics: {}", stats_result.error());

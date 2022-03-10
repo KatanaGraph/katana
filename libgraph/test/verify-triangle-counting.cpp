@@ -4,7 +4,7 @@
 
 void
 RunTriCount(
-    std::unique_ptr<katana::PropertyGraph>&& pg,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
     const size_t num_expected_triangles) noexcept {
   using Plan = katana::analytics::TriangleCountPlan;
   std::vector<Plan> plans{
@@ -12,8 +12,7 @@ RunTriCount(
       Plan::OrderedCount(Plan::kRelabel)};
 
   for (const auto& p : plans) {
-    katana::Result<size_t> num_tri =
-        katana::analytics::TriangleCount(pg.get(), p);
+    katana::Result<size_t> num_tri = katana::analytics::TriangleCount(pg, p);
     KATANA_LOG_VASSERT(num_tri, "TriangleCount failed and returned error");
     KATANA_LOG_VASSERT(
         num_tri.value() == num_expected_triangles,

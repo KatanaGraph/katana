@@ -16,6 +16,7 @@ Jaccard Similarity
 .. autofunction:: katana.local.analytics.jaccard_assert_valid
 """
 
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -25,7 +26,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -48,10 +49,10 @@ cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analyti
         @staticmethod
         _JaccardPlan Unsorted()
 
-    Result[void] Jaccard(_PropertyGraph* pg, size_t compare_node,
+    Result[void] Jaccard(const shared_ptr[_PropertyGraph]& pg, size_t compare_node,
         string output_property_name, CTxnContext* txn_ctx, _JaccardPlan plan)
 
-    Result[void] JaccardAssertValid(_PropertyGraph* pg, size_t compare_node,
+    Result[void] JaccardAssertValid(const shared_ptr[_PropertyGraph]& pg, size_t compare_node,
         string output_property_name)
 
     cppclass _JaccardStatistics  "katana::analytics::JaccardStatistics":
@@ -61,7 +62,7 @@ cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analyti
         void Print(ostream os)
 
         @staticmethod
-        Result[_JaccardStatistics] Compute(_PropertyGraph* pg, size_t compare_node,
+        Result[_JaccardStatistics] Compute(const shared_ptr[_PropertyGraph]& pg, size_t compare_node,
             string output_property_name)
 
 
@@ -171,7 +172,7 @@ def jaccard(pg, size_t compare_node, str output_property_name,
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Jaccard(underlying_property_graph(pg), compare_node, output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
+        handle_result_void(Jaccard(underlying_property_graph_shared_ptr(pg), compare_node, output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
 
 
 def jaccard_assert_valid(pg, size_t compare_node, str output_property_name):
@@ -184,7 +185,7 @@ def jaccard_assert_valid(pg, size_t compare_node, str output_property_name):
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(JaccardAssertValid(underlying_property_graph(pg), compare_node, output_property_name_cstr))
+        handle_result_assert(JaccardAssertValid(underlying_property_graph_shared_ptr(pg), compare_node, output_property_name_cstr))
 
 
 cdef _JaccardStatistics handle_result_JaccardStatistics(Result[_JaccardStatistics] res) nogil except *:
@@ -207,7 +208,7 @@ cdef class JaccardStatistics:
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_JaccardStatistics(_JaccardStatistics.Compute(
-                underlying_property_graph(pg), compare_node, output_property_name_cstr))
+                underlying_property_graph_shared_ptr(pg), compare_node, output_property_name_cstr))
 
     @property
     def max_similarity(self):

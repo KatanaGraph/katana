@@ -64,13 +64,13 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto uri = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(uri, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -99,8 +99,7 @@ main(int argc, char** argv) {
   std::cout << "INFO: This is extracting the topology containing nodes from "
                "the user defined node set.\n";
 
-  auto subgraph_result =
-      SubGraphExtraction(pg_projected_view.get(), node_vec, plan);
+  auto subgraph_result = SubGraphExtraction(pg_projected_view, node_vec, plan);
   if (!subgraph_result) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", subgraph_result.error());
   }

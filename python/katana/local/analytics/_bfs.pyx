@@ -18,6 +18,7 @@ Breadth-first Search
 
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -27,7 +28,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -66,13 +67,13 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
     uint32_t kDefaultAlpha "katana::analytics::BfsPlan::kDefaultAlpha"
     uint32_t kDefaultBeta "katana::analytics::BfsPlan::kDefaultBeta"
 
-    Result[void] Bfs(_PropertyGraph * pg,
+    Result[void] Bfs(const shared_ptr[_PropertyGraph]& pg,
                      uint32_t start_node,
                      string output_property_name,
                      CTxnContext* txn_ctx,
                      _BfsPlan algo)
 
-    Result[void] BfsAssertValid(_PropertyGraph* pg, uint32_t start_node,
+    Result[void] BfsAssertValid(const shared_ptr[_PropertyGraph]& pg, uint32_t start_node,
                                 string property_name);
 
     cppclass _BfsStatistics "katana::analytics::BfsStatistics":
@@ -81,7 +82,7 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
         void Print(ostream os)
 
         @staticmethod
-        Result[_BfsStatistics] Compute(_PropertyGraph* pg,
+        Result[_BfsStatistics] Compute(const shared_ptr[_PropertyGraph]& pg,
                                        string property_name);
 
 class _BfsAlgorithm(Enum):
@@ -195,7 +196,7 @@ def bfs(pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPla
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Bfs(underlying_property_graph(pg), start_node, output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
+        handle_result_void(Bfs(underlying_property_graph_shared_ptr(pg), start_node, output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
 
 def bfs_assert_valid(pg, uint32_t start_node, str property_name):
     """
@@ -207,7 +208,7 @@ def bfs_assert_valid(pg, uint32_t start_node, str property_name):
     output_property_name_bytes = bytes(property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(BfsAssertValid(underlying_property_graph(pg), start_node, output_property_name_cstr))
+        handle_result_assert(BfsAssertValid(underlying_property_graph_shared_ptr(pg), start_node, output_property_name_cstr))
 
 cdef _BfsStatistics handle_result_BfsStatistics(Result[_BfsStatistics] res) nogil except *:
     if not res.has_value():
@@ -225,7 +226,7 @@ cdef class BfsStatistics:
         output_property_name_bytes = bytes(property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
-            self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(underlying_property_graph(pg), output_property_name_cstr))
+            self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(underlying_property_graph_shared_ptr(pg), output_property_name_cstr))
 
     @property
     def n_reached_nodes(self):

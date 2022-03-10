@@ -18,6 +18,7 @@ The k-Truss is a maximal connected subgraph in which all edges are part of at le
 .. autofunction:: katana.local.analytics.k_truss_assert_valid
 """
 from libc.stdint cimport uint32_t, uint64_t
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -27,7 +28,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -51,9 +52,9 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
         @staticmethod
         _KTrussPlan BspCoreThenTruss()
 
-    Result[void] KTruss(CTxnContext* txn_ctx, _PropertyGraph* pg, uint32_t k_truss_number, string output_property_name, _KTrussPlan plan)
+    Result[void] KTruss(CTxnContext* txn_ctx, const shared_ptr[_PropertyGraph]& pg, uint32_t k_truss_number, string output_property_name, _KTrussPlan plan)
 
-    Result[void] KTrussAssertValid(_PropertyGraph* pg, uint32_t k_truss_number,
+    Result[void] KTrussAssertValid(const shared_ptr[_PropertyGraph]& pg, uint32_t k_truss_number,
                                    string output_property_name)
 
     cppclass _KTrussStatistics "katana::analytics::KTrussStatistics":
@@ -62,7 +63,7 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
         void Print(ostream os)
 
         @staticmethod
-        Result[_KTrussStatistics] Compute(_PropertyGraph* pg, uint32_t k_truss_number,
+        Result[_KTrussStatistics] Compute(const shared_ptr[_PropertyGraph]& pg, uint32_t k_truss_number,
                                           string output_property_name)
 
 
@@ -153,7 +154,7 @@ def k_truss(pg, uint32_t k_truss_number, str output_property_name, KTrussPlan pl
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(KTruss(underlying_txn_context(txn_ctx), underlying_property_graph(pg),k_truss_number,output_property_name_str, plan.underlying_))
+        v = handle_result_void(KTruss(underlying_txn_context(txn_ctx), underlying_property_graph_shared_ptr(pg),k_truss_number,output_property_name_str, plan.underlying_))
     return v
 
 
@@ -165,7 +166,7 @@ def k_truss_assert_valid(pg, uint32_t k_truss_number, str output_property_name):
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        handle_result_assert(KTrussAssertValid(underlying_property_graph(pg), k_truss_number, output_property_name_str))
+        handle_result_assert(KTrussAssertValid(underlying_property_graph_shared_ptr(pg), k_truss_number, output_property_name_str))
 
 
 cdef _KTrussStatistics handle_result_KTrussStatistics(Result[_KTrussStatistics] res) nogil except *:
@@ -185,7 +186,7 @@ cdef class KTrussStatistics:
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_KTrussStatistics(_KTrussStatistics.Compute(
-                underlying_property_graph(pg), k_truss_number, output_property_name_str))
+                underlying_property_graph_shared_ptr(pg), k_truss_number, output_property_name_str))
 
     @property
     def number_of_edges_left(self) -> uint64_t:

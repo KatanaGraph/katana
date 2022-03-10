@@ -69,13 +69,13 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("URI from string {} failed: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -104,7 +104,7 @@ main(int argc, char** argv) {
     std::cerr << "Unknown algo: " << algo << "\n";
   }
 
-  auto num_triangles_result = TriangleCount(pg_projected_view.get(), plan);
+  auto num_triangles_result = TriangleCount(pg_projected_view, plan);
   if (!num_triangles_result) {
     KATANA_LOG_FATAL(
         "failed to run algorithm: {}", num_triangles_result.error());

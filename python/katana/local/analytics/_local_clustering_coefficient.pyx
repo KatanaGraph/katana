@@ -11,6 +11,7 @@ Local Clustering Coefficient
 .. autofunction:: katana.local.analytics.local_clustering_coefficient
 """
 from libcpp cimport bool
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -19,7 +20,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_void
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -58,7 +59,7 @@ cdef extern from "katana/analytics/local_clustering_coefficient/local_clustering
     _LocalClusteringCoefficientPlan.Relabeling kDefaultRelabeling "katana::analytics::LocalClusteringCoefficientPlan::kDefaultRelabeling"
     bool kDefaultEdgesSorted "katana::analytics::LocalClusteringCoefficientPlan::kDefaultEdgesSorted"
 
-    Result[void] LocalClusteringCoefficient(_PropertyGraph* pfg, const string& output_property_name, CTxnContext* txn_ctx, _LocalClusteringCoefficientPlan plan)
+    Result[void] LocalClusteringCoefficient(const shared_ptr[_PropertyGraph]& pfg, const string& output_property_name, CTxnContext* txn_ctx, _LocalClusteringCoefficientPlan plan)
 
 
 class _LocalClusteringCoefficientPlanAlgorithm(Enum):
@@ -157,4 +158,4 @@ def local_clustering_coefficient(pg, str output_property_name, LocalClusteringCo
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(LocalClusteringCoefficient(underlying_property_graph(pg), output_property_name_str, underlying_txn_context(txn_ctx), plan.underlying_))
+        handle_result_void(LocalClusteringCoefficient(underlying_property_graph_shared_ptr(pg), output_property_name_str, underlying_txn_context(txn_ctx), plan.underlying_))

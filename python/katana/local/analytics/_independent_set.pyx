@@ -16,6 +16,7 @@ Independent Set
 .. autofunction:: katana.local.analytics.independent_set_assert_valid
 """
 from libc.stdint cimport uint32_t
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -25,7 +26,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -57,9 +58,9 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
         @staticmethod
         _IndependentSetPlan EdgeTiledPriority()
 
-    Result[void] IndependentSet(_PropertyGraph* pg, string output_property_name, CTxnContext* txn_ctx, _IndependentSetPlan plan)
+    Result[void] IndependentSet(const shared_ptr[_PropertyGraph]& pg, string output_property_name, CTxnContext* txn_ctx, _IndependentSetPlan plan)
 
-    Result[void] IndependentSetAssertValid(_PropertyGraph* pg, string output_property_name)
+    Result[void] IndependentSetAssertValid(const shared_ptr[_PropertyGraph]& pg, string output_property_name)
 
     cppclass _IndependentSetStatistics "katana::analytics::IndependentSetStatistics":
         uint32_t cardinality
@@ -67,7 +68,7 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
         void Print(ostream os)
 
         @staticmethod
-        Result[_IndependentSetStatistics] Compute(_PropertyGraph* pg, string output_property_name)
+        Result[_IndependentSetStatistics] Compute(const shared_ptr[_PropertyGraph]& pg, string output_property_name)
 
 
 class _IndependentSetPlanAlgorithm(Enum):
@@ -154,7 +155,7 @@ def independent_set(pg, str output_property_name,
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(IndependentSet(underlying_property_graph(pg), output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
+        handle_result_void(IndependentSet(underlying_property_graph_shared_ptr(pg), output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
 
 
 def independent_set_assert_valid(pg, str output_property_name):
@@ -167,7 +168,7 @@ def independent_set_assert_valid(pg, str output_property_name):
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(IndependentSetAssertValid(underlying_property_graph(pg), output_property_name_cstr))
+        handle_result_assert(IndependentSetAssertValid(underlying_property_graph_shared_ptr(pg), output_property_name_cstr))
 
 
 cdef _IndependentSetStatistics handle_result_IndependentSetStatistics(Result[_IndependentSetStatistics] res) nogil except *:
@@ -188,7 +189,7 @@ cdef class IndependentSetStatistics:
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_IndependentSetStatistics(_IndependentSetStatistics.Compute(
-                underlying_property_graph(pg), output_property_name_cstr))
+                underlying_property_graph_shared_ptr(pg), output_property_name_cstr))
 
     @property
     def cardinality(self) -> int:

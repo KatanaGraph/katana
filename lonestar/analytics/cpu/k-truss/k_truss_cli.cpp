@@ -92,7 +92,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
@@ -100,8 +100,8 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
-      ProjectPropertyGraphForArguments(pg);
+  auto pg_projected_view = std::shared_ptr<katana::PropertyGraph>(
+      ProjectPropertyGraphForArguments(pg));
 
   std::cout << "Projected graph has: "
             << pg_projected_view->topology().NumNodes() << " nodes, "
@@ -123,14 +123,14 @@ main(int argc, char** argv) {
   }
 
   katana::TxnContext txn_ctx;
-  if (auto r = KTruss(
-          &txn_ctx, pg_projected_view.get(), kTrussNumber, "edge-alive", plan);
+  if (auto r =
+          KTruss(&txn_ctx, pg_projected_view, kTrussNumber, "edge-alive", plan);
       !r) {
     KATANA_LOG_FATAL("Failed to compute k-truss: {}", r.error());
   }
 
-  auto stats_result = KTrussStatistics::Compute(
-      pg_projected_view.get(), kTrussNumber, "edge-alive");
+  auto stats_result =
+      KTrussStatistics::Compute(pg_projected_view, kTrussNumber, "edge-alive");
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute KTruss statistics: {}", stats_result.error());
@@ -139,8 +139,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (KTrussAssertValid(
-            pg_projected_view.get(), kTrussNumber, "edge-alive")) {
+    if (KTrussAssertValid(pg_projected_view, kTrussNumber, "edge-alive")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");

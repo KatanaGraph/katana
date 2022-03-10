@@ -86,7 +86,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->NumNodes() << " nodes, " << pg->NumEdges()
@@ -95,11 +95,11 @@ main(int argc, char** argv) {
   IndependentSetPlan plan = IndependentSetPlan::FromAlgorithm(algo);
 
   katana::TxnContext txn_ctx;
-  if (auto r = IndependentSet(pg.get(), "indicator", &txn_ctx, plan); !r) {
+  if (auto r = IndependentSet(pg, "indicator", &txn_ctx, plan); !r) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", r.error());
   }
 
-  auto stats_result = IndependentSetStatistics::Compute(pg.get(), "indicator");
+  auto stats_result = IndependentSetStatistics::Compute(pg, "indicator");
   if (!stats_result) {
     KATANA_LOG_FATAL("Failed to compute statistics: {}", stats_result.error());
   }
@@ -107,7 +107,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (IndependentSetAssertValid(pg.get(), "indicator")) {
+    if (IndependentSetAssertValid(pg, "indicator")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");

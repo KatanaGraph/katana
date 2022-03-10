@@ -269,12 +269,12 @@ katana::PropertyGraph::Make(
 
 std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeEmptyEdgeProjectedGraph(
-    PropertyGraph& pg, uint32_t num_new_nodes,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t num_new_nodes,
     const DynamicBitset& nodes_bitset,
     NUMAArray<Node>&& original_to_projected_nodes_mapping,
     NUMAArray<GraphTopology::PropertyIndex>&&
         projected_to_original_nodes_mapping) {
-  const auto& topology = pg.topology();
+  const auto& topology = pg->topology();
 
   NUMAArray<Edge> out_indices;
   out_indices.allocateInterleaved(num_new_nodes);
@@ -310,8 +310,9 @@ katana::PropertyGraph::MakeEmptyEdgeProjectedGraph(
 
 std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeEmptyProjectedGraph(
-    katana::PropertyGraph& pg, const katana::DynamicBitset& nodes_bitset) {
-  const auto& topology = pg.topology();
+    const std::shared_ptr<PropertyGraph>& pg,
+    const katana::DynamicBitset& nodes_bitset) {
+  const auto& topology = pg->topology();
   NUMAArray<Node> original_to_projected_nodes_mapping;
   original_to_projected_nodes_mapping.allocateInterleaved(topology.NumNodes());
   katana::ParallelSTL::fill(
@@ -351,7 +352,8 @@ katana::PropertyGraph::Copy(katana::TxnContext* txn_ctx) const {
 
 std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeProjectedGraph(
-    PropertyGraph& pg, const std::vector<std::string>& node_types,
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::vector<std::string>& node_types,
     const std::vector<std::string>& edge_types) {
   auto ret = MakeProjectedGraph(
       pg, node_types.empty() ? std::nullopt : std::make_optional(node_types),
@@ -362,17 +364,18 @@ katana::PropertyGraph::MakeProjectedGraph(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::MakeProjectedGraph(
-    PropertyGraph& pg, std::optional<std::vector<std::string>> node_types,
+    const std::shared_ptr<PropertyGraph>& pg,
+    std::optional<std::vector<std::string>> node_types,
     std::optional<std::vector<std::string>> edge_types) {
   std::optional<SetOfEntityTypeIDs> node_type_ids;
   if (node_types) {
     node_type_ids = KATANA_CHECKED(
-        pg.GetNodeTypeManager().GetEntityTypeIDs(node_types.value()));
+        pg->GetNodeTypeManager().GetEntityTypeIDs(node_types.value()));
   }
   std::optional<SetOfEntityTypeIDs> edge_type_ids;
   if (edge_types) {
     edge_type_ids = KATANA_CHECKED(
-        pg.GetEdgeTypeManager().GetEntityTypeIDs(edge_types.value()));
+        pg->GetEdgeTypeManager().GetEntityTypeIDs(edge_types.value()));
   }
   return MakeProjectedGraph(pg, node_type_ids, edge_type_ids);
 }
@@ -381,9 +384,10 @@ katana::PropertyGraph::MakeProjectedGraph(
 /// the original graph.
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::MakeProjectedGraph(
-    PropertyGraph& pg, std::optional<SetOfEntityTypeIDs> node_types,
+    const std::shared_ptr<PropertyGraph>& pg,
+    std::optional<SetOfEntityTypeIDs> node_types,
     std::optional<SetOfEntityTypeIDs> edge_types) {
-  const auto& topology = pg.topology();
+  const auto& topology = pg->topology();
   if (topology.empty()) {
     return MakeEmptyProjectedGraph(pg, katana::DynamicBitset{});
   }
@@ -414,7 +418,7 @@ katana::PropertyGraph::MakeProjectedGraph(
 
     katana::do_all(katana::iterate(topology.Nodes()), [&](auto src) {
       for (auto type : node_types.value()) {
-        if (pg.DoesNodeHaveType(src, type)) {
+        if (pg->DoesNodeHaveType(src, type)) {
           accum_num_new_nodes += 1;
           bitset_nodes.set(src);
           // this sets the corresponding entry in the array to 1
@@ -500,7 +504,7 @@ katana::PropertyGraph::MakeProjectedGraph(
             auto dest = topology.OutEdgeDst(e);
             if (bitset_nodes.test(dest)) {
               for (auto type : edge_types.value()) {
-                if (pg.DoesEdgeHaveTypeFromTopoIndex(e, type)) {
+                if (pg->DoesEdgeHaveTypeFromTopoIndex(e, type)) {
                   accum_num_new_edges += 1;
                   bitset_edges.set(e);
                   out_indices[src] += 1;

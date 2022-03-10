@@ -370,7 +370,7 @@ public:
 
 template <typename Algo>
 katana::Result<void>
-Run(katana::PropertyGraph* pg, MatrixCompletionPlan plan,
+Run(const std::shared_ptr<katana::PropertyGraph>& pg, MatrixCompletionPlan plan,
     katana::TxnContext* txn_ctx) {
   KATANA_CHECKED(pg->ConstructNodeProperties<NodeData>(txn_ctx));
   Graph graph = KATANA_CHECKED(Graph::Make(pg));
@@ -398,8 +398,8 @@ Run(katana::PropertyGraph* pg, MatrixCompletionPlan plan,
 
 katana::Result<void>
 katana::analytics::MatrixCompletion(
-    katana::PropertyGraph* pg, katana::TxnContext* txn_ctx,
-    MatrixCompletionPlan plan) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    katana::TxnContext* txn_ctx, MatrixCompletionPlan plan) {
   switch (plan.algorithm()) {
   case MatrixCompletionPlan::kSGDByItems:
     return Run<SGDItemsAlgo>(pg, plan, txn_ctx);

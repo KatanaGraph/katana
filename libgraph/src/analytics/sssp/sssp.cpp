@@ -514,7 +514,7 @@ Sssp(
 template <typename Weight>
 static katana::Result<void>
 SSSPWithWrap(
-    katana::PropertyGraph* pg, size_t start_node,
+    const std::shared_ptr<katana::PropertyGraph>& pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan,
     katana::TxnContext* txn_ctx) {
@@ -545,7 +545,7 @@ SSSPWithWrap(
 
 katana::Result<void>
 katana::analytics::Sssp(
-    PropertyGraph* pg, size_t start_node,
+    const std::shared_ptr<katana::PropertyGraph>& pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     SsspPlan plan) {
@@ -609,7 +609,7 @@ namespace {
 template <typename Weight>
 static katana::Result<void>
 SsspValidateImpl(
-    katana::PropertyGraph* pg, size_t start_node,
+    const std::shared_ptr<katana::PropertyGraph>& pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name) {
   using Impl = SsspImplementation<Weight>;
@@ -642,7 +642,7 @@ SsspValidateImpl(
 
 katana::Result<void>
 katana::analytics::SsspAssertValid(
-    katana::PropertyGraph* pg, size_t start_node,
+    const std::shared_ptr<katana::PropertyGraph>& pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx) {
   if (!edge_weight_property_name.empty() &&
@@ -698,7 +698,8 @@ namespace {
 template <typename Weight>
 static katana::Result<SsspStatistics>
 ComputeStatistics(
-    katana::PropertyGraph* pg, const std::string& output_property_name) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& output_property_name) {
   auto pg_result = katana::TypedPropertyGraph<
       typename SsspImplementation<Weight>::NodeData,
       std::tuple<>>::Make(pg, {output_property_name}, {});
@@ -736,7 +737,8 @@ ComputeStatistics(
 
 katana::Result<SsspStatistics>
 SsspStatistics::Compute(
-    PropertyGraph* pg, const std::string& output_property_name) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& output_property_name) {
   switch (
       KATANA_CHECKED(pg->GetNodeProperty(output_property_name))->type()->id()) {
   case arrow::UInt32Type::type_id:

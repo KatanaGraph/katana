@@ -46,6 +46,6 @@ std::unique_ptr<katana::SharedMemSys> LonestarStart(
     llvm::cl::opt<std::string>* input);
 std::unique_ptr<katana::SharedMemSys> LonestarStart(int argc, char** argv);
 
-std::unique_ptr<katana::PropertyGraph> ProjectPropertyGraphForArguments(
-    const std::unique_ptr<katana::PropertyGraph>& pg);
+std::shared_ptr<katana::PropertyGraph> ProjectPropertyGraphForArguments(
+    const std::shared_ptr<katana::PropertyGraph>& pg);
 #endif

@@ -135,7 +135,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
@@ -143,7 +143,7 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -179,9 +179,8 @@ main(int argc, char** argv) {
 
     std::string node_distance_prop = "level-" + std::to_string(start_node);
     katana::TxnContext txn_ctx;
-    if (auto r =
-            Bfs(pg_projected_view.get(), start_node, node_distance_prop,
-                &txn_ctx, plan);
+    if (auto r = Bfs(
+            pg_projected_view, start_node, node_distance_prop, &txn_ctx, plan);
         !r) {
       KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
@@ -197,7 +196,7 @@ main(int argc, char** argv) {
               << results->Value(reportNode) << "\n";
 
     auto stats_result =
-        BfsStatistics::Compute(pg_projected_view.get(), node_distance_prop);
+        BfsStatistics::Compute(pg_projected_view, node_distance_prop);
     if (!stats_result) {
       KATANA_LOG_FATAL("Failed to compute stats {}", stats_result.error());
     }
@@ -211,8 +210,8 @@ main(int argc, char** argv) {
             "connected",
             pg_projected_view->NumNodes() - stats.n_reached_nodes);
       }
-      if (auto res = BfsAssertValid(
-              pg_projected_view.get(), start_node, node_distance_prop);
+      if (auto res =
+              BfsAssertValid(pg_projected_view, start_node, node_distance_prop);
           res) {
         std::cout << "Verification successful.\n";
       } else {

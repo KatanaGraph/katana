@@ -15,7 +15,7 @@ from pyarrow.lib cimport to_shared
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, raise_error_code
 from katana.local import Graph, TxnContext
-from katana.local._graph cimport underlying_property_graph
+from katana.local._graph cimport underlying_property_graph_shared_ptr
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -34,7 +34,7 @@ cdef extern from "katana/analytics/subgraph_extraction/subgraph_extraction.h" na
         _SubGraphExtractionPlan NodeSet(
             )
 
-    Result[unique_ptr[_PropertyGraph]] SubGraphExtraction(_PropertyGraph* pfg, const vector[uint32_t]& node_vec, _SubGraphExtractionPlan plan)
+    Result[unique_ptr[_PropertyGraph]] SubGraphExtraction(const shared_ptr[_PropertyGraph]& pfg, const vector[uint32_t]& node_vec, _SubGraphExtractionPlan plan)
 
 
 class _SubGraphExtractionPlanAlgorithm(Enum):
@@ -87,5 +87,5 @@ def subgraph_extraction(pg, node_vec, SubGraphExtractionPlan plan = SubGraphExtr
     """
     cdef vector[uint32_t] vec = [<uint32_t>n for n in node_vec]
     with nogil:
-        v = handle_result_property_graph(SubGraphExtraction(underlying_property_graph(pg), vec, plan.underlying_))
+        v = handle_result_property_graph(SubGraphExtraction(underlying_property_graph_shared_ptr(pg), vec, plan.underlying_))
     return Graph._make_from_address_shared(<uintptr_t>&v)

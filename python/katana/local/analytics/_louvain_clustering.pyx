@@ -17,6 +17,7 @@ Louvain Clustering
 """
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp cimport bool
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -26,7 +27,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -70,9 +71,9 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
     uint32_t kDefaultMaxIterations "katana::analytics::LouvainClusteringPlan::kDefaultMaxIterations"
     uint32_t kDefaultMinGraphSize "katana::analytics::LouvainClusteringPlan::kDefaultMinGraphSize"
 
-    Result[void] LouvainClustering(_PropertyGraph* pfg, const string& edge_weight_property_name,const string& output_property_name, CTxnContext* txn_ctx, bool is_symmetric, _LouvainClusteringPlan plan)
+    Result[void] LouvainClustering(const shared_ptr[_PropertyGraph]& pfg, const string& edge_weight_property_name,const string& output_property_name, CTxnContext* txn_ctx, bool is_symmetric, _LouvainClusteringPlan plan)
 
-    Result[void] LouvainClusteringAssertValid(_PropertyGraph* pfg,
+    Result[void] LouvainClusteringAssertValid(const shared_ptr[_PropertyGraph]& pfg,
             const string& edge_weight_property_name,
             const string& output_property_name
             )
@@ -87,7 +88,7 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
         void Print(ostream os)
 
         @staticmethod
-        Result[_LouvainClusteringStatistics] Compute(_PropertyGraph* pfg,
+        Result[_LouvainClusteringStatistics] Compute(const shared_ptr[_PropertyGraph]& pfg,
             const string& edge_weight_property_name,
             const string& output_property_name,
             CTxnContext* txn_ctx
@@ -209,14 +210,14 @@ def louvain_clustering(pg, str edge_weight_property_name, str output_property_na
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(LouvainClustering(underlying_property_graph(pg), edge_weight_property_name_str, output_property_name_str, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
+        handle_result_void(LouvainClustering(underlying_property_graph_shared_ptr(pg), edge_weight_property_name_str, output_property_name_str, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
 
 
 def louvain_clustering_assert_valid(pg, str edge_weight_property_name, str output_property_name ):
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_assert(LouvainClusteringAssertValid(underlying_property_graph(pg),
+        handle_result_assert(LouvainClusteringAssertValid(underlying_property_graph_shared_ptr(pg),
                 edge_weight_property_name_str,
                 output_property_name_str
                 ))
@@ -242,7 +243,7 @@ cdef class LouvainClusteringStatistics:
         txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_LouvainClusteringStatistics(_LouvainClusteringStatistics.Compute(
-                underlying_property_graph(pg),
+                underlying_property_graph_shared_ptr(pg),
                 edge_weight_property_name_str,
                 output_property_name_str,
                 underlying_txn_context(txn_ctx)

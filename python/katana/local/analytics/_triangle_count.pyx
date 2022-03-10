@@ -15,11 +15,12 @@ Triangle Counting
 """
 from libc.stdint cimport uint64_t
 from libcpp cimport bool
+from libcpp.memory cimport shared_ptr
 
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
 from katana.local import Graph, TxnContext
-from katana.local._graph cimport underlying_property_graph
+from katana.local._graph cimport underlying_property_graph_shared_ptr
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -54,7 +55,7 @@ cdef extern from "katana/analytics/triangle_count/triangle_count.h" namespace "k
     _TriangleCountPlan.Relabeling kDefaultRelabeling "katana::analytics::TriangleCountPlan::kDefaultRelabeling"
     bool kDefaultEdgeSorted "katana::analytics::TriangleCountPlan::kDefaultEdgeSorted"
 
-    Result[uint64_t] TriangleCount(_PropertyGraph* pg, _TriangleCountPlan plan)
+    Result[uint64_t] TriangleCount(const shared_ptr[_PropertyGraph]& pg, _TriangleCountPlan plan)
 
 
 class _TriangleCountPlanAlgorithm(Enum):
@@ -202,5 +203,5 @@ def triangle_count(pg,  TriangleCountPlan plan = TriangleCountPlan()) -> int:
 
     """
     with nogil:
-        v = handle_result_int(TriangleCount(underlying_property_graph(pg), plan.underlying_))
+        v = handle_result_int(TriangleCount(underlying_property_graph_shared_ptr(pg), plan.underlying_))
     return v

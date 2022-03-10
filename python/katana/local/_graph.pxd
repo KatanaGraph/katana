@@ -7,6 +7,7 @@ from katana.cpp.libsupport.result cimport Result
 
 
 cdef _PropertyGraph* underlying_property_graph(graph) nogil
+cdef shared_ptr[_PropertyGraph] underlying_property_graph_shared_ptr(graph) nogil
 cdef CTxnContext* underlying_txn_context(txn_context) nogil
 
 cdef shared_ptr[_PropertyGraph] handle_result_PropertyGraph(Result[unique_ptr[_PropertyGraph]] res) nogil except *

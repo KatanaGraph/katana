@@ -346,3 +346,4 @@ min-similarity-lines = 10
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "--import-mode append"
+asyncio_mode = "strict"

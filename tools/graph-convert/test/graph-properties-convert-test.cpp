@@ -83,7 +83,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.topology.NumEdges() == 8);
 
   // test node properties
-  auto names = safe_cast<arrow::LargeStringArray>(
+  auto names = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("name")->chunk(0));
   std::string names_expected = std::string(
       "[\n\
@@ -99,7 +99,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(names->ToString() == names_expected);
 
-  auto taglines = safe_cast<arrow::LargeStringArray>(
+  auto taglines = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("tagline")->chunk(0));
   std::string taglines_expected = std::string(
       "[\n\
@@ -115,7 +115,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(taglines->ToString() == taglines_expected);
 
-  auto titles = safe_cast<arrow::LargeStringArray>(
+  auto titles = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("title")->chunk(0));
   std::string titles_expected = std::string(
       "[\n\
@@ -131,7 +131,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(titles->ToString() == titles_expected);
 
-  auto released = safe_cast<arrow::LargeStringArray>(
+  auto released = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("released")->chunk(0));
   std::string released_expected = std::string(
       "[\n\
@@ -147,7 +147,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(released->ToString() == released_expected);
 
-  auto borns = safe_cast<arrow::LargeStringArray>(
+  auto borns = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
   std::string borns_expected = std::string(
       "[\n\
@@ -229,7 +229,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(randoms->ToString() == randoms_expected);
 
   // test edge properties
-  auto roles = safe_cast<arrow::LargeStringArray>(
+  auto roles = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("roles")->chunk(0));
   std::string roles_expected = std::string(
       "[\n\
@@ -244,7 +244,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(roles->ToString() == roles_expected);
 
-  auto texts = safe_cast<arrow::LargeStringArray>(
+  auto texts = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("text")->chunk(0));
   std::string texts_expected = std::string(
       "[\n\
@@ -365,7 +365,7 @@ VerifyTypesSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.topology.NumEdges() == 8);
 
   // test node properties
-  auto names = safe_cast<arrow::LargeStringArray>(
+  auto names = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("name")->chunk(0));
   std::string names_expected = std::string(
       "[\n\
@@ -381,7 +381,7 @@ VerifyTypesSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(names->ToString() == names_expected);
 
-  auto taglines = safe_cast<arrow::LargeStringArray>(
+  auto taglines = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("tagline")->chunk(0));
   std::string taglines_expected = std::string(
       "[\n\
@@ -397,7 +397,7 @@ VerifyTypesSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(taglines->ToString() == taglines_expected);
 
-  auto titles = safe_cast<arrow::LargeStringArray>(
+  auto titles = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("title")->chunk(0));
   std::string titles_expected = std::string(
       "[\n\
@@ -429,7 +429,7 @@ VerifyTypesSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(released->ToString() == released_expected);
 
-  auto borns = safe_cast<arrow::LargeStringArray>(
+  auto borns = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
   std::string borns_expected = std::string(
       "[\n\
@@ -602,7 +602,7 @@ VerifyTypesSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(bools->ToString() == bools_expected);
 
-  auto texts = safe_cast<arrow::LargeStringArray>(
+  auto texts = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("text")->chunk(0));
   std::string texts_expected = std::string(
       "[\n\
@@ -1200,7 +1200,7 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.topology.NumEdges() == 1);
 
   // test node properties
-  auto names = safe_cast<arrow::LargeStringArray>(
+  auto names = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("name")->chunk(0));
   std::string names_expected = std::string(
       "[\n\

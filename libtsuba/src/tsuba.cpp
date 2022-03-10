@@ -185,7 +185,7 @@ katana::ListViewsOfVersion(
         KATANA_CHECKED(RDGManifest::Make(manifest_path));
 
     if (manifest.num_hosts() == 0) {
-      // empty sentinel; not a valid view
+      // empty sentinal; not a valid view
       continue;
     }
 
@@ -210,6 +210,12 @@ katana::ListViewsOfVersion(
   }
 
   return std::make_pair(latest_version, views_found);
+}
+
+katana::Result<std::pair<uint64_t, std::vector<katana::RDGView>>>
+katana::ListAvailableViews(
+    const std::string& rdg_dir, std::optional<uint64_t> version) {
+  return ListViewsOfVersion(rdg_dir, version);
 }
 
 katana::Result<std::vector<std::pair<katana::URI, katana::URI>>>

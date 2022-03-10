@@ -148,7 +148,7 @@ GetNullArrays(size_t elts) {
   std::unordered_map<int, std::shared_ptr<arrow::Array>> null_map;
   std::unordered_map<int, std::shared_ptr<arrow::Array>> lists_null_map;
 
-  AddNullArrays<arrow::LargeStringBuilder>(&null_map, &lists_null_map, elts);
+  AddNullArrays<arrow::StringBuilder>(&null_map, &lists_null_map, elts);
   AddNullArrays<arrow::Int32Builder>(&null_map, &lists_null_map, elts);
   AddNullArrays<arrow::Int64Builder>(&null_map, &lists_null_map, elts);
   AddNullArrays<arrow::FloatBuilder>(&null_map, &lists_null_map, elts);
@@ -311,9 +311,8 @@ AppendArray(
   bool is_list = true;
 
   switch (list_builder->value_builder()->type()->id()) {
-  case arrow::Type::LARGE_STRING: {
-    auto sb =
-        static_cast<arrow::LargeStringBuilder*>(list_builder->value_builder());
+  case arrow::Type::STRING: {
+    auto sb = static_cast<arrow::StringBuilder*>(list_builder->value_builder());
     auto res = resolve_value(ImportDataType::kString, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = list_builder->Append();
@@ -396,8 +395,8 @@ AppendValue(
   bool is_list = false;
 
   switch (array->type()->id()) {
-  case arrow::Type::LARGE_STRING: {
-    auto sb = std::static_pointer_cast<arrow::LargeStringBuilder>(array);
+  case arrow::Type::STRING: {
+    auto sb = std::static_pointer_cast<arrow::StringBuilder>(array);
     auto res = resolve_value(ImportDataType::kString, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = sb->Append(std::get<std::string>(res.value));
@@ -645,9 +644,9 @@ AddArray(
 void
 AddArray(
     const std::shared_ptr<arrow::ListArray>& list_vals,
-    const std::shared_ptr<arrow::LargeStringArray>& vals, size_t index,
+    const std::shared_ptr<arrow::StringArray>& vals, size_t index,
     std::shared_ptr<arrow::ListBuilder> list_builder,
-    arrow::LargeStringBuilder* type_builder, ArrowArrays* chunks,
+    arrow::StringBuilder* type_builder, ArrowArrays* chunks,
     std::shared_ptr<arrow::Array> null_array, WriterProperties* properties,
     size_t total) {
   AddNulls(list_builder, chunks, null_array, properties, total);
@@ -825,7 +824,7 @@ RearrangeArray(
 // Rearrange an array's entries to match up with those of mapping
 ArrowArrays
 RearrangeArray(
-    std::shared_ptr<arrow::LargeStringBuilder> builder,
+    std::shared_ptr<arrow::StringBuilder> builder,
     const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
     const std::vector<size_t>& mapping, WriterProperties* properties) {
   auto chunk_size = properties->chunk_size;
@@ -836,10 +835,9 @@ RearrangeArray(
         "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
-  std::vector<std::shared_ptr<arrow::LargeStringArray>> arrays;
+  std::vector<std::shared_ptr<arrow::StringArray>> arrays;
   for (auto chunk : chunked_array->chunks()) {
-    arrays.emplace_back(
-        std::static_pointer_cast<arrow::LargeStringArray>(chunk));
+    arrays.emplace_back(std::static_pointer_cast<arrow::StringArray>(chunk));
   }
   std::shared_ptr<arrow::Array> null_array =
       properties->null_arrays.first.find(builder->type()->id())->second;
@@ -939,11 +937,11 @@ RearrangeListArray(
           ->value_type();
 
   switch (list_type->id()) {
-  case arrow::Type::LARGE_STRING: {
+  case arrow::Type::STRING: {
     auto builder = std::make_shared<arrow::ListBuilder>(
-        pool, std::make_shared<arrow::LargeStringBuilder>());
-    auto sb = static_cast<arrow::LargeStringBuilder*>(builder->value_builder());
-    chunks = RearrangeArray<arrow::LargeStringBuilder, arrow::LargeStringArray>(
+        pool, std::make_shared<arrow::StringBuilder>());
+    auto sb = static_cast<arrow::StringBuilder*>(builder->value_builder());
+    chunks = RearrangeArray<arrow::StringBuilder, arrow::StringArray>(
         builder, sb, list_chunked_array, mapping, properties);
     break;
   }
@@ -1029,8 +1027,8 @@ RearrangeTable(
         ArrowArrays ca;
 
         switch (arrayType) {
-        case arrow::Type::LARGE_STRING: {
-          auto sb = std::make_shared<arrow::LargeStringBuilder>();
+        case arrow::Type::STRING: {
+          auto sb = std::make_shared<arrow::StringBuilder>();
           ca = RearrangeArray(sb, array, mapping, properties);
           break;
         }
@@ -1433,10 +1431,9 @@ katana::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
   if (!key.is_list) {
     switch (key.type) {
     case ImportDataType::kString: {
-      properties->schema.emplace_back(
-          arrow::field(key.name, arrow::large_utf8()));
+      properties->schema.emplace_back(arrow::field(key.name, arrow::utf8()));
       properties->builders.emplace_back(
-          std::make_shared<arrow::LargeStringBuilder>());
+          std::make_shared<arrow::StringBuilder>());
       break;
     }
     case ImportDataType::kInt64: {
@@ -1486,19 +1483,18 @@ katana::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
     default:
       // for now handle uncaught types as strings
       KATANA_LOG_WARN("treating unknown type {} as string", key.type);
-      properties->schema.emplace_back(
-          arrow::field(key.name, arrow::large_utf8()));
+      properties->schema.emplace_back(arrow::field(key.name, arrow::utf8()));
       properties->builders.emplace_back(
-          std::make_shared<arrow::LargeStringBuilder>());
+          std::make_shared<arrow::StringBuilder>());
       break;
     }
   } else {
     switch (key.type) {
     case ImportDataType::kString: {
       properties->schema.emplace_back(
-          arrow::field(key.name, arrow::list(arrow::large_utf8())));
+          arrow::field(key.name, arrow::list(arrow::utf8())));
       properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
-          pool, std::make_shared<arrow::LargeStringBuilder>()));
+          pool, std::make_shared<arrow::StringBuilder>()));
       break;
     }
     case ImportDataType::kInt64: {
@@ -1552,9 +1548,9 @@ katana::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
       KATANA_LOG_WARN(
           "treating unknown array type {} as a string array", key.type);
       properties->schema.emplace_back(
-          arrow::field(key.name, arrow::list(arrow::large_utf8())));
+          arrow::field(key.name, arrow::list(arrow::utf8())));
       properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
-          pool, std::make_shared<arrow::LargeStringBuilder>()));
+          pool, std::make_shared<arrow::StringBuilder>()));
       break;
     }
   }
@@ -1777,10 +1773,9 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
 void
 ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
   switch (scalar->type->id()) {
-  case arrow::Type::LARGE_STRING: {
+  case arrow::Type::STRING: {
     type = ImportDataType::kString;
-    value =
-        std::static_pointer_cast<arrow::LargeStringScalar>(scalar)->ToString();
+    value = std::static_pointer_cast<arrow::StringScalar>(scalar)->ToString();
     break;
   }
   case arrow::Type::INT64: {
@@ -1932,9 +1927,9 @@ ToArrowArray(
     arrow::Type::type arrow_type, std::shared_ptr<arrow::Array> arrow_dst,
     const std::vector<katana::ImportData>& import_src) {
   switch (arrow_type) {
-  case arrow::Type::LARGE_STRING: {
-    arrow::LargeStringBuilder builder;
-    arrow_dst = BuildImportVec<arrow::LargeStringBuilder, std::string>(
+  case arrow::Type::STRING: {
+    arrow::StringBuilder builder;
+    arrow_dst = BuildImportVec<arrow::StringBuilder, std::string>(
         std::move(builder), arrow_dst, import_src);
     break;
   }

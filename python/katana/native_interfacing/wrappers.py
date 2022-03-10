@@ -1,4 +1,3 @@
-import ctypes
 import logging
 from abc import ABCMeta, abstractmethod
 from functools import lru_cache
@@ -225,7 +224,8 @@ class DtypeParametricType(numba.types.Type):
 class DtypeNumbaPointerWrapper(SimpleNumbaPointerWrapper):
     def __init__(self, orig_typ, override_module_name=None):
         super().__init__(orig_typ, override_module_name)
-        # TODO(amp): Is there a way to check for ".dtype"? Probably not, it's an attribute and we don't have an instance.
+        # TODO(amp): Is there a way to check for ".dtype"? Probably not, it's an attribute and we don't have
+        #  an instance.
 
     def _build_typing(self, orig_typ):
         @wraps_class(orig_typ, "<numba type>")

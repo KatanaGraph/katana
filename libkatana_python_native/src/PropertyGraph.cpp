@@ -286,6 +286,17 @@ template <
     typename... ClsExtra>
 void
 DefCompactIteratorWithNumbaInferer(
+    Return (Cls::*)(Args...) const, py::class_<Cls, ClsExtra...>& cls,
+    const char* name, const std::string& scab) {
+  DefCompactIteratorWithNumbaImpl<IteratorFunc, Cls, Args...>::Def(
+      cls, name, scab);
+}
+
+template <
+    auto IteratorFunc, typename Cls, typename Return, typename... Args,
+    typename... ClsExtra>
+void
+DefCompactIteratorWithNumbaInferer(
     Return (*)(Cls*, Args...), py::class_<Cls, ClsExtra...>& cls,
     const char* name, const std::string& scab) {
   DefCompactIteratorWithNumbaImpl<IteratorFunc, Cls, Args...>::Def(

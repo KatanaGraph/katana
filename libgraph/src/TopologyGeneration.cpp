@@ -29,7 +29,7 @@ MakeGrid(size_t width, size_t height, bool with_diagonals) noexcept {
   i+N---i+N+1
 
   The diagonals and the double-lines above are the edges we explicitly add for
-  every cell. Right and bottom boundary cells only add the double-line edges.
+  every cell. Right and bottom boundary cells only add the double-line deges.
   */
 
   size_t total_nodes = width * height;

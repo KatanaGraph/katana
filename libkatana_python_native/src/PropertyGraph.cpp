@@ -145,6 +145,17 @@ out_edge_dst(katana::PropertyGraph* pg, katana::GraphTopologyTypes::Edge e) {
   return *pg->OutEdgeDst(e);
 }
 
+auto
+PropertyGraphTopologyOutEdges(katana::PropertyGraph* pg) {
+  return pg->topology().OutEdges();
+}
+
+auto
+PropertyGraphTopologyOutEdgesForNode(
+    katana::PropertyGraph* pg, katana::GraphTopologyTypes::Node n) {
+  return pg->topology().OutEdges(n);
+}
+
 class PropertyGraphNumbaReplacement {
   using Edge = katana::GraphTopologyTypes::Edge;
   using Node = katana::GraphTopologyTypes::Node;
@@ -239,23 +250,23 @@ public:
   }
 };
 
-template <auto IteratorFunc, typename T, typename... Args>
+template <auto iterator_func, typename Cls, typename... Args>
 class DefCompactIteratorWithNumbaImpl {
-  static auto GetRange(T* self, Args... args) {
-    return std::invoke(IteratorFunc, self, args...);
+  static auto GetRange(Cls* self, Args... args) {
+    return std::invoke(iterator_func, self, args...);
   }
 
-  static auto Begin(T* self, Args... args) {
+  static auto Begin(Cls* self, Args... args) {
     return *GetRange(self, args...).begin();
   }
-  static auto End(T* self, Args... args) {
+  static auto End(Cls* self, Args... args) {
     return *GetRange(self, args...).end();
   }
 
 public:
   template <typename... ClsExtra>
   static void Def(
-      py::class_<T, ClsExtra...>& cls, const char* name,
+      py::class_<Cls, ClsExtra...>& cls, const char* name,
       const std::string& scab) {
     std::string begin_name = "_" + std::string(name) + "_" + scab + "_begin";
     std::string end_name = "_" + std::string(name) + "_" + scab + "_end";
@@ -271,45 +282,56 @@ public:
 };
 
 template <
-    auto IteratorFunc, typename Cls, typename Return, typename... Args,
+    auto iterator_func, typename Cls, typename Return, typename... Args,
     typename... ClsExtra>
 void
 DefCompactIteratorWithNumbaInferer(
     Return (Cls::*)(Args...), py::class_<Cls, ClsExtra...>& cls,
     const char* name, const std::string& scab) {
-  DefCompactIteratorWithNumbaImpl<IteratorFunc, Cls, Args...>::Def(
+  DefCompactIteratorWithNumbaImpl<iterator_func, Cls, Args...>::Def(
       cls, name, scab);
 }
 
 template <
-    auto IteratorFunc, typename Cls, typename Return, typename... Args,
+    auto iterator_func, typename Cls, typename Return, typename... Args,
     typename... ClsExtra>
 void
 DefCompactIteratorWithNumbaInferer(
     Return (Cls::*)(Args...) const, py::class_<Cls, ClsExtra...>& cls,
     const char* name, const std::string& scab) {
-  DefCompactIteratorWithNumbaImpl<IteratorFunc, Cls, Args...>::Def(
+  DefCompactIteratorWithNumbaImpl<iterator_func, const Cls, Args...>::Def(
       cls, name, scab);
 }
 
 template <
-    auto IteratorFunc, typename Cls, typename Return, typename... Args,
+    auto iterator_func, typename Cls, typename Return, typename... Args,
     typename... ClsExtra>
 void
 DefCompactIteratorWithNumbaInferer(
     Return (*)(Cls*, Args...), py::class_<Cls, ClsExtra...>& cls,
     const char* name, const std::string& scab) {
-  DefCompactIteratorWithNumbaImpl<IteratorFunc, Cls, Args...>::Def(
+  DefCompactIteratorWithNumbaImpl<iterator_func, Cls, Args...>::Def(
       cls, name, scab);
 }
 
-template <auto IteratorFunc, typename T, typename... ClsExtra>
+template <
+    auto iterator_func, typename Cls, typename Return, typename... Args,
+    typename... ClsExtra>
+void
+DefCompactIteratorWithNumbaInferer(
+    Return (*)(const Cls*, Args...), py::class_<Cls, ClsExtra...>& cls,
+    const char* name, const std::string& scab) {
+  DefCompactIteratorWithNumbaImpl<iterator_func, const Cls, Args...>::Def(
+      cls, name, scab);
+}
+
+template <auto iterator_func, typename Cls, typename... ClsExtra>
 void
 DefCompactIteratorWithNumba(
-    py::class_<T, ClsExtra...>& cls, const char* name,
+    py::class_<Cls, ClsExtra...>& cls, const char* name,
     const std::string& scab) {
-  DefCompactIteratorWithNumbaInferer<IteratorFunc>(
-      IteratorFunc, cls, name, scab);
+  DefCompactIteratorWithNumbaInferer<iterator_func>(
+      iterator_func, cls, name, scab);
 }
 
 // Functions which define specific types or groups of types. These are all
@@ -508,9 +530,8 @@ DefPropertyGraph(py::module& m) {
           if using ``node`` only, and ``out_edge_ids_for_node_and_type`` if
           using ``node`` and ``edge_type``.
       )""");
-  DefCompactIteratorWithNumba<&SubObjectCall<
-      &PropertyGraph::topology,
-      py::overload_cast<>(&GraphTopology::OutEdges, py::const_)>::Func>(
+
+  DefCompactIteratorWithNumba<&PropertyGraphTopologyOutEdges>(
       cls, "out_edge_ids", "for_node");
   DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::OutEdges>(
       cls_numba_replacement, "out_edge_ids", "all");
@@ -521,10 +542,7 @@ DefPropertyGraph(py::module& m) {
           &PropertyGraph::OutEdges, py::const_),
       py::call_guard<py::gil_scoped_release>());
   cls.attr("out_edge_ids_for_node") = cls.attr("out_edge_ids");
-  DefCompactIteratorWithNumba<&SubObjectCall<
-      &PropertyGraph::topology,
-      py::overload_cast<GraphTopologyTypes::Node>(
-          &GraphTopology::OutEdges, py::const_)>::Func>(
+  DefCompactIteratorWithNumba<&PropertyGraphTopologyOutEdgesForNode>(
       cls, "out_edge_ids_for_node", "for_node");
   DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::OutEdgesForNode>(
       cls_numba_replacement, "out_edge_ids_for_node", "for_node");
@@ -549,6 +567,8 @@ DefPropertyGraph(py::module& m) {
         return self.topology().OutDegree(n);
       },
       py::call_guard<py::gil_scoped_release>());
+  // TODO(amp): Decide if this kind of function composition is actually better
+  //  than boilerplate declarations.
   DefWithNumba<&SubObjectCall<
       &PropertyGraph::topology, &GraphTopology::OutDegree>::Func>(
       cls, "out_degree");

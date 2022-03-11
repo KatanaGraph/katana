@@ -508,27 +508,27 @@ DefPropertyGraph(py::module& m) {
   cls.def(
       "out_edge_ids", py::overload_cast<>(&PropertyGraph::OutEdges, py::const_),
       R"""(
-      Get out-edges from the graph; either all out-edges, or a subset based on
-      destination node and edge type. |lazy_compute|
+Get out-edges from the graph; either all out-edges, or a subset based on
+destination node and edge type. |lazy_compute|
 
-      Returns:
-          Iterable[NodeID]: An iterable over in-edges in the graph.
+Returns:
+    Iterable[NodeID]: An iterable over in-edges in the graph.
 
-      Args:
-          node (Optional[NodeID]): A node ID whose in-edges should be returned.
-              If this is not provided, all in-edges in the graph are returned.
-          edge_type (Optional[EntityType]): The type of edges to return; other
-              edges are ignored. If this is not provided, edges of all types are
-              returned.
+Args:
+    node (Optional[NodeID]): A node ID whose in-edges should be returned.
+        If this is not provided, all in-edges in the graph are returned.
+    edge_type (Optional[EntityType]): The type of edges to return; other
+        edges are ignored. If this is not provided, edges of all types are
+        returned.
 
-      .. note::
+.. note::
 
-          |supports_compiled_operator| To call this method with ``edge_type``
-          from compiled operators, call :py:func:`~Graph.with_edge_type_lookup`
-          and pass the result to the compiled function. When using this method
-          from compiled operators, you must call it as ``out_edge_ids_for_node``
-          if using ``node`` only, and ``out_edge_ids_for_node_and_type`` if
-          using ``node`` and ``edge_type``.
+    |supports_compiled_operator| To call this method with ``edge_type``
+    from compiled operators, call :py:func:`~Graph.with_edge_type_lookup`
+    and pass the result to the compiled function. When using this method
+    from compiled operators, you must call it as ``out_edge_ids_for_node``
+    if using ``node`` only, and ``out_edge_ids_for_node_and_type`` if
+    using ``node`` and ``edge_type``.
       )""");
 
   DefCompactIteratorWithNumba<&PropertyGraphTopologyOutEdges>(
@@ -649,27 +649,27 @@ DefPropertyGraph(py::module& m) {
       },
       py::call_guard<py::gil_scoped_release>(),
       R"""(
-      Get in-edges from the graph; either all in-edges, or a subset based on
-      destination node and edge type. |lazy_compute|
+Get in-edges from the graph; either all in-edges, or a subset based on
+destination node and edge type. |lazy_compute|
 
-      Returns:
-          Iterable[NodeID]: An iterable over in-edges in the graph.
+Returns:
+    Iterable[NodeID]: An iterable over in-edges in the graph.
 
-      Args:
-          node (Optional[NodeID]): A node ID whose in-edges should be returned.
-            If this is not provided, all in-edges in the graph are returned.
-          edge_type (Optional[EntityType]): The type of edges to return; other
-            edges are ignored. If this is not provided, edges of all types are
-            returned.
+Args:
+    node (Optional[NodeID]): A node ID whose in-edges should be returned.
+      If this is not provided, all in-edges in the graph are returned.
+    edge_type (Optional[EntityType]): The type of edges to return; other
+      edges are ignored. If this is not provided, edges of all types are
+      returned.
 
-      .. note::
+.. note::
 
-          |supports_compiled_operator| To call this method from compiled
-          operators call :py:func:`~Graph.with_in_edges` and
-          :py:func:`~Graph.with_edge_type_lookup` if using the ``edge_type``
-          argument. When using this method from compiled operators, you must
-          call it as ``in_edge_ids_for_node`` if using ``node`` only, and
-          ``in_edge_ids_for_node_and_type`` if using ``node`` and ``edge_type``.
+    |supports_compiled_operator| To call this method from compiled
+    operators call :py:func:`~Graph.with_in_edges` and
+    :py:func:`~Graph.with_edge_type_lookup` if using the ``edge_type``
+    argument. When using this method from compiled operators, you must
+    call it as ``in_edge_ids_for_node`` if using ``node`` only, and
+    ``in_edge_ids_for_node_and_type`` if using ``node`` and ``edge_type``.
       )""");
 
   DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::InEdges>(
@@ -711,24 +711,24 @@ DefPropertyGraph(py::module& m) {
       },
       py::call_guard<py::gil_scoped_release>(),
       R"""(
-      Get in-degree of a node, possibly filtered by edge type. |lazy_compute|
+Get in-degree of a node, possibly filtered by edge type. |lazy_compute|
 
-      Returns:
-          int: The degree of the code.
+Returns:
+    int: The degree of the code.
 
-      Args:
-          node (NodeID): A node ID whose in-degree should be returned.
-          edge_type (Optional[EntityType]): The type of edges to return; other
-            edges are ignored. If this is not provided, edges of all types are
-            returned.
+Args:
+    node (NodeID): A node ID whose in-degree should be returned.
+    edge_type (Optional[EntityType]): The type of edges to return; other
+      edges are ignored. If this is not provided, edges of all types are
+      returned.
 
-      .. note::
+.. note::
 
-          |supports_compiled_operator| To call this method from compiled
-          operators call :py:func:`~Graph.with_in_edges` and
-          :py:func:`~Graph.with_edge_type_lookup` if using the ``edge_type``
-          argument. When using this method from compiled operators, you must
-          call it  ``in_degree_for_type`` if using ``edge_type``.
+    |supports_compiled_operator| To call this method from compiled
+    operators call :py:func:`~Graph.with_in_edges` and
+    :py:func:`~Graph.with_edge_type_lookup` if using the ``edge_type``
+    argument. When using this method from compiled operators, you must
+    call it  ``in_degree_for_type`` if using ``edge_type``.
       )""");
 
   katana::DefWithNumba<&PropertyGraphNumbaReplacement::InDegree>(

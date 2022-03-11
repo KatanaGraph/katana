@@ -402,7 +402,7 @@ DefPropertyGraph(py::module& m) {
   cls.def(
       "project",
       [](PropertyGraph& self, py::object node_types,
-         py::object edge_types) -> Result<std::shared_ptr<PropertyGraph>> {
+         py::object edge_types) -> std::shared_ptr<PropertyGraph> {
         std::optional<katana::SetOfEntityTypeIDs> node_type_ids;
         if (!node_types.is_none()) {
           node_type_ids = katana::SetOfEntityTypeIDs();
@@ -423,10 +423,11 @@ DefPropertyGraph(py::module& m) {
         py::gil_scoped_release
             guard;  // graph projection may copy or load data.
         // is_none is safe without the GIL because it is just a pointer compare.
-        return KATANA_CHECKED(PropertyGraph::MakeProjectedGraph(
+        return PythonChecked(PropertyGraph::MakeProjectedGraph(
             self, node_type_ids, edge_type_ids));
       },
       py::arg("node_types") = py::none(), py::arg("edge_types") = py::none(),
+      py::return_value_policy::reference_internal,
       R"""(
       Get a projected view of the graph which only contains nodes or edges of
       specific types.
@@ -504,88 +505,123 @@ DefPropertyGraph(py::module& m) {
   // Nodes() -> NodeHandle iterator  - iterator over all graph nodes
   cls.def("nodes", [](PropertyGraph& self) { return self.Nodes(); });
 
-  // OutEdges() -> OutEdgeHandle iterator  - iterator over all graph out-edges
-  cls.def(
-      "out_edge_ids", py::overload_cast<>(&PropertyGraph::OutEdges, py::const_),
-      R"""(
-Get out-edges from the graph; either all out-edges, or a subset based on
-destination node and edge type. |lazy_compute|
+  {
+    py::options options;
+    options.disable_function_signatures();
 
-Returns:
-    Iterable[NodeID]: An iterable over in-edges in the graph.
+    // OutEdges() -> OutEdgeHandle iterator  - iterator over all graph out-edges
+    cls.def(
+        "out_edge_ids",
+        py::overload_cast<>(&PropertyGraph::OutEdges, py::const_),
+        R"""(
+        out_edge_ids(node: Optional[NodeID] = None, edge_type: Optional[EntityType] = None)
 
-Args:
-    node (Optional[NodeID]): A node ID whose in-edges should be returned.
-        If this is not provided, all in-edges in the graph are returned.
-    edge_type (Optional[EntityType]): The type of edges to return; other
-        edges are ignored. If this is not provided, edges of all types are
-        returned.
+        Get out-edges from the graph; either all out-edges, or a subset based on
+        destination node and edge type. |lazy_compute|
 
-.. note::
+        Returns:
+            Iterable[NodeID]: An iterable over in-edges in the graph.
 
-    |supports_compiled_operator| To call this method with ``edge_type``
-    from compiled operators, call :py:func:`~Graph.with_edge_type_lookup`
-    and pass the result to the compiled function. When using this method
-    from compiled operators, you must call it as ``out_edge_ids_for_node``
-    if using ``node`` only, and ``out_edge_ids_for_node_and_type`` if
-    using ``node`` and ``edge_type``.
-      )""");
+        Args:
+            node (Optional[NodeID]): A node ID whose in-edges should be returned.
+                If this is not provided, all in-edges in the graph are returned.
+            edge_type (Optional[EntityType]): The type of edges to return; other
+                edges are ignored. If this is not provided, edges of all types are
+                returned.
 
-  DefCompactIteratorWithNumba<&PropertyGraphTopologyOutEdges>(
-      cls, "out_edge_ids", "for_node");
-  DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::OutEdges>(
-      cls_numba_replacement, "out_edge_ids", "all");
+        .. note::
 
-  cls.def(
-      "out_edge_ids",
-      py::overload_cast<GraphTopologyTypes::Node>(
-          &PropertyGraph::OutEdges, py::const_),
-      py::call_guard<py::gil_scoped_release>());
-  cls.attr("out_edge_ids_for_node") = cls.attr("out_edge_ids");
-  DefCompactIteratorWithNumba<&PropertyGraphTopologyOutEdgesForNode>(
-      cls, "out_edge_ids_for_node", "for_node");
-  DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::OutEdgesForNode>(
-      cls_numba_replacement, "out_edge_ids_for_node", "for_node");
+            |supports_compiled_operator| To call this method with ``edge_type``
+            from compiled operators, call
+            :py:func:`~Graph.with_edge_type_lookup` and pass the result to the
+            compiled function. When using this method from compiled operators,
+            you must call it as ``out_edge_ids_for_node`` if using ``node``
+            only, and ``out_edge_ids_for_node_and_type`` if using ``node`` and
+            ``edge_type``.
+        )""");
 
-  cls.def(
-      "out_edge_ids",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n,
-         const EntityType& ty) {
-        return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
-            .OutEdges(n, ty.type_id);
-      },
-      py::call_guard<py::gil_scoped_release>());
-  cls.attr("out_edge_ids_for_node_and_type") = cls.attr("out_edge_ids");
-  DefCompactIteratorWithNumba<
-      &PropertyGraphNumbaReplacement::OutEdgesForNodeAndType>(
-      cls_numba_replacement, "out_edge_ids_for_node_and_type",
-      "for_node_and_type");
+    DefCompactIteratorWithNumba<&PropertyGraphTopologyOutEdges>(
+        cls, "out_edge_ids", "for_node");
+    DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::OutEdges>(
+        cls_numba_replacement, "out_edge_ids", "all");
 
-  cls.def(
-      "out_degree",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
-        return self.topology().OutDegree(n);
-      },
-      py::call_guard<py::gil_scoped_release>());
-  // TODO(amp): Decide if this kind of function composition is actually better
-  //  than boilerplate declarations.
-  DefWithNumba<&SubObjectCall<
-      &PropertyGraph::topology, &GraphTopology::OutDegree>::Func>(
-      cls, "out_degree");
-  DefWithNumba<&PropertyGraphNumbaReplacement::OutDegree>(
-      cls_numba_replacement, "out_degree");
+    cls.def(
+        "out_edge_ids",
+        py::overload_cast<GraphTopologyTypes::Node>(
+            &PropertyGraph::OutEdges, py::const_),
+        py::call_guard<py::gil_scoped_release>());
+    cls.attr("out_edge_ids_for_node") = cls.attr("out_edge_ids");
+    DefCompactIteratorWithNumba<&PropertyGraphTopologyOutEdgesForNode>(
+        cls, "out_edge_ids_for_node", "for_node");
+    DefCompactIteratorWithNumba<
+        &PropertyGraphNumbaReplacement::OutEdgesForNode>(
+        cls_numba_replacement, "out_edge_ids_for_node", "for_node");
 
-  // OutDegree(NodeHandle, EdgeEntityTypeID)-> size_t  - number of out-edges of a type for a node
-  cls.def(
-      "out_degree",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n,
-         const EntityType& ty) {
-        return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
-            .OutDegree(n, ty.type_id);
-      },
-      py::call_guard<py::gil_scoped_release>());
-  DefWithNumba<&PropertyGraphNumbaReplacement::OutDegreeForType>(
-      cls_numba_replacement, "out_degree_for_type");
+    cls.def(
+        "out_edge_ids",
+        [](PropertyGraph& self, GraphTopologyTypes::Node n,
+           const EntityType& ty) {
+          return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+              .OutEdges(n, ty.type_id);
+        },
+        py::call_guard<py::gil_scoped_release>());
+    cls.attr("out_edge_ids_for_node_and_type") = cls.attr("out_edge_ids");
+    DefCompactIteratorWithNumba<
+        &PropertyGraphNumbaReplacement::OutEdgesForNodeAndType>(
+        cls_numba_replacement, "out_edge_ids_for_node_and_type",
+        "for_node_and_type");
+
+    cls.def(
+        "out_degree",
+        [](PropertyGraph& self, GraphTopologyTypes::Node n) {
+          return self.topology().OutDegree(n);
+        },
+        py::call_guard<py::gil_scoped_release>(),
+        R"""(
+        out_degree(node: NodeID, edge_type: Optional[EntityType] = None)
+
+        Get out-degree of a node, possibly filtered by edge type. |lazy_compute|
+
+        Returns:
+            int: The degree of the node.
+
+        Args:
+            node (NodeID): A node ID whose in-degree should be returned.
+            edge_type (Optional[EntityType]): The type of edges to return; other
+              edges are ignored. If this is not provided, edges of all types are
+              returned.
+
+        .. note::
+
+            |supports_compiled_operator| To call this method with ``edge_type``
+            from compiled operators, call
+            :py:func:`~Graph.with_edge_type_lookup` and pass the result to the
+            compiled function. When using this method from compiled operators,
+            you must call it as ``out_edge_ids_for_node`` if using ``node``
+            only, and ``out_edge_ids_for_node_and_type`` if using ``node`` and
+            ``edge_type``.
+        )""");
+    // TODO(amp): Decide if this kind of function composition is actually better
+    //  than boilerplate declarations.
+    DefWithNumba<&SubObjectCall<
+        &PropertyGraph::topology, &GraphTopology::OutDegree>::Func>(
+        cls, "out_degree", katana::numba_only());
+    DefWithNumba<&PropertyGraphNumbaReplacement::OutDegree>(
+        cls_numba_replacement, "out_degree");
+
+    // OutDegree(NodeHandle, EdgeEntityTypeID)-> size_t  - number of out-edges of a type for a node
+    cls.def(
+        "out_degree",
+        [](PropertyGraph& self, GraphTopologyTypes::Node n,
+           const EntityType& ty) {
+          return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+              .OutDegree(n, ty.type_id);
+        },
+        py::call_guard<py::gil_scoped_release>());
+    cls.attr("out_degree_for_type") = cls.attr("out_degree");
+    DefWithNumba<&PropertyGraphNumbaReplacement::OutDegreeForType>(
+        cls_numba_replacement, "out_degree_for_type");
+  }
 
   // OutEdgeDst(OutEdgeHandle)-> NodeHandle - destination of an out-edge
   katana::DefWithNumba<&out_edge_dst>(cls, "out_edge_dst");
@@ -642,109 +678,120 @@ Args:
       `~Graph.in_edge_ids` and others.
       )""");
 
-  cls.def(
-      "in_edge_ids",
-      [](PropertyGraph& self) {
-        return self.BuildView<PropertyGraphViews::Transposed>().OutEdges();
-      },
-      py::call_guard<py::gil_scoped_release>(),
-      R"""(
-Get in-edges from the graph; either all in-edges, or a subset based on
-destination node and edge type. |lazy_compute|
+  {
+    py::options options;
+    options.disable_function_signatures();
 
-Returns:
-    Iterable[NodeID]: An iterable over in-edges in the graph.
+    cls.def(
+        "in_edge_ids",
+        [](PropertyGraph& self) {
+          return self.BuildView<PropertyGraphViews::Transposed>().OutEdges();
+        },
+        py::call_guard<py::gil_scoped_release>(),
+        R"""(
+        in_edge_ids(node: Optional[NodeID] = None, edge_type: Optional[EntityType] = None)
 
-Args:
-    node (Optional[NodeID]): A node ID whose in-edges should be returned.
-      If this is not provided, all in-edges in the graph are returned.
-    edge_type (Optional[EntityType]): The type of edges to return; other
-      edges are ignored. If this is not provided, edges of all types are
-      returned.
+        Get in-edges from the graph; either all in-edges, or a subset based on
+        destination node and edge type. |lazy_compute|
 
-.. note::
+        Returns:
+            Iterable[NodeID]: An iterable over in-edges in the graph.
 
-    |supports_compiled_operator| To call this method from compiled
-    operators call :py:func:`~Graph.with_in_edges` and
-    :py:func:`~Graph.with_edge_type_lookup` if using the ``edge_type``
-    argument. When using this method from compiled operators, you must
-    call it as ``in_edge_ids_for_node`` if using ``node`` only, and
-    ``in_edge_ids_for_node_and_type`` if using ``node`` and ``edge_type``.
-      )""");
+        Args:
+            node (Optional[NodeID]): A node ID whose in-edges should be returned.
+              If this is not provided, all in-edges in the graph are returned.
+            edge_type (Optional[EntityType]): The type of edges to return; other
+              edges are ignored. If this is not provided, edges of all types are
+              returned.
 
-  DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::InEdges>(
-      cls_numba_replacement, "in_edge_ids", "all");
+        .. note::
 
-  // InEdges(NodeHandle)-> InEdgeHandle iterator - iterator over in-edges for a node
-  cls.def(
-      "in_edge_ids",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
-        return self.BuildView<PropertyGraphViews::Transposed>().OutEdges(n);
-      },
-      py::call_guard<py::gil_scoped_release>());
-  cls.attr("in_edge_ids_for_node") = cls.attr("in_edge_ids");
+            |supports_compiled_operator| To call this method from compiled
+            operators call :py:func:`~Graph.with_in_edges` and
+            :py:func:`~Graph.with_edge_type_lookup` if using the ``edge_type``
+            argument. When using this method from compiled operators, you must
+            call it as ``in_edge_ids_for_node`` if using ``node`` only, and
+            ``in_edge_ids_for_node_and_type`` if using ``node`` and
+            ``edge_type``.
+        )""");
 
-  // TODO(amp, KAT-4362): Make all these scabbed methods into overloads.
-  DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::InEdgesForNode>(
-      cls_numba_replacement, "in_edge_ids_for_node", "for_node");
+    DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::InEdges>(
+        cls_numba_replacement, "in_edge_ids", "all");
 
-  // InEdges(NodeHandle, EdgeEntityTypeID)-> InEdgeHandle iterator - iterator over in-edges of a type for a node
-  cls.def(
-      "in_edge_ids",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n,
-         const EntityType& ty) {
-        return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>().InEdges(
-            n, ty.type_id);
-      },
-      py::call_guard<py::gil_scoped_release>());
-  cls.attr("in_edge_ids_for_node_and_type") = cls.attr("in_edge_ids");
+    // InEdges(NodeHandle)-> InEdgeHandle iterator - iterator over in-edges for a node
+    cls.def(
+        "in_edge_ids",
+        [](PropertyGraph& self, GraphTopologyTypes::Node n) {
+          return self.BuildView<PropertyGraphViews::Transposed>().OutEdges(n);
+        },
+        py::call_guard<py::gil_scoped_release>());
+    cls.attr("in_edge_ids_for_node") = cls.attr("in_edge_ids");
 
-  DefCompactIteratorWithNumba<
-      &PropertyGraphNumbaReplacement::InEdgesForNodeAndType>(
-      cls_numba_replacement, "in_edge_ids_for_node_and_type",
-      "for_node_and_type");
+    // TODO(amp, KAT-4362): Make all these scabbed methods into overloads.
+    DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::InEdgesForNode>(
+        cls_numba_replacement, "in_edge_ids_for_node", "for_node");
 
-  cls.def(
-      "in_degree",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
-        return self.BuildView<PropertyGraphViews::Transposed>().OutDegree(n);
-      },
-      py::call_guard<py::gil_scoped_release>(),
-      R"""(
-Get in-degree of a node, possibly filtered by edge type. |lazy_compute|
+    // InEdges(NodeHandle, EdgeEntityTypeID)-> InEdgeHandle iterator - iterator over in-edges of a type for a node
+    cls.def(
+        "in_edge_ids",
+        [](PropertyGraph& self, GraphTopologyTypes::Node n,
+           const EntityType& ty) {
+          return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+              .InEdges(n, ty.type_id);
+        },
+        py::call_guard<py::gil_scoped_release>());
+    cls.attr("in_edge_ids_for_node_and_type") = cls.attr("in_edge_ids");
 
-Returns:
-    int: The degree of the code.
+    DefCompactIteratorWithNumba<
+        &PropertyGraphNumbaReplacement::InEdgesForNodeAndType>(
+        cls_numba_replacement, "in_edge_ids_for_node_and_type",
+        "for_node_and_type");
 
-Args:
-    node (NodeID): A node ID whose in-degree should be returned.
-    edge_type (Optional[EntityType]): The type of edges to return; other
-      edges are ignored. If this is not provided, edges of all types are
-      returned.
+    cls.def(
+        "in_degree",
+        [](PropertyGraph& self, GraphTopologyTypes::Node n) {
+          return self.BuildView<PropertyGraphViews::Transposed>().OutDegree(n);
+        },
+        py::call_guard<py::gil_scoped_release>(),
+        R"""(
+        in_degree(node: NodeID, edge_type: Optional[EntityType] = None)
 
-.. note::
+        Get in-degree of a node, possibly filtered by edge type. |lazy_compute|
 
-    |supports_compiled_operator| To call this method from compiled
-    operators call :py:func:`~Graph.with_in_edges` and
-    :py:func:`~Graph.with_edge_type_lookup` if using the ``edge_type``
-    argument. When using this method from compiled operators, you must
-    call it  ``in_degree_for_type`` if using ``edge_type``.
-      )""");
+        Returns:
+            int: The degree of the node.
 
-  katana::DefWithNumba<&PropertyGraphNumbaReplacement::InDegree>(
-      cls_numba_replacement, "in_degree");
+        Args:
+            node (NodeID): A node ID whose in-degree should be returned.
+            edge_type (Optional[EntityType]): The type of edges to return; other
+              edges are ignored. If this is not provided, edges of all types are
+              returned.
 
-  cls.def(
-      "in_degree",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n,
-         const EntityType& ty) {
-        return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
-            .InDegree(n, ty.type_id);
-      },
-      py::call_guard<py::gil_scoped_release>());
+        .. note::
 
-  katana::DefWithNumba<&PropertyGraphNumbaReplacement::InDegreeForType>(
-      cls_numba_replacement, "in_degree_for_type");
+            |supports_compiled_operator| To call this method from compiled
+            operators call :py:func:`~Graph.with_in_edges` and
+            :py:func:`~Graph.with_edge_type_lookup` if using the ``edge_type``
+            argument. When using this method from compiled operators, you must
+            call it  ``in_degree_for_type`` if using ``edge_type``.
+        )""");
+
+    katana::DefWithNumba<&PropertyGraphNumbaReplacement::InDegree>(
+        cls_numba_replacement, "in_degree");
+
+    cls.def(
+        "in_degree",
+        [](PropertyGraph& self, GraphTopologyTypes::Node n,
+           const EntityType& ty) {
+          return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+              .InDegree(n, ty.type_id);
+        },
+        py::call_guard<py::gil_scoped_release>());
+    cls.attr("in_degree_for_type") = cls.attr("in_degree");
+
+    katana::DefWithNumba<&PropertyGraphNumbaReplacement::InDegreeForType>(
+        cls_numba_replacement, "in_degree_for_type");
+  }
 
   // InEdgeSrc(InEdgeHandle)-> NodeHandle - source of an in-edge
   cls.def(
@@ -756,97 +803,6 @@ Args:
 
   katana::DefWithNumba<&PropertyGraphNumbaReplacement::InEdgeSrc>(
       cls_numba_replacement, "in_edge_src");
-
-  cls.def(
-      "with_undirected_edges",
-      [](std::shared_ptr<PropertyGraph> self) {
-        self->BuildView<PropertyGraphViews::Undirected>();
-        // TODO(amp): as with_in_edges
-        return self;
-      },
-      py::call_guard<py::gil_scoped_release>(),
-      R"""(
-      Returns:
-        A view on this graph with undirected-edge information available
-        via `~Graph.undirected_edge_ids` and others.
-      )""");
-  cls_numba_replacement.def(
-      "with_undirected_edges",
-      [](py::object& self) {
-        py::cast<PropertyGraphNumbaReplacement*>(self)->WithUndirected();
-        return self;
-      },
-      py::call_guard<py::gil_scoped_release>(),
-      R"""(
-      Returns:
-        A view on this graph with undirected-edge information available
-        via `~Graph.undirected_edge_ids` and others.
-      )""");
-
-  // UndirectedEdges()-> UndirectedEdgeHandle iterator - iterator over all graph edges (in and out)
-  cls.def(
-      "undirected_edge_ids",
-      [](PropertyGraph& self) {
-        return self.BuildView<PropertyGraphViews::Undirected>().OutEdges();
-      },
-      py::call_guard<py::gil_scoped_release>(),
-      R"""(
-      Get undirected-edges from the graph; either all in-edges, or a subset
-      based on a neighbor node. |lazy_compute|
-
-      Returns:
-          Iterable[NodeID]: An iterable over undirected-edges in the graph.
-
-      Args:
-          node (Optional[NodeID]): A node ID whose in-edges should be returned.
-            If this is not provided, all in-edges in the graph are returned.
-
-      .. note::
-
-          |supports_compiled_operator| To call this method from compiled
-          operators call :py:func:`~Graph.with_undirected_edges`. When using
-          this method from compiled operators, you must call it as
-          ``undirected_edge_ids_for_node`` if using ``node``.
-      )""");
-  DefCompactIteratorWithNumba<&PropertyGraphNumbaReplacement::UndirectedEdges>(
-      cls_numba_replacement, "undirected_edge_ids", "all");
-
-  // UndirectedEdges(NodeHandle)-> UndirectedEdgeHandle iterator - iterator over all edges for a node
-  cls.def(
-      "undirected_edge_ids",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
-        return self.BuildView<PropertyGraphViews::Undirected>().UndirectedEdges(
-            n);
-      },
-      py::call_guard<py::gil_scoped_release>());
-  cls.attr("undirected_edge_ids_for_node") = cls.attr("undirected_edge_ids");
-  DefCompactIteratorWithNumba<
-      &PropertyGraphNumbaReplacement::UndirectedEdgesForNode>(
-      cls_numba_replacement, "undirected_edge_ids_for_node", "for_node");
-
-  // UndirectedEdges(NodeHandle, EdgeEntityTypeID) -> UndirectedEdgeHandle iterator - iterator over all edges of a type for a node
-  // UndirectedDegree(NodeHandle)-> size_t - number of all edges for a node
-  cls.def(
-      "undirected_degree",
-      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
-        return self.BuildView<PropertyGraphViews::Undirected>()
-            .UndirectedDegree(n);
-      },
-      py::call_guard<py::gil_scoped_release>());
-  katana::DefWithNumba<&PropertyGraphNumbaReplacement::UndirectedDegree>(
-      cls_numba_replacement, "undirected_degree");
-
-  // UndirectedDegree(NodeHandle, EdgeEntityTypeID) -> size_t - number of all edges of a type for a node
-  // UndirectedEdgeNeighbor(UndirectedEdgeHandle)-> NodeHandle - the other endpoint/neighbor of the edge
-  cls.def(
-      "undirected_edge_neighbor",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::Undirected>()
-            .UndirectedEdgeNeighbor(e);
-      },
-      py::call_guard<py::gil_scoped_release>());
-  katana::DefWithNumba<&PropertyGraphNumbaReplacement::UndirectedEdgeNeighbor>(
-      cls_numba_replacement, "undirected_edge_neighbor");
 
   // FindAllEdges(NodeHandle src_node, NodeHandle dst_node) -> LocalEdgeID iterator - iterator over out-edges between src and dst nodes
   cls.def(
@@ -1051,24 +1007,22 @@ Args:
   cls.def(
       "get_node_index",
       [](PropertyGraph& self, const std::string& name)
-          -> Result<std::shared_ptr<
-              katana::EntityIndex<katana::GraphTopology::Node>>> {
+          -> std::shared_ptr<katana::EntityIndex<katana::GraphTopology::Node>> {
         if (!self.HasNodeIndex(name)) {
-          KATANA_CHECKED(self.MakeNodeIndex(name));
+          PythonChecked(self.MakeNodeIndex(name));
         }
-        return self.GetNodeIndex(name);
+        return PythonChecked(self.GetNodeIndex(name));
       },
       py::arg("name"), py::return_value_policy::reference_internal);
   cls.def("has_edge_index", &PropertyGraph::HasEdgeIndex, py::arg("name"));
   cls.def(
       "get_edge_index",
       [](PropertyGraph& self, const std::string& name)
-          -> Result<std::shared_ptr<
-              katana::EntityIndex<katana::GraphTopology::Edge>>> {
+          -> std::shared_ptr<katana::EntityIndex<katana::GraphTopology::Edge>> {
         if (!self.HasEdgeIndex(name)) {
-          KATANA_CHECKED(self.MakeEdgeIndex(name));
+          PythonChecked(self.MakeEdgeIndex(name));
         }
-        return self.GetEdgeIndex(name);
+        return PythonChecked(self.GetEdgeIndex(name));
       },
       py::arg("name"), py::return_value_policy::reference_internal);
 
@@ -1102,7 +1056,10 @@ Args:
 
 template <typename node_or_edge>
 struct WrapPrimitiveEntityIndex {
-  py::class_<katana::EntityIndex<node_or_edge>> base_cls;
+  py::class_<
+      katana::EntityIndex<node_or_edge>,
+      std::shared_ptr<katana::EntityIndex<node_or_edge>>>
+      base_cls;
 
   template <typename T>
   py::object instantiate(py::module& m, const char* name) {
@@ -1123,7 +1080,10 @@ struct WrapPrimitiveEntityIndex {
 
 template <typename node_or_edge>
 struct WrapStringEntityIndex {
-  py::class_<katana::EntityIndex<node_or_edge>> base_cls;
+  py::class_<
+      katana::EntityIndex<node_or_edge>,
+      std::shared_ptr<katana::EntityIndex<node_or_edge>>>
+      base_cls;
 
   py::object instantiate(py::module& m, const char* name) {
     using Cls = katana::StringEntityIndex<node_or_edge>;

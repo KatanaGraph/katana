@@ -26,3 +26,4 @@ When working with graph projections, keep in mind that:
 
 .. autoclass:: katana.local.Graph
    :special-members: __init__, __iter__, __getitem__, __setitem__, __len__
+   :exclude-members: out_edge_ids_for_node, out_edge_ids_for_node_and_type, in_edge_ids_for_node, in_edge_ids_for_node_and_type, out_degree_for_type, in_degree_for_type

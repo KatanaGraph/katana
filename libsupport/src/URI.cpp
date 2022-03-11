@@ -281,7 +281,9 @@ katana::URI::MakeTempDir() {
   GetEnv("TMPDIR", &tmp_dir);
   GetEnv("KATANA_TMPDIR", &tmp_dir);
 
-  return KATANA_CHECKED(Make(tmp_dir));
+  auto tmp_uri = KATANA_CHECKED(Make(tmp_dir));
+
+  return tmp_uri.Join("katana-tmp");
 }
 
 std::string

@@ -32,6 +32,7 @@ public:
   /// 3. KATANA_TMPDIR
   /// The contents of the "most senior" set variable from this list will be used
   /// if any are set.
+  // TODO (scober): Add a signal handler to clear this directory
   static Result<URI> MakeTempDir();
 
   static std::string JoinPath(const std::string& dir, const std::string& file);
@@ -71,6 +72,15 @@ public:
   URI RandFile(std::string_view prefix) const;
   /// An overload of RandFile provided for clarity at call sites
   URI RandSubdir(std::string_view prefix) const { return RandFile(prefix); }
+
+  bool IsPrefixOf(const URI& other) const {
+    return scheme_ == other.scheme_ &&
+           other.path_.compare(0, path_.size(), path_) == 0;
+  }
+  bool HasAsPrefix(const URI& other) const {
+    return scheme_ == other.scheme_ &&
+           path_.compare(0, other.path_.size(), other.path_) == 0;
+  }
 
   URI operator+(char rhs) const;
   URI operator+(const std::string& rhs) const;

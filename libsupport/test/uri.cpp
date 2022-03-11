@@ -75,6 +75,22 @@ TestDecode() {
       katana::URI::Decode("host%3A8020/path") == "host:8020/path");
 }
 
+void
+TestPrefix() {
+  katana::URI full = Str2Uri("abc/def/ghi");
+  katana::URI prefix = Str2Uri("abc/d");
+  katana::URI not_prefix = Str2Uri("jkl/mn");
+  katana::URI other_not_prefix = Str2Uri("s3://abc/def");
+
+  KATANA_LOG_ASSERT(prefix.IsPrefixOf(full));
+  KATANA_LOG_ASSERT(full.HasAsPrefix(prefix));
+
+  KATANA_LOG_ASSERT(!not_prefix.IsPrefixOf(full));
+  KATANA_LOG_ASSERT(!full.HasAsPrefix(not_prefix));
+  KATANA_LOG_ASSERT(!other_not_prefix.IsPrefixOf(full));
+  KATANA_LOG_ASSERT(!full.HasAsPrefix(other_not_prefix));
+}
+
 }  // namespace
 
 int
@@ -86,6 +102,8 @@ main() {
   TestEncode();
 
   TestDecode();
+
+  TestPrefix();
 
   return 0;
 }

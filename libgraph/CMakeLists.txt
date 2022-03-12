@@ -11,6 +11,7 @@ set(sources
         src/GraphML.cpp
         src/GraphMLSchema.cpp
         src/GraphTopology.cpp
+        src/HashIndexedProperty.cpp
         src/OCFileGraph.cpp
         src/Properties.cpp
         src/PropertyGraph.cpp

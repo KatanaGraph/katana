@@ -31,7 +31,7 @@ static cll::opt<std::string> OutputFile(
     cll::Positional, cll::desc("<output rdg file>"), cll::Required);
 
 katana::PropertyGraph
-LoadGraph(const std::string& rdg_file) {
+LoadGraph(const katana::URI& rdg_file) {
   KATANA_LOG_ASSERT(!rdg_file.empty());
   katana::TxnContext txn_ctx;
   auto g_res =
@@ -44,28 +44,29 @@ LoadGraph(const std::string& rdg_file) {
   return g;
 }
 
-std::string
-StoreGraph(katana::PropertyGraph* g, std::string& output_path) {
+katana::URI
+StoreGraph(katana::PropertyGraph* g, const katana::URI& output_uri) {
   std::string command_line;
   katana::TxnContext txn_ctx;
   // Store graph. If there is a new storage format then storing it is enough to bump the version up.
-  KATANA_LOG_WARN("writing graph at file {}", output_path);
-  auto write_result = g->Write(output_path, command_line, &txn_ctx);
+  KATANA_LOG_WARN("writing graph at file {}", output_uri);
+
+  auto write_result = g->Write(output_uri, command_line, &txn_ctx);
   if (!write_result) {
     KATANA_LOG_FATAL("writing result failed: {}", write_result.error());
   }
-  return output_path;
+  return output_uri;
 }
 
 /// Load/store cycle the provided RDG to cleanly relocate the graph without
 /// Carrying along stale files
 katana::PropertyGraph
-CleanRelocateGraphLoad(const std::string& rdg_file) {
+CleanRelocateGraphLoad(const katana::URI& rdg_file) {
   katana::PropertyGraph g_orig = LoadGraph(rdg_file);
   auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
-  std::string tmp_rdg_dir(uri_res.value().path());  // path() because local
-  std::string tmp_path = StoreGraph(&g_orig, tmp_rdg_dir);
+  auto tmp_rdg_dir = uri_res.value();
+  auto tmp_path = StoreGraph(&g_orig, tmp_rdg_dir);
 
   katana::PropertyGraph g = LoadGraph(tmp_path);
   return g;
@@ -73,22 +74,23 @@ CleanRelocateGraphLoad(const std::string& rdg_file) {
 
 /// Load/store cycle the provided RDG to cleanly relocate the graph without
 /// Carrying along stale files
-std::string
-CleanRelocateGraphStore(katana::PropertyGraph* g, std::string& output_path) {
+katana::URI
+CleanRelocateGraphStore(
+    katana::PropertyGraph* g, const katana::URI& output_uri) {
   auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
-  std::string tmp_rdg_dir_2(uri_res.value().path());  // path() because local
-  std::string g_tmp_rdg_file = StoreGraph(g, tmp_rdg_dir_2);
+  auto tmp_rdg_dir_2 = uri_res.value();
+  auto g_tmp_rdg_file = StoreGraph(g, tmp_rdg_dir_2);
 
   katana::PropertyGraph g_new = LoadGraph(g_tmp_rdg_file);
-  std::string g_new_rdg_file = StoreGraph(&g_new, output_path);
+  auto g_new_rdg = StoreGraph(&g_new, output_uri);
 
-  return g_new_rdg_file;
+  return g_new_rdg;
 }
 
 katana::Result<void>
-MaximizeGraph(std::string& input_rdg, std::string& output_path) {
-  katana::PropertyGraph g_tmp = CleanRelocateGraphLoad(input_rdg);
+MaximizeGraph(const katana::URI& input_uri, const katana::URI& output_uri) {
+  katana::PropertyGraph g_tmp = CleanRelocateGraphLoad(input_uri);
 
   // Add calls which add optional data structures to the RDG here
   auto generated_sorted_view_sort1 = g_tmp.BuildView<
@@ -104,10 +106,10 @@ MaximizeGraph(std::string& input_rdg, std::string& output_path) {
   KATANA_CHECKED(g_tmp.WriteRDKLSHIndexPrimitive(lsh));
   KATANA_CHECKED(g_tmp.WriteRDKSubstructureIndexPrimitive(substruct));
 
-  std::string g2_rdg_file = CleanRelocateGraphStore(&g_tmp, output_path);
+  auto g2_rdg_uri = CleanRelocateGraphStore(&g_tmp, output_uri);
 
   KATANA_LOG_WARN(
-      "maximized version of {} stored at {}", input_rdg, g2_rdg_file);
+      "maximized version of {} stored at {}", input_uri, g2_rdg_uri);
 
   return katana::ResultSuccess();
 }
@@ -119,9 +121,19 @@ main(int argc, char** argv) {
   cll::ParseCommandLineOptions(argc, argv);
 
   KATANA_LOG_ASSERT(!InputFile.empty());
-  auto res = MaximizeGraph(InputFile, OutputFile);
+  auto res = katana::URI::Make(InputFile);
   if (!res) {
-    KATANA_LOG_FATAL("failed to generate maximal graph");
+    KATANA_LOG_FATAL("input file {} error: {}", InputFile, res.error());
+  }
+  auto InputURI = res.value();
+  res = katana::URI::Make(OutputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("output file {} error: {}", OutputFile, res.error());
+  }
+  auto OutputURI = res.value();
+
+  if (auto max_res = MaximizeGraph(InputURI, OutputURI); !max_res) {
+    KATANA_LOG_FATAL("failed to generate maximal graph: {}", max_res.error());
   }
 
   return 0;

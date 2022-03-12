@@ -27,11 +27,11 @@ static cll::opt<std::string> OutputFile(
     cll::Positional, cll::desc("<output rdg file>"), cll::Required);
 
 katana::PropertyGraph
-LoadGraph(const std::string& rdg_file) {
-  KATANA_LOG_ASSERT(!rdg_file.empty());
+LoadGraph(const katana::URI& rdg_dir) {
+  KATANA_LOG_ASSERT(!rdg_dir.empty());
   katana::TxnContext txn_ctx;
   auto g_res =
-      katana::PropertyGraph::Make(rdg_file, &txn_ctx, katana::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, &txn_ctx, katana::RDGLoadOptions());
 
   if (!g_res) {
     KATANA_LOG_FATAL("making result: {}", g_res.error());
@@ -40,8 +40,8 @@ LoadGraph(const std::string& rdg_file) {
   return g;
 }
 
-std::string
-StoreGraph(katana::PropertyGraph* g, std::string& output_path) {
+katana::URI
+StoreGraph(katana::PropertyGraph* g, const katana::URI& output_path) {
   std::string command_line;
   katana::TxnContext txn_ctx;
   // Store graph. If there is a new storage format then storing it is enough to bump the version up.
@@ -54,9 +54,9 @@ StoreGraph(katana::PropertyGraph* g, std::string& output_path) {
 }
 
 void
-UprevGraph(std::string& input_rdg, std::string& output_path) {
+UprevGraph(const katana::URI& input_rdg, const katana::URI& output_path) {
   katana::PropertyGraph g = LoadGraph(input_rdg);
-  std::string g2_rdg_file = StoreGraph(&g, output_path);
+  auto g2_rdg_file = StoreGraph(&g, output_path);
   katana::PropertyGraph g2 = LoadGraph(g2_rdg_file);
 
   if (!g.Equals(&g2)) {
@@ -77,7 +77,18 @@ main(int argc, char** argv) {
   cll::ParseCommandLineOptions(argc, argv);
 
   KATANA_LOG_ASSERT(!InputFile.empty());
-  UprevGraph(InputFile, OutputFile);
+  auto res = katana::URI::Make(InputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("input file {} error: {}", InputFile, res.error());
+  }
+  auto inputURI = res.value();
+  res = katana::URI::Make(OutputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("input file {} error: {}", OutputFile, res.error());
+  }
+  auto outputURI = res.value();
+
+  UprevGraph(inputURI, outputURI);
 
   return 0;
 }

@@ -376,12 +376,12 @@ InRange(uint64_t id, const EdgeIterRange& range) {
 
 void
 katana::graphml::ExportGraph(
-    const std::string& outfile, const std::string& rdg_file,
+    const std::string& outfile, const katana::URI& rdg_dir,
     katana::TxnContext* txn_ctx) {
   auto result =
-      katana::PropertyGraph::Make(rdg_file, txn_ctx, katana::RDGLoadOptions());
+      katana::PropertyGraph::Make(rdg_dir, txn_ctx, katana::RDGLoadOptions());
   if (!result) {
-    KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
+    KATANA_LOG_FATAL("failed to load {}: {}", rdg_dir, result.error());
   }
   std::unique_ptr<katana::PropertyGraph> graph = std::move(result.value());
 

@@ -2903,12 +2903,13 @@ struct Gr2Kg : public Conversion {
       return katana::ErrorCode::InvalidArgument;
     }
 
-    if (auto res = katana::Create(out_file_name); !res) {
+    auto out_uri = KATANA_CHECKED(katana::URI::Make(out_file_name));
+    if (auto res = katana::Create(out_uri); !res) {
       return res.error();
     }
 
     katana::RDGManifest manifest =
-        KATANA_CHECKED(katana::FindManifest(out_file_name));
+        KATANA_CHECKED(katana::FindManifest(out_uri));
     katana::RDGHandle rdg_handle =
         KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
     katana::RDGFile handle(std::move(rdg_handle));
@@ -3030,7 +3031,13 @@ struct Gr2Kg : public Conversion {
     katana::gPrint(
         "Node Schema : ", pg->loaded_node_schema()->ToString(), "\n");
 
-    if (auto r = pg->Write(out_file_name, "cmd", &txn_ctx); !r) {
+    auto res = katana::URI::Make(out_file_name);
+    if (!res) {
+      KATANA_LOG_FATAL("file {} error: {}", out_file_name, res.error());
+    }
+    auto out_uri = res.value();
+
+    if (auto r = pg->Write(out_uri, "cmd", &txn_ctx); !r) {
       KATANA_LOG_FATAL("Failed to write property file graph: {}", r.error());
     }
     printStatus(graph.size(), graph.sizeEdges());

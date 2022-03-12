@@ -30,7 +30,7 @@
 
 inline std::unique_ptr<katana::PropertyGraph>
 MakeFileGraph(
-    const std::string& rdg_name, const std::string& edge_property_name) {
+    const katana::URI& rdg_name, const std::string& edge_property_name) {
   std::vector<std::string> edge_properties;
   std::vector<std::string> node_properties;
   if (!edge_property_name.empty()) {

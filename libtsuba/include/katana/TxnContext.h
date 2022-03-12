@@ -29,55 +29,47 @@ public:
     }
   }
 
-  void InsertNodePropertyRead(
-      const std::string& rdg_dir, const std::string& name) {
-    node_properties_read_.insert(URI::JoinPath(rdg_dir, name));
+  void InsertNodePropertyRead(const URI& rdg_dir, const std::string& name) {
+    node_properties_read_.insert(rdg_dir.Join(name));
   }
 
   template <typename Container>
-  void InsertNodePropertyRead(
-      const std::string& rdg_dir, const Container& names) {
+  void InsertNodePropertyRead(const URI& rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      node_properties_read_.insert(URI::JoinPath(rdg_dir, name));
+      node_properties_read_.insert(rdg_dir.Join(name));
     }
   }
 
-  void InsertNodePropertyWrite(
-      const std::string& rdg_dir, const std::string& name) {
-    node_properties_write_.insert(URI::JoinPath(rdg_dir, name));
+  void InsertNodePropertyWrite(const URI& rdg_dir, const std::string& name) {
+    node_properties_write_.insert(rdg_dir.Join(name));
   }
 
   template <typename Container>
-  void InsertNodePropertyWrite(
-      const std::string& rdg_dir, const Container& names) {
+  void InsertNodePropertyWrite(const URI& rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      node_properties_write_.insert(URI::JoinPath(rdg_dir, name));
+      node_properties_write_.insert(rdg_dir.Join(name));
     }
   }
 
-  void InsertEdgePropertyRead(
-      const std::string& rdg_dir, const std::string& name) {
-    edge_properties_read_.insert(URI::JoinPath(rdg_dir, name));
+  void InsertEdgePropertyRead(const URI& rdg_dir, const std::string& name) {
+    edge_properties_read_.insert(rdg_dir.Join(name));
   }
 
   template <typename Container>
-  void InsertEdgePropertyRead(
-      const std::string& rdg_dir, const Container& names) {
+  void InsertEdgePropertyRead(const URI& rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      edge_properties_read_.insert(URI::JoinPath(rdg_dir, name));
+      edge_properties_read_.insert(rdg_dir.Join(name));
     }
   }
 
-  void InsertEdgePropertyWrite(
-      const std::string& rdg_dir, const std::string& name) {
-    edge_properties_write_.insert(URI::JoinPath(rdg_dir, name));
+  void InsertEdgePropertyWrite(const URI& rdg_dir, const std::string& name) {
+    edge_properties_write_.insert(rdg_dir.Join(name));
   }
 
   template <typename Container>
-  void InsertEdgePropertyWrite(
-      const std::string& rdg_dir, const Container& names) {
+  void InsertEdgePropertyWrite(const URI& rdg_dir, const Container& names) {
     for (const auto& name : names) {
-      edge_properties_write_.insert(URI::JoinPath(rdg_dir, name));
+      edge_properties_write_.insert(rdg_dir.Join(name));
     }
   }
 
@@ -97,19 +89,19 @@ public:
     manifest_uptodate_[rdg_dir] = false;
   }
 
-  const std::set<std::string>& NodePropertyRead() const {
+  const std::set<URI>& NodePropertyRead() const {
     return node_properties_read_;
   }
 
-  const std::set<std::string>& NodePropertyWrite() const {
+  const std::set<URI>& NodePropertyWrite() const {
     return node_properties_write_;
   }
 
-  const std::set<std::string>& EdgePropertyRead() const {
+  const std::set<URI>& EdgePropertyRead() const {
     return edge_properties_read_;
   }
 
-  const std::set<std::string>& EdgePropertyWrite() const {
+  const std::set<URI>& EdgePropertyWrite() const {
     return edge_properties_write_;
   }
 
@@ -132,10 +124,10 @@ public:
   katana::Result<void> Commit();
 
 private:
-  std::set<std::string> node_properties_read_;
-  std::set<std::string> node_properties_write_;
-  std::set<std::string> edge_properties_read_;
-  std::set<std::string> edge_properties_write_;
+  std::set<URI> node_properties_read_;
+  std::set<URI> node_properties_write_;
+  std::set<URI> edge_properties_read_;
+  std::set<URI> edge_properties_write_;
   bool all_properties_read_{false};
   bool all_properties_write_{false};
   bool topology_read_{false};

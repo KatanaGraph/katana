@@ -40,7 +40,7 @@ public:
 
   size_t size() const { return data_.length(); }
 
-  katana::Result<void> Finalize(std::shared_ptr<arrow::Array>* array) {
+  katana::Result<std::shared_ptr<arrow::Array>> Finalize() {
     using ArrayType = typename arrow::TypeTraits<ArrowType>::ArrayType;
     int64_t length = data_.length();
 
@@ -53,9 +53,8 @@ public:
     std::shared_ptr<arrow::Buffer> values = KATANA_CHECKED(data_.Finish());
     data_.Reset();
 
-    *array = std::make_shared<ArrayType>(
+    return std::make_shared<ArrayType>(
         length, std::move(values), std::move(bitmask));
-    return katana::ResultSuccess();
   }
 
 private:
@@ -93,16 +92,20 @@ public:
 
   size_t size() const { return data_.size(); }
 
-  katana::Result<void> Finalize(std::shared_ptr<arrow::Array>* array) {
+  katana::Result<std::shared_ptr<arrow::Array>> Finalize() {
     using ArrowBuilder = typename arrow::TypeTraits<ArrowType>::BuilderType;
     ArrowBuilder builder;
     if (data_.size() > 0) {
-      KATANA_CHECKED(builder.AppendValues(data_, valid_.data()));
+      if constexpr (arrow::is_boolean_type<ArrowType>::value) {
+        KATANA_CHECKED(
+            builder.AppendValues(data_.data(), data_.size(), valid_.data()));
+      } else {
+        KATANA_CHECKED(builder.AppendValues(data_, valid_.data()));
+      }
     }
-    KATANA_CHECKED(builder.Finish(array));
     data_ = std::vector<StorageType>(0);
-    valid_ = std::vector<StorageType>(0);
-    return katana::ResultSuccess();
+    valid_ = std::vector<uint8_t>(0);
+    return KATANA_CHECKED(builder.Finish());
   }
 
 private:
@@ -153,13 +156,7 @@ class ArrowRandomAccessBuilder
     : public internal::BuilderTraits<ArrowType>::Type {
 public:
   ArrowRandomAccessBuilder(size_t length) {
-    KATANA_ASSERT(this->Resize(length));
-  }
-
-  katana::Result<std::shared_ptr<arrow::Array>> Finalize() {
-    std::shared_ptr<arrow::Array> array;
-    KATANA_CHECKED(Finalize(&array));
-    return array;
+    KATANA_LOG_ASSERT(this->Resize(length));
   }
 };
 

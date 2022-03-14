@@ -22,7 +22,7 @@ def initialize_residual_operator(rank, nout, delta, residual, nid):
 @do_all_operator()
 def compute_out_deg_operator(graph: Graph, nout, nid):
     """Operator for computing outdegree of nodes in the Graph"""
-    for ii in graph.out_edge_ids(nid):
+    for ii in graph.out_edge_ids_for_node(nid):
         dst = graph.out_edge_dst(ii)
         atomic_add(nout, dst, 1)
 
@@ -42,7 +42,7 @@ def compute_pagerank_pull_delta_operator(rank, nout, delta, residual, tolerance,
 @do_all_operator()
 def compute_pagerank_pull_residual_operator(graph: Graph, delta, residual, nid):
     total = 0
-    for ii in graph.out_edge_ids(nid):
+    for ii in graph.out_edge_ids_for_node(nid):
         dst = graph.out_edge_dst(ii)
         if delta[dst] > 0:
             total += delta[dst]

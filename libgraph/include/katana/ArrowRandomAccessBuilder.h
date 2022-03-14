@@ -17,6 +17,8 @@ public:
 
   katana::Result<void> Resize(size_t length) {
     KATANA_CHECKED(data_.Resize(length));
+    data_.bytes_builder()->UnsafeAdvance(
+        data_.bytes_builder()->capacity() - data_.bytes_builder()->length());
     valid_.resize(length, false);
     return katana::ResultSuccess();
   }
@@ -155,7 +157,7 @@ template <typename ArrowType>
 class ArrowRandomAccessBuilder
     : public internal::BuilderTraits<ArrowType>::Type {
 public:
-  ArrowRandomAccessBuilder(size_t length) {
+  explicit ArrowRandomAccessBuilder(size_t length) {
     KATANA_LOG_ASSERT(this->Resize(length));
   }
 };

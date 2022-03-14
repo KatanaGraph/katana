@@ -32,6 +32,7 @@ GetPythonExceptionType(std::error_code code) {
     case katana::ErrorCode::GraphUpdateFailed:
     case katana::ErrorCode::FeatureNotEnabled:
     case katana::ErrorCode::S3Error:
+    case katana::ErrorCode::S3ExpiredToken:
     case katana::ErrorCode::AWSWrongRegion:
     case katana::ErrorCode::LocalStorageError:
     case katana::ErrorCode::NoCredentials:

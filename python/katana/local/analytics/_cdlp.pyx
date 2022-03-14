@@ -137,7 +137,7 @@ def cdlp(pg, str output_property_name,
     :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type plan: CdlpPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 
@@ -152,7 +152,7 @@ def cdlp(pg, str output_property_name,
 
         stats = CdlpStatistics(graph, "output")
 
-        print("Total Communities:", stats.total_communitiess)
+        print("Total Communities:", stats.total_communities)
         print("Total Non-Trivial Communities:", stats.total_non_trivial_communities)
         print("Largest Community Size:", stats.largest_community_size)
         print("Largest Community Ratio:", stats.largest_community_ratio)

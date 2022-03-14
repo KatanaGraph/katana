@@ -134,7 +134,7 @@ def independent_set(pg, str output_property_name,
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: IndependentSetPlan
     :param plan: The execution plan to use.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

@@ -79,7 +79,7 @@ cdef class KssspPlan(Plan):
     """
     A computational :ref:`Plan` for K-Shortest Paths
     Static method construct KssspPlans using specific algorithms with their required parameters. All parameters are
-    opetional and have resonable defaults
+    optional and have reasonable defaults
     """
 
     cdef:

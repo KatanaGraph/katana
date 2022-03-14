@@ -177,7 +177,7 @@ def pagerank(pg, str output_property_name, PagerankPlan plan = PagerankPlan(), *
     :param output_property_name: The output property to store the rank. This property must not already exist.
     :type plan: PagerankPlan
     :param plan: The execution plan to use.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

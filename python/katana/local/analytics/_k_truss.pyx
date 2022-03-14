@@ -133,7 +133,7 @@ def k_truss(pg, uint32_t k_truss_number, str output_property_name, KTrussPlan pl
         This property must not already exist.
     :type plan: KTrussPlan
     :param plan: The execution plan to use.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

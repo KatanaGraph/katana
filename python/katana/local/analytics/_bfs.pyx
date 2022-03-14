@@ -173,7 +173,7 @@ def bfs(pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPla
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: BfsPlan
     :param plan: The execution plan to use.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

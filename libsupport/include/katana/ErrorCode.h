@@ -70,7 +70,6 @@ enum class ErrorCode {
   FeatureNotEnabled,
   OutOfMemory,
   S3Error,
-  S3ExpiredToken,
   AWSWrongRegion,
   LocalStorageError,
   NoCredentials,

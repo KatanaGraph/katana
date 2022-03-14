@@ -9,8 +9,8 @@ from katana.timer import StatTimer
 @do_all_operator()
 def jaccard_operator(g, n1_neighbors, n1_size, output, n2):
     intersection_size = 0
-    n2_size = len(g.out_edge_ids(n2))
-    for e_iter in g.out_edge_ids(n2):
+    n2_size = g.out_degree(n2)
+    for e_iter in g.out_edge_ids_for_node(n2):
         ne = g.out_edge_dst(e_iter)
         if n1_neighbors[ne]:
             intersection_size += 1

@@ -211,6 +211,7 @@ function(add_python_setuptools_target TARGET_NAME)
 
   _symlink_tree(${TARGET_NAME}_python_tree ${PYTHON_SETUP_DIR}/python ${PYTHON_BINARY_DIR})
   _symlink_tree(${TARGET_NAME}_setup_tree ${PYTHON_SETUP_DIR}/setup.py ${PYTHON_BINARY_DIR})
+  _symlink_tree(${TARGET_NAME}_docs_tree ${PYTHON_SETUP_DIR}/docs ${PYTHON_BINARY_DIR})
   # Needed for scripts/katana_version
   _symlink_tree(${TARGET_NAME}_scripts_tree ${PYTHON_SETUP_DIR}/scripts ${PYTHON_BINARY_DIR})
 
@@ -279,7 +280,7 @@ function(add_python_setuptools_target TARGET_NAME)
       PROPERTY ADDITIONAL_CLEAN_FILES ${PYTHON_BINARY_DIR} ${CMAKE_BINARY_DIR}/katana_setup_requirements_cache.txt
   )
 
-  add_dependencies(${TARGET_NAME} ${TARGET_NAME}_python_tree ${TARGET_NAME}_setup_tree ${TARGET_NAME}_scripts_tree)
+  add_dependencies(${TARGET_NAME} ${TARGET_NAME}_python_tree ${TARGET_NAME}_setup_tree ${TARGET_NAME}_scripts_tree ${TARGET_NAME}_docs_tree)
   if(X_DEPENDS)
     add_dependencies(${TARGET_NAME} ${X_DEPENDS})
   endif()
@@ -357,9 +358,11 @@ function(add_python_setuptools_tests TARGET_NAME)
   cmake_parse_arguments(X "${no_value_options}" "${one_value_options}" "${multi_value_options}" ${ARGN})
 
   get_target_property(script ${TARGET_NAME} PYTHON_ENV_SCRIPT)
+  get_target_property(bin_dir ${TARGET_NAME} PYTHON_BINARY_DIR)
+
   add_test(NAME ${TARGET_NAME}
            COMMAND ${script} pytest -s -v --import-mode append ${X_PATH}
-           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+           WORKING_DIRECTORY ${bin_dir})
   set_property(TEST ${TARGET_NAME} APPEND
                PROPERTY ENVIRONMENT KATANA_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
   set_property(TEST ${TARGET_NAME} APPEND

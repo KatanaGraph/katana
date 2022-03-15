@@ -303,26 +303,6 @@ jobs:
         . .github/workflows/activate_miniconda.sh
         ./scripts/check_python_lint.sh python test scripts
 
-    - name: Find changed Python files
-      uses: dorny/paths-filter@v2
-      id: filter
-      with:
-        base: ${{ github.ref }}
-        list-files: shell
-        filters: |
-          python:
-            - added|modified: '!(docs/**)**.py'
-    
-    - name: Check docstrings
-      run: |
-        if [ "${{ steps.filter.outputs.python }}" == "true" ]
-        then
-           . .github/workflows/activate_miniconda.sh
-           pydocstyle --config=./pyproject.toml ${{ steps.filter.outputs.python_files }}
-        else
-           echo "No Python files were changed."
-        fi
-
   build_and_test:
     needs: do_python_test
     runs-on: ${{matrix.os}}

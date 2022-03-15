@@ -1,17 +1,40 @@
-#include <arrow/api.h>
+#include <arrow/array.h>
+#include <arrow/builder.h>
 
-#include "katana/ErrorCode.h"
 #include "katana/Logging.h"
-#include "katana/NUMAArray.h"
-#include "katana/Properties.h"
 #include "katana/Result.h"
 
 namespace katana {
 
+/// ArrowRandomAccessBuilder encapsulates the concept of building
+/// an arrow::Array from <index, value> pairs arriving in unknown order
+/// Thread-safety guarantee is equivalent to that of std::vector<uint8_t>
+/// Concurrent accesses to different indices are thread safe
+/// Concurrent accesses to a single index are not safe
+///
+/// Example Usage:
+/// katana::ArrowRandomAccessBuilder<arrow::Int64Type> builder{128};
+/// builder[55] = 7;
+/// builder[127] = 11;
+/// std::shared_ptr<arrow::Array> array =
+///     KATANA_CHECKED(builder.Finalize());
+/// array has 128 elements, 2 are valid, the rest are null
+///
+/// API:
+/// template <typename ArrowType>
+/// class ArrowRandomAccessBuilder {
+///   value_type& operator[](index);
+///   void UnsetValue(index);
+///   bool IsValid(index);
+///   katana::Result<std::shared_ptr<arrow::Array>> Finalize();
+/// };
+///
+/// TODO(danielm) express this API through inheritance or concepts
+
 namespace internal {
 
 template <typename ArrowType>
-class NumberBuilder {
+class FixedSizeBuilder {
 public:
   using value_type = typename ArrowType::c_type;
 
@@ -50,6 +73,7 @@ public:
     KATANA_CHECKED(bitmask_builder.Append(valid_.data(), length));
     std::shared_ptr<arrow::Buffer> bitmask =
         KATANA_CHECKED(bitmask_builder.Finish());
+    // peak memory (data buffer + null bitmask + null byte vector)
     valid_ = std::vector<uint8_t>(0);
 
     std::shared_ptr<arrow::Buffer> values = KATANA_CHECKED(data_.Finish());
@@ -78,6 +102,9 @@ public:
   // NOTE this operator has side-effects. It can safely be used in two ways:
   // 1) builder[index] = value; where it creates a non-null entry
   // 2) value = builder[index]; ONLY IF option 1 has already used that index
+  // Thread-safety guarantee is equivalent to that of std::vector<uint8_t>
+  // Concurrent accesses to different indices are thread safe
+  // Concurrent access to a single index are not safe
   value_type& operator[](size_t index) {
     KATANA_LOG_DEBUG_VASSERT(
         index < size(), "index: {}, size: {}", index, size());
@@ -105,6 +132,8 @@ public:
         KATANA_CHECKED(builder.AppendValues(data_, valid_.data()));
       }
     }
+    // peak memory (StorageType buffer + ArrowType buffer +
+    //              null bitmask + null byte vector)
     data_ = std::vector<StorageType>(0);
     valid_ = std::vector<uint8_t>(0);
     return KATANA_CHECKED(builder.Finish());
@@ -121,7 +150,7 @@ struct BuilderTraits;
 #define NUMBER(ArrowType)                                                      \
   template <>                                                                  \
   struct BuilderTraits<ArrowType> {                                            \
-    using Type = NumberBuilder<ArrowType>;                                     \
+    using Type = FixedSizeBuilder<ArrowType>;                                  \
   }
 
 NUMBER(arrow::Int8Type);
@@ -151,8 +180,6 @@ VECTOR_BACKED(std::string, std::string, arrow::LargeStringType);
 
 }  // namespace internal
 
-/// ArrowRandomAccessBuilder encapsulates the concept of building
-/// an arrow::Array from <index, value> pairs arriving in unknown order
 template <typename ArrowType>
 class ArrowRandomAccessBuilder
     : public internal::BuilderTraits<ArrowType>::Type {

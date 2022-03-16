@@ -26,7 +26,6 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
   using UndirectedView = katana::TypedPropertyGraphView<
       katana::PropertyGraphViews::Undirected, NodeProps, EdgeProps>;
   using Node = UndirectedView::Node;
-  using Edge = UndirectedView::Edge;
 
   auto view_res = UndirectedView::Make(pg.get(), {"label", "deg_sum"}, {});
   KATANA_LOG_VASSERT(
@@ -35,9 +34,9 @@ TestDegreeSum(std::unique_ptr<katana::PropertyGraph>&& pg) noexcept {
 
   auto graph = view_res.value();
 
-  for (Node src : graph.Nodes()) {
+  for (const auto& src : graph.Nodes()) {
     uint32_t deg_sum = 0u;
-    for (Edge e : graph.UndirectedEdges(src)) {
+    for (const auto& e : graph.UndirectedEdges(src)) {
       Node dst = graph.UndirectedEdgeNeighbor(e);
       deg_sum += graph.GetData<NodeLabel>(dst);
     }

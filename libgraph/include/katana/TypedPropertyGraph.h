@@ -47,19 +47,18 @@ class TypedPropertyGraph {
 public:
   using node_properties = NodeProps;
   using edge_properties = EdgeProps;
-  using node_iterator = GraphTopology::node_iterator;
-  using edge_iterator = GraphTopology::edge_iterator;
-  using edges_range = GraphTopology::edges_range;
   using nodes_range = GraphTopology::nodes_range;
+  using edges_range = GraphTopology::edges_range;
   using iterator = GraphTopology::iterator;
+  using edge_iterator = GraphTopology::edge_iterator;
   using Node = GraphTopology::Node;
-  using Edge = GraphTopology::Edge;
+  using OutEdgeHandle = GraphTopology::OutEdgeHandle;
 
   // Standard container concepts
 
-  node_iterator begin() const { return pg_->begin(); }
+  iterator begin() const { return pg_->begin(); }
 
-  node_iterator end() const { return pg_->end(); }
+  iterator end() const { return pg_->end(); }
 
   size_t size() const { return pg_->size(); }
 
@@ -78,13 +77,8 @@ public:
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     auto& property = std::get<prop_col_index>(node_view_);
     auto idx = pg_->GetNodePropertyIndex(node);
-    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
-    return property.GetValue(idx);
-  }
-
-  template <typename NodeIndex>
-  PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
-    return GetData<NodeIndex>(*node);
+    KATANA_LOG_DEBUG_ASSERT(idx.value() < property.size());
+    return property.GetValue(idx.value());
   }
 
   /**
@@ -98,14 +92,8 @@ public:
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     const auto& property = std::get<prop_col_index>(node_view_);
     auto idx = pg_->GetNodePropertyIndex(node);
-    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
-    return property.GetValue(idx);
-  }
-
-  template <typename NodeIndex>
-  PropertyConstReferenceType<NodeIndex> GetData(
-      const node_iterator& node) const {
-    return GetData<NodeIndex>(*node);
+    KATANA_LOG_DEBUG_ASSERT(idx.value() < property.size());
+    return property.GetValue(idx.value());
   }
 
   /**
@@ -115,12 +103,12 @@ public:
    * @returns reference to the edge data
    */
   template <typename EdgeIndex>
-  PropertyReferenceType<EdgeIndex> GetEdgeData(const edge_iterator& edge) {
+  PropertyReferenceType<EdgeIndex> GetEdgeData(const OutEdgeHandle& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     auto& property = std::get<prop_col_index>(edge_view_);
-    auto idx = pg_->GetEdgePropertyIndexFromOutEdge(*edge);
-    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
-    return property.GetValue(idx);
+    auto idx = pg_->GetEdgePropertyIndex(edge);
+    KATANA_LOG_DEBUG_ASSERT(idx.value() < property.size());
+    return property.GetValue(idx.value());
   }
 
   /**
@@ -130,13 +118,13 @@ public:
    * @returns const reference to the edge data
    */
   template <typename EdgeIndex>
-  PropertyConstReferenceType<EdgeIndex> GetEdgeData(
-      const edge_iterator& edge) const {
+  PropertyConstReferenceType<EdgeIndex> 
+  GetEdgeData(const OutEdgeHandle& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     const auto& property = std::get<prop_col_index>(edge_view_);
-    auto idx = pg_->GetEdgePropertyIndexFromOutEdge(*edge);
-    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
-    return property.GetValue(idx);
+    auto idx = pg_->GetEdgePropertyIndex(edge);
+    KATANA_LOG_DEBUG_ASSERT(idx.value() < property.size());
+    return property.GetValue(idx.value());
   }
 
   /**
@@ -145,7 +133,7 @@ public:
    * @param edge edge id to get the destination of
    * @returns node id of the edge destination
    */
-  Node OutEdgeDst(Edge e) const noexcept {
+  Node OutEdgeDst(const OutEdgeHandle& e) const noexcept {
     return pg_->topology().OutEdgeDst(e);
   }
 
@@ -161,7 +149,7 @@ public:
    *
    * @returns iterable edge range for the entire graph.
    */
-  edges_range OutEdges() const noexcept { return pg_->topology().OutEdges(); }
+  edges_range Edges() const noexcept { return pg_->topology().Edges(); }
 
   /**
    * Gets the edge range of some node.
@@ -169,7 +157,7 @@ public:
    * @param node node to get the edge range of
    * @returns iterable edge range for node.
    */
-  edges_range OutEdges(Node node) const { return pg_->OutEdges(node); }
+  edges_range OutEdges(const Node& node) const { return pg_->OutEdges(node); }
 
   nodes_range Nodes() const noexcept { return pg_->topology().Nodes(); }
   /**
@@ -204,12 +192,11 @@ class TypedPropertyGraphView : public PGView {
 public:
   using node_properties = NodeProps;
   using edge_properties = EdgeProps;
-  using node_iterator = typename PGView::node_iterator;
-  using edge_iterator = typename PGView::edge_iterator;
-  using edges_range = typename PGView::edges_range;
-  using iterator = typename PGView::iterator;
-  using Node = typename PGView::Node;
-  using Edge = typename PGView::Edge;
+  using typename PGView::node_iterator;
+  using typename PGView::edge_iterator;
+  using typename PGView::edges_range;
+  using typename PGView::iterator;
+  using typename PGView::Node;
 
   /**
    * Gets the node data.
@@ -222,8 +209,8 @@ public:
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     auto& property = std::get<prop_col_index>(node_view_);
     auto idx = PGView::GetNodePropertyIndex(node);
-    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
-    return property.GetValue(idx);
+    KATANA_LOG_DEBUG_ASSERT(idx.value() < property.size());
+    return property.GetValue(idx.value());
   }
 
   /**
@@ -237,8 +224,8 @@ public:
     constexpr size_t prop_col_index = find_trait<NodeIndex, NodeProps>();
     const auto& property = std::get<prop_col_index>(node_view_);
     auto idx = PGView::GetNodePropertyIndex(node);
-    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
-    return property.GetValue(idx);
+    KATANA_LOG_DEBUG_ASSERT(idx.value() < property.size());
+    return property.GetValue(idx.value());
   }
 
   /**
@@ -247,20 +234,15 @@ public:
    * @param edge edge iterator to get the data of
    * @returns reference to the edge data
    */
-  template <typename EdgeIndex>
-  PropertyReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) {
+  template <typename EdgeIndex, typename EdgeHandle>
+  PropertyReferenceType<EdgeIndex> GetEdgeData(const EdgeHandle& edge) {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     auto& property = std::get<prop_col_index>(edge_view_);
 
-    typename PGView::PropertyIndex idx = 0;
-    if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
-      idx = PGView::GetEdgePropertyIndexFromUndirectedEdge(edge);
-    } else {
-      idx = PGView::GetEdgePropertyIndexFromOutEdge(edge);
-    }
+    auto idx = PGView::GetEdgePropertyIndex(edge);
 
-    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
-    return property.GetValue(idx);
+    KATANA_LOG_DEBUG_ASSERT(idx.value() < property.size());
+    return property.GetValue(idx.value());
   }
 
   /**
@@ -269,20 +251,15 @@ public:
    * @param edge edge iterator to get the data of
    * @returns const reference to the edge data
    */
-  template <typename EdgeIndex>
-  PropertyConstReferenceType<EdgeIndex> GetEdgeData(const Edge& edge) const {
+  template <typename EdgeIndex, typename EdgeHandle>
+  PropertyConstReferenceType<EdgeIndex> GetEdgeData(const EdgeHandle& edge) const {
     constexpr size_t prop_col_index = find_trait<EdgeIndex, EdgeProps>();
     const auto& property = std::get<prop_col_index>(edge_view_);
 
-    typename PGView::PropertyIndex idx = 0;
-    if constexpr (katana::is_detected_v<has_undirected_t, PGView>) {
-      idx = PGView::GetEdgePropertyIndexFromUndirectedEdge(edge);
-    } else {
-      idx = PGView::GetEdgePropertyIndexFromOutEdge(edge);
-    }
+    auto idx = PGView::GetEdgePropertyIndex(edge);
 
-    KATANA_LOG_DEBUG_ASSERT(idx < property.size());
-    return property.GetValue(idx);
+    KATANA_LOG_DEBUG_ASSERT(idx.value() < property.size());
+    return property.GetValue(idx.value());
   }
 
   static Result<TypedPropertyGraphView<PGView, NodeProps, EdgeProps>> Make(
@@ -310,9 +287,8 @@ KATANA_EXPORT typename GraphTy::edge_iterator
 FindEdgeSortedByDest(
     const GraphTy& graph, typename GraphTy::Node node,
     typename GraphTy::Node node_to_find) {
-  auto edge_matched = katana::FindEdgeSortedByDest(
+  return  katana::FindEdgeSortedByDest(
       &graph.GetPropertyGraph(), node, node_to_find);
-  return typename GraphTy::edge_iterator(edge_matched);
 }
 
 template <typename NodeProps, typename EdgeProps>

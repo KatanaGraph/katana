@@ -367,11 +367,6 @@ ExtractData(std::shared_ptr<arrow::Array> array, int64_t index) {
   }
 }
 
-template <typename EdgeIterRange>
-bool
-InRange(uint64_t id, const EdgeIterRange& range) {
-  return *range.begin() <= id && id < *range.end();
-}
 }  // namespace
 
 void
@@ -418,7 +413,8 @@ katana::graphml::ExportGraph(
     sub_indexes.emplace_back(0);
   }
 
-  for (uint64_t i = 0; i < graph->NumNodes(); i++) {
+  const katana::GraphTopology& topology = graph->topology();
+  for (const auto& node: topology.Nodes()) {
     // find labels
     std::string labels;
     for (auto j : node_label_indexes) {
@@ -439,7 +435,7 @@ katana::graphml::ExportGraph(
       sub_indexes[j]++;
     }
 
-    StartGraphmlNode(writer, boost::lexical_cast<std::string>(i), labels);
+    StartGraphmlNode(writer, boost::lexical_cast<std::string>(node.value()), labels);
 
     // add properties
     for (auto j : node_property_indexes) {
@@ -461,16 +457,13 @@ katana::graphml::ExportGraph(
     FinishGraphmlNode(writer);
   }
 
-  const katana::GraphTopology& topology = graph->topology();
-  uint32_t src_node = 0;
-
   chunk_indexes.clear();
   sub_indexes.clear();
   for (int i = 0; i < graph->GetNumEdgeProperties(); i++) {
     chunk_indexes.emplace_back(0);
     sub_indexes.emplace_back(0);
   }
-  for (uint64_t i = 0; i < graph->NumEdges(); i++) {
+  for (const auto& edge_handle: topology.Edges()) {
     // find labels
     std::string labels;
     for (auto j : edge_label_indexes) {
@@ -493,13 +486,10 @@ katana::graphml::ExportGraph(
       sub_indexes[j]++;
     }
 
-    while (!InRange(i, topology.OutEdges(src_node))) {
-      src_node++;
-    }
-    std::string src = boost::lexical_cast<std::string>(src_node);
-    std::string dest = boost::lexical_cast<std::string>(topology.OutEdgeDst(i));
+    std::string src = boost::lexical_cast<std::string>(topology.GetEdgeSrc(edge_handle).value());
+    std::string dest = boost::lexical_cast<std::string>(topology.OutEdgeDst(edge_handle).value());
     StartGraphmlEdge(
-        writer, boost::lexical_cast<std::string>(i), src, dest, labels);
+        writer, boost::lexical_cast<std::string>(edge_handle.value()), src, dest, labels);
 
     // add properties
     for (auto j : edge_property_indexes) {

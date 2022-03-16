@@ -228,7 +228,7 @@ private:
 // Create a EntityIndex with the appropriate type for 'property'. Does not
 // build the index.
 template <typename node_or_edge>
-Result<std::unique_ptr<EntityIndex<node_or_edge>>> MakeTypedEntityIndex(
+Result<std::unique_ptr<EntityIndex<typename node_or_edge::underlying_type>>> MakeTypedEntityIndex(
     const std::string& property_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property);
 

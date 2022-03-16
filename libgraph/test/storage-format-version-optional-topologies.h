@@ -12,9 +12,9 @@ verify_view(View generated_view, View loaded_view) {
   KATANA_LOG_ASSERT(generated_view.NumNodes() == loaded_view.NumNodes());
 
   auto beg_edge = katana::make_zip_iterator(
-      generated_view.OutEdges().begin(), loaded_view.OutEdges().begin());
+      generated_view.Edges().begin(), loaded_view.Edges().begin());
   auto end_edge = katana::make_zip_iterator(
-      generated_view.OutEdges().end(), loaded_view.OutEdges().end());
+      generated_view.Edges().end(), loaded_view.Edges().end());
 
   for (auto i = beg_edge; i != end_edge; i++) {
     KATANA_LOG_ASSERT(std::get<0>(*i) == std::get<1>(*i));

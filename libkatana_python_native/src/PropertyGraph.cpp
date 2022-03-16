@@ -80,7 +80,7 @@ katana::python::PythonArgumentsToTable(
 class LazyDataAccessor {
 public:
   virtual ~LazyDataAccessor();
-  virtual py::object at(ssize_t i) const = 0;
+  virtual py::object at(katana::GraphTopologyTypes::OutEdgeHandle eh) const = 0;
   virtual py::object array(const py::slice& slice) const = 0;
 };
 
@@ -89,15 +89,24 @@ LazyDataAccessor::~LazyDataAccessor() = default;
 template <typename T>
 class LazyDataAccessorTyped : public LazyDataAccessor {
 public:
-  virtual T at_typed(ssize_t i) const = 0;
-  py::object at(ssize_t i) const final { return py::cast(at_typed(i)); }
+  virtual T at_typed(katana::GraphTopologyTypes::OutEdgeHandle eh) const = 0;
+  py::object at(katana::GraphTopologyTypes::OutEdgeHandle eh) const final {
+    return py::cast(at_typed(eh));
+  }
   py::object array(const py::slice& slice) const override {
-    auto begin = py::cast<ssize_t>(slice.attr("start"));
-    auto end = py::cast<ssize_t>(slice.attr("stop"));
-    auto step = py::cast<ssize_t>(slice.attr("step"));
-    py::array_t<T> out{(end - begin) / step};
-    for (ssize_t j = 0, i = begin; i < end; j += 1, i += step) {
-      out.mutable_at(j) = at_typed(i);
+    auto begin = py::cast<katana::GraphTopologyTypes::OutEdgeHandle>(
+        slice.attr("start"));
+    auto end =
+        py::cast<katana::GraphTopologyTypes::OutEdgeHandle>(slice.attr("stop"));
+    auto step =
+        py::cast<katana::GraphTopologyTypes::OutEdgeHandle::difference_type>(
+            slice.attr("step"));
+    py::array_t<T> out((end.value() - begin.value()) / step);
+    ssize_t j = 0;
+    for (auto i = begin.value(); i < end.value(); i += step) {
+      out.mutable_at(j) =
+          at_typed(katana::GraphTopologyTypes::OutEdgeHandle{i});
+      j += 1;
     }
     return std::move(out);
   }
@@ -114,24 +123,25 @@ public:
 
   GraphBaseEdgeDestAccessor(const katana::PropertyGraph* pg) : pg_(pg) {}
 
-  katana::PropertyGraph::Node at_typed(ssize_t i) const final {
-    return *pg_->OutEdgeDst(i);
+  katana::PropertyGraph::Node at_typed(
+      katana::GraphTopologyTypes::OutEdgeHandle eh) const final {
+    return *pg_->OutEdgeDst(eh);
   }
 };
 GraphBaseEdgeDestAccessor::~GraphBaseEdgeDestAccessor() = default;
 
 class GraphBaseEdgeSourceAccessor final
     : public LazyDataAccessorTyped<katana::PropertyGraph::Node> {
-  const katana::PropertyGraphViews::BiDirectional view_;
+  const katana::PropertyGraph* pg_;
 
 public:
   virtual ~GraphBaseEdgeSourceAccessor();
 
-  GraphBaseEdgeSourceAccessor(katana::PropertyGraph* pg)
-      : view_(pg->BuildView<katana::PropertyGraphViews::BiDirectional>()) {}
+  GraphBaseEdgeSourceAccessor(katana::PropertyGraph* pg) : pg_(pg) {}
 
-  katana::PropertyGraph::Node at_typed(ssize_t i) const final {
-    return view_.GetEdgeSrc(i);
+  katana::PropertyGraph::Node at_typed(
+      katana::GraphTopologyTypes::OutEdgeHandle eh) const final {
+    return *pg_->topology().GetEdgeSrc(eh);
   }
 };
 GraphBaseEdgeSourceAccessor::~GraphBaseEdgeSourceAccessor() = default;
@@ -141,8 +151,9 @@ namespace {
 // lambdas until C++20
 
 katana::GraphTopologyTypes::Node
-out_edge_dst(katana::PropertyGraph* pg, katana::GraphTopologyTypes::Edge e) {
-  return *pg->OutEdgeDst(e);
+out_edge_dst(
+    katana::PropertyGraph* pg, katana::GraphTopologyTypes::OutEdgeHandle eh) {
+  return *pg->OutEdgeDst(eh);
 }
 
 auto
@@ -456,48 +467,50 @@ DefPropertyGraph(py::module& m) {
   // GetLocalEdgeID(OutEdgeHandle) -> LocalEdgeID  - local edge ID
   cls.def(
       "get_local_edge_id_from_out_edge",
-      [](const PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.topology().GetLocalEdgeIDFromOutEdge(e);
+      [](const PropertyGraph& self, GraphTopologyTypes::OutEdgeHandle eh) {
+        return self.topology().GetLocalEdgeID(eh);
       });
 
   // GetLocalEdgeID(InEdgeHandle) -> LocalEdgeID  - local edge ID
   cls.def(
       "get_local_edge_id_from_in_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
+      [](PropertyGraph& self, GraphTopologyTypes::InEdgeHandle eh) {
         return self.BuildView<PropertyGraphViews::BiDirectional>()
-            .GetLocalEdgeIDFromInEdge(e);
+            .GetLocalEdgeID(eh);
       },
       py::call_guard<py::gil_scoped_release>());
 
   // GetLocalEdgeID(UndirectedEdgeHandle) -> LocalEdgeID  - local edge ID
   cls.def(
       "get_local_edge_id_from_undirected_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::Undirected>()
-            .GetLocalEdgeIDFromUndirectedEdge(e);
+      [](PropertyGraph& self, GraphTopologyTypes::InOutEdgeHandle eh) {
+        return self.BuildView<PropertyGraphViews::Undirected>().GetLocalEdgeID(
+            eh);
       },
       py::call_guard<py::gil_scoped_release>());
 
   // GetEdgePropertyIndex(OutEdgeHandle) -> EdgePropertyIndex  - index into the property table for an edge
   cls.def(
       "get_edge_property_index_from_out_edge",
-      &GraphTopology::GetEdgePropertyIndexFromOutEdge);
+      [](const PropertyGraph& self, GraphTopologyTypes::OutEdgeHandle eh) {
+        return self.topology().GetEdgePropertyIndex(eh);
+      });
 
   // GetEdgePropertyIndex(InEdgeHandle) -> EdgePropertyIndex  - index into the property table for an edge
   cls.def(
       "get_edge_property_index_from_in_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
+      [](PropertyGraph& self, GraphTopologyTypes::InEdgeHandle eh) {
         return self.BuildView<PropertyGraphViews::BiDirectional>()
-            .GetEdgePropertyIndexFromInEdge(e);
+            .GetEdgePropertyIndex(eh);
       },
       py::call_guard<py::gil_scoped_release>());
 
   // GetEdgePropertyIndex(UndirectedEdgeHandle) -> EdgePropertyIndex  - index into the property table for an edge
   cls.def(
       "get_edge_property_index_from_undirected_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
+      [](PropertyGraph& self, GraphTopologyTypes::InOutEdgeHandle eh) {
         return self.BuildView<PropertyGraphViews::Undirected>()
-            .GetEdgePropertyIndexFromUndirectedEdge(e);
+            .GetEdgePropertyIndex(eh);
       },
       py::call_guard<py::gil_scoped_release>());
 
@@ -506,9 +519,20 @@ DefPropertyGraph(py::module& m) {
   // Nodes() -> NodeHandle iterator  - iterator over all graph nodes
   cls.def("nodes", [](PropertyGraph& self) { return self.Nodes(); });
 
+<<<<<<< HEAD
   {
     py::options options;
     options.disable_function_signatures();
+||||||| parent of 659b3f9ee (Squash into one commit)
+  // OutEdges() -> OutEdgeHandle iterator  - iterator over all graph out-edges
+  cls.def(
+      "out_edge_ids",
+      py::overload_cast<>(&PropertyGraph::OutEdges, py::const_));
+=======
+  // OutEdges() -> OutEdgeHandle iterator  - iterator over all graph out-edges
+  cls.def(
+      "out_edge_ids", py::overload_cast<>(&PropertyGraph::Edges, py::const_));
+>>>>>>> 659b3f9ee (Squash into one commit)
 
     // OutEdges() -> OutEdgeHandle iterator  - iterator over all graph out-edges
     cls.def(
@@ -628,11 +652,21 @@ DefPropertyGraph(py::module& m) {
   katana::DefWithNumba<&out_edge_dst>(cls, "out_edge_dst");
 
   cls.def(
+<<<<<<< HEAD
       "with_edge_type_lookup",
       [](std::shared_ptr<PropertyGraph> self) {
         auto r = std::make_unique<PropertyGraphNumbaReplacement>(self);
         r->WithEdgeTypeAwareBiDirectional();
         return r;
+||||||| parent of 659b3f9ee (Squash into one commit)
+      "in_edge_ids",
+      [](PropertyGraph& self) {
+        return self.BuildView<PropertyGraphViews::Transposed>().OutEdges();
+=======
+      "in_edge_ids",
+      [](PropertyGraph& self) {
+        return self.BuildView<PropertyGraphViews::Transposed>().Edges();
+>>>>>>> 659b3f9ee (Squash into one commit)
       },
       py::call_guard<py::gil_scoped_release>(),
       R"""(
@@ -797,13 +831,92 @@ DefPropertyGraph(py::module& m) {
   // InEdgeSrc(InEdgeHandle)-> NodeHandle - source of an in-edge
   cls.def(
       "in_edge_src",
+<<<<<<< HEAD
       [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
         return self.BuildView<PropertyGraphViews::Transposed>().OutEdgeDst(e);
+||||||| parent of 659b3f9ee (Squash into one commit)
+      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
+        return self.BuildView<PropertyGraphViews::BiDirectional>().InEdgeSrc(e);
+=======
+      [](PropertyGraph& self, GraphTopologyTypes::InEdgeHandle eh) {
+        return self.BuildView<PropertyGraphViews::BiDirectional>().GetEdgeSrc(
+            eh);
+>>>>>>> 659b3f9ee (Squash into one commit)
       },
       py::call_guard<py::gil_scoped_release>());
 
+<<<<<<< HEAD
   katana::DefWithNumba<&PropertyGraphNumbaReplacement::InEdgeSrc>(
       cls_numba_replacement, "in_edge_src");
+||||||| parent of 659b3f9ee (Squash into one commit)
+  // UndirectedEdges()-> UndirectedEdgeHandle iterator - iterator over all graph edges (in and out)
+  cls.def(
+      "undirected_edge_ids",
+      [](PropertyGraph& self) {
+        return self.BuildView<PropertyGraphViews::Undirected>().OutEdges();
+      },
+      py::call_guard<py::gil_scoped_release>());
+  // UndirectedEdges(NodeHandle)-> UndirectedEdgeHandle iterator - iterator over all edges for a node
+  cls.def(
+      "undirected_edge_ids",
+      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
+        return self.BuildView<PropertyGraphViews::Undirected>().UndirectedEdges(
+            n);
+      },
+      py::call_guard<py::gil_scoped_release>());
+  // UndirectedEdges(NodeHandle, EdgeEntityTypeID) -> UndirectedEdgeHandle iterator - iterator over all edges of a type for a node
+  // UndirectedDegree(NodeHandle)-> size_t - number of all edges for a node
+  cls.def(
+      "undirected_degree",
+      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
+        return self.BuildView<PropertyGraphViews::Undirected>()
+            .UndirectedDegree(n);
+      },
+      py::call_guard<py::gil_scoped_release>());
+  // UndirectedDegree(NodeHandle, EdgeEntityTypeID) -> size_t - number of all edges of a type for a node
+  // UndirectedEdgeNeighbor(UndirectedEdgeHandle)-> NodeHandle - the other endpoint/neighbor of the edge
+  cls.def(
+      "undirected_edge_neighbor",
+      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
+        return self.BuildView<PropertyGraphViews::Undirected>()
+            .UndirectedEdgeNeighbor(e);
+      },
+      py::call_guard<py::gil_scoped_release>());
+=======
+  // UndirectedEdges()-> UndirectedEdgeHandle iterator - iterator over all graph edges (in and out)
+  cls.def(
+      "undirected_edge_ids",
+      [](PropertyGraph& self) {
+        return self.BuildView<PropertyGraphViews::Undirected>().Edges();
+      },
+      py::call_guard<py::gil_scoped_release>());
+  // UndirectedEdges(NodeHandle)-> UndirectedEdgeHandle iterator - iterator over all edges for a node
+  cls.def(
+      "undirected_edge_ids",
+      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
+        return self.BuildView<PropertyGraphViews::Undirected>().UndirectedEdges(
+            n);
+      },
+      py::call_guard<py::gil_scoped_release>());
+  // UndirectedEdges(NodeHandle, EdgeEntityTypeID) -> UndirectedEdgeHandle iterator - iterator over all edges of a type for a node
+  // UndirectedDegree(NodeHandle)-> size_t - number of all edges for a node
+  cls.def(
+      "undirected_degree",
+      [](PropertyGraph& self, GraphTopologyTypes::Node n) {
+        return self.BuildView<PropertyGraphViews::Undirected>()
+            .UndirectedDegree(n);
+      },
+      py::call_guard<py::gil_scoped_release>());
+  // UndirectedDegree(NodeHandle, EdgeEntityTypeID) -> size_t - number of all edges of a type for a node
+  // UndirectedEdgeNeighbor(UndirectedEdgeHandle)-> NodeHandle - the other endpoint/neighbor of the edge
+  cls.def(
+      "undirected_edge_neighbor",
+      [](PropertyGraph& self, GraphTopologyTypes::InOutEdgeHandle eh) {
+        return self.BuildView<PropertyGraphViews::Undirected>()
+            .UndirectedEdgeNeighbor(eh);
+      },
+      py::call_guard<py::gil_scoped_release>());
+>>>>>>> 659b3f9ee (Squash into one commit)
 
   // FindAllEdges(NodeHandle src_node, NodeHandle dst_node) -> LocalEdgeID iterator - iterator over out-edges between src and dst nodes
   cls.def(
@@ -849,17 +962,16 @@ DefPropertyGraph(py::module& m) {
   // GetEdgeSrc(LocalEdgeID)-> NodeHandle - source of an edge
   cls.def(
       "get_edge_src",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::BiDirectional>().GetEdgeSrc(
-            e);
+      [](PropertyGraph&, GraphTopologyTypes::Edge) {
+        // TODO(yan): we don't have the correct implementation of this method in PropertyGraph yet
       },
       py::call_guard<py::gil_scoped_release>());
   katana::DefWithNumba<&PropertyGraphNumbaReplacement::GetEdgeSrc>(
       cls_numba_replacement, "get_edge_src");
 
   // GetEdgeDst(LocalEdgeID)-> NodeHandle - destination of an edge
-  cls.def("get_edge_dst", [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-    return self.BuildView<PropertyGraphViews::BiDirectional>().OutEdgeDst(e);
+  cls.def("get_edge_dst", [](PropertyGraph&, GraphTopologyTypes::Edge) {
+    // TODO(yan): we don't have the correct implementation of this method in PropertyGraph yet
   });
   katana::DefWithNumba<&PropertyGraphNumbaReplacement::OutEdgeDst>(
       cls_numba_replacement, "get_edge_dst");
@@ -921,15 +1033,16 @@ DefPropertyGraph(py::module& m) {
   // GetEdgeEntityType(EdgePropertyIndex)-> EntityTypeID - entity type for an edge
   cls.def(
       "get_edge_type",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
+      [](PropertyGraph& self, GraphTopologyTypes::EdgePropertyIndex e) {
         return EntityType::Make(
-            &self.GetEdgeTypeManager(), self.GetTypeOfEdgeFromTopoIndex(e));
+            &self.GetEdgeTypeManager(), self.GetTypeOfEdge(e));
       },
       py::return_value_policy::reference_internal);
   cls.def(
-      "does_edge_have_type", [](PropertyGraph& self, GraphTopologyTypes::Edge e,
-                                const EntityType& type) {
-        return self.DoesEdgeHaveTypeFromTopoIndex(e, type.type_id);
+      "does_edge_have_type",
+      [](PropertyGraph& self, GraphTopologyTypes::OutEdgeHandle e,
+         const EntityType& type) {
+        return self.DoesEdgeHaveType(e, type.type_id);
       });
   cls.def_property_readonly("edge_types", &PropertyGraph::GetEdgeTypeManager);
 
@@ -1008,7 +1121,15 @@ DefPropertyGraph(py::module& m) {
   cls.def(
       "get_node_index",
       [](PropertyGraph& self, const std::string& name)
+<<<<<<< HEAD
           -> std::shared_ptr<katana::EntityIndex<katana::GraphTopology::Node>> {
+||||||| parent of 659b3f9ee (Squash into one commit)
+          -> Result<std::shared_ptr<
+              katana::EntityIndex<katana::GraphTopology::Node>>> {
+=======
+          -> Result<std::shared_ptr<katana::EntityIndex<
+              katana::GraphTopology::Node::underlying_type>>> {
+>>>>>>> 659b3f9ee (Squash into one commit)
         if (!self.HasNodeIndex(name)) {
           PythonChecked(self.MakeNodeIndex(name));
         }
@@ -1019,7 +1140,15 @@ DefPropertyGraph(py::module& m) {
   cls.def(
       "get_edge_index",
       [](PropertyGraph& self, const std::string& name)
+<<<<<<< HEAD
           -> std::shared_ptr<katana::EntityIndex<katana::GraphTopology::Edge>> {
+||||||| parent of 659b3f9ee (Squash into one commit)
+          -> Result<std::shared_ptr<
+              katana::EntityIndex<katana::GraphTopology::Edge>>> {
+=======
+          -> Result<std::shared_ptr<katana::EntityIndex<
+              katana::GraphTopology::Edge::underlying_type>>> {
+>>>>>>> 659b3f9ee (Squash into one commit)
         if (!self.HasEdgeIndex(name)) {
           PythonChecked(self.MakeEdgeIndex(name));
         }
@@ -1058,16 +1187,22 @@ DefPropertyGraph(py::module& m) {
   });
 }
 
-template <typename node_or_edge>
+template <typename node_or_edge_int>
 struct WrapPrimitiveEntityIndex {
+<<<<<<< HEAD
   py::class_<
       katana::EntityIndex<node_or_edge>,
       std::shared_ptr<katana::EntityIndex<node_or_edge>>>
       base_cls;
+||||||| parent of 659b3f9ee (Squash into one commit)
+  py::class_<katana::EntityIndex<node_or_edge>> base_cls;
+=======
+  py::class_<katana::EntityIndex<node_or_edge_int>> base_cls;
+>>>>>>> 659b3f9ee (Squash into one commit)
 
   template <typename T>
   py::object instantiate(py::module& m, const char* name) {
-    using Cls = katana::PrimitiveEntityIndex<node_or_edge, T>;
+    using Cls = katana::PrimitiveEntityIndex<node_or_edge_int, T>;
     py::class_<Cls, std::shared_ptr<Cls>> cls(m, name, base_cls);
 
     cls.template def(
@@ -1082,15 +1217,21 @@ struct WrapPrimitiveEntityIndex {
   }
 };
 
-template <typename node_or_edge>
+template <typename node_or_edge_int>
 struct WrapStringEntityIndex {
+<<<<<<< HEAD
   py::class_<
       katana::EntityIndex<node_or_edge>,
       std::shared_ptr<katana::EntityIndex<node_or_edge>>>
       base_cls;
+||||||| parent of 659b3f9ee (Squash into one commit)
+  py::class_<katana::EntityIndex<node_or_edge>> base_cls;
+=======
+  py::class_<katana::EntityIndex<node_or_edge_int>> base_cls;
+>>>>>>> 659b3f9ee (Squash into one commit)
 
   py::object instantiate(py::module& m, const char* name) {
-    using Cls = katana::StringEntityIndex<node_or_edge>;
+    using Cls = katana::StringEntityIndex<node_or_edge_int>;
     py::class_<Cls, std::shared_ptr<Cls>> cls(m, name, base_cls);
 
     cls.template def("__getitem__", [](Cls& self, const std::string& v) {
@@ -1109,7 +1250,8 @@ struct WrapStringEntityIndex {
 template <typename node_or_edge>
 void
 DefEntityIndex(py::module& m) {
-  using EntityIndex = katana::EntityIndex<node_or_edge>;
+  using node_or_edge_int = typename node_or_edge::underlying_type;
+  using EntityIndex = katana::EntityIndex<node_or_edge_int>;
   constexpr bool is_node =
       std::is_same_v<node_or_edge, katana::GraphTopologyTypes::Node>;
   auto cls_name = std::string(is_node ? "Node" : "Edge") + "Index";
@@ -1121,8 +1263,8 @@ DefEntityIndex(py::module& m) {
 
   katana::InstantiateForTypes<bool, uint8_t, int64_t, uint64_t, double_t>(
       m, ("Primitive" + cls_name).c_str(),
-      WrapPrimitiveEntityIndex<node_or_edge>{cls});
-  WrapStringEntityIndex<node_or_edge>{cls}.instantiate(
+      WrapPrimitiveEntityIndex<node_or_edge_int>{cls});
+  WrapStringEntityIndex<node_or_edge_int>{cls}.instantiate(
       m, ("String" + cls_name).c_str());
 }
 

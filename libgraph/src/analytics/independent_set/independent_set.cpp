@@ -351,7 +351,7 @@ struct PrioAlgo {
         [&](const GNode& src) {
           auto& src_flag = graph->GetData<NodeFlag>(src);
           float degree = graph->OutEdges(src).size();
-          float x = degree - hash(src) * kHashScale;
+          float x = degree - hash(src.value()) * kHashScale;
           int res = round(scale_avg / (avg_degree + x));
           uint8_t val = (res + res) | 1;
           src_flag = val;
@@ -452,7 +452,7 @@ struct EdgeTiledPrioAlgo {
           const auto end = rng.end();
 
           float degree = float(graph->OutDegree(src));
-          float x = degree - hash(src) * kHashScale;
+          float x = degree - hash(src.value()) * kHashScale;
           int res = round(scale_avg / (avg_degree + x));
           uint8_t val = (res + res) | 0x03;
 

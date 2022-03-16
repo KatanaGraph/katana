@@ -3,8 +3,8 @@
 #include "katana/SharedMemSys.h"
 #include "katana/TopologyGeneration.h"
 
-using Edge = katana::PropertyGraph::Edge;
 using Node = katana::PropertyGraph::Node;
+using OutEdgeHandle = katana::PropertyGraph::OutEdgeHandle;
 using katana::AddEdgeProperties;
 using katana::AddNodeProperties;
 using katana::PropertyGenerator;
@@ -15,9 +15,9 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
   katana::Result<void> result = AddNodeProperties(
       pg.get(), &txn_ctx,
       PropertyGenerator(
-          "age", [](Node id) { return static_cast<int32_t>(id * 2); }),
+          "age", [](const Node& id) { return static_cast<int32_t>(id.value() * 2); }),
       PropertyGenerator(
-          "name", [](Node id) { return fmt::format("Node {}", id); }));
+          "name", [](const Node& id) { return fmt::format("Node {}", id); }));
 
   KATANA_LOG_VASSERT(result, "AddNodeProperties returned an error.");
 
@@ -36,8 +36,8 @@ TestNodeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
 
   size_t i = 0;
   for (Node n : pg->Nodes()) {
-    int32_t expected_age = static_cast<int32_t>(n) * 2;
-    std::string expected_name = fmt::format("Node {}", n);
+    int32_t expected_age = n.value() * 2;
+    std::string expected_name = fmt::format("Node {}", n.value());
 
     KATANA_LOG_VASSERT(
         ages_array->Value(i) == expected_age, "Incorrect node age value");
@@ -56,13 +56,13 @@ TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       pg.get(), &txn_ctx,
       PropertyGenerator(
           "average",
-          [&pg](Edge id) {
+          [&pg](const OutEdgeHandle& id) {
             Node src = pg->topology().GetEdgeSrc(id);
             Node dst = pg->topology().OutEdgeDst(id);
-            return 0.5 * (src + dst);
+            return 0.5 * (src.value() + dst.value());
           }),
       PropertyGenerator(
-          "edge_name", [](Edge id) { return fmt::format("Edge {}", id); }));
+          "edge_name", [](const OutEdgeHandle& id) { return fmt::format("Edge {}", id.value()); }));
 
   KATANA_LOG_VASSERT(result, "AddEdgeProperties returned an error.");
 
@@ -83,13 +83,13 @@ TestEdgeProps(std::unique_ptr<katana::PropertyGraph>&& pg) {
       std::static_pointer_cast<arrow::StringArray>(names->chunk(0));
 
   size_t i = 0;
-  for (Edge e : pg->OutEdges()) {
+  for (const auto& e : pg->Edges()) {
     Node src = pg->topology().GetEdgeSrc(e);
     Node dst = pg->topology().OutEdgeDst(e);
     std::string expected_name = fmt::format("Edge {}", e);
 
     KATANA_LOG_VASSERT(
-        avgs_array->Value(i) == 0.5 * (src + dst),
+        avgs_array->Value(i) == 0.5 * (src.value() + dst.value()),
         "Incorrect edge average value");
 
     KATANA_LOG_VASSERT(

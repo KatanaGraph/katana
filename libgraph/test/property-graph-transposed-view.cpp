@@ -27,7 +27,7 @@ TestTransposedView() {
 
   auto pg_tr = KATANA_CHECKED(PropertyGraph::Make(builder_tr.ConvertToCSR()));
 
-  for (Edge e : pg_tr_view.OutEdges()) {
+  for (const auto& e : pg_tr_view.Edges()) {
     KATANA_LOG_VASSERT(
         pg_tr->topology().GetEdgeSrc(e) == pg_tr_view.GetEdgeSrc(e),
         "Edge sources do not match");

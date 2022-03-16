@@ -125,13 +125,13 @@ struct KSsspImplementationBase {
   template <typename WL, typename TileMaker>
   static void PushEdgeTilesParallel(
       WL& wl, Graph* graph, GNode src, const TileMaker& f) {
-    auto beg = Edges(*graph, src).begin();
-    const auto end = Edges(*graph, src).end();
 
-    if ((end - beg) > EdgeTileSize) {
+    auto edges_range = Edges(*graph, src);
+
+    if (edges_range.size() > EdgeTileSize) {
       katana::on_each(
           [&](const unsigned tid, const unsigned numT) {
-            auto p = katana::block_range(beg, end, tid, numT);
+            auto p = katana::block_range(edges_range.begin(), edges_range.end(), tid, numT);
 
             auto b = p.first;
             const auto e = p.second;
@@ -140,8 +140,8 @@ struct KSsspImplementationBase {
           },
           katana::loopname("Init-Tiling"));
 
-    } else if ((end - beg) > 0) {
-      wl.push(f(beg, end));
+    } else if (edges_range.size() > 0) {
+      wl.push(f(edges_range.begin(), edges_range.end()));
     }
   }
 

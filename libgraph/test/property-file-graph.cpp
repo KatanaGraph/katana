@@ -433,7 +433,8 @@ TestTopologyAccess() {
   KATANA_LOG_ASSERT(g->NumNodes() == 10);
   KATANA_LOG_ASSERT(g->NumEdges() == 30);
 
-  for (int i = 0; i < 10; ++i) {
+  using Node = katana::PropertyGraph::Node;
+  for (Node i{0ul}; i < Node{10ul}; ++i) {
     KATANA_LOG_ASSERT(
         std::distance(g->OutEdges(i).begin(), g->OutEdges(i).end()) == 3);
     KATANA_LOG_ASSERT(g->OutEdges(i).size() == 3);
@@ -442,11 +443,9 @@ TestTopologyAccess() {
   }
   int n_nodes = 0;
   for (katana::PropertyGraph::Node i : *g) {
-    auto _ignore = g->GetNodeProperty(0)->chunk(0)->GetScalar(i);
     n_nodes++;
     int n_edges = 0;
-    for (auto e : g->OutEdges(i)) {
-      auto __ignore = g->GetEdgeProperty(0)->chunk(0)->GetScalar(e);
+    for ([[maybe_unused]] auto e : g->OutEdges(i)) {
       n_edges++;
     }
     KATANA_LOG_ASSERT(n_edges == 3);

@@ -25,9 +25,11 @@ class KATANA_EXPORT SourcePicker {
   const PropertyGraph& graph;
 
 public:
+  using Node = PropertyGraph::Node;
+
   explicit SourcePicker(const PropertyGraph& g) : graph(g) {}
 
-  uint32_t PickNext();
+  Node PickNext();
 };
 
 //! Used to determine if a graph has power-law degree distribution or not
@@ -132,8 +134,8 @@ AddDefaultEdgeWeight(
       KATANA_CHECKED((katana::TypedPropertyGraph<std::tuple<>, EdgeData>::Make(
           pg, {}, {edge_weight_property_name})));
   katana::do_all(
-      katana::iterate(typed_graph.OutEdges()),
-      [&](auto e) {
+      katana::iterate(typed_graph.Edges()),
+      [&](const auto& e) {
         typed_graph.template GetEdgeData<EdgeWt>(e) = default_val;
       },
       katana::steal(), katana::loopname("SetDefaultWeight"));

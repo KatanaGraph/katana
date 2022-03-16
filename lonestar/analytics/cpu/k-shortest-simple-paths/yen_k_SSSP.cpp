@@ -63,12 +63,6 @@ static cll::opt<Algo> algo(
         clEnumVal(deltaStepBarrier, "deltaStepBarrier")),
     cll::init(deltaTile));
 
-struct Path {
-  uint32_t parent;
-  uint32_t w;
-  const Path* last;
-};
-
 struct NodeDist : public katana::AtomicPODProperty<uint32_t> {};
 
 struct NodeAlive : public katana::PODProperty<uint8_t> {};
@@ -78,8 +72,14 @@ struct EdgeWeight : public katana::PODProperty<uint32_t> {};
 using NodeData = std::tuple<NodeDist, NodeAlive>;
 using EdgeData = std::tuple<EdgeWeight>;
 
-typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
-typedef typename Graph::Node GNode;
+using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
+using GNode = typename Graph::Node;
+
+struct Path {
+  GNode parent;
+  uint32_t w;
+  const Path* last;
+};
 
 constexpr static const bool kTrackWork = false;
 constexpr static const unsigned kChunkSize = 64U;

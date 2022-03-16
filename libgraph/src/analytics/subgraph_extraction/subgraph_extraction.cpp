@@ -20,8 +20,10 @@
 #include "katana/analytics/subgraph_extraction/subgraph_extraction.h"
 
 #include <iostream>
+#include <limits>
 
 #include "katana/PropertyGraph.h"
+#include "katana/Logging.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 
@@ -32,26 +34,28 @@ using edge_iterator = boost::counting_iterator<uint64_t>;
 
 using SortedGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
 using Node = SortedGraphView::Node;
-using Edge = SortedGraphView::Edge;
+using OutEdgeHandle = katana::GraphTopology::OutEdgeHandle;
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 SubGraphNodeSet(
     const SortedGraphView& graph, const std::vector<Node>& node_set) {
-  uint64_t num_nodes = node_set.size();
+  using NodeInt = Node::underlying_type;
+  KATANA_LOG_ASSERT(node_set.size() < std::numeric_limits<NodeInt>::max());
+  NodeInt num_nodes = node_set.size();
   // Subgraph topology : out indices
-  katana::NUMAArray<Edge> out_indices;
+  katana::NUMAArray<OutEdgeHandle::underlying_type> out_indices;
   out_indices.allocateInterleaved(num_nodes);
 
-  katana::gstl::Vector<katana::gstl::Vector<Node>> subgraph_edges;
+  katana::gstl::Vector<katana::gstl::Vector<NodeInt>> subgraph_edges;
   subgraph_edges.resize(num_nodes);
 
   katana::do_all(
-      katana::iterate(Node(0), Node(num_nodes)),
-      [&](const Node& n) {
+      katana::iterate(NodeInt(0), NodeInt(num_nodes)),
+      [&](const NodeInt& n) {
         Node src = node_set[n];
 
         auto last = graph.OutEdges(src).end();
-        for (Node m = 0; m < num_nodes; ++m) {
+        for (NodeInt m = 0; m < num_nodes; ++m) {
           auto dest = node_set[m];
           // Binary search on the edges sorted by destination id
           for (auto edge_it = graph.FindEdge(src, dest);
@@ -70,14 +74,14 @@ SubGraphNodeSet(
   uint64_t num_edges = out_indices[num_nodes - 1];
 
   // Subgraph topology : out dests
-  katana::NUMAArray<Node> out_dests;
+  katana::NUMAArray<NodeInt> out_dests;
   out_dests.allocateInterleaved(num_edges);
 
   katana::do_all(
-      katana::iterate(Node(0), Node(num_nodes)),
-      [&](const Node& n) {
+      katana::iterate(NodeInt(0), NodeInt(num_nodes)),
+      [&](const NodeInt& n) {
         uint64_t offset = n == 0 ? 0 : out_indices[n - 1];
-        for (Node dest : subgraph_edges[n]) {
+        for (NodeInt dest : subgraph_edges[n]) {
           out_dests[offset] = dest;
           offset++;
         }
@@ -97,8 +101,8 @@ katana::analytics::SubGraphExtraction(
     katana::PropertyGraph* pg, const std::vector<Node>& node_vec,
     SubGraphExtractionPlan plan) {
   // Remove duplicates from the node vector
-  std::unordered_set<uint32_t> set;
-  std::vector<uint32_t> dedup_node_vec;
+  std::unordered_set<Node> set;
+  std::vector<Node> dedup_node_vec;
   for (auto n : node_vec) {
     if (set.insert(n).second) {  // If n wasn't already present.
       dedup_node_vec.push_back(n);

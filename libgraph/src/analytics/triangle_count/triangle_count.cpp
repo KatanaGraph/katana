@@ -62,11 +62,10 @@ LowerBound(Iterator first, Iterator last, Compare comp) {
 /**
  * std::set_intersection over edge_iterators.
  */
-template <typename G>
+template <typename G, typename EI = typename G::edge_iterator>
 size_t
 CountEqual(
-    const G& g, typename G::edge_iterator aa, typename G::edge_iterator ea,
-    typename G::edge_iterator bb, typename G::edge_iterator eb) {
+    const G& g, EI aa, EI ea, EI bb,  EI eb) {
   size_t retval = 0;
   while (aa != ea && bb != eb) {
     typename G::Node a = g.OutEdgeDst(*aa);

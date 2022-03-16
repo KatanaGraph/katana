@@ -51,29 +51,27 @@ public:
     float* delta = *per_thread_delta_.getLocal();
     katana::gdeque<OuterGNode>* successor = *per_thread_successor_.getLocal();
 
-    sigma[current_source] = 1;
-    distance[current_source] = 1;
+    sigma[current_source.value()] = 1;
+    distance[current_source.value()] = 1;
 
     source_queue.push_back(current_source);
 
     // Do bfs while computing number of shortest paths (saved into sigma)
     // and successors of nodes;
     // Note this bfs makes it so source has distance of 1 instead of 0
-    for (auto qq = source_queue.begin(), eq = source_queue.end(); qq != eq;
-         ++qq) {
-      int src = *qq;
+    for (const auto& src: source_queue) {
 
       for (auto edge : graph_.OutEdges(src)) {
         auto dest = graph_.OutEdgeDst(edge);
 
-        if (!distance[dest]) {
+        if (!distance[dest.value()]) {
           source_queue.push_back(dest);
-          distance[dest] = distance[src] + 1;
+          distance[dest.value()] = distance[src.value()] + 1;
         }
 
-        if (distance[dest] == distance[src] + 1) {
-          sigma[dest] = sigma[dest] + sigma[src];
-          successor[src].push_back(dest);
+        if (distance[dest.value()] == distance[src.value()] + 1) {
+          sigma[dest.value()] = sigma[dest.value()] + sigma[src.value()];
+          successor[src.value()].push_back(dest);
         }
       }
     }
@@ -81,19 +79,18 @@ public:
     // Back-propogate the dependency values (delta) along the BFS DAG
     // ignore the source (hence source_queue.size > 1 and not source_queue.empty)
     while (source_queue.size() > 1) {
-      int leaf = source_queue.back();
+      OuterGNode leaf = source_queue.back();
       source_queue.pop_back();
 
-      float sigma_leaf = sigma[leaf];  // has finalized short path value
-      float delta_leaf = delta[leaf];
-      auto& succ_list = successor[leaf];
+      float sigma_leaf = sigma[leaf.value()];  // has finalized short path value
+      float delta_leaf = delta[leaf.value()];
+      auto& succ_list = successor[leaf.value()];
 
-      for (auto current_succ = succ_list.begin(), succ_end = succ_list.end();
-           current_succ != succ_end; ++current_succ) {
+      for (const auto& current_succ : succ_list) {
         delta_leaf +=
-            (sigma_leaf / sigma[*current_succ]) * (1.0 + delta[*current_succ]);
+            (sigma_leaf / sigma[current_succ.value()]) * (1.0 + delta[current_succ.value()]);
       }
-      delta[leaf] = delta_leaf;
+      delta[leaf.value()] = delta_leaf;
     }
 
     // save result of this source's BC, reset all local values for next
@@ -235,9 +232,7 @@ struct HasOut {
   HasOut(const OuterGraph& g) : graph(g) {}
 
   bool operator()(const OuterGNode& n) const {
-    // return *graph.edge_begin(n) != *graph.edge_end(n);
-    auto edge_range = graph.OutEdges(n);
-    return !edge_range.empty();
+    return graph.OutDegree(n) > 0;
   }
 };
 }  // namespace
@@ -260,27 +255,30 @@ BetweennessCentralityOuter(
   katana::ReportPageAllocGuard page_alloc;
 
   // vector of sources to process; initialized if doing outSources
-  std::vector<uint32_t> source_vector;
+  std::vector<OuterGNode> source_vector;
   // preprocessing: find the nodes with out edges we will process and skip
   // over nodes with no out edges; only done if numOfSources isn't specified
   if (std::holds_alternative<uint32_t>(sources) &&
       sources != kBetweennessCentralityAllNodes) {
     // find first node with out edges
-    boost::filter_iterator<HasOut, OuterGraph::iterator> begin =
+    auto begin =
         boost::make_filter_iterator(HasOut(graph), graph.begin(), graph.end());
-    boost::filter_iterator<HasOut, OuterGraph::iterator> end =
+    auto end =
         boost::make_filter_iterator(HasOut(graph), graph.end(), graph.end());
     // adjustedEnd = last node we will process based on how many iterations
     // (i.e. sources) we want to do
-    boost::filter_iterator<HasOut, OuterGraph::iterator> adjustedEnd =
-        katana::safe_advance(begin, end, (int)std::get<uint32_t>(sources));
+    auto adjustedEnd =
+        katana::safe_advance(begin, end, std::get<uint32_t>(sources));
 
     // vector of nodes we want to process
-    for (auto node = begin; node != adjustedEnd; ++node) {
-      source_vector.push_back(*node);
+    // for (auto node = begin; node != adjustedEnd; ++node) {
+    for (const auto& node: katana::MakeStandardRange(begin, adjustedEnd)) {
+      source_vector.push_back(node);
     }
   } else if (std::holds_alternative<std::vector<uint32_t>>(sources)) {
-    source_vector = std::get<std::vector<uint32_t>>(sources);
+    for (const auto& v: std::get<std::vector<uint32_t>>(sources)) {
+      source_vector.emplace_back(OuterGNode{v});
+    }
   }
 
   // execute algorithm

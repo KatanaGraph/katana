@@ -174,7 +174,7 @@ BaselineIterate(katana::PropertyGraph* g, int num_properties) {
 
 template <size_t size, typename Graph>
 struct SumNodeProperty {
-  static size_t Call(Graph g, typename Graph::iterator node, size_t limit) {
+  static size_t Call(const Graph& g, const typename Graph::Node& node, size_t limit) {
     constexpr size_t total = std::tuple_size_v<typename Graph::node_properties>;
     constexpr size_t idx = total - size;
     using Index =
@@ -187,21 +187,22 @@ struct SumNodeProperty {
 
 template <typename Graph>
 struct SumNodeProperty<0, Graph> {
-  static size_t Call(Graph, typename Graph::iterator, size_t) { return {}; }
+  static size_t Call(const Graph&, const typename Graph::Node&, size_t) {
+    return 0ul;
+  }
 };
 
 /// Sum all the properties associated with a particular node.
 template <typename Graph>
 size_t
-SumNodePropertyV(Graph g, typename Graph::iterator node, size_t limit) {
+SumNodePropertyV(const Graph& g, const typename Graph::Node& node, size_t limit) {
   constexpr size_t size = std::tuple_size_v<typename Graph::node_properties>;
   return SumNodeProperty<size, Graph>::Call(g, node, limit);
 }
 
 template <size_t size, typename Graph>
 struct SumEdgeProperty {
-  static size_t Call(
-      Graph g, typename Graph::edge_iterator edge, size_t limit) {
+  static size_t Call(const Graph& g, const typename Graph::OutEdgeHandle& edge, size_t limit) {
     constexpr size_t total = std::tuple_size_v<typename Graph::edge_properties>;
     constexpr size_t idx = total - size;
     using Index =
@@ -214,7 +215,7 @@ struct SumEdgeProperty {
 
 template <typename Graph>
 struct SumEdgeProperty<0, Graph> {
-  static size_t Call(Graph, typename Graph::edge_iterator, size_t) {
+  static size_t Call(const Graph&, const typename Graph::OutEdgeHandle&, size_t) {
     return {};
   }
 };
@@ -222,7 +223,7 @@ struct SumEdgeProperty<0, Graph> {
 /// Sum all the properties associated with a particular edge.
 template <typename Graph>
 size_t
-SumEdgePropertyV(Graph g, typename Graph::edge_iterator edge, size_t limit) {
+SumEdgePropertyV(const Graph& g, const typename Graph::OutEdgeHandle& edge, size_t limit) {
   constexpr size_t size = std::tuple_size_v<typename Graph::edge_properties>;
   return SumEdgeProperty<size, Graph>::Call(g, edge, limit);
 }
@@ -233,7 +234,7 @@ Iterate(katana::TypedPropertyGraph<NodeType, EdgeType> g, size_t limit) {
   size_t result = 0;
   for (const auto& node : g) {
     result += SumNodePropertyV(g, node, limit);
-    for (auto& edge : g.OutEdges(node)) {
+    for (const auto& edge : g.OutEdges(node)) {
       result += SumEdgePropertyV(g, edge, limit);
       result += SumNodePropertyV(g, g.OutEdgeDst(edge), limit);
     }

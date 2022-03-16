@@ -174,7 +174,7 @@ katana::analytics::JaccardAssertValid(
   Graph graph = KATANA_CHECKED(Graph::Make(pg, {property_name}, {}));
   ;
 
-  if (abs(graph.GetData<JaccardSimilarity>(compare_node) - 1.0) > EPSILON) {
+  if (abs(graph.GetData<JaccardSimilarity>(GNode{compare_node}) - 1.0) > EPSILON) {
     return katana::ErrorCode::AssertionFailed;
   }
 

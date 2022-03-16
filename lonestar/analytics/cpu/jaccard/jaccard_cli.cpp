@@ -108,7 +108,7 @@ main(int argc, char** argv) {
   Graph graph = pg_result.value();
 
   std::cout << "Node " << report_node << " has similarity "
-            << graph.GetData<NodeValue>(report_node) << "\n";
+            << graph.GetData<NodeValue>(GNode{report_node}) << "\n";
 
   auto stats_result = katana::analytics::JaccardStatistics::Compute(
       pg_projected_view.get(), base_node, output_property_name);

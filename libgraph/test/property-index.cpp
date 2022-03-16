@@ -10,7 +10,7 @@
 
 template <typename node_or_edge>
 struct NodeOrEdge {
-  static katana::Result<katana::EntityIndex<node_or_edge>*> MakeIndex(
+  static katana::Result<katana::EntityIndex<typename node_or_edge::underlying_type>*> MakeIndex(
       katana::PropertyGraph* pg, const std::string& property_name);
   static katana::Result<void> AddProperties(
       katana::PropertyGraph* pg, std::shared_ptr<arrow::Table> properties,
@@ -22,7 +22,7 @@ using Node = NodeOrEdge<katana::GraphTopology::Node>;
 using Edge = NodeOrEdge<katana::GraphTopology::Edge>;
 
 template <>
-katana::Result<katana::EntityIndex<katana::GraphTopology::Node>*>
+katana::Result<katana::EntityIndex<katana::GraphTopology::Node::underlying_type>*>
 Node::MakeIndex(katana::PropertyGraph* pg, const std::string& property_name) {
   auto result = pg->MakeNodeIndex(property_name);
   if (!result) {
@@ -39,7 +39,7 @@ Node::MakeIndex(katana::PropertyGraph* pg, const std::string& property_name) {
 }
 
 template <>
-katana::Result<katana::EntityIndex<katana::GraphTopology::Edge>*>
+katana::Result<katana::EntityIndex<katana::GraphTopology::Edge::underlying_type>*>
 Edge::MakeIndex(katana::PropertyGraph* pg, const std::string& property_name) {
   auto result = pg->MakeEdgeIndex(property_name);
   if (!result) {
@@ -136,7 +136,7 @@ CreateStringProperty(const std::string& name, bool uniform, size_t num_rows) {
 template <typename node_or_edge, typename DataType>
 void
 TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
-  using IndexType = katana::PrimitiveEntityIndex<node_or_edge, DataType>;
+  using IndexType = katana::PrimitiveEntityIndex<typename node_or_edge::underlying_type, DataType>;
   using ArrayType = typename arrow::CTypeTraits<DataType>::ArrayType;
 
   LinePolicy policy{line_width};
@@ -181,14 +181,15 @@ TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
 
   // Searching for '42' should get every item.
   size_t num_entities = NodeOrEdge<node_or_edge>::num_entities(g.get());
+  using node_or_edge_int = typename node_or_edge::underlying_type;
   std::vector<bool> found(num_entities, false);
   for (it = uniform_index->Find(42); it != uniform_index->end(); ++it) {
-    node_or_edge id = *it;
+    node_or_edge_int id = *it;
     KATANA_LOG_VASSERT(id < num_entities, "Invalid id: {}", id);
     KATANA_LOG_VASSERT(!found[id], "Duplicate id: {}", id);
     found[id] = true;
   }
-  for (node_or_edge id = 0; id < num_entities; ++id) {
+  for (node_or_edge_int id = 0; id < num_entities; ++id) {
     KATANA_LOG_VASSERT(found[id], "Not in index: {}", id);
   }
 
@@ -208,7 +209,7 @@ TestPrimitiveIndex(size_t num_nodes, size_t line_width) {
 template <typename node_or_edge>
 void
 TestStringIndex(size_t num_nodes, size_t line_width) {
-  using IndexType = katana::StringEntityIndex<node_or_edge>;
+  using IndexType = katana::StringEntityIndex<typename node_or_edge::underlying_type>;
   using ArrayType = arrow::LargeStringArray;
 
   LinePolicy policy{line_width};
@@ -250,13 +251,14 @@ TestStringIndex(size_t num_nodes, size_t line_width) {
   // Searching for "aaaa" should get every item.
   size_t num_entities = NodeOrEdge<node_or_edge>::num_entities(g.get());
   std::vector<bool> found(num_entities, false);
+  using node_or_edge_int = typename node_or_edge::underlying_type;
   for (it = uniform_index->Find("aaaa"); it != uniform_index->end(); ++it) {
-    node_or_edge id = *it;
+    node_or_edge_int id = *it;
     KATANA_LOG_VASSERT(id < num_entities, "Invalid id: {}", id);
     KATANA_LOG_VASSERT(!found[id], "Duplicate id: {}", id);
     found[id] = true;
   }
-  for (node_or_edge id = 0; id < num_entities; ++id) {
+  for (node_or_edge_int id = 0; id < num_entities; ++id) {
     KATANA_LOG_VASSERT(found[id], "Not in index: {}", id);
   }
 

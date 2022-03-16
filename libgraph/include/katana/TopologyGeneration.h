@@ -3,9 +3,101 @@
 
 #include <arrow/type_traits.h>
 
+#include "katana/GraphTopology.h"
 #include "katana/PropertyGraph.h"
 
 namespace katana {
+
+/// A simple incremental topology builder for small sized graphs.
+/// Typical usage:
+/// AddNodes(10); // creates 10 nodes (0..9) with no edges
+/// AddEdge(0, 3); // creates an edge between nodes 0 and 3.
+/// Once done adding edges, call ConvertToCSR() to obtain a GraphTopology instance
+template <bool IS_SYMMETRIC = false, bool ALLOW_MULTI_EDGE = false>
+class KATANA_EXPORT TopologyBuilderImpl : public GraphTopologyTypes {
+  using NodeInt = Node::underlying_type;
+  using AdjVec = std::vector<NodeInt>;
+
+public:
+  void AddNodes(size_t num) noexcept {
+    all_nodes_adj_.resize(all_nodes_adj_.size() + num);
+  }
+
+  void AddEdge(NodeInt src, NodeInt dst) noexcept {
+    AddEdgeImpl(src, dst);
+    if constexpr (IS_SYMMETRIC) {
+      AddEdgeImpl(dst, src);
+    }
+  }
+
+  size_t degree(NodeInt src) const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(IsValidNode(src));
+    return all_nodes_adj_[src].size();
+  }
+
+  size_t num_nodes() const noexcept { return all_nodes_adj_.size(); }
+
+  bool empty() const noexcept { return num_nodes() == size_t{0}; }
+
+  size_t num_edges() const noexcept {
+    size_t res = 0;
+    for (const AdjVec& v : all_nodes_adj_) {
+      res += v.size();
+    }
+    return res;
+  }
+
+  void Print() const noexcept {
+    for (size_t n = 0; n < all_nodes_adj_.size(); ++n) {
+      fmt::print("Node {}: [{}]\n", n, fmt::join(all_nodes_adj_[n], ", "));
+    }
+  }
+
+  GraphTopology ConvertToCSR() const noexcept { 
+    AdjIndexVec adj_indices; 
+    EdgeDestVec dests;
+
+    adj_indices.allocateInterleaved(num_nodes());
+    dests.allocateInterleaved(num_edges());
+
+    size_t prefix_sum = 0;
+    for (NodeInt n = 0; n < num_nodes(); ++n) {
+      adj_indices[n] = prefix_sum + degree(n);
+      std::copy(
+          all_nodes_adj_[n].begin(), all_nodes_adj_[n].end(),
+          &dests[prefix_sum]);
+      prefix_sum += degree(n);
+    }
+
+    return GraphTopology{std::move(adj_indices), std::move(dests)};
+  }
+
+private:
+  bool IsValidNode(NodeInt id) const noexcept {
+    return id < all_nodes_adj_.size();
+  }
+
+  void AddEdgeImpl(NodeInt src, NodeInt dst) noexcept {
+    KATANA_LOG_DEBUG_ASSERT(IsValidNode(src));
+    auto& adj_list = all_nodes_adj_[src];
+
+    if constexpr (ALLOW_MULTI_EDGE) {
+      adj_list.emplace_back(dst);
+    } else {
+      auto it = std::find(adj_list.begin(), adj_list.end(), dst);
+      bool not_found = (it == adj_list.end());
+      KATANA_LOG_DEBUG_ASSERT(not_found);
+      if (not_found) {
+        adj_list.emplace_back(dst);
+      }
+    }
+  }
+
+  std::vector<AdjVec> all_nodes_adj_;
+};
+
+using AsymmetricGraphTopologyBuilder = TopologyBuilderImpl<false>;
+using SymmetricGraphTopologyBuilder = TopologyBuilderImpl<true>;
 
 /*********************************************************/
 /* Functions for generating pre-defined graph topologies */
@@ -102,8 +194,8 @@ AddGraphProperties(
       "PropertyGenerator.");
 
   using Node = PropertyGraph::Node;
-  using Edge = PropertyGraph::Edge;
-  using ArgType = std::conditional_t<is_node, Node, Edge>;
+  using OutEdgeHandle = PropertyGraph::OutEdgeHandle;
+  using ArgType = std::conditional_t<is_node, Node, OutEdgeHandle>;
 
   // For every generator argument we add the corresponding field to the schema
   // and the corresponding column of node property values.
@@ -120,12 +212,12 @@ AddGraphProperties(
     auto builder = generator.MakeBuilder();
     if constexpr (is_node) {
       KATANA_CHECKED(builder->Reserve(pg->NumNodes()));
-      for (Node n : pg->Nodes()) {
+      for (const auto& n : pg->Nodes()) {
         KATANA_CHECKED(builder->Append(generator(n)));
       }
     } else {
       KATANA_CHECKED(builder->Reserve(pg->NumEdges()));
-      for (Edge e : pg->OutEdges()) {
+      for (const auto& e : pg->Edges()) {
         KATANA_CHECKED(builder->Append(generator(e)));
       }
     }

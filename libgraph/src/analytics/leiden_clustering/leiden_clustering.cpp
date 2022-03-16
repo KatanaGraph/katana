@@ -80,13 +80,13 @@ struct LeidenClusteringImplementation
         Base::template CalConstantForSecondTerm<EdgeWeightType>(*graph);
 
     if (iter >= 1) {
-      katana::do_all(katana::iterate(*graph), [&](GNode n) {
-        c_info[n].size = 0;
-        c_info[n].degree_wt = 0;
-        c_info[n].node_wt = 0;
+      katana::do_all(katana::iterate(*graph), [&] (const GNode& n) {
+        c_info[n.value()].size = 0;
+        c_info[n.value()].degree_wt = 0;
+        c_info[n.value()].node_wt = 0;
       });
 
-      katana::do_all(katana::iterate(*graph), [&](GNode n) {
+      katana::do_all(katana::iterate(*graph), [&] (const GNode& n) {
         auto& n_data_curr_comm_id =
             graph->template GetData<CurrentCommunityID>(n);
         auto& n_data_degree_wt =
@@ -105,7 +105,7 @@ struct LeidenClusteringImplementation
 
       katana::do_all(
           katana::iterate(*graph),
-          [&](GNode n) {
+          [&] (const GNode& n) {
             auto& n_data_curr_comm_id =
                 graph->template GetData<CurrentCommunityID>(n);
             auto& n_data_degree_wt =
@@ -210,13 +210,13 @@ struct LeidenClusteringImplementation
         Base::template CalConstantForSecondTerm<EdgeWeightType>(*graph);
 
     if (iter >= 1) {
-      katana::do_all(katana::iterate(*graph), [&](GNode n) {
-        c_info[n].size = 0;
-        c_info[n].degree_wt = 0;
-        c_info[n].node_wt = 0;
+      katana::do_all(katana::iterate(*graph), [&] (const GNode& n) {
+        c_info[n.value()].size = 0;
+        c_info[n.value()].degree_wt = 0;
+        c_info[n.value()].node_wt = 0;
       });
 
-      katana::do_all(katana::iterate(*graph), [&](GNode n) {
+      katana::do_all(katana::iterate(*graph), [&] (const GNode& n) {
         auto& n_data_curr_comm_id =
             graph->template GetData<CurrentCommunityID>(n);
         auto& n_data_degree_wt =
@@ -229,7 +229,7 @@ struct LeidenClusteringImplementation
       });
     }
 
-    katana::NUMAArray<GNode> local_target;
+    katana::NUMAArray<typename GNode::underlying_type> local_target;
     local_target.allocateBlocked(graph->NumNodes());
 
     // partition nodes
@@ -239,20 +239,20 @@ struct LeidenClusteringImplementation
     katana::NUMAArray<bool> in_bag;
     in_bag.allocateBlocked(graph->NumNodes());
 
-    katana::do_all(katana::iterate(*graph), [&](GNode n) {
-      uint64_t idx = n % 16;
+    katana::do_all(katana::iterate(*graph), [&] (const GNode& n) {
+      uint64_t idx = n.value() % 16;
       bag[idx].push(n);
-      in_bag[n] = false;
-      local_target[n] = Base::UNASSIGNED;
+      in_bag[n.value()] = false;
+      local_target[n.value()] = Base::UNASSIGNED;
     });
 
-    katana::do_all(katana::iterate(*graph), [&](GNode n) {
-      c_update_add[n].degree_wt = 0;
-      c_update_add[n].size = 0;
-      c_update_add[n].node_wt = 0;
-      c_update_subtract[n].degree_wt = 0;
-      c_update_subtract[n].size = 0;
-      c_update_subtract[n].node_wt = 0;
+    katana::do_all(katana::iterate(*graph), [&] (const GNode& n) {
+      c_update_add[n.value()].degree_wt = 0;
+      c_update_add[n.value()].size = 0;
+      c_update_add[n.value()].node_wt = 0;
+      c_update_subtract[n.value()].degree_wt = 0;
+      c_update_subtract[n.value()].size = 0;
+      c_update_subtract[n.value()].node_wt = 0;
     });
 
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
@@ -266,7 +266,7 @@ struct LeidenClusteringImplementation
 
         katana::do_all(
             katana::iterate(bag[idx]),
-            [&](GNode n) {
+            [&] (const GNode& n) {
               auto& n_data_curr_comm_id =
                   graph->template GetData<CurrentCommunityID>(n);
               auto& n_data_degree_wt =
@@ -286,24 +286,24 @@ struct LeidenClusteringImplementation
                 Base::template FindNeighboringClusters<EdgeWeightType>(
                     *graph, n, cluster_local_map, counter, self_loop_wt);
                 // Find the max gain in modularity
-                local_target[n] = Base::MaxModularityWithoutSwaps(
+                local_target[n.value()] = Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
                     n_data_degree_wt, n_data_curr_comm_id,
                     constant_for_second_term);
 
               } else {
-                local_target[n] = 0;
+                local_target[n.value()] = 0;
               }
 
               /* Update cluster info */
-              if (local_target[n] != n_data_curr_comm_id &&
-                  local_target[n] != Base::UNASSIGNED) {
+              if (local_target[n.value()] != n_data_curr_comm_id &&
+                  local_target[n.value()] != Base::UNASSIGNED) {
                 katana::atomicAdd(
-                    c_update_add[local_target[n]].degree_wt, n_data_degree_wt);
+                    c_update_add[local_target[n.value()]].degree_wt, n_data_degree_wt);
                 katana::atomicAdd(
-                    c_update_add[local_target[n]].size, (uint64_t)1);
+                    c_update_add[local_target[n.value()]].size, (uint64_t)1);
                 katana::atomicAdd(
-                    c_update_add[local_target[n]].size, n_data_node_wt);
+                    c_update_add[local_target[n.value()]].size, n_data_node_wt);
 
                 katana::atomicAdd(
                     c_update_subtract[n_data_curr_comm_id].degree_wt,
@@ -314,9 +314,9 @@ struct LeidenClusteringImplementation
                     c_update_subtract[n_data_curr_comm_id].size,
                     n_data_node_wt);
 
-                if (!in_bag[local_target[n]]) {
-                  to_process.push(local_target[n]);
-                  in_bag[local_target[n]] = true;
+                if (!in_bag[local_target[n.value()]]) {
+                  to_process.push(local_target[n.value()]);
+                  in_bag[local_target[n.value()]] = true;
                 }
 
                 if (!in_bag[n_data_curr_comm_id]) {
@@ -327,33 +327,33 @@ struct LeidenClusteringImplementation
             },
             katana::loopname("leiden algo: Phase 1"));
 
-        katana::do_all(katana::iterate(bag[idx]), [&](GNode n) {
-          graph->template GetData<CurrentCommunityID>(n) = local_target[n];
+        katana::do_all(katana::iterate(bag[idx]), [&] (const GNode& n) {
+          graph->template GetData<CurrentCommunityID>(n) = local_target[n.value()];
         });
 
         for (auto n : to_process) {
-          if (in_bag[n]) {
-            katana::atomicAdd(c_info[n].size, c_update_add[n].size.load());
+          if (in_bag[n.value()]) {
+            katana::atomicAdd(c_info[n.value()].size, c_update_add[n.value()].size.load());
             katana::atomicAdd(
-                c_info[n].degree_wt, c_update_add[n].degree_wt.load());
+                c_info[n.value()].degree_wt, c_update_add[n.value()].degree_wt.load());
             katana::atomicAdd(
-                c_info[n].node_wt, c_update_add[n].node_wt.load());
+                c_info[n.value()].node_wt, c_update_add[n.value()].node_wt.load());
 
-            katana::atomicSub(c_info[n].size, c_update_subtract[n].size.load());
+            katana::atomicSub(c_info[n.value()].size, c_update_subtract[n.value()].size.load());
             katana::atomicSub(
-                c_info[n].degree_wt, c_update_subtract[n].degree_wt.load());
+                c_info[n.value()].degree_wt, c_update_subtract[n.value()].degree_wt.load());
             katana::atomicSub(
-                c_info[n].node_wt, c_update_subtract[n].node_wt.load());
+                c_info[n.value()].node_wt, c_update_subtract[n.value()].node_wt.load());
 
-            c_update_add[n].size = 0;
-            c_update_add[n].degree_wt = 0;
-            c_update_add[n].node_wt = 0;
+            c_update_add[n.value()].size = 0;
+            c_update_add[n.value()].degree_wt = 0;
+            c_update_add[n.value()].node_wt = 0;
 
-            c_update_subtract[n].size = 0;
-            c_update_subtract[n].degree_wt = 0;
-            c_update_subtract[n].node_wt = 0;
+            c_update_subtract[n.value()].size = 0;
+            c_update_subtract[n.value()].degree_wt = 0;
+            c_update_subtract[n.value()].node_wt = 0;
 
-            in_bag[n] = false;
+            in_bag[n.value()] = false;
           }
         }
 
@@ -417,8 +417,8 @@ public:
       /*
      * Initialize node cluster id.
      */
-      katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-        clusters_orig[n] = graph_curr.template GetData<CurrentCommunityID>(n);
+      katana::do_all(katana::iterate(graph_curr), [&](const GNode& n) {
+        clusters_orig[n.value()] = graph_curr.template GetData<CurrentCommunityID>(n);
       });
 
       auto pg_empty = std::make_unique<katana::PropertyGraph>();
@@ -438,8 +438,8 @@ public:
       /*
        * Initialize node cluster id.
        */
-      katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-        clusters_orig[n] = Base::UNASSIGNED;
+      katana::do_all(katana::iterate(graph_curr), [&](const GNode& n) {
+        clusters_orig[n.value()] = Base::UNASSIGNED;
       });
 
       auto pg_dup = KATANA_CHECKED(Base::DuplicateGraphWithSameTopo(*pg));
@@ -469,10 +469,10 @@ public:
 
       if (iter == 1) {
         /* Initialization each node to its own cluster */
-        katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-          graph_curr.template GetData<CurrentCommunityID>(n) = n;
-          graph_curr.template GetData<PreviousCommunityID>(n) = n;
-          clusters_orig[n] = n;
+        katana::do_all(katana::iterate(graph_curr), [&](const GNode& n) {
+          graph_curr.template GetData<CurrentCommunityID>(n) = n.value();
+          graph_curr.template GetData<PreviousCommunityID>(n) = n.value();
+          clusters_orig[n.value()] = n.value();
           graph_curr.template GetData<NodeWeight>(n) = 1;
         });
       }
@@ -515,19 +515,19 @@ public:
           (curr_mod - prev_mod) > plan.modularity_threshold_total()) {
         if (!plan.enable_vf() && phase == 1) {
           KATANA_LOG_DEBUG_ASSERT(num_nodes_orig == graph_curr.NumNodes());
-          katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-            clusters_orig[n] =
+          katana::do_all(katana::iterate(graph_curr), [&] (const GNode& n) {
+            clusters_orig[n.value()] =
                 graph_curr.template GetData<CurrentSubCommunityID>(n);
           });
         } else {
           katana::do_all(
-              katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
+              katana::iterate((uint64_t)0, num_nodes_orig), [&] (const auto& n) {
                 if (clusters_orig[n] != Base::UNASSIGNED) {
                   KATANA_LOG_DEBUG_ASSERT(
                       clusters_orig[n] < graph_curr.NumNodes());
                   clusters_orig[n] =
                       graph_curr.template GetData<CurrentSubCommunityID>(
-                          clusters_orig[n]);
+                          GNode{clusters_orig[n]});
                 }
               });
         }
@@ -540,9 +540,9 @@ public:
 
         katana::do_all(
             katana::iterate((uint64_t)0, num_unique_subclusters),
-            [&](GNode n) { cluster_node_wt[n] = 0; });
+            [&] (const auto& n) { cluster_node_wt[n] = 0; });
 
-        katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
+        katana::do_all(katana::iterate(graph_curr), [&] (const GNode& n) {
           auto& n_curr_sub_comm =
               graph_curr.template GetData<CurrentSubCommunityID>(n);
           auto& n_curr_comm =
@@ -571,10 +571,10 @@ public:
        * Assign cluster id from previous iteration
        */
         Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
-        katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
+        katana::do_all(katana::iterate(graph_curr_tmp), [&] (const GNode& n) {
           graph_curr_tmp.template GetData<CurrentCommunityID>(n) =
-              original_comm_ass[n];
-          graph_curr_tmp.template GetData<NodeWeight>(n) = cluster_node_wt[n];
+              original_comm_ass[n.value()];
+          graph_curr_tmp.template GetData<NodeWeight>(n) = cluster_node_wt[n.value()];
         });
 
         original_comm_ass.deallocate();
@@ -593,9 +593,9 @@ public:
         Base::template RenumberClustersContiguously<CurrentCommunityID>(
             &graph_curr);
 
-    katana::do_all(katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
+    katana::do_all(katana::iterate((uint64_t)0, num_nodes_orig), [&] (const auto& n) {
       clusters_orig[n] =
-          graph_curr.template GetData<CurrentCommunityID>(clusters_orig[n]);
+          graph_curr.template GetData<CurrentCommunityID>(GNode{clusters_orig[n]});
     });
 
     auto coarsened_graph_result = Base::template GraphCoarsening<
@@ -610,17 +610,17 @@ public:
     prev_mod = curr_mod;
 
     Graph graph_curr_tmp = KATANA_CHECKED(Graph::Make(pg_curr.get()));
-    katana::do_all(katana::iterate(graph_curr_tmp), [&](GNode n) {
-      graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n;
+    katana::do_all(katana::iterate(graph_curr_tmp), [&] (const GNode& n) {
+      graph_curr_tmp.template GetData<CurrentCommunityID>(n) = n.value();
     });
 
     curr_mod = KATANA_CHECKED(LeidenDeterministic(
         &graph_curr_tmp, curr_mod, plan.modularity_threshold_per_round(), iter,
         plan.resolution()));
 
-    katana::do_all(katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
+    katana::do_all(katana::iterate((uint64_t)0, num_nodes_orig), [&] (const auto& n) {
       clusters_orig[n] =
-          graph_curr_tmp.template GetData<CurrentCommunityID>(clusters_orig[n]);
+          graph_curr_tmp.template GetData<CurrentCommunityID>(GNode{clusters_orig[n]});
     });
 
     TimerTotal.stop();
@@ -691,8 +691,8 @@ LeidenClusteringWithWrap(
 
   katana::do_all(
       katana::iterate(graph),
-      [&](uint32_t i) {
-        graph.GetData<CurrentCommunityID>(i) = clusters_orig[i];
+      [&](const auto& n) {
+        graph.GetData<CurrentCommunityID>(n) = clusters_orig[n.value()];
       },
       katana::loopname("Add clusterIDs"), katana::no_stats());
 
@@ -842,7 +842,7 @@ katana::analytics::LeidenClusteringStatistics::Compute(
 
   katana::do_all(
       katana::iterate(graph),
-      [&](const uint32_t& x) {
+      [&](const auto& x) {
         auto& n = graph.template GetData<PreviousCommunityID>(x);
         accumMap.update(Map{std::make_pair(n, uint64_t{1})});
       },

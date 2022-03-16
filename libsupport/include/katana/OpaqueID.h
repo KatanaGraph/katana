@@ -2,7 +2,10 @@
 
 #include <cstdint>
 #include <iostream>
+#include <limits>
+#include <type_traits>
 
+#include <boost/iterator/iterator_facade.hpp>
 #include <boost/math/tools/precision.hpp>
 
 #include "katana/CompileTimeIntrospection.h"
@@ -72,6 +75,7 @@ protected:
   ValueType value_;
 
 public:
+  using underlying_type = ValueType;
   OpaqueID() noexcept = default;
   OpaqueID(const OpaqueID& other) noexcept = default;
   OpaqueID(OpaqueID&& other) noexcept = default;
@@ -202,10 +206,28 @@ struct OpaqueIDOrderedWithValue : public OpaqueIDOrdered<_IDType, _Value> {
 /// - Increment and decrement
 /// - Subtraction of two IDs to get a DifferenceType
 /// - Dereference
+// TODO(Amber): Remove iterator traits from OpaqueIDLinear. OpaqueIDLinear's
+// iterator should not be OpaqueIDLinear itself. This creates subtle issues
+// (especially when trying to use STL algorithms). I have created an
+// OpaqueIDCountingIterator instead for this purpose. 
 template <typename _IDType, typename _Value>
 struct OpaqueIDLinear : public OpaqueIDOrderedWithValue<_IDType, _Value> {
 public:
   using OpaqueIDOrderedWithValue<_IDType, _Value>::OpaqueIDOrderedWithValue;
+
+  /// Convert from other integer types to OpaqueIDLinear
+  template <typename AltValue, std::enable_if_t<std::is_integral_v<AltValue>, bool> = true>
+  explicit OpaqueIDLinear(const AltValue& v): 
+      OpaqueIDOrderedWithValue<_IDType,_Value>(static_cast<const _Value&>(v)) {
+
+    // static_assert(sizeof(AltValue) <= sizeof(_Value), "Cannot safely convert from AltValue to _Value");
+    // static_assert(std::numeric_limits<AltValue>::max() <= std::numeric_limits<_Value>::max()
+      //   , "Cannot safely convert from AltValue to _Value");
+
+    // XXX(yan): Commented to avoid a compiler error for an unrecognized macro.
+    // KATANA_LOG_VASSERT(v < std::numeric_limits<_Value>::max(),
+    //     "Value {} exceeds the limits of OpaqueIDLinear", v);
+  }
 
   static_assert(
       sizeof(_Value) <= sizeof(std::ptrdiff_t),
@@ -218,10 +240,13 @@ public:
   using value_type = _IDType;
   using pointer = _IDType*;
   using reference = _IDType&;
+  using const_reference = const _IDType&;
   using iterator_category = std::random_access_iterator_tag;
 
   // must provide a dereference to be an iterator
   reference operator*() { return *static_cast<_IDType*>(this); }
+  reference operator*() const { return *static_cast<_IDType*>(const_cast<OpaqueIDLinear*>(this)); }
+  // const_reference operator*() const { return *static_cast<const _IDType*>(this); }
 
   _IDType& operator++() {
     ++this->value_;
@@ -255,6 +280,16 @@ public:
     return *static_cast<_IDType*>(this);
   }
 
+  _IDType& operator+=(const _IDType& rhs) {
+    this->value_ += rhs.value();
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType& operator-=(const _IDType& rhs) {
+    this->value_ -= rhs.value();
+    return *static_cast<_IDType*>(this);
+  }
+
   _IDType operator+(DifferenceType v) const {
     return _IDType(this->value() + v);
   }
@@ -263,10 +298,16 @@ public:
     return _IDType(this->value() - v);
   }
 
+  friend _IDType operator+(const _IDType& lhs, const _IDType& rhs) {
+    _IDType ret{lhs};
+    ret += rhs;
+    return ret;
+  }
+
   /// The difference between two IDs represented as the signed variant of
   /// ValueType.
   DifferenceType operator-(_IDType v) const {
-    return DifferenceType(this->value()) - DifferenceType(v.value());
+    return DifferenceType(this->value() - v.value());
   }
 
   /// If your _Value is not a language-provided numeric type
@@ -278,6 +319,83 @@ public:
   }
 };
 
+
+/// A Counting Iterator for OpaqueIDLinear
+template <typename IDType>
+class OpaqueIDCountingIterator: 
+  public boost::iterator_facade<
+    OpaqueIDCountingIterator<IDType>, // derived class
+    IDType, // Value type
+    std::random_access_iterator_tag> // iterator_category
+    
+{
+  friend class boost::iterator_core_access;
+
+  using Base = boost::iterator_facade<
+    OpaqueIDCountingIterator, IDType, std::random_access_iterator_tag>;
+
+  static_assert(std::is_base_of_v<
+        OpaqueIDLinear<IDType, typename IDType::underlying_type>, 
+        IDType
+        >,
+      "OpaqueIDCountingIterator can only be created for OpaqueIDLinear");
+
+
+public:
+
+  OpaqueIDCountingIterator() noexcept = default;
+  explicit OpaqueIDCountingIterator(const IDType& id) noexcept: value_(id) {}
+
+  OpaqueIDCountingIterator(const OpaqueIDCountingIterator& other) noexcept = default;
+  OpaqueIDCountingIterator(OpaqueIDCountingIterator&& other) noexcept = default;
+
+  ~OpaqueIDCountingIterator() noexcept = default;
+
+  OpaqueIDCountingIterator& operator=(const OpaqueIDCountingIterator& other) noexcept = default;
+  OpaqueIDCountingIterator& operator=(OpaqueIDCountingIterator&& other) noexcept = default;
+
+private:
+
+  bool equal(const OpaqueIDCountingIterator& that) const noexcept {
+    return value_ == that.value_;
+  }
+
+  typename Base::reference
+  dereference() const noexcept { 
+    // potential const correctness issue with boost forced this const_cast
+    return const_cast<typename Base::reference>(value_); 
+  }
+
+  typename Base::reference
+  dereference() noexcept { return value_; }
+
+  void increment() noexcept {
+    ++value_;
+  }
+
+  void decrement() noexcept {
+    --value_;
+  }
+
+  void advance(const typename Base::difference_type& d) noexcept {
+    value_ += d;
+  }
+
+  typename Base::difference_type
+  distance_to(const OpaqueIDCountingIterator& that) const noexcept {
+    return that.value_ - value_;
+  }
+
+  IDType value_;
+};
+
+template <typename IDType>
+auto MakeOpaqueIDCountingIterator(const IDType& id) noexcept {
+  return OpaqueIDCountingIterator<IDType>(id);
+}
+
+
+
 /// Provide hashing for IDs to allow them to be used in unordered maps.
 ///
 /// \see OpaqueID
@@ -287,6 +405,11 @@ struct OpaqueIDHashable : private std::hash<opaque_id_value_type<T>> {
     return std::hash<opaque_id_value_type<T>>::operator()(v.value());
   }
 };
+
+#define KATANA_DEFINE_OPAQUE_ID_STD_HASH(TYPE) \
+  template <> \
+  struct std::hash<TYPE>: public katana::OpaqueIDHashable<TYPE> {};
+
 
 /// Provide ordering for "unordered" IDs to allow them to be used in
 /// ordered maps. These types do not support comparison operators, to prevent
@@ -299,5 +422,9 @@ struct OpaqueIDLess : private std::less<opaque_id_value_type<T>> {
     return std::less<opaque_id_value_type<T>>::operator()(x.value(), y.value());
   }
 };
+
+#define KATANA_DEFINE_OPAQUE_ID_STD_LESS(TYPE) \
+  template <> \
+  struct std::less<TYPE>: public katana::OpaqueIDLess<TYPE> {};
 
 }  // namespace katana

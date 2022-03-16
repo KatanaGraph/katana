@@ -120,7 +120,7 @@ template <typename WL>
 void
 WlToBitset(const WL& wl, katana::DynamicBitset* bitset) {
   katana::do_all(
-      katana::iterate(wl), [&](const GNode& src) { bitset->set(src); },
+      katana::iterate(wl), [&](const GNode& src) { bitset->set(src.value()); },
       katana::chunk_size<kChunkSize>(), katana::loopname("WlToBitset"));
 }
 
@@ -131,7 +131,7 @@ BitsetToWl(const G& graph, const katana::DynamicBitset& bitset, WL* wl) {
   katana::do_all(
       katana::iterate(graph),
       [&](const GNode& src) {
-        if (bitset.test(src)) {
+        if (bitset.test(src.value())) {
           wl->push(src);
         }
       },
@@ -159,7 +159,7 @@ AsynchronousAlgo(
   katana::GAccumulator<size_t> bad_work;
   katana::GAccumulator<size_t> WL_empty_work;
 
-  (*node_data)[source] = 0;
+  (*node_data)[source.value()] = 0;
 
   katana::InsertBag<T> init_bag;
 
@@ -168,7 +168,7 @@ AsynchronousAlgo(
   loop(
       katana::iterate(init_bag),
       [&](const T& item, auto& ctx) {
-        const Dist& sdist = (*node_data)[item.src];
+        const Dist& sdist = (*node_data)[item.src.value()];
 
         if (kTrackWork) {
           if (item.dist != sdist) {
@@ -181,7 +181,7 @@ AsynchronousAlgo(
 
         for (auto ii : edgeRange(item)) {
           auto dest = graph.OutEdgeDst(ii);
-          Dist& ddata = (*node_data)[dest];
+          Dist& ddata = (*node_data)[dest.value()];
 
           while (true) {
             Dist old_dist = ddata;
@@ -243,7 +243,7 @@ SynchronousDirectOpt(
   auto frontier = std::make_unique<Cont>();
   auto next_frontier = std::make_unique<Cont>();
 
-  (*node_data)[source] = source;
+  (*node_data)[source.value()] = source;
 
   pushWrap(*next_frontier, source, "parallel");
 
@@ -270,15 +270,15 @@ SynchronousDirectOpt(
         loop(
             katana::iterate(bidir_view),
             [&](const GNode& dst) {
-              GNode& ddata = (*node_data)[dst];
+              GNode& ddata = (*node_data)[dst.value()];
               if (ddata == BfsImplementation::kDistanceInfinity) {
                 for (auto e : bidir_view.InEdges(dst)) {
-                  auto src = bidir_view.InEdgeSrc(e);
+                  auto src = bidir_view.GetEdgeSrc(e);
 
-                  if (front_bitset.test(src)) {
+                  if (front_bitset.test(src.value())) {
                     // assign parents on the bfs path.
                     ddata = src;
-                    next_bitset.set(dst);
+                    next_bitset.set(dst.value());
                     work_items += 1;
                     break;
                   }
@@ -304,10 +304,10 @@ SynchronousDirectOpt(
           [&](const GNode& src) {
             for (auto e : bidir_view.OutEdges(src)) {
               auto dst = bidir_view.OutEdgeDst(e);
-              GNode& ddata = (*node_data)[dst];
+              GNode& ddata = (*node_data)[dst.value()];
               if (ddata == BfsImplementation::kDistanceInfinity) {
                 GNode old_parent = ddata;
-                if (__sync_bool_compare_and_swap(&ddata, old_parent, src)) {
+                if (__sync_bool_compare_and_swap(&static_cast<GNode::underlying_type&>(ddata), old_parent.value(), src.value())) {
                   next_frontier->push(dst);
                   work_items += bidir_view.OutDegree(dst);
                 }
@@ -325,7 +325,7 @@ template <typename NDType, typename ValueTy>
 void
 InitNodeDataVec(const ValueTy& value, katana::NUMAArray<NDType>* node_data) {
   katana::do_all(katana::iterate(0ul, node_data->size()), [&](auto n) {
-    (*node_data)[n] = value;
+    (*node_data)[n] = NDType{value};
   });
 }
 
@@ -333,7 +333,7 @@ template <typename NDType>
 void
 UpdateGraphNodeData(Graph* graph, const katana::NUMAArray<NDType>& node_data) {
   katana::do_all(katana::iterate(*graph), [&](auto& node) {
-    graph->GetData<BfsNodeParent>(node) = node_data[node];
+    graph->GetData<BfsNodeParent>(node) = node_data[node.value()].value();
   });
 }
 
@@ -341,12 +341,12 @@ void
 ComputeParentFromDistance(
     const BiDirGraphView& bidir_view, katana::NUMAArray<GNode>* node_parent,
     const katana::NUMAArray<Dist>& node_dist, const GNode source) {
-  (*node_parent)[source] = source;
+  (*node_parent)[source.value()] = source;
   katana::do_all(
       katana::iterate(bidir_view.Nodes()),
       [&](const GNode v) {
-        GNode& v_parent = (*node_parent)[v];
-        Dist v_dist = node_dist[v];
+        GNode& v_parent = (*node_parent)[v.value()];
+        Dist v_dist = node_dist[v.value()];
 
         if (v_dist == BfsImplementation::kDistanceInfinity) {
           return;
@@ -356,8 +356,8 @@ ComputeParentFromDistance(
         }
 
         for (auto e : bidir_view.InEdges(v)) {
-          GNode u = bidir_view.InEdgeSrc(e);
-          if (node_dist[v] == node_dist[u] + 1) {
+          GNode u = bidir_view.GetEdgeSrc(e);
+          if (node_dist[v.value()] == node_dist[u.value()] + 1) {
             v_parent = u;
             break;
           }
@@ -419,9 +419,9 @@ RunAlgo(
 
 katana::Result<void>
 BfsImpl(
-    Graph* graph, const BiDirGraphView& bidir_view, size_t start_node,
+    Graph* graph, const BiDirGraphView& bidir_view, GNode start_node,
     BfsPlan algo) {
-  if (start_node >= graph->NumNodes()) {
+  if (start_node.value() >= graph->NumNodes()) {
     return katana::ErrorCode::InvalidArgument;
   }
 
@@ -433,8 +433,8 @@ BfsImpl(
   }
 
   auto it = graph->begin();
-  std::advance(it, start_node);
-  GNode source = *it;
+  std::advance(it, start_node.value());
+  GNode source{*it};
 
   size_t approxNodeData = 4 * (graph->NumNodes() + graph->NumEdges());
   katana::EnsurePreallocated(8, approxNodeData);
@@ -451,7 +451,7 @@ BfsImpl(
 
 katana::Result<void>
 katana::analytics::Bfs(
-    PropertyGraph* pg, GNode start_node,
+    PropertyGraph* pg, uint32_t start_node,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     BfsPlan algo) {
   if (auto result = pg->ConstructNodeProperties<std::tuple<BfsNodeParent>>(
@@ -471,7 +471,7 @@ katana::analytics::Bfs(
   }
   */
 
-  return BfsImpl(&graph, bidir_view, start_node, algo);
+  return BfsImpl(&graph, bidir_view, GNode{start_node}, algo);
 }
 
 template <typename LevelVec>
@@ -487,7 +487,7 @@ ComputeLevels(
   auto next = std::make_unique<Cont>();
 
   Dist next_level = 0U;
-  levels[source] = 0u;
+  levels[source.value()] = 0u;
 
   next->push(source);
 
@@ -504,8 +504,8 @@ ComputeLevels(
           for (auto e : graph.OutEdges(src)) {
             auto dest = graph.OutEdgeDst(e);
 
-            if (levels[dest] == BfsImplementation::kDistanceInfinity) {
-              levels[dest] = next_level;
+            if (levels[dest.value()] == BfsImplementation::kDistanceInfinity) {
+              levels[dest.value()] = next_level;
               next->push(dest);
             }
           }
@@ -520,8 +520,8 @@ katana::Result<void>
 CheckParentByLevel(
     const BiDirGraphView& bidir_view, const GNode& source,
     const LevelVec& levels) {
-  if (levels[source] != 0u ||
-      bidir_view.GetData<BfsNodeParent>(source) != source) {
+  if (levels[source.value()] != 0u ||
+      bidir_view.GetData<BfsNodeParent>(source) != source.value()) {
     return KATANA_ERROR(
         katana::ErrorCode::AssertionFailed, "incorrect state of source");
   }
@@ -543,7 +543,7 @@ CheckParentByLevel(
       [&](const GNode& u) {
         auto u_parent = bidir_view.GetData<BfsNodeParent>(u);
 
-        if (u != source && levels[u] == 0ul) {
+        if (u != source && levels[u.value()] == 0ul) {
           found_level_too_low = true;
         }
 
@@ -551,16 +551,16 @@ CheckParentByLevel(
           return;
         }
 
-        if (u_parent != kUnvisited && levels[u] != kUnvisited) {
+        if (u_parent != kUnvisited && levels[u.value()] != kUnvisited) {
           bool parent_found = false;
 
           for (auto e : bidir_view.InEdges(u)) {
-            auto v = bidir_view.InEdgeSrc(e);
+            auto v = bidir_view.GetEdgeSrc(e);
 
-            if (v == u_parent) {
+            if (v.value() == u_parent) {
               parent_found = true;
 
-              if (levels[u] != levels[v] + 1) {
+              if (levels[u.value()] != levels[v.value()] + 1) {
                 found_node_with_wrong_level = true;
               }
             }
@@ -570,11 +570,11 @@ CheckParentByLevel(
             found_node_with_wrong_parent = true;
           }
 
-        } else if (u_parent == kUnvisited && levels[u] != kUnvisited) {
+        } else if (u_parent == kUnvisited && levels[u.value()] != kUnvisited) {
           found_reachable_node_with_no_parent = true;
         } else {
           KATANA_LOG_DEBUG_ASSERT(
-              u_parent == kUnvisited && levels[u] == kUnvisited);
+              u_parent == kUnvisited && levels[u.value()] == kUnvisited);
           num_unvisited += 1;
         }
       },
@@ -610,7 +610,7 @@ CheckParentByLevel(
 
 katana::Result<void>
 katana::analytics::BfsAssertValid(
-    PropertyGraph* pg, const GNode source,
+    PropertyGraph* pg, uint32_t source,
     const std::string& output_property_name) {
   auto graph = KATANA_CHECKED(Graph::Make(pg, {output_property_name}, {}));
   auto bidir_view =
@@ -622,9 +622,9 @@ katana::analytics::BfsAssertValid(
   katana::ParallelSTL::fill(
       levels.begin(), levels.end(), BfsImplementation::kDistanceInfinity);
 
-  ComputeLevels(graph, source, levels);
+  ComputeLevels(graph, GNode{source}, levels);
 
-  return CheckParentByLevel(bidir_view, source, levels);
+  return CheckParentByLevel(bidir_view, GNode{source}, levels);
 }
 
 katana::Result<BfsStatistics>
@@ -645,9 +645,9 @@ katana::analytics::BfsStatistics::Compute(
   do_all(
       iterate(graph),
       [&](GNode i) {
-        GNode my_parent = graph.GetData<BfsNodeParent>(i);
+      GNode::underlying_type my_parent = graph.GetData<BfsNodeParent>(i);
 
-        if (my_parent == i) {
+        if (my_parent == i.value()) {
           source_node = i;
         }
         if (my_parent <= max_possible_parent) {

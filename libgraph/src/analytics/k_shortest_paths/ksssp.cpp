@@ -223,7 +223,7 @@ DeltaStepAlgo(
 
   Path* path = path_alloc.NewPath();
   path->last = nullptr;
-  path->parent = source;
+  path->parent = source.value();
 
   path_pointers->push(path);
 
@@ -244,7 +244,7 @@ DeltaStepAlgo(
             continue;
 
           Path* path = path_alloc.NewPath();
-          path->parent = item.src;
+          path->parent = item.src.value();
           path->last = item.path;
           path_pointers->push(path);
 

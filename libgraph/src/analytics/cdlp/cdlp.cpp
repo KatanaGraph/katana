@@ -42,7 +42,7 @@ struct CdlpAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->template GetData<NodeCommunity>(node) = node;
+      graph->template GetData<NodeCommunity>(node) = node.value();
     });
   }
   virtual void operator()(Graph* graph, size_t max_iterations) = 0;

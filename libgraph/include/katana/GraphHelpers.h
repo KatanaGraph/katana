@@ -34,7 +34,7 @@ namespace internal {
 
 template <typename GraphTy>
 inline GraphTopology::edge_iterator
-edge_begin(GraphTy& graph, uint32_t N) {
+edge_begin(GraphTy& graph, const GraphTopology::Node& N) {
   return graph.topology().OutEdges(N).begin();
 }
 
@@ -47,19 +47,21 @@ edge_begin(GraphTy& graph, uint32_t N) {
  */
 template <typename GraphTy>
 inline GraphTopology::edge_iterator
-edge_end(GraphTy& graph, uint32_t N) {
+edge_end(GraphTy& graph, const GraphTopology::Node& N) {
   return graph.topology().OutEdges(N).end();
 }
 
-template <typename Ty>
-inline size_t
-getEdgePrefixSum(Ty& p, size_t n) {
+template <typename ArrayTy>
+inline uint64_t
+getEdgePrefixSum(ArrayTy& p, size_t n) {
   return p[n];
 }
 template <>
-inline size_t
+inline uint64_t
 getEdgePrefixSum<PropertyGraph>(PropertyGraph& p, size_t n) {
-  return *edge_end(p, n);
+  using NTy = GraphTopology::Node;
+  auto e = edge_end(p, NTy{n});
+  return (*e).value();
 }
 
 /**
@@ -97,15 +99,13 @@ findIndexPrefixSum(
 
   while (lb < ub) {
     size_t mid = lb + (ub - lb) / 2;
-    size_t num_edges;
+    uint64_t num_edges = 0;
 
     if ((mid + nodeOffset) != 0) {
       num_edges =
           internal::getEdgePrefixSum(edgePrefixSum, mid - 1 + nodeOffset) -
           edgeOffset;
-    } else {
-      num_edges = 0;
-    }
+    } 
 
     size_t weight = num_edges * edgeWeight + mid * nodeWeight;
 
@@ -299,14 +299,15 @@ void
 determineUnitRangesLoopGraph(
     GraphTy& graph, uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
     std::vector<uint32_t>& returnRanges, uint32_t nodeAlpha) {
-  KATANA_LOG_DEBUG_ASSERT(beginNode != endNode);
+  KATANA_LOG_DEBUG_ASSERT(beginNode < endNode);
 
   uint32_t numNodesInRange = endNode - beginNode;
   // uint64_t numEdgesInRange =
   // graph.edge_end(endNode - 1) - graph.edge_begin(beginNode);
+  using Node = typename GraphTy::Node;
   uint64_t numEdgesInRange =
-      edge_end(graph, endNode - 1) - edge_begin(graph, beginNode);
-  uint64_t edgeOffset = *edge_begin(graph, beginNode);
+      edge_end(graph, Node{endNode - 1}) - edge_begin(graph, Node{beginNode});
+  uint64_t edgeOffset = (*edge_begin(graph, beginNode)).value();
 
   returnRanges[0] = beginNode;
   std::vector<size_t> dummyScaleFactor;

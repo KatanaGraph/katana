@@ -14,8 +14,10 @@ namespace {
 
 katana::GraphTopology
 TopologyFromCSR(
-    const py::array_t<katana::PropertyGraph::Edge>& edge_indices,
-    const py::array_t<katana::PropertyGraph::Node>& edge_destinations) {
+    const py::array_t<katana::PropertyGraph::Edge::underlying_type>&
+        edge_indices,
+    const py::array_t<katana::PropertyGraph::Node::underlying_type>&
+        edge_destinations) {
   return katana::GraphTopology(
       edge_indices.data(), edge_indices.size(), edge_destinations.data(),
       edge_destinations.size());
@@ -36,8 +38,8 @@ katana::python::InitImportData(py::module& m) {
 
   m.def(
       "from_csr",
-      [](py::array_t<PropertyGraph::Edge> edge_indices,
-         py::array_t<PropertyGraph::Node> edge_destinations)
+      [](py::array_t<PropertyGraph::Edge::underlying_type> edge_indices,
+         py::array_t<PropertyGraph::Node::underlying_type> edge_destinations)
           -> Result<std::shared_ptr<PropertyGraph>> {
         return KATANA_CHECKED(katana::PropertyGraph::Make(
             TopologyFromCSR(edge_indices, edge_destinations)));
@@ -56,8 +58,9 @@ katana::python::InitImportData(py::module& m) {
 
   m.def(
       "_from_csr_and_raw_types",
-      [](const py::array_t<PropertyGraph::Edge> edge_indices,
-         const py::array_t<PropertyGraph::Node> edge_destinations,
+      [](const py::array_t<PropertyGraph::Edge::underlying_type> edge_indices,
+         const py::array_t<PropertyGraph::Node::underlying_type>
+             edge_destinations,
          const py::array_t<EntityTypeID> node_types,
          const py::array_t<EntityTypeID> edge_types,
          const EntityTypeManager& node_type_manager,

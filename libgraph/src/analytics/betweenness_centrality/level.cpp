@@ -51,7 +51,7 @@ LevelInitializeGraph(
   katana::do_all(
       katana::iterate(*graph),
       [&](LevelGNode n) {
-        auto& node_data = (*graph_data)[n];
+        auto& node_data = (*graph_data)[n.value()];
         node_data.current_dist = 0;
         node_data.num_shortest_paths = 0;
         node_data.dependency = 0;
@@ -74,7 +74,7 @@ LevelInitializeIteration(
       katana::iterate(*graph),
       [&](LevelGNode n) {
         bool is_source = (n == src_node);
-        auto& node_data = (*graph_data)[n];
+        auto& node_data = (*graph_data)[n.value()];
 
         // source nodes have distance 0 and initialize short paths to 1, else
         // distance is kInfinity with 0 short paths
@@ -118,12 +118,12 @@ LevelSSSP(
     katana::do_all(
         katana::iterate(vector_of_worklists[current_level]),
         [&](LevelGNode n) {
-          auto& src_data = (*graph_data)[n];
+          auto& src_data = (*graph_data)[n.value()];
           KATANA_LOG_ASSERT(src_data.current_dist == current_level);
 
           for (auto e : graph->OutEdges(n)) {
             auto dest = graph->OutEdgeDst(e);
-            auto& dst_data = (*graph_data)[dest];
+            auto& dst_data = (*graph_data)[dest.value()];
 
             if (dst_data.current_dist == kInfinity) {
               auto expected = kInfinity;
@@ -135,12 +135,12 @@ LevelSSSP(
                 vector_of_worklists[next_level].emplace(dest);
               }
 
-              active_edges->set(e);
+              active_edges->set(e.value());
               katana::atomicAdd(
                   dst_data.num_shortest_paths,
                   src_data.num_shortest_paths.load());
             } else if (dst_data.current_dist == next_level) {
-              active_edges->set(e);
+              active_edges->set(e.value());
               katana::atomicAdd(
                   dst_data.num_shortest_paths,
                   src_data.num_shortest_paths.load());
@@ -180,16 +180,16 @@ LevelBackwardBrandes(
       katana::do_all(
           katana::iterate(current_worklist),
           [&](LevelGNode n) {
-            auto& src_data = (*graph_data)[n];
+            auto& src_data = (*graph_data)[n.value()];
             KATANA_LOG_ASSERT(src_data.current_dist == current_level);
 
             for (auto e : graph->OutEdges(n)) {
-              if (active_edges->test(e)) {
+              if (active_edges->test(e.value())) {
                 // note: distance check not required because an edge
                 // will never be revisited in a BFS DAG, meaning it
                 // will only ever be activated once
                 auto dest = graph->OutEdgeDst(e);
-                auto& dst_data = (*graph_data)[dest];
+                auto& dst_data = (*graph_data)[dest.value()];
 
                 // grab dependency, add to self
                 float contrib = ((float)1 + dst_data.dependency) /
@@ -235,7 +235,7 @@ ExtractBC(
   katana::do_all(
       katana::iterate(array_of_struct_graph),
       [&](LevelGNode node_id) {
-        float bc_value = graph_data[node_id].bc;
+        float bc_value = graph_data[node_id.value()].bc;
         new_graph.GetData<NodeBC>(node_id) = bc_value;
       },
       katana::loopname("ExtractBC"), katana::no_stats());
@@ -277,12 +277,10 @@ BetweennessCentralityLevel(
     source_vector = std::get<std::vector<uint32_t>>(sources);
   }
 
-  uint64_t loop_end;
+  uint64_t loop_end = pg->NumNodes();
 
   if (std::holds_alternative<uint32_t>(sources)) {
-    if (sources == kBetweennessCentralityAllNodes) {
-      loop_end = pg->NumNodes();
-    } else {
+    if (sources != kBetweennessCentralityAllNodes) {
       loop_end = std::get<uint32_t>(sources);
     }
   } else {
@@ -303,10 +301,10 @@ BetweennessCentralityLevel(
       if (i > source_vector.size()) {
         return katana::ErrorCode::AssertionFailed;
       }
-      src_node = source_vector[i];
+      src_node = LevelGNode{source_vector[i]};
     } else {
       // all sources
-      src_node = i;
+      src_node = LevelGNode{i};
     }
 
     // here begins main computation

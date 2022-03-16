@@ -75,8 +75,8 @@ struct LouvainClusteringImplementation
 
     /* Initialization each node to its own cluster */
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
-      graph->template GetData<CurrentCommunityID>(n) = n;
-      graph->template GetData<PreviousCommunityID>(n) = n;
+      graph->template GetData<CurrentCommunityID>(n) = n.value();
+      graph->template GetData<PreviousCommunityID>(n) = n.value();
     });
 
     /* Calculate the weighted degree sum for each vertex */
@@ -96,8 +96,8 @@ struct LouvainClusteringImplementation
       num_iter++;
 
       katana::do_all(katana::iterate(*graph), [&](GNode n) {
-        c_update[n].degree_wt = 0;
-        c_update[n].size = 0;
+        c_update[n.value()].degree_wt = 0;
+        c_update[n.value()].size = 0;
       });
 
       katana::do_all(
@@ -206,8 +206,8 @@ struct LouvainClusteringImplementation
 
     /* Initialization each node to its own cluster */
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
-      graph->template GetData<CurrentCommunityID>(n) = n;
-      graph->template GetData<PreviousCommunityID>(n) = n;
+      graph->template GetData<CurrentCommunityID>(n) = n.value();
+      graph->template GetData<PreviousCommunityID>(n) = n.value();
     });
 
     /* Calculate the weighted degree sum for each vertex */
@@ -229,17 +229,17 @@ struct LouvainClusteringImplementation
     in_bag.allocateBlocked(graph->NumNodes());
 
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
-      uint64_t idx = n % 16;
+      uint64_t idx = n.value() % 16;
       bag[idx].push(n);
-      in_bag[n] = false;
-      local_target[n] = Base::UNASSIGNED;
+      in_bag[n.value()] = false;
+      local_target[n.value()] = Base::UNASSIGNED;
     });
 
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
-      c_update_add[n].degree_wt = 0;
-      c_update_add[n].size = 0;
-      c_update_subtract[n].degree_wt = 0;
-      c_update_subtract[n].size = 0;
+      c_update_add[n.value()].degree_wt = 0;
+      c_update_add[n.value()].size = 0;
+      c_update_subtract[n.value()].degree_wt = 0;
+      c_update_subtract[n.value()].size = 0;
     });
 
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
@@ -273,31 +273,31 @@ struct LouvainClusteringImplementation
                 Base::template FindNeighboringClusters<EdgeWeightType>(
                     *graph, n, cluster_local_map, counter, self_loop_wt);
                 // Find the max gain in modularity
-                local_target[n] = Base::MaxModularityWithoutSwaps(
+                local_target[n.value()] = Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
                     n_data_degree_wt, n_data_curr_comm_id,
                     constant_for_second_term);
 
               } else {
-                local_target[n] = Base::UNASSIGNED;
+                local_target[n.value()] = Base::UNASSIGNED;
               }
 
               /* Update cluster info */
-              if (local_target[n] != n_data_curr_comm_id &&
-                  local_target[n] != Base::UNASSIGNED) {
+              if (local_target[n.value()] != n_data_curr_comm_id &&
+                  local_target[n.value()] != Base::UNASSIGNED) {
                 katana::atomicAdd(
-                    c_update_add[local_target[n]].degree_wt, n_data_degree_wt);
+                    c_update_add[local_target[n.value()]].degree_wt, n_data_degree_wt);
                 katana::atomicAdd(
-                    c_update_add[local_target[n]].size, (uint64_t)1);
+                    c_update_add[local_target[n.value()]].size, (uint64_t)1);
                 katana::atomicAdd(
                     c_update_subtract[n_data_curr_comm_id].degree_wt,
                     n_data_degree_wt);
                 katana::atomicAdd(
                     c_update_subtract[n_data_curr_comm_id].size, (uint64_t)1);
 
-                if (!in_bag[local_target[n]]) {
-                  to_process.push(local_target[n]);
-                  in_bag[local_target[n]] = true;
+                if (!in_bag[local_target[n.value()]]) {
+                  to_process.push(local_target[n.value()]);
+                  in_bag[local_target[n.value()]] = true;
                 }
 
                 if (!in_bag[n_data_curr_comm_id]) {
@@ -309,23 +309,23 @@ struct LouvainClusteringImplementation
             katana::loopname("louvain algo: Phase 1"));
 
         katana::do_all(katana::iterate(bag[idx]), [&](GNode n) {
-          graph->template GetData<CurrentCommunityID>(n) = local_target[n];
+          graph->template GetData<CurrentCommunityID>(n) = local_target[n.value()];
         });
 
         for (auto n : to_process) {
-          if (in_bag[n]) {
-            katana::atomicAdd(c_info[n].size, c_update_add[n].size.load());
+          if (in_bag[n.value()]) {
+            katana::atomicAdd(c_info[n.value()].size, c_update_add[n.value()].size.load());
             katana::atomicAdd(
-                c_info[n].degree_wt, c_update_add[n].degree_wt.load());
+                c_info[n.value()].degree_wt, c_update_add[n.value()].degree_wt.load());
 
-            katana::atomicSub(c_info[n].size, c_update_subtract[n].size.load());
+            katana::atomicSub(c_info[n.value()].size, c_update_subtract[n.value()].size.load());
             katana::atomicSub(
-                c_info[n].degree_wt, c_update_subtract[n].degree_wt.load());
-            c_update_add[n].size = 0;
-            c_update_add[n].degree_wt = 0;
-            c_update_subtract[n].size = 0;
-            c_update_subtract[n].degree_wt = 0;
-            in_bag[n] = false;
+                c_info[n.value()].degree_wt, c_update_subtract[n.value()].degree_wt.load());
+            c_update_add[n.value()].size = 0;
+            c_update_add[n.value()].degree_wt = 0;
+            c_update_subtract[n.value()].size = 0;
+            c_update_subtract[n.value()].degree_wt = 0;
+            in_bag[n.value()] = false;
           }
         }
 
@@ -387,7 +387,7 @@ public:
      * Initialize node cluster id.
      */
       katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-        clusters_orig[n] = graph_curr.template GetData<CurrentCommunityID>(n);
+        clusters_orig[n.value()] = graph_curr.template GetData<CurrentCommunityID>(n);
       });
 
       auto pg_empty = std::make_unique<katana::PropertyGraph>();
@@ -408,7 +408,7 @@ public:
        * Initialize node cluster id.
        */
       katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-        clusters_orig[n] = Base::UNASSIGNED;
+        clusters_orig[n.value()] = Base::UNASSIGNED;
       });
 
       auto pg_dup = KATANA_CHECKED(Base::DuplicateGraphWithSameTopo(*pg));
@@ -466,18 +466,21 @@ public:
         if (!plan.enable_vf() && phase == 1) {
           KATANA_LOG_DEBUG_ASSERT(num_nodes_orig == graph_curr.NumNodes());
           katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-            clusters_orig[n] =
+            clusters_orig[n.value()] =
                 graph_curr.template GetData<CurrentCommunityID>(n);
           });
         } else {
           katana::do_all(
-              katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
+              katana::iterate((uint64_t)0, num_nodes_orig), [&](auto n) {
                 if (clusters_orig[n] != Base::UNASSIGNED) {
                   KATANA_LOG_DEBUG_ASSERT(
                       clusters_orig[n] < graph_curr.NumNodes());
-                  clusters_orig[n] =
+
+                  auto& c_orig_n = clusters_orig[n];
+                  auto new_val =
                       graph_curr.template GetData<CurrentCommunityID>(
-                          clusters_orig[n]);
+                          GNode{c_orig_n});
+                  c_orig_n = new_val;
                 }
               });
         }
@@ -560,8 +563,8 @@ LouvainClusteringWithWrap(
 
   katana::do_all(
       katana::iterate(graph),
-      [&](uint32_t i) {
-        graph.GetData<CurrentCommunityID>(i) = clusters_orig[i];
+      [&](const auto& n) {
+        graph.GetData<CurrentCommunityID>(n) = clusters_orig[n.value()];
       },
       katana::loopname("Add clusterIDs"), katana::no_stats());
 
@@ -711,7 +714,7 @@ katana::analytics::LouvainClusteringStatistics::Compute(
 
   katana::do_all(
       katana::iterate(graph),
-      [&](const uint32_t& x) {
+      [&](const auto& x) {
         auto& n = graph.template GetData<PreviousCommunityID>(x);
         accumMap.update(Map{std::make_pair(n, uint64_t{1})});
       },

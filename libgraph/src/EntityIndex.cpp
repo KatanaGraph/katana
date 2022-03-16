@@ -6,19 +6,21 @@ namespace katana {
 
 // Switch statement over creation of per-type indexes.
 template <typename node_or_edge>
-Result<std::unique_ptr<EntityIndex<node_or_edge>>>
+Result<std::unique_ptr<EntityIndex<typename node_or_edge::underlying_type>>>
 MakeTypedEntityIndex(
     const std::string& property_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property) {
-  std::unique_ptr<EntityIndex<node_or_edge>> index;
+
+  using node_or_edge_int = typename node_or_edge::underlying_type;
+  std::unique_ptr<EntityIndex<node_or_edge_int>> index;
 
   switch (property->type_id()) {
   case arrow::Type::BOOL:
-    index = std::make_unique<PrimitiveEntityIndex<node_or_edge, bool>>(
+    index = std::make_unique<PrimitiveEntityIndex<node_or_edge_int, bool>>(
         property_name, num_entities, property);
     break;
   case arrow::Type::UINT8:
-    index = std::make_unique<PrimitiveEntityIndex<node_or_edge, uint8_t>>(
+    index = std::make_unique<PrimitiveEntityIndex<node_or_edge_int, uint8_t>>(
         property_name, num_entities, property);
     break;
   case arrow::Type::INT16:
@@ -30,15 +32,15 @@ MakeTypedEntityIndex(
         property_name, num_entities, property);
     break;
   case arrow::Type::INT64:
-    index = std::make_unique<PrimitiveEntityIndex<node_or_edge, int64_t>>(
+    index = std::make_unique<PrimitiveEntityIndex<node_or_edge_int, int64_t>>(
         property_name, num_entities, property);
     break;
   case arrow::Type::UINT64:
-    index = std::make_unique<PrimitiveEntityIndex<node_or_edge, uint64_t>>(
+    index = std::make_unique<PrimitiveEntityIndex<node_or_edge_int, uint64_t>>(
         property_name, num_entities, property);
     break;
   case arrow::Type::DOUBLE:
-    index = std::make_unique<PrimitiveEntityIndex<node_or_edge, double_t>>(
+    index = std::make_unique<PrimitiveEntityIndex<node_or_edge_int, double_t>>(
         property_name, num_entities, property);
     break;
   case arrow::Type::FLOAT:
@@ -46,7 +48,7 @@ MakeTypedEntityIndex(
         property_name, num_entities, property);
     break;
   case arrow::Type::LARGE_STRING:
-    index = std::make_unique<StringEntityIndex<node_or_edge>>(
+    index = std::make_unique<StringEntityIndex<node_or_edge_int>>(
         property_name, num_entities, property);
     break;
   default:
@@ -55,8 +57,7 @@ MakeTypedEntityIndex(
         property->type()->ToString());
   }
 
-  // Some compilers seem to have trouble converting to Result here.
-  return Result<std::unique_ptr<EntityIndex<node_or_edge>>>(std::move(index));
+  return katana::MakeResult(std::move(index));
 }
 
 template <typename node_or_edge, typename c_type>
@@ -100,32 +101,32 @@ StringEntityIndex<node_or_edge>::BuildFromProperty() {
 }
 
 // Forward declare template types to allow implementation in .cpp.
-template class PrimitiveEntityIndex<GraphTopology::Node, bool>;
-template class PrimitiveEntityIndex<GraphTopology::Edge, bool>;
-template class PrimitiveEntityIndex<GraphTopology::Node, uint8_t>;
-template class PrimitiveEntityIndex<GraphTopology::Edge, uint8_t>;
-template class PrimitiveEntityIndex<GraphTopology::Node, int16_t>;
-template class PrimitiveEntityIndex<GraphTopology::Edge, int16_t>;
-template class PrimitiveEntityIndex<GraphTopology::Node, int32_t>;
-template class PrimitiveEntityIndex<GraphTopology::Edge, int32_t>;
-template class PrimitiveEntityIndex<GraphTopology::Node, int64_t>;
-template class PrimitiveEntityIndex<GraphTopology::Edge, int64_t>;
-template class PrimitiveEntityIndex<GraphTopology::Node, uint64_t>;
-template class PrimitiveEntityIndex<GraphTopology::Edge, uint64_t>;
-template class PrimitiveEntityIndex<GraphTopology::Node, double_t>;
-template class PrimitiveEntityIndex<GraphTopology::Edge, double_t>;
-template class PrimitiveEntityIndex<GraphTopology::Node, float_t>;
-template class PrimitiveEntityIndex<GraphTopology::Edge, float_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node::underlying_type, bool>;
+template class PrimitiveEntityIndex<GraphTopology::Edge::underlying_type, bool>;
+template class PrimitiveEntityIndex<GraphTopology::Node::underlying_type, uint8_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge::underlying_type, uint8_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node::underlying_type, int16_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge::underlying_type, int16_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node::underlying_type, int32_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge::underlying_type, int32_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node::underlying_type, int64_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge::underlying_type, int64_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node::underlying_type, uint64_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge::underlying_type, uint64_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node::underlying_type, double_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge::underlying_type, double_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node::underlying_type, float_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge::underlying_type, float_t>;
 
-template class StringEntityIndex<GraphTopology::Node>;
-template class StringEntityIndex<GraphTopology::Edge>;
+template class StringEntityIndex<GraphTopology::Node::underlying_type>;
+template class StringEntityIndex<GraphTopology::Edge::underlying_type>;
 
-template Result<std::unique_ptr<EntityIndex<GraphTopology::Node>>>
-MakeTypedEntityIndex(
+template Result<std::unique_ptr<EntityIndex<GraphTopology::Node::underlying_type>>>
+MakeTypedEntityIndex<GraphTopology::Node>(
     const std::string& property_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property);
-template Result<std::unique_ptr<EntityIndex<GraphTopology::Edge>>>
-MakeTypedEntityIndex(
+template Result<std::unique_ptr<EntityIndex<GraphTopology::Edge::underlying_type>>>
+MakeTypedEntityIndex<GraphTopology::Edge>(
     const std::string& property_name, size_t num_entities,
     std::shared_ptr<arrow::Array> property);
 

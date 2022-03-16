@@ -78,21 +78,23 @@ main(int argc, char** argv) {
             << pg_projected_view->topology().NumEdges() << " edges\n";
   SubGraphExtractionPlan plan;
 
-  std::vector<uint32_t> node_vec;
+  std::vector<katana::PropertyGraph::Node> node_vec;
   if (!nodesFile.getValue().empty()) {
     std::ifstream file(nodesFile);
     if (!file.good()) {
       KATANA_LOG_FATAL("failed to open file: {}", nodesFile);
     }
-    node_vec.insert(
-        node_vec.end(), std::istream_iterator<uint64_t>{file},
-        std::istream_iterator<uint64_t>{});
+    std::transform(
+        std::istream_iterator<uint64_t>{file},
+        std::istream_iterator<uint64_t>{}, std::back_inserter(node_vec),
+        [](uint64_t value) { return katana::PropertyGraph::Node{value}; });
   } else {
     std::cout << "nodes list arg = " << nodesString << std::endl;
     std::istringstream str(nodesString);
-    node_vec.insert(
-        node_vec.end(), std::istream_iterator<uint64_t>{str},
-        std::istream_iterator<uint64_t>{});
+    std::transform(
+        std::istream_iterator<uint64_t>{str}, std::istream_iterator<uint64_t>{},
+        std::back_inserter(node_vec),
+        [](uint64_t value) { return katana::PropertyGraph::Node{value}; });
   }
   uint64_t num_nodes = node_vec.size();
   std::cout << "Extracting subgraph with " << num_nodes << " num nodes\n";

@@ -274,16 +274,14 @@ namespace detail {
 /// @e Python @c range type which provides start, stop, and step values.
 template <typename T>
 auto
-GetRangeStep(T& self) -> std::make_signed_t<
-    std::remove_reference_t<std::remove_cv_t<decltype(*self.begin())>>> {
-  using Signed = std::make_signed_t<
-      std::remove_reference_t<std::remove_cv_t<decltype(*self.begin())>>>;
+GetRangeStep(T& self) -> typename std::remove_reference_t<
+    std::remove_cv_t<decltype(*self.begin())>>::difference_type {
   if (std::distance(self.begin(), self.end()) <= 1) {
     return 1;
   }
   auto next = self.begin();
   std::advance(next, 1);
-  return Signed(*next) - *self.begin();
+  return *next - *self.begin();
 }
 
 }  // namespace detail
@@ -293,8 +291,8 @@ ClassT
 DefRange(ClassT& cls) {
   using T = typename ClassT::type;
   static_assert(
-      std::is_integral_v<std::remove_cv_t<
-          std::remove_reference_t<decltype(*std::declval<T>().begin())>>>,
+      std::is_integral_v<typename std::remove_cv_t<std::remove_reference_t<
+          decltype(*std::declval<T>().begin())>>::underlying_type>,
       "Only integral types may be in ranges");
   DefContainer(cls);
   cls.template def_property_readonly(

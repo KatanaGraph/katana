@@ -66,12 +66,12 @@ class KATANA_EXPORT PropertyGraph {
   // Regular methods
 public:
   using node_iterator = GraphTopology::node_iterator;
-  using edge_iterator = GraphTopology::edge_iterator;
   using nodes_range = GraphTopology::nodes_range;
   using edges_range = GraphTopology::edges_range;
   using iterator = GraphTopology::iterator;
   using Node = GraphTopology::Node;
   using Edge = GraphTopology::Edge;
+  using OutEdgeHandle = GraphTopology::OutEdgeHandle;
 
   using EntityTypeIDArray = katana::NUMAArray<EntityTypeID>;
 
@@ -558,27 +558,31 @@ public:
   }
 
   /// \return returns the most specific node entity type for @param node
-  EntityTypeID GetTypeOfNode(Node node) const {
-    auto idx = GetNodePropertyIndex(node);
-    return node_entity_data_[idx];
+  EntityTypeID GetTypeOfNode(const Node& node) const {
+    return GetTypeOfNode(GetNodePropertyIndex(node));
   }
 
   /// \return returns the most specific node entity type for @param node
-  EntityTypeID GetTypeOfNodeFromPropertyIndex(
-      GraphTopology::PropertyIndex prop_index) const {
-    return node_entity_data_[prop_index];
+  EntityTypeID GetTypeOfNode(
+      const GraphTopology::NodePropertyIndex& prop_index) const {
+    return node_entity_data_[prop_index.value()];
+  }
+
+  /// \return returns the most specific edge entity type for @param eh
+  EntityTypeID GetTypeOfEdge(const GraphTopologyTypes::OutEdgeHandle& eh) const {
+    auto idx = GetEdgePropertyIndex(eh);
+    return GetTypeOfEdge(idx);
   }
 
   /// \return returns the most specific edge entity type for @param edge
-  EntityTypeID GetTypeOfEdgeFromTopoIndex(Edge edge) const {
-    auto idx = GetEdgePropertyIndexFromOutEdge(edge);
-    return GetTypeOfEdgeFromPropertyIndex(idx);
+  EntityTypeID GetTypeOfEdge(const Edge& edge) const {
+    auto idx = GetEdgePropertyIndex(edge);
+    return GetTypeOfEdge(idx);
   }
 
   /// \return returns the most specific edge entity type for @param edge
-  EntityTypeID GetTypeOfEdgeFromPropertyIndex(
-      GraphTopology::PropertyIndex prop_index) const {
-    return edge_entity_data_[prop_index];
+  EntityTypeID GetTypeOfEdge(const GraphTopology::EdgePropertyIndex& prop_index) const {
+    return edge_entity_data_[prop_index.value()];
   }
 
   /// \return true iff the node @param node has the given entity type
@@ -591,16 +595,22 @@ public:
   /// \return true iff the edge @param edge has the given entity type
   /// @param edge_entity_type_id (need not be the most specific type)
   /// (assumes that the edge entity type exists)
-  bool DoesEdgeHaveTypeFromTopoIndex(
-      Edge edge, EntityTypeID edge_entity_type_id) const {
+  bool DoesEdgeHaveType(
+      const GraphTopologyTypes::OutEdgeHandle& eh, EntityTypeID edge_entity_type_id) const {
     return IsEdgeSubtypeOf(
-        edge_entity_type_id, GetTypeOfEdgeFromTopoIndex(edge));
+        edge_entity_type_id, GetTypeOfEdge(eh));
   }
 
-  bool DoesEdgeHaveTypeFromPropertyIndex(
-      Edge edge, EntityTypeID edge_entity_type_id) const {
+  bool DoesEdgeHaveType(
+      const GraphTopologyTypes::EdgePropertyIndex& pidx, EntityTypeID edge_entity_type_id) const {
     return IsEdgeSubtypeOf(
-        edge_entity_type_id, GetTypeOfEdgeFromPropertyIndex(edge));
+        edge_entity_type_id, GetTypeOfEdge(pidx));
+  }
+
+  bool DoesEdgeHaveType(
+      const Edge& edge, EntityTypeID edge_entity_type_id) const {
+    return IsEdgeSubtypeOf(
+        edge_entity_type_id, GetTypeOfEdge(edge));
   }
 
   // Return type dictated by arrow
@@ -727,10 +737,15 @@ public:
     return pg_view_cache_.GetDefaultTopologyRef();
   }
 
-  GraphTopology::PropertyIndex GetEdgePropertyIndexFromOutEdge(
-      const Edge& eid) const noexcept;
+  GraphTopology::EdgePropertyIndex GetEdgePropertyIndex(
+      const GraphTopologyTypes::OutEdgeHandle& eid) const noexcept;
 
-  GraphTopology::PropertyIndex GetNodePropertyIndex(
+  GraphTopology::EdgePropertyIndex GetEdgePropertyIndex(
+      const Edge& eid) const noexcept {
+    return topology().GetEdgePropertyIndex(eid);
+  }
+
+  GraphTopology::NodePropertyIndex GetNodePropertyIndex(
       const Node& nid) const noexcept;
 
   template <typename NodeProps>
@@ -908,7 +923,7 @@ public:
 
   nodes_range Nodes() const noexcept { return topology().Nodes(); }
 
-  edges_range OutEdges() const noexcept { return topology().OutEdges(); }
+  edges_range Edges() const noexcept { return topology().Edges(); }
 
   /// Gets the edge range of some node.
   ///
@@ -931,9 +946,8 @@ public:
   ///
   /// @param edge edge iterator to get the destination of
   /// @returns node iterator to the edge destination
-  node_iterator OutEdgeDst(const edge_iterator& edge) const {
-    auto node_id = topology().OutEdgeDst(*edge);
-    return node_iterator(node_id);
+  Node OutEdgeDst(const GraphTopologyTypes::OutEdgeHandle& eh) const {
+    return topology().OutEdgeDst(eh);
   }
 
   // Creates an index over a node property.
@@ -949,13 +963,13 @@ public:
   Result<void> DeleteEdgeIndex(const std::string& property_name);
 
   // Returns the list of node indexes.
-  const std::vector<std::shared_ptr<EntityIndex<GraphTopology::Node>>>&
+  const std::vector<std::shared_ptr<EntityIndex<GraphTopology::Node::underlying_type>>>&
   node_indexes() const {
     return node_indexes_;
   }
 
   // Returns the list of edge indexes.
-  const std::vector<std::shared_ptr<EntityIndex<GraphTopology::Edge>>>&
+  const std::vector<std::shared_ptr<EntityIndex<GraphTopology::Edge::underlying_type>>>&
   edge_indexes() const {
     return edge_indexes_;
   }
@@ -966,7 +980,7 @@ public:
   /// Returns the index associated with the named node property.
   ///
   /// The graph retains ownership of the index.
-  katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Node>>>
+  katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Node::underlying_type>>>
   GetNodeIndex(const std::string& property_name) const;
 
   /// Returns true of an index exists for the named edge property
@@ -975,12 +989,12 @@ public:
   /// Returns the index associated with the named edge property.
   ///
   /// The graph retains ownership of the index.
-  katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Edge>>>
+  katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Edge::underlying_type>>>
   GetEdgeIndex(const std::string& property_name) const;
 
   GraphTopology::Node OriginalToTransformedNodeID(
       GraphTopology::Node node) const {
-    return IsTransformed() ? original_to_transformed_nodes_[node] : node;
+    return IsTransformed() ? Node{original_to_transformed_nodes_[node.value()]} : node;
   }
 
 protected:
@@ -988,8 +1002,8 @@ protected:
   const RDG& rdg() const { return *rdg_; }
 
   GraphTopology::Edge OriginalToTransformedEdgeID(
-      GraphTopology::Edge edge) const {
-    return IsTransformed() ? original_to_transformed_edges_[edge] : edge;
+      const GraphTopology::Edge& edge) const {
+    return IsTransformed() ? Edge{original_to_transformed_edges_[edge.value()]} : edge;
   }
 
   // TODO(Rob): avoid exposing mutable versions of these
@@ -1016,8 +1030,8 @@ protected:
   /// Call this constructor to populate projection data.
   PropertyGraph(
       PropertyGraph& parent, GraphTopology&& projected_topo,
-      NUMAArray<Node>&& original_to_transformed_nodes,
-      NUMAArray<Edge>&& original_to_transformed_edges,
+      NUMAArray<Node::underlying_type>&& original_to_transformed_nodes,
+      NUMAArray<Edge::underlying_type>&& original_to_transformed_edges,
       NUMAArray<uint8_t>&& node_bitmask_data,
       NUMAArray<uint8_t>&& edge_bitmask_data) noexcept
       : rdg_(parent.rdg_),
@@ -1053,8 +1067,8 @@ private:
   static std::unique_ptr<PropertyGraph> MakeEmptyEdgeProjectedGraph(
       PropertyGraph& pg, uint32_t num_new_nodes,
       const DynamicBitset& nodes_bitset,
-      NUMAArray<Node>&& original_to_projected_nodes_mapping,
-      NUMAArray<GraphTopology::PropertyIndex>&&
+      NUMAArray<Node::underlying_type>&& original_to_projected_nodes_mapping,
+      GraphTopologyTypes::NodePropIndexVec&&
           projected_to_original_nodes_mapping);
 
   /// this function creates an empty projection
@@ -1121,16 +1135,16 @@ private:
   EntityTypeID* edge_entity_data_;
 
   // List of node and edge indexes on this graph.
-  std::vector<std::shared_ptr<EntityIndex<Node>>> node_indexes_;
-  std::vector<std::shared_ptr<EntityIndex<Edge>>> edge_indexes_;
+  std::vector<std::shared_ptr<EntityIndex<Node::underlying_type>>> node_indexes_;
+  std::vector<std::shared_ptr<EntityIndex<Edge::underlying_type>>> edge_indexes_;
 
   PGViewCache pg_view_cache_;
 
   // Transformation related data.
   PropertyGraph* parent_{nullptr};
 
-  NUMAArray<Node> original_to_transformed_nodes_{};
-  NUMAArray<Edge> original_to_transformed_edges_{};
+  NUMAArray<Node::underlying_type> original_to_transformed_nodes_{};
+  NUMAArray<Edge::underlying_type> original_to_transformed_edges_{};
 
   NUMAArray<uint8_t> node_bitmask_data_{};
   std::shared_ptr<arrow::Buffer> node_bitmask_;
@@ -1153,7 +1167,7 @@ SortAllEdgesByDest(PropertyGraph* pg);
 /// in the edgelist of 'node' else edge end if 'node_to_find' is not found.
 // TODO(amber): make this a method of a sorted topology class in the near future
 // TODO(amber): this method should return an edge_iterator
-KATANA_EXPORT GraphTopology::Edge FindEdgeSortedByDest(
+KATANA_EXPORT GraphTopology::OutEdgeHandle FindEdgeSortedByDest(
     const PropertyGraph* graph, GraphTopology::Node node,
     GraphTopology::Node node_to_find);
 

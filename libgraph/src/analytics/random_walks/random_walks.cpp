@@ -42,11 +42,9 @@ struct Node2VecAlgo {
 
   GNode FindSampleNeighbor(
       const SortedGraphView& graph, const GNode& n,
-      const katana::NUMAArray<uint64_t>& degree, const double prob) {
-    if (degree[n] == 0) {
-      return graph.NumNodes();
-    }
-    double total_wt = degree[n];
+      const size_t n_deg, const double prob) {
+    KATANA_LOG_ASSERT(n_deg > 0);
+    double total_wt = n_deg;
 
     uint32_t edge_index = std::floor(prob * total_wt);
     auto ei = graph.OutEdges(n).begin() + edge_index;
@@ -55,15 +53,14 @@ struct Node2VecAlgo {
 
   void GraphRandomWalk(
       const SortedGraphView& graph,
-      katana::InsertBag<std::vector<uint32_t>>* walks,
-      const katana::NUMAArray<uint64_t>& degree) {
+      katana::InsertBag<std::vector<uint32_t>>* walks) {
     katana::PerThreadStorage<std::mt19937> generator;
-    katana::PerThreadStorage<std::uniform_real_distribution<double>*>
-        distribution;
+    katana::PerThreadStorage<std::uniform_real_distribution<double>>
+      distribution;
 
     for (uint32_t i = 0; i < distribution.size(); i++) {
       *distribution.getRemote(i) =
-          new std::uniform_real_distribution<double>(0.0, 1.0);
+          std::uniform_real_distribution<double>(0.0, 1.0);
     }
 
     double prob_forward = 1.0 / plan_.forward_probability();
@@ -84,52 +81,54 @@ struct Node2VecAlgo {
     katana::do_all(
         katana::iterate(uint64_t(0), total_walks),
         [&](uint64_t idx) {
-          GNode n = idx % graph.size();
+          GNode::underlying_type n_val = idx % graph.size();
+          GNode n{n_val};
+          auto n_deg = graph.OutDegree(n);
 
           //check if n has no neighbor
-          if (degree[n] == 0) {
+          if (n_deg == 0) {
             return;
           }
 
-          std::uniform_real_distribution<double>* dist =
+          std::uniform_real_distribution<double>& dist =
               *distribution.getLocal();
 
           std::vector<uint32_t> walk;
-          walk.push_back(n);
+          walk.push_back(n.value());
 
           //random value between 0 and 1
-          double prob = (*dist)(*generator.getLocal());
+          double prob = dist(*generator.getLocal());
 
           //Assumption: All edges have weight 1
-          auto nbr = FindSampleNeighbor(graph, n, degree, prob);
-          KATANA_LOG_ASSERT(nbr < graph.NumNodes());
+          auto nbr = FindSampleNeighbor(graph, n, n_deg, prob);
 
-          walk.push_back(std::move(nbr));
+          walk.push_back(nbr.value());
 
           for (uint32_t current_walk = 2; current_walk <= plan_.walk_length();
                current_walk++) {
-            uint32_t curr = walk[current_walk - 1];
-            uint32_t prev = walk[current_walk - 2];
+            GNode curr {walk[current_walk - 1]};
+            GNode prev {walk[current_walk - 2]};
+
+            auto curr_deg = graph.OutDegree(curr);
 
             //check if n has no neighbor
-            if (degree[curr] == 0) {
+            if (curr_deg == 0) {
               break;
             }
             //acceptance-rejection sampling
             while (true) {
               //sample x
-              double prob = (*dist)(*generator.getLocal());
+              double prob = dist(*generator.getLocal());
 
-              auto nbr = FindSampleNeighbor(graph, curr, degree, prob);
-              KATANA_LOG_ASSERT(nbr < graph.NumNodes());
+              auto nbr = FindSampleNeighbor(graph, curr, curr_deg, prob);
 
               //sample y
-              double y = (*dist)(*generator.getLocal());
+              double y = dist(*generator.getLocal());
               y = y * upper_bound;
 
               if (y <= lower_bound) {
                 //accept this sample
-                walk.push_back(std::move(nbr));
+                walk.push_back(nbr.value());
                 break;
               } else {
                 //compute transition probability
@@ -147,7 +146,7 @@ struct Node2VecAlgo {
 
                 if (y <= alpha) {
                   //accept y
-                  walk.push_back(std::move(nbr));
+                  walk.push_back(nbr.value());
                   break;
                 }
               }
@@ -159,16 +158,12 @@ struct Node2VecAlgo {
         katana::steal(), katana::chunk_size<RandomWalksPlan::kChunkSize>(),
         katana::loopname("Node2vec walks"), katana::no_stats());
 
-    for (uint32_t i = 0; i < distribution.size(); i++) {
-      delete (*distribution.getRemote(i));
-    }
   }
 
   void operator()(
       const SortedGraphView& graph,
-      katana::InsertBag<std::vector<uint32_t>>* walks,
-      const katana::NUMAArray<uint64_t>& degree) {
-    GraphRandomWalk(graph, walks, degree);
+      katana::InsertBag<std::vector<uint32_t>>* walks) {
+    GraphRandomWalk(graph, walks);
   }
 };
 
@@ -200,11 +195,9 @@ struct Edge2VecAlgo {
 
   std::pair<GNode, EdgeType::ViewType::value_type> FindSampleNeighbor(
       const SortedGraphView& graph, const GNode& n,
-      const katana::NUMAArray<uint64_t>& degree, const double prob) {
-    if (degree[n] == 0) {
-      return std::make_pair(graph.NumNodes(), 1);
-    }
-    double total_wt = degree[n];
+      const size_t n_deg, const double prob) {
+    KATANA_LOG_ASSERT(n_deg > 0);
+    double total_wt = n_deg;
 
     uint32_t edge_index = std::floor(prob * total_wt);
     auto ei = graph.OutEdges(n).begin() + edge_index;
@@ -215,15 +208,15 @@ struct Edge2VecAlgo {
   void GraphRandomWalk(
       const SortedGraphView& graph,
       katana::InsertBag<std::vector<uint32_t>>* walks,
-      katana::InsertBag<std::vector<uint32_t>>* types_walks,
-      const katana::NUMAArray<uint64_t>& degree) {
+      katana::InsertBag<std::vector<uint32_t>>* types_walks) {
+
     katana::PerThreadStorage<std::mt19937> generator;
-    katana::PerThreadStorage<std::uniform_real_distribution<double>*>
+    katana::PerThreadStorage<std::uniform_real_distribution<double>>
         distribution;
 
     for (uint32_t i = 0; i < distribution.size(); i++) {
       *distribution.getRemote(i) =
-          new std::uniform_real_distribution<double>(0.0, 1.0);
+          std::uniform_real_distribution<double>(0.0, 1.0);
     }
 
     double prob_forward = 1.0 / plan_.forward_probability();
@@ -239,56 +232,61 @@ struct Edge2VecAlgo {
     katana::do_all(
         katana::iterate(uint64_t(0), total_walks),
         [&](uint64_t idx) {
-          GNode n = idx % graph.size();
+
+        GNode::underlying_type  n_val = idx % graph.size();
+        GNode n{n_val};
+        auto n_deg = graph.OutDegree(n);
 
           //check if n has no neighbor
-          if (degree[n] == 0) {
+          if (n_deg == 0) {
             return;
           }
 
-          std::uniform_real_distribution<double>* dist =
+          std::uniform_real_distribution<double>& dist =
               *distribution.getLocal();
 
           std::vector<uint32_t> walk;
           std::vector<uint32_t> types_vec;
 
-          walk.push_back(n);
+          walk.push_back(n.value());
 
           //random value between 0 and 1
-          double prob = (*dist)(*generator.getLocal());
+          double prob = dist(*generator.getLocal());
 
           //Assumption: All edges have weight 1
-          auto nbr_pair = FindSampleNeighbor(graph, n, degree, prob);
+          auto nbr_pair = FindSampleNeighbor(graph, n, n_deg, prob);
           KATANA_LOG_ASSERT(nbr_pair.first < graph.NumNodes());
 
-          walk.push_back(std::move(nbr_pair.first));
+          walk.push_back(nbr_pair.first.value());
           types_vec.push_back(nbr_pair.second);
 
           for (uint32_t current_walk = 2; current_walk <= plan_.walk_length();
                current_walk++) {
-            uint32_t curr = walk[walk.size() - 1];
+
+            GNode curr{walk[walk.size() - 1]};
+            auto curr_deg = graph.OutDegree(curr);
+
             //check if n has no neighbor
-            if (degree[curr] == 0) {
+            if (curr_deg == 0) {
               return;
             }
-            uint32_t prev = walk[walk.size() - 2];
+            GNode prev{walk[walk.size() - 2]};
 
             uint32_t p1 = types_vec.back();  //last element of types_vec
 
             //acceptance-rejection sampling
             while (true) {
               //sample x
-              double prob = (*dist)(*generator.getLocal());
+              double prob = dist(*generator.getLocal());
 
               auto nbr_type_pair =
-                  FindSampleNeighbor(graph, curr, degree, prob);
-              KATANA_LOG_ASSERT(nbr_pair.first < graph.NumNodes());
+                  FindSampleNeighbor(graph, curr, curr_deg, prob);
 
               GNode nbr = nbr_type_pair.first;
               EdgeType::ViewType::value_type p2 = nbr_type_pair.second;
 
               //sample y
-              double y = (*dist)(*generator.getLocal());
+              double y = dist(*generator.getLocal());
               y = y * upper_bound;
 
               //compute transition probability
@@ -307,7 +305,7 @@ struct Edge2VecAlgo {
               alpha = alpha * transition_matrix_[p1][p2];
               if (alpha >= y) {
                 //accept y
-                walk.push_back(std::move(nbr));
+                walk.push_back(nbr.value());
                 types_vec.push_back(p2);
                 break;
               }
@@ -440,8 +438,8 @@ struct Edge2VecAlgo {
 
   void operator()(
       const SortedGraphView& graph,
-      katana::InsertBag<std::vector<uint32_t>>* walks,
-      const katana::NUMAArray<uint64_t>& degree) {
+      katana::InsertBag<std::vector<uint32_t>>* walks) {
+
     uint32_t iterations = plan_.max_iterations();
 
     Initialize();
@@ -450,7 +448,7 @@ struct Edge2VecAlgo {
       //E step; generate walks
       katana::InsertBag<std::vector<uint32_t>> types_walks;
 
-      GraphRandomWalk(graph, walks, &types_walks, degree);
+      GraphRandomWalk(graph, walks, &types_walks);
 
       //Update transition matrix
       std::vector<std::vector<uint32_t>> num_edge_types_walks =
@@ -467,15 +465,6 @@ struct Edge2VecAlgo {
   }
 };
 
-template <typename Graph>
-void
-InitializeDegrees(const Graph& graph, katana::NUMAArray<uint64_t>* degree) {
-  katana::do_all(katana::iterate(graph), [&](typename Graph::Node n) {
-    // Treat this as O(1) time because subtracting iterators is just pointer
-    // or number subtraction. So don't use steal().
-    (*degree)[n] = graph.OutDegree(n);
-  });
-}
 
 }  //namespace
 
@@ -487,14 +476,10 @@ RandomWalksWithWrap(
 
   Algorithm algo(plan);
 
-  katana::NUMAArray<uint64_t> degree;
-  degree.allocateBlocked(graph.size());
-  InitializeDegrees(graph, &degree);
-
   katana::StatTimer execTime("RandomWalks");
   execTime.start();
   katana::InsertBag<std::vector<uint32_t>> walks;
-  algo(graph, &walks, degree);
+  algo(graph, &walks);
   execTime.stop();
 
   std::vector<std::vector<uint32_t>> walks_in_vector;
@@ -503,6 +488,8 @@ RandomWalksWithWrap(
   return walks_in_vector;
 }
 
+// TODO(amber): Change return type to return a vector of Opaque GNode type insead
+// of uint32_t
 katana::Result<std::vector<std::vector<uint32_t>>>
 katana::analytics::RandomWalks(PropertyGraph* pg, RandomWalksPlan plan) {
   switch (plan.algorithm()) {

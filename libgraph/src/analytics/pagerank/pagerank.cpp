@@ -72,8 +72,8 @@ katana::analytics::PagerankStatistics::Compute(
   //! [example of no_stats]
   katana::do_all(
       katana::iterate(graph),
-      [&](uint32_t i) {
-        PRTy rank = graph.GetData<NodeValue>(i);
+      [&](const auto& n) {
+        PRTy rank = graph.GetData<NodeValue>(n);
 
         max_rank.update(rank);
         min_rank.update(rank);

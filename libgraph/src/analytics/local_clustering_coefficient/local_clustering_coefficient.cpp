@@ -65,9 +65,9 @@ struct LocalClusteringCoefficientAtomics {
           e_it_n++;
         }
         if (dst_v == graph.OutEdgeDst(*e_it_n)) {
-          __sync_fetch_and_add(&(*count_vec)[n], uint32_t{1});
-          __sync_fetch_and_add(&(*count_vec)[v], uint32_t{1});
-          __sync_fetch_and_add(&(*count_vec)[dst_v], uint32_t{1});
+          __sync_fetch_and_add(&(*count_vec)[n.value()], uint32_t{1});
+          __sync_fetch_and_add(&(*count_vec)[v.value()], uint32_t{1});
+          __sync_fetch_and_add(&(*count_vec)[dst_v.value()], uint32_t{1});
         }
       }
     }
@@ -91,11 +91,11 @@ struct LocalClusteringCoefficientAtomics {
 
     katana::do_all(
         katana::iterate(*graph),
-        [&](Node n) {
+        [&](const auto& n) {
           auto degree = graph->OutDegree(n);
 
           graph->template GetData<NodeClusteringCoefficient>(n) =
-              static_cast<double>(2 * per_node_triangles[n]) /
+              static_cast<double>(2 * per_node_triangles[n.value()]) /
               (degree * (degree - 1));
         },
         katana::no_stats());
@@ -150,9 +150,9 @@ struct LocalClusteringCoefficientPerThread {
           e_it_n++;
         }
         if (dst_v == graph.OutEdgeDst(*e_it_n)) {
-          *(per_thread_count_range.first + n) += 1;
-          *(per_thread_count_range.first + v) += 1;
-          *(per_thread_count_range.first + dst_v) += 1;
+          *(per_thread_count_range.first + n.value()) += 1;
+          *(per_thread_count_range.first + v.value()) += 1;
+          *(per_thread_count_range.first + dst_v.value()) += 1;
         }
       }
     }
@@ -192,11 +192,11 @@ struct LocalClusteringCoefficientPerThread {
     katana::do_all(
         katana::iterate(graph),
         [&](const Node& n) {
-          node_triangle_count_[n] = 0;
+          node_triangle_count_[n.value()] = 0;
           for (uint32_t i = 0; i < num_threads; i++) {
             auto my_count_range = *per_thread_node_triangle_count.getRemote(i);
 
-            node_triangle_count_[n] += *(my_count_range.first + n);
+            node_triangle_count_[n.value()] += *(my_count_range.first + n.value());
           }
         },
         katana::chunk_size<kChunkSize>(), katana::steal(),
@@ -208,7 +208,7 @@ struct LocalClusteringCoefficientPerThread {
       auto degree = graph->OutDegree(n);
       if (degree > 1) {
         graph->template GetData<NodeClusteringCoefficient>(n) =
-            static_cast<double>(2 * node_triangle_count_[n]) /
+            static_cast<double>(2 * node_triangle_count_[n.value()]) /
             (degree * (degree - 1));
       } else {
         graph->template GetData<NodeClusteringCoefficient>(n) = 0.0;

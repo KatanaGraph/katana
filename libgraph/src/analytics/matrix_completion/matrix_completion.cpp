@@ -228,12 +228,13 @@ struct MatrixCompletionImplementation
       if ((graph.size() % nthreads) > 0)
         ++block_size;
 
-      GNode start = tid * block_size;
-      GNode end = (tid + 1) * block_size;
-      if (end > graph.size())
-        end = graph.size();
+      GNode start{tid * block_size};
+      GNode end{(tid + 1) * block_size};
+      if (end.value() > graph.size()) {
+        end = GNode{graph.size()};
+      }
 
-      largest_node_id_per_thread[tid] = 0;
+      largest_node_id_per_thread[tid] = GNode{0ul};
       for (GNode i = start; i < end; ++i) {
         if (graph.OutDegree(i)) {
           if (largest_node_id_per_thread[tid] < i)
@@ -242,12 +243,12 @@ struct MatrixCompletionImplementation
       }
     });
 
-    GNode largest_node_id = 0;
+    GNode largest_node_id{0ul};
     for (uint32_t t = 0; t < active_threads; ++t) {
       if (largest_node_id < largest_node_id_per_thread[t])
         largest_node_id = largest_node_id_per_thread[t];
     }
-    size_t num_item_nodes = largest_node_id + 1;
+    size_t num_item_nodes = largest_node_id.value() + 1;
 
     initTimer.stop();
     return num_item_nodes;

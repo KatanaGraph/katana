@@ -57,7 +57,11 @@ struct MatrixCompletionImplementationBase {
      * Generate a number [-1, 1] using node id
      * for deterministic runs
      */
-  double GenVal(GNode n) { return 2.0 * ((double)n / (double)RAND_MAX) - 1.0; }
+  double GenVal(GNode n) const { 
+    double n_val = n.value();
+    double rm = RAND_MAX;
+    return 2.0 * n_val / rm - 1.0; 
+  }
 
   template <typename T, unsigned Size>
   struct ExplicitFiniteChecker {};

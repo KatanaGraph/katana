@@ -70,7 +70,9 @@ public:
     int64_t length = data_.length();
 
     arrow::TypedBufferBuilder<bool> bitmask_builder;
-    KATANA_CHECKED(bitmask_builder.Append(valid_.data(), length));
+    if (length > 0) {
+      KATANA_CHECKED(bitmask_builder.Append(valid_.data(), length));
+    }
     std::shared_ptr<arrow::Buffer> bitmask =
         KATANA_CHECKED(bitmask_builder.Finish());
     // peak memory (data buffer + null bitmask + null byte vector)

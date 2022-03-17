@@ -46,12 +46,12 @@ See the `Conda User Guide <https://docs.conda.io/projects/conda/en/latest/user-g
    it will install a conflicting version of pyarrow. Conda can handle all
    required dependencies itself.
 
-.. include:: conda_dev_env.rst
+.. include:: conda-dev-env.rst
 
 The ``conda env update`` line can be run later to update your environment. Deactivate your environment
 ``conda deactivate``, then run the update commands, then reactivate ``conda activate katana-dev``.
 
-.. include:: cuda_workaround.rst
+.. include:: cuda-workaround.rst
 
 Now, run ``cmake`` to configure your build directory and ``make`` to build Katana.
 
@@ -123,7 +123,7 @@ If you want to compile with ``clang`` instead of ``gcc``, make sure ``libstdc++-
 
    sudo apt-get install libstdc++-11-dev
 
-.. include:: lang_spec.rst
+.. include:: lang-spec.rst
 
 Resolving Common Build Issues
 =============================

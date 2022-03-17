@@ -136,6 +136,15 @@ author = "Katana Graph"
 # TODO(ddn): Get this from katana.libgalois.version
 copyright = "Katana Graph, Inc. 2022"
 
+rst_epilog = """
+.. |supports_compiled_operator| replace::
+    This method may be used in compiled operators with some restrictions.
+
+.. |lazy_compute| replace::
+    The information required to perform this operation efficiently is computed lazily on the first call to this
+    method. This information is shared between related methods when possible.
+"""
+
 # -- Options for extensions --------------------------------------------------
 
 # nbsphinx configuration values

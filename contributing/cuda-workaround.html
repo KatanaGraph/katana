@@ -144,7 +144,7 @@
 
 <!-- NOTE: this JS must live here (not in our global JS file) because it relies
      on being processed by Jinja before it is run (specifically for replacing
-     variables contributing/conda_dev_env and {'json_url': 'https://docs.k9h.dev/switcher.json', 'url_template': 'https://docs.k9h.dev/{version}/', 'version_match': 'latest'}.
+     variables contributing/cuda-workaround and {'json_url': 'https://docs.k9h.dev/switcher.json', 'url_template': 'https://docs.k9h.dev/{version}/', 'version_match': 'latest'}.
 -->
 
 <script type="text/javascript">
@@ -158,7 +158,7 @@ function buildURL(entry) {
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
-    const currentFilePath = "contributing/conda_dev_env.html",
+    const currentFilePath = "contributing/cuda-workaround.html",
           tryUrl = event.target.getAttribute("href");
     let otherDocsHomepage = tryUrl.replace(currentFilePath, "");
     $.ajax({
@@ -179,7 +179,7 @@ function checkPageExistsAndRedirect(event) {
 // Populate the version switcher from the JSON config file
 (function () {
     $.getJSON("https://docs.k9h.dev/switcher.json", function(data, textStatus, jqXHR) {
-        const currentFilePath = "contributing/conda_dev_env.html";
+        const currentFilePath = "contributing/cuda-workaround.html";
         // create links to the corresponding page in the other docs versions
         $.each(data, function(index, entry) {
             // if no custom name specified (e.g., "latest"), use version string
@@ -200,7 +200,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+14.0.2a5c4e variable.
+            // this version, rather than using sphinx's 0.3.0.dev+15.0.4f1a32 variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -477,7 +477,7 @@ function checkPageExistsAndRedirect(event) {
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="how_to_template.html">
+    <a class="reference internal" href="how-to-template.html">
      How-to guide template
     </a>
    </li>
@@ -528,20 +528,23 @@ function checkPageExistsAndRedirect(event) {
               
               <div>
                 
-  <p>You will need to log out and back in again to ensure conda is properly
-configured. Then, create and activate the development environment:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">SRC_DIR</span><span class="o">=</span>&lt;repo/root&gt;
-conda config --add channels conda-forge
-<span class="c1"># For library compatibility reasons, prefer taking dependencies from</span>
-<span class="c1"># higher priority channels even if newer versions exist in lower priority</span>
-<span class="c1"># channels.</span>
-conda config --set channel_priority strict
-<span class="c1"># Create the environment</span>
-conda create --name katana-dev
-<span class="c1"># Install the dependencies</span>
+  <div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Not all conda installation scripts are well-behaved. In particular, the
+default behavior of the <code class="docutils literal notranslate"><span class="pre">cudatoolkit-dev</span></code> package’s post-installation
+script is to write a log to the hard-coded path <code class="docutils literal notranslate"><span class="pre">/tmp/cuda-installer.log</span></code>
+and not delete it. Once one user on a system has written this file all other
+users will fail to install the package because they won’t be able to write
+the log file. The only known workaround is to manually delete the log file.
+It is best practice to delete your own log file immediately after you have
+updated your environment. If you are on a system where someone else has
+written the log file and you can’t overwrite it please contact that user to
+delete it. You may also contact a user with root privileges.</p>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># If you are sharing a system with other users,</span>
+<span class="c1"># please perform the following manual clean-up:</span>
 conda env update --name katana-dev --file <span class="nv">$SRC_DIR</span>/conda_recipe/environment.yml
-conda activate katana-dev
-conda install numactl-devel-cos6-x86_64 <span class="c1"># For x86_64 builds</span>
+rm /tmp/cuda-installer.log
 </pre></div>
 </div>
 

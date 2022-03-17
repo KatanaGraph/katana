@@ -773,6 +773,28 @@ public:
     return std::binary_search(e_range.begin(), e_range.end(), dst, comp);
   }
 
+  /// Count the number of edges from src to dst with a given edge_type
+  ///
+  /// @param src source node
+  /// @param dst destination node
+  /// @param edge_type edge_type of the edge
+  /// @returns the number of edges from src to dst with edge_type
+  size_t CountEdges(Node src, Node dst, const EntityTypeID& edge_type) const {
+    auto e_range = OutEdges(src, edge_type);
+    if (e_range.empty()) {
+      return 0;
+    }
+
+    internal::EdgeDestComparator<EdgeTypeAwareTopology> comp{this};
+    auto [lower_it, upper_it] =
+        std::equal_range(e_range.begin(), e_range.end(), dst, comp);
+    if (lower_it == e_range.end() || OutEdgeDst(*lower_it) != dst) {
+      return 0;
+    }
+
+    return std::distance(lower_it, upper_it);
+  }
+
   /// Search over all edges of each type between src and dst until an edge satisfying func is
   /// found.
   ///
@@ -1223,9 +1245,29 @@ public:
 
     if (d_out < d_in) {
       return Base::out().HasEdge(src, dst, edge_type);
-    } else {
-      return Base::in().HasEdge(dst, src, edge_type);
     }
+
+    return Base::in().HasEdge(dst, src, edge_type);
+  }
+
+  /// Count the number of edges from src to dst with a given edge_type
+  ///
+  /// @param src source node
+  /// @param dst destination node
+  /// @param edge_type edge_type of the edge
+  /// @returns the number of edges from src to dst with edge_type
+  size_t CountEdges(Node src, Node dst, const EntityTypeID& edge_type) const {
+    const auto d_out = OutDegree(src, edge_type);
+    const auto d_in = InDegree(dst, edge_type);
+    if (d_out == 0 || d_in == 0) {
+      return 0;
+    }
+
+    if (d_out < d_in) {
+      return Base::out().CountEdges(src, dst, edge_type);
+    }
+
+    return Base::in().CountEdges(dst, src, edge_type);
   }
 
   /// Search over all edges of each type between src and dst until an edge satisfying func is

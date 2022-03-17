@@ -12,5 +12,13 @@ You can also create a ``Graph`` by calling the :py:meth:`~katana.local.Graph.pro
 
 When working with graph projections, keep in mind that the resulting `Graph` projection object shares property data with the original graph. If a user runs an analytics routine such as PageRank on the projection, this will add a new node property to both the projection and the original graph.
 
+.. |supports_compiled_operator| replace::
+    This method may be used in compiled operators with some restrictions.
+
+.. |lazy_compute| replace::
+    The information required to perform this operation efficiently is computed lazily on the first call to this
+    method. This information is shared between related methods when possible.
+
 .. autoclass:: katana.local.Graph
    :special-members: __init__, __iter__, __getitem__, __setitem__, __len__
+   :exclude-members: out_edge_ids_for_node, out_edge_ids_for_node_and_type, in_edge_ids_for_node, in_edge_ids_for_node_and_type, out_degree_for_type, in_degree_for_type

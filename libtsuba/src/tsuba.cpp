@@ -212,12 +212,6 @@ katana::ListViewsOfVersion(
   return std::make_pair(latest_version, views_found);
 }
 
-katana::Result<std::pair<uint64_t, std::vector<katana::RDGView>>>
-katana::ListAvailableViews(
-    const std::string& rdg_dir, std::optional<uint64_t> version) {
-  return ListViewsOfVersion(rdg_dir, version);
-}
-
 katana::Result<std::vector<std::pair<katana::URI, katana::URI>>>
 katana::CreateSrcDestFromViewsForCopy(
     const std::string& src_dir, const std::string& dst_dir, uint64_t version) {

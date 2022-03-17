@@ -1,0 +1,72 @@
+name: Docstrings CI
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'release/*'
+    tags:
+      - 'v*'
+  pull_request:
+
+# Cancel any previous runs with the same key.
+concurrency:
+  # Example key: Repository Structure CI-refs/pull/1381/merge
+  #   or Repository Structure CI-<owner>-<sha> for pushes
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || format('{0}-{1}', github.repository_owner, github.sha) }}
+  cancel-in-progress: true
+
+jobs:
+  python_docstrings:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        # We need history so that we have tags to provide version information.
+        fetch-depth: 0
+        # 0 fetches all history. See https://github.com/actions/checkout#checkout-v2
+
+    - name: Cache miniconda between builds
+      id: cache-miniconda
+      uses: actions/cache@v2
+      with:
+        key: ${{matrix.os}}-miniconda-${{hashFiles('.github/workflows/download_miniconda.sh')}}
+        path: ~/.cache/miniconda
+
+    - name: Install platform-level dependencies (OS-specific)
+      run: |
+        sudo apt install -yq curl
+
+    - name: Install Conda environment
+      run: .github/workflows/download_miniconda.sh ${{matrix.os}}
+      if: steps.cache-miniconda.outputs.cache-hit != 'true'
+
+    - name: Install dependencies
+      run: |
+        . .github/workflows/activate_miniconda.sh
+        mamba install -y -q -c conda-forge black=19.10b0 pylint=2.8.3 pydocstyle=6.1.1
+
+    - name: Find changed Python files
+      uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        base: ${{ github.ref }}
+        list-files: shell
+        filters: |
+          python:
+            - added|modified: '!(docs/**)**.py'
+    
+    - name: Check docstrings
+      run: |
+        if [ "${{ steps.filter.outputs.python }}" == "true" ]
+        then
+           . .github/workflows/activate_miniconda.sh
+           pydocstyle --config=./pyproject.toml ${{ steps.filter.outputs.python_files }}
+        else
+           echo "No Python files were changed."
+        fi

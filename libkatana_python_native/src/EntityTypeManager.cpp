@@ -44,7 +44,18 @@ katana::python::EntityType::ToString() const {
   if (r) {
     return r.value();
   } else {
-    return fmt::format("<non-atomic type {}>", type_id);
+    auto names = owner->GetNonAtomicTypeName(type_id);
+
+    std::string value = std::accumulate(
+        names.begin(), names.end(), std::string(""),
+        [](std::string first, std::string second) {
+          if (!first.empty() && !second.empty()) {
+            return fmt::format("{} & {}", first, second);
+          }
+          return second;
+        });
+
+    return value;
   }
 }
 

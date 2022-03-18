@@ -326,6 +326,12 @@ def test_types(graph):
     }
     assert graph.edge_types.is_subtype_of(0, 1) is True
 
+    n_type = graph.node_types.get_non_atomic_entity_type([node_atomic_types["Post"], node_atomic_types["Message"]])
+    assert str(n_type) == "Message & Post"
+
+    new_n_type = graph.node_types.get_or_add_non_atomic_entity_type([n_type, node_atomic_types["City"]])
+    assert str(new_n_type) == "City & Message & Post"
+
 
 def test_projected(graph):
     projected_graph = graph.project([])

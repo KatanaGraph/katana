@@ -39,7 +39,7 @@ katana::python::InitImportData(py::module& m) {
       [](py::array_t<PropertyGraph::Edge> edge_indices,
          py::array_t<PropertyGraph::Node> edge_destinations)
           -> Result<std::shared_ptr<PropertyGraph>> {
-        return KATANA_CHECKED(katana::PropertyGraph::Make(
+        return KATANA_CHECKED(katana::PropertyGraph::MakeEphemeral(
             TopologyFromCSR(edge_indices, edge_destinations)));
       },
       R"""(
@@ -75,7 +75,7 @@ katana::python::InitImportData(py::module& m) {
             edge_types_owned.begin());
         EntityTypeManager node_type_manager_owned = node_type_manager;
         EntityTypeManager edge_type_manager_owned = edge_type_manager;
-        return KATANA_CHECKED(katana::PropertyGraph::Make(
+        return KATANA_CHECKED(katana::PropertyGraph::MakeEphemeral(
             TopologyFromCSR(edge_indices, edge_destinations),
             std::move(node_types_owned), std::move(edge_types_owned),
             std::move(node_type_manager_owned),

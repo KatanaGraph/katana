@@ -300,6 +300,14 @@ katana::RDG::DoStore(
     std::unique_ptr<WriteGroup> write_group, katana::TxnContext* txn_ctx) {
   KATANA_LOG_DEBUG_ASSERT(txn_ctx != nullptr);
 
+  auto tmp_uri = KATANA_CHECKED(URI::MakeTempDir());
+  if (tmp_uri.IsPrefixOf(rdg_dir())) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "cannot write rdg to ephemeral storage - try specifying a different "
+        "path to write to");
+  }
+
   // bump the storage format version to the latest
   core_->part_header().update_storage_format_version();
 
@@ -591,6 +599,7 @@ katana::RDG::Store(
   if (handle.impl_->rdg_manifest().dir() != rdg_dir()) {
     KATANA_CHECKED(core_->part_header().ChangeStorageLocation(
         rdg_dir(), handle.impl_->rdg_manifest().dir()));
+    set_rdg_dir(handle.impl_->rdg_manifest().dir());
   }
 
   // All write buffers must outlive desc
@@ -890,6 +899,11 @@ katana::RDG::rdg_dir() const {
 }
 void
 katana::RDG::set_rdg_dir(const katana::URI& rdg_dir) {
+  if (ephemeral_ && rdg_dir != ephemeral_->uri()) {
+    // we are changing the storage location, meaning this RDG is no longer
+    // ephemeral
+    ephemeral_.reset();
+  }
   return core_->set_rdg_dir(rdg_dir);
 }
 

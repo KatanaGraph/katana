@@ -8,7 +8,7 @@ MakeTopologyImpl(F builder_fun) {
   builder_fun(builder);
 
   katana::GraphTopology topo = builder.ConvertToCSR();
-  auto res = katana::PropertyGraph::Make(std::move(topo));
+  auto res = katana::PropertyGraph::MakeEphemeral(std::move(topo));
   KATANA_LOG_ASSERT(res);
   return std::move(res.value());
 }

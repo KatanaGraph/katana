@@ -234,6 +234,25 @@ katana::PropertyGraph::Make(
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
+    const katana::URI& rdg_dir, katana::GraphTopology&& topo_to_assign) {
+  return Make(
+      rdg_dir, std::move(topo_to_assign),
+      MakeDefaultEntityTypeIDArray(topo_to_assign.NumNodes()),
+      MakeDefaultEntityTypeIDArray(topo_to_assign.NumEdges()),
+      EntityTypeManager{}, EntityTypeManager{});
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::MakeEphemeral(katana::GraphTopology&& topo_to_assign) {
+  return MakeEphemeral(
+      std::move(topo_to_assign),
+      MakeDefaultEntityTypeIDArray(topo_to_assign.NumNodes()),
+      MakeDefaultEntityTypeIDArray(topo_to_assign.NumEdges()),
+      EntityTypeManager{}, EntityTypeManager{});
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
   return std::make_unique<katana::PropertyGraph>(
       std::unique_ptr<katana::RDGFile>(), katana::RDG{},
@@ -245,12 +264,36 @@ katana::PropertyGraph::Make(katana::GraphTopology&& topo_to_assign) {
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const katana::URI& rdg_dir, katana::GraphTopology&& topo_to_assign) {
-  return Make(
-      rdg_dir, std::move(topo_to_assign),
-      MakeDefaultEntityTypeIDArray(topo_to_assign.NumNodes()),
-      MakeDefaultEntityTypeIDArray(topo_to_assign.NumEdges()),
-      EntityTypeManager{}, EntityTypeManager{});
+    const katana::URI& rdg_dir, katana::GraphTopology&& topo_to_assign,
+    NUMAArray<EntityTypeID>&& node_entity_type_ids,
+    NUMAArray<EntityTypeID>&& edge_entity_type_ids,
+    EntityTypeManager&& node_type_manager,
+    EntityTypeManager&& edge_type_manager) {
+  auto retval = std::make_unique<katana::PropertyGraph>(
+      std::unique_ptr<katana::RDGFile>(), katana::RDG{},
+      std::move(topo_to_assign), std::move(node_entity_type_ids),
+      std::move(edge_entity_type_ids), std::move(node_type_manager),
+      std::move(edge_type_manager));
+  // It doesn't make sense to pass a RDGFile to the constructor because this
+  // PropertyGraph wasn't loaded from a file. But all PropertyGraphs have an
+  // associated storage location, so set one here.
+  retval->rdg().set_rdg_dir(rdg_dir);
+  return retval;
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::MakeEphemeral(
+    katana::GraphTopology&& topo_to_assign,
+    NUMAArray<EntityTypeID>&& node_entity_type_ids,
+    NUMAArray<EntityTypeID>&& edge_entity_type_ids,
+    EntityTypeManager&& node_type_manager,
+    EntityTypeManager&& edge_type_manager) {
+  auto rdg = KATANA_CHECKED(RDG::MakeEphemeral());
+  return std::make_unique<katana::PropertyGraph>(
+      std::unique_ptr<katana::RDGFile>(), std::move(rdg),
+      std::move(topo_to_assign), std::move(node_entity_type_ids),
+      std::move(edge_entity_type_ids), std::move(node_type_manager),
+      std::move(edge_type_manager));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -321,25 +364,6 @@ katana::PropertyGraph::MakeEmptyProjectedGraph(
 
   return MakeEmptyEdgeProjectedGraph(
       pg, 0, nodes_bitset, std::move(original_to_projected_nodes_mapping), {});
-}
-
-katana::Result<std::unique_ptr<katana::PropertyGraph>>
-katana::PropertyGraph::Make(
-    const katana::URI& rdg_dir, katana::GraphTopology&& topo_to_assign,
-    NUMAArray<EntityTypeID>&& node_entity_type_ids,
-    NUMAArray<EntityTypeID>&& edge_entity_type_ids,
-    EntityTypeManager&& node_type_manager,
-    EntityTypeManager&& edge_type_manager) {
-  auto retval = std::make_unique<katana::PropertyGraph>(
-      std::unique_ptr<katana::RDGFile>(), katana::RDG{},
-      std::move(topo_to_assign), std::move(node_entity_type_ids),
-      std::move(edge_entity_type_ids), std::move(node_type_manager),
-      std::move(edge_type_manager));
-  // It doesn't make sense to pass a RDGFile to the constructor because this
-  // PropertyGraph wasn't loaded from a file. But all PropertyGraphs have an
-  // associated storage location, so set one here.
-  retval->rdg().set_rdg_dir(rdg_dir);
-  return retval;
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -1593,7 +1617,7 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
       katana::no_stats());
 
   GraphTopology sym_topo(std::move(out_indices), std::move(out_dests));
-  return katana::PropertyGraph::Make(std::move(sym_topo));
+  return katana::PropertyGraph::MakeEphemeral(std::move(sym_topo));
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -1660,7 +1684,7 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
       katana::no_stats());
 
   GraphTopology transpose_topo{std::move(out_indices), std::move(out_dests)};
-  return katana::PropertyGraph::Make(std::move(transpose_topo));
+  return katana::PropertyGraph::MakeEphemeral(std::move(transpose_topo));
 }
 
 bool

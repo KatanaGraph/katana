@@ -3011,7 +3011,12 @@ struct Gr2Kg : public Conversion {
     }
 
     katana::GraphTopology topo{std::move(out_indices), std::move(out_dests)};
-    auto pg_res = katana::PropertyGraph::Make(std::move(topo));
+    auto rdg_dir_res = katana::URI::Make(out_file_name);
+    if (!rdg_dir_res) {
+      KATANA_LOG_FATAL("Failed to create PropertyGraph storage URI");
+    }
+    auto pg_res =
+        katana::PropertyGraph::Make(rdg_dir_res.value(), std::move(topo));
     if (!pg_res) {
       KATANA_LOG_FATAL("Failed to create PropertyGraph");
     }
@@ -3030,7 +3035,7 @@ struct Gr2Kg : public Conversion {
     katana::gPrint(
         "Node Schema : ", pg->loaded_node_schema()->ToString(), "\n");
 
-    if (auto r = pg->Write(out_file_name, "cmd", &txn_ctx); !r) {
+    if (auto r = pg->Commit("cmd", &txn_ctx); !r) {
       KATANA_LOG_FATAL("Failed to write property file graph: {}", r.error());
     }
     printStatus(graph.size(), graph.sizeEdges());

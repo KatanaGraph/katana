@@ -8,6 +8,7 @@
 #include "katana/ErrorCode.h"
 #include "katana/FileView.h"
 #include "katana/Plugin.h"
+#include "katana/ProgressTracer.h"
 #include "katana/Signals.h"
 #include "katana/URI.h"
 #include "katana/file.h"
@@ -282,7 +283,12 @@ katana::Result<void>
 katana::CopyRDG(
     std::vector<std::pair<katana::URI, katana::URI>> src_dst_files) {
   // TODO(vkarthik): add do_all loop
+  auto& tracer = katana::GetTracer();
+
+  auto scope = tracer.StartActiveSpan("copying RDG");
+
   std::vector<uint64_t> manifest_uri_idxs;
+
   for (uint64_t i = 0; i < src_dst_files.size(); i++) {
     auto [src_file_uri, dst_file_uri] = src_dst_files[i];
     // We save the names of all the manifest files and we write them out at the end.
@@ -290,15 +296,22 @@ katana::CopyRDG(
       manifest_uri_idxs.push_back(i);
       continue;
     }
+
+    auto scope = tracer.StartActiveSpan("copying file");
+
     katana::FileView fv;
     KATANA_CHECKED(fv.Bind(src_file_uri.string(), true));
     KATANA_CHECKED(
         katana::FileStore(dst_file_uri.string(), fv.ptr<char>(), fv.size()));
+
+    scope.span().SetTags({{"uri", src_file_uri.string()}, {"size", fv.size()}});
   }
 
   // Process all the manifest files, write them out.
   // We want to write this last so that we know whether a write fully finished or not.
   for (auto idx : manifest_uri_idxs) {
+    auto scope = tracer.StartActiveSpan("copying manifest");
+
     auto [src_file_uri, dst_file_uri] = src_dst_files[idx];
     auto rdg_manifest = KATANA_CHECKED(katana::RDGManifest::Make(src_file_uri));
     // These are hard-coded for now. Will what we copy always be version 1?
@@ -312,7 +325,11 @@ katana::CopyRDG(
         dst_file_uri.string(),
         reinterpret_cast<const uint8_t*>(rdg_manifest_json.data()),
         rdg_manifest_json.size()));
+
+    scope.span().SetTags(
+        {{"uri", dst_file_uri.string()}, {"size", rdg_manifest_json.size()}});
   }
+
   return katana::ResultSuccess();
 }
 
@@ -345,14 +362,14 @@ katana::WriteRDGPartHeader(
   // Create vector that is needed by part_header for prop_info, do this for both node and edges
   std::vector<katana::PropStorageInfo> node_props;
   node_props.reserve(node_properties.size());
-  for (auto rdg_prop_info : node_properties) {
+  for (const auto& rdg_prop_info : node_properties) {
     node_props.emplace_back(katana::PropStorageInfo(
         rdg_prop_info.property_name, rdg_prop_info.property_path));
   }
 
   std::vector<katana::PropStorageInfo> edge_props;
   edge_props.reserve(edge_properties.size());
-  for (auto rdg_prop_info : edge_properties) {
+  for (const auto& rdg_prop_info : edge_properties) {
     edge_props.emplace_back(katana::PropStorageInfo(
         rdg_prop_info.property_name, rdg_prop_info.property_path));
   }

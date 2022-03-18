@@ -296,12 +296,12 @@ jobs:
     - name: Check formatting
       run: |
         . .github/workflows/activate_miniconda.sh
-        ./scripts/check_python_format.sh python test scripts
+        ./scripts/check_python_format.sh .
 
     - name: Check for lint
       run: |
         . .github/workflows/activate_miniconda.sh
-        ./scripts/check_python_lint.sh python test scripts
+        ./scripts/check_python_lint.sh .
 
   build_and_test:
     needs: do_python_test

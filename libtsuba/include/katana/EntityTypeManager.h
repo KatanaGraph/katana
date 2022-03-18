@@ -529,7 +529,7 @@ public:
 
   /// \returns the names of the atomic supertypes for the given non-atomic type
   /// \p entity_type_id is an non-atomic type
-  std::set<std::string> GetNonAtomicTypeName(
+  std::set<std::string> GetNonAtomicTypeNames(
       EntityTypeID entity_type_id) const {
     std::set<std::string> result;
     auto atomic_types = GetAtomicSubtypes(entity_type_id);

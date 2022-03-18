@@ -44,7 +44,7 @@ katana::python::EntityType::ToString() const {
   if (r) {
     return r.value();
   } else {
-    auto names = owner->GetNonAtomicTypeName(type_id);
+    auto names = owner->GetNonAtomicTypeNames(type_id);
 
     std::string value = std::accumulate(
         names.begin(), names.end(), std::string(""),

@@ -1,4 +1,5 @@
 import io
+
 import metagraph as mg
 import numpy as np
 import pandas as pd
@@ -126,9 +127,7 @@ Source,Destination,Weight
 """
     csv_file = io.StringIO(data)
     df = pd.read_csv(csv_file)
-    em = mg.wrappers.EdgeMap.PandasEdgeMap(
-        df, "Source", "Destination", "Weight", is_directed=True
-    )
+    em = mg.wrappers.EdgeMap.PandasEdgeMap(df, "Source", "Destination", "Weight", is_directed=True)
     graph1 = mg.algos.util.graph.build(em)
     return graph1
 
@@ -143,9 +142,7 @@ def kg_from_nx_di_8_12(networkx_weighted_directed_8_12):
 # directed graph
 @pytest.fixture(autouse=True)
 def kg_from_nx_di_bfs(networkx_weighted_directed_bfs):
-    pg_test_case = mg.translate(
-        networkx_weighted_directed_bfs, mg.wrappers.Graph.KatanaGraph
-    )
+    pg_test_case = mg.translate(networkx_weighted_directed_bfs, mg.wrappers.Graph.KatanaGraph)
     return pg_test_case
 
 

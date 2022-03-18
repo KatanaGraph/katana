@@ -18,10 +18,11 @@ def has_node_prop(kg, node_prop_name):
             return True
     return False
 
+
 # breadth-first search,
 @concrete_algorithm("traversal.bfs_iter")
 def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> NumpyVectorType:
-    '''
+    """
     .. py:function:: metagraph.algos.traversal.bfs_iter(graph, source_node, depth_limit)
 
     Use BFS to traverse a graph given a source node and BFS depth limit (implemented by a Katana Graph API)
@@ -31,9 +32,11 @@ def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> Nu
     :param int depth: The BFS depth
     :return: the BFS traversal result in order
     :rtype: NumpyVectorType
-    '''
+    """
     bfs_prop_name = "bfs_prop_start_from_" + str(source_node)
-    depth_limit_internal = 2**30 - 1 if depth_limit == -1 else depth_limit # return all the reachable nodes for the default value of depth_limit (-1)
+    depth_limit_internal = (
+        2 ** 30 - 1 if depth_limit == -1 else depth_limit
+    )  # return all the reachable nodes for the default value of depth_limit (-1)
     start_node = source_node
     if not has_node_prop(graph.value, bfs_prop_name):
         bfs(graph.value, start_node, bfs_prop_name)
@@ -42,6 +45,7 @@ def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> Nu
     sorted_list = sorted(new_list, key=lambda each: (each[1], each[0]))
     bfs_arr = np.array([each[0] for each in sorted_list])
     return bfs_arr
+
 
 # TODO(pengfei):
 # single-source shortest path

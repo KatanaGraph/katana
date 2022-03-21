@@ -226,7 +226,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
         if not res.has_value():
             with gil:
                 raise_error_code(res.error())
-        return res.value()
+    return res.value()
 
 
 cdef _KssspStatistics handle_result_KssspStatistics(Result[_KssspStatistics] res) nogil except *:

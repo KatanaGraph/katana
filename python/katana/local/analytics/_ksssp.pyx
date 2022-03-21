@@ -60,16 +60,9 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
                                             const string& edge_weight_property_name,
                                             size_t start_node, size_t report_node, 
                                             size_t num_paths, const bool& is_symmetric, 
-                                            CTxnContext* txn_ctx, _KssspPlan plan);
+                                            CTxnContext* txn_ctx, _KssspPlan plan)
 
     cppclass _KssspStatistics "katana::analytics::KssspStatistics":
-        """cdef struct PathStats:
-            vector[uint64_t] path
-            double weight
-        
-        vector[PathStats] paths
-        size_t report_node"""
-
         void Print(ostream os)
 
         @staticmethod
@@ -78,7 +71,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
                                          shared_ptr[pyarrow.Table] table, 
                                          size_t report_node, 
                                          const bool& is_symmetric, 
-                                         CTxnContext* txn_ctx);
+                                         CTxnContext* txn_ctx)
 
 
 class _KssspAlgorithm(Enum):

@@ -12,6 +12,6 @@ configured. Then, create and activate the development environment:
    # Create the environment
    conda create --name katana-dev
    # Install the dependencies
-   conda env update --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
+   $SRC_DIR/scripts/update_conda.sh katana-dev
    conda activate katana-dev
    conda install numactl-devel-cos6-x86_64 # For x86_64 builds

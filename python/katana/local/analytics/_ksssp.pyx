@@ -249,7 +249,7 @@ cdef class KssspStatistics(Statistics):
         with nogil:
             self.underlying = handle_result_KssspStatistics(_KssspStatistics.Compute(
                 underlying_property_graph(pg), edge_weight_property_name_str, table, 
-                report_node, is_symmetric, txn_ctx))
+                report_node, is_symmetric, underlying_txn_context(txn_ctx)))
 
     def __str__(self) -> str:
         cdef ostringstream ss

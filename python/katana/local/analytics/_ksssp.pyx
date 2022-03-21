@@ -243,13 +243,13 @@ cdef class KssspStatistics(Statistics):
     cdef _KssspStatistics underlying
 
     def __init__(self, pg, str edge_property_name, shared_ptr[pyarrow.Table] table, 
-                 size_t report_node, bool is_symmetric, txn_ctx = None):
+                 size_t report_node, bool is_symmetric=False, txn_ctx = None):
         cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
         txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_KssspStatistics(_KssspStatistics.Compute(
                 underlying_property_graph(pg), edge_weight_property_name_str, table, 
-                size_t report_node, is_symmetric, txn_ctx))
+                report_node, is_symmetric, txn_ctx))
 
     def __str__(self) => str:
         cdef ostringstream ss

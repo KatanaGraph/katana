@@ -533,18 +533,16 @@ public:
       EntityTypeID entity_type_id) const {
     std::set<std::string> result;
     auto atomic_types = GetAtomicSubtypes(entity_type_id);
-    for (EntityTypeID super_type_id = 0; super_type_id < atomic_types.size();
-         ++super_type_id) {
-      if (atomic_types.test(super_type_id)) {
-        auto val = GetAtomicTypeName(super_type_id);
-        if (val) {
-          result.insert(val.value());
-        } else {
-          // Seems it's possible to have non-atomic from another non-atomic.
-          auto atomic_type_names = GetNonAtomicTypeNames(super_type_id);
-          // Set will avoid any duplicate names.
-          result.insert(atomic_type_names.begin(), atomic_type_names.end());
-        }
+
+    for (auto super_type_id : atomic_types) {
+      auto val = GetAtomicTypeName(super_type_id);
+      if (val) {
+        result.insert(val.value());
+      } else {
+        // Seems it's possible to have non-atomic from another non-atomic.
+        auto atomic_type_names = GetNonAtomicTypeNames(super_type_id);
+        // Set will avoid any duplicate names.
+        result.insert(atomic_type_names.begin(), atomic_type_names.end());
       }
     }
 

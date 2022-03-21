@@ -56,7 +56,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
     unsigned kDefaultDelta "katana::analytics::KssspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::KssspPlan::kDefaultEdgeTileSize"
 
-    Result[shared_ptr[pyarrow.Table]] Ksssp(_PropertyGraph* pg, 
+    Result[pyarrow.Table] Ksssp(_PropertyGraph* pg, 
                                             const string& edge_weight_property_name,
                                             size_t start_node, size_t report_node, 
                                             size_t num_paths, const bool& is_symmetric, 
@@ -68,7 +68,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
         @staticmethod
         Result[_KssspStatistics] Compute(_PropertyGraph* pg, 
                                          const string& edge_property_name, 
-                                         shared_ptr[pyarrow.Table] table, 
+                                         pyarrow.Table table, 
                                          size_t report_node, 
                                          const bool& is_symmetric, 
                                          CTxnContext* txn_ctx)
@@ -242,7 +242,7 @@ cdef class KssspStatistics(Statistics):
     """
     cdef _KssspStatistics underlying
 
-    def __init__(self, pg, str edge_property_name, shared_ptr[pyarrow.Table] table, 
+    def __init__(self, pg, str edge_property_name, pyarrow.Table table, 
                  size_t report_node, bool is_symmetric=False, txn_ctx = None):
         cdef string edge_weight_property_name_str = bytes(edge_property_name, "utf-8")
         txn_ctx = txn_ctx or TxnContext()

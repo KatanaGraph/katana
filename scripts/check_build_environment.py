@@ -1,11 +1,16 @@
 #! /usr/bin/env python3
 import os
 import subprocess
-import sys
 import textwrap
 from pathlib import Path
 
+import click
+
 OPEN_ROOT = Path(__file__).resolve().parent.parent
+if (OPEN_ROOT.parent.parent / "conda_recipe").is_dir():
+    SRC_DIR = OPEN_ROOT.parent.parent
+else:
+    SRC_DIR = OPEN_ROOT
 
 
 def show_problem(msg, instructions, exc=None):
@@ -33,7 +38,7 @@ CONDA_ENV_UPDATE_INSTRUCTIONS = """
 
 
 @check
-def avoid_go_nocgo():
+def avoid_go_nocgo(**_kwargs):
     has_problem = False
     try:
         go_env_lines = subprocess.check_output(["go", "env"], encoding="UTF-8").splitlines()
@@ -79,7 +84,7 @@ def strip_str(s):
 
 
 @check
-def conda_needs_reactivate():
+def conda_needs_reactivate(**_kwargs):
     has_problem = False
     if "CONDA_PREFIX" not in os.environ:
         show_problem(
@@ -111,13 +116,13 @@ def conda_needs_reactivate():
 
 
 @check
-def conda_environment_packages_wrong():
+def conda_environment_packages_wrong(src_dir):
     has_problem = False
-    open_environment_yml = OPEN_ROOT / "conda_recipe" / "environment.yml"
-    enterprise_environment_yml = OPEN_ROOT.parent.parent / "conda_recipe" / "environment.yml"
-    if not open_environment_yml.exists():
-        raise RuntimeError(f"Checkout is missing {open_environment_yml}")
-    for yml in (open_environment_yml, enterprise_environment_yml):
+    environment_yml = src_dir / "conda_recipe" / "environment.yml"
+    external_katana_environment_yml = src_dir / "external" / "katana" / "conda_recipe" / "environment.yml"
+    if not environment_yml.exists():
+        raise RuntimeError(f"Checkout is missing {external_katana_environment_yml}")
+    for yml in (external_katana_environment_yml, environment_yml):
         if not yml.exists():
             continue
 
@@ -131,15 +136,30 @@ def conda_environment_packages_wrong():
     return has_problem
 
 
-def main():
+check_function_names = [f.__name__ for f in check_functions]
+
+
+@click.command()
+@click.option(
+    "--check",
+    multiple=True,
+    type=click.Choice(check_function_names, case_sensitive=False),
+    help="Checks to run. Default: all checks.",
+)
+@click.option("--src-dir", type=Path, default=SRC_DIR, help="The explicit source directory.")
+@click.option("-v", "--verbose", count=True)
+def check_build_environment(check, src_dir, verbose):
+    if verbose > 0:
+        click.echo(f"Using source directory: {src_dir}")
     has_problem = False
     for f in check_functions:
-        print(f"Running {f.__name__}...")
-        has_problem = f() or has_problem
+        if not check or f.__name__ in check:
+            click.echo(f"Running check {f.__name__}...")
+            has_problem = f(src_dir=src_dir) or has_problem
     if has_problem:
-        print("There are potential problems. You may need to address them.")
+        click.echo("There are potential problems. You may need to address them.")
     return 1 if has_problem else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    check_build_environment()

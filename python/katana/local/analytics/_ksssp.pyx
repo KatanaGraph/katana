@@ -251,7 +251,7 @@ cdef class KssspStatistics(Statistics):
                 underlying_property_graph(pg), edge_weight_property_name_str, table, 
                 report_node, is_symmetric, txn_ctx))
 
-    def __str__(self) => str:
+    def __str__(self) -> str:
         cdef ostringstream ss
         self.underlying.Print(ss)
         return str(ss.str(), "ascii")

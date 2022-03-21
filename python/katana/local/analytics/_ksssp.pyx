@@ -17,7 +17,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libstd.iostream cimport ostream
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, raise_error_code
 
 from katana.local import Graph, TxnContext

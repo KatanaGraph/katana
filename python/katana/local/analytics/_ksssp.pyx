@@ -6,6 +6,8 @@ K Shortest paths
 .. autoclass:: katana.local.analytics._ksssp._KssspReachability
 .. autofunction:: katana.local.analytics.ksssp
 """
+import pyarrow
+
 from enum import Enum
 
 from libc.stddef cimport ptrdiff_t
@@ -15,12 +17,13 @@ from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libsupport.result cimport Result, handle_result_void
+from katana.cpp.libstd.iostream cimport ostream
+from katana.cpp.libsupport.result cimport Result, raise_error_code
 
 from katana.local import Graph, TxnContext
 
 from katana.local._graph cimport underlying_property_graph, underlying_txn_context
-from katana.local.analytics.plan cimport Plan, _Plan
+from katana.local.analytics.plan cimport Plan, Statistics, _Plan
 
 
 cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::analytics" nogil:
@@ -53,10 +56,30 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
     unsigned kDefaultDelta "katana::analytics::KssspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::KssspPlan::kDefaultEdgeTileSize"
 
-    Result[void] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name,
-                       size_t start_node, size_t report_node, size_t num_paths,
-                       const bool& is_symmetric, CTxnContext* txn_ctx,
-                       _KssspPlan plan)
+    Result[shared_ptr[pyarrow.Table]] Ksssp(_PropertyGraph* pg, 
+                                            const string& edge_weight_property_name,
+                                            size_t start_node, size_t report_node, 
+                                            size_t num_paths, const bool& is_symmetric, 
+                                            CTxnContext* txn_ctx, _KssspPlan plan)
+
+    cpclass _KssspStatistics "katana::analytics::KssspStatistics":
+        cdef struct PathStats:
+            vector[uint64_t] path
+            double weight
+        
+        vector[PathStats] paths
+        size_t report_node
+
+        void Print(ostream os)
+
+        @staticmethod
+        Result[_KssspStatistics] Compute(_PropertyGraph* pg, 
+                                         const string& edge_property_name, 
+                                         shared_ptr[pyarrow.Table] table, 
+                                         size_t report_node, 
+                                         const bool& is_symmetric, 
+                                         CTxnContext* txn_ctx)
+
 
 class _KssspAlgorithm(Enum):
     """
@@ -204,6 +227,38 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
-                                 start_node, report_node, num_paths, is_symmetric,
-                                 underlying_txn_context(txn_ctx), plan.underlying_))
+        res = Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
+                    start_node, report_node, num_paths, is_symmetric,
+                    underlying_txn_context(txn_ctx), plan.underlying_))
+        if not res.has_value():
+            with gil:
+                raise_error_code(res.error())
+        return res.value()
+
+
+cdef _KssspStatistics handle_result_KssspStatistics(Result[_KssspStatistics res]) nogil except *:
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+    return res.value()
+
+
+cdef class KssspStatistics(Statistics):
+    """
+    Compute the :ref:`statistics` of a kSSSP computation on a graph
+    """
+    cdef _KssspStatistics underlying
+
+    def __init__(self, pg, str edge_property_name, shared_ptr[pyarrow.Table] table, 
+                 size_t report_node, bool is_symmetric, txn_ctx = None):
+        cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
+        txn_ctx = txn_ctx or TxnContext()
+        with nogil:
+            self.underlying = handle_result_KssspStatistics(_KssspStatistics.Compute(
+                underlying_property_graph(pg), edge_weight_property_name_str, table, 
+                size_t report_node, is_symmetric, txn_ctx))
+
+    def __str__(self) => str:
+        cdef ostringstream ss
+        self.underlying.Print(ss)
+        return str(ss.str(), "ascii")

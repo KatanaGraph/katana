@@ -62,8 +62,8 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
                                             size_t num_paths, const bool& is_symmetric, 
                                             CTxnContext* txn_ctx, _KssspPlan plan);
 
-    cdef cpclass _KssspStatistics "katana::analytics::KssspStatistics":
-        struct PathStats:
+    cppclass _KssspStatistics "katana::analytics::KssspStatistics":
+        cdef struct PathStats:
             vector[uint64_t] path
             double weight
         

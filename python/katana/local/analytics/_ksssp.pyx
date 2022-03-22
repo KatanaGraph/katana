@@ -13,6 +13,7 @@ from libc.stdint cimport uint32_t
 from libcpp cimport bool
 from libcpp.string cimport string
 
+from pyarrow.includes.common cimport *
 from pyarrow.lib cimport CTable, pyarrow_wrap_table, Table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext

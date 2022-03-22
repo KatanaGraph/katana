@@ -246,11 +246,11 @@ cdef class KssspStatistics(Statistics):
     def __init__(self, pg, str edge_property_name, Table table, 
                  size_t report_node, bool is_symmetric=False, txn_ctx = None):
         cdef string edge_weight_property_name_str = bytes(edge_property_name, "utf-8")
-        table = pyarrow_unwrap_table(table)
+        cdef table_ptr = pyarrow_unwrap_table(table)
         txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_KssspStatistics(_KssspStatistics.Compute(
-                underlying_property_graph(pg), edge_weight_property_name_str, table, 
+                underlying_property_graph(pg), edge_weight_property_name_str, table_ptr, 
                 report_node, is_symmetric, underlying_txn_context(txn_ctx)))
 
     def __str__(self) -> str:

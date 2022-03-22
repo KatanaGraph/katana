@@ -527,7 +527,7 @@ public:
     return std::nullopt;
   }
 
-  /// \returns the names of the atomic supertypes for the given non-atomic type
+  /// \returns the names of the atomic subtypes for the given non-atomic type
   /// \p entity_type_id is an non-atomic type
   std::set<std::string> GetNonAtomicTypeNames(
       EntityTypeID entity_type_id) const {
@@ -538,11 +538,6 @@ public:
       auto val = GetAtomicTypeName(super_type_id);
       if (val) {
         result.insert(val.value());
-      } else {
-        // Seems it's possible to have non-atomic from another non-atomic.
-        auto atomic_type_names = GetNonAtomicTypeNames(super_type_id);
-        // Set will avoid any duplicate names.
-        result.insert(atomic_type_names.begin(), atomic_type_names.end());
       }
     }
 

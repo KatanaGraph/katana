@@ -14,12 +14,21 @@ namespace py = pybind11;
 namespace {
 
 katana::SetOfEntityTypeIDs
-GetSetOfEntityTypeIds(std::vector<katana::python::EntityType> types) {
+GetAtomicSetOfEntityTypeIds(
+    const katana::EntityTypeManager* manager,
+    std::vector<katana::python::EntityType> types) {
   katana::SetOfEntityTypeIDs type_ids;
-  type_ids.resize(types.size());
-  for (auto t : types) {
-    type_ids.set(t.type_id);
+
+  for (auto entity_type : types) {
+    // Convert non atomic types to atomic types.
+    auto atomic_types = manager->GetAtomicSubtypes(entity_type.type_id);
+
+    type_ids.resize(atomic_types.size());
+    for (auto type_id : atomic_types) {
+      type_ids.set(type_id);
+    }
   }
+
   return type_ids;
 }
 
@@ -44,7 +53,18 @@ katana::python::EntityType::ToString() const {
   if (r) {
     return r.value();
   } else {
-    return fmt::format("<non-atomic type {}>", type_id);
+    auto names = owner->GetNonAtomicTypeNames(type_id);
+
+    std::string value = std::accumulate(
+        names.begin(), names.end(), std::string(""),
+        [](std::string first, std::string second) {
+          if (!first.empty() && !second.empty()) {
+            return fmt::format("{} & {}", first, second);
+          }
+          return second;
+        });
+
+    return value;
   }
 }
 
@@ -110,7 +130,7 @@ katana::python::InitEntityTypeManager(py::module_& m) {
           "get_non_atomic_entity_type",
           [](katana::EntityTypeManager* self,
              std::vector<EntityType> types) -> Result<EntityType> {
-            auto set_of_type_ids = GetSetOfEntityTypeIds(types);
+            auto set_of_type_ids = GetAtomicSetOfEntityTypeIds(self, types);
             return EntityType{
                 self,
                 KATANA_CHECKED(self->GetNonAtomicEntityType(set_of_type_ids))};
@@ -119,8 +139,8 @@ katana::python::InitEntityTypeManager(py::module_& m) {
           "get_or_add_non_atomic_entity_type",
           [](katana::EntityTypeManager* self,
              py::object types) -> Result<EntityType> {
-            auto set_of_type_ids = GetSetOfEntityTypeIds(
-                py::cast<std::vector<EntityType>>(py::list(types)));
+            auto set_of_type_ids = GetAtomicSetOfEntityTypeIds(
+                self, py::cast<std::vector<EntityType>>(py::list(types)));
             return EntityType{
                 self, KATANA_CHECKED(
                           self->GetOrAddNonAtomicEntityType(set_of_type_ids))};

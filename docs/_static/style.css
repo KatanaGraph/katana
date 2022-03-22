@@ -185,7 +185,7 @@ input#search-input::placeholder{
 }
 
 .bd-sidebar .nav li>a {
-	padding: 10px 10px;
+	padding: 10px 15px;
 	margin-top: 5px;
 	margin-bottom: 5px;
 }
@@ -193,6 +193,9 @@ input#search-input::placeholder{
 .bd-sidebar .nav .active>a {
 	font-weight: 300;
 	background-color: white;
+}
+
+.bd-sidebar .nav .active>a.current.reference.internal {
 	border-left: 2px solid rgb(135, 84, 245);
 }
 

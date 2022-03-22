@@ -303,7 +303,9 @@ jobs:
         list-files: shell
         filters: |
           python:
-            - added|modified: '**.py'  
+            - added|modified: 'python/**.py'
+            - added|modified: 'test/**.py'
+            - added|modified: 'scripts/**.py'
     - name: Check for lint
       run: |
         if [ "${{ steps.filter.outputs.python }}" == "true" ]

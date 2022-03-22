@@ -8,12 +8,11 @@ K Shortest paths
 """
 from enum import Enum
 
-from libc.stddef cimport ptrdiff_t
+from libc.stddef cimport ptrdiff_t, shared_ptr
 from libc.stdint cimport uint32_t
 from libcpp cimport bool
 from libcpp.string cimport string
 
-from pyarrow.includes.common cimport *
 from pyarrow.lib cimport CTable, Table, pyarrow_wrap_table, pyarrow_unwrap_table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext

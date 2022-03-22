@@ -70,10 +70,10 @@ dependencies:
  - pydocstyle>=6.1.1
  - pygithub>=1.54,<2a0
  - pylint>=2.8.3,<2.9a0
- - pytest>=6.2
+ - pytest>=6.2,<8a0
  - pytest-asyncio>=0.15,<1a0
  - pytest-notebook>=0.6.1,<1a0
- - pytest-timeout>=1.4.2,<2a0
+ - pytest-timeout>=1.4.2,<3a0
  - python>=3.8,<3.9a0
  - pyyaml>=5.4.1,<6a0
  - readline>=8

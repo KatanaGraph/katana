@@ -6,7 +6,7 @@ K Shortest paths
 .. autoclass:: katana.local.analytics._ksssp._KssspReachability
 .. autofunction:: katana.local.analytics.ksssp
 """
-import pyarrow
+from pyarrow import Table
 
 from enum import Enum
 
@@ -15,6 +15,7 @@ from libc.stdint cimport uint32_t
 from libcpp cimport bool
 from libcpp.string cimport string
 
+from pyarrow cimport pyarrow_wrap_table
 from pyarrow.lib cimport CTable
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -228,7 +229,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
         if not res.has_value():
             with gil:
                 raise_error_code(res.error())
-    return res.value()
+    return pyarrow_wrap_table(res.value())
 
 
 cdef _KssspStatistics handle_result_KssspStatistics(Result[_KssspStatistics] res) nogil except *:

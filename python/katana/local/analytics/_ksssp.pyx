@@ -179,7 +179,7 @@ cdef class KssspPlan(Plan):
         return KssspPlan.make(_KssspPlan.DeltaStepBarrier(reachability, delta))
 
 
-cdef Table handle_result_ksssp(Result[shared_ptr[CTable]] res) nogil except *:
+cdef handle_result_ksssp(Result[shared_ptr[CTable]] res) nogil except *:
     with gil:
         if not res.has_value():
             raise_error_code(res.error())

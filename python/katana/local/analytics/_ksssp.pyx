@@ -14,7 +14,7 @@ from libcpp cimport bool
 from libcpp.string cimport string
 
 from pyarrow.includes.common cimport *
-from pyarrow.lib cimport CTable, pyarrow_wrap_table, Table
+from pyarrow.lib cimport CTable, Table, pyarrow_wrap_table, pyarrow_unwrap_table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
@@ -249,7 +249,7 @@ cdef class KssspStatistics(Statistics):
         txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_KssspStatistics(_KssspStatistics.Compute(
-                underlying_property_graph(pg), edge_weight_property_name_str, table, 
+                underlying_property_graph(pg), edge_weight_property_name_str, pyarrow_unwrap_table(table), 
                 report_node, is_symmetric, underlying_txn_context(txn_ctx)))
 
     def __str__(self) -> str:

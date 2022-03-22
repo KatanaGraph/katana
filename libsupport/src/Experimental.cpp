@@ -58,27 +58,6 @@ std::unique_ptr<ExperimentalFeatureEnvState>
 
 }  // namespace
 
-const katana::internal::ExperimentalFeature*
-katana::internal::ExperimentalFeature::Register(
-    const std::string& feature_name, const std::string& filename,
-    int line_number) {
-  std::lock_guard<std::mutex> lock(registered_features_mutex_);
-
-  auto [it, was_created] = registered_features_.emplace(
-      feature_name,
-      std::unique_ptr<ExperimentalFeature>(
-          new ExperimentalFeature(feature_name, filename, line_number)));
-  const auto& flag = it->second;
-  if (!was_created &&
-      (flag->filename() != filename || flag->line_number() != line_number)) {
-    KATANA_LOG_WARN(
-        "{} declared in multiple places:\n\there: {}:{}\n\tand here: {}:{}",
-        feature_name, flag->filename(), flag->line_number(), filename,
-        line_number);
-  }
-  return it->second.get();
-}
-
 void
 katana::internal::ExperimentalFeature::CheckEnv() {
   is_enabled_ = ExperimentalFeatureEnvState::Get()->WasInEnv(name_);
@@ -91,7 +70,8 @@ katana::internal::ExperimentalFeature::ReportEnabled() {
   std::vector<std::string> enabled;
 
   for (const auto& [name, ptr] : registered_features_) {
-    if (ptr->IsEnabled()) {
+    if (ExperimentalFeatureEnvState::Get()->features_used().find(name) !=
+        ExperimentalFeatureEnvState::Get()->features_used().end()) {
       enabled.emplace_back(name);
     }
   }
@@ -105,7 +85,8 @@ katana::internal::ExperimentalFeature::ReportDisabled() {
   std::vector<std::string> disabled;
 
   for (const auto& [name, ptr] : registered_features_) {
-    if (!ptr->IsEnabled()) {
+    if (ExperimentalFeatureEnvState::Get()->features_used().find(name) ==
+        ExperimentalFeatureEnvState::Get()->features_used().end()) {
       disabled.emplace_back(name);
     }
   }
@@ -118,7 +99,7 @@ katana::internal::ExperimentalFeature::ReportUnrecognized() {
 
   for (const auto& [name, was_used] :
        ExperimentalFeatureEnvState::Get()->features_used()) {
-    if (!was_used) {
+    if (registered_features_.find(name) == registered_features_.end()) {
       unused.emplace_back(name);
     }
   }
@@ -127,6 +108,5 @@ katana::internal::ExperimentalFeature::ReportUnrecognized() {
 
 std::mutex katana::internal::ExperimentalFeature::registered_features_mutex_;
 
-std::unordered_map<
-    std::string, std::unique_ptr<katana::internal::ExperimentalFeature>>
+std::unordered_map<std::string, katana::internal::ExperimentalFeature*>
     katana::internal::ExperimentalFeature::registered_features_;

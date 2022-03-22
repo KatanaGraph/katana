@@ -106,13 +106,13 @@ breathe:
   labels:
     - conda/dev
 cmake:
-  version: [ 3.17, 4 ]
+  version: [ 3.22.3, 4 ]
   labels:
     - apt
     - conda/dev
   version_overrides:
-    conda/dev: ">=3.17,<3.22a0"
-    conda: ">=3.17,<3.22a0"
+    # This  is due to the fact that apt doesn't have a CMake 3.22.3 package available yet
+    apt: ">=3.22,<<4a0"
 conan:
   version: [ 1.40, null ]
   labels:
@@ -351,11 +351,15 @@ pyarrow:
 pydata-sphinx-theme:
   name_overrides:
     pip: "git+https://github.com/pydata/pydata-sphinx-theme.git"
-  version: [ 0.6.3, null ]
+  version: [ 0.8.0, null ]
   version_overrides:
-    pip: "@v0.6.3"
+    pip: "@v0.8.0"
   labels:
     - pip/dev
+    - conda/dev
+pydocstyle:
+  version: [ 6.1.1, null ]
+  labels:
     - conda/dev
 pygithub:
   name_overrides:

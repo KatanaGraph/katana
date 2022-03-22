@@ -2,6 +2,7 @@
 add_test_unit(acquire)
 add_test_unit(bandwidth)
 add_test_unit(barriers 1024 2)
+add_test_unit(dynamic-bitset-unit)
 add_test_unit(flatmap)
 add_test_unit(floating-point-errors)
 add_test_unit(foreach)

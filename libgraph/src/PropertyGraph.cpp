@@ -269,7 +269,7 @@ katana::PropertyGraph::Make(
 
 std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeEmptyEdgeProjectedGraph(
-    const PropertyGraph& pg, uint32_t num_new_nodes,
+    PropertyGraph& pg, uint32_t num_new_nodes,
     const DynamicBitset& nodes_bitset,
     NUMAArray<Node>&& original_to_projected_nodes_mapping,
     NUMAArray<GraphTopology::PropertyIndex>&&
@@ -310,8 +310,7 @@ katana::PropertyGraph::MakeEmptyEdgeProjectedGraph(
 
 std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeEmptyProjectedGraph(
-    const katana::PropertyGraph& pg,
-    const katana::DynamicBitset& nodes_bitset) {
+    katana::PropertyGraph& pg, const katana::DynamicBitset& nodes_bitset) {
   const auto& topology = pg.topology();
   NUMAArray<Node> original_to_projected_nodes_mapping;
   original_to_projected_nodes_mapping.allocateInterleaved(topology.NumNodes());
@@ -352,7 +351,7 @@ katana::PropertyGraph::Copy(katana::TxnContext* txn_ctx) const {
 
 std::unique_ptr<katana::PropertyGraph>
 katana::PropertyGraph::MakeProjectedGraph(
-    const PropertyGraph& pg, const std::vector<std::string>& node_types,
+    PropertyGraph& pg, const std::vector<std::string>& node_types,
     const std::vector<std::string>& edge_types) {
   auto ret = MakeProjectedGraph(
       pg, node_types.empty() ? std::nullopt : std::make_optional(node_types),
@@ -363,7 +362,7 @@ katana::PropertyGraph::MakeProjectedGraph(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::MakeProjectedGraph(
-    const PropertyGraph& pg, std::optional<std::vector<std::string>> node_types,
+    PropertyGraph& pg, std::optional<std::vector<std::string>> node_types,
     std::optional<std::vector<std::string>> edge_types) {
   std::optional<SetOfEntityTypeIDs> node_type_ids;
   if (node_types) {
@@ -382,11 +381,11 @@ katana::PropertyGraph::MakeProjectedGraph(
 /// the original graph.
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::MakeProjectedGraph(
-    const PropertyGraph& pg, std::optional<SetOfEntityTypeIDs> node_types,
+    PropertyGraph& pg, std::optional<SetOfEntityTypeIDs> node_types,
     std::optional<SetOfEntityTypeIDs> edge_types) {
   const auto& topology = pg.topology();
   if (topology.empty()) {
-    return std::make_unique<PropertyGraph>();
+    return MakeEmptyProjectedGraph(pg, katana::DynamicBitset{});
   }
 
   // calculate number of new nodes
@@ -727,7 +726,7 @@ katana::PropertyGraph::ConstructEntityTypeIDs(katana::TxnContext* txn_ctx) {
 
 katana::Result<katana::RDGTopology*>
 katana::PropertyGraph::LoadTopology(const katana::RDGTopology& shadow) {
-  if (is_transformed) {
+  if (IsTransformed()) {
     return KATANA_ERROR(
         katana::ErrorCode::InvalidArgument,
         "Transformation topologies are not persisted yet.");
@@ -774,9 +773,7 @@ katana::PropertyGraph::DoWrite(
       rdg_->node_entity_type_id_array_file_storage().Valid(),
       rdg_->edge_entity_type_id_array_file_storage().Valid());
 
-  if (!is_transformed) {
-    KATANA_CHECKED(DoWriteTopologies());
-  }
+  KATANA_CHECKED(DoWriteTopologies());
 
   //TODO(emcginnis): we don't actually have any lifetime tracking for the in memory
   // entity_type_id arrays, which means we don't actually know when the array
@@ -835,6 +832,10 @@ katana::PropertyGraph::WriteGraph(
 katana::Result<void>
 katana::PropertyGraph::Commit(
     const std::string& command_line, katana::TxnContext* txn_ctx) {
+  if (IsTransformed()) {
+    return parent_->Commit(command_line, txn_ctx);
+  }
+
   if (file_ == nullptr) {
     if (rdg_->rdg_dir().empty()) {
       return KATANA_ERROR(
@@ -850,6 +851,11 @@ katana::PropertyGraph::Commit(
 katana::Result<void>
 katana::PropertyGraph::WriteView(
     const std::string& command_line, katana::TxnContext* txn_ctx) {
+  if (IsTransformed()) {
+    return KATANA_ERROR(
+        ErrorCode::AssertionFailed,
+        "PropertyGraph::WriteView should not be called on a projected graph");
+  }
   // WriteView occurs once, and only before any Commit/Write operation
   KATANA_LOG_DEBUG_ASSERT(file_ == nullptr);
   return WriteView(rdg_->rdg_dir().string(), command_line, txn_ctx);
@@ -1122,6 +1128,10 @@ katana::Result<void>
 katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line,
     katana::TxnContext* txn_ctx) {
+  if (IsTransformed()) {
+    return parent_->Write(rdg_name, command_line, txn_ctx);
+  }
+
   if (auto res = katana::Create(rdg_name); !res) {
     return res.error();
   }

@@ -19,6 +19,11 @@ line-length = 120
 profile = "black"
 line_length = 120
 
+[tool.pydocstyle]
+convention = "google"
+match = "(?!python/test).*"
+add-ignore = "D105"
+
 [tool.pylint.format]
 max-line-length = 120
 

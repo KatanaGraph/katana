@@ -287,34 +287,20 @@ jobs:
     - name: Download miniconda
       run: .github/workflows/download_miniconda.sh ${{matrix.os}}
       if: steps.cache-miniconda.outputs.cache-hit != 'true'
+
     - name: Install dependencies
       run: |
         . .github/workflows/activate_miniconda.sh
-        mamba install -y -q -c conda-forge black=19.10b0 pylint=2.8.3
-    - name: Check formating
+        mamba install -y -q -c conda-forge black=19.10b0 pylint=2.8.3 pydocstyle=6.1.1
+
+    - name: Check formatting
       run: |
         . .github/workflows/activate_miniconda.sh
         ./scripts/check_python_format.sh python test scripts
-    - name: Find changed Python files
-      uses: dorny/paths-filter@v2
-      id: filter
-      with:
-        base: ${{ github.ref }}
-        list-files: shell
-        filters: |
-          python:
-            - added|modified: 'python/**.py'
-            - added|modified: 'test/**.py'
-            - added|modified: 'scripts/**.py'
     - name: Check for lint
       run: |
-        if [ "${{ steps.filter.outputs.python }}" == "true" ]
-        then
-           . .github/workflows/activate_miniconda.sh
-           ./scripts/check_python_lint.sh ${{ steps.filter.outputs.python_files }}
-        else
-           echo "No Python files were changed."
-        fi
+        . .github/workflows/activate_miniconda.sh
+        ./scripts/check_python_lint.sh python test scripts
 
   build_and_test:
     needs: do_python_test

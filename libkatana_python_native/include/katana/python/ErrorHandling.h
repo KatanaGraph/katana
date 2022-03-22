@@ -47,6 +47,14 @@ PythonChecked(katana::Result<T>&& src) {
   return std::move(src.value());
 }
 
+template <>
+inline void
+PythonChecked(katana::Result<void>&& src) {
+  if (!src) {
+    detail::RaiseResultException(src.error());
+  }
+}
+
 template <typename Cls, typename Return, typename Error, typename... Args>
 auto
 WithErrorSentinel(Return (Cls::*func)(Args...), Return sentinel, Error error) {

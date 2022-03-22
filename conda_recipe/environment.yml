@@ -22,8 +22,7 @@ dependencies:
  - clang-tools>=10
  - clang-tools>=10
  - clangxx>=10
-   # the aws-sdk cmake is incompatible with version 3.22
- - cmake>=3.17,<3.22a0
+ - cmake>=3.22.3,<4a0
  - conda-build>=3
  - conda-verify>=3
  - coverage>=5.5
@@ -67,7 +66,8 @@ dependencies:
  - pkg-config>=0.29
  - pyarrow>=6,<7a0
  - pybind11>=2.6.1,<3a0
- - pydata-sphinx-theme>=0.6.3
+ - pydata-sphinx-theme>=0.8.0
+ - pydocstyle>=6.1.1
  - pygithub>=1.54,<2a0
  - pylint>=2.8.3,<2.9a0
  - pytest>=6.2

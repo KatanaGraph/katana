@@ -62,105 +62,6 @@ included in external facing documentation.
 Whole directories ending in ``-draft/`` or ``-internal/`` will be omitted when
 building external documentation.
 
-*****************
-Restructured Text
-*****************
-
-Most documentation is written in Restructured Text (``.rst``) format, which is
-similar to Markdown (``.md``) in spirit but has a slightly different syntax.
-
-.. list-table:: Summary of differences between Restructured Text and Markdown
-
-   * -
-     - Restructured Text
-     - Markdown
-   * - Inline code
-     - .. code-block::
-
-          The ``Foo`` function
-     - .. code-block::
-
-          The `Foo` function
-   * - Code blocks
-     - .. code-block::
-
-         .. code-block:: python
-
-            def foo():
-              pass
-
-     - .. code-block::
-
-          ```
-          def foo():
-            pass
-          ```
-   * - External links
-     - .. code-block::
-
-          Visit `my link <https://invalid/>`_
-
-     - .. code-block::
-
-          Visit [my link](https://invalid/)
-   * - Internal links
-     - .. code-block::
-
-          .. _label:
-
-          See :ref:`label`
-     - (Not applicable)
-   * - Sections
-     - .. code-block::
-
-          ====
-          Part
-          ====
-
-          *******
-          Chapter
-          *******
-
-          Section
-          =======
-
-          Subsection
-          ----------
-
-          Subsubsection
-          ^^^^^^^^^^^^^
-
-          Paragraphs
-          """"""""""
-     - .. code-block::
-
-          # Level 1
-
-          ## Level 2
-
-          ### Level 3
-
-          #### Level 4
-
-          ##### Level 5
-
-          ###### Level 6
-   * - Conditional Include
-     - .. code-block::
-
-          .. only:: internal
-
-             Text to only include when internal is set.
-
-       The only condition currently defined is ``internal``. Conditional
-       including has limited scope as it cannot include other directives nor
-       alter the section structure. The body of the directive is always parsed,
-       so references must be valid regardless of the condition.
-
-     - (Not applicable)
-
-
-- https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
 
 *****************
 Jupyter Notebooks
@@ -186,7 +87,7 @@ Style
 How-to template
 ===============
 
-``katana/docs/contributing/how_to_template.ipynb`` is a template for creating a
+``katana/docs/contributing/how-to-template.ipynb`` is a template for creating a
 how-to guide in the form of a Jupyter Notebook. Use it when you wish to take a
 reader through a detailed series of steps required to do an individual task or
 procedure. Be sure to follow the section structure in the notebook and to use
@@ -334,11 +235,13 @@ particular code block.
 Python
 ======
 
+In general, we adhere to the `Google Python Style Guide
+<https://google.github.io/styleguide/pyguide.html>`_.
+
 .. code-block:: python
 
    def foo(a: float, b: float) -> int:
-      """
-      foo returns the sum of a and b.
+      """Returns the sum of a and b.
 
       Foo rounds the result away from zero. That is: if the sum is negative,
       foo rounds towards negative infinity, and if sum is positive, foo rounds
@@ -351,9 +254,11 @@ Python
 
       This function is not safe to call concurrently.
 
-      :param a: The first addend
-      :param b: The second addend
-      :return: The sum of a and b
+      Args:
+          a (float): The first addend
+          b (float): The second addend
+      Returns:
+          int: The sum of a and b
       """
       ...
 

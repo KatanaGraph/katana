@@ -6,8 +6,6 @@ K Shortest paths
 .. autoclass:: katana.local.analytics._ksssp._KssspReachability
 .. autofunction:: katana.local.analytics.ksssp
 """
-from pyarrow import Table
-
 from enum import Enum
 
 from libc.stddef cimport ptrdiff_t
@@ -15,7 +13,7 @@ from libc.stdint cimport uint32_t
 from libcpp cimport bool
 from libcpp.string cimport string
 
-from pyarrow.lib cimport CTable, pyarrow_wrap_table
+from pyarrow.lib cimport CTable, pyarrow_wrap_table, Table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
@@ -58,7 +56,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
     unsigned kDefaultDelta "katana::analytics::KssspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::KssspPlan::kDefaultEdgeTileSize"
 
-    Result[CTable] Ksssp(_PropertyGraph* pg, 
+    Result[shared_ptr[CTable]] Ksssp(_PropertyGraph* pg, 
                                             const string& edge_weight_property_name,
                                             size_t start_node, size_t report_node, 
                                             size_t num_paths, const bool& is_symmetric, 

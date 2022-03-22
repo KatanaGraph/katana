@@ -180,8 +180,8 @@ cdef class KssspPlan(Plan):
 
 
 cdef Table handle_result_ksssp(Result[shared_ptr[CTable]] res) nogil except *:
-    if not res.has_value():
-        with gil:
+    with gil:
+        if not res.has_value():
             raise_error_code(res.error())
         return pyarrow_wrap_table(res.value())
 

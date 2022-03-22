@@ -202,7 +202,7 @@ function checkPageExistsAndRedirect(event) {
             node.onclick = checkPageExistsAndRedirect;
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+18.0.248b57 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+19.0.b9e518 variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -536,8 +536,8 @@ function checkPageExistsAndRedirect(event) {
 <p>Contexts are typically used to pass spans across process/thread boundaries</p>
 <p>Best Practices:</p>
 <p><ul class="simple">
-<li><p>If possible always avoid creating raw ProgressSpans from ProgressTracer</p></li>
-<li><p>If possible always use ProgressScopes to handle ProgressSpans</p></li>
+<li><p>If possible, always avoid creating raw ProgressSpans from ProgressTracer</p></li>
+<li><p>If possible, always use ProgressScopes to handle ProgressSpans</p></li>
 <li><p>Only use 1 ProgressTracer in an execution. They should be created at entry points.</p></li>
 <li><p>Use ProgressScope’s RAII to handle early returns (e.g., due to errors)</p></li>
 <li><p>Raw ProgressSpans should be used for special scenarios like tracing asynchronous calls</p></li>
@@ -590,7 +590,9 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer15StartActiveSpanERKNSt6stringE">
 <span class="target" id="classkatana_1_1ProgressTracer_1a7b5305006e51b64ea290bda484174e87"></span><a class="reference internal" href="#_CPPv4N6katana13ProgressScopeE" title="katana::ProgressScope"><span class="n"><span class="pre">ProgressScope</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartActiveSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer15StartActiveSpanERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>StartActiveSpan creates a new span. </p>
+<p>If there is not an active span, create a new top-level span. Otherwise, this function creates a child span of the active span. The returned scope will finish the span on close </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer15StartActiveSpanERKNSt6stringERK15ProgressContext">
@@ -600,19 +602,24 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer9StartSpanERKNSt6stringERK15ProgressContext">
 <span class="target" id="classkatana_1_1ProgressTracer_1af7bbfcbd95012c709ad87ab41f655489"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">child_of</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer9StartSpanERKNSt6stringERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Create a new top level span if ignore_active_span=true and no child_of value is given Otherwise creates a child span of the child_of span or active span Should only be used to handle multiple active spans simultaneously. </p>
+<dd><p>StartSpan creates a new span which is the child of the given span, but unlike StartActiveSpan, StartSpan does not change the active span. </p>
+<p>This method is used to create multiple active spans simultaneously. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer16FinishActiveSpanEv">
 <span class="target" id="classkatana_1_1ProgressTracer_1a9f107255d3542c08ace4901e227e82cb"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FinishActiveSpan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer16FinishActiveSpanEv" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Calls finish on the active span, its parent is set to be active Primarily for internal use only, preferred to use <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a>’s Finish function. </p>
+<dd><p>FinishActiveSpan finishes the active span and the parent of the erstwhile active span becomes the active span. </p>
+<p>The method is primarily for internal use only. Most users should use <a class="reference internal" href="#classkatana_1_1ProgressSpan_1ac841f401c5c972242d47ef6ae8a70312"><span class="std std-ref">ProgressSpan::Finish()</span></a>. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer6InjectERK15ProgressContext">
 <span class="target" id="classkatana_1_1ProgressTracer_1afff98612693a3d59acdd8a3132681ec5"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Inject</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">ctx</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer6InjectERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Inject passes a span from one process or host to another. </p>
+<p>The return value of Inject should be passed to Extract.</p>
+<p>These functions are primarily for interest use only and they will be replaced in the future. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer7ExtractERKNSt6stringE">
@@ -622,7 +629,8 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer13GetActiveSpanEv">
 <span class="target" id="classkatana_1_1ProgressTracer_1a9a7e7b0ebc68e5da69a5698fbc22e6e6"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetActiveSpan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer13GetActiveSpanEv" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Get the current scope’s span to add tagging/logging without having to pass around scopes/spans as parameters If there is no active span, an unnamed root span of a new trace is created (in this case the program is probably not using tracing) </p>
+<dd><p>GetActiveSpan returns the current scope’s span. </p>
+<p>If there is no active span, return an unnamed root span of a new trace. is created (in this case the program is probably not using tracing). </p>
 </dd></dl>
 
 <dl class="cpp function">
@@ -643,7 +651,8 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14ProgressTracer6FinishEv">
 <span class="target" id="classkatana_1_1ProgressTracer_1ad5bb52ce485831b7ce96f14f1bc85020"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14ProgressTracer6FinishEv" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Finish closes the active span and its parent spans if present and resets the active span to the unnamed root span Handles end of program logic and calls Close. </p>
+<dd><p>Finish closes the active span and its parent spans if present and flushes any buffered trace information. </p>
+<p>Finish resets the active span to the unnamed root span. </p>
 </dd></dl>
 
 </div>
@@ -695,13 +704,17 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana10TextTracer9StartSpanERKNSt6stringERK15ProgressContext">
 <span class="target" id="classkatana_1_1TextTracer_1a0d9d160c1aa7aead47d8e0752adc097c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">child_of</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10TextTracer9StartSpanERKNSt6stringERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Create a new top level span if ignore_active_span=true and no child_of value is given Otherwise creates a child span of the child_of span or active span Should only be used to handle multiple active spans simultaneously. </p>
+<dd><p>StartSpan creates a new span which is the child of the given span, but unlike StartActiveSpan, StartSpan does not change the active span. </p>
+<p>This method is used to create multiple active spans simultaneously. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana10TextTracer6InjectERK15ProgressContext">
 <span class="target" id="classkatana_1_1TextTracer_1ae02450f568a33b6f662695751771eb37"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Inject</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">ctx</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10TextTracer6InjectERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Inject passes a span from one process or host to another. </p>
+<p>The return value of Inject should be passed to Extract.</p>
+<p>These functions are primarily for interest use only and they will be replaced in the future. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana10TextTracer7ExtractERKNSt6stringE">
@@ -727,13 +740,17 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracer9StartSpanERKNSt6stringERK15ProgressContext">
 <span class="target" id="classkatana_1_1JSONTracer_1ad14b90cbbd896d8a2887a14dd94fd4f2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">StartSpan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">span_name</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">child_of</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10JSONTracer9StartSpanERKNSt6stringERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Create a new top level span if ignore_active_span=true and no child_of value is given Otherwise creates a child span of the child_of span or active span Should only be used to handle multiple active spans simultaneously. </p>
+<dd><p>StartSpan creates a new span which is the child of the given span, but unlike StartActiveSpan, StartSpan does not change the active span. </p>
+<p>This method is used to create multiple active spans simultaneously. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracer6InjectERK15ProgressContext">
 <span class="target" id="classkatana_1_1JSONTracer_1ad934d5628521156819d764a769f4cc6a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Inject</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">ctx</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6katana10JSONTracer6InjectERK15ProgressContext" title="Permalink to this definition">¶</a><br /></dt>
-<dd></dd></dl>
+<dd><p>Inject passes a span from one process or host to another. </p>
+<p>The return value of Inject should be passed to Extract.</p>
+<p>These functions are primarily for interest use only and they will be replaced in the future. </p>
+</dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana10JSONTracer7ExtractERKNSt6stringE">
@@ -789,13 +806,16 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScope4spanEv">
 <span class="target" id="classkatana_1_1ProgressScope_1a14658983a3f747353971aa907b774840"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana12ProgressSpanE" title="katana::ProgressSpan"><span class="n"><span class="pre">ProgressSpan</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">span</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana13ProgressScope4spanEv" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Get the scope’s underlying span to add tagging/logging, span relationships, and handle multiple active spans at a time. </p>
+<dd><p>span returns the span of the scope. </p>
+<p>Spans may have tags and logs associated with them. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana13ProgressScope5CloseEv">
 <span class="target" id="classkatana_1_1ProgressScope_1a226476fcb4258aa2da16dc0234b6cf44"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Close</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana13ProgressScope5CloseEv" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Closes the underlying <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> if the <a class="reference internal" href="#classkatana_1_1ProgressScope"><span class="std std-ref">ProgressScope</span></a> was created with the flag finish_on_close=true Note that this will only close the underlying <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> when all of its active children ProgressSpans have been finished This will be called by RAII if it has not already been called. </p>
+<dd><p>Close marks the underlying <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> as complete. </p>
+<p>This method will only finish the underlying <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> when all of its active children ProgressSpans have been finished.</p>
+<p>This is called by ~ProgressScope if not called explicitly. </p>
 </dd></dl>
 
 </div>
@@ -865,7 +885,7 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan7SetTagsERK4Tags">
 <span class="target" id="classkatana_1_1ProgressSpan_1aaea35b9df4c7e31a3abf885153a03b14"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SetTags</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">Tags</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tags</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan7SetTagsERK4Tags" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Adds a tag to the span. </p>
+<dd><p>SetTag adds a tag to the span. </p>
 </dd></dl>
 
 <dl class="cpp function">
@@ -876,7 +896,8 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan3LogERKNSt6stringERK4Tags">
 <span class="target" id="classkatana_1_1ProgressSpan_1ad82ae6c4f620c118d725ccab2329a780"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Log</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">message</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">Tags</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tags</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan3LogERKNSt6stringERK4Tags" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Output logging as well as standard metrics and extra stats Current standard metrics: max_mem, mem, host, and timestamp. </p>
+<dd><p>Log attaches a message with standard metrics and optional tags. </p>
+<p>The current standard metrics are max_mem, mem, host, and timestamp. </p>
 </dd></dl>
 
 <dl class="cpp function">
@@ -897,14 +918,14 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan10LogProfileEv">
 <span class="target" id="classkatana_1_1ProgressSpan_1a6415c8d279eba711449f63088e3a1afd"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">LogProfile</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan10LogProfileEv" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Optionally output detailed memory profiling information. </p>
+<dd><p>LogProfile optionally attaches detailed memory profiling information. </p>
 <p>This is a noop unless KATANA_USE_JEMALLOC is enabled and the environment variable MALLOC_CONF contains prof:true. See docs/contributing/performance.rst for more details. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4NK6katana12ProgressSpan10GetContextEv">
 <span class="target" id="classkatana_1_1ProgressSpan_1a6286c0fac75517dda2ffac558ab85ca9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6katana15ProgressContextE" title="katana::ProgressContext"><span class="n"><span class="pre">ProgressContext</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetContext</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6katana12ProgressSpan10GetContextEv" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Get span’s context for propagating across process boundaries. </p>
+<dd><p>GetContext returns the a context that can be used with ProgressScope::Inject. </p>
 </dd></dl>
 
 <dl class="cpp function">
@@ -931,9 +952,11 @@ function checkPageExistsAndRedirect(event) {
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana12ProgressSpan6FinishEv">
 <span class="target" id="classkatana_1_1ProgressSpan_1ac841f401c5c972242d47ef6ae8a70312"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana12ProgressSpan6FinishEv" title="Permalink to this definition">¶</a><br /></dt>
-<dd><p>Every <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> started must be finished. </p>
-<p>If the <a class="reference internal" href="#classkatana_1_1ProgressScope"><span class="std std-ref">ProgressScope</span></a> for this <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> was created with finish_on_close=true then this will be called via the ProgressScope’s RAII if Close() has not already been called</p>
-<p>If there is an unclosed <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> at the end of execution then a warning will be given Note that this immediately finishes the span regardless of it having unfinished children ProgressSpans </p>
+<dd><p>Finish the <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a>. </p>
+<p>Every <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> that has been created must be finished.</p>
+<p>Note that Finish immediately finishes the span even if it has unfinished child spans.</p>
+<p>This is called by ~ProgressSpan if not called explicitly.</p>
+<p>If there is an unclosed <a class="reference internal" href="#classkatana_1_1ProgressSpan"><span class="std std-ref">ProgressSpan</span></a> at the end of execution then a warning is printed. </p>
 </dd></dl>
 
 </div>

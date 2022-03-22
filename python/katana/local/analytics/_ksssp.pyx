@@ -220,7 +220,6 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
-    res = None
     with nogil:
         res = Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
                     start_node, report_node, num_paths, is_symmetric,

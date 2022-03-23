@@ -18,7 +18,7 @@ from pyarrow.lib import CTable
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libsupport.result cimport Result, handle_result_void
+from katana.cpp.libsupport.result cimport Result, raise_error_code
 
 from katana.local import Graph, TxnContext
 
@@ -202,6 +202,9 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
+        res = Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
                                  start_node, report_node, num_paths, is_symmetric,
-                                 underlying_txn_context(txn_ctx), plan.underlying_))
+                                 underlying_txn_context(txn_ctx), plan.underlying_)
+    if not rest.has_value():
+        raise_error_code(res.error())
+    return res.value()

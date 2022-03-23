@@ -299,7 +299,7 @@ void GetPath(const Path* path, arrow::UInt64Builder& builder) {
  * @param plan Algorithm to get path
  */
 template <typename GraphTy, typename Weight>
-katana::Result<arrow::Table>
+katana::Result<std::shared_ptr<arrow::Table>>
 KssspImpl(
     GraphTy graph, size_t start_node, size_t report_node, size_t num_paths,
     KssspPlan plan) {
@@ -422,7 +422,7 @@ KssspImpl(
     });
   } 
 
-  return arrow::Table::Make(schema, {arr}).get();
+  return arrow::Table::Make(schema, {arr});
 }
 
 /**
@@ -437,7 +437,7 @@ KssspImpl(
  * @param plan Algorithm to get path
  */
 template <typename Weight>
-katana::Result<arrow::Table>
+katana::Result<std::shared_ptr<arrow::Table>>
 kSSSPWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
@@ -491,7 +491,7 @@ kSSSPWithWrap(
  * @param is_symmetric Whether or not the path is symmetric
  * @param plan Algorithm to get path
  */
-katana::Result<arrow::Table>
+katana::Result<std::shared_ptr<arrow::Table>>
 katana::analytics::Ksssp(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     size_t start_node, size_t report_node, size_t num_paths,
@@ -564,14 +564,14 @@ katana::analytics::KssspStatistics::Print(std::ostream& os) const {
 template <typename GraphTy, typename Weight>
 katana::Result<katana::analytics::KssspStatistics>
 ComputeStatistics(
-     GraphTy graph, arrow::Table table, 
+     GraphTy graph, std::shared_ptr<arrow::Table> table, 
     size_t report_node) {
   std::vector<katana::analytics::KssspStatistics::PathStats> paths = {};
-  auto node_list = std::static_pointer_cast<arrow::ListArray>(table.column(0)->chunk(0));
+  auto node_list = std::static_pointer_cast<arrow::ListArray>(table->column(0)->chunk(0));
   auto all_nodes = std::static_pointer_cast<arrow::UInt64Array>(node_list->values());
   int64_t i = 0;
   uint64_t j = 0;
-  while (i < table.num_rows()) {
+  while (i < table->num_rows()) {
     std::vector<uint64_t> path = {};
     katana::GAccumulator<Weight> weight;
     while (all_nodes->Value(j) != report_node) {
@@ -592,7 +592,7 @@ template <typename Weight>
 katana::Result<katana::analytics::KssspStatistics>
 ComputeWithWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
-    arrow::Table table, size_t report_node, 
+    std::shared_ptr<arrow::Table> table, size_t report_node, 
     const bool& is_symmetric, katana::TxnContext* txn_ctx) {
       static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
 
@@ -635,7 +635,7 @@ ComputeWithWrap(
 katana::Result<katana::analytics::KssspStatistics>
 katana::analytics::KssspStatistics::Compute(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name, 
-    arrow::Table table, size_t report_node, 
+    std::shared_ptr<arrow::Table> table, size_t report_node, 
     const bool& is_symmetric, katana::TxnContext* txn_ctx) {
   if (!edge_weight_property_name.empty() &&
       !pg->HasEdgeProperty(edge_weight_property_name)) {

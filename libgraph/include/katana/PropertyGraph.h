@@ -233,6 +233,16 @@ public:
     return pg_view_cache_.BuildView<PGView>(this);
   }
 
+  template <
+      typename PGView,
+      std::enable_if_t<
+          std::is_same<
+              PGView, PropertyGraphViews::EdgesSortedByProperty>::value,
+          bool> = true>
+  PGView BuildView(const std::string prop_name) noexcept {
+    return pg_view_cache_.BuildView<PGView>(this, prop_name);
+  }
+
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
   static Result<std::unique_ptr<PropertyGraph>> Make(
@@ -699,6 +709,28 @@ public:
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetEdgePropertyTyped(const std::string& name) {
+    // TODO(amp): Use KATANA_CHECKED once that doesn't cause CUDA builds to fail.
+    auto chunked_array_result = GetEdgeProperty(name);
+    if (!chunked_array_result) {
+      return chunked_array_result.assume_error();
+    }
+    auto chunked_array = chunked_array_result.assume_value();
+    KATANA_LOG_ASSERT(chunked_array);
+
+    auto array =
+        std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
+            chunked_array->chunk(0));
+    if (!array) {
+      return KATANA_ERROR(
+          katana::ErrorCode::TypeError, "Incorrect arrow::Array type: {}",
+          chunked_array->type()->ToString());
+    }
+    return MakeResult(std::move(array));
+  }
+
+  template <typename T>
+  Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
+  GetEdgePropertyTyped(const std::string& name) const {
     // TODO(amp): Use KATANA_CHECKED once that doesn't cause CUDA builds to fail.
     auto chunked_array_result = GetEdgeProperty(name);
     if (!chunked_array_result) {

@@ -16,6 +16,7 @@ add_test_unit(property-graph-bench NOT_QUICK LINK_LIBRARIES benchmark::benchmark
 add_test_unit(property-graph-in-memory-props)
 add_test_unit(property-graph-topology)
 add_test_unit(property-graph-optional-topology-generation "${RDG_LDBC_003}" LINK_LIBRARIES LLVMSupport)
+add_test_unit(property-graph-sorted-by-edgeprop-then-dest-view)
 add_test_unit(property-graph-transposed-view)
 add_test_unit(property-graph-undirected-view)
 add_test_unit(property-index)

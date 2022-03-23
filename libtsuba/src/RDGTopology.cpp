@@ -560,6 +560,23 @@ katana::RDGTopology::MakeShadow(
 }
 
 katana::RDGTopology
+katana::RDGTopology::MakeShadow(
+    katana::RDGTopology::TopologyKind topology_state,
+    katana::RDGTopology::TransposeKind transpose_state,
+    katana::RDGTopology::EdgeSortKind edge_sort_state,
+    katana::RDGTopology::NodeSortKind node_sort_state,
+    const std::string& edge_property_name_for_sorting) {
+  RDGTopology topo = RDGTopology();
+
+  topo.topology_state_ = topology_state;
+  topo.transpose_state_ = transpose_state;
+  topo.edge_sort_state_ = edge_sort_state;
+  topo.node_sort_state_ = node_sort_state;
+  topo.edge_property_name_for_sorting_ = edge_property_name_for_sorting;
+  return RDGTopology(std::move(topo));
+}
+
+katana::RDGTopology
 katana::RDGTopology::MakeShadowCSR() {
   // Match on a CSR topology transposed or not transposed, and no sorting
   return MakeShadow(

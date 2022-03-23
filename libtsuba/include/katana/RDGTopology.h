@@ -37,7 +37,8 @@ public:
     kAny = 0,  // don't care. Sorted or Unsorted
     kSortedByDestID,
     kSortedByEdgeType,
-    kSortedByNodeType
+    kSortedByNodeType,
+    kSortedByProperty
   };
 
   enum class NodeSortKind : int {
@@ -259,6 +260,11 @@ public:
       TopologyKind topology_state, TransposeKind transpose_state,
       EdgeSortKind edge_sort_state, NodeSortKind node_sort_state);
 
+  static katana::RDGTopology MakeShadow(
+      TopologyKind topology_state, TransposeKind transpose_state,
+      EdgeSortKind edge_sort_state, NodeSortKind node_sort_state,
+      const std::string& edge_property_name_for_sorting);
+
   /// Create a shadow RDGTopology with default CSR state
   static katana::RDGTopology MakeShadowCSR();
 
@@ -320,6 +326,7 @@ private:
   TransposeKind transpose_state_{-1};
   EdgeSortKind edge_sort_state_{-1};
   NodeSortKind node_sort_state_{-1};
+  std::string edge_property_name_for_sorting_;
   uint64_t edge_condensed_type_id_map_size_{0};
   uint64_t node_condensed_type_id_map_size_{0};
 

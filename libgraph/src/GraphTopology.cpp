@@ -376,6 +376,146 @@ katana::EdgeShuffleTopology::SortEdgesByDestID() noexcept {
   edge_sort_state_ = katana::RDGTopology::EdgeSortKind::kSortedByDestID;
 }
 
+template <typename ArrowArrayTy>
+void
+katana::EdgeShuffleTopology::RunSortingEdgesByPropertyThenDest(
+    const PropertyGraph* pg,
+    std::shared_ptr<ArrowArrayTy> edge_prop_view) noexcept {
+  katana::do_all(
+      katana::iterate(Nodes()),
+      [&](Node node) {
+        // get this node's first and last edge
+        auto e_beg = *OutEdges(node).begin();
+        auto e_end = *OutEdges(node).end();
+
+        // get iterators to locations to sort in the vector
+        auto begin_sort_iter = katana::make_zip_iterator(
+            edge_prop_indices_.begin() + e_beg, GetDests().begin() + e_beg);
+
+        auto end_sort_iter = katana::make_zip_iterator(
+            edge_prop_indices_.begin() + e_end, GetDests().begin() + e_end);
+
+        // rearrange vector indices based on how the destinations of this
+        // graph will eventually be sorted sort function not based on vector
+        // being passed, but rather the type and destination of the graph
+        std::sort(
+            begin_sort_iter, end_sort_iter,
+            [&](const auto& tup1, const auto& tup2) {
+              // get edge type and destinations
+              auto e1 = std::get<0>(tup1);
+              auto e2 = std::get<0>(tup2);
+              static_assert(
+                  std::is_same_v<
+                      decltype(e1), katana::GraphTopology::PropertyIndex>);
+              static_assert(
+                  std::is_same_v<
+                      decltype(e2), katana::GraphTopology::PropertyIndex>);
+
+              auto e1_prop_idx = pg->GetEdgePropertyIndexFromOutEdge(e1);
+              auto e2_prop_idx = pg->GetEdgePropertyIndexFromOutEdge(e2);
+              auto data1 = edge_prop_view->Value(e1_prop_idx);
+              auto data2 = edge_prop_view->Value(e2_prop_idx);
+              if (data1 != data2) {
+                return data1 < data2;
+              }
+
+              auto dst1 = std::get<1>(tup1);
+              auto dst2 = std::get<1>(tup2);
+              static_assert(
+                  std::is_same_v<decltype(dst1), katana::GraphTopology::Node>);
+              static_assert(
+                  std::is_same_v<decltype(dst2), katana::GraphTopology::Node>);
+              return dst1 < dst2;
+            });
+      },
+      katana::steal(), katana::no_stats());
+}
+
+void
+katana::EdgeShuffleTopology::SortEdgesByPropertyThenDest(
+    const PropertyGraph* pg, const std::string& property_name) noexcept {
+  auto edge_prop_ret = pg->GetEdgeProperty(property_name);
+  if (!edge_prop_ret) {
+    KATANA_LOG_FATAL("PropertyGraph does not have property");
+  }
+  auto edge_property = edge_prop_ret.value();
+
+#if 0
+  switch (edge_property->type()->id()) {
+#define TYPE_CASE(EnumType)                                                    \
+  case arrow::Type::EnumType: {                                                \
+    using ArrowType =                                                          \
+        typename arrow::TypeIdTraits<arrow::Type::EnumType>::Type;             \
+    using CType = typename arrow::TypeTraits<ArrowType>::CType;                \
+    std::shared_ptr<ArrowType> typed_edge_prop_view =                          \
+        pg->GetEdgePropertyTyped<CType>(property_name).value();                \
+    RunSortingEdgesByPropertyThenDest(pg, typed_edge_prop_view);               \
+    break;                                                                     \
+  }
+    TYPE_CASE(UINT8)
+    TYPE_CASE(INT8)
+    TYPE_CASE(UINT16)
+    TYPE_CASE(INT16)
+    TYPE_CASE(UINT32)
+    TYPE_CASE(INT32)
+    TYPE_CASE(UINT64)
+    TYPE_CASE(INT64)
+    TYPE_CASE(FLOAT)
+    TYPE_CASE(DOUBLE)
+#undef TYPE_CASE
+  default:
+    KATANA_LOG_FATAL("EdgeSortingByProperty: invalid type");
+    return;
+  }
+#endif
+
+  switch (edge_property->type()->id()) {
+  case arrow::UInt32Type::type_id: {
+    std::shared_ptr<arrow::UInt32Array> typed_edge_prop_view =
+        pg->GetEdgePropertyTyped<uint32_t>(property_name).value();
+    RunSortingEdgesByPropertyThenDest(pg, typed_edge_prop_view);
+    break;
+  }
+  case arrow::Int32Type::type_id: {
+    std::shared_ptr<arrow::Int32Array> typed_edge_prop_view =
+        pg->GetEdgePropertyTyped<int32_t>(property_name).value();
+    RunSortingEdgesByPropertyThenDest(pg, typed_edge_prop_view);
+    break;
+  }
+  case arrow::UInt64Type::type_id: {
+    std::shared_ptr<arrow::UInt64Array> typed_edge_prop_view =
+        pg->GetEdgePropertyTyped<uint64_t>(property_name).value();
+    RunSortingEdgesByPropertyThenDest(pg, typed_edge_prop_view);
+    break;
+  }
+  case arrow::Int64Type::type_id: {
+    std::shared_ptr<arrow::Int64Array> typed_edge_prop_view =
+        pg->GetEdgePropertyTyped<int64_t>(property_name).value();
+    RunSortingEdgesByPropertyThenDest(pg, typed_edge_prop_view);
+    break;
+  }
+  case arrow::FloatType::type_id: {
+    std::shared_ptr<arrow::FloatArray> typed_edge_prop_view =
+        pg->GetEdgePropertyTyped<float>(property_name).value();
+    RunSortingEdgesByPropertyThenDest(pg, typed_edge_prop_view);
+    break;
+  }
+  case arrow::DoubleType::type_id: {
+    std::shared_ptr<arrow::DoubleArray> typed_edge_prop_view =
+        pg->GetEdgePropertyTyped<double>(property_name).value();
+    RunSortingEdgesByPropertyThenDest(pg, typed_edge_prop_view);
+    break;
+  }
+  default: {
+    KATANA_LOG_FATAL("EdgeSortingByProperty only supports integer types.");
+    break;
+  }
+  }
+  // remember to update sort state
+  edge_sort_state_ = katana::RDGTopology::EdgeSortKind::kSortedByProperty;
+  property_name_for_sorting_ = property_name;
+}
+
 void
 katana::EdgeShuffleTopology::SortEdgesByTypeThenDest(
     const PropertyGraph* pg) noexcept {
@@ -756,6 +896,16 @@ katana::PGViewCache::BuildOrGetEdgeShuffTopo(
 }
 
 std::shared_ptr<katana::EdgeShuffleTopology>
+katana::PGViewCache::BuildOrGetEdgeShuffTopo(
+    katana::PropertyGraph* pg,
+    const katana::RDGTopology::TransposeKind& tpose_kind,
+    const katana::RDGTopology::EdgeSortKind& sort_kind,
+    const std::string& property_name) noexcept {
+  return BuildOrGetEdgeShuffTopoImpl(
+      pg, tpose_kind, sort_kind, false, property_name);
+}
+
+std::shared_ptr<katana::EdgeShuffleTopology>
 katana::PGViewCache::PopEdgeShuffTopo(
     katana::PropertyGraph* pg,
     const katana::RDGTopology::TransposeKind& tpose_kind,
@@ -804,6 +954,50 @@ katana::PGViewCache::BuildOrGetEdgeShuffTopoImpl(
 
   auto res = pg->LoadTopology(std::move(shadow));
   auto new_topo = (!res) ? EdgeShuffleTopology::Make(pg, tpose_kind, sort_kind)
+                         : EdgeShuffleTopology::Make(res.value());
+  KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, new_topo.get()));
+
+  if (pop) {
+    return new_topo;
+  } else {
+    edge_shuff_topos_.emplace_back(std::move(new_topo));
+    return edge_shuff_topos_.back();
+  }
+}
+
+std::shared_ptr<katana::EdgeShuffleTopology>
+katana::PGViewCache::BuildOrGetEdgeShuffTopoImpl(
+    katana::PropertyGraph* pg,
+    const katana::RDGTopology::TransposeKind& tpose_kind,
+    const katana::RDGTopology::EdgeSortKind& sort_kind, bool pop,
+    const std::string& property_name) noexcept {
+  // Try to find a matching topology in the cache.
+  auto pred = [&](const auto& topo_ptr) {
+    return topo_ptr->is_valid() && topo_ptr->has_transpose_state(tpose_kind) &&
+           topo_ptr->has_edges_sorted_by_property(sort_kind, property_name);
+  };
+  auto it =
+      std::find_if(edge_shuff_topos_.begin(), edge_shuff_topos_.end(), pred);
+
+  if (it != edge_shuff_topos_.end()) {
+    KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, it->get()));
+    if (pop) {
+      auto topo = *it;
+      edge_shuff_topos_.erase(it);
+      return topo;
+    } else {
+      return *it;
+    }
+  }
+
+  // No matching topology in cache, see if we have it in storage
+  katana::RDGTopology shadow = katana::RDGTopology::MakeShadow(
+      katana::RDGTopology::TopologyKind::kEdgeShuffleTopology, tpose_kind,
+      sort_kind, katana::RDGTopology::NodeSortKind::kAny, property_name);
+
+  auto res = pg->LoadTopology(std::move(shadow));
+  auto new_topo = (!res) ? EdgeShuffleTopology::Make(
+                               pg, tpose_kind, sort_kind, property_name)
                          : EdgeShuffleTopology::Make(res.value());
   KATANA_LOG_DEBUG_ASSERT(CheckTopology(pg, new_topo.get()));
 

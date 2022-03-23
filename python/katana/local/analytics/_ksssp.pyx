@@ -14,7 +14,7 @@ from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.memory cimport shared_ptr
 
-from pyarrow.lib import CTable
+from pyarrow.lib cimport CTable, pyarrow_wrap_table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
@@ -208,4 +208,4 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     
     if not res.has_value():
         raise_error_code(res.error())
-    return res.value()
+    return pyarrow_wrap_table(res.value())

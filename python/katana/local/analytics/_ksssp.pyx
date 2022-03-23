@@ -56,7 +56,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
     unsigned kDefaultDelta "katana::analytics::KssspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::KssspPlan::kDefaultEdgeTileSize"
 
-    Result[shared_ptr[CTable]] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name,
+    Result[CTable] Ksssp(_PropertyGraph* pg, const string& edge_weight_property_name,
                        size_t start_node, size_t report_node, size_t num_paths,
                        const bool& is_symmetric, CTxnContext* txn_ctx,
                        _KssspPlan plan)

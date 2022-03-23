@@ -978,6 +978,11 @@ public:
   katana::Result<std::shared_ptr<katana::EntityIndex<GraphTopology::Edge>>>
   GetEdgeIndex(const std::string& property_name) const;
 
+  GraphTopology::Node OriginalToTransformedNodeID(
+      GraphTopology::Node node) const {
+    return IsTransformed() ? original_to_transformed_nodes_[node] : node;
+  }
+
 protected:
   RDG& rdg() { return *rdg_; }
   const RDG& rdg() const { return *rdg_; }
@@ -985,11 +990,6 @@ protected:
   GraphTopology::Edge OriginalToTransformedEdgeID(
       GraphTopology::Edge edge) const {
     return IsTransformed() ? original_to_transformed_edges_[edge] : edge;
-  }
-
-  GraphTopology::Node OriginalToTransformedNodeID(
-      GraphTopology::Node node) const {
-    return IsTransformed() ? original_to_transformed_nodes_[node] : node;
   }
 
   // TODO(Rob): avoid exposing mutable versions of these

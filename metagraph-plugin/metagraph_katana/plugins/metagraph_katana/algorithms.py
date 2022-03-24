@@ -39,12 +39,9 @@ def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> Nu
         bfs(graph.value, start_node, bfs_prop_name)
     pg_bfs_list = graph.value.get_node_property(bfs_prop_name).to_pandas().values.tolist()
     new_list = [[i, pg_bfs_list[i]] for i in range(len(pg_bfs_list)) if pg_bfs_list[i] < depth_limit_internal]
-    sorted_list = []
+    sorted_list = [start_node]
 
-    for i in range(len(new_list)):
-        if (new_list[i][0] == new_list[i][1]):
-            sorted_list.append(new_list.pop(i)[0])
-            break
+    new_list.remove([start_node, start_node])
     
     i = 0
     while len(new_list) > 0:

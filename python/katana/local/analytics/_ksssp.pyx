@@ -14,7 +14,7 @@ from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.memory cimport shared_ptr
 
-from pyarrow.lib cimport CTable, pyarrow_wrap_table
+from pyarrow.lib cimport CTable, Table, pyarrow_wrap_table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
@@ -165,6 +165,13 @@ cdef class KssspPlan(Plan):
         return KssspPlan.make(_KssspPlan.DeltaStepBarrier(reachability, delta))
 
 
+cdef Table handle_result_ksssp(Result[shared_ptr[CTable]] res) nogil except *:
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+        return pyarrow_wrap_table(res.value())
+
+
 def ksssp(pg, str edge_weight_property_name, size_t start_node,
           size_t report_node, size_t num_paths, bool is_symmetric=False,
           KssspPlan plan = KssspPlan(), *, txn_ctx = None):
@@ -202,10 +209,6 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        cdef Result[shared_ptr[CTable]] res = Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
+        return handle_result_ksssp(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
                                  start_node, report_node, num_paths, is_symmetric,
-                                 underlying_txn_context(txn_ctx), plan.underlying_)
-    
-    """if not res.has_value():
-        raise_error_code(res.error())
-    return pyarrow_wrap_table(res.value())"""
+                                 underlying_txn_context(txn_ctx), plan.underlying_))

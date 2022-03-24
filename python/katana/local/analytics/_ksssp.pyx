@@ -5,6 +5,7 @@ K Shortest paths
 .. autoclass:: katana.local.analytics._ksssp._KssspAlgorithm
 .. autoclass:: katana.local.analytics._ksssp._KssspReachability
 .. autofunction:: katana.local.analytics.ksssp
+.. autoclass:: katana.local.analytics.KssspStatistics
 """
 from enum import Enum
 
@@ -186,7 +187,7 @@ cdef Table handle_result_ksssp(Result[shared_ptr[CTable]] res):
 
 def ksssp(pg, str edge_weight_property_name, size_t start_node,
           size_t report_node, size_t num_paths, bool is_symmetric=False,
-          KssspPlan plan = KssspPlan(), *, txn_ctx = None):
+          KssspPlan plan = KssspPlan(), *, txn_ctx = None) -> Table:
     """
     Compute the K-Shortest Path on `pg` using `start_node` as source.
     :type pg: katana.local.Graph
@@ -204,18 +205,22 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     :type plan: KssspPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
     :param txn_ctx: The transaction context for passing read write sets
+    :rtype: Table
     .. code-block:: python
         import katana.local
         from katana.example_data import get_rdg_dataset
         from katana.local import Graph
         katana.local.initialize()
+
         graph = Graph(get_rdg_dataset("ldbc_003"))
-        from katana.local.analytics import ksssp
+        from katana.local.analytics import ksssp, KssspStatistics
         weight_name = "workFrom"
         start_node = 0
         report_node = 10
         num_paths = 5
-        ksssp(graph, weight_name, start_node, report_node, num_paths)
+        table = ksssp(graph, weight_name, start_node, report_node, num_paths)
+        stats = KssspStatistics(graph, weight_name, table, report_node)
+        print(str(stats))
     """
 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
@@ -240,6 +245,19 @@ cdef class KssspStatistics(Statistics):
 
     def __init__(self, pg, str edge_property_name, Table table, 
                  size_t report_node, bool is_symmetric=False, txn_ctx = None):
+        """
+        :type pg: katana.local.Graph
+        :param pg: The graph to analyze
+        :type edge_weight_property_name: str
+        :param edge_weight_property_name: The input property containing edge weights.
+        :type table: Table
+        :param table: Output table from ksssp
+        :type report_node: Node ID
+        :param report_node: The destination node
+        :type is_symmetric: bool
+        :param is_symmetric: Whether or not the graph is symmetric. Defaults to false.
+        :param txn_ctx: The transaction context for passing read write sets
+        """
         cdef string edge_weight_property_name_str = bytes(edge_property_name, "utf-8")
         cdef shared_ptr[CTable] table_ptr = pyarrow_unwrap_table(table)
         txn_ctx = txn_ctx or TxnContext()

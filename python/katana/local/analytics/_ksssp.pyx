@@ -61,6 +61,18 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
                        const bool& is_symmetric, CTxnContext* txn_ctx,
                        _KssspPlan plan)
 
+    cppclass _KssspStatistics "katana::analytics::KssspStatistics":
+        void Print(ostream os)
+
+        @staticmethod
+        Result[_KssspStatistics] Compute(_PropertyGraph* pg,
+                                         const string& edge_property_name, 
+                                         shared_ptr[CTable] table, 
+                                         size_t report_node, 
+                                         const bool& is_symmetric, 
+                                         CTxnContext* txn_ctx)
+
+
 class _KssspAlgorithm(Enum):
     """
     The concrete algorithms available for Ksssp.
@@ -210,3 +222,32 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     return handle_result_ksssp(Ksssp(underlying_property_graph(pg), edge_weight_property_name_str,
                                   start_node, report_node, num_paths, is_symmetric,
                                   underlying_txn_context(txn_ctx), plan.underlying_))
+
+
+cdef _KssspStatistics handle_result_KssspStatistics(Result[_KssspStatistics] res) nogil except *:
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+    return res.value()
+
+
+cdef class KssspStatistics(Statistics):
+    """
+    Compute the :ref:`statistics` of a kSSSP computation on a graph
+    """
+    cdef _KssspStatistics underlying
+
+    def __init__(self, pg, str edge_property_name, Table table, 
+                 size_t report_node, bool is_symmetric=False, txn_ctx = None):
+        cdef string edge_weight_property_name_str = bytes(edge_property_name, "utf-8")
+        cdef shared_ptr[CTable] table_ptr = pyarrow_unwrap_table(table)
+        txn_ctx = txn_ctx or TxnContext()
+        with nogil:
+            self.underlying = handle_result_KssspStatistics(_KssspStatistics.Compute(
+                underlying_property_graph(pg), edge_weight_property_name_str, table_ptr, 
+                report_node, is_symmetric, underlying_txn_context(txn_ctx)))
+
+    def __str__(self) -> str:
+        cdef ostringstream ss
+        self.underlying.Print(ss)
+        return str(ss.str(), "ascii")

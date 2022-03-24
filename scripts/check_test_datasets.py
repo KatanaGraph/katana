@@ -47,6 +47,7 @@ if __name__ == "__main__":
         "d",
     ]
     rdgs_list = subprocess.check_output(get_rdgs_cmd).decode().split()
+    rdgs_list.sort()
 
     rdgs = []
     for rdg_path in rdgs_list:

@@ -14,16 +14,17 @@ from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.memory cimport shared_ptr
 
-from pyarrow.lib cimport CTable, Table, pyarrow_wrap_table
+from pyarrow.lib cimport CTable, Table, pyarrow_wrap_table, pyarrow_unwrap_table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, raise_error_code
 
 from katana.local import Graph, TxnContext
 
 from katana.local._graph cimport underlying_property_graph, underlying_txn_context
-from katana.local.analytics.plan cimport Plan, _Plan
+from katana.local.analytics.plan cimport Plan, Statistics, _Plan
 
 
 cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::analytics" nogil:

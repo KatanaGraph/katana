@@ -206,6 +206,6 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
                                  start_node, report_node, num_paths, is_symmetric,
                                  underlying_txn_context(txn_ctx), plan.underlying_)
     
-    if not res.has_value():
+    """if not res.has_value():
         raise_error_code(res.error())
-    return pyarrow_wrap_table(res.value())
+    return pyarrow_wrap_table(res.value())"""

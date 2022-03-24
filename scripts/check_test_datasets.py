@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 """Check that all RDGs from test-datasets are present in TestDatasetsRDGs.cmake."""
 
+import difflib
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -61,4 +62,9 @@ if __name__ == "__main__":
             output.write(expected_file)
     else:
         with open(output_file, "r") as actual_file:
-            assert expected_file == actual_file.read(), "files differ"
+            actual_txt = actual_file.read()
+            if actual_txt != expected_file:
+                actual_lines = actual_txt.splitlines(keepends=True)
+                expected_lines = expected_file.splitlines(keepends=True)
+                print("".join(difflib.ndiff(actual_lines, expected_lines)), end="")
+                raise Exception("TestDatasetsRDGs.cmake is out of date! Run ./scripts/check_test_datasets.py --fix")

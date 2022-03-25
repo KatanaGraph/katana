@@ -287,7 +287,7 @@ GetPath(const Path* path, arrow::UInt64Builder& builder) {
     GetPath(path->last, builder);
   }
 
-  KATANA_CHECKED(builder.Append(path->parent));
+  ARROW_RETURN_NOT_OK(builder.Append(path->parent));
 }
 
 /**
@@ -401,7 +401,7 @@ KssspImpl(
 
   if (reachable) {
     std::unique_ptr<arrow::ArrayBuilder> builder;
-    KATANA_CHECKED(arrow::MakeBuilder(
+    ARROW_RETURN_NOT_OK(arrow::MakeBuilder(
         arrow::default_memory_pool(), arrow::large_list(arrow::uint64()),
         &builder));
     auto& outer_builder = dynamic_cast<arrow::LargeListBuilder&>(*builder);
@@ -409,13 +409,13 @@ KssspImpl(
         dynamic_cast<arrow::UInt64Builder&>(*(outer_builder.value_builder()));
 
     for (auto pair : paths) {
-      KATANA_CHECKED(outer_builder.Append());
+      ARROW_RETURN_NOT_OK(outer_builder.Append());
 
       GetPath(pair.second, inner_builder);
-      KATANA_CHECKED(inner_builder.Append(report));
+      ARROW_RETURN_NOT_OK(inner_builder.Append(report));
     }
 
-    arr = KATANA_CHECKED(builder->Finish());
+    arr = ARROW_RETURN_NOT_OK(builder->Finish());
 
     katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
       path_alloc.DeletePath(p);

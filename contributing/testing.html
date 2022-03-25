@@ -8,29 +8,26 @@
 
     <title>Testing &#8212; Katana</title>
     
-    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-  
+
     
-    <link rel="stylesheet"
-      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
-  
-    
-      
-  
-    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
     <link rel="stylesheet" type="text/css" href="../_static/style.css" />
     
-    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
-  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
@@ -62,7 +59,7 @@
     <!-- Google Analytics -->
     
   </head>
-  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
     
     <div class="container-fluid" id="banner"></div>
 
@@ -150,13 +147,6 @@
 -->
 
 <script type="text/javascript">
-// Construct the target URL from the JSON components
-function buildURL(entry) {
-    var template = "https://docs.k9h.dev/{version}/";  // supplied by jinja
-    template = template.replace("{version}", entry.version);
-    return template;
-}
-
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
@@ -192,22 +182,26 @@ function checkPageExistsAndRedirect(event) {
             const node = document.createElement("a");
             node.setAttribute("class", "list-group-item list-group-item-action py-1");
             node.textContent = `${entry.name}`;
-            // get the base URL for that doc version, add the current page's
-            // path to it, and set as `href`
-            entry.url = buildURL(entry);
             node.setAttribute("href", `${entry.url}${currentFilePath}`);
             // on click, AJAX calls will check if the linked page exists before
             // trying to redirect, and if not, will redirect to the homepage
             // for that version of the docs.
             node.onclick = checkPageExistsAndRedirect;
+            // Add dataset values for the version and name in case people want
+            // to apply CSS styling based on this information.
+            node.dataset["versionName"] = entry.name;
+            node.dataset["version"] = entry.version;
+
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+25.0.2210b6 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+26.0.1f484e variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
                 node.classList.add("active");
-                $("#version_switcher_button").text(entry.name);
+                let btn = document.getElementById("version_switcher_button");
+                btn.innerText = btn.dataset["activeVersionName"] = entry.name;
+                btn.dataset["activeVersion"] = entry.version;
             }
         });
     });
@@ -503,7 +497,7 @@ function checkPageExistsAndRedirect(event) {
               
               <div class="toc-item">
                 
-<div class="tocsection onthispage pt-5 pb-3">
+<div class="tocsection onthispage mt-5 pt-1 pb-3">
     <i class="fas fa-list"></i> On this page
 </div>
 
@@ -597,7 +591,7 @@ function checkPageExistsAndRedirect(event) {
               <div>
                 
   <section id="testing">
-<span id="id1"></span><h1>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h1>
+<span id="id1"></span><h1>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">#</a></h1>
 <p>Tests are just executables created by the CMake <code class="docutils literal notranslate"><span class="pre">add_test</span></code> command.  A test
 succeeds if it can be run and it returns a zero exit value; otherwise, the test
 execution is considered a failure. A test executable itself may contain many
@@ -613,7 +607,7 @@ tests are run as part of our continuous integration pipeline.</p></li>
 <li><p><strong>gpu</strong>: Tests that require a GPU.</p></li>
 </ul>
 <section id="test-inputs">
-<h2>Test Inputs<a class="headerlink" href="#test-inputs" title="Permalink to this headline">¶</a></h2>
+<h2>Test Inputs<a class="headerlink" href="#test-inputs" title="Permalink to this headline">#</a></h2>
 <p>Many tests require sample graphs that are too big to keep in this repository.
 Test datasets are located in the <cite>katana/external/test-datasets</cite> submodule, which is
 the <a class="reference external" href="https://github.com/KatanaGraph/test-datasets">https://github.com/KatanaGraph/test-datasets</a> git repo</p>
@@ -628,7 +622,7 @@ source available have access to the correct test datasets.</p>
 <p>Tests using test inputs should make a temporary copy of that input to avoid
 dirtying the inputs for other tests.</p>
 <section id="using-inputs-with-cmake-tests">
-<h3>Using inputs with CMake tests<a class="headerlink" href="#using-inputs-with-cmake-tests" title="Permalink to this headline">¶</a></h3>
+<h3>Using inputs with CMake tests<a class="headerlink" href="#using-inputs-with-cmake-tests" title="Permalink to this headline">#</a></h3>
 <p>To avoid hardcoding the path to an input in tests
 <cite>katana/cmake/Modules/TestDatasets.cmake</cite> defines variables for common test inputs,
 as well as functions for managing RDG test inputs</p>
@@ -646,7 +640,7 @@ so that the latest is always used.</p>
 </dl>
 </section>
 <section id="using-inputs-with-python-tests-and-notebooks">
-<h3>Using inputs with python tests and notebooks<a class="headerlink" href="#using-inputs-with-python-tests-and-notebooks" title="Permalink to this headline">¶</a></h3>
+<h3>Using inputs with python tests and notebooks<a class="headerlink" href="#using-inputs-with-python-tests-and-notebooks" title="Permalink to this headline">#</a></h3>
 <p>To avoid hardcoding the path or url to an input in tests, the enterprise and open katana repos provide
 test input helper functions.</p>
 <dl class="simple">
@@ -675,7 +669,7 @@ a <cite>file://</cite> url instead of a standard unix/posix path</p>
 </section>
 </section>
 <section id="running">
-<h2>Running<a class="headerlink" href="#running" title="Permalink to this headline">¶</a></h2>
+<h2>Running<a class="headerlink" href="#running" title="Permalink to this headline">#</a></h2>
 <p>All tests can be run with <code class="docutils literal notranslate"><span class="pre">ctest</span></code>.</p>
 <p>To run all quick tests,</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ctest -L quick
@@ -724,7 +718,7 @@ also possible to run Python tests directly with <code class="docutils literal no
 </pre></div>
 </div>
 <section id="notebooks">
-<h3>Notebooks<a class="headerlink" href="#notebooks" title="Permalink to this headline">¶</a></h3>
+<h3>Notebooks<a class="headerlink" href="#notebooks" title="Permalink to this headline">#</a></h3>
 <p>Some of the tests run a notebook and check to see if the computed output matches the output saved in the notebook.</p>
 <p>If you want to automatically update the saved output of a notebook to match the computed output, you can pass the <code class="docutils literal notranslate"><span class="pre">--nb-force-regen</span></code> flag to update the notebook output:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">$BUILD_DIR</span>/python_env.sh pytest -k my_test --nb-force-regen python/test
@@ -756,10 +750,10 @@ for more options.</p>
 </section>
 </section>
 <section id="coverage">
-<h2>Coverage<a class="headerlink" href="#coverage" title="Permalink to this headline">¶</a></h2>
+<h2>Coverage<a class="headerlink" href="#coverage" title="Permalink to this headline">#</a></h2>
 <p>Collecting coverage is enabled for Python and C++.</p>
 <section id="python">
-<h3>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h3>
+<h3>Python<a class="headerlink" href="#python" title="Permalink to this headline">#</a></h3>
 <p>Export <code class="docutils literal notranslate"><span class="pre">COVERAGE_RCFILE</span></code> before running the build command:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">COVERAGE_RCFILE</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$SRC_DIR</span><span class="s2">/.coveragerc&quot;</span>
 </pre></div>
@@ -775,7 +769,7 @@ coverage html
 <p>The output is available in <code class="docutils literal notranslate"><span class="pre">$(pwd)/pythoncov</span></code>.</p>
 </section>
 <section id="c">
-<h3>C++<a class="headerlink" href="#c" title="Permalink to this headline">¶</a></h3>
+<h3>C++<a class="headerlink" href="#c" title="Permalink to this headline">#</a></h3>
 <p>Include the following options when running the <code class="docutils literal notranslate"><span class="pre">cmake</span></code> command
 (i.e., when configuring your build):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-DKATANA_USE_COVERAGE<span class="o">=</span>ON -DCMAKE_BUILD_TYPE<span class="o">=</span>Debug
@@ -797,7 +791,7 @@ gcovr -r . --html --html-medium-threshold<span class="o">=</span><span class="m"
 </section>
 </section>
 <section id="debugging">
-<h2>Debugging<a class="headerlink" href="#debugging" title="Permalink to this headline">¶</a></h2>
+<h2>Debugging<a class="headerlink" href="#debugging" title="Permalink to this headline">#</a></h2>
 <p>Printing and its more production-oriented cousin, logging, are simple ways to
 get started with debugging, especially if you are in an environment where you
 can build executables from source. Just remember to prefix your debugging messages
@@ -835,7 +829,7 @@ disable core dumps by default, but you can enable them with:</p>
 </div>
 </section>
 <section id="dealing-with-errors-in-ci">
-<h2>Dealing with Errors in CI<a class="headerlink" href="#dealing-with-errors-in-ci" title="Permalink to this headline">¶</a></h2>
+<h2>Dealing with Errors in CI<a class="headerlink" href="#dealing-with-errors-in-ci" title="Permalink to this headline">#</a></h2>
 <p>If the error is due to a transient external failure, you can re-run jobs in the
 GitHub UI.</p>
 <p>When debugging a CI failure, it is good to confirm that tests pass locally in
@@ -849,7 +843,7 @@ definitions under <code class="docutils literal notranslate"><span class="pre">.
 are used.</p>
 </section>
 <section id="manually-controlling-ci-jobs">
-<h2>Manually Controlling CI Jobs<a class="headerlink" href="#manually-controlling-ci-jobs" title="Permalink to this headline">¶</a></h2>
+<h2>Manually Controlling CI Jobs<a class="headerlink" href="#manually-controlling-ci-jobs" title="Permalink to this headline">#</a></h2>
 <p>You can disable CI jobs selectively on a given PR using “magic words” in the PR
 body text. All magic words are case-insensitive. Changing the magic words will
 not cause jobs to run. You will need to manually trigger the jobs to runs again
@@ -894,7 +888,7 @@ documented at:
 <a class="reference external" href="https://docs.github.com/en/actions/guides/about-continuous-integration#skipping-workflow-runs">https://docs.github.com/en/actions/guides/about-continuous-integration#skipping-workflow-runs</a></p>
 </section>
 <section id="caching-in-ci">
-<h2>Caching in CI<a class="headerlink" href="#caching-in-ci" title="Permalink to this headline">¶</a></h2>
+<h2>Caching in CI<a class="headerlink" href="#caching-in-ci" title="Permalink to this headline">#</a></h2>
 <p>GitHub actions allows for build data to be cached between CI runs. For
 reference, the caches (<code class="docutils literal notranslate"><span class="pre">actions/cache</span></code>) are scoped to
 [branches](<a class="reference external" href="https://github.com/actions/cache#cache-scopes">https://github.com/actions/cache#cache-scopes</a>). The cache matching
@@ -932,8 +926,9 @@ limits need to be periodically reassessed.</p>
       </div>
     </div>
   
-    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
-  <footer class="footer mt-5 mt-md-0">
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+<footer class="footer mt-5 mt-md-0">
   <div class="container">
     
     <div class="footer-item">

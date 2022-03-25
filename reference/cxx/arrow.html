@@ -8,29 +8,26 @@
 
     <title>Arrow &#8212; Katana</title>
     
-    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-  
+
     
-    <link rel="stylesheet"
-      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
-  
-    
-      
-  
-    
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
     
-    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
-  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
     <script src="../../_static/underscore.js"></script>
@@ -62,7 +59,7 @@
     <!-- Google Analytics -->
     
   </head>
-  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
     
     <div class="container-fluid" id="banner"></div>
 
@@ -150,13 +147,6 @@
 -->
 
 <script type="text/javascript">
-// Construct the target URL from the JSON components
-function buildURL(entry) {
-    var template = "https://docs.k9h.dev/{version}/";  // supplied by jinja
-    template = template.replace("{version}", entry.version);
-    return template;
-}
-
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
@@ -192,22 +182,26 @@ function checkPageExistsAndRedirect(event) {
             const node = document.createElement("a");
             node.setAttribute("class", "list-group-item list-group-item-action py-1");
             node.textContent = `${entry.name}`;
-            // get the base URL for that doc version, add the current page's
-            // path to it, and set as `href`
-            entry.url = buildURL(entry);
             node.setAttribute("href", `${entry.url}${currentFilePath}`);
             // on click, AJAX calls will check if the linked page exists before
             // trying to redirect, and if not, will redirect to the homepage
             // for that version of the docs.
             node.onclick = checkPageExistsAndRedirect;
+            // Add dataset values for the version and name in case people want
+            // to apply CSS styling based on this information.
+            node.dataset["versionName"] = entry.name;
+            node.dataset["version"] = entry.version;
+
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+25.0.2210b6 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+26.0.1f484e variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
                 node.classList.add("active");
-                $("#version_switcher_button").text(entry.name);
+                let btn = document.getElementById("version_switcher_button");
+                btn.innerText = btn.dataset["activeVersionName"] = entry.name;
+                btn.dataset["activeVersion"] = entry.version;
             }
         });
     });
@@ -503,7 +497,7 @@ function checkPageExistsAndRedirect(event) {
               
               <div class="toc-item">
                 
-<div class="tocsection onthispage pt-5 pb-3">
+<div class="tocsection onthispage mt-5 pt-1 pb-3">
     <i class="fas fa-list"></i> On this page
 </div>
 
@@ -536,14 +530,14 @@ function checkPageExistsAndRedirect(event) {
               <div>
                 
   <section id="arrow">
-<h1>Arrow<a class="headerlink" href="#arrow" title="Permalink to this headline">¶</a></h1>
+<h1>Arrow<a class="headerlink" href="#arrow" title="Permalink to this headline">#</a></h1>
 <section id="inspecting-arrow-data">
-<h2>Inspecting Arrow Data<a class="headerlink" href="#inspecting-arrow-data" title="Permalink to this headline">¶</a></h2>
+<h2>Inspecting Arrow Data<a class="headerlink" href="#inspecting-arrow-data" title="Permalink to this headline">#</a></h2>
 <p>In addition to the Arrow API, there are some support functions in the Katana
 library to help inspect Arrow data in a type-safe way.</p>
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args">
-<span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Visitor</span></span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="sig-name descname"><span class="n"><span class="pre">Args</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="namespacekatana_1a7c8b39ddbf3a122a0d5e22d5318b5f31"></span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">VisitArrow</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="katana::VisitArrow::Visitor"><span class="n"><span class="pre">Visitor</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">visitor</span></span>, <a class="reference internal" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="katana::VisitArrow::Args"><span class="n"><span class="pre">Args</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">...</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">args</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="Permalink to this definition">¶</a><br /></dt>
+<span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Visitor</span></span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="sig-name descname"><span class="n"><span class="pre">Args</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="namespacekatana_1a7c8b39ddbf3a122a0d5e22d5318b5f31"></span><span class="kt"><span class="pre">auto</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">VisitArrow</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="katana::VisitArrow::Visitor"><span class="n"><span class="pre">Visitor</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">visitor</span></span>, <a class="reference internal" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="katana::VisitArrow::Args"><span class="n"><span class="pre">Args</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">...</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">args</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0DpEN6katana10VisitArrowEDaRR7VisitorDpRR4Args" title="Permalink to this definition">#</a><br /></dt>
 <dd><p>VisitArrow downcasts or specializes its arguments to their specific runtime types and then invokes Visitor::Call. </p>
 <p>For example, <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">VisitArrow</span><span class="p">(</span><span class="n">visitor</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Scalar</span><span class="p">,</span> <span class="n">arrow</span><span class="p">::</span><span class="n">Array</span><span class="p">)</span>
 </pre></div>
@@ -575,7 +569,7 @@ library to help inspect Arrow data in a type-safe way.</p>
 
 <dl class="cpp class">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana12ArrowVisitorE">
-<span class="target" id="classkatana_1_1ArrowVisitor"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ArrowVisitor</span></span></span><a class="headerlink" href="#_CPPv4N6katana12ArrowVisitorE" title="Permalink to this definition">¶</a><br /></dt>
+<span class="target" id="classkatana_1_1ArrowVisitor"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ArrowVisitor</span></span></span><a class="headerlink" href="#_CPPv4N6katana12ArrowVisitorE" title="Permalink to this definition">#</a><br /></dt>
 <dd><p>Concept for visitors for VisitArrow. </p>
 <p>A visitor for VisitArrow should model the following behavior.</p>
 <p>Users can optionally subclass <a class="reference internal" href="#classkatana_1_1ArrowVisitor"><span class="std std-ref">ArrowVisitor</span></a> to signal they intend to follow the <a class="reference internal" href="#classkatana_1_1ArrowVisitor"><span class="std std-ref">ArrowVisitor</span></a> protocol but this is not required.</p>
@@ -620,24 +614,24 @@ library to help inspect Arrow data in a type-safe way.</p>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14GetArrowTypeIDERKN5arrow6ScalarE">
-<span class="target" id="namespacekatana_1ad657d2f28ce2a719ecb1ae9e823f4e07"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Scalar</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">scalar</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDERKN5arrow6ScalarE" title="Permalink to this definition">¶</a><br /></dt>
+<span class="target" id="namespacekatana_1ad657d2f28ce2a719ecb1ae9e823f4e07"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Scalar</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">scalar</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDERKN5arrow6ScalarE" title="Permalink to this definition">#</a><br /></dt>
 <dd><p>GetArrowTypeID returns the arrow type ID for a parameter. </p>
 <p>This is an extension point for VisitArrow. Overload this and VisitArrowCast for custom parameter types. </p>
 </dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14GetArrowTypeIDERKN5arrow5ArrayE">
-<span class="target" id="namespacekatana_1a882e3c65a2de1f34def1e7ee0330bd40"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Array</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">array</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDERKN5arrow5ArrayE" title="Permalink to this definition">¶</a><br /></dt>
+<span class="target" id="namespacekatana_1a882e3c65a2de1f34def1e7ee0330bd40"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Array</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">array</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDERKN5arrow5ArrayE" title="Permalink to this definition">#</a><br /></dt>
 <dd></dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana14GetArrowTypeIDEPKN5arrow12ArrayBuilderE">
-<span class="target" id="namespacekatana_1a856afb2726d5df3e800751bf4279061c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrayBuilder</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">builder</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDEPKN5arrow12ArrayBuilderE" title="Permalink to this definition">¶</a><br /></dt>
+<span class="target" id="namespacekatana_1a856afb2726d5df3e800751bf4279061c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Type</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">type</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetArrowTypeID</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrayBuilder</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">builder</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana14GetArrowTypeIDEPKN5arrow12ArrayBuilderE" title="Permalink to this definition">#</a><br /></dt>
 <dd></dd></dl>
 
 <dl class="cpp function">
 <dt class="sig sig-object cpp" id="_CPPv4N6katana16ArrayFromScalarsERKNSt6vectorINSt10shared_ptrIN5arrow6ScalarEEEEERKNSt10shared_ptrIN5arrow8DataTypeEEE">
-<span class="target" id="namespacekatana_1ab3541f6d41d9c9eb7ed48c83765220c7"></span><a class="reference internal" href="error-handling.html#_CPPv4I0EN6katana6ResultE" title="katana::Result"><span class="n"><span class="pre">Result</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Array</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ArrayFromScalars</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Scalar</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">scalars</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">DataType</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana16ArrayFromScalarsERKNSt6vectorINSt10shared_ptrIN5arrow6ScalarEEEEERKNSt10shared_ptrIN5arrow8DataTypeEEE" title="Permalink to this definition">¶</a><br /></dt>
+<span class="target" id="namespacekatana_1ab3541f6d41d9c9eb7ed48c83765220c7"></span><a class="reference internal" href="error-handling.html#_CPPv4I0EN6katana6ResultE" title="katana::Result"><span class="n"><span class="pre">Result</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Array</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">katana</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ArrayFromScalars</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Scalar</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">scalars</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">arrow</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">DataType</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">type</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6katana16ArrayFromScalarsERKNSt6vectorINSt10shared_ptrIN5arrow6ScalarEEEEERKNSt10shared_ptrIN5arrow8DataTypeEEE" title="Permalink to this definition">#</a><br /></dt>
 <dd><p>Take a vector of scalars of type data_type and return an Array scalars vector can contain nullptr entries. </p>
 </dd></dl>
 
@@ -654,8 +648,9 @@ library to help inspect Arrow data in a type-safe way.</p>
       </div>
     </div>
   
-    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
-  <footer class="footer mt-5 mt-md-0">
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+<footer class="footer mt-5 mt-md-0">
   <div class="container">
     
     <div class="footer-item">

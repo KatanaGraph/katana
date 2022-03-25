@@ -8,29 +8,26 @@
 
     <title>Documentation &#8212; Katana</title>
     
-    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-  
+
     
-    <link rel="stylesheet"
-      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
-  
-    
-      
-  
-    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
     <link rel="stylesheet" type="text/css" href="../_static/style.css" />
     
-    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
-  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
@@ -62,7 +59,7 @@
     <!-- Google Analytics -->
     
   </head>
-  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
     
     <div class="container-fluid" id="banner"></div>
 
@@ -150,13 +147,6 @@
 -->
 
 <script type="text/javascript">
-// Construct the target URL from the JSON components
-function buildURL(entry) {
-    var template = "https://docs.k9h.dev/{version}/";  // supplied by jinja
-    template = template.replace("{version}", entry.version);
-    return template;
-}
-
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
@@ -192,22 +182,26 @@ function checkPageExistsAndRedirect(event) {
             const node = document.createElement("a");
             node.setAttribute("class", "list-group-item list-group-item-action py-1");
             node.textContent = `${entry.name}`;
-            // get the base URL for that doc version, add the current page's
-            // path to it, and set as `href`
-            entry.url = buildURL(entry);
             node.setAttribute("href", `${entry.url}${currentFilePath}`);
             // on click, AJAX calls will check if the linked page exists before
             // trying to redirect, and if not, will redirect to the homepage
             // for that version of the docs.
             node.onclick = checkPageExistsAndRedirect;
+            // Add dataset values for the version and name in case people want
+            // to apply CSS styling based on this information.
+            node.dataset["versionName"] = entry.name;
+            node.dataset["version"] = entry.version;
+
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+25.0.2210b6 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+26.0.1f484e variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
                 node.classList.add("active");
-                $("#version_switcher_button").text(entry.name);
+                let btn = document.getElementById("version_switcher_button");
+                btn.innerText = btn.dataset["activeVersionName"] = entry.name;
+                btn.dataset["activeVersion"] = entry.version;
             }
         });
     });
@@ -503,7 +497,7 @@ function checkPageExistsAndRedirect(event) {
               
               <div class="toc-item">
                 
-<div class="tocsection onthispage pt-5 pb-3">
+<div class="tocsection onthispage mt-5 pt-1 pb-3">
     <i class="fas fa-list"></i> On this page
 </div>
 
@@ -624,9 +618,9 @@ function checkPageExistsAndRedirect(event) {
               <div>
                 
   <section id="documentation">
-<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
+<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">#</a></h1>
 <section id="overview">
-<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">#</a></h2>
 <p>People turn to documentation for many different reasons, so it is important to
 consider the audience and what their needs are. What a person wants out of
 documentation depends on their background, what they want to do and their
@@ -652,7 +646,7 @@ know?</p></li>
 </ul>
 </section>
 <section id="building-documentation">
-<h2>Building Documentation<a class="headerlink" href="#building-documentation" title="Permalink to this headline">¶</a></h2>
+<h2>Building Documentation<a class="headerlink" href="#building-documentation" title="Permalink to this headline">#</a></h2>
 <p>To build the documentation, set the <code class="docutils literal notranslate"><span class="pre">-DBUILD_DOCS=</span></code> option to either
 <code class="docutils literal notranslate"><span class="pre">internal</span></code> or <code class="docutils literal notranslate"><span class="pre">external</span></code> and <code class="docutils literal notranslate"><span class="pre">-DKATANA_LANG_BINDINGS=python</span></code> <code class="docutils literal notranslate"><span class="pre">cmake</span></code>
 options and then make the <code class="docutils literal notranslate"><span class="pre">docs</span></code> build target.</p>
@@ -670,18 +664,18 @@ make docs
 </div>
 </section>
 <section id="annotating-internal-or-draft-only-content">
-<h2>Annotating Internal or Draft only Content<a class="headerlink" href="#annotating-internal-or-draft-only-content" title="Permalink to this headline">¶</a></h2>
+<h2>Annotating Internal or Draft only Content<a class="headerlink" href="#annotating-internal-or-draft-only-content" title="Permalink to this headline">#</a></h2>
 <p>Files ending in <code class="docutils literal notranslate"><span class="pre">-draft.[rst/ipynb]</span></code> or <code class="docutils literal notranslate"><span class="pre">-internal.[rst/ipynb]</span></code> will not be
 included in external facing documentation.</p>
 <p>Whole directories ending in <code class="docutils literal notranslate"><span class="pre">-draft/</span></code> or <code class="docutils literal notranslate"><span class="pre">-internal/</span></code> will be omitted when
 building external documentation.</p>
 </section>
 <section id="jupyter-notebooks">
-<h2>Jupyter Notebooks<a class="headerlink" href="#jupyter-notebooks" title="Permalink to this headline">¶</a></h2>
+<h2>Jupyter Notebooks<a class="headerlink" href="#jupyter-notebooks" title="Permalink to this headline">#</a></h2>
 <p>Guides on how to use Katana Graph in Python should be written as Jupyter
 Notebooks. They will be parsed similar to Restructured Text (<code class="docutils literal notranslate"><span class="pre">.rst</span></code>) files.</p>
 <section id="style">
-<h3>Style<a class="headerlink" href="#style" title="Permalink to this headline">¶</a></h3>
+<h3>Style<a class="headerlink" href="#style" title="Permalink to this headline">#</a></h3>
 <ul class="simple">
 <li><p>Keep titles and headings in sentence case (capitalize first letter of first
 word, proper nouns, first letter of subheading after colon, and no
@@ -696,14 +690,14 @@ Enclose the assertion in an individual code cell and add
 </ul>
 </section>
 <section id="how-to-template">
-<h3>How-to template<a class="headerlink" href="#how-to-template" title="Permalink to this headline">¶</a></h3>
+<h3>How-to template<a class="headerlink" href="#how-to-template" title="Permalink to this headline">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">katana/docs/contributing/how-to-template.ipynb</span></code> is a template for creating a
 how-to guide in the form of a Jupyter Notebook. Use it when you wish to take a
 reader through a detailed series of steps required to do an individual task or
 procedure. Be sure to follow the section structure in the notebook and to use
 the above Katana Graph writing style.</p>
 <section id="customization">
-<h4>Customization<a class="headerlink" href="#customization" title="Permalink to this headline">¶</a></h4>
+<h4>Customization<a class="headerlink" href="#customization" title="Permalink to this headline">#</a></h4>
 <ol class="arabic simple">
 <li><p>Choose a filename that matches or abbreviates what you wish to title the
 guide. Add the <code class="docutils literal notranslate"><span class="pre">-draft</span></code> tag (with hyphen) to the end of the filename. For
@@ -722,7 +716,7 @@ another user guide subdirectory.</p></li>
 </ol>
 </section>
 <section id="fill-out-the-requirements-section">
-<h4>Fill out the Requirements section<a class="headerlink" href="#fill-out-the-requirements-section" title="Permalink to this headline">¶</a></h4>
+<h4>Fill out the Requirements section<a class="headerlink" href="#fill-out-the-requirements-section" title="Permalink to this headline">#</a></h4>
 <p>This section prevents readers from getting halfway through and discovering that
 they need to go and read other documentation before they can continue.
 Prerequisites can include other articles or information to read, or it can be
@@ -734,9 +728,9 @@ how-to. You must include links to procedures or information about how to get
 what they need. If not possible, give useful pointers.</p>
 </section>
 <section id="explain-steps-and-process">
-<h4>Explain steps and process<a class="headerlink" href="#explain-steps-and-process" title="Permalink to this headline">¶</a></h4>
+<h4>Explain steps and process<a class="headerlink" href="#explain-steps-and-process" title="Permalink to this headline">#</a></h4>
 <section id="images">
-<h5>Images<a class="headerlink" href="#images" title="Permalink to this headline">¶</a></h5>
+<h5>Images<a class="headerlink" href="#images" title="Permalink to this headline">#</a></h5>
 <p>When you are explaining steps in a process, it can be useful to include images
 (such as screenshots) for each key part of the process. This can help readers
 orientate themselves as they move through the steps. It can also help someone
@@ -745,13 +739,13 @@ When an image is quicker to interpret than descriptive text, put the screenshot
 first, otherwise lead with the text.</p>
 </section>
 <section id="ordered-lists">
-<h5>Ordered lists<a class="headerlink" href="#ordered-lists" title="Permalink to this headline">¶</a></h5>
+<h5>Ordered lists<a class="headerlink" href="#ordered-lists" title="Permalink to this headline">#</a></h5>
 <p>In general, ordered lists should be avoided in favor of section titles presented
 in order to the reader. When unavoidable, provide a lead-in sentence before the
 ordered list.</p>
 </section>
 <section id="code">
-<h5>Code<a class="headerlink" href="#code" title="Permalink to this headline">¶</a></h5>
+<h5>Code<a class="headerlink" href="#code" title="Permalink to this headline">#</a></h5>
 <p>Break up your code where possible into smaller code cells and provide a lead-in
 sentence explaining the code snippet. Describe what you are doing and your
 expected result. If a large code block cannot be broken up, provide comments in
@@ -761,7 +755,7 @@ must be fully executable with no errors or warnings.</p>
 </section>
 </section>
 <section id="orphaned-notebooks">
-<h3>Orphaned Notebooks<a class="headerlink" href="#orphaned-notebooks" title="Permalink to this headline">¶</a></h3>
+<h3>Orphaned Notebooks<a class="headerlink" href="#orphaned-notebooks" title="Permalink to this headline">#</a></h3>
 <p>This means that it doesn’t appear in a toctree (see <code class="docutils literal notranslate"><span class="pre">index.rst</span></code>),
 but other pages can still link to it.</p>
 <p>Orphaned notebookes require the following to be added to the notebook’s JSON
@@ -774,7 +768,7 @@ metadata:</p>
 </section>
 </section>
 <section id="api-documentation">
-<h2>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h2>
+<h2>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">#</a></h2>
 <p>API documentation is a form of reference information, usually embedded in code
 files, and is targeted towards people who know the general concepts in question
 but need some help with details or specifics, e.g., I have a <code class="docutils literal notranslate"><span class="pre">Foo</span></code> object but
@@ -794,7 +788,7 @@ supports a form of Markdown and Python (Sphinx) supports Restructured Text, it
 is best to keep text simple and communicate using basic text that can be read
 easily without being rendered by a separate documentation tool.</p>
 <section id="c">
-<h3>C++<a class="headerlink" href="#c" title="Permalink to this headline">¶</a></h3>
+<h3>C++<a class="headerlink" href="#c" title="Permalink to this headline">#</a></h3>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">/// Foo returns the sum of a and b.</span>
 <span class="c1">///</span>
 <span class="c1">/// Foo rounds the result away from zero. That is: if the sum is negative,</span>
@@ -829,7 +823,7 @@ particular code block.</p>
 </div>
 </section>
 <section id="python">
-<h3>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h3>
+<h3>Python<a class="headerlink" href="#python" title="Permalink to this headline">#</a></h3>
 <p>In general, we adhere to the <a class="reference external" href="https://google.github.io/styleguide/pyguide.html">Google Python Style Guide</a>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
    <span class="sd">&quot;&quot;&quot;Returns the sum of a and b.</span>
@@ -856,7 +850,7 @@ particular code block.</p>
 </div>
 </section>
 <section id="go">
-<h3>Go<a class="headerlink" href="#go" title="Permalink to this headline">¶</a></h3>
+<h3>Go<a class="headerlink" href="#go" title="Permalink to this headline">#</a></h3>
 <div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="c1">// Foo returns the sum of a and b.</span><span class="w"></span>
 <span class="c1">//</span><span class="w"></span>
 <span class="c1">// Foo rounds the result away from zero. That is: if the sum is negative,</span><span class="w"></span>
@@ -890,8 +884,9 @@ further discussion on best practices for comments.</p>
       </div>
     </div>
   
-    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
-  <footer class="footer mt-5 mt-md-0">
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+<footer class="footer mt-5 mt-md-0">
   <div class="container">
     
     <div class="footer-item">

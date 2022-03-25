@@ -8,29 +8,26 @@
 
     <title>Building &#8212; Katana</title>
     
-    <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-  
+
     
-    <link rel="stylesheet"
-      href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
-  
-    
-      
-  
-    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/pydata-sphinx-theme.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../_static/tabs.css" />
     <link rel="stylesheet" type="text/css" href="../_static/style.css" />
     
-    <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
-  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
@@ -62,7 +59,7 @@
     <!-- Google Analytics -->
     
   </head>
-  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
     
     <div class="container-fluid" id="banner"></div>
 
@@ -150,13 +147,6 @@
 -->
 
 <script type="text/javascript">
-// Construct the target URL from the JSON components
-function buildURL(entry) {
-    var template = "https://docs.k9h.dev/{version}/";  // supplied by jinja
-    template = template.replace("{version}", entry.version);
-    return template;
-}
-
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
@@ -192,22 +182,26 @@ function checkPageExistsAndRedirect(event) {
             const node = document.createElement("a");
             node.setAttribute("class", "list-group-item list-group-item-action py-1");
             node.textContent = `${entry.name}`;
-            // get the base URL for that doc version, add the current page's
-            // path to it, and set as `href`
-            entry.url = buildURL(entry);
             node.setAttribute("href", `${entry.url}${currentFilePath}`);
             // on click, AJAX calls will check if the linked page exists before
             // trying to redirect, and if not, will redirect to the homepage
             // for that version of the docs.
             node.onclick = checkPageExistsAndRedirect;
+            // Add dataset values for the version and name in case people want
+            // to apply CSS styling based on this information.
+            node.dataset["versionName"] = entry.name;
+            node.dataset["version"] = entry.version;
+
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+25.0.2210b6 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+26.0.1f484e variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
                 node.classList.add("active");
-                $("#version_switcher_button").text(entry.name);
+                let btn = document.getElementById("version_switcher_button");
+                btn.innerText = btn.dataset["activeVersionName"] = entry.name;
+                btn.dataset["activeVersion"] = entry.version;
             }
         });
     });
@@ -503,7 +497,7 @@ function checkPageExistsAndRedirect(event) {
               
               <div class="toc-item">
                 
-<div class="tocsection onthispage pt-5 pb-3">
+<div class="tocsection onthispage mt-5 pt-1 pb-3">
     <i class="fas fa-list"></i> On this page
 </div>
 
@@ -592,9 +586,9 @@ function checkPageExistsAndRedirect(event) {
               <div>
                 
   <section id="building">
-<span id="id1"></span><h1>Building<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h1>
+<span id="id1"></span><h1>Building<a class="headerlink" href="#building" title="Permalink to this headline">#</a></h1>
 <section id="setting-up-a-build">
-<h2>Setting up a Build<a class="headerlink" href="#setting-up-a-build" title="Permalink to this headline">¶</a></h2>
+<h2>Setting up a Build<a class="headerlink" href="#setting-up-a-build" title="Permalink to this headline">#</a></h2>
 <p>The Katana repo supports both Conan and Conda for installing additional library
 dependencies. The quickest way to start hacking on Katana is to follow the
 Conda instructions below.</p>
@@ -611,7 +605,7 @@ build and linker errors, and possibly, dynamic library loading errors.</p>
 initialized and reflect their checked-in state.</p>
 </div>
 <section id="building-with-conda">
-<span id="id2"></span><h3>Building with Conda<a class="headerlink" href="#building-with-conda" title="Permalink to this headline">¶</a></h3>
+<span id="id2"></span><h3>Building with Conda<a class="headerlink" href="#building-with-conda" title="Permalink to this headline">#</a></h3>
 <p><a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Install conda</a> if needed.
 See the <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html">Conda User Guide</a> for more details.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -676,7 +670,7 @@ make
 <p>This will build Katana and place the built libraries and executables in
 <code class="docutils literal notranslate"><span class="pre">$BUILD_DIR</span></code>.</p>
 <section id="conda-performance">
-<h4>Conda Performance<a class="headerlink" href="#conda-performance" title="Permalink to this headline">¶</a></h4>
+<h4>Conda Performance<a class="headerlink" href="#conda-performance" title="Permalink to this headline">#</a></h4>
 <p>Conda is slow to install packages.
 This makes installing a new development take a few minutes.
 More importantly, it makes conda package building very slow (~40 minutes for this repository), because the build process installs at least 7 conda environments.
@@ -693,7 +687,7 @@ It is an installer, similar to miniconda, which installs an environment with con
 </section>
 </section>
 <section id="building-with-conan">
-<span id="id3"></span><h3>Building with Conan<a class="headerlink" href="#building-with-conan" title="Permalink to this headline">¶</a></h3>
+<span id="id3"></span><h3>Building with Conan<a class="headerlink" href="#building-with-conan" title="Permalink to this headline">#</a></h3>
 <p>For the Conan build you must run <code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code>, as Conan
 build depends on system level packages that it does not install itself.</p>
 <p>If you have issues with missing system level dependencies, look at
@@ -714,7 +708,7 @@ make
 </pre></div>
 </div>
 <section id="compiling-with-clang">
-<h4>Compiling with <code class="docutils literal notranslate"><span class="pre">clang</span></code><a class="headerlink" href="#compiling-with-clang" title="Permalink to this headline">¶</a></h4>
+<h4>Compiling with <code class="docutils literal notranslate"><span class="pre">clang</span></code><a class="headerlink" href="#compiling-with-clang" title="Permalink to this headline">#</a></h4>
 <p>If you want to compile with <code class="docutils literal notranslate"><span class="pre">clang</span></code> instead of <code class="docutils literal notranslate"><span class="pre">gcc</span></code>, make sure <code class="docutils literal notranslate"><span class="pre">libstdc++-dev</span></code> is present in your system, e.g.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo apt-get install libstdc++-11-dev
 </pre></div>
@@ -723,7 +717,7 @@ make
 </section>
 </section>
 <section id="python">
-<h2>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h2>
+<h2>Python<a class="headerlink" href="#python" title="Permalink to this headline">#</a></h2>
 <p>To use the Python libraries from the build directory, use
 <code class="docutils literal notranslate"><span class="pre">$BUILD_DIR/python_env.sh</span></code>. You can either use this script as a launcher,</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">$BUILD_DIR</span>/python_env.sh python
@@ -735,7 +729,7 @@ make
 </div>
 </section>
 <section id="resolving-common-build-issues">
-<h2>Resolving Common Build Issues<a class="headerlink" href="#resolving-common-build-issues" title="Permalink to this headline">¶</a></h2>
+<h2>Resolving Common Build Issues<a class="headerlink" href="#resolving-common-build-issues" title="Permalink to this headline">#</a></h2>
 <p>If you have having issues from a clean build directory (i.e., empty directory),</p>
 <ol class="arabic simple">
 <li><p>Make sure you have also checked out any git submodules: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">submodule</span>
@@ -792,7 +786,7 @@ branches. This allows object files to be reused between compilations.</p>
 </div>
 </section>
 <section id="specifying-and-resolving-c-dependencies">
-<h2>Specifying and Resolving C++ Dependencies<a class="headerlink" href="#specifying-and-resolving-c-dependencies" title="Permalink to this headline">¶</a></h2>
+<h2>Specifying and Resolving C++ Dependencies<a class="headerlink" href="#specifying-and-resolving-c-dependencies" title="Permalink to this headline">#</a></h2>
 <p>The above instructions should work if you have installed the C++ library
 dependencies in <code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code> (e.g., llvm-dev, arrow) in their
 standard system locations (typically <code class="docutils literal notranslate"><span class="pre">/usr/lib</span></code> or <code class="docutils literal notranslate"><span class="pre">/usr/local/lib</span></code>). If you
@@ -826,7 +820,7 @@ directly with <code class="docutils literal notranslate"><span class="pre">LLVM_
 </div>
 </section>
 <section id="adding-new-e-x-ternal-dependencies">
-<h2>Adding New E(x)ternal Dependencies<a class="headerlink" href="#adding-new-e-x-ternal-dependencies" title="Permalink to this headline">¶</a></h2>
+<h2>Adding New E(x)ternal Dependencies<a class="headerlink" href="#adding-new-e-x-ternal-dependencies" title="Permalink to this headline">#</a></h2>
 <p>Adding new dependencies should generally be avoided since it makes it more
 likely that satisfying local development requirements, conda build requirements,
 production library requirements, etc. will become impossible. If you do choose
@@ -862,7 +856,7 @@ absolutely necessary, discuss it with the current Conda package maintainer
 Conda packages.</p>
 </section>
 <section id="building-in-docker">
-<h2>Building in Docker<a class="headerlink" href="#building-in-docker" title="Permalink to this headline">¶</a></h2>
+<h2>Building in Docker<a class="headerlink" href="#building-in-docker" title="Permalink to this headline">#</a></h2>
 <p>Instead of setting up a development environment explicitly you can build Katana
 in docker.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>scripts/build_in_container.py -B <span class="nv">$BUILD_DIR</span> --type conda
@@ -890,8 +884,9 @@ You can also pass build targets to the command.</p>
       </div>
     </div>
   
-    <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
-  <footer class="footer mt-5 mt-md-0">
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+<footer class="footer mt-5 mt-md-0">
   <div class="container">
     
     <div class="footer-item">

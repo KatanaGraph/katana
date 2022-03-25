@@ -8,29 +8,26 @@
 
     <title>Katana &#8212; Katana</title>
     
-    <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-  
+
     
-    <link rel="stylesheet"
-      href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
-    <link rel="preload" as="font" type="font/woff2" crossorigin
-      href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
-  
-    
-      
-  
-    
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/pydata-sphinx-theme.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/tabs.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/style.css" />
     
-    <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
-  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
     <script src="../../_static/underscore.js"></script>
@@ -62,7 +59,7 @@
     <!-- Google Analytics -->
     
   </head>
-  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
     
     <div class="container-fluid" id="banner"></div>
 
@@ -150,13 +147,6 @@
 -->
 
 <script type="text/javascript">
-// Construct the target URL from the JSON components
-function buildURL(entry) {
-    var template = "https://docs.k9h.dev/{version}/";  // supplied by jinja
-    template = template.replace("{version}", entry.version);
-    return template;
-}
-
 // Check if corresponding page path exists in other version of docs
 // and, if so, go there instead of the homepage of the other docs version
 function checkPageExistsAndRedirect(event) {
@@ -192,22 +182,26 @@ function checkPageExistsAndRedirect(event) {
             const node = document.createElement("a");
             node.setAttribute("class", "list-group-item list-group-item-action py-1");
             node.textContent = `${entry.name}`;
-            // get the base URL for that doc version, add the current page's
-            // path to it, and set as `href`
-            entry.url = buildURL(entry);
             node.setAttribute("href", `${entry.url}${currentFilePath}`);
             // on click, AJAX calls will check if the linked page exists before
             // trying to redirect, and if not, will redirect to the homepage
             // for that version of the docs.
             node.onclick = checkPageExistsAndRedirect;
+            // Add dataset values for the version and name in case people want
+            // to apply CSS styling based on this information.
+            node.dataset["versionName"] = entry.name;
+            node.dataset["version"] = entry.version;
+
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+25.0.2210b6 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+26.0.1f484e variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
                 node.classList.add("active");
-                $("#version_switcher_button").text(entry.name);
+                let btn = document.getElementById("version_switcher_button");
+                btn.innerText = btn.dataset["activeVersionName"] = entry.name;
+                btn.dataset["activeVersion"] = entry.version;
             }
         });
     });
@@ -526,7 +520,7 @@ function checkPageExistsAndRedirect(event) {
               <div>
                 
   <section id="module-katana">
-<span id="katana"></span><h1>Katana<a class="headerlink" href="#module-katana" title="Permalink to this headline">¶</a></h1>
+<span id="katana"></span><h1>Katana<a class="headerlink" href="#module-katana" title="Permalink to this headline">#</a></h1>
 <p>Galois Python is a Python library designed to simplify parallel programming. It is especially
 focused on computations that are difficult to parallelize efficiently, such as
 loops with</p>
@@ -546,60 +540,60 @@ Galois Python also leverages numba to compile the “operators” which are run
 by Galois C++.</p>
 <dl class="py exception">
 <dt class="sig sig-object py" id="katana.GaloisError">
-<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">GaloisError</span></span><a class="reference internal" href="../../_modules/katana.html#GaloisError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.GaloisError" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">GaloisError</span></span><a class="reference internal" href="../../_modules/katana.html#GaloisError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.GaloisError" title="Permalink to this definition">#</a></dt>
 <dd><dl class="py method">
 <dt class="sig sig-object py" id="katana.GaloisError.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.GaloisError.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.GaloisError.__init__" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.GaloisError.with_traceback">
-<span class="sig-name descname"><span class="pre">with_traceback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.GaloisError.with_traceback" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">with_traceback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.GaloisError.with_traceback" title="Permalink to this definition">#</a></dt>
 <dd><p>Exception.with_traceback(tb) –
 set self.__traceback__ to tb and return self.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="katana.GaloisError.args">
-<span class="sig-name descname"><span class="pre">args</span></span><a class="headerlink" href="#katana.GaloisError.args" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">args</span></span><a class="headerlink" href="#katana.GaloisError.args" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py exception">
 <dt class="sig sig-object py" id="katana.QueryError">
-<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">QueryError</span></span><a class="reference internal" href="../../_modules/katana.html#QueryError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.QueryError" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">QueryError</span></span><a class="reference internal" href="../../_modules/katana.html#QueryError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.QueryError" title="Permalink to this definition">#</a></dt>
 <dd><dl class="py method">
 <dt class="sig sig-object py" id="katana.QueryError.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.QueryError.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.QueryError.__init__" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.QueryError.with_traceback">
-<span class="sig-name descname"><span class="pre">with_traceback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.QueryError.with_traceback" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">with_traceback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.QueryError.with_traceback" title="Permalink to this definition">#</a></dt>
 <dd><p>Exception.with_traceback(tb) –
 set self.__traceback__ to tb and return self.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="katana.QueryError.args">
-<span class="sig-name descname"><span class="pre">args</span></span><a class="headerlink" href="#katana.QueryError.args" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">args</span></span><a class="headerlink" href="#katana.QueryError.args" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="katana.DataFrame">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">DataFrame</span></span><a class="reference internal" href="../../_modules/katana/dataframe.html#DataFrame"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.DataFrame" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">DataFrame</span></span><a class="reference internal" href="../../_modules/katana/dataframe.html#DataFrame"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.DataFrame" title="Permalink to this definition">#</a></dt>
 <dd><p>A data-frame interface to Katana data.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.DataFrame.count">
-<span class="sig-name descname"><span class="pre">count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">integer</span> <span class="pre">--</span> <span class="pre">return</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">occurrences</span> <span class="pre">of</span> <span class="pre">value</span></span></span><a class="headerlink" href="#katana.DataFrame.count" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">integer</span> <span class="pre">--</span> <span class="pre">return</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">occurrences</span> <span class="pre">of</span> <span class="pre">value</span></span></span><a class="headerlink" href="#katana.DataFrame.count" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.DataFrame.index">
-<span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="optional">[</span>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em><span class="optional">[</span>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em><span class="optional">]</span><span class="optional">]</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">integer</span> <span class="pre">--</span> <span class="pre">return</span> <span class="pre">first</span> <span class="pre">index</span> <span class="pre">of</span> <span class="pre">value.</span></span></span><a class="headerlink" href="#katana.DataFrame.index" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="optional">[</span>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em><span class="optional">[</span>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em><span class="optional">]</span><span class="optional">]</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">integer</span> <span class="pre">--</span> <span class="pre">return</span> <span class="pre">first</span> <span class="pre">index</span> <span class="pre">of</span> <span class="pre">value.</span></span></span><a class="headerlink" href="#katana.DataFrame.index" title="Permalink to this definition">#</a></dt>
 <dd><p>Raises ValueError if the value is not present.</p>
 <p>Supporting start and stop arguments is optional, but
 recommended.</p>
@@ -607,7 +601,7 @@ recommended.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.DataFrame.to_pandas">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">to_pandas</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.core.frame.DataFrame</span></span></span><a class="headerlink" href="#katana.DataFrame.to_pandas" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">to_pandas</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.core.frame.DataFrame</span></span></span><a class="headerlink" href="#katana.DataFrame.to_pandas" title="Permalink to this definition">#</a></dt>
 <dd><p>Create a pandas dataframe from this dataframe by copying the data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -618,14 +612,14 @@ recommended.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="katana.DataFrame.at">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">at</span></span><a class="headerlink" href="#katana.DataFrame.at" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">at</span></span><a class="headerlink" href="#katana.DataFrame.at" title="Permalink to this definition">#</a></dt>
 <dd><p>&gt;&gt; df.at[row, column]</p>
 <p>Index a single element from the dataframe.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="katana.DataFrame.columns">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">columns</span></span><a class="headerlink" href="#katana.DataFrame.columns" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">columns</span></span><a class="headerlink" href="#katana.DataFrame.columns" title="Permalink to this definition">#</a></dt>
 <dd><p>a sequence containing all the column names in this dataframe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -636,7 +630,7 @@ recommended.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="katana.DataFrame.dtypes">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#katana.DataFrame.dtypes" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#katana.DataFrame.dtypes" title="Permalink to this definition">#</a></dt>
 <dd><p>The dtype of each column as a dict mapping column names to dtypes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -647,84 +641,84 @@ recommended.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="katana.DataFrame.shape">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shape</span></span><a class="headerlink" href="#katana.DataFrame.shape" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shape</span></span><a class="headerlink" href="#katana.DataFrame.shape" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="katana.OrderedByIntegerMetric">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">OrderedByIntegerMetric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indexer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.OrderedByIntegerMetric" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">OrderedByIntegerMetric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indexer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.OrderedByIntegerMetric" title="Permalink to this definition">#</a></dt>
 <dd><dl class="py method">
 <dt class="sig sig-object py" id="katana.OrderedByIntegerMetric.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indexer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.OrderedByIntegerMetric.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indexer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.OrderedByIntegerMetric.__init__" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="katana.PerSocketChunkFIFO">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">PerSocketChunkFIFO</span></span><a class="headerlink" href="#katana.PerSocketChunkFIFO" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">PerSocketChunkFIFO</span></span><a class="headerlink" href="#katana.PerSocketChunkFIFO" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="katana.UserContext">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">UserContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">UserContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext" title="Permalink to this definition">#</a></dt>
 <dd><dl class="py method">
 <dt class="sig sig-object py" id="katana.UserContext.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.__init__" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.UserContext.abort">
-<span class="sig-name descname"><span class="pre">abort</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.abort" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">abort</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.abort" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.UserContext.breakLoop">
-<span class="sig-name descname"><span class="pre">breakLoop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.breakLoop" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">breakLoop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.breakLoop" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.UserContext.cautiousPoint">
-<span class="sig-name descname"><span class="pre">cautiousPoint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.cautiousPoint" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">cautiousPoint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.cautiousPoint" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.UserContext.isFirstPass">
-<span class="sig-name descname"><span class="pre">isFirstPass</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.isFirstPass" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">isFirstPass</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.isFirstPass" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.UserContext.push">
-<span class="sig-name descname"><span class="pre">push</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.push" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">push</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.push" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.UserContext.push_back">
-<span class="sig-name descname"><span class="pre">push_back</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.push_back" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">push_back</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.UserContext.push_back" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="katana.UserContext.dtype">
-<span class="sig-name descname"><span class="pre">dtype</span></span><a class="headerlink" href="#katana.UserContext.dtype" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">dtype</span></span><a class="headerlink" href="#katana.UserContext.dtype" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="katana.UserContext.storage_size">
-<span class="sig-name descname"><span class="pre">storage_size</span></span><a class="headerlink" href="#katana.UserContext.storage_size" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">storage_size</span></span><a class="headerlink" href="#katana.UserContext.storage_size" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.do_all">
-<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">do_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.do_all" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">do_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.do_all" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.do_all_operator">
-<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">do_all_operator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">typ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nopython</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kws</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/loop_operators.html#do_all_operator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.do_all_operator" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">do_all_operator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">typ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nopython</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kws</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/loop_operators.html#do_all_operator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.do_all_operator" title="Permalink to this definition">#</a></dt>
 <dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@do_all_operator</span><span class="p">()</span>
 <span class="gp">... </span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">arg0</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">argn</span><span class="p">,</span> <span class="n">element</span><span class="p">):</span> <span class="o">...</span>
 </pre></div>
@@ -748,12 +742,12 @@ operator may not add a numpy array to a global list.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.for_each">
-<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">for_each</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">worklist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_pushes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_conflict_detection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.for_each" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">for_each</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">worklist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_pushes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_conflict_detection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.for_each" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.for_each_operator">
-<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">for_each_operator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">typ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nopython</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kws</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/loop_operators.html#for_each_operator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.for_each_operator" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">for_each_operator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">typ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nopython</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kws</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/loop_operators.html#for_each_operator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.for_each_operator" title="Permalink to this definition">#</a></dt>
 <dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@for_each_operator</span><span class="p">()</span>
 <span class="gp">... </span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">arg0</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">argn</span><span class="p">,</span> <span class="n">element</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span> <span class="o">...</span>
 </pre></div>
@@ -777,7 +771,7 @@ operator may not add a numpy array to a global list.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.get_active_threads">
-<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">get_active_threads</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.get_active_threads" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">get_active_threads</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#katana.get_active_threads" title="Permalink to this definition">#</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>The number of threads Katana is configured to use for work.</p>
@@ -787,7 +781,7 @@ operator may not add a numpy array to a global list.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.obim_metric">
-<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">obim_metric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">typ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nopython</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kws</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/loop_operators.html#obim_metric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.obim_metric" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">obim_metric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">typ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nopython</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kws</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/katana/loop_operators.html#obim_metric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#katana.obim_metric" title="Permalink to this definition">#</a></dt>
 <dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@obim_metric</span><span class="p">()</span>
 <span class="gp">... </span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">arg0</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">argn</span><span class="p">,</span> <span class="n">element</span><span class="p">):</span> <span class="o">...</span>
 </pre></div>
@@ -802,7 +796,7 @@ metric may not add a numpy array to a global list.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.set_active_threads">
-<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">set_active_threads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.set_active_threads" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">set_active_threads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.set_active_threads" title="Permalink to this definition">#</a></dt>
 <dd><p>Set the number of threads Katana should use to do computation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -813,7 +807,7 @@ metric may not add a numpy array to a global list.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="katana.set_busy_wait">
-<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">set_busy_wait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.set_busy_wait" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">katana.</span></span><span class="sig-name descname"><span class="pre">set_busy_wait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#katana.set_busy_wait" title="Permalink to this definition">#</a></dt>
 <dd><p>Configure Katana threads busy wait for work. This decreases latency at the cost of 100% CPU usage even if there is
 no work to be done.</p>
 <dl class="field-list simple">
@@ -836,8 +830,9 @@ this will disable busy waiting.</p>
       </div>
     </div>
   
-    <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
-  <footer class="footer mt-5 mt-md-0">
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+<footer class="footer mt-5 mt-md-0">
   <div class="container">
     
     <div class="footer-item">

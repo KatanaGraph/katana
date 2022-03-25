@@ -53,6 +53,8 @@ from katana.local.analytics import (
     sssp_assert_valid,
     subgraph_extraction,
     triangle_count,
+    ksssp, 
+    KssspStatistics
 )
 
 NODES_TO_SAMPLE = 10
@@ -151,6 +153,29 @@ def test_sssp(graph: Graph):
 
     # Verify with numba implementation of verifier
     verify_sssp(graph, start_node, property_name)
+
+
+def test_ksssp(graph: Graph):
+    weight_name = "workFrom"
+    start_node = 0
+    report_node = 10
+    num_paths = 5
+
+    table = ksssp(graph, weight_name, start_node, report_node, num_paths)
+    paths = table.to_dist()['path']
+    assert len(paths) <= num_paths
+
+    for i in range(len(paths)):
+        assert paths[i][-1] == report_node
+
+        for j in range(i + 1, len(paths)):
+            if len(paths[i]) == len(paths[j]):
+                unique_path = False
+                for (elem_i, elem_j) in zip(paths[i], paths[j]):
+                    if elem_i != elem_j:
+                        unique_path = True
+                        break
+                assert unique_path
 
 
 def test_jaccard(graph: Graph):

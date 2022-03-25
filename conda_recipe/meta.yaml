@@ -158,6 +158,7 @@ outputs:
         - nbconvert {{ nbconvert }}
         - mistune {{ mistune }}
         - pexpect {{ pexpect }}
+        - jinja2 {{ jinja2 }}
       source_files:
         - external/test-datasets
         - python/test

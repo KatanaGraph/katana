@@ -185,7 +185,9 @@ jemalloc:
     - conan
     - conda
 jinja2:
-  version: [ 2.11, null ]
+  # nbconvert does not express its own dependencies very well. In particular,
+  # it depends on jinja2<3.1
+  version: [ 2.11, 3.1 ]
   labels:
     - conda/dev
 markupsafe:

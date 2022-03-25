@@ -28,7 +28,8 @@ def check(f):
     return f
 
 
-CONDA_ENV_UPDATE_INSTRUCTIONS = """
+def conda_env_update_instructions():
+    return """"
     Install the required conda packages with:
         # The external file if you have it.
         conda env update -f external/katana/conda_recipe/environment.yml
@@ -37,12 +38,31 @@ CONDA_ENV_UPDATE_INSTRUCTIONS = """
     """
 
 
+def conda_env_reactivate_instructions():
+    conda_env_name = Path(os.environ["CONDA_PREFIX"]).name
+    return f"""
+        Reactivate your environment by starting a new shell and activating your environment:
+          [start new shell]
+          conda activate {conda_env_name}
+        (running conda deactivate followed by activate does not correctly reset Go environment variables, so you
+        need a new clean shell. Logout and back in, or open a clean shell some other way.)
+        """
+
+
 @check
 def avoid_go_nocgo(**_kwargs):
     has_problem = False
+    cgo_enabled_env_var = os.environ.get("CGO_ENABLED")
+    if cgo_enabled_env_var is not None and cgo_enabled_env_var != "1":
+        show_problem(
+            f"CGO_ENABLED environment variable is set to {cgo_enabled_env_var}",
+            conda_env_reactivate_instructions()
+            + """\n        and make sure CGO_ENABLED=1 is set in your environment.""",
+        )
+        has_problem = True
     try:
         go_env_lines = subprocess.check_output(["go", "env"], encoding="UTF-8").splitlines()
-        if 'CGO_ENABLED="0"' not in go_env_lines:
+        if 'CGO_ENABLED="1"' not in go_env_lines and cgo_enabled_env_var in (None, "1"):
             show_problem(
                 "go is installed in no-cgo mode",
                 """
@@ -52,18 +72,8 @@ def avoid_go_nocgo(**_kwargs):
             )
             has_problem = True
     except subprocess.SubprocessError as e:
-        show_problem("go executable did not run correctly", CONDA_ENV_UPDATE_INSTRUCTIONS, exc=e)
+        show_problem("go executable did not run correctly", conda_env_update_instructions, exc=e)
         has_problem = True
-    if has_problem:
-        # Only check this if we see an issue above. It may help people with workarounds. However,
-        # it has false positives, so don't check in the normal case.
-        cgo_enabled_env_var = os.environ.get("CGO_ENABLED")
-        if cgo_enabled_env_var != "1":
-            show_problem(
-                f"CGO_ENABLED environment variable is set to {cgo_enabled_env_var}",
-                """Remove no cgo go install, or set CGO_ENABLED=1 in your environment.""",
-            )
-            has_problem = True
     return has_problem
 
 
@@ -98,7 +108,7 @@ def conda_needs_reactivate(**_kwargs):
     conda_run_env = parse_env_output(
         subprocess.check_output(["conda", "run", "-p", os.environ["CONDA_PREFIX"], "env"], encoding="UTF-8")
     )
-    conda_env_name = Path(os.environ["CONDA_PREFIX"]).name
+
     for k in set(current_env.keys()) | set(conda_run_env.keys()):
         if k in ("PS1", "PS2", "SHLVL", "PATH", "CONDA_ROOT", "_"):
             continue
@@ -106,10 +116,7 @@ def conda_needs_reactivate(**_kwargs):
             show_problem(
                 f"environment does not match installed conda packages "
                 f"(Environment variable {k} does not match: {current_env.get(k)} != {conda_run_env.get(k)})",
-                f"""
-                Reactivate your environment with:
-                  conda deactivate; conda activate {conda_env_name}
-                """,
+                conda_env_reactivate_instructions(),
             )
             has_problem = True
     return has_problem
@@ -132,7 +139,7 @@ def conda_environment_packages_wrong(src_dir):
             output = p.stdout.read()
             p.wait()
             if p.returncode != 0:
-                show_problem(f"Conda environment needs update with {yml}\n{output}", CONDA_ENV_UPDATE_INSTRUCTIONS)
+                show_problem(f"Conda environment needs update with {yml}\n{output}", conda_env_update_instructions)
     return has_problem
 
 
@@ -156,8 +163,11 @@ def check_build_environment(check, src_dir, verbose):
         if not check or f.__name__ in check:
             click.echo(f"Running check {f.__name__}...")
             has_problem = f(src_dir=src_dir) or has_problem
+    click.echo("Make sure you ran this script from the exact shell you use for builds.")
     if has_problem:
         click.echo("There are potential problems. You may need to address them.")
+    else:
+        click.echo("No obvious problems found.")
     return 1 if has_problem else 0
 
 

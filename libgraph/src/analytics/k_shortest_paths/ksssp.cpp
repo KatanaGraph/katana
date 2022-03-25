@@ -287,7 +287,7 @@ GetPath(const Path* path, arrow::UInt64Builder& builder) {
     GetPath(path->last, builder);
   }
 
-  builder.Append(path->parent);
+  KATANA_CHECKED(builder.Append(path->parent));
 }
 
 /**
@@ -412,7 +412,7 @@ KssspImpl(
       KATANA_CHECKED(outer_builder.Append());
 
       GetPath(pair.second, inner_builder);
-      inner_builder.Append(report);
+      KATANA_CHECKED(inner_builder.Append(report));
     }
 
     arr = KATANA_CHECKED(builder->Finish());

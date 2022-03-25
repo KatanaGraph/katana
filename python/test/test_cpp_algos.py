@@ -40,6 +40,7 @@ from katana.local.analytics import (
     k_core_assert_valid,
     k_truss,
     k_truss_assert_valid,
+    ksssp,
     leiden_clustering,
     leiden_clustering_assert_valid,
     local_clustering_coefficient,
@@ -53,8 +54,6 @@ from katana.local.analytics import (
     sssp_assert_valid,
     subgraph_extraction,
     triangle_count,
-    ksssp, 
-    KssspStatistics
 )
 
 NODES_TO_SAMPLE = 10

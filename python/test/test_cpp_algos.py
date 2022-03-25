@@ -167,7 +167,7 @@ def test_ksssp(graph: Graph):
     for i, i_path in enumerate(paths):
         assert paths[i][-1] == report_node
 
-        for j, j_path in enumerate(paths, start=i):
+        for _, j_path in enumerate(paths, start=i):
             if len(i_path) == len(j_path):
                 unique_path = False
                 for (elem_i, elem_j) in zip(i_path, j_path):

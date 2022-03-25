@@ -14,7 +14,6 @@ from libc.stdint cimport uint32_t
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
-
 from pyarrow.lib cimport CTable, Table, pyarrow_unwrap_table, pyarrow_wrap_table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext

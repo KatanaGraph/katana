@@ -67,10 +67,10 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
 
         @staticmethod
         Result[_KssspStatistics] Compute(_PropertyGraph* pg,
-                                         const string& edge_property_name, 
-                                         shared_ptr[CTable] table, 
-                                         size_t report_node, 
-                                         const bool& is_symmetric, 
+                                         const string& edge_property_name,
+                                         shared_ptr[CTable] table,
+                                         size_t report_node,
+                                         const bool& is_symmetric,
                                          CTxnContext* txn_ctx)
 
 
@@ -242,7 +242,7 @@ cdef class KssspStatistics(Statistics):
     """
     cdef _KssspStatistics underlying
 
-    def __init__(self, pg, str edge_property_name, Table table, 
+    def __init__(self, pg, str edge_property_name, Table table,
                  size_t report_node, bool is_symmetric=False, txn_ctx = None):
         """
         :type pg: katana.local.Graph
@@ -262,7 +262,7 @@ cdef class KssspStatistics(Statistics):
         txn_ctx = txn_ctx or TxnContext()
         with nogil:
             self.underlying = handle_result_KssspStatistics(_KssspStatistics.Compute(
-                underlying_property_graph(pg), edge_weight_property_name_str, table_ptr, 
+                underlying_property_graph(pg), edge_weight_property_name_str, table_ptr,
                 report_node, is_symmetric, underlying_txn_context(txn_ctx)))
 
     def __str__(self) -> str:

@@ -46,16 +46,15 @@ def kg_bfs_iter(graph: KatanaGraph, source_node: NodeID, depth_limit: int) -> Nu
     i = 0
     while len(new_list) > 0:
         idx_list = []
-        for j in range(len(new_list)):
-            if sorted_list[i] == new_list[j][1]:
+        for j in new_list:
+            if sorted_list[i] == j[1]:
                 idx_list.append(j)
-        sub_list = []
         for j in idx_list:
-            sub_list.append(new_list.pop(j)[0])
-        sorted_list += sorted(sub_list)
+            new_list.remove(j)
+        sorted_list += sorted(j[0] for j in idx_list)
         i += 1
 
-    bfs_arr = np.array([sorted_list])
+    bfs_arr = np.array(sorted_list)
     return bfs_arr
 
 # TODO(pengfei):

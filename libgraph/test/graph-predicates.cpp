@@ -26,8 +26,13 @@ TestIsApproximateDegreeDistributionPowerLaw() {
         !katana::analytics::IsApproximateDegreeDistributionPowerLaw(*g.get()));
   }
   {
-    auto g = katana::PropertyGraph::Make(
-        rmat10InputFile, &txn_ctx, katana::RDGLoadOptions());
+    auto res = katana::URI::Make(rmat10InputFile);
+    if (!res) {
+      KATANA_LOG_FATAL("input file {} error: {}", rmat10InputFile, res.error());
+    }
+    auto uri = res.value();
+    auto g =
+        katana::PropertyGraph::Make(uri, &txn_ctx, katana::RDGLoadOptions());
 
     KATANA_LOG_ASSERT(
         katana::analytics::IsApproximateDegreeDistributionPowerLaw(

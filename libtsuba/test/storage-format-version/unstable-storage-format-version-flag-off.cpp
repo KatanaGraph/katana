@@ -18,7 +18,7 @@ namespace fs = boost::filesystem;
 /// Tests the following while the feature flag is disabled:
 /// 1) loading and storing a stable RDG
 katana::Result<void>
-TestStable(const std::string& stable_rdg) {
+TestStable(const katana::URI& stable_rdg) {
   KATANA_LOG_ASSERT(!stable_rdg.empty());
 
   // load a stable rdg
@@ -26,7 +26,7 @@ TestStable(const std::string& stable_rdg) {
   KATANA_LOG_ASSERT(!rdg.IsUnstableStorageFormat());
 
   // store the stable rdg
-  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
+  auto rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   return katana::ResultSuccess();
@@ -35,7 +35,7 @@ TestStable(const std::string& stable_rdg) {
 /// Tests the following while the feature flag is disabled:
 /// 1) loading an unstable RDG
 katana::Result<void>
-TestLoadUnstable(const std::string& unstable_rdg) {
+TestLoadUnstable(const katana::URI& unstable_rdg) {
   KATANA_LOG_ASSERT(!unstable_rdg.empty());
 
   // this should fail
@@ -43,6 +43,16 @@ TestLoadUnstable(const std::string& unstable_rdg) {
   auto res = LoadRDG(unstable_rdg);
   KATANA_LOG_ASSERT(!res);
 
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+Run(const std::string& stable, const std::string& unstable) {
+  const katana::URI stable_rdg = KATANA_CHECKED(katana::URI::Make(stable));
+  const katana::URI unstable_rdg = KATANA_CHECKED(katana::URI::Make(unstable));
+
+  KATANA_CHECKED(TestStable(stable_rdg));
+  KATANA_CHECKED(TestLoadUnstable(unstable_rdg));
   return katana::ResultSuccess();
 }
 
@@ -62,17 +72,8 @@ main(int argc, char* argv[]) {
   // Ensure the feature flag is not set
   KATANA_LOG_ASSERT(!KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat));
 
-  const std::string& stable_rdg = argv[1];
-  const std::string& unstable_rdg = argv[2];
-
-  auto res = TestStable(stable_rdg);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
-  }
-
-  res = TestLoadUnstable(unstable_rdg);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
+  if (auto res = Run(argv[1], argv[2]); !res) {
+    KATANA_LOG_FATAL("URI from string {} failed: {}", argv[1], res.error());
   }
 
   if (auto fini_good = katana::FiniTsuba(); !fini_good) {

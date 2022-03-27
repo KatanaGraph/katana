@@ -241,7 +241,7 @@ public:
 
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name, katana::TxnContext* txn_ctx,
+      const katana::URI& rdg_dir, katana::TxnContext* txn_ctx,
       const katana::RDGLoadOptions& opts = katana::RDGLoadOptions());
 
   /// Make a property graph from an RDG handle
@@ -355,7 +355,7 @@ public:
     return rdg_->WriteRDKSubstructureIndexPrimitive(index);
   }
 
-  const std::string& rdg_dir() const { return rdg_->rdg_dir().string(); }
+  const katana::URI& rdg_dir() const { return rdg_->rdg_dir(); }
 
   uint32_t partition_id() const { return rdg_->partition_id(); }
 
@@ -375,7 +375,7 @@ public:
   ///
   /// \returns io_error if, for instance, a file already exists
   Result<void> Write(
-      const std::string& rdg_name, const std::string& command_line,
+      const katana::URI& rdg_dir, const std::string& command_line,
       katana::TxnContext* txn_ctx);
 
   /// Commit updates modified state and re-uses graph components already in storage.
@@ -1072,16 +1072,16 @@ private:
       katana::TxnContext* txn_ctx);
 
   Result<void> ConductWriteOp(
-      const std::string& uri, const std::string& command_line,
+      const katana::URI& uri, const std::string& command_line,
       katana::RDG::RDGVersioningPolicy versioning_action,
       katana::TxnContext* txn_ctx);
 
   Result<void> WriteGraph(
-      const std::string& uri, const std::string& command_line,
+      const katana::URI& uri, const std::string& command_line,
       katana::TxnContext* txn_ctx);
 
   Result<void> WriteView(
-      const std::string& uri, const std::string& command_line,
+      const katana::URI& uri, const std::string& command_line,
       katana::TxnContext* txn_ctx);
 
   /// Return the number of nodes of the original property graph.

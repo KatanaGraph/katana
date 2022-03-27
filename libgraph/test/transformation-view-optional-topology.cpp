@@ -75,7 +75,12 @@ main(int argc, char** argv) {
   cll::ParseCommandLineOptions(argc, argv);
 
   katana::TxnContext txn_ctx;
-  katana::PropertyGraph pg = LoadGraph(inputFile);
+  auto res = katana::URI::Make(inputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
+  }
+  auto inputURI = res.value();
+  katana::PropertyGraph pg = LoadGraph(inputURI);
 
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);

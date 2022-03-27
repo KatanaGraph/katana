@@ -49,17 +49,17 @@ CSRPresent(katana::RDG* rdg) {
 }
 
 void
-CleanupRDGDirs(std::vector<std::string> dirs) {
+CleanupRDGDirs(std::vector<katana::URI> dirs) {
   for (auto rdg_dir : dirs) {
     KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir);
-    fs::remove_all(rdg_dir);
+    fs::remove_all(rdg_dir.path());
   }
 }
 
 /// Load a graph that was stored without optional topology support
 /// Ensure it survives a store/load cycle
 katana::Result<void>
-TestGraphBackwardsCompatabilityRoundTrip(const std::string& rdg_name) {
+TestGraphBackwardsCompatabilityRoundTrip(const katana::URI& rdg_name) {
   KATANA_LOG_DEBUG("***** Testing Backwards Compatability *****");
 
   KATANA_LOG_ASSERT(!rdg_name.empty());
@@ -71,7 +71,7 @@ TestGraphBackwardsCompatabilityRoundTrip(const std::string& rdg_name) {
   KATANA_CHECKED(CSRPresent(&rdg));
 
   // write out converted rdg
-  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
+  auto rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load converted rdg
@@ -87,7 +87,7 @@ TestGraphBackwardsCompatabilityRoundTrip(const std::string& rdg_name) {
 /// Ensure added optional topology didn't change
 /// Since we added the optional topology to a graph that originally did not have
 katana::Result<void>
-TestGraphComplexOptionalTopologyRoundTrip(const std::string& rdg_name) {
+TestGraphComplexOptionalTopologyRoundTrip(const katana::URI& rdg_name) {
   KATANA_LOG_DEBUG(
       "***** Testing Complex Optional Topology Support Roundtrip *****");
 
@@ -136,7 +136,7 @@ TestGraphComplexOptionalTopologyRoundTrip(const std::string& rdg_name) {
   KATANA_CHECKED(csr->unbind_file_storage());
   csr = nullptr;
 
-  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
+  auto rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load rdg with optional topology and verify it
@@ -181,7 +181,7 @@ TestGraphComplexOptionalTopologyRoundTrip(const std::string& rdg_name) {
 /// Since we added the optional topology to a graph that originally did not have
 /// optional topology support, store/load the graph again
 katana::Result<void>
-TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
+TestGraphOptionalTopologyRoundTrip(const katana::URI& rdg_name) {
   KATANA_LOG_DEBUG("***** Testing Optional Topology Support Roundtrip *****");
 
   KATANA_LOG_ASSERT(!rdg_name.empty());
@@ -222,7 +222,7 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
   KATANA_CHECKED(csr->unbind_file_storage());
   csr = nullptr;
 
-  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
+  auto rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load rdg with optional topology and verify it
@@ -257,7 +257,7 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
   optional_topology = nullptr;
 
   // write out rdg with optional topology
-  std::string rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
+  auto rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
   KATANA_LOG_ASSERT(!rdg_dir2.empty());
 
   // load rdg again, and verify the optional topology
@@ -293,14 +293,14 @@ TestGraphOptionalTopologyRoundTrip(const std::string& rdg_name) {
 /// Store it so we get a graph with optional topology support
 /// Ensure graph with optional topology support survives store/load cycle
 katana::Result<void>
-TestGraphBasicRoundTrip(const std::string& rdg_name) {
+TestGraphBasicRoundTrip(const katana::URI& rdg_name) {
   KATANA_LOG_DEBUG("***** Testing Basic Roundtrip *****");
 
   KATANA_LOG_ASSERT(!rdg_name.empty());
 
   katana::RDG rdg = KATANA_CHECKED(LoadRDG(rdg_name));
   KATANA_CHECKED(CSRPresent(&rdg));
-  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
+  auto rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
 
   // load converted rdg
@@ -311,7 +311,7 @@ TestGraphBasicRoundTrip(const std::string& rdg_name) {
 
   // write out converted rdg
 
-  std::string rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
+  auto rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
   KATANA_LOG_ASSERT(!rdg_dir2.empty());
 
   // load converted rdg
@@ -322,6 +322,15 @@ TestGraphBasicRoundTrip(const std::string& rdg_name) {
 
   CleanupRDGDirs({rdg_dir1, rdg_dir2});
 
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+Run(const std::string& rdg_str) {
+  const katana::URI rdg_dir = KATANA_CHECKED(katana::URI::Make(rdg_str));
+  KATANA_CHECKED(TestGraphBasicRoundTrip(rdg_dir));
+  KATANA_CHECKED(TestGraphOptionalTopologyRoundTrip(rdg_dir));
+  KATANA_CHECKED(TestGraphComplexOptionalTopologyRoundTrip(rdg_dir));
   return katana::ResultSuccess();
 }
 
@@ -338,19 +347,8 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("missing rdg file directory");
   }
 
-  auto res = TestGraphBasicRoundTrip(argv[1]);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
-  }
-
-  res = TestGraphOptionalTopologyRoundTrip(argv[1]);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
-  }
-
-  res = TestGraphComplexOptionalTopologyRoundTrip(argv[1]);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
+  if (auto res = Run(argv[1]); !res) {
+    KATANA_LOG_FATAL("URI from string {} failed: {}", argv[1], res.error());
   }
 
   if (auto fini_good = katana::FiniTsuba(); !fini_good) {

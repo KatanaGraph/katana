@@ -3,6 +3,7 @@
 #include "katana/RDGSlice.h"
 #include "katana/Result.h"
 #include "katana/TextTracer.h"
+#include "katana/URI.h"
 
 namespace {
 // This test tests the following:
@@ -11,7 +12,7 @@ namespace {
 // 3. loading/unloading properties changes the properties tables as expected
 // 4. loading/unloading non-existent properties behaves as expected
 katana::Result<void>
-TestPropertyLoading(const std::string& path_to_manifest) {
+TestPropertyLoading(const katana::URI& path_to_manifest) {
   katana::RDGManifest manifest =
       KATANA_CHECKED(katana::FindManifest(path_to_manifest));
   katana::RDGHandle rdg_handle =
@@ -102,7 +103,8 @@ TestPropertyLoading(const std::string& path_to_manifest) {
 
 katana::Result<void>
 TestAll(const std::string& path_to_manifest) {
-  KATANA_CHECKED(TestPropertyLoading(path_to_manifest));
+  katana::URI uri = KATANA_CHECKED(katana::URI::Make(path_to_manifest));
+  KATANA_CHECKED(TestPropertyLoading(uri));
   return katana::ResultSuccess();
 }
 }  // namespace

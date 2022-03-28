@@ -12,6 +12,9 @@ python:
 arrow_cpp:
   - 6.0.* *_3_*
 
+jinja2:
+  - <3.1a0
+
 pin_run_as_build:
   arrow-cpp:
     max_pin: x

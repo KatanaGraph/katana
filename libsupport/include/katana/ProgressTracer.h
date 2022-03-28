@@ -31,9 +31,9 @@
 ///
 /// Best Practices:
 ///
-/// - If possible always avoid creating raw ProgressSpans from ProgressTracer
+/// - If possible, always avoid creating raw ProgressSpans from ProgressTracer
 ///
-/// - If possible always use ProgressScopes to handle ProgressSpans
+/// - If possible, always use ProgressScopes to handle ProgressSpans
 ///
 /// - Only use 1 ProgressTracer in an execution. They should be created at entry points.
 ///
@@ -117,45 +117,52 @@ public:
   static long GetMaxMem();
   static std::string GetValue(const Value& value);
 
-  // StartActiveSpan creates a new span. If there is not an active span,
-  // create a new top-level span. Otherwise, this function creates a child
-  // span of the active span. The returned scope will finish
-  // the span on close
+  /// StartActiveSpan creates a new span. If there is not an active span,
+  /// create a new top-level span. Otherwise, this function creates a child
+  /// span of the active span. The returned scope will finish
+  /// the span on close
   ProgressScope StartActiveSpan(const std::string& span_name);
   ProgressScope StartActiveSpan(
       const std::string& span_name, const ProgressContext& child_of);
 
-  /// Create a new top level span if ignore_active_span=true and
-  /// no child_of value is given
-  /// Otherwise creates a child span of the child_of span or active span
-  /// Should only be used to handle multiple active spans simultaneously
+  /// StartSpan creates a new span which is the child of the given span, but
+  /// unlike StartActiveSpan, StartSpan does not change the active span. This
+  /// method is used to create multiple active spans simultaneously.
   virtual std::shared_ptr<ProgressSpan> StartSpan(
       const std::string& span_name, const ProgressContext& child_of) = 0;
 
-  /// Calls finish on the active span, its parent is set to be active
-  /// Primarily for internal use only, preferred to use ProgressSpan's Finish function
+  /// FinishActiveSpan finishes the active span and the parent of the erstwhile
+  /// active span becomes the active span.
+  ///
+  /// The method is primarily for internal use only. Most users should use
+  /// ProgressSpan::Finish().
   void FinishActiveSpan();
 
-  // For passing spans across process/host boundaries
-  // These functions are needed, but are implemented now for
-  // debugging purposes, they will be replaced
-  // Extract returns a nullptr on failure
+  /// Inject passes a span from one process or host to another. The return value
+  /// of Inject should be passed to Extract.
+  ///
+  /// These functions are primarily for interest use only and they will be
+  /// replaced in the future.
   virtual std::string Inject(const ProgressContext& ctx) = 0;
+
+  // Extract receives context information from Inject. It returns a nullptr on
+  // failure.
   virtual std::unique_ptr<ProgressContext> Extract(
       const std::string& carrier) = 0;
 
-  /// Get the current scope’s span to add tagging/logging without having
-  /// to pass around scopes/spans as parameters
-  /// If there is no active span, an unnamed root span of a new trace
-  /// is created (in this case the program is probably not using tracing)
+  /// GetActiveSpan returns the current scope’s span.
+  ///
+  /// If there is no active span, return an unnamed root span of a new trace.
+  /// is created (in this case the program is probably not using tracing).
   virtual ProgressSpan& GetActiveSpan();
   bool HasActiveSpan() { return active_span_ != nullptr; }
   uint32_t GetHostID() const { return host_id_; }
   uint32_t GetNumHosts() const { return num_hosts_; }
 
-  /// Finish closes the active span and its parent spans if
-  ///   present and resets the active span to the unnamed root span
-  /// Handles end of program logic and calls Close
+  /// Finish closes the active span and its parent spans if present and flushes any
+  /// buffered trace information.
+  ///
+  /// Finish resets the active span to the unnamed root span.
   void Finish();
 
 protected:
@@ -188,15 +195,15 @@ public:
   ProgressScope& operator=(const ProgressScope&) = delete;
   ProgressScope& operator=(ProgressScope&&) = delete;
 
-  /// Get the scope’s underlying span to add tagging/logging,
-  /// span relationships, and handle multiple active spans at a time
+  /// span returns the span of the scope. Spans may have tags and logs
+  /// associated with them.
   ProgressSpan& span() { return *span_; }
 
-  /// Closes the underlying ProgressSpan if the ProgressScope was created
-  /// with the flag finish_on_close=true
-  /// Note that this will only close the underlying ProgressSpan when all
-  /// of its active children ProgressSpans have been finished
-  /// This will be called by RAII if it has not already been called
+  /// Close marks the underlying ProgressSpan as complete. This method will
+  /// only finish the underlying ProgressSpan when all of its active children
+  /// ProgressSpans have been finished.
+  ///
+  /// This is called by ~ProgressScope if not called explicitly.
   void Close();
 
 private:
@@ -225,12 +232,13 @@ public:
   ProgressSpan& operator=(const ProgressSpan&) = delete;
   ProgressSpan& operator=(ProgressSpan&&) = delete;
 
-  /// Adds a tag to the span.
+  /// SetTag adds a tag to the span.
   virtual void SetTags(const Tags& tags) = 0;
   void SetError() { SetTags({{"error", true}}); }
 
-  /// Output logging as well as standard metrics and extra stats
-  /// Current standard metrics: max_mem, mem, host, and timestamp.
+  /// Log attaches a message with standard metrics and optional tags.
+  ///
+  /// The current standard metrics are max_mem, mem, host, and timestamp.
   virtual void Log(const std::string& message, const Tags& tags) = 0;
   void Log(const std::string& message) { Log(message, {}); }
   void LogError(const std::string& message) {
@@ -238,14 +246,15 @@ public:
   }
   void LogError(const std::string& message, const ErrorInfo& error);
 
-  /// Optionally output detailed memory profiling information.
+  /// LogProfile optionally attaches detailed memory profiling information.
   ///
   /// This is a noop unless KATANA_USE_JEMALLOC is enabled and the environment
   /// variable MALLOC_CONF contains prof:true. See
   /// docs/contributing/performance.rst for more details.
   void LogProfile();
 
-  /// Get span's context for propagating across process boundaries
+  /// GetContext returns the a context that can be used with
+  /// ProgressScope::Inject.
   virtual const ProgressContext& GetContext() const noexcept = 0;
 
   /// Primarily for internal class use only
@@ -254,16 +263,17 @@ public:
   bool IsFinished() const { return finished_; }
   const std::shared_ptr<ProgressSpan>& GetParentSpan() { return parent_; }
 
-  /// Every ProgressSpan started must be finished
+  /// Finish the ProgressSpan.
   ///
-  /// If the ProgressScope for this ProgressSpan was created with
-  /// finish_on_close=true then this will be called via the
-  /// ProgressScope’s RAII if Close() has not already been called
+  /// Every ProgressSpan that has been created must be finished.
   ///
-  /// If there is an unclosed ProgressSpan at the end of
-  /// execution then a warning will be given
-  /// Note that this immediately finishes the span regardless of it
-  /// having unfinished children ProgressSpans
+  /// Note that Finish immediately finishes the span even if it has unfinished
+  /// child spans.
+  ///
+  /// This is called by ~ProgressSpan if not called explicitly.
+  ///
+  /// If there is an unclosed ProgressSpan at the end of execution then a
+  /// warning is printed.
   void Finish();
 
 protected:

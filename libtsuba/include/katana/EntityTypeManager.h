@@ -527,6 +527,23 @@ public:
     return std::nullopt;
   }
 
+  /// \returns the names of the atomic subtypes for the given non-atomic type
+  /// \p entity_type_id is an non-atomic type
+  std::set<std::string> GetNonAtomicTypeNames(
+      EntityTypeID entity_type_id) const {
+    std::set<std::string> result;
+    auto atomic_types = GetAtomicSubtypes(entity_type_id);
+
+    for (auto super_type_id : atomic_types) {
+      auto val = GetAtomicTypeName(super_type_id);
+      if (val) {
+        result.insert(val.value());
+      }
+    }
+
+    return result;
+  }
+
   /// \returns a vector containing all atomic type IDs
   std::vector<EntityTypeID> GetAtomicEntityTypeIDs() const {
     std::vector<EntityTypeID> type_vec;

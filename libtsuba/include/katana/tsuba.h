@@ -56,10 +56,10 @@ OpenFlagsValid(uint32_t flags) {
 }
 
 KATANA_EXPORT katana::Result<RDGManifest> FindManifest(
-    const std::string& rdg_name);
+    const katana::URI& rdg_dir);
 
 KATANA_EXPORT katana::Result<katana::RDGManifest> FindManifest(
-    const std::string& rdg_name, katana::TxnContext* txn_ctx);
+    const katana::URI& rdg_dir, katana::TxnContext* txn_ctx);
 
 KATANA_EXPORT katana::Result<RDGHandle> Open(
     RDGManifest rdg_manifest, uint32_t flags);
@@ -87,7 +87,7 @@ KATANA_EXPORT katana::Result<void> Close(RDGHandle handle);
 
 /// Create an RDG storage location
 /// \param name is storage location prefix that will be used to store the RDG
-KATANA_EXPORT katana::Result<void> Create(const std::string& name);
+KATANA_EXPORT katana::Result<void> Create(const katana::URI& uri);
 
 /// @brief Describes properties of RDGView
 /// The RDGView will describe will identify the view-type, the arguments used to
@@ -96,25 +96,25 @@ KATANA_EXPORT katana::Result<void> Create(const std::string& name);
 struct KATANA_EXPORT RDGView {
   std::string view_type;
   std::string view_args;
-  std::string view_path;
+  katana::URI view_path;
   uint64_t num_partitions{0};
   uint32_t policy_id{0};
   bool transpose{false};
 };
 
 /// list the views in storage for a particular version of an RDG
-/// \param rdg_dir is the RDG's URI prefix
+/// \param rdg_uri is the RDG's URI prefix
 /// \param version is an optional version argument, if omitted this will return
 ///    the views for the latest version
 /// \returns a pair (RDG version, vector of RDGViews) or ErrorCode::NotFound if
 /// rdg_dir contains no manifest files
 KATANA_EXPORT katana::Result<std::pair<uint64_t, std::vector<RDGView>>>
 ListViewsOfVersion(
-    const std::string& rdg_dir, std::optional<uint64_t> version = std::nullopt);
+    const katana::URI& rdg_uri, std::optional<uint64_t> version = std::nullopt);
 
 KATANA_EXPORT katana::Result<std::vector<std::pair<katana::URI, katana::URI>>>
 CreateSrcDestFromViewsForCopy(
-    const std::string& src_dir, const std::string& dst_dir, uint64_t version);
+    const katana::URI& src_uri, const std::string& dst_dir, uint64_t version);
 
 /// CopyRDG copies RDG files from a source to a destination.
 /// E.g. SRC_DIR/part_vers0003_rdg_node00000 -> DST_DIR/part_vers0001_rdg_node_00000

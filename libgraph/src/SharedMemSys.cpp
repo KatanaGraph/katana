@@ -42,6 +42,7 @@ struct katana::SharedMemSys::Impl {
 
 katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
     : impl_(std::make_unique<Impl>()) {
+  katana::ProgressTracer::Set(std::move(tracer));
   LoadPlugins();
   if (auto init_good = katana::InitTsuba(&comm_backend); !init_good) {
     KATANA_LOG_FATAL("katana::InitTsuba: {}", init_good.error());
@@ -50,7 +51,7 @@ katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
   auto features_on = katana::internal::ExperimentalFeature::ReportEnabled();
   if (!features_on.empty()) {
     auto feature_string = katana::Join(features_on, ",");
-    tracer->GetActiveSpan().SetTags(
+    ProgressTracer::Get().GetActiveSpan().SetTags(
         {{"experimental_features_enabled", feature_string}});
   }
 
@@ -62,8 +63,6 @@ katana::SharedMemSys::SharedMemSys(std::unique_ptr<ProgressTracer> tracer)
         "features:\n\t{}",
         katana::Join(unrecognized, " "));
   }
-
-  katana::ProgressTracer::Set(std::move(tracer));
 }
 
 katana::SharedMemSys::~SharedMemSys() {

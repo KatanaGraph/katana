@@ -129,7 +129,7 @@ ValidateLDBC003EntityTypeManagers(
 }
 
 void
-TestConvertGraphStorageFormat(std::string& input_rdg) {
+TestConvertGraphStorageFormat(const katana::URI& input_rdg) {
   // Load existing "old" graph, which converts all uint8/bool properties into types
   // store it as a new file
   // load the new file
@@ -143,7 +143,7 @@ TestConvertGraphStorageFormat(std::string& input_rdg) {
   ValidateLDBC003EntityTypeManagers(
       g.GetNodeTypeManager(), g.GetEdgeTypeManager());
 
-  std::string g2_rdg_file = StoreGraph(&g);
+  auto g2_rdg_file = StoreGraph(&g);
   katana::PropertyGraph g2 = LoadGraph(g2_rdg_file);
   ValidateLDBC003EntityTypeManagers(
       g2.GetNodeTypeManager(), g2.GetEdgeTypeManager());
@@ -156,7 +156,7 @@ TestConvertGraphStorageFormat(std::string& input_rdg) {
 }
 
 void
-TestRoundTripNewStorageFormat(std::string& input_rdg) {
+TestRoundTripNewStorageFormat(const katana::URI& input_rdg) {
   // Test store/load cycle of a graph with the new storage format
   // To do this, we first must first convert an old graph.
   // Steps:
@@ -177,13 +177,13 @@ TestRoundTripNewStorageFormat(std::string& input_rdg) {
   ValidateLDBC003EntityTypeManagers(
       g.GetNodeTypeManager(), g.GetEdgeTypeManager());
 
-  std::string g2_rdg_file = StoreGraph(&g);
+  auto g2_rdg_file = StoreGraph(&g);
   katana::PropertyGraph g2 = LoadGraph(g2_rdg_file);
   ValidateLDBC003EntityTypeManagers(
       g2.GetNodeTypeManager(), g2.GetEdgeTypeManager());
 
   // second cycle doesn't do any conversion, but tests storing/loading a "new format" graph
-  std::string g3_rdg_file = StoreGraph(&g2);
+  auto g3_rdg_file = StoreGraph(&g2);
   katana::PropertyGraph g3 = LoadGraph(g3_rdg_file);
   ValidateLDBC003EntityTypeManagers(
       g3.GetNodeTypeManager(), g3.GetEdgeTypeManager());

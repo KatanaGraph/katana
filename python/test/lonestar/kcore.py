@@ -13,7 +13,7 @@ def compute_degree_count_operator(graph: Graph, current_degree, nid):
     Operator to initialize degree fields in graph with current degree. Since symmetric,
     out edge count is equivalent to in-edge count.
     """
-    current_degree[nid] = len(graph.out_edge_ids(nid))
+    current_degree[nid] = graph.out_degree(nid)
 
 
 @do_all_operator()
@@ -28,7 +28,7 @@ def setup_initial_worklist_operator(
 @for_each_operator()
 def compute_async_kcore_operator(graph: Graph, current_degree, k_core_num, nid, ctx):
     # Decrement degree of all the neighbors of dead node
-    for ii in graph.out_edge_ids(nid):
+    for ii in graph.out_edge_ids_for_node(nid):
         dst = graph.out_edge_dst(ii)
         old_degree = atomic_sub(current_degree, dst, 1)
         # Add new dead nodes to the worklist

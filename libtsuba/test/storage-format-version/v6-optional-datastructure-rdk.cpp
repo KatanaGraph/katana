@@ -31,7 +31,7 @@
  * 5) loading an RDG with 2 optional indices (RDKLSHIndexPrimitive, RDKSubstructureIndexPrimitive)
  */
 katana::Result<void>
-TestRoundTripRDKIndex(const std::string& rdg_dir) {
+TestRoundTripRDKIndex(const katana::URI& rdg_dir) {
   KATANA_LOG_ASSERT(!rdg_dir.empty());
   katana::RDKLSHIndexPrimitive lsh_index = GenerateLSHIndex();
   ValidateLSHIndex(lsh_index);
@@ -50,7 +50,7 @@ TestRoundTripRDKIndex(const std::string& rdg_dir) {
   ValidateLSHIndex(lsh_index_2);
 
   // Store the RDG in a new location
-  std::string rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
+  auto rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
 
   // Load the RDG from the new location
   katana::RDG rdg2 = KATANA_CHECKED(LoadRDG(rdg_dir2));
@@ -76,7 +76,7 @@ TestRoundTripRDKIndex(const std::string& rdg_dir) {
   ValidateSubstructIndex(substruct_index_2);
 
   // Store the RDG in a new location
-  std::string rdg_dir3 = KATANA_CHECKED(WriteRDG(std::move(rdg2)));
+  auto rdg_dir3 = KATANA_CHECKED(WriteRDG(std::move(rdg2)));
 
   // Load the RDG from the new location
   katana::RDG rdg3 = KATANA_CHECKED(LoadRDG(rdg_dir3));
@@ -102,14 +102,14 @@ TestRoundTripRDKIndex(const std::string& rdg_dir) {
  * and that we fail in a way that the caller can recover from
  */
 katana::Result<void>
-TestLoadFail(const std::string& rdg_dir) {
+TestLoadFail(const katana::URI& rdg_dir) {
   // make a copy of the RDG in a new location
   katana::RDG rdg = KATANA_CHECKED(LoadRDG(rdg_dir));
   // add an optional index
   katana::RDKLSHIndexPrimitive lsh_index = GenerateLSHIndex();
   ValidateLSHIndex(lsh_index);
   KATANA_CHECKED(rdg.WriteRDKLSHIndexPrimitive(lsh_index));
-  std::string rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
+  auto rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg)));
 
   // Load the RDG from the new location
   katana::RDG rdg2 = KATANA_CHECKED(LoadRDG(rdg_dir2));
@@ -130,7 +130,7 @@ TestLoadFail(const std::string& rdg_dir) {
   // write garbage over existing optional datastructure manifest
   // rdg must have only one of these manifests available for this test to function propertly
   std::string path =
-      KATANA_CHECKED(find_file(rdg_dir2, "rdk_lsh_index_manifest"));
+      KATANA_CHECKED(find_file(rdg_dir2.path(), "rdk_lsh_index_manifest"));
   KATANA_LOG_DEBUG("replacing manifest file at {}", path);
   std::filesystem::remove(path);
   ff->Bind(path);
@@ -143,6 +143,15 @@ TestLoadFail(const std::string& rdg_dir) {
     return KATANA_ERROR(katana::ErrorCode::InvalidArgument, "should fail");
   }
 
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+Run(const std::string& rdg_str) {
+  auto rdg_dir = KATANA_CHECKED(katana::URI::Make(rdg_str));
+
+  KATANA_CHECKED(TestRoundTripRDKIndex(rdg_dir));
+  KATANA_CHECKED(TestLoadFail(rdg_dir));
   return katana::ResultSuccess();
 }
 
@@ -160,16 +169,8 @@ main(int argc, char* argv[]) {
   katana::ProgressScope host_scope =
       katana::GetTracer().StartActiveSpan("rdg-slice test");
 
-  const std::string& rdg = argv[1];
-
-  auto res = TestRoundTripRDKIndex(rdg);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
-  }
-
-  res = TestLoadFail(rdg);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
+  if (auto res = Run(argv[1]); !res) {
+    KATANA_LOG_FATAL("run failed: {}", res.error());
   }
 
   if (auto fini_good = katana::FiniTsuba(); !fini_good) {

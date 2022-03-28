@@ -134,8 +134,13 @@ main(int argc, char** argv) {
   totalTime.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
+  auto res = katana::URI::Make(inputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
+  }
+  auto inputURI = res.value();
   std::unique_ptr<katana::PropertyGraph> pg =
-      MakeFileGraph(inputFile, edge_property_name);
+      MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->NumNodes() << " nodes, " << pg->NumEdges()
             << " edges\n";

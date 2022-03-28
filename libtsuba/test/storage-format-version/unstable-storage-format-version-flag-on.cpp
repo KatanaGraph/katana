@@ -28,12 +28,12 @@ namespace fs = boost::filesystem;
 /// 3) loading an unstable RDG and storing it as unstable
 katana::Result<void>
 TestRoundtripUnstable(
-    const std::string& stable_rdg, const std::string& unstable_rdg) {
+    const katana::URI& stable_rdg, const katana::URI& unstable_rdg) {
   KATANA_LOG_ASSERT(!stable_rdg.empty());
   KATANA_LOG_ASSERT(!unstable_rdg.empty());
 
   // clean up whatever temporary unstable rdg might already be present
-  std::filesystem::remove_all(unstable_rdg);
+  std::filesystem::remove_all(unstable_rdg.path());
 
   // load a stable rdg
   katana::RDG rdg = KATANA_CHECKED(LoadRDG(stable_rdg));
@@ -41,7 +41,7 @@ TestRoundtripUnstable(
   KATANA_LOG_ASSERT(!rdg.IsUnstableStorageFormat());
 
   // store the unstable rdg
-  std::string rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg), unstable_rdg));
+  auto rdg_dir1 = KATANA_CHECKED(WriteRDG(std::move(rdg), unstable_rdg));
   KATANA_LOG_ASSERT(!rdg_dir1.empty());
   // ensure where we stored it matches the unstable_rdg path so that the flag-off test can use it
   KATANA_LOG_ASSERT(rdg_dir1 == unstable_rdg);
@@ -51,11 +51,20 @@ TestRoundtripUnstable(
   KATANA_LOG_ASSERT(rdg1.IsUnstableStorageFormat());
 
   // RoundTrip it again to ensure we can load an unstable RDG and store it
-  std::string rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
+  auto rdg_dir2 = KATANA_CHECKED(WriteRDG(std::move(rdg1)));
   KATANA_LOG_ASSERT(!rdg_dir2.empty());
   katana::RDG rdg2 = KATANA_CHECKED(LoadRDG(rdg_dir2));
   KATANA_LOG_ASSERT(rdg2.IsUnstableStorageFormat());
 
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+Run(const std::string& stable, const std::string& unstable) {
+  const katana::URI stable_rdg = KATANA_CHECKED(katana::URI::Make(stable));
+  const katana::URI unstable_rdg = KATANA_CHECKED(katana::URI::Make(unstable));
+
+  KATANA_CHECKED(TestRoundtripUnstable(stable_rdg, unstable_rdg));
   return katana::ResultSuccess();
 }
 
@@ -75,12 +84,8 @@ main(int argc, char* argv[]) {
   // Ensure the feature flag is actually set
   KATANA_LOG_ASSERT(KATANA_EXPERIMENTAL_ENABLED(UnstableRDGStorageFormat));
 
-  const std::string& stable_rdg = argv[1];
-  const std::string& unstable_rdg = argv[2];
-
-  auto res = TestRoundtripUnstable(stable_rdg, unstable_rdg);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
+  if (auto res = Run(argv[1], argv[2]); !res) {
+    KATANA_LOG_FATAL("URI from string {} failed: {}", argv[1], res.error());
   }
 
   if (auto fini_good = katana::FiniTsuba(); !fini_good) {

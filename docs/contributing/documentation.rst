@@ -87,7 +87,7 @@ Style
 How-to template
 ===============
 
-``katana/docs/contributing/how_to_template.ipynb`` is a template for creating a
+``katana/docs/contributing/how-to-template.ipynb`` is a template for creating a
 how-to guide in the form of a Jupyter Notebook. Use it when you wish to take a
 reader through a detailed series of steps required to do an individual task or
 procedure. Be sure to follow the section structure in the notebook and to use

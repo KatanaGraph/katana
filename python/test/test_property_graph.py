@@ -234,7 +234,7 @@ def test_simple_algorithm(graph):
     @do_all_operator()
     def func_operator(g, prop, out, nid):
         t = 0
-        for eid in g.out_edge_ids(nid):
+        for eid in g.out_edge_ids_for_node(nid):
             nid2 = g.out_edge_dst(eid)
             if prop.is_valid(nid2):
                 t += prop[nid2]
@@ -326,6 +326,12 @@ def test_types(graph):
     }
     assert graph.edge_types.is_subtype_of(0, 1) is True
 
+    n_type = graph.node_types.get_non_atomic_entity_type([node_atomic_types["Post"], node_atomic_types["Message"]])
+    assert str(n_type) == "Message & Post"
+
+    new_n_type = graph.node_types.get_or_add_non_atomic_entity_type([n_type, node_atomic_types["City"]])
+    assert str(new_n_type) == "City & Message & Post"
+
 
 def test_projected(graph):
     projected_graph = graph.project([])
@@ -353,3 +359,57 @@ def test_projected(graph):
     projected_graph = graph.project(edge_types=[graph.edge_types.atomic_types["REPLY_OF"]])
     assert projected_graph.num_nodes() == 29946
     assert projected_graph.num_edges() == 371
+
+
+def test_out_edges(graph):
+    assert len(graph.out_edge_ids()) == graph.num_edges()
+    assert len(graph.out_edge_ids(1)) == 1
+    assert len(graph.out_edge_ids(26352, graph.edge_types.atomic_types["LIKES"])) == 27
+    assert graph.out_degree(26352) == 103
+    assert graph.out_degree(26352, graph.edge_types.atomic_types["LIKES"]) == 27
+
+    likes_id = graph.edge_types.atomic_types["LIKES"].id
+
+    @do_all_operator()
+    def f(graph, out, i):  # pylint: disable=unused-argument
+        out[0] = len(graph.out_edge_ids()) == graph.num_edges()
+        out[1] = len(graph.out_edge_ids_for_node(26352)) == 103
+        out[2] = len(graph.out_edge_ids_for_node_and_type(26352, likes_id)) == 27
+        out[3] = graph.out_degree(26352) == 103
+        out[4] = graph.out_degree_for_type(26352, likes_id) == 27
+
+    out = np.zeros(shape=(5,), dtype=int)
+    do_all(range(0, 1), f(graph.with_edge_type_lookup(), out))
+    assert all(out)
+
+    @do_all_operator()
+    def g(graph, out, i):  # pylint: disable=unused-argument
+        out[0] = len(graph.out_edge_ids()) == graph.num_edges()
+        out[1] = len(graph.out_edge_ids_for_node(26352)) == 103
+        out[2] = graph.out_degree(26352) == 103
+
+    out = np.zeros(shape=(3,), dtype=int)
+    do_all(range(0, 1), g(graph, out))
+    assert all(out)
+
+
+def test_in_edges(graph):
+    assert len(graph.in_edge_ids()) == graph.num_edges()
+    assert len(graph.in_edge_ids(1)) == 1
+    assert len(graph.in_edge_ids(28007, graph.edge_types.atomic_types["REPLY_OF"])) == 2
+    assert graph.in_degree(28007) == 40
+    assert graph.in_degree(28007, graph.edge_types.atomic_types["REPLY_OF"]) == 2
+
+    reply_of_id = graph.edge_types.atomic_types["REPLY_OF"].id
+
+    @do_all_operator()
+    def f(graph, out, i):  # pylint: disable=unused-argument
+        out[0] = len(graph.in_edge_ids()) == graph.num_edges()
+        out[1] = len(graph.in_edge_ids_for_node(1)) == 1
+        out[2] = len(graph.in_edge_ids_for_node_and_type(28007, reply_of_id)) == 2
+        out[3] = graph.in_degree(28007) == 40
+        out[4] = graph.in_degree_for_type(28007, reply_of_id) == 2
+
+    out = np.zeros(shape=(5,), dtype=int)
+    do_all(range(0, 1), f(graph.with_in_edges().with_edge_type_lookup(), out))
+    assert all(out)

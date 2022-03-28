@@ -269,8 +269,13 @@ main(int argc, char** argv) {
   timer_graph_read.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
+  auto res = katana::URI::Make(inputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
+  }
+  auto inputURI = res.value();
   std::unique_ptr<katana::PropertyGraph> pg =
-      MakeFileGraph(inputFile, edge_property_name);
+      MakeFileGraph(inputURI, edge_property_name);
 
   auto pg_result =
       katana::TypedPropertyGraph<NodeData, EdgeData>::Make(pg.get());

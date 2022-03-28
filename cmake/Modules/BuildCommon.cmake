@@ -434,6 +434,7 @@ endfunction ()
 
 ###### Test Inputs ######
 include(TestDatasets)
+include(TestDatasetsRDGs)
 
 ###### Documentation ######
 

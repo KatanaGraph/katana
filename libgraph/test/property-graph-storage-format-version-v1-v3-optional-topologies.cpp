@@ -31,8 +31,14 @@ main(int argc, char** argv) {
   katana::SharedMemSys sys;
   cll::ParseCommandLineOptions(argc, argv);
 
-  TestOptionalTopologyStorageEdgeShuffleTopology(ldbc_003InputFile);
-  TestOptionalTopologyStorageShuffleTopology(ldbc_003InputFile);
-  TestOptionalTopologyStorageEdgeTypeAwareTopology(ldbc_003InputFile);
+  auto res = katana::URI::Make(ldbc_003InputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("input file {} error: {}", ldbc_003InputFile, res.error());
+  }
+  auto uri = res.value();
+
+  TestOptionalTopologyStorageEdgeShuffleTopology(uri);
+  TestOptionalTopologyStorageShuffleTopology(uri);
+  TestOptionalTopologyStorageEdgeTypeAwareTopology(uri);
   return 0;
 }

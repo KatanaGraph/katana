@@ -67,19 +67,6 @@ function(add_test_dataset_fixture proj_bin_dir orig_loc suffix tmp_loc fixture_g
   set(${fixture_group_name} ${group} PARENT_SCOPE)
 endfunction()
 
-
-## latest storage_format_version RDG dataset paths
-rdg_dataset(RDG_LDBC_003 "ldbc_003")
-rdg_dataset(RDG_RMAT10 "rmat10")
-rdg_dataset(RDG_RMAT15 "rmat15")
-rdg_dataset(RDG_RMAT10_SYMMETRIC "rmat10_symmetric")
-rdg_dataset(RDG_RMAT15_SYMMETRIC "rmat15_symmetric")
-rdg_dataset(RDG_RMAT15_CLEANED_SYMMETRIC "rmat15_cleaned_symmetric")
-rdg_dataset(RDG_EPINIONS "Epinions")
-rdg_dataset(RDG_GNN_TESTER "gnn_tester")
-rdg_dataset(RDG_GNN_K5_PART "gnn_k5_part")
-rdg_dataset(RDG_GNN_K5_SINGLE "gnn_k5_single")
-
 ## Specific storage_format_version RDG dataset paths
 # Don't use these unless you know you need a specific storage_format_version RDG
 # Used the latest storage_format_version RDGs defined above instead

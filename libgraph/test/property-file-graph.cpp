@@ -73,7 +73,7 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
 
   auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
-  std::string rdg_dir(uri_res.value().path());  // path() because local
+  auto rdg_dir = uri_res.value();
 
   KATANA_LOG_VASSERT(
       g->GetNodeEntityTypeID("node-name") != katana::kUnknownEntityType,
@@ -98,13 +98,13 @@ TestTypesFromPropertiesCompareTypesFromStorage() {
   KATANA_LOG_WARN("creating temp file {}", rdg_dir);
 
   if (!write_result) {
-    fs::remove_all(rdg_dir);
+    fs::remove_all(rdg_dir.path());
     KATANA_LOG_FATAL("writing result: {}", write_result.error());
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
       katana::PropertyGraph::Make(rdg_dir, &txn_ctx, katana::RDGLoadOptions());
-  fs::remove_all(rdg_dir);
+  fs::remove_all(rdg_dir.path());
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
   }
@@ -185,7 +185,7 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
 
   auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
-  std::string rdg_dir(uri_res.value().path());  // path() because local
+  auto rdg_dir = uri_res.value();
 
   KATANA_LOG_VASSERT(
       g->GetNodeEntityTypeID("node-name-1") != katana::kUnknownEntityType,
@@ -217,13 +217,13 @@ TestCompositeTypesFromPropertiesCompareCompositeTypesFromStorage() {
   KATANA_LOG_WARN("creating temp file {}", rdg_dir);
 
   if (!write_result) {
-    fs::remove_all(rdg_dir);
+    fs::remove_all(rdg_dir.path());
     KATANA_LOG_FATAL("writing result: {}", write_result.error());
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
       katana::PropertyGraph::Make(rdg_dir, &txn_ctx, katana::RDGLoadOptions());
-  fs::remove_all(rdg_dir);
+  fs::remove_all(rdg_dir.path());
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
   }
@@ -281,7 +281,7 @@ TestRoundTrip() {
 
   auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
-  std::string rdg_dir(uri_res.value().path());  // path() because local
+  auto rdg_dir = uri_res.value();
 
   // don't persist throwaway properties
   auto remove_node_throw_away_res =
@@ -297,13 +297,13 @@ TestRoundTrip() {
   KATANA_LOG_WARN("creating temp file {}", rdg_dir);
 
   if (!write_result) {
-    fs::remove_all(rdg_dir);
+    fs::remove_all(rdg_dir.path());
     KATANA_LOG_FATAL("writing result: {}", write_result.error());
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
       katana::PropertyGraph::Make(rdg_dir, &txn_ctx, katana::RDGLoadOptions());
-  fs::remove_all(rdg_dir);
+  fs::remove_all(rdg_dir.path());
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
   }
@@ -353,23 +353,21 @@ void
 TestGarbageMetadata() {
   auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
   KATANA_LOG_ASSERT(uri_res);
-  std::string temp_dir(uri_res.value().path());  // path because local
+  auto temp_dir = uri_res.value();
+  auto rdg_file = temp_dir.Join("/meta");
 
-  std::string rdg_file{temp_dir};
-  rdg_file += "/meta";
-
-  std::ofstream out(rdg_file);
+  std::ofstream out(rdg_file.path());
   out << "garbage to make the file non-empty";
   out.close();
 
   katana::TxnContext txn_ctx;
   auto no_dir_result =
       katana::PropertyGraph::Make(rdg_file, &txn_ctx, katana::RDGLoadOptions());
-  fs::remove_all(temp_dir);
+  fs::remove_all(temp_dir.path());
   KATANA_LOG_ASSERT(!no_dir_result.has_value());
 }
 
-std::string
+katana::URI
 MakePFGFile(const std::string& n1name) {
   constexpr size_t test_length = 10;
   using V0 = int32_t;
@@ -390,7 +388,7 @@ MakePFGFile(const std::string& n1name) {
   add_node_result =
       g->AddNodeProperties(MakeProps<V1>(n1name, test_length), &txn_ctx);
   if (!add_node_result) {
-    return "";
+    return katana::URI();
   }
 
   std::shared_ptr<arrow::Table> edge_props = MakeProps<V0>(e0name, test_length);
@@ -400,15 +398,14 @@ MakePFGFile(const std::string& n1name) {
 
   auto unique_result = katana::URI::MakeRand("/tmp/propertygraphtests");
   KATANA_LOG_ASSERT(unique_result);
-  std::string rdg_file(
-      std::move(unique_result.value().path()));  // path() for local
+  auto rdg_file = std::move(unique_result.value());
 
   auto write_result = g->Write(rdg_file, command_line, &txn_ctx);
 
   KATANA_LOG_WARN("creating temp file {}", rdg_file);
 
   if (!write_result) {
-    fs::remove_all(rdg_file);
+    fs::remove_all(rdg_file.path());
     KATANA_LOG_FATAL("writing result: {}", write_result.error());
   }
   return rdg_file;
@@ -422,7 +419,7 @@ TestSimplePGs() {
   katana::TxnContext txn_ctx;
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
       katana::PropertyGraph::Make(rdg_file, &txn_ctx, katana::RDGLoadOptions());
-  fs::remove_all(rdg_file);
+  fs::remove_all(rdg_file.path());
   KATANA_LOG_ASSERT(make_result);
 }
 

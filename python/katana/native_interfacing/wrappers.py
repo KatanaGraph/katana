@@ -1,4 +1,4 @@
-import ctypes
+"""Wrapper representing Numba types and implementing their registration with Numba."""
 import logging
 from abc import ABCMeta, abstractmethod
 from functools import lru_cache
@@ -28,6 +28,9 @@ from katana.native_interfacing.template_type import find_size_for_dtype
 
 from . import exec_in_file, wraps_class
 
+__all__ = ["NumbaPointerWrapper", "SimpleNumbaPointerWrapper", "DtypeNumbaPointerWrapper", "NativeNumbaPointerWrapper"]
+
+
 _logger = logging.getLogger(__name__)
 
 
@@ -45,14 +48,21 @@ def get_cython_function_address_with_defaults(full_function_name, default_module
 
 
 class NumbaPointerWrapper(metaclass=ABCMeta):
-    """
-    A collection of methods to configure Numba to correctly handle an extension type that can provide a raw pointer
-    to some underlying native object.
+    """A Numba wrapper for a pointer to some object type.
+
+    This provides a collection of methods to configure Numba to correctly handle an extension type that can provide a
+    raw pointer to some underlying native object.
 
     This class is used from Numba wrappers in pybind11 and Cython.
     """
 
     def __init__(self, orig_typ, override_module_name=None):
+        """Construct a wrapper for the Python type ``orig_typ``.
+
+        Args:
+            orig_typ: The Python type connected with the Numba type we are wrapping.
+            override_module_name: *deprecated*. The module name to use for looking up method implementations.
+        """
         _logger.debug("NumbaPointerWrapper: %r, %r", orig_typ, override_module_name)
         Type = self._build_typing(orig_typ)
 
@@ -103,8 +113,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         dtype_arguments: Optional[Sequence[bool]] = None,
         data: Optional[int] = None,
     ):
-        """
-        Add a Numba callable Method to the type represented by self.
+        """Add a Numba callable Method to the type represented by self.
 
         This is called from `katana.native_interfacing.numba_support.register_method`.
 
@@ -171,6 +180,7 @@ def overload(self, {arguments}):
 
     @abstractmethod
     def get_value_address(self, pyval):
+        """Get the address for use in Numba from a python object."""
         raise NotImplementedError()
 
     def __repr__(self):
@@ -178,7 +188,17 @@ def overload(self, {arguments}):
 
 
 class SimpleNumbaPointerWrapper(NumbaPointerWrapper):
+    """A wrapper for a non-parametric pointer type with methods."""
+
     def __init__(self, orig_typ, override_module_name=None):
+        """Construct a wrapper for the simple Python type ``orig_typ``.
+
+        The type must be an object with only methods. It may not be a parametric type.
+
+        Args:
+            orig_typ: The Python type connected with the Numba type we are wrapping.
+            override_module_name: *deprecated*. The module name to use for looking up method implementations.
+        """
         assert (
             hasattr(orig_typ, "__katana_address__")
             and hasattr(orig_typ.__katana_address__, "__get__")
@@ -196,6 +216,7 @@ class SimpleNumbaPointerWrapper(NumbaPointerWrapper):
             return NativeValue(ctx._getvalue(), is_error=is_error)
 
     def get_value_address(self, pyval):
+        """Get the address for use in Numba from a python object."""
         return pyval.__katana_address__
 
 
@@ -223,9 +244,20 @@ class DtypeParametricType(numba.types.Type):
 
 
 class DtypeNumbaPointerWrapper(SimpleNumbaPointerWrapper):
+    """A wrapper for a parametric pointer type with methods and a dtype."""
+
     def __init__(self, orig_typ, override_module_name=None):
+        """Construct a wrapper for the parametric Python type ``orig_typ``.
+
+        The type should have a ``dtype`` attribute that specifies it's "element type" as a numpy dtype.
+
+        Args:
+            orig_typ: The Python type connected with the Numba type we are wrapping.
+            override_module_name: *deprecated*. The module name to use for looking up method implementations.
+        """
         super().__init__(orig_typ, override_module_name)
-        # TODO: Is there a way to check for ".dtype"? Probably not, it's an attribute and we don't have an instance.
+        # TODO(amp): Is there a way to check for ".dtype"? Probably not, it's an attribute and we don't have
+        #  an instance.
 
     def _build_typing(self, orig_typ):
         @wraps_class(orig_typ, "<numba type>")
@@ -242,7 +274,20 @@ class DtypeNumbaPointerWrapper(SimpleNumbaPointerWrapper):
 
 
 class NativeNumbaPointerWrapper(NumbaPointerWrapper):
+    """A wrapper for pointer types with methods which are external to Katana.
+
+    These objects need a static address function.
+    """
+
     def __init__(self, orig_typ, addr_func, addr_func_name=None, override_module_name=None):
+        """Create an external type wrapper.
+
+        Args:
+            orig_typ: The Python type connected with the Numba type we are wrapping.
+            addr_func: The function which returns the address of the underlying native object as an int.
+            addr_func_name: The name of that function.
+            override_module_name: *deprecated*. The module name to use for looking up method implementations.
+        """
         super().__init__(orig_typ, override_module_name)
         self.addr_func = self._build_unbox_by_call(addr_func, addr_func_name)
 
@@ -270,13 +315,14 @@ class NativeNumbaPointerWrapper(NumbaPointerWrapper):
         return addr_func
 
     def get_value_address(self, pyval):
+        """Get the address for use in Numba from a python object."""
         return self.addr_func(pyval)
 
 
 def construct_dtype_on_stack(self, values):
-    """
-    (Numba compiled only) Return a stack allocated instance of the self.dtype (self must be a DtypeParametricType) with
-    the field values taken from the tuple `values`.
+    """Return a stack allocated instance of the self.dtype.
+
+    ``self`` must be a DtypeParametricType. The field values are taken from the tuple `values`.
     """
     raise RuntimeError("Not callable from Python")
 

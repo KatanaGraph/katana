@@ -1,0 +1,36 @@
+name: Verify TestDatasetsRDGs.cmake
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'release/*'
+    tags:
+      - 'v*'
+  pull_request:
+
+# Cancel any previous runs with the same key.
+concurrency:
+  # Example key: Repository Structure CI-refs/pull/1381/merge
+  #   or Repository Structure CI-<owner>-<sha> for pushes
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || format('{0}-{1}', github.repository_owner, github.sha) }}
+  cancel-in-progress: true
+
+jobs:
+  verify_test_datasets:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        # We need history so that we have tags to provide version information.
+        fetch-depth: 0
+        # 0 fetches all history. See https://github.com/actions/checkout#checkout-v2
+
+    - name: Verify TestDatasetsRDGs.cmake
+      run: |
+         ./scripts/check_test_datasets.py

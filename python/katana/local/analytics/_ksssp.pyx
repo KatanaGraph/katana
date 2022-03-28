@@ -206,6 +206,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
     :param txn_ctx: The transaction context for passing read write sets
     :rtype: Table
     .. code-block:: python
+
         import katana.local
         from katana.example_data import get_rdg_dataset
         from katana.local import Graph
@@ -220,6 +221,7 @@ def ksssp(pg, str edge_weight_property_name, size_t start_node,
         table = ksssp(graph, weight_name, start_node, report_node, num_paths)
         stats = KssspStatistics(graph, weight_name, table, report_node)
         print(stats)
+
     """
 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")

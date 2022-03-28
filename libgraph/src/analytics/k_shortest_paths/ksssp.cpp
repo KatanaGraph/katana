@@ -411,7 +411,7 @@ KssspImpl(
     for (auto pair : paths) {
       KATANA_CHECKED(outer_builder.Append());
 
-      KATNA_CHECKED(GetPath(pair.second, inner_builder));
+      KATANA_CHECKED(GetPath(pair.second, inner_builder));
       KATANA_CHECKED(inner_builder.Append(report));
     }
 

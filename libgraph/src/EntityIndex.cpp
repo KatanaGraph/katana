@@ -21,6 +21,14 @@ MakeTypedEntityIndex(
     index = std::make_unique<PrimitiveEntityIndex<node_or_edge, uint8_t>>(
         property_name, num_entities, property);
     break;
+  case arrow::Type::INT16:
+    index = std::make_unique<PrimitiveEntityIndex<node_or_edge, int16_t>>(
+        property_name, num_entities, property);
+    break;
+  case arrow::Type::INT32:
+    index = std::make_unique<PrimitiveEntityIndex<node_or_edge, int32_t>>(
+        property_name, num_entities, property);
+    break;
   case arrow::Type::INT64:
     index = std::make_unique<PrimitiveEntityIndex<node_or_edge, int64_t>>(
         property_name, num_entities, property);
@@ -31,6 +39,10 @@ MakeTypedEntityIndex(
     break;
   case arrow::Type::DOUBLE:
     index = std::make_unique<PrimitiveEntityIndex<node_or_edge, double_t>>(
+        property_name, num_entities, property);
+    break;
+  case arrow::Type::FLOAT:
+    index = std::make_unique<PrimitiveEntityIndex<node_or_edge, float_t>>(
         property_name, num_entities, property);
     break;
   case arrow::Type::LARGE_STRING:
@@ -92,12 +104,18 @@ template class PrimitiveEntityIndex<GraphTopology::Node, bool>;
 template class PrimitiveEntityIndex<GraphTopology::Edge, bool>;
 template class PrimitiveEntityIndex<GraphTopology::Node, uint8_t>;
 template class PrimitiveEntityIndex<GraphTopology::Edge, uint8_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node, int16_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge, int16_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node, int32_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge, int32_t>;
 template class PrimitiveEntityIndex<GraphTopology::Node, int64_t>;
 template class PrimitiveEntityIndex<GraphTopology::Edge, int64_t>;
 template class PrimitiveEntityIndex<GraphTopology::Node, uint64_t>;
 template class PrimitiveEntityIndex<GraphTopology::Edge, uint64_t>;
 template class PrimitiveEntityIndex<GraphTopology::Node, double_t>;
 template class PrimitiveEntityIndex<GraphTopology::Edge, double_t>;
+template class PrimitiveEntityIndex<GraphTopology::Node, float_t>;
+template class PrimitiveEntityIndex<GraphTopology::Edge, float_t>;
 
 template class StringEntityIndex<GraphTopology::Node>;
 template class StringEntityIndex<GraphTopology::Edge>;

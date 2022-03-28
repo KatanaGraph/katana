@@ -284,10 +284,11 @@ DeltaStepAlgo(
 katana::Result<void>
 GetPath(const Path* path, arrow::UInt64Builder& builder) {
   if (path->last->last != nullptr) {
-    return KATANA_CHECKED(GetPath(path->last, builder));
+    KATANA_CHECKED(GetPath(path->last, builder));
   }
+  KATANA_CHECKED(builder.Append(path->parent));
 
-  return KATANA_CHECKED(builder.Append(path->parent));
+  return katana::ResultSuccess();
 }
 
 /**

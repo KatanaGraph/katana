@@ -30,7 +30,8 @@ public:
   // The set key type is either a node/edge id (all the keys in the actual set)
   // or a value representing the search key.
   using set_key_type = typename std::variant<
-      IndexID, bool, uint8_t, int64_t, uint64_t, double_t, std::string_view*>;
+      IndexID, bool, uint8_t, int16_t, int32_t, int64_t, uint64_t, double_t,
+      float_t, std::string_view*>;
 
   // EntityIndex::iterator returns a sequence of node or edge ids.
   using base_iterator = typename std::multiset<set_key_type>::iterator;

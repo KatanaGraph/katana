@@ -279,8 +279,12 @@ main() {
 
   TestPrimitiveIndex<katana::GraphTopology::Node, int64_t>(10, 3);
   TestPrimitiveIndex<katana::GraphTopology::Edge, int64_t>(10, 3);
+
   TestPrimitiveIndex<katana::GraphTopology::Node, double_t>(10, 3);
   TestPrimitiveIndex<katana::GraphTopology::Edge, double_t>(10, 3);
+
+  TestPrimitiveIndex<katana::GraphTopology::Node, float_t>(20, 5);
+  TestPrimitiveIndex<katana::GraphTopology::Edge, float_t>(20, 5);
 
   TestStringIndex<katana::GraphTopology::Node>(10, 3);
   TestStringIndex<katana::GraphTopology::Edge>(10, 3);

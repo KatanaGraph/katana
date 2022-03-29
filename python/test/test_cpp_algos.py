@@ -165,16 +165,9 @@ def test_ksssp(graph: Graph):
     assert len(paths) <= num_paths
 
     for i, i_path in enumerate(paths):
-        assert paths[i][-1] == report_node
-
-        for _, j_path in enumerate(paths, start=i):
-            if len(i_path) == len(j_path):
-                unique_path = False
-                for (elem_i, elem_j) in zip(i_path, j_path):
-                    if elem_i != elem_j:
-                        unique_path = True
-                        break
-                assert unique_path
+        assert i_path[-1] == report_node
+        # Assert that all paths are unique
+        assert all(list(i_path) != list(j_path) for j_path in paths[i:])
 
 
 def test_jaccard(graph: Graph):

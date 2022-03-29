@@ -396,9 +396,9 @@ KssspImpl(
   page_alloc.Report();
 
   std::vector<std::shared_ptr<arrow::Field>> schema_vector = {
-      arrow::field("path", arrow::large_list(arrow::uint64()))};
+      arrow::field("path", arrow::list(arrow::uint64()))};
   auto schema = std::make_shared<arrow::Schema>(schema_vector);
-  std::shared_ptr<arrow::LargeListArray> arr = {};
+  std::shared_ptr<arrow::Array> arr = {};
 
   if (reachable) {
     std::unique_ptr<arrow::ArrayBuilder> builder;

@@ -194,7 +194,7 @@ function checkPageExistsAndRedirect(event) {
 
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+30.0.fc9f86 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+31.0.350b66 variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -753,7 +753,7 @@ Vertices with high betweenness may have considerable influence within a network 
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>sources</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><em>int</em><em>]</em><em>, </em><em>int</em><em>]</em>) – Only process some sources, producing an approximate betweenness centrality. If this is a list of node IDs process those source nodes; if this is an int process that number of source nodes.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.BetweennessCentralityPlan" title="katana.local.analytics.BetweennessCentralityPlan"><em>BetweennessCentralityPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -877,7 +877,7 @@ Vertices with high betweenness may have considerable influence within a network 
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>sources</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><em>int</em><em>]</em><em>, </em><em>int</em><em>]</em>) – Only process some sources, producing an approximate betweenness centrality. If this is a list of node IDs process those source nodes; if this is an int process that number of source nodes.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._betweenness_centrality.BetweennessCentralityPlan" title="katana.local.analytics._betweenness_centrality.BetweennessCentralityPlan"><em>BetweennessCentralityPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1009,7 +1009,7 @@ written to the property <cite>output_property_name</cite>.</p>
 <li><p><strong>start_node</strong> (<em>Node ID</em>) – The source node.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.BfsPlan" title="katana.local.analytics.BfsPlan"><em>BfsPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1157,7 +1157,7 @@ written to the property <cite>output_property_name</cite>.</p>
 <li><p><strong>start_node</strong> (<em>Node ID</em>) – The source node.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._bfs.BfsPlan" title="katana.local.analytics._bfs.BfsPlan"><em>BfsPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1262,7 +1262,7 @@ Benchmark,” arXiv preprint arXiv:2011.15028 (2020).</p>
 <li><p><strong>max_iteration</strong> – indicates the maximum number of iteration for cdlp to run.</p></li>
 <li><p><strong>is_symmetric</strong> – The bool flag to indicate if graph is symmetric.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.CdlpPlan" title="katana.local.analytics.CdlpPlan"><em>CdlpPlan</em></a>) – The execution plan to use. Defaults to heuristically selecting the plan.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1277,7 +1277,7 @@ Benchmark,” arXiv preprint arXiv:2011.15028 (2020).</p>
 
 <span class="n">stats</span> <span class="o">=</span> <span class="n">CdlpStatistics</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="s2">&quot;output&quot;</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Total Communities:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">total_communitiess</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Total Communities:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">total_communities</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Total Non-Trivial Communities:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">total_non_trivial_communities</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Largest Community Size:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">largest_community_size</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Largest Community Ratio:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">largest_community_ratio</span><span class="p">)</span>
@@ -1393,7 +1393,7 @@ parameters are optional and have reasonable defaults.</p>
 <li><p><strong>max_iteration</strong> – indicates the maximum number of iteration for cdlp to run.</p></li>
 <li><p><strong>is_symmetric</strong> – The bool flag to indicate if graph is symmetric.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._cdlp.CdlpPlan" title="katana.local.analytics._cdlp.CdlpPlan"><em>CdlpPlan</em></a>) – The execution plan to use. Defaults to heuristically selecting the plan.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1408,7 +1408,7 @@ parameters are optional and have reasonable defaults.</p>
 
 <span class="n">stats</span> <span class="o">=</span> <span class="n">CdlpStatistics</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="s2">&quot;output&quot;</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Total Communities:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">total_communitiess</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Total Communities:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">total_communities</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Total Non-Trivial Communities:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">total_non_trivial_communities</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Largest Community Size:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">largest_community_size</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Largest Community Ratio:&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">largest_community_ratio</span><span class="p">)</span>
@@ -1609,7 +1609,7 @@ pp. 12-21.</p>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>is_symmetric</strong> – The bool flag to indicate if graph is symmetric.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.ConnectedComponentsPlan" title="katana.local.analytics.ConnectedComponentsPlan"><em>ConnectedComponentsPlan</em></a>) – The execution plan to use. Defaults to heuristically selecting the plan.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1818,7 +1818,7 @@ component.</p>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>is_symmetric</strong> – The bool flag to indicate if graph is symmetric.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._connected_components.ConnectedComponentsPlan" title="katana.local.analytics._connected_components.ConnectedComponentsPlan"><em>ConnectedComponentsPlan</em></a>) – The execution plan to use. Defaults to heuristically selecting the plan.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1942,7 +1942,7 @@ this function and may not exist before the call. The created property has type u
 <li><p><strong>pg</strong> (<a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><em>katana.local.Graph</em></a>) – The graph to analyze.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.IndependentSetPlan" title="katana.local.analytics.IndependentSetPlan"><em>IndependentSetPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2062,7 +2062,7 @@ this function and may not exist before the call. The created property has type u
 <li><p><strong>pg</strong> (<a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><em>katana.local.Graph</em></a>) – The graph to analyze.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._independent_set.IndependentSetPlan" title="katana.local.analytics._independent_set.IndependentSetPlan"><em>IndependentSetPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2192,7 +2192,7 @@ not exist before the call.</p>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output edge property</p></li>
 <li><p><strong>is_symmetric</strong> – The bool flag to indicate if graph is symmetric.</p></li>
 <li><p><strong>LouvainClusteringPlan</strong> (<a class="reference internal" href="#katana.local.analytics.LouvainClusteringPlan" title="katana.local.analytics.LouvainClusteringPlan"><em>LouvainClusteringPlan</em></a>) – The Louvain Clustering Plan</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2362,7 +2362,7 @@ not exist before the call.</p>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output edge property</p></li>
 <li><p><strong>is_symmetric</strong> – The bool flag to indicate if graph is symmetric.</p></li>
 <li><p><strong>LouvainClusteringPlan</strong> (<a class="reference internal" href="#katana.local.analytics._louvain_clustering.LouvainClusteringPlan" title="katana.local.analytics._louvain_clustering.LouvainClusteringPlan"><em>LouvainClusteringPlan</em></a>) – The Louvain Clustering Plan</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2722,7 +2722,7 @@ between them.</p>
 <li><p><strong>compare_node</strong> (<em>node ID</em>) – The node to compare to all nodes.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property for similarities. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.JaccardPlan" title="katana.local.analytics.JaccardPlan"><em>JaccardPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2874,7 +2874,7 @@ sanity check.</p>
 <li><p><strong>compare_node</strong> (<em>node ID</em>) – The node to compare to all nodes.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property for similarities. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._jaccard.JaccardPlan" title="katana.local.analytics._jaccard.JaccardPlan"><em>JaccardPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2985,7 +2985,7 @@ sanity check.</p>
 This property must not already exist.</p></li>
 <li><p><strong>is_symmetric</strong> – The bool flag to indicate if graph is symmetric.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.KCorePlan" title="katana.local.analytics.KCorePlan"><em>KCorePlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3099,7 +3099,7 @@ This property must not already exist.</p></li>
 This property must not already exist.</p></li>
 <li><p><strong>is_symmetric</strong> – The bool flag to indicate if graph is symmetric.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._k_core.KCorePlan" title="katana.local.analytics._k_core.KCorePlan"><em>KCorePlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3215,7 +3215,7 @@ This property must not already exist.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output edge property specifying if that edge is in the k-truss.
 This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.KTrussPlan" title="katana.local.analytics.KTrussPlan"><em>KTrussPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3334,7 +3334,7 @@ This property must not already exist.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output edge property specifying if that edge is in the k-truss.
 This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._k_truss.KTrussPlan" title="katana.local.analytics._k_truss.KTrussPlan"><em>KTrussPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3372,7 +3372,7 @@ This property must not already exist.</p></li>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.analytics.</span></span><span class="sig-name descname"><span class="pre">KssspPlan</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan" title="Permalink to this definition">#</a></dt>
 <dd><p>A computational <a class="reference internal" href="#plan"><span class="std std-ref">Plans</span></a> for K-Shortest Paths
 Static method construct KssspPlans using specific algorithms with their required parameters. All parameters are
-opetional and have resonable defaults</p>
+optional and have reasonable defaults</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="katana.local.analytics.KssspPlan.Algorithm">
 <span class="sig-name descname"><span class="pre">Algorithm</span></span><a class="headerlink" href="#katana.local.analytics.KssspPlan.Algorithm" title="Permalink to this definition">#</a></dt>
@@ -3519,7 +3519,7 @@ opetional and have resonable defaults</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">katana.local.analytics._ksssp.</span></span><span class="sig-name descname"><span class="pre">KssspPlan</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan" title="Permalink to this definition">#</a></dt>
 <dd><p>A computational <a class="reference internal" href="#plan"><span class="std std-ref">Plans</span></a> for K-Shortest Paths
 Static method construct KssspPlans using specific algorithms with their required parameters. All parameters are
-opetional and have resonable defaults</p>
+optional and have reasonable defaults</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="katana.local.analytics._ksssp.KssspPlan.Algorithm">
 <span class="sig-name descname"><span class="pre">Algorithm</span></span><a class="headerlink" href="#katana.local.analytics._ksssp.KssspPlan.Algorithm" title="Permalink to this definition">#</a></dt>
@@ -3742,7 +3742,7 @@ Processing. Springer, Berlin, Heidelberg, 2015. p. 438-450.</p>
 <li><p><strong>pg</strong> (<a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><em>katana.local.Graph</em></a>) – The graph to analyze.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to store the rank. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.PagerankPlan" title="katana.local.analytics.PagerankPlan"><em>PagerankPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3914,7 +3914,7 @@ Processing. Springer, Berlin, Heidelberg, 2015. p. 438-450.</p>
 <li><p><strong>pg</strong> (<a class="reference internal" href="katana.local.graph.html#katana.local.Graph" title="katana.local.Graph"><em>katana.local.Graph</em></a>) – The graph to analyze.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to store the rank. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._pagerank.PagerankPlan" title="katana.local.analytics._pagerank.PagerankPlan"><em>PagerankPlan</em></a>) – The execution plan to use.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -4134,7 +4134,7 @@ written to the property <cite>output_property_name</cite>.</p>
 <li><p><strong>edge_weight_property_name</strong> (<em>str</em>) – The input property containing edge weights.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics.SsspPlan" title="katana.local.analytics.SsspPlan"><em>SsspPlan</em></a>) – The execution plan to use. Defaults to heuristically selecting the plan.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>
@@ -4388,7 +4388,7 @@ written to the property <cite>output_property_name</cite>.</p>
 <li><p><strong>edge_weight_property_name</strong> (<em>str</em>) – The input property containing edge weights.</p></li>
 <li><p><strong>output_property_name</strong> (<em>str</em>) – The output property to write path lengths into. This property must not already exist.</p></li>
 <li><p><strong>plan</strong> (<a class="reference internal" href="#katana.local.analytics._sssp.SsspPlan" title="katana.local.analytics._sssp.SsspPlan"><em>SsspPlan</em></a>) – The execution plan to use. Defaults to heuristically selecting the plan.</p></li>
-<li><p><strong>txn_ctx</strong> – The tranaction context for passing read write sets.</p></li>
+<li><p><strong>txn_ctx</strong> – The transaction context for passing read write sets.</p></li>
 </ul>
 </dd>
 </dl>

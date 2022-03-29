@@ -194,7 +194,7 @@ function checkPageExistsAndRedirect(event) {
 
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+30.0.fc9f86 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+31.0.350b66 variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -758,7 +758,7 @@ must be fully executable with no errors or warnings.</p>
 <h3>Orphaned Notebooks<a class="headerlink" href="#orphaned-notebooks" title="Permalink to this headline">#</a></h3>
 <p>This means that it doesn’t appear in a toctree (see <code class="docutils literal notranslate"><span class="pre">index.rst</span></code>),
 but other pages can still link to it.</p>
-<p>Orphaned notebookes require the following to be added to the notebook’s JSON
+<p>Orphaned notebooks require the following to be added to the notebook’s JSON
 metadata:</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;nbsphinx&quot;</span><span class="o">:</span> <span class="p">{</span>
    <span class="s2">&quot;orphan&quot;</span><span class="o">:</span> <span class="kc">true</span>

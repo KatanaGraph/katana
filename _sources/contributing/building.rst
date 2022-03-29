@@ -147,7 +147,7 @@ unexpected build errors after updating your source directory,
 
 2. Check if there were any system build environment changes since the last time
    you successfully built. If you are :ref:`building-with-conda`, you can skip
-   this step as all dependences are managed through Conda.
+   this step as all dependencies are managed through Conda.
 
    To update your environment, run ``scripts/setup_dev_ubuntu.sh``.
 

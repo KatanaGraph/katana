@@ -194,7 +194,7 @@ function checkPageExistsAndRedirect(event) {
 
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+30.0.fc9f86 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+31.0.350b66 variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -531,7 +531,7 @@ function checkPageExistsAndRedirect(event) {
 <span class="gp">... </span><span class="k">with</span> <span class="n">timer</span><span class="p">:</span> <span class="o">...</span>
 </pre></div>
 </div>
-<p>The time is only reported to Galois when this object is destoyed so the user should make sure this object goes out
+<p>The time is only reported to Galois when this object is destroyed so the user should make sure this object goes out
 of scope before the program exits or that they call call <cite>finalize()</cite>.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="katana.timer.StatTimer.__enter__">

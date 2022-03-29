@@ -194,7 +194,7 @@ function checkPageExistsAndRedirect(event) {
 
             $("#version_switcher_menu").append(node);
             // replace dropdown button text with the preferred display name of
-            // this version, rather than using sphinx's 0.3.0.dev+30.0.fc9f86 variable.
+            // this version, rather than using sphinx's 0.3.0.dev+31.0.350b66 variable.
             // also highlight the dropdown entry for the currently-viewed
             // version's entry
             if (entry.version == "latest") {
@@ -746,7 +746,7 @@ unexpected build errors after updating your source directory,</p>
 <span class="pre">update</span> <span class="pre">--recursive</span> <span class="pre">--init</span></code></p></li>
 <li><p>Check if there were any system build environment changes since the last time
 you successfully built. If you are <a class="reference internal" href="#building-with-conda"><span class="std std-ref">Building with Conda</span></a>, you can skip
-this step as all dependences are managed through Conda.</p>
+this step as all dependencies are managed through Conda.</p>
 <p>To update your environment, run <code class="docutils literal notranslate"><span class="pre">scripts/setup_dev_ubuntu.sh</span></code>.</p>
 <p>This requires root privileges, if you don’t have root, it is likely that
 your system administrator has already updated your build environment.</p>

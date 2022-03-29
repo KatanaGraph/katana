@@ -403,9 +403,9 @@ KssspImpl(
   if (reachable) {
     std::unique_ptr<arrow::ArrayBuilder> builder;
     KATANA_CHECKED(arrow::MakeBuilder(
-        arrow::default_memory_pool(), arrow::large_list(arrow::uint64()),
+        arrow::default_memory_pool(), arrow::list(arrow::uint64()),
         &builder));
-    auto& outer_builder = dynamic_cast<arrow::LargeListBuilder&>(*builder);
+    auto& outer_builder = dynamic_cast<arrow::ListBuilder&>(*builder);
     auto& inner_builder =
         dynamic_cast<arrow::UInt64Builder&>(*(outer_builder.value_builder()));
 

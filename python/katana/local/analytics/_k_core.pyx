@@ -120,7 +120,7 @@ def k_core(pg, uint32_t k_core_number, str output_property_name, bool is_symmetr
     :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type plan: KCorePlan
     :param plan: The execution plan to use.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

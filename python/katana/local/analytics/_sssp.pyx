@@ -257,7 +257,7 @@ def sssp(pg, size_t start_node, str edge_weight_property_name, str output_proper
     :param output_property_name: The output property to write path lengths into. This property must not already exist.
     :type plan: SsspPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

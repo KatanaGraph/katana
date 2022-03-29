@@ -70,7 +70,7 @@ cdef class StatTimer:
     >>> timer = StatTimer("Test", "Inner")
     ... with timer: ...
 
-    The time is only reported to Galois when this object is destoyed so the user should make sure this object goes out
+    The time is only reported to Galois when this object is destroyed so the user should make sure this object goes out
     of scope before the program exits or that they call call `finalize()`.
     """
     cdef CStatTimer* underlying

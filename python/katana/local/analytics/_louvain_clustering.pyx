@@ -189,7 +189,7 @@ def louvain_clustering(pg, str edge_weight_property_name, str output_property_na
     :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type LouvainClusteringPlan: LouvainClusteringPlan
     :param LouvainClusteringPlan: The Louvain Clustering Plan
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

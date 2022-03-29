@@ -23,7 +23,7 @@ def do_all_operator(typ=None, nopython=True, **kws):
     ... def f(arg0, ..., argn, element): ...
 
     Decorator to declare an operator for use with a `do_all`.
-    The operators have some restructions; see below.
+    The operators have some restrictions; see below.
     If the operator has any arguments other than the element argument expected from the loop, those arguments must be
     bound by calling the function to create a closure:
 
@@ -67,7 +67,7 @@ def for_each_operator(typ=None, nopython=True, **kws):
     ... def f(arg0, ..., argn, element, ctx): ...
 
     Decorator to declare an operator for use with a `for_each`.
-    The operators have some restructions; see below.
+    The operators have some restrictions; see below.
     If the operator has any arguments other than the element and context arguments expected from the loop, those
     arguments must be bound by calling the function to create a closure:
 

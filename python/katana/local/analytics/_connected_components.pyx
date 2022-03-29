@@ -257,7 +257,7 @@ def connected_components(pg, str output_property_name, bool is_symmetric = False
     :param is_symmetric: The bool flag to indicate if graph is symmetric.
     :type plan: ConnectedComponentsPlan
     :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

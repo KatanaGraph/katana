@@ -45,7 +45,7 @@ katana::python::InitImportData(py::module& m) {
       R"""(
       Create a new `Graph` from a raw Compressed Sparse Row representation.
 
-      :param edge_indices: The indicies of the first edge for each node in the destinations vector.
+      :param edge_indices: The indices of the first edge for each node in the destinations vector.
       :type edge_indices: `numpy.ndarray` or another type supporting the buffer protocol. Element type must be an
           integer.
       :param edge_destinations: The destinations of edges in the new graph.

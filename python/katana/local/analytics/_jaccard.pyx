@@ -145,7 +145,7 @@ def jaccard(pg, size_t compare_node, str output_property_name,
     :param output_property_name: The output property for similarities. This property must not already exist.
     :type plan: JaccardPlan
     :param plan: The execution plan to use.
-    :param txn_ctx: The tranaction context for passing read write sets.
+    :param txn_ctx: The transaction context for passing read write sets.
 
     .. code-block:: python
 

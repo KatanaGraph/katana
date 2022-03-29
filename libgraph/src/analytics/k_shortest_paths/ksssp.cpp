@@ -398,10 +398,10 @@ KssspImpl(
   std::vector<std::shared_ptr<arrow::Field>> schema_vector = {
       arrow::field("path", arrow::large_list(arrow::uint64()))};
   auto schema = std::make_shared<arrow::Schema>(schema_vector);
-  std::shared_ptr<arrow::Array> arr = {};
+  std::shared_ptr<arrow::LargeListArray> arr = {};
 
   if (reachable) {
-    std::unique_ptr<arrow::ArrayBuilder> builder;
+    std::unique_ptr<arrow::LargeListBuilder> builder;
     KATANA_CHECKED(arrow::MakeBuilder(
         arrow::default_memory_pool(), arrow::large_list(arrow::uint64()),
         &builder));

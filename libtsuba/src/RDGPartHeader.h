@@ -29,6 +29,13 @@
 #include "katana/tsuba.h"
 
 namespace katana {
+/// ,_._._._._._._._._|__________________________________________________________,
+/// |_|_|_|_|_|_|_|_|_|_________________________________________________________/
+///                   !
+
+///  __-----_________________{]__________________________________________________
+/// {&&&&&&&#%%&#%&%&%&%&%#%&|]__________________________________________________\
+///                          {]
 
 /// PropStorageInfo objects track the state of properties, and sanity check their
 /// transitions. N.b., It does not "DO" the transitions, this structure is purely
@@ -127,7 +134,7 @@ private:
   std::string path_;
   std::shared_ptr<arrow::DataType> type_;
   State state_;
-};
+      };
 
 class KATANA_EXPORT RDGPartHeader {
 public:
@@ -642,6 +649,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
      {RDGTopology::TopologyKind::kEdgeTypeAwareTopology,
       "kEdgeTypeAwareTopology"}})
 
-}  // namespace katana
+    }  // namespace katana
 
 #endif

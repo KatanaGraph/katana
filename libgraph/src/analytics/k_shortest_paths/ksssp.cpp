@@ -401,7 +401,7 @@ KssspImpl(
   std::shared_ptr<arrow::LargeListArray> arr = {};
 
   if (reachable) {
-    std::unique_ptr<arrow::LargeListBuilder> builder;
+    std::unique_ptr<arrow::ArrayBuilder> builder;
     KATANA_CHECKED(arrow::MakeBuilder(
         arrow::default_memory_pool(), arrow::large_list(arrow::uint64()),
         &builder));

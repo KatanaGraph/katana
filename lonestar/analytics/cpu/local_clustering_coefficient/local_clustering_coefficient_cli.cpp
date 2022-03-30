@@ -69,13 +69,13 @@ main(int argc, char** argv) {
   }
   auto uri = res.value();
 
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(uri, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -102,7 +102,7 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   auto lcc_result = LocalClusteringCoefficient(
-      pg_projected_view.get(), "localClusteringCoefficient", &txn_ctx, plan);
+      pg_projected_view, "localClusteringCoefficient", &txn_ctx, plan);
   if (!lcc_result) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", lcc_result.error());
   }

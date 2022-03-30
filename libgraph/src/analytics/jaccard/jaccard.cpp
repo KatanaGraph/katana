@@ -138,7 +138,7 @@ JaccardImpl(Graph& graph, size_t compare_node, JaccardPlan /*plan*/) {
 
 katana::Result<void>
 katana::analytics::Jaccard(
-    PropertyGraph* pg, uint32_t compare_node,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     JaccardPlan plan) {
   if (auto result = pg->ConstructNodeProperties<NodeData>(
@@ -169,7 +169,7 @@ constexpr static const double EPSILON = 1e-6;
 
 katana::Result<void>
 katana::analytics::JaccardAssertValid(
-    katana::PropertyGraph* pg, uint32_t compare_node,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
     const std::string& property_name) {
   Graph graph = KATANA_CHECKED(Graph::Make(pg, {property_name}, {}));
   ;
@@ -196,7 +196,7 @@ katana::analytics::JaccardAssertValid(
 
 katana::Result<JaccardStatistics>
 katana::analytics::JaccardStatistics::Compute(
-    katana::PropertyGraph* pg, uint32_t compare_node,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t compare_node,
     const std::string& property_name) {
   Graph graph = KATANA_CHECKED(Graph::Make(pg, {property_name}, {}));
   ;

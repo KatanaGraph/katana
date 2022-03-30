@@ -17,6 +17,7 @@ k-Core
 """
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp cimport bool
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -26,7 +27,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -47,10 +48,10 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
         @staticmethod
         _KCorePlan Asynchronous()
 
-    Result[void] KCore(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name, CTxnContext* txn_ctx, bool is_symmetric, _KCorePlan plan)
+    Result[void] KCore(const shared_ptr[_PropertyGraph]& pg, uint32_t k_core_number, string output_property_name, CTxnContext* txn_ctx, bool is_symmetric, _KCorePlan plan)
 
 
-    Result[void] KCoreAssertValid(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name)
+    Result[void] KCoreAssertValid(const shared_ptr[_PropertyGraph]& pg, uint32_t k_core_number, string output_property_name)
 
     cppclass _KCoreStatistics "katana::analytics::KCoreStatistics":
         uint64_t number_of_nodes_in_kcore
@@ -58,7 +59,7 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
         void Print(ostream os)
 
         @staticmethod
-        Result[_KCoreStatistics] Compute(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name)
+        Result[_KCoreStatistics] Compute(const shared_ptr[_PropertyGraph]& pg, uint32_t k_core_number, string output_property_name)
 
 
 class _KCorePlanAlgorithm(Enum):
@@ -140,7 +141,8 @@ def k_core(pg, uint32_t k_core_number, str output_property_name, bool is_symmetr
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(KCore(underlying_property_graph(pg), k_core_number, output_property_name_str, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
+        v = handle_result_void(KCore(
+            underlying_property_graph_shared_ptr(pg), k_core_number, output_property_name_str, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
     return v
 
 
@@ -152,7 +154,7 @@ def k_core_assert_valid(pg, uint32_t k_core_number, str output_property_name):
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        handle_result_assert(KCoreAssertValid(underlying_property_graph(pg), k_core_number, output_property_name_str))
+        handle_result_assert(KCoreAssertValid(underlying_property_graph_shared_ptr(pg), k_core_number, output_property_name_str))
 
 
 cdef _KCoreStatistics handle_result_KCoreStatistics(Result[_KCoreStatistics] res) nogil except *:
@@ -172,7 +174,7 @@ cdef class KCoreStatistics:
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_KCoreStatistics(_KCoreStatistics.Compute(
-                underlying_property_graph(pg), k_core_number, output_property_name_str))
+                underlying_property_graph_shared_ptr(pg), k_core_number, output_property_name_str))
 
     @property
     def number_of_nodes_in_kcore(self) -> uint64_t:

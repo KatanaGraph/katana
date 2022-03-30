@@ -54,7 +54,7 @@ public:
  */
 KATANA_EXPORT katana::Result<std::unique_ptr<katana::PropertyGraph>>
 SubGraphExtraction(
-    katana::PropertyGraph* pg,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
     const std::vector<katana::PropertyGraph::Node>& node_vec,
     SubGraphExtractionPlan plan = {});
 // const std::vector<std::string>& node_properties_to_copy, const std::vector<std::string>& edge_properties_to_copy);

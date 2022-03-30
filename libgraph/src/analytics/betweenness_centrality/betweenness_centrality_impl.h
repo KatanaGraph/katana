@@ -5,14 +5,14 @@
 #include "katana/analytics/betweenness_centrality/betweenness_centrality.h"
 
 katana::Result<void> BetweennessCentralityOuter(
-    katana::PropertyGraph* pg,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
     [[maybe_unused]] katana::analytics::BetweennessCentralityPlan plan,
     katana::TxnContext* txn_ctx);
 
 katana::Result<void> BetweennessCentralityLevel(
-    katana::PropertyGraph* pg,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
     katana::analytics::BetweennessCentralityPlan plan,

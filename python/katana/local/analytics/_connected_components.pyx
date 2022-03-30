@@ -22,6 +22,7 @@ Connected Components
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp cimport bool
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -31,7 +32,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -93,10 +94,10 @@ cdef extern from "katana/analytics/connected_components/connected_components.h" 
     uint32_t kDefaultNeighborSampleSize "katana::analytics::ConnectedComponentsPlan::kDefaultNeighborSampleSize"
     uint32_t kDefaultComponentSampleFrequency "katana::analytics::ConnectedComponentsPlan::kDefaultComponentSampleFrequency"
 
-    Result[void] ConnectedComponents(_PropertyGraph*pg, string output_property_name,
+    Result[void] ConnectedComponents(const shared_ptr[_PropertyGraph]& pg, string output_property_name,
                                      CTxnContext* txn_ctx, bool is_symmetric, _ConnectedComponentsPlan plan)
 
-    Result[void] ConnectedComponentsAssertValid(_PropertyGraph*pg, string output_property_name)
+    Result[void] ConnectedComponentsAssertValid(const shared_ptr[_PropertyGraph]& pg, string output_property_name)
 
     cppclass _ConnectedComponentsStatistics "katana::analytics::ConnectedComponentsStatistics":
         uint64_t total_components
@@ -107,7 +108,7 @@ cdef extern from "katana/analytics/connected_components/connected_components.h" 
         void Print(ostream os)
 
         @staticmethod
-        Result[_ConnectedComponentsStatistics] Compute(_PropertyGraph*pg, string output_property_name)
+        Result[_ConnectedComponentsStatistics] Compute(const shared_ptr[_PropertyGraph]& pg, string output_property_name)
 
 
 class _ConnectedComponentsPlanAlgorithm(Enum):
@@ -281,7 +282,7 @@ def connected_components(pg, str output_property_name, bool is_symmetric = False
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        v = handle_result_void(ConnectedComponents(underlying_property_graph(pg), output_property_name_str, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
+        v = handle_result_void(ConnectedComponents(underlying_property_graph_shared_ptr(pg), output_property_name_str, underlying_txn_context(txn_ctx), is_symmetric, plan.underlying_))
     return v
 
 def connected_components_assert_valid(pg, str output_property_name):
@@ -293,7 +294,7 @@ def connected_components_assert_valid(pg, str output_property_name):
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        handle_result_assert(ConnectedComponentsAssertValid(underlying_property_graph(pg), output_property_name_str))
+        handle_result_assert(ConnectedComponentsAssertValid(underlying_property_graph_shared_ptr(pg), output_property_name_str))
 
 cdef _ConnectedComponentsStatistics handle_result_ConnectedComponentsStatistics(
         Result[_ConnectedComponentsStatistics] res) nogil except *:
@@ -312,7 +313,7 @@ cdef class ConnectedComponentsStatistics:
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_ConnectedComponentsStatistics(_ConnectedComponentsStatistics.Compute(
-                underlying_property_graph(pg), output_property_name_str))
+                underlying_property_graph_shared_ptr(pg), output_property_name_str))
 
     @property
     def total_components(self) -> uint64_t:

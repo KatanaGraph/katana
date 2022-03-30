@@ -94,8 +94,8 @@ SubGraphNodeSet(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::analytics::SubGraphExtraction(
-    katana::PropertyGraph* pg, const std::vector<Node>& node_vec,
-    SubGraphExtractionPlan plan) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::vector<Node>& node_vec, SubGraphExtractionPlan plan) {
   // Remove duplicates from the node vector
   std::unordered_set<uint32_t> set;
   std::vector<uint32_t> dedup_node_vec;

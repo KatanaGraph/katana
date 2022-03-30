@@ -76,7 +76,7 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Bfs(
-    PropertyGraph* pg, uint32_t start_node,
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t start_node,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     BfsPlan algo = {});
 
@@ -85,7 +85,8 @@ KATANA_EXPORT Result<void> Bfs(
 /// @return a failure if the BFS results do not pass validation or if there is a
 ///     failure during checking.
 KATANA_EXPORT Result<void> BfsAssertValid(
-    PropertyGraph* pg, uint32_t source, const std::string& property_name);
+    const std::shared_ptr<PropertyGraph>& pg, uint32_t source,
+    const std::string& property_name);
 
 /// Statistics about a graph that can be extracted from the results of BFS.
 struct KATANA_EXPORT BfsStatistics {
@@ -97,7 +98,8 @@ struct KATANA_EXPORT BfsStatistics {
 
   /// Compute the statistics of BFS results stored in property_name.
   static katana::Result<BfsStatistics> Compute(
-      katana::PropertyGraph* pg, const std::string& property_name);
+      const std::shared_ptr<PropertyGraph>& pg,
+      const std::string& property_name);
 };
 
 }  // namespace katana::analytics

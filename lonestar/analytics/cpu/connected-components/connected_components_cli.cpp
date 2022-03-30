@@ -142,13 +142,13 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -219,14 +219,14 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   auto pg_result = ConnectedComponents(
-      pg_projected_view.get(), "component", &txn_ctx, symmetricGraph, plan);
+      pg_projected_view, "component", &txn_ctx, symmetricGraph, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL(
         "Failed to run ConnectedComponents: {}", pg_result.error());
   }
 
-  auto stats_result = ConnectedComponentsStatistics::Compute(
-      pg_projected_view.get(), "component");
+  auto stats_result =
+      ConnectedComponentsStatistics::Compute(pg_projected_view, "component");
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute ConnectedComponents statistics: {}",
@@ -236,7 +236,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (ConnectedComponentsAssertValid(pg_projected_view.get(), "component")) {
+    if (ConnectedComponentsAssertValid(pg_projected_view, "component")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");

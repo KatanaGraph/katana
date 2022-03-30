@@ -27,8 +27,9 @@ const BetweennessCentralitySources
 
 katana::Result<void>
 katana::analytics::BetweennessCentrality(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx, const BetweennessCentralitySources& sources,
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
+    const BetweennessCentralitySources& sources,
     BetweennessCentralityPlan plan) {
   switch (plan.algorithm()) {
     //TODO (gill) Needs bidirectional graph (CSR_CSC)
@@ -57,7 +58,8 @@ BetweennessCentralityStatistics::Print(std::ostream& os) {
 
 katana::Result<BetweennessCentralityStatistics>
 BetweennessCentralityStatistics::Compute(
-    katana::PropertyGraph* pg, const std::string& output_property_name) {
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& output_property_name) {
   auto values_result = pg->GetNodePropertyTyped<float>(output_property_name);
   if (!values_result) {
     return values_result.error();

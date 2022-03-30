@@ -127,7 +127,7 @@ class GraphBaseEdgeSourceAccessor final
 public:
   virtual ~GraphBaseEdgeSourceAccessor();
 
-  GraphBaseEdgeSourceAccessor(katana::PropertyGraph* pg)
+  GraphBaseEdgeSourceAccessor(std::shared_ptr<katana::PropertyGraph> pg)
       : view_(pg->BuildView<katana::PropertyGraphViews::BiDirectional>()) {}
 
   katana::PropertyGraph::Node at_typed(ssize_t i) const final {
@@ -402,12 +402,12 @@ DefPropertyGraph(py::module& m) {
 
   cls.def(
       "project",
-      [](PropertyGraph& self, py::object node_types,
+      [](std::shared_ptr<PropertyGraph> self, py::object node_types,
          py::object edge_types) -> std::shared_ptr<PropertyGraph> {
         std::optional<katana::SetOfEntityTypeIDs> node_type_ids;
         if (!node_types.is_none()) {
           node_type_ids = katana::SetOfEntityTypeIDs();
-          node_type_ids->resize(self.GetNodeTypeManager().GetNumEntityTypes());
+          node_type_ids->resize(self->GetNodeTypeManager().GetNumEntityTypes());
           for (auto& t : node_types) {
             node_type_ids->set(py::cast<EntityType>(t).type_id);
           }
@@ -415,7 +415,7 @@ DefPropertyGraph(py::module& m) {
         std::optional<katana::SetOfEntityTypeIDs> edge_type_ids;
         if (!edge_types.is_none()) {
           edge_type_ids = katana::SetOfEntityTypeIDs();
-          edge_type_ids->resize(self.GetEdgeTypeManager().GetNumEntityTypes());
+          edge_type_ids->resize(self->GetEdgeTypeManager().GetNumEntityTypes());
           for (auto& t : edge_types) {
             edge_type_ids->set(py::cast<EntityType>(t).type_id);
           }
@@ -463,8 +463,8 @@ DefPropertyGraph(py::module& m) {
   // GetLocalEdgeID(InEdgeHandle) -> LocalEdgeID  - local edge ID
   cls.def(
       "get_local_edge_id_from_in_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::BiDirectional>()
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Edge e) {
+        return self->BuildView<PropertyGraphViews::BiDirectional>()
             .GetLocalEdgeIDFromInEdge(e);
       },
       py::call_guard<py::gil_scoped_release>());
@@ -472,8 +472,8 @@ DefPropertyGraph(py::module& m) {
   // GetLocalEdgeID(UndirectedEdgeHandle) -> LocalEdgeID  - local edge ID
   cls.def(
       "get_local_edge_id_from_undirected_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::Undirected>()
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Edge e) {
+        return self->BuildView<PropertyGraphViews::Undirected>()
             .GetLocalEdgeIDFromUndirectedEdge(e);
       },
       py::call_guard<py::gil_scoped_release>());
@@ -486,8 +486,8 @@ DefPropertyGraph(py::module& m) {
   // GetEdgePropertyIndex(InEdgeHandle) -> EdgePropertyIndex  - index into the property table for an edge
   cls.def(
       "get_edge_property_index_from_in_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::BiDirectional>()
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Edge e) {
+        return self->BuildView<PropertyGraphViews::BiDirectional>()
             .GetEdgePropertyIndexFromInEdge(e);
       },
       py::call_guard<py::gil_scoped_release>());
@@ -495,8 +495,8 @@ DefPropertyGraph(py::module& m) {
   // GetEdgePropertyIndex(UndirectedEdgeHandle) -> EdgePropertyIndex  - index into the property table for an edge
   cls.def(
       "get_edge_property_index_from_undirected_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::Undirected>()
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Edge e) {
+        return self->BuildView<PropertyGraphViews::Undirected>()
             .GetEdgePropertyIndexFromUndirectedEdge(e);
       },
       py::call_guard<py::gil_scoped_release>());
@@ -560,9 +560,9 @@ DefPropertyGraph(py::module& m) {
 
     cls.def(
         "out_edge_ids",
-        [](PropertyGraph& self, GraphTopologyTypes::Node n,
+        [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node n,
            const EntityType& ty) {
-          return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+          return self->BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
               .OutEdges(n, ty.type_id);
         },
         py::call_guard<py::gil_scoped_release>());
@@ -613,9 +613,9 @@ DefPropertyGraph(py::module& m) {
     // OutDegree(NodeHandle, EdgeEntityTypeID)-> size_t  - number of out-edges of a type for a node
     cls.def(
         "out_degree",
-        [](PropertyGraph& self, GraphTopologyTypes::Node n,
+        [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node n,
            const EntityType& ty) {
-          return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+          return self->BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
               .OutDegree(n, ty.type_id);
         },
         py::call_guard<py::gil_scoped_release>());
@@ -685,8 +685,8 @@ DefPropertyGraph(py::module& m) {
 
     cls.def(
         "in_edge_ids",
-        [](PropertyGraph& self) {
-          return self.BuildView<PropertyGraphViews::Transposed>().OutEdges();
+        [](std::shared_ptr<PropertyGraph> self) {
+          return self->BuildView<PropertyGraphViews::Transposed>().OutEdges();
         },
         py::call_guard<py::gil_scoped_release>(),
         R"""(
@@ -722,8 +722,8 @@ DefPropertyGraph(py::module& m) {
     // InEdges(NodeHandle)-> InEdgeHandle iterator - iterator over in-edges for a node
     cls.def(
         "in_edge_ids",
-        [](PropertyGraph& self, GraphTopologyTypes::Node n) {
-          return self.BuildView<PropertyGraphViews::Transposed>().OutEdges(n);
+        [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node n) {
+          return self->BuildView<PropertyGraphViews::Transposed>().OutEdges(n);
         },
         py::call_guard<py::gil_scoped_release>());
     cls.attr("in_edge_ids_for_node") = cls.attr("in_edge_ids");
@@ -735,9 +735,9 @@ DefPropertyGraph(py::module& m) {
     // InEdges(NodeHandle, EdgeEntityTypeID)-> InEdgeHandle iterator - iterator over in-edges of a type for a node
     cls.def(
         "in_edge_ids",
-        [](PropertyGraph& self, GraphTopologyTypes::Node n,
+        [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node n,
            const EntityType& ty) {
-          return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+          return self->BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
               .InEdges(n, ty.type_id);
         },
         py::call_guard<py::gil_scoped_release>());
@@ -750,8 +750,8 @@ DefPropertyGraph(py::module& m) {
 
     cls.def(
         "in_degree",
-        [](PropertyGraph& self, GraphTopologyTypes::Node n) {
-          return self.BuildView<PropertyGraphViews::Transposed>().OutDegree(n);
+        [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node n) {
+          return self->BuildView<PropertyGraphViews::Transposed>().OutDegree(n);
         },
         py::call_guard<py::gil_scoped_release>(),
         R"""(
@@ -782,9 +782,9 @@ DefPropertyGraph(py::module& m) {
 
     cls.def(
         "in_degree",
-        [](PropertyGraph& self, GraphTopologyTypes::Node n,
+        [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node n,
            const EntityType& ty) {
-          return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+          return self->BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
               .InDegree(n, ty.type_id);
         },
         py::call_guard<py::gil_scoped_release>());
@@ -797,8 +797,8 @@ DefPropertyGraph(py::module& m) {
   // InEdgeSrc(InEdgeHandle)-> NodeHandle - source of an in-edge
   cls.def(
       "in_edge_src",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::Transposed>().OutEdgeDst(e);
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Edge e) {
+        return self->BuildView<PropertyGraphViews::Transposed>().OutEdgeDst(e);
       },
       py::call_guard<py::gil_scoped_release>());
 
@@ -808,9 +808,9 @@ DefPropertyGraph(py::module& m) {
   // FindAllEdges(NodeHandle src_node, NodeHandle dst_node) -> LocalEdgeID iterator - iterator over out-edges between src and dst nodes
   cls.def(
       "find_all_edge_ids",
-      [](PropertyGraph& self, GraphTopologyTypes::Node src,
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node src,
          GraphTopologyTypes::Node dst) {
-        return self.BuildView<PropertyGraphViews::EdgesSortedByDestID>()
+        return self->BuildView<PropertyGraphViews::EdgesSortedByDestID>()
             .FindAllEdges(src, dst);
       },
       py::call_guard<py::gil_scoped_release>());
@@ -818,9 +818,9 @@ DefPropertyGraph(py::module& m) {
   // FindAllEdges(NodeHandle src_node, NodeHandle dst_node, EdgeEntityTypeID)-> LocalEdgeID iterator - iterator over out-edges of a type between src and dst nodes
   cls.def(
       "find_all_edge_ids",
-      [](PropertyGraph& self, GraphTopologyTypes::Node src,
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node src,
          GraphTopologyTypes::Node dst, const EntityType& ty) {
-        return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+        return self->BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
             .FindAllEdges(src, dst, ty.type_id);
       },
       py::call_guard<py::gil_scoped_release>());
@@ -828,19 +828,19 @@ DefPropertyGraph(py::module& m) {
   // HasEdge(NodeHandle src, NodeHandle dst) -> bool  - are source and destination nodes connected by some edge
   cls.def(
       "has_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Node src,
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node src,
          GraphTopologyTypes::Node dst) {
-        return self.BuildView<PropertyGraphViews::EdgesSortedByDestID>()
+        return self->BuildView<PropertyGraphViews::EdgesSortedByDestID>()
             .HasEdge(src, dst);
       },
       py::call_guard<py::gil_scoped_release>());
   // HasEdge(NodeHandle src, NodeHandle dst, EdgeEntityTypeID)-> bool - are source and destination nodes connected by some edge of a given type
   cls.def(
       "has_edge",
-      [](PropertyGraph& self, GraphTopologyTypes::Node src,
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Node src,
          GraphTopologyTypes::Node dst, const EntityType& ty) {
-        return self.BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>().HasEdge(
-            src, dst, ty.type_id);
+        return self->BuildView<PropertyGraphViews::EdgeTypeAwareBiDir>()
+            .HasEdge(src, dst, ty.type_id);
       },
       py::call_guard<py::gil_scoped_release>());
 
@@ -849,8 +849,8 @@ DefPropertyGraph(py::module& m) {
   // GetEdgeSrc(LocalEdgeID)-> NodeHandle - source of an edge
   cls.def(
       "get_edge_src",
-      [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-        return self.BuildView<PropertyGraphViews::BiDirectional>().GetEdgeSrc(
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Edge e) {
+        return self->BuildView<PropertyGraphViews::BiDirectional>().GetEdgeSrc(
             e);
       },
       py::call_guard<py::gil_scoped_release>());
@@ -858,9 +858,12 @@ DefPropertyGraph(py::module& m) {
       cls_numba_replacement, "get_edge_src");
 
   // GetEdgeDst(LocalEdgeID)-> NodeHandle - destination of an edge
-  cls.def("get_edge_dst", [](PropertyGraph& self, GraphTopologyTypes::Edge e) {
-    return self.BuildView<PropertyGraphViews::BiDirectional>().OutEdgeDst(e);
-  });
+  cls.def(
+      "get_edge_dst",
+      [](std::shared_ptr<PropertyGraph> self, GraphTopologyTypes::Edge e) {
+        return self->BuildView<PropertyGraphViews::BiDirectional>().OutEdgeDst(
+            e);
+      });
   katana::DefWithNumba<&PropertyGraphNumbaReplacement::OutEdgeDst>(
       cls_numba_replacement, "get_edge_dst");
 
@@ -1053,9 +1056,17 @@ DefPropertyGraph(py::module& m) {
       :param command_line: Lineage information in the form of a command line.
       :type command_line: str
       )""");
+
   cls.def_property_readonly("path", [](PropertyGraph& self) -> std::string {
     return self.rdg_dir().string();
   });
+
+  cls.def_property_readonly(
+      "_shared_ptr_address",
+      [](std::shared_ptr<katana::PropertyGraph> self) {
+        return (uintptr_t)(new std::shared_ptr<katana::PropertyGraph>(self));
+      },
+      "Katana Internal. Used for passing objects into Cython.");
 }
 
 template <typename node_or_edge>
@@ -1151,7 +1162,7 @@ DefAccessors(py::module& m) {
       .def("__getitem__", &GraphBaseEdgeDestAccessor::at)
       .def("array", &GraphBaseEdgeDestAccessor::array);
   py::class_<GraphBaseEdgeSourceAccessor>(m, "GraphBaseEdgeSourceAccessor")
-      .def(py::init<katana::PropertyGraph*>())
+      .def(py::init<std::shared_ptr<katana::PropertyGraph>>())
       .def("__getitem__", &GraphBaseEdgeSourceAccessor::at)
       .def("array", &GraphBaseEdgeSourceAccessor::array);
 }

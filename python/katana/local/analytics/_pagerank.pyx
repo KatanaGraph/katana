@@ -19,6 +19,7 @@ Page Rank
 
 .. autofunction:: katana.local.analytics.pagerank_assert_valid
 """
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -28,7 +29,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -65,9 +66,9 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
     int kDefaultMaxIterations "katana::analytics::PagerankPlan::kDefaultMaxIterations"
     double kDefaultAlpha "katana::analytics::PagerankPlan::kDefaultAlpha"
 
-    Result[void] Pagerank(_PropertyGraph* pg, string output_property_name, CTxnContext* txn_ctx, _PagerankPlan plan)
+    Result[void] Pagerank(const shared_ptr[_PropertyGraph]& pg, string output_property_name, CTxnContext* txn_ctx, _PagerankPlan plan)
 
-    Result[void] PagerankAssertValid(_PropertyGraph* pg, string output_property_name)
+    Result[void] PagerankAssertValid(const shared_ptr[_PropertyGraph]& pg, string output_property_name)
 
     cppclass _PagerankStatistics "katana::analytics::PagerankStatistics":
         float max_rank
@@ -77,7 +78,7 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
         void Print(ostream os)
 
         @staticmethod
-        Result[_PagerankStatistics] Compute(_PropertyGraph* pg, string output_property_name)
+        Result[_PagerankStatistics] Compute(const shared_ptr[_PropertyGraph]& pg, string output_property_name)
 
 
 class _PagerankPlanAlgorithm(Enum):
@@ -202,7 +203,7 @@ def pagerank(pg, str output_property_name, PagerankPlan plan = PagerankPlan(), *
     output_property_name_cstr = <string>output_property_name_bytes
     txn_ctx = txn_ctx or TxnContext()
     with nogil:
-        handle_result_void(Pagerank(underlying_property_graph(pg), output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
+        handle_result_void(Pagerank(underlying_property_graph_shared_ptr(pg), output_property_name_cstr, underlying_txn_context(txn_ctx), plan.underlying_))
 
 
 def pagerank_assert_valid(pg, str output_property_name):
@@ -214,7 +215,7 @@ def pagerank_assert_valid(pg, str output_property_name):
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(PagerankAssertValid(underlying_property_graph(pg), output_property_name_cstr))
+        handle_result_assert(PagerankAssertValid(underlying_property_graph_shared_ptr(pg), output_property_name_cstr))
 
 
 cdef _PagerankStatistics handle_result_PagerankStatistics(Result[_PagerankStatistics] res) nogil except *:
@@ -237,7 +238,7 @@ cdef class PagerankStatistics:
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_PagerankStatistics(_PagerankStatistics.Compute(
-                underlying_property_graph(pg), output_property_name_cstr))
+                underlying_property_graph_shared_ptr(pg), output_property_name_cstr))
 
     @property
     def max_rank(self) -> float:

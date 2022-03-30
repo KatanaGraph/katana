@@ -39,34 +39,37 @@ SplitString(std::string& str, std::vector<std::string>* vec) {
 }
 
 void
-TestOptionalTopologyGenerationEdgeShuffleTopology(katana::PropertyGraph& pg) {
+TestOptionalTopologyGenerationEdgeShuffleTopology(
+    std::shared_ptr<katana::PropertyGraph>& pg) {
   KATANA_LOG_DEBUG("##### Testing EdgeShuffleTopology Generation #####");
 
   // Build a EdgeSortedByDestID view, which uses GraphTopology EdgeShuffleTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
 
-  pg.BuildView<SortedGraphView>();
+  pg->BuildView<SortedGraphView>();
 }
 
 void
-TestOptionalTopologyGenerationShuffleTopology(katana::PropertyGraph& pg) {
+TestOptionalTopologyGenerationShuffleTopology(
+    std::shared_ptr<katana::PropertyGraph>& pg) {
   KATANA_LOG_DEBUG("##### Testing ShuffleTopology Generation #####");
 
   // Build a NodesSortedByDegreeEdgesSortedByDestID view, which uses GraphTopology ShuffleTopology in the background
   using SortedGraphView =
       katana::PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID;
 
-  pg.BuildView<SortedGraphView>();
+  pg->BuildView<SortedGraphView>();
 }
 
 void
-TestOptionalTopologyGenerationEdgeTypeAwareTopology(katana::PropertyGraph& pg) {
+TestOptionalTopologyGenerationEdgeTypeAwareTopology(
+    std::shared_ptr<katana::PropertyGraph>& pg) {
   KATANA_LOG_DEBUG("##### Testing EdgeTypeAware Topology Generation ######");
 
   // Build a EdgeTypeAwareBiDir view, which uses GraphTopology EdgeTypeAwareTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgeTypeAwareBiDir;
 
-  pg.BuildView<SortedGraphView>();
+  pg->BuildView<SortedGraphView>();
 }
 
 int
@@ -80,7 +83,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  katana::PropertyGraph pg = LoadGraph(inputURI);
+  std::shared_ptr<katana::PropertyGraph> pg = LoadGraph(inputURI);
 
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);
@@ -94,10 +97,11 @@ main(int argc, char** argv) {
   if (!pg_view_res) {
     KATANA_LOG_FATAL("Failed to construct projection: {}", pg_view_res.error());
   }
-  auto pg_view = std::move(pg_view_res.value());
+  std::shared_ptr<katana::PropertyGraph> pg_view =
+      std::move(pg_view_res.value());
 
-  TestOptionalTopologyGenerationEdgeShuffleTopology(*pg_view);
-  TestOptionalTopologyGenerationShuffleTopology(*pg_view);
-  TestOptionalTopologyGenerationEdgeTypeAwareTopology(*pg_view);
+  TestOptionalTopologyGenerationEdgeShuffleTopology(pg_view);
+  TestOptionalTopologyGenerationShuffleTopology(pg_view);
+  TestOptionalTopologyGenerationEdgeTypeAwareTopology(pg_view);
   return 0;
 }

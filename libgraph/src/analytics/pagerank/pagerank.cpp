@@ -22,8 +22,9 @@
 
 katana::Result<void>
 katana::analytics::Pagerank(
-    katana::PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx, katana::analytics::PagerankPlan plan) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
+    katana::analytics::PagerankPlan plan) {
   switch (plan.algorithm()) {
   case PagerankPlan::kPullResidual:
     return PagerankPullResidual(pg, output_property_name, plan, txn_ctx);
@@ -41,7 +42,7 @@ katana::analytics::Pagerank(
 /// \cond DO_NOT_DOCUMENT
 katana::Result<void>
 katana::analytics::PagerankAssertValid(
-    [[maybe_unused]] katana::PropertyGraph* pg,
+    [[maybe_unused]] const std::shared_ptr<katana::PropertyGraph>& pg,
     [[maybe_unused]] const std::string& property_name) {
   // TODO(gill): This should have real checks. amp has no idea what to check.
   return katana::ResultSuccess();
@@ -57,7 +58,8 @@ katana::analytics::PagerankStatistics::Print(std::ostream& os) {
 
 katana::Result<katana::analytics::PagerankStatistics>
 katana::analytics::PagerankStatistics::Compute(
-    katana::PropertyGraph* pg, const std::string& property_name) {
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    const std::string& property_name) {
   auto graph_result =
       TypedPropertyGraph<std::tuple<NodeValue>, std::tuple<>>::Make(
           pg, {property_name}, {});

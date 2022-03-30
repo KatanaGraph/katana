@@ -504,7 +504,8 @@ RandomWalksWithWrap(
 }
 
 katana::Result<std::vector<std::vector<uint32_t>>>
-katana::analytics::RandomWalks(PropertyGraph* pg, RandomWalksPlan plan) {
+katana::analytics::RandomWalks(
+    const std::shared_ptr<katana::PropertyGraph>& pg, RandomWalksPlan plan) {
   switch (plan.algorithm()) {
   case RandomWalksPlan::kNode2Vec: {
     auto graph =
@@ -525,7 +526,7 @@ katana::analytics::RandomWalks(PropertyGraph* pg, RandomWalksPlan plan) {
 /// \cond DO_NOT_DOCUMENT
 katana::Result<void>
 katana::analytics::RandomWalksAssertValid(
-    [[maybe_unused]] katana::PropertyGraph* pg) {
+    [[maybe_unused]] const std::shared_ptr<katana::PropertyGraph>& pg) {
   // TODO(gill): This should have real checks.
   return katana::ResultSuccess();
 }

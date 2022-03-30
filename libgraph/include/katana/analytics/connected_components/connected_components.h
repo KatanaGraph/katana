@@ -158,12 +158,13 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> ConnectedComponents(
-    PropertyGraph* pg, const std::string& output_property_name,
-    katana::TxnContext* txn_ctx, const bool& is_symmetric = false,
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& output_property_name, katana::TxnContext* txn_ctx,
+    const bool& is_symmetric = false,
     ConnectedComponentsPlan plan = ConnectedComponentsPlan());
 
 KATANA_EXPORT Result<void> ConnectedComponentsAssertValid(
-    PropertyGraph* pg, const std::string& property_name);
+    const std::shared_ptr<PropertyGraph>& pg, const std::string& property_name);
 
 struct KATANA_EXPORT ConnectedComponentsStatistics {
   /// Total number of unique components in the graph.
@@ -179,7 +180,8 @@ struct KATANA_EXPORT ConnectedComponentsStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<ConnectedComponentsStatistics> Compute(
-      katana::PropertyGraph* pg, const std::string& property_name);
+      const std::shared_ptr<PropertyGraph>& pg,
+      const std::string& property_name);
 };
 
 }  // namespace katana::analytics

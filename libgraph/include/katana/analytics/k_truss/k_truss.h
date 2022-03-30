@@ -50,11 +50,12 @@ public:
 ///
 /// @warning This algorithm will reorder nodes and edges in the graph.
 KATANA_EXPORT Result<void> KTruss(
-    katana::TxnContext* txn_ctx, PropertyGraph* pg, uint32_t k_truss_number,
-    const std::string& output_property_name, KTrussPlan plan = KTrussPlan());
+    katana::TxnContext* txn_ctx, const std::shared_ptr<katana::PropertyGraph>&,
+    uint32_t k_truss_number, const std::string& output_property_name,
+    KTrussPlan plan = KTrussPlan());
 
 KATANA_EXPORT Result<void> KTrussAssertValid(
-    PropertyGraph* pg, uint32_t k_truss_number,
+    const std::shared_ptr<katana::PropertyGraph>& pg, uint32_t k_truss_number,
     const std::string& property_name);
 
 struct KATANA_EXPORT KTrussStatistics {
@@ -65,7 +66,7 @@ struct KATANA_EXPORT KTrussStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KTrussStatistics> Compute(
-      katana::PropertyGraph* pg, uint32_t k_truss_number,
+      const std::shared_ptr<katana::PropertyGraph>& pg, uint32_t k_truss_number,
       const std::string& property_name);
 };
 

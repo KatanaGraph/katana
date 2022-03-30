@@ -35,10 +35,10 @@ TestIterate1(size_t num_nodes, size_t line_width) {
 
   katana::TxnContext txn_ctx;
 
-  std::unique_ptr<katana::PropertyGraph> g =
+  std::shared_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
 
-  auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(g.get());
+  auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(g);
   if (!r) {
     KATANA_LOG_FATAL("could not make property graph: {}", r.error());
   }
@@ -66,10 +66,10 @@ TestIterate3(size_t num_nodes, size_t line_width) {
 
   katana::TxnContext txn_ctx;
 
-  std::unique_ptr<katana::PropertyGraph> g =
+  std::shared_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy, &txn_ctx);
 
-  auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(g.get());
+  auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(g);
   if (!r) {
     KATANA_LOG_FATAL("could not make property graph: {}", r.error());
   }
@@ -93,11 +93,11 @@ TestIterate4(size_t num_nodes, size_t line_width) {
 
   katana::TxnContext txn_ctx;
 
-  std::unique_ptr<katana::PropertyGraph> g =
+  std::shared_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, 5, &policy, &txn_ctx);
 
   auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(
-      g.get(), {"1", "3"}, {"0", "4"});
+      g, {"1", "3"}, {"0", "4"});
   if (!r) {
     KATANA_LOG_FATAL("could not make property graph: {}", r.error());
   }
@@ -119,17 +119,17 @@ TestError1(size_t num_nodes, size_t line_width) {
 
   katana::TxnContext txn_ctx;
 
-  std::unique_ptr<katana::PropertyGraph> g =
+  std::shared_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, 5, &policy, &txn_ctx);
 
   auto r1 = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(
-      g.get(), {"1", "3"}, {"0", "noexist"});
+      g, {"1", "3"}, {"0", "noexist"});
   KATANA_LOG_VASSERT(
       r1.error() == katana::ErrorCode::PropertyNotFound,
       "Should return PropertyNotFound when edge property doesn't exist.");
 
   auto r2 = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(
-      g.get(), {"noexist", "3"}, {"0", "2"});
+      g, {"noexist", "3"}, {"0", "2"});
   KATANA_LOG_VASSERT(
       r2.error() == katana::ErrorCode::PropertyNotFound,
       "Should return PropertyNotFound when node property doesn't exist.");

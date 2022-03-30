@@ -6,17 +6,17 @@ using namespace katana::analytics;
 
 void
 RunCdlp(
-    std::unique_ptr<katana::PropertyGraph>&& pg, const bool& is_symmetric,
+    const std::shared_ptr<katana::PropertyGraph>& pg, const bool& is_symmetric,
     const CdlpStatistics cdlp_expected_statistics) noexcept {
   using Plan = CdlpPlan;
   Plan plan = Plan::Synchronous();
   const std::string property_name = "community";
 
   katana::TxnContext txn_ctx;
-  auto cdlp = Cdlp(pg.get(), property_name, 10, &txn_ctx, is_symmetric, plan);
+  auto cdlp = Cdlp(pg, property_name, 10, &txn_ctx, is_symmetric, plan);
   KATANA_LOG_VASSERT(cdlp, " CDLP failed and returned error {}", cdlp.error());
 
-  auto stats_result = CdlpStatistics::Compute(pg.get(), property_name);
+  auto stats_result = CdlpStatistics::Compute(pg, property_name);
   KATANA_LOG_VASSERT(
       stats_result, "Failed to compute Cdlp statistics: {}",
       stats_result.error());

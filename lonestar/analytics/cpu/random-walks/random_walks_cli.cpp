@@ -116,7 +116,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
@@ -139,7 +139,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm");
   }
 
-  auto walks_result = RandomWalks(pg.get(), plan);
+  auto walks_result = RandomWalks(pg, plan);
   if (!walks_result) {
     KATANA_LOG_FATAL("Failed to run RandomWalks: {}", walks_result.error());
   }

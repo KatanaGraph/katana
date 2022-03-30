@@ -19,6 +19,7 @@ from enum import Enum
 
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint64_t
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -28,7 +29,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph, underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, Statistics, _Plan
 
 
@@ -78,10 +79,10 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
     unsigned kDefaultDelta "katana::analytics::SsspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
-    Result[void] Sssp(_PropertyGraph* pg, size_t start_node,
+    Result[void] Sssp(const shared_ptr[_PropertyGraph]& pg, size_t start_node,
         const string& edge_weight_property_name, const string& output_property_name, CTxnContext* txn_ctx, _SsspPlan plan)
 
-    Result[void] SsspAssertValid(_PropertyGraph* pg, size_t start_node,
+    Result[void] SsspAssertValid(const shared_ptr[_PropertyGraph]& pg, size_t start_node,
                                  const string& edge_weight_property_name, const string& output_property_name, CTxnContext* txn_ctx);
 
     cppclass _SsspStatistics  "katana::analytics::SsspStatistics":
@@ -92,7 +93,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
         void Print(ostream os)
 
         @staticmethod
-        Result[_SsspStatistics] Compute(_PropertyGraph* pg, string output_property_name);
+        Result[_SsspStatistics] Compute(const shared_ptr[_PropertyGraph]& pg, string output_property_name);
 
 
 class _SsspAlgorithm(Enum):
@@ -281,7 +282,7 @@ def sssp(pg, size_t start_node, str edge_weight_property_name, str output_proper
     txn_ctx = txn_ctx or TxnContext()
     print("Edge schema:", repr(pg.loaded_edge_schema()))
     with nogil:
-        handle_result_void(Sssp(underlying_property_graph(pg), start_node, edge_weight_property_name_str,
+        handle_result_void(Sssp(underlying_property_graph_shared_ptr(pg), start_node, edge_weight_property_name_str,
                                 output_property_name_str, underlying_txn_context(txn_ctx), plan.underlying_))
 
 def sssp_assert_valid(pg, size_t start_node, str edge_weight_property_name, str output_property_name, txn_ctx = None):
@@ -294,7 +295,7 @@ def sssp_assert_valid(pg, size_t start_node, str edge_weight_property_name, str 
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_assert(SsspAssertValid(underlying_property_graph(pg), start_node, edge_weight_property_name_str, output_property_name_str, underlying_txn_context(txn_ctx)))
+        handle_result_assert(SsspAssertValid(underlying_property_graph_shared_ptr(pg), start_node, edge_weight_property_name_str, output_property_name_str, underlying_txn_context(txn_ctx)))
 
 
 cdef _SsspStatistics handle_result_SsspStatistics(Result[_SsspStatistics] res) nogil except *:
@@ -318,7 +319,7 @@ cdef class SsspStatistics(Statistics):
         cdef string output_property_name_str = bytes(output_property_name, "utf-8")
         with nogil:
             self.underlying = handle_result_SsspStatistics(_SsspStatistics.Compute(
-                underlying_property_graph(pg), output_property_name_str))
+                underlying_property_graph_shared_ptr(pg), output_property_name_str))
 
     @property
     def max_distance(self) -> float:

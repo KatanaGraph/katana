@@ -117,7 +117,8 @@ KATANA_EXPORT void SplitStringByComma(
 template <typename EdgeWeightType>
 static katana::Result<void>
 AddDefaultEdgeWeight(
-    katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::shared_ptr<PropertyGraph>& pg,
+    const std::string& edge_weight_property_name,
     const EdgeWeightType& default_val, katana::TxnContext* txn_ctx) {
   struct EdgeWt : public katana::PODProperty<EdgeWeightType> {};
   using EdgeData = std::tuple<EdgeWt>;
@@ -138,7 +139,7 @@ AddDefaultEdgeWeight(
       },
       katana::steal(), katana::loopname("SetDefaultWeight"));
   return katana::ResultSuccess();
+}
 
-}  // namespace katana::analytics
 }  // namespace katana::analytics
 #endif

@@ -1383,13 +1383,15 @@ class BasicPropGraphViewWrapper : public Topo {
 
 public:
   explicit BasicPropGraphViewWrapper(
-      PropertyGraph* pg, const Topo& topo) noexcept
-      : Base(topo), prop_graph_(pg) {}
+      std::shared_ptr<PropertyGraph> pg, const Topo& topo) noexcept
+      : Base(topo), prop_graph_(std::move(pg)) {}
 
-  const PropertyGraph* property_graph() const noexcept { return prop_graph_; }
+  const PropertyGraph* property_graph() const noexcept {
+    return prop_graph_.get();
+  }
 
 private:
-  PropertyGraph* prop_graph_;
+  std::shared_ptr<PropertyGraph> prop_graph_;
 };
 
 namespace internal {
@@ -1405,7 +1407,7 @@ template <>
 struct PGViewBuilder<PGViewDefault> {
   template <typename ViewCache>
   static PGViewDefault BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      const std::shared_ptr<PropertyGraph>& pg, ViewCache& viewCache) noexcept {
     auto topo = viewCache.GetDefaultTopology();
     return PGViewDefault{pg, DefaultPGTopology{topo}};
   }
@@ -1420,9 +1422,10 @@ template <>
 struct PGViewBuilder<PGViewTransposed> {
   template <typename ViewCache>
   static PGViewTransposed BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      const std::shared_ptr<PropertyGraph>& pg, ViewCache& viewCache) noexcept {
     auto transposed_topo = viewCache.BuildOrGetEdgeShuffTopo(
-        pg, RDGTopology::TransposeKind::kYes, RDGTopology::EdgeSortKind::kAny);
+        pg.get(), RDGTopology::TransposeKind::kYes,
+        RDGTopology::EdgeSortKind::kAny);
 
     return PGViewTransposed{pg, TransposedTopology(transposed_topo)};
   }
@@ -1438,9 +1441,9 @@ template <>
 struct PGViewBuilder<PGViewEdgesSortedByDestID> {
   template <typename ViewCache>
   static PGViewEdgesSortedByDestID BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      const std::shared_ptr<PropertyGraph>& pg, ViewCache& viewCache) noexcept {
     auto sorted_topo = viewCache.BuildOrGetEdgeShuffTopo(
-        pg, RDGTopology::TransposeKind::kNo,
+        pg.get(), RDGTopology::TransposeKind::kNo,
         RDGTopology::EdgeSortKind::kSortedByDestID);
 
     viewCache.ReseatDefaultTopo(sorted_topo);
@@ -1461,9 +1464,9 @@ template <>
 struct PGViewBuilder<PGViewNodesSortedByDegreeEdgesSortedByDestID> {
   template <typename ViewCache>
   static PGViewNodesSortedByDegreeEdgesSortedByDestID BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      const std::shared_ptr<PropertyGraph>& pg, ViewCache& viewCache) noexcept {
     auto sorted_topo = viewCache.BuildOrGetShuffTopo(
-        pg, RDGTopology::TransposeKind::kNo,
+        pg.get(), RDGTopology::TransposeKind::kNo,
         RDGTopology::NodeSortKind::kSortedByDegree,
         RDGTopology::EdgeSortKind::kSortedByDestID);
 
@@ -1482,9 +1485,10 @@ template <>
 struct PGViewBuilder<PGViewBiDirectional> {
   template <typename ViewCache>
   static PGViewBiDirectional BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      const std::shared_ptr<PropertyGraph>& pg, ViewCache& viewCache) noexcept {
     auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
-        pg, RDGTopology::TransposeKind::kYes, RDGTopology::EdgeSortKind::kAny);
+        pg.get(), RDGTopology::TransposeKind::kYes,
+        RDGTopology::EdgeSortKind::kAny);
     auto bidir_topo =
         SimpleBiDirTopology{viewCache.GetDefaultTopology(), tpose_topo};
 
@@ -1502,9 +1506,10 @@ template <>
 struct PGViewBuilder<PGViewUnDirected> {
   template <typename ViewCache>
   static internal::PGViewUnDirected BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      const std::shared_ptr<PropertyGraph>& pg, ViewCache& viewCache) noexcept {
     auto tpose_topo = viewCache.BuildOrGetEdgeShuffTopo(
-        pg, RDGTopology::TransposeKind::kYes, RDGTopology::EdgeSortKind::kAny);
+        pg.get(), RDGTopology::TransposeKind::kYes,
+        RDGTopology::EdgeSortKind::kAny);
     auto undir_topo =
         UndirectedTopology{viewCache.GetDefaultTopology(), tpose_topo};
 
@@ -1521,11 +1526,11 @@ template <>
 struct PGViewBuilder<PGViewEdgeTypeAwareBiDir> {
   template <typename ViewCache>
   static PGViewEdgeTypeAwareBiDir BuildView(
-      PropertyGraph* pg, ViewCache& viewCache) noexcept {
+      const std::shared_ptr<PropertyGraph>& pg, ViewCache& viewCache) noexcept {
     auto out_topo = viewCache.BuildOrGetEdgeTypeAwareTopo(
-        pg, RDGTopology::TransposeKind::kNo);
+        pg.get(), RDGTopology::TransposeKind::kNo);
     auto in_topo = viewCache.BuildOrGetEdgeTypeAwareTopo(
-        pg, RDGTopology::TransposeKind::kYes);
+        pg.get(), RDGTopology::TransposeKind::kYes);
 
     // The new topology can replace the defaut one.
     viewCache.ReseatDefaultTopo(out_topo);
@@ -1573,19 +1578,11 @@ public:
   PGViewCache& operator=(const PGViewCache&) = delete;
 
   template <typename PGView>
-  PGView BuildView(PropertyGraph* pg) noexcept {
+  PGView BuildView(const std::shared_ptr<PropertyGraph>& pg) noexcept {
     return internal::PGViewBuilder<PGView>::BuildView(pg, *this);
   }
 
   katana::Result<std::vector<RDGTopology>> ToRDGTopology();
-
-  template <typename PGView>
-  PGView BuildView(
-      const PropertyGraph* pg, const std::vector<std::string>& node_types,
-      const std::vector<std::string>& edge_types) noexcept {
-    return internal::PGViewBuilder<PGView>::BuildView(
-        pg, node_types, edge_types, *this);
-  }
 
   // Avoids a copy of the default topology.
   const GraphTopology& GetDefaultTopologyRef() const noexcept;

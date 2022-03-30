@@ -10,6 +10,7 @@
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
+#include "storage-format-version.h"
 
 namespace cll = llvm::cl;
 namespace fs = boost::filesystem;
@@ -29,20 +30,6 @@ using EdgeData = std::tuple<>;
 
 using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
 using GNode = typename Graph::Node;
-
-katana::PropertyGraph
-LoadGraph(const katana::URI& rdg_file) {
-  KATANA_LOG_ASSERT(!rdg_file.empty());
-  katana::TxnContext txn_ctx;
-  auto g_res =
-      katana::PropertyGraph::Make(rdg_file, &txn_ctx, katana::RDGLoadOptions());
-
-  if (!g_res) {
-    KATANA_LOG_FATAL("making result: {}", g_res.error());
-  }
-  katana::PropertyGraph g = std::move(*g_res.value());
-  return g;
-}
 
 void
 SplitString(std::string& str, std::vector<std::string>* vec) {
@@ -65,7 +52,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  katana::PropertyGraph full_graph = LoadGraph(inputURI);
+  std::shared_ptr<katana::PropertyGraph> full_graph = LoadGraph(inputURI);
 
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);
@@ -80,10 +67,11 @@ main(int argc, char** argv) {
   if (!pg_view_res) {
     KATANA_LOG_FATAL("Failed to construct projection: {}", pg_view_res.error());
   }
-  auto pg_view = std::move(pg_view_res.value());
+  std::shared_ptr<katana::PropertyGraph> pg_view =
+      std::move(pg_view_res.value());
 
   katana::analytics::TemporaryPropertyGuard temp_node_property{
-      full_graph.NodeMutablePropertyView()};
+      full_graph->NodeMutablePropertyView()};
 
   std::vector<std::string> node_props;
   node_props.emplace_back(temp_node_property.name());
@@ -95,24 +83,23 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL(
         "Failed to Construct Properties: {}", res_node_prop.error());
   }
-  auto typed_pg_view =
-      Graph::Make(pg_view.get(), node_props, {}).assume_value();
+  auto typed_pg_view = Graph::Make(pg_view, node_props, {}).assume_value();
 
   uint32_t num_valid_nodes{0};
 
   auto res_node_get_prop =
-      full_graph.GetNodeProperty(temp_node_property.name());
+      full_graph->GetNodeProperty(temp_node_property.name());
   auto node_prop = res_node_get_prop.value();
 
-  num_valid_nodes = full_graph.NumNodes() - node_prop->null_count();
+  num_valid_nodes = full_graph->NumNodes() - node_prop->null_count();
 
   KATANA_LOG_VASSERT(
       typed_pg_view.NumNodes() > 0 &&
-          full_graph.NumNodes() >= typed_pg_view.NumNodes(),
+          full_graph->NumNodes() >= typed_pg_view.NumNodes(),
       "\n Num Nodes: {}", typed_pg_view.NumNodes());
   KATANA_LOG_VASSERT(
       typed_pg_view.NumEdges() > 0 &&
-          full_graph.NumEdges() >= typed_pg_view.NumEdges(),
+          full_graph->NumEdges() >= typed_pg_view.NumEdges(),
       "\n Num Edges: {}", typed_pg_view.NumEdges());
   KATANA_LOG_VASSERT(
       typed_pg_view.NumNodes() == num_valid_nodes,

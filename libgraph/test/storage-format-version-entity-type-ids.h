@@ -139,20 +139,21 @@ TestConvertGraphStorageFormat(const katana::URI& input_rdg) {
 
   katana::TxnContext txn_ctx;
 
-  katana::PropertyGraph g = LoadGraph(input_rdg);
+  std::shared_ptr<katana::PropertyGraph> g = LoadGraph(input_rdg);
   ValidateLDBC003EntityTypeManagers(
-      g.GetNodeTypeManager(), g.GetEdgeTypeManager());
+      g->GetNodeTypeManager(), g->GetEdgeTypeManager());
 
-  auto g2_rdg_file = StoreGraph(&g);
-  katana::PropertyGraph g2 = LoadGraph(g2_rdg_file);
+  auto g2_rdg_file = StoreGraph(g.get());
+  std::shared_ptr<katana::PropertyGraph> g2 = LoadGraph(g2_rdg_file);
+
   ValidateLDBC003EntityTypeManagers(
-      g2.GetNodeTypeManager(), g2.GetEdgeTypeManager());
+      g2->GetNodeTypeManager(), g2->GetEdgeTypeManager());
 
   // This takes ~20 seconds
-  KATANA_LOG_WARN("{}", g.ReportDiff(&g2));
+  KATANA_LOG_WARN("{}", g->ReportDiff(g2.get()));
 
   // Equals takes over a minute
-  KATANA_LOG_ASSERT(g.Equals(&g2));
+  KATANA_LOG_ASSERT(g->Equals(g2.get()));
 }
 
 void
@@ -173,25 +174,27 @@ TestRoundTripNewStorageFormat(const katana::URI& input_rdg) {
   katana::TxnContext txn_ctx;
 
   // first cycle converts old->new
-  katana::PropertyGraph g = LoadGraph(input_rdg);
+  std::shared_ptr<katana::PropertyGraph> g = LoadGraph(input_rdg);
   ValidateLDBC003EntityTypeManagers(
-      g.GetNodeTypeManager(), g.GetEdgeTypeManager());
+      g->GetNodeTypeManager(), g->GetEdgeTypeManager());
 
-  auto g2_rdg_file = StoreGraph(&g);
-  katana::PropertyGraph g2 = LoadGraph(g2_rdg_file);
+  auto g2_rdg_file = StoreGraph(g.get());
+  std::shared_ptr<katana::PropertyGraph> g2 = LoadGraph(g2_rdg_file);
+
   ValidateLDBC003EntityTypeManagers(
-      g2.GetNodeTypeManager(), g2.GetEdgeTypeManager());
+      g2->GetNodeTypeManager(), g2->GetEdgeTypeManager());
 
   // second cycle doesn't do any conversion, but tests storing/loading a "new format" graph
-  auto g3_rdg_file = StoreGraph(&g2);
-  katana::PropertyGraph g3 = LoadGraph(g3_rdg_file);
+  auto g3_rdg_file = StoreGraph(g2.get());
+  std::shared_ptr<katana::PropertyGraph> g3 = LoadGraph(g3_rdg_file);
+
   ValidateLDBC003EntityTypeManagers(
-      g3.GetNodeTypeManager(), g3.GetEdgeTypeManager());
+      g3->GetNodeTypeManager(), g3->GetEdgeTypeManager());
 
   // This takes ~20 seconds
-  KATANA_LOG_WARN("{}", g.ReportDiff(&g3));
+  KATANA_LOG_WARN("{}", g->ReportDiff(g3.get()));
   // Equals takes over a minute
-  KATANA_LOG_ASSERT(g.Equals(&g3));
+  KATANA_LOG_ASSERT(g->Equals(g3.get()));
 }
 
 #endif

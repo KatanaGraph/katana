@@ -28,7 +28,7 @@
 #include "katana/RDG.h"
 #include "katana/analytics/Utils.h"
 
-inline std::unique_ptr<katana::PropertyGraph>
+inline std::shared_ptr<katana::PropertyGraph>
 MakeFileGraph(
     const katana::URI& rdg_name, const std::string& edge_property_name) {
   std::vector<std::string> edge_properties;

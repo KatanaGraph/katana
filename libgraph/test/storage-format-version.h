@@ -4,7 +4,7 @@
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 
-katana::PropertyGraph
+std::shared_ptr<katana::PropertyGraph>
 LoadGraph(const katana::URI& rdg_file) {
   KATANA_LOG_ASSERT(!rdg_file.empty());
   katana::TxnContext txn_ctx;
@@ -14,8 +14,7 @@ LoadGraph(const katana::URI& rdg_file) {
   if (!g_res) {
     KATANA_LOG_FATAL("making result: {}", g_res.error());
   }
-  katana::PropertyGraph g = std::move(*g_res.value());
-  return g;
+  return {std::move(g_res.value())};
 }
 
 katana::URI

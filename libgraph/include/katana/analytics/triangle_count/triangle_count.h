@@ -102,7 +102,8 @@ public:
  * @param plan
  */
 KATANA_EXPORT katana::Result<uint64_t> TriangleCount(
-    PropertyGraph* pg, TriangleCountPlan plan = {});
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    TriangleCountPlan plan = {});
 
 }  // namespace katana::analytics
 

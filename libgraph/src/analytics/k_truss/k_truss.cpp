@@ -346,9 +346,9 @@ BSPCoreThenTrussAlgo(SortedGraphView* g, uint32_t k) {
 
 katana::Result<void>
 katana::analytics::KTruss(
-    katana::TxnContext* txn_ctx, katana::PropertyGraph* pg,
-    uint32_t k_truss_number, const std::string& output_property_name,
-    KTrussPlan plan) {
+    katana::TxnContext* txn_ctx,
+    const std::shared_ptr<katana::PropertyGraph>& pg, uint32_t k_truss_number,
+    const std::string& output_property_name, KTrussPlan plan) {
   katana::ReportPageAllocGuard page_alloc;
 
   KATANA_CHECKED(
@@ -380,7 +380,7 @@ katana::analytics::KTruss(
 // TODO (gill) Add a validity routine.
 katana::Result<void>
 katana::analytics::KTrussAssertValid(
-    [[maybe_unused]] katana::PropertyGraph* pg,
+    [[maybe_unused]] const std::shared_ptr<katana::PropertyGraph>& pg,
     [[maybe_unused]] uint32_t k_truss_number,
     [[maybe_unused]] const std::string& property_name) {
   return katana::ResultSuccess();
@@ -388,7 +388,8 @@ katana::analytics::KTrussAssertValid(
 
 katana::Result<KTrussStatistics>
 katana::analytics::KTrussStatistics::Compute(
-    katana::PropertyGraph* pg, [[maybe_unused]] uint32_t k_truss_number,
+    const std::shared_ptr<katana::PropertyGraph>& pg,
+    [[maybe_unused]] uint32_t k_truss_number,
     const std::string& property_name) {
   auto graph = KATANA_CHECKED(Graph::Make(pg, {}, {property_name}));
 

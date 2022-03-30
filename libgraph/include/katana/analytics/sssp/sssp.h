@@ -122,13 +122,13 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Sssp(
-    PropertyGraph* pg, size_t start_node,
+    const std::shared_ptr<katana::PropertyGraph>& pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx,
     SsspPlan plan = {});
 
 KATANA_EXPORT Result<void> SsspAssertValid(
-    PropertyGraph* pg, size_t start_node,
+    const std::shared_ptr<katana::PropertyGraph>& pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, katana::TxnContext* txn_ctx);
 
@@ -144,7 +144,8 @@ struct KATANA_EXPORT SsspStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<SsspStatistics> Compute(
-      PropertyGraph* pg, const std::string& output_property_name);
+      const std::shared_ptr<katana::PropertyGraph>& pg,
+      const std::string& output_property_name);
 };
 
 }  // namespace katana::analytics

@@ -60,7 +60,7 @@ StoreGraph(katana::PropertyGraph* g, const katana::URI& output_uri) {
 
 /// Load/store cycle the provided RDG to cleanly relocate the graph without
 /// Carrying along stale files
-katana::PropertyGraph
+std::shared_ptr<katana::PropertyGraph>
 CleanRelocateGraphLoad(const katana::URI& rdg_file) {
   katana::PropertyGraph g_orig = LoadGraph(rdg_file);
   auto uri_res = katana::URI::MakeRand("/tmp/propertyfilegraph");
@@ -68,8 +68,7 @@ CleanRelocateGraphLoad(const katana::URI& rdg_file) {
   auto tmp_rdg_dir = uri_res.value();
   auto tmp_path = StoreGraph(&g_orig, tmp_rdg_dir);
 
-  katana::PropertyGraph g = LoadGraph(tmp_path);
-  return g;
+  return std::make_shared<katana::PropertyGraph>(LoadGraph(tmp_path));
 }
 
 /// Load/store cycle the provided RDG to cleanly relocate the graph without
@@ -90,23 +89,24 @@ CleanRelocateGraphStore(
 
 katana::Result<void>
 MaximizeGraph(const katana::URI& input_uri, const katana::URI& output_uri) {
-  katana::PropertyGraph g_tmp = CleanRelocateGraphLoad(input_uri);
+  std::shared_ptr<katana::PropertyGraph> g_tmp =
+      CleanRelocateGraphLoad(input_uri);
 
   // Add calls which add optional data structures to the RDG here
-  auto generated_sorted_view_sort1 = g_tmp.BuildView<
+  auto generated_sorted_view_sort1 = g_tmp->BuildView<
       katana::PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID>();
   auto generated_sorted_view_sort2 =
-      g_tmp.BuildView<katana::PropertyGraphViews::EdgesSortedByDestID>();
+      g_tmp->BuildView<katana::PropertyGraphViews::EdgesSortedByDestID>();
   auto generated_sorted_view_sort3 =
-      g_tmp.BuildView<katana::PropertyGraphViews::EdgeTypeAwareBiDir>();
+      g_tmp->BuildView<katana::PropertyGraphViews::EdgeTypeAwareBiDir>();
 
   katana::RDKLSHIndexPrimitive lsh = GenerateLSHIndex();
   katana::RDKSubstructureIndexPrimitive substruct = GenerateSubstructIndex();
 
-  KATANA_CHECKED(g_tmp.WriteRDKLSHIndexPrimitive(lsh));
-  KATANA_CHECKED(g_tmp.WriteRDKSubstructureIndexPrimitive(substruct));
+  KATANA_CHECKED(g_tmp->WriteRDKLSHIndexPrimitive(lsh));
+  KATANA_CHECKED(g_tmp->WriteRDKSubstructureIndexPrimitive(substruct));
 
-  auto g2_rdg_uri = CleanRelocateGraphStore(&g_tmp, output_uri);
+  auto g2_rdg_uri = CleanRelocateGraphStore(g_tmp.get(), output_uri);
 
   KATANA_LOG_WARN(
       "maximized version of {} stored at {}", input_uri, g2_rdg_uri);

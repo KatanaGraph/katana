@@ -63,7 +63,7 @@ public:
 ///
 /// \tparam ValueType is the type of column data
 template <typename ValueType>
-std::unique_ptr<katana::PropertyGraph>
+std::shared_ptr<katana::PropertyGraph>
 MakeFileGraph(
     size_t num_nodes, size_t num_properties, Policy* policy,
     katana::TxnContext* txn_ctx) {
@@ -83,7 +83,7 @@ MakeFileGraph(
   auto g_res = katana::PropertyGraph::Make(std::move(topo));
   KATANA_LOG_ASSERT(g_res);
 
-  std::unique_ptr<katana::PropertyGraph> g = std::move(g_res.value());
+  std::shared_ptr<katana::PropertyGraph> g = std::move(g_res.value());
 
   size_t num_edges = dests.size();
 

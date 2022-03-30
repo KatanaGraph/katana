@@ -26,12 +26,12 @@ TestOptionalTopologyGenerationEdgeShuffleTopology(const katana::URI& rdg_dir) {
   KATANA_LOG_DEBUG("##### Testing EdgeShuffleTopology Generation #####");
 
   katana::TxnContext txn_ctx;
-  katana::PropertyGraph pg = LoadGraph(rdg_dir);
+  std::shared_ptr<katana::PropertyGraph> pg = LoadGraph(rdg_dir);
 
   // Build a EdgeSortedByDestID view, which uses GraphTopology EdgeShuffleTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
 
-  pg.BuildView<SortedGraphView>();
+  pg->BuildView<SortedGraphView>();
 }
 
 void
@@ -39,13 +39,13 @@ TestOptionalTopologyGenerationShuffleTopology(const katana::URI& rdg_dir) {
   KATANA_LOG_DEBUG("##### Testing ShuffleTopology Generation #####");
 
   katana::TxnContext txn_ctx;
-  katana::PropertyGraph pg = LoadGraph(rdg_dir);
+  std::shared_ptr<katana::PropertyGraph> pg = LoadGraph(rdg_dir);
 
   // Build a NodesSortedByDegreeEdgesSortedByDestID view, which uses GraphTopology ShuffleTopology in the background
   using SortedGraphView =
       katana::PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID;
 
-  pg.BuildView<SortedGraphView>();
+  pg->BuildView<SortedGraphView>();
 }
 
 void
@@ -54,12 +54,12 @@ TestOptionalTopologyGenerationEdgeTypeAwareTopology(
   KATANA_LOG_DEBUG("##### Testing EdgeTypeAware Topology Generation ######");
 
   katana::TxnContext txn_ctx;
-  katana::PropertyGraph pg = LoadGraph(rdg_dir);
+  std::shared_ptr<katana::PropertyGraph> pg = LoadGraph(rdg_dir);
 
   // Build a EdgeTypeAwareBiDir view, which uses GraphTopology EdgeTypeAwareTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgeTypeAwareBiDir;
 
-  pg.BuildView<SortedGraphView>();
+  pg->BuildView<SortedGraphView>();
 }
 
 int

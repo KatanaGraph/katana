@@ -15,6 +15,7 @@ Betweenness Centrality
 """
 
 from libc.stdint cimport uint32_t
+from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
@@ -25,7 +26,7 @@ from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_r
 
 from katana.local import Graph, TxnContext
 
-from katana.local._graph cimport underlying_property_graph, underlying_txn_context
+from katana.local._graph cimport underlying_property_graph_shared_ptr, underlying_txn_context
 from katana.local.analytics.plan cimport Plan, _Plan
 
 from enum import Enum
@@ -53,9 +54,7 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
 
     BetweennessCentralitySources kBetweennessCentralityAllNodes;
 
-    Result[void] BetweennessCentrality(_PropertyGraph* pg, string output_property_name, CTxnContext* txn_ctx, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
-
-    # std_result[void] BetweennessCentralityAssertValid(Graph* pg, string output_property_name)
+    Result[void] BetweennessCentrality(const shared_ptr[_PropertyGraph]& pg, string output_property_name, CTxnContext* txn_ctx, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
 
     cppclass _BetweennessCentralityStatistics "katana::analytics::BetweennessCentralityStatistics":
         float max_centrality
@@ -65,7 +64,7 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
         void Print(ostream os)
 
         @staticmethod
-        Result[_BetweennessCentralityStatistics] Compute(_PropertyGraph* pg, string output_property_name)
+        Result[_BetweennessCentralityStatistics] Compute(const shared_ptr[_PropertyGraph]& pg, string output_property_name)
 
 
 cdef extern from * nogil:
@@ -174,7 +173,7 @@ def betweenness_centrality(pg, str output_property_name, sources = None,
     else:
         c_sources = BetweennessCentralitySources_from_int(int(sources))
     with nogil:
-        handle_result_void(BetweennessCentrality(underlying_property_graph(pg), output_property_name_cstr, underlying_txn_context(txn_ctx), c_sources, plan.underlying_))
+        handle_result_void(BetweennessCentrality(underlying_property_graph_shared_ptr(pg), output_property_name_cstr, underlying_txn_context(txn_ctx), c_sources, plan.underlying_))
 
 
 cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatistics(Result[_BetweennessCentralityStatistics] res) nogil except *:
@@ -197,7 +196,7 @@ cdef class BetweennessCentralityStatistics:
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_BetweennessCentralityStatistics(_BetweennessCentralityStatistics.Compute(
-                underlying_property_graph(pg), output_property_name_cstr))
+                underlying_property_graph_shared_ptr(pg), output_property_name_cstr))
 
     @property
     def max_centrality(self) -> float:

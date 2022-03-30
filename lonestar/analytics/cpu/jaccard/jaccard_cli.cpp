@@ -68,14 +68,15 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
+
   std::string output_property_name = "jaccard_output_property";
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -91,7 +92,7 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   if (auto r = katana::analytics::Jaccard(
-          pg_projected_view.get(), base_node, output_property_name, &txn_ctx,
+          pg_projected_view, base_node, output_property_name, &txn_ctx,
           katana::analytics::JaccardPlan());
       !r) {
     KATANA_LOG_FATAL("Jaccard failed: {}", r.error());
@@ -101,7 +102,7 @@ main(int argc, char** argv) {
   /// Graph graph = KATANA_CHECKED(Graph::Make(pg_projected_view.get(), {output_property_name}, {}));
   auto pg_result = katana::TypedPropertyGraphView<
       katana::PropertyGraphViews::Default, NodeData,
-      EdgeData>::Make(pg_projected_view.get(), {output_property_name}, {});
+      EdgeData>::Make(pg_projected_view, {output_property_name}, {});
   if (!pg_result) {
     KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
@@ -111,7 +112,7 @@ main(int argc, char** argv) {
             << graph.GetData<NodeValue>(report_node) << "\n";
 
   auto stats_result = katana::analytics::JaccardStatistics::Compute(
-      pg_projected_view.get(), base_node, output_property_name);
+      pg_projected_view, base_node, output_property_name);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "could not make compute statistics: {}", stats_result.error());
@@ -121,7 +122,7 @@ main(int argc, char** argv) {
 
   if (!skipVerify) {
     if (katana::analytics::JaccardAssertValid(
-            pg_projected_view.get(), base_node, output_property_name)) {
+            pg_projected_view, base_node, output_property_name)) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL(

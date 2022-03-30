@@ -35,19 +35,19 @@ TestOptionalTopologyStorageEdgeShuffleTopology(const katana::URI& inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeShuffleTopology *****");
 
   katana::TxnContext txn_ctx;
-  katana::PropertyGraph pg = LoadGraph(inputFile);
+  std::shared_ptr<katana::PropertyGraph> pg = LoadGraph(inputFile);
 
   // Build a EdgeSortedByDestID view, which uses GraphTopology EdgeShuffleTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgesSortedByDestID;
 
-  SortedGraphView generated_sorted_view = pg.BuildView<SortedGraphView>();
+  SortedGraphView generated_sorted_view = pg->BuildView<SortedGraphView>();
   // TODO: ensure this view was generated, not loaded
   // generated_sorted_view.Print();
 
-  auto g2_rdg_file = StoreGraph(&pg);
-  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
+  auto g2_rdg_file = StoreGraph(pg.get());
+  std::shared_ptr<katana::PropertyGraph> pg2 = LoadGraph(g2_rdg_file);
 
-  SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();
+  SortedGraphView loaded_sorted_view = pg2->BuildView<SortedGraphView>();
 
   //TODO: emcginnis need some way to verify we loaded this view, vs just generating it again
 
@@ -59,20 +59,20 @@ TestOptionalTopologyStorageShuffleTopology(const katana::URI& inputFile) {
   KATANA_LOG_WARN("***** Testing ShuffleTopology *****");
 
   katana::TxnContext txn_ctx;
-  katana::PropertyGraph pg = LoadGraph(inputFile);
+  std::shared_ptr<katana::PropertyGraph> pg = LoadGraph(inputFile);
 
   // Build a NodesSortedByDegreeEdgesSortedByDestID view, which uses GraphTopology ShuffleTopology in the background
   using SortedGraphView =
       katana::PropertyGraphViews::NodesSortedByDegreeEdgesSortedByDestID;
 
-  SortedGraphView generated_sorted_view = pg.BuildView<SortedGraphView>();
+  SortedGraphView generated_sorted_view = pg->BuildView<SortedGraphView>();
   // TODO: ensure this view was generated, not loaded
   // generated_sorted_view.Print();
 
-  auto g2_rdg_file = StoreGraph(&pg);
-  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
+  auto g2_rdg_file = StoreGraph(pg.get());
+  std::shared_ptr<katana::PropertyGraph> pg2 = LoadGraph(g2_rdg_file);
 
-  SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();
+  SortedGraphView loaded_sorted_view = pg2->BuildView<SortedGraphView>();
 
   //TODO: emcginnis need some way to verify we loaded this view, vs just generating it again
 
@@ -84,18 +84,18 @@ TestOptionalTopologyStorageEdgeTypeAwareTopology(const katana::URI& inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeTypeAware Topology *****");
 
   katana::TxnContext txn_ctx;
-  katana::PropertyGraph pg = LoadGraph(inputFile);
+  std::shared_ptr<katana::PropertyGraph> pg = LoadGraph(inputFile);
 
   // Build a EdgeTypeAwareBiDir view, which uses GraphTopology EdgeTypeAwareTopology in the background
   using SortedGraphView = katana::PropertyGraphViews::EdgeTypeAwareBiDir;
 
-  SortedGraphView generated_sorted_view = pg.BuildView<SortedGraphView>();
+  SortedGraphView generated_sorted_view = pg->BuildView<SortedGraphView>();
   // generated_sorted_view.Print();
 
-  auto g2_rdg_file = StoreGraph(&pg);
-  katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
+  auto g2_rdg_file = StoreGraph(pg.get());
+  std::shared_ptr<katana::PropertyGraph> pg2 = LoadGraph(g2_rdg_file);
 
-  SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();
+  SortedGraphView loaded_sorted_view = pg2->BuildView<SortedGraphView>();
 
   //TODO: emcginnis need some way to verify we loaded this view, vs just generating it again
 

@@ -166,13 +166,13 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
             << pg->topology().NumEdges() << " edges\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -258,15 +258,15 @@ main(int argc, char** argv) {
     std::string node_distance_prop = "distance-" + std::to_string(startNode);
     katana::TxnContext txn_ctx;
     auto pg_result = Sssp(
-        pg_projected_view.get(), startNode, edge_property_name,
-        node_distance_prop, &txn_ctx, plan);
+        pg_projected_view, startNode, edge_property_name, node_distance_prop,
+        &txn_ctx, plan);
     if (!pg_result) {
       KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
     }
     std::cout << "---------------> sssp done\n";
 
     auto stats_result =
-        SsspStatistics::Compute(pg_projected_view.get(), node_distance_prop);
+        SsspStatistics::Compute(pg_projected_view, node_distance_prop);
     if (!stats_result) {
       KATANA_LOG_FATAL("Computing statistics: {}", stats_result.error());
     }
@@ -282,7 +282,7 @@ main(int argc, char** argv) {
             pg_projected_view->topology().NumNodes() - stats.n_reached_nodes);
       }
       if (auto r = SsspAssertValid(
-              pg_projected_view.get(), startNode, edge_property_name,
+              pg_projected_view, startNode, edge_property_name,
               node_distance_prop, &txn_ctx);
           r) {
         std::cout << "Verification successful.\n";

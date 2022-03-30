@@ -104,7 +104,7 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
   }
   auto inputURI = res.value();
-  std::unique_ptr<katana::PropertyGraph> pg =
+  std::shared_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputURI, edge_property_name);
 
   std::cout << "Read " << pg->topology().NumNodes() << " nodes, "
@@ -112,7 +112,7 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
-  std::unique_ptr<katana::PropertyGraph> pg_projected_view =
+  std::shared_ptr<katana::PropertyGraph> pg_projected_view =
       ProjectPropertyGraphForArguments(pg);
 
   std::cout << "Projected graph has: "
@@ -137,14 +137,14 @@ main(int argc, char** argv) {
 
   katana::TxnContext txn_ctx;
   auto pg_result = LouvainClustering(
-      pg_projected_view.get(), edge_property_name, "clusterId", &txn_ctx,
+      pg_projected_view, edge_property_name, "clusterId", &txn_ctx,
       symmetricGraph, plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run LouvainClustering: {}", pg_result.error());
   }
 
   auto stats_result = LouvainClusteringStatistics::Compute(
-      pg_projected_view.get(), edge_property_name, "clusterId", &txn_ctx);
+      pg_projected_view, edge_property_name, "clusterId", &txn_ctx);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute LouvainClustering statistics: {}",
@@ -155,7 +155,7 @@ main(int argc, char** argv) {
 
   if (!skipVerify) {
     if (LouvainClusteringAssertValid(
-            pg_projected_view.get(), edge_property_name, "clusterId")) {
+            pg_projected_view, edge_property_name, "clusterId")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");

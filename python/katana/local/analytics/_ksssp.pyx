@@ -10,10 +10,11 @@ K Shortest paths
 from enum import Enum
 
 from libc.stddef cimport ptrdiff_t
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint32_t, uint64_t
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.string cimport string
+from libcpp.vector cimport vector
 from pyarrow.lib cimport CTable, Table, pyarrow_unwrap_table, pyarrow_wrap_table
 
 from katana.cpp.libgalois.graphs.Graph cimport TxnContext as CTxnContext
@@ -63,6 +64,12 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
                        _KssspPlan plan)
 
     cppclass _KssspStatistics "katana::analytics::KssspStatistics":
+        cppclass _PathStats "katana::analytics::KssspStatistics::PathStats":
+            vector[uint64_t] path
+            double weight
+
+        vector[_PathStats] paths
+
         void Print(ostream os)
 
         @staticmethod

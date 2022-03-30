@@ -8,6 +8,7 @@ K Shortest paths
 .. autoclass:: katana.local.analytics.KssspStatistics
 """
 from enum import Enum
+from typing import List
 
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t
@@ -69,6 +70,7 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
             double weight
 
         vector[_PathStats] paths
+        size_t report_node
 
         void Print(ostream os)
 
@@ -245,6 +247,28 @@ cdef _KssspStatistics handle_result_KssspStatistics(Result[_KssspStatistics] res
     return res.value()
 
 
+cdef class PathStats:
+    cdef _PathStats underlying
+
+    @property
+    def path(self) -> List[int]:
+        """
+        Path from a source to destination node
+
+        :rtype: List[int]
+        """
+        return self.underlying.path
+
+    @property
+    def weight(self) -> double:
+        """
+        Weight of path
+
+        :rtype: double
+        """
+        return self.underlying.weight
+        
+
 cdef class KssspStatistics(Statistics):
     """
     Compute the :ref:`statistics` of a kSSSP computation on a graph
@@ -273,6 +297,24 @@ cdef class KssspStatistics(Statistics):
             self.underlying = handle_result_KssspStatistics(_KssspStatistics.Compute(
                 underlying_property_graph(pg), edge_weight_property_name_str, table_ptr,
                 report_node, is_symmetric, underlying_txn_context(txn_ctx)))
+
+    @property
+    def paths(self) -> List[PathStats]:
+        """
+        All possible paths from source to report node
+
+        :rtype: List[PathStats]
+        """
+        return self.underlying.paths
+
+    @property
+    def report_node(self) -> int:
+        """
+        End node 
+
+        :rtype: int
+        """
+        return self.underlying.report_node
 
     def __str__(self) -> str:
         cdef ostringstream ss

@@ -257,7 +257,7 @@ cdef class PathStats:
 
         :rtype: List[int]
         """
-        return self.underlying.path
+        return <int [:self.underlying.path.size()]>self.underlying.path.data()
 
     @property
     def weight(self) -> double:
@@ -305,7 +305,7 @@ cdef class KssspStatistics(Statistics):
 
         :rtype: List[PathStats]
         """
-        return self.underlying.paths
+        return <PathStats [:self.underlying.paths.size()]>self.underlying.paths.data()
 
     @property
     def report_node(self) -> int:

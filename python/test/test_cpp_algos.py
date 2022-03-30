@@ -161,7 +161,7 @@ def test_ksssp(graph: Graph):
     num_paths = 5
 
     table = ksssp(graph, weight_name, start_node, report_node, num_paths)
-    paths = table.to_dict()["path"]
+    paths = table.to_pydict()["path"]
     assert len(paths) <= num_paths
 
     for i, i_path in enumerate(paths):

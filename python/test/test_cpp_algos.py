@@ -19,6 +19,7 @@ from katana.local.analytics import (
     JaccardPlan,
     JaccardStatistics,
     KCoreStatistics,
+    KssspStatistics,
     KTrussStatistics,
     LeidenClusteringStatistics,
     LouvainClusteringStatistics,

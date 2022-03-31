@@ -250,6 +250,9 @@ cdef _KssspStatistics handle_result_KssspStatistics(Result[_KssspStatistics] res
 cdef class PathStats:
     cdef _PathStats underlying
 
+    def __init__(self, underlying):
+        self.underlying = underlying
+
     @property
     def path(self) -> List[int]:
         """
@@ -309,7 +312,12 @@ cdef class KssspStatistics(Statistics):
 
         :rtype: List[PathStats]
         """
-        return <PathStats [:self.underlying.paths.size()]>self.underlying.paths.data()
+        res = []
+
+        for i in range(self.underlying.paths.size()):
+            res.append(PathStats(self.underlying.paths.at(i)))
+
+        return res
 
     @property
     def report_node(self) -> int:

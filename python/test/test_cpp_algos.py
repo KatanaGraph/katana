@@ -161,13 +161,18 @@ def test_ksssp(graph: Graph):
     num_paths = 5
 
     table = ksssp(graph, weight_name, start_node, report_node, num_paths)
-    paths = table.to_pydict()["path"]
+    stats = KssspStatistics(graph, weight_name, table, report_node)
+    paths = stats.paths()
     assert len(paths) <= num_paths
 
     for i, i_path in enumerate(paths):
-        assert i_path[-1] == report_node
+        i_nodes = i_path.path()
+        assert i_nodes[0] == start_node
+        assert i_nodes[-1] == report_node
         # Assert that all paths are unique
-        assert all(list(i_path) != list(j_path) for j_path in paths[(i + 1):])
+        for j_path in paths[(i + 1):]:
+            assert i_path.weight() <= j_path.weight()
+            assert list(i_nodes) != list(j_path.path())
 
 
 def test_jaccard(graph: Graph):

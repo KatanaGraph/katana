@@ -250,8 +250,11 @@ cdef _KssspStatistics handle_result_KssspStatistics(Result[_KssspStatistics] res
 cdef class PathStats:
     cdef _PathStats underlying
 
-    def __init__(self, underlying):
-        self.underlying = underlying
+    @staticmethod
+    cdef PathStats make(_PathStats u):
+        f = <PathStats>PathStats.__new__(PathStats)
+        f.underlying = u
+        return f
 
     @property
     def path(self) -> List[int]:
@@ -315,7 +318,7 @@ cdef class KssspStatistics(Statistics):
         res = []
 
         for i in range(self.underlying.paths.size()):
-            res.append(PathStats(self.underlying.paths.at(i)))
+            res.append(PathStats.make(self.underlying.paths.at(i)))
 
         return res
 

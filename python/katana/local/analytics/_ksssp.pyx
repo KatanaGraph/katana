@@ -64,11 +64,11 @@ cdef extern from "katana/analytics/k_shortest_paths/ksssp.h" namespace "katana::
                        const bool& is_symmetric, CTxnContext* txn_ctx,
                        _KssspPlan plan)
 
-    cppclass _KssspStatistics "katana::analytics::KssspStatistics":
-        cppclass _PathStats "katana::analytics::KssspStatistics::PathStats":
-            vector[uint64_t] path
-            double weight
+    cppclass _PathStats "katana::analytics::KssspStatistics::PathStats":
+        vector[uint64_t] path
+        double weight
 
+    cppclass _KssspStatistics "katana::analytics::KssspStatistics":
         vector[_PathStats] paths
         size_t report_node
 
@@ -257,7 +257,11 @@ cdef class PathStats:
 
         :rtype: List[int]
         """
-        return <int [:self.underlying.path.size()]>self.underlying.path.data()
+        res = []
+        for i in range(self.underlying.path.size()):
+            res.append(self.underlying.path.at(i))
+        
+        return res
 
     @property
     def weight(self) -> double:

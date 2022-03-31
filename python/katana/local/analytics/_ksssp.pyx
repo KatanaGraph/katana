@@ -266,7 +266,7 @@ cdef class PathStats:
         res = []
         for i in range(self.underlying.path.size()):
             res.append(self.underlying.path.at(i))
-        
+
         return res
 
     @property
@@ -277,7 +277,7 @@ cdef class PathStats:
         :rtype: double
         """
         return self.underlying.weight
-        
+
 
 cdef class KssspStatistics(Statistics):
     """
@@ -325,7 +325,7 @@ cdef class KssspStatistics(Statistics):
     @property
     def report_node(self) -> int:
         """
-        End node 
+        End node
 
         :rtype: int
         """

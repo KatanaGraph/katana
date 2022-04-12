@@ -148,7 +148,7 @@ katana::AddProperties(
     };
     if (grp) {
       grp->AddReturnsOp<std::shared_ptr<arrow::Table>>(
-          std::move(future), path.string(), on_complete);
+          std::move(future), path, on_complete);
       continue;
     }
     auto read_res = KATANA_CHECKED(future.get());
@@ -203,7 +203,7 @@ katana::AddPropertySlice(
     };
     if (grp) {
       grp->AddReturnsOp<std::shared_ptr<arrow::Table>>(
-          std::move(future), path.string(), on_complete);
+          std::move(future), path, on_complete);
       continue;
     }
     std::shared_ptr<arrow::Table> props = KATANA_CHECKED(future.get());

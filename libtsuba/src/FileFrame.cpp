@@ -38,7 +38,6 @@ katana::FileFrame::Init(uint64_t reserved_size) {
   }
   KATANA_CHECKED(Destroy());
 
-  path_ = "";
   map_size_ = map_size;
   map_start_ = static_cast<uint8_t*>(ptr);
   synced_ = false;
@@ -48,7 +47,7 @@ katana::FileFrame::Init(uint64_t reserved_size) {
 }
 
 void
-katana::FileFrame::Bind(std::string_view filename) {
+katana::FileFrame::Bind(const URI& filename) {
   path_ = filename;
 }
 

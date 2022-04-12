@@ -31,7 +31,7 @@ using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
 using GNode = typename Graph::Node;
 
 katana::PropertyGraph
-LoadGraph(const std::string& rdg_file) {
+LoadGraph(const katana::URI& rdg_file) {
   KATANA_LOG_ASSERT(!rdg_file.empty());
   katana::TxnContext txn_ctx;
   auto g_res =
@@ -60,7 +60,12 @@ main(int argc, char** argv) {
   katana::SharedMemSys sys;
   cll::ParseCommandLineOptions(argc, argv);
 
-  katana::PropertyGraph full_graph = LoadGraph(inputFile);
+  auto res = katana::URI::Make(inputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("input file {} error: {}", inputFile, res.error());
+  }
+  auto inputURI = res.value();
+  katana::PropertyGraph full_graph = LoadGraph(inputURI);
 
   std::vector<std::string> node_types;
   SplitString(nodeTypes, &node_types);

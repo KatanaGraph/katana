@@ -21,10 +21,10 @@ TestEmpty(const std::string& path) {
   auto uri = KATANA_CHECKED(katana::URI::MakeFromFile(path));
   auto empty_uri = uri.Join("empty_file");
 
-  KATANA_CHECKED(katana::FileStore(empty_uri.string(), std::string("")));
+  KATANA_CHECKED(katana::FileStore(empty_uri, std::string("")));
   katana::FileView fv;
 
-  KATANA_CHECKED(fv.Bind(empty_uri.string(), true));
+  KATANA_CHECKED(fv.Bind(empty_uri, true));
 
   KATANA_LOG_ASSERT(fv.size() == 0);
 

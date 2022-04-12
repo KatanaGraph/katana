@@ -77,7 +77,7 @@ katana::RDGTopology::Bind(const katana::URI& metadata_dir, bool resolve) {
   katana::URI t_path = metadata_dir.Join(path());
   KATANA_LOG_DEBUG(
       "binding to entire topology file at path {}", t_path.string());
-  KATANA_CHECKED(file_storage_.Bind(t_path.string(), resolve));
+  KATANA_CHECKED(file_storage_.Bind(t_path, resolve));
 
   file_store_bound_ = true;
   storage_valid_ = true;
@@ -97,7 +97,7 @@ katana::RDGTopology::Bind(
   KATANA_LOG_DEBUG(
       "binding from {} to {} with topology file at path {}", begin, end,
       t_path.string());
-  KATANA_CHECKED(file_storage_.Bind(t_path.string(), begin, end, resolve));
+  KATANA_CHECKED(file_storage_.Bind(t_path, begin, end, resolve));
 
   file_store_bound_ = true;
   storage_valid_ = true;
@@ -455,7 +455,7 @@ katana::RDGTopology::DoStore(
     //TODO: emcginnis need different naming schemes for the optional topologies?
     // add "epi_npi_eti_nti" to name?
     katana::URI path_uri = MakeTopologyFileName(handle);
-    ff->Bind(path_uri.string());
+    ff->Bind(path_uri);
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     write_group->StartStore(std::move(ff));
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -506,7 +506,7 @@ katana::RDGTopology::DoStore(
           "binding to entire topology file at path {} for relocation",
           t_path.string());
       KATANA_CHECKED_CONTEXT(
-          file_storage_.Bind(t_path.string(), true),
+          file_storage_.Bind(t_path, true),
           "failed binding topology file for copying at path = {}, "
           "TopologyKind={}, "
           "TransposeKind={}, EdgeSortKind={}, NodeSortKind={}",
@@ -520,7 +520,7 @@ katana::RDGTopology::DoStore(
     // depends on `topology file_storage_` outliving writes
     // all topology file stores must remain bound until write_group->Finish() completes
     write_group->StartStore(
-        path_uri.string(), file_storage_.ptr<uint8_t>(), file_storage_.size());
+        path_uri, file_storage_.ptr<uint8_t>(), file_storage_.size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
 
     // since nothing has changed besides the storage location, just have to update path

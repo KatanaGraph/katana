@@ -31,7 +31,7 @@ public:
   static katana::Result<RDKSubstructureIndexPrimitive> Load(
       const katana::URI& rdg_dir_path, const std::string& path) {
     RDKSubstructureIndexPrimitive substructure_index =
-        KATANA_CHECKED(LoadJson(rdg_dir_path.Join(path).string()));
+        KATANA_CHECKED(LoadJson(rdg_dir_path.Join(path)));
     return substructure_index;
   }
 
@@ -39,7 +39,7 @@ public:
     // Write out our json manifest
     katana::URI manifest_path = rdg_dir_path.RandFile(
         kOptionalDatastructureRDKSubstructureIndexPrimitiveFilename);
-    KATANA_CHECKED(WriteManifest(manifest_path.string()));
+    KATANA_CHECKED(WriteManifest(manifest_path));
     return manifest_path.BaseName();
   }
 
@@ -84,7 +84,7 @@ private:
   std::vector<std::vector<std::uint64_t>> index_;
 
   static katana::Result<RDKSubstructureIndexPrimitive> LoadJson(
-      const std::string& path) {
+      const URI& path) {
     katana::FileView fv;
     KATANA_CHECKED(fv.Bind(path, true));
 
@@ -99,7 +99,7 @@ private:
     return substructure_index;
   }
 
-  katana::Result<void> WriteManifest(const std::string& path) const {
+  katana::Result<void> WriteManifest(const URI& path) const {
     std::string serialized = KATANA_CHECKED(katana::JsonDump(*this));
     // POSIX files end with newlines
     serialized = serialized + "\n";

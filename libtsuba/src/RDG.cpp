@@ -214,7 +214,7 @@ katana::RDG::DoStoreNodeEntityTypeIDArray(
   if (node_entity_type_id_array_ff) {
     // we have an update, store the passed in memory state
     katana::URI path_uri = MakeNodeEntityTypeIDArrayFileName(handle);
-    node_entity_type_id_array_ff->Bind(path_uri.string());
+    node_entity_type_id_array_ff->Bind(path_uri);
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     write_group->StartStore(std::move(node_entity_type_id_array_ff));
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -229,7 +229,7 @@ katana::RDG::DoStoreNodeEntityTypeIDArray(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     // depends on `node_entity_type_id_array_` outliving writes
     write_group->StartStore(
-        path_uri.string(),
+        path_uri,
         core_->node_entity_type_id_array_file_storage().ptr<uint8_t>(),
         core_->node_entity_type_id_array_file_storage().size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -262,7 +262,7 @@ katana::RDG::DoStoreEdgeEntityTypeIDArray(
   if (edge_entity_type_id_array_ff) {
     // we have an update, store the passed in memory state
     katana::URI path_uri = MakeEdgeEntityTypeIDArrayFileName(handle);
-    edge_entity_type_id_array_ff->Bind(path_uri.string());
+    edge_entity_type_id_array_ff->Bind(path_uri);
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     write_group->StartStore(std::move(edge_entity_type_id_array_ff));
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -277,7 +277,7 @@ katana::RDG::DoStoreEdgeEntityTypeIDArray(
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     // depends on `edge_entity_type_id_array_` outliving writes
     write_group->StartStore(
-        path_uri.string(),
+        path_uri,
         core_->edge_entity_type_id_array_file_storage().ptr<uint8_t>(),
         core_->edge_entity_type_id_array_file_storage().size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -421,12 +421,12 @@ katana::RDG::DoMake(
     katana::URI node_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().node_entity_type_id_array_path());
     KATANA_CHECKED(core_->node_entity_type_id_array_file_storage().Bind(
-        node_entity_type_id_array_path.string(), true));
+        node_entity_type_id_array_path, true));
 
     katana::URI edge_entity_type_id_array_path = metadata_dir.Join(
         core_->part_header().edge_entity_type_id_array_path());
     KATANA_CHECKED(core_->edge_entity_type_id_array_file_storage().Bind(
-        edge_entity_type_id_array_path.string(), true));
+        edge_entity_type_id_array_path, true));
   }
   core_->set_rdg_dir(metadata_dir);
 

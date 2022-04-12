@@ -13,9 +13,7 @@ katana::TxnContext::Commit() {
       KATANA_CHECKED(katana::OneHostOnly([&]() -> katana::Result<void> {
         std::string curr_s = info.second.rdg_manifest.ToJsonString();
         KATANA_CHECKED_CONTEXT(
-            katana::FileStore(
-                manifest_file.string(),
-                reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size()),
+            katana::FileStore(manifest_file, curr_s),
             "CommitRDG future failed {}", manifest_file);
         return katana::ResultSuccess();
       }));

@@ -291,7 +291,7 @@ jobs:
     - name: Install dependencies
       run: |
         . .github/workflows/activate_miniconda.sh
-        mamba install -y -q -c conda-forge black=19.10b0 pylint=2.8.3
+        mamba install -y -q -c conda-forge click=8.0.4 black=19.10b0 pylint=2.8.3
 
     - name: Check formatting
       run: |

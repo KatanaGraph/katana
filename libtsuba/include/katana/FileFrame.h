@@ -10,11 +10,12 @@
 
 #include "katana/Logging.h"
 #include "katana/Result.h"
+#include "katana/URI.h"
 
 namespace katana {
 
 class KATANA_EXPORT FileFrame : public arrow::io::OutputStream {
-  std::string path_;
+  URI path_;
   uint8_t* map_start_;
   uint64_t map_size_;
   uint64_t region_size_;
@@ -63,7 +64,7 @@ public:
 
   katana::Result<void> Init(uint64_t reserve_size);
   katana::Result<void> Init() { return Init(1); }
-  void Bind(std::string_view filename);
+  void Bind(const URI& filename);
 
   katana::Result<void> Destroy();
 
@@ -82,7 +83,7 @@ public:
   /// treating the FileFrame like a buffer (e.g., using ptr())
   katana::Result<void> SetCursor(uint64_t new_cursor);
 
-  const std::string& path() const { return path_; }
+  const URI& path() const { return path_; }
 
   /// Calculate the number of padding bytes needed to reach nearest byte_boundry
   /// size_t num_bytes : size of bytes

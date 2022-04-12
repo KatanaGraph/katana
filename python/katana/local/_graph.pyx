@@ -336,7 +336,7 @@ cdef class GraphBase:
 
         :rtype: str
         """
-        return str(self.underlying_property_graph().rdg_dir(), encoding="UTF-8")
+        return str(self.underlying_property_graph().rdg_dir_raw_string(), encoding="UTF-8")
 
     @property
     def node_types(self):

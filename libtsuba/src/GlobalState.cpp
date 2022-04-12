@@ -23,12 +23,15 @@ katana::GlobalState::GetDefaultFS() const {
 }
 
 katana::FileStorage*
-katana::GlobalState::FS(std::string_view uri) const {
+katana::GlobalState::FS(const URI& uri) const {
   for (FileStorage* fs : file_stores_) {
-    if (uri.find(fs->uri_scheme()) == 0) {
+    if (uri.scheme() == fs->uri_scheme()) {
       return fs;
     }
   }
+  KATANA_WARN_ONCE(
+      "returning default storage backend for uri with unknown scheme {}",
+      uri.scheme());
   return GetDefaultFS();
 }
 
@@ -84,7 +87,7 @@ katana::Comm() {
 }
 
 katana::FileStorage*
-katana::FS(std::string_view uri) {
+katana::FS(const URI& uri) {
   return GlobalState::Get().FS(uri);
 }
 

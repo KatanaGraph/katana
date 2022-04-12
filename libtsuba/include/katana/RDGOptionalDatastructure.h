@@ -41,7 +41,7 @@ public:
       const katana::URI& new_loc) {
     katana::URI old_manifest_path = old_loc.Join(manifest_relpath);
     katana::FileView fv;
-    KATANA_CHECKED(fv.Bind(old_manifest_path.string(), true));
+    KATANA_CHECKED(fv.Bind(old_manifest_path, true));
     RDGOptionalDatastructure data;
     KATANA_CHECKED(katana::JsonParse<RDGOptionalDatastructure>(fv, &data));
 
@@ -50,17 +50,17 @@ public:
     for (const auto& file : data.paths_) {
       katana::FileView fvtmp;
       katana::URI old_path = old_loc.Join(file.second);
-      KATANA_CHECKED(fvtmp.Bind(old_path.string(), true));
+      KATANA_CHECKED(fvtmp.Bind(old_path, true));
       katana::URI new_path = new_loc.Join(file.second);
-      KATANA_CHECKED(katana::FileStore(
-          new_path.string(), fvtmp.ptr<uint8_t>(), fvtmp.size()));
+      KATANA_CHECKED(
+          katana::FileStore(new_path, fvtmp.ptr<uint8_t>(), fvtmp.size()));
       KATANA_CHECKED(fvtmp.Unbind());
     }
 
     // copy out the manifest itself
     katana::URI new_manifest_path = new_loc.Join(manifest_relpath);
-    KATANA_CHECKED(katana::FileStore(
-        new_manifest_path.string(), fv.ptr<uint8_t>(), fv.size()));
+    KATANA_CHECKED(
+        katana::FileStore(new_manifest_path, fv.ptr<uint8_t>(), fv.size()));
     KATANA_CHECKED(fv.Unbind());
 
     return katana::ResultSuccess();

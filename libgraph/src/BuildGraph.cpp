@@ -1873,7 +1873,7 @@ katana::ConvertToPropertyGraph(
 /// to the directory \param dir
 katana::Result<void>
 katana::WritePropertyGraph(
-    katana::GraphComponents&& graph_comps, const std::string& dir,
+    katana::GraphComponents&& graph_comps, const katana::URI& dir,
     katana::TxnContext* txn_ctx) {
   auto graph_ptr = ConvertToPropertyGraph(std::move(graph_comps), txn_ctx);
   if (!graph_ptr) {
@@ -1885,7 +1885,7 @@ katana::WritePropertyGraph(
 
 katana::Result<void>
 katana::WritePropertyGraph(
-    katana::PropertyGraph& prop_graph, const std::string& dir,
+    katana::PropertyGraph& prop_graph, const katana::URI& dir,
     katana::TxnContext* txn_ctx) {
   for (const auto& field : prop_graph.loaded_node_schema()->fields()) {
     KATANA_LOG_VERBOSE(

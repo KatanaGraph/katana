@@ -36,7 +36,7 @@ KATANA_EXPORT void ExportSchemaMapping(
     const std::string& outfile, const std::vector<LabelRule>& rules,
     const std::vector<PropertyKey>& keys);
 KATANA_EXPORT void ExportGraph(
-    const std::string& outfile, const std::string& rdg_file,
+    const std::string& outfile, const katana::URI& rdg_dir,
     katana::TxnContext* txn_ctx);
 
 KATANA_EXPORT ImportDataType ExtractTypeGraphML(xmlChar* value);

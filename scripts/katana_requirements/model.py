@@ -303,7 +303,7 @@ class Requirements(Mergeable):
             packaging_system = self.packaging_systems[packaging_system]
 
         for p in self.packages:
-            package_disabled = p.name_for(packaging_system) is None
+            package_disabled = packaging_system is None or p.name_for(packaging_system) is None
             has_specified_label = p.labels & labels_to_find
             labels_provided = labels_to_find
             if (not labels_provided or has_specified_label) and not package_disabled:

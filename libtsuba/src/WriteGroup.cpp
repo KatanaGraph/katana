@@ -31,7 +31,7 @@ katana::WriteGroup::Finish() {
 
 void
 katana::WriteGroup::AddOp(
-    std::future<katana::CopyableResult<void>> future, std::string file,
+    std::future<katana::CopyableResult<void>> future, const URI& file,
     uint64_t accounted_size) {
   if (accounted_size > kMaxOutstandingSize) {
     accounted_size = kMaxOutstandingSize;
@@ -46,7 +46,7 @@ katana::WriteGroup::AddOp(
     }
   }
   async_op_group_.AddOp(
-      std::move(future), std::move(file),
+      std::move(future), file,
       [wg = this, accounted_size]() -> katana::CopyableResult<void> {
         wg->outstanding_size_ -= accounted_size;
         return katana::CopyableResultSuccess();
@@ -57,7 +57,7 @@ katana::WriteGroup::AddOp(
 // they're used with arrow
 void
 katana::WriteGroup::StartStore(std::shared_ptr<katana::FileFrame> ff) {
-  std::string file = ff->path();
+  auto file = ff->path();
   uint64_t size = ff->map_size();
 
   // wrap future to hold onto FileFrame, but free it as soon as possible

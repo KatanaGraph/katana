@@ -44,7 +44,7 @@ public:
   /// gs://...    -> GSStore
   /// file://...  -> LocalStore
   /// {no scheme} -> LocalStore
-  FileStorage* FS(std::string_view uri) const;
+  FileStorage* FS(const URI& uri) const;
 
   static katana::Result<void> Init(katana::CommBackend* comm);
   static katana::Result<void> Fini();
@@ -52,7 +52,7 @@ public:
 };
 
 KATANA_EXPORT katana::CommBackend* Comm();
-FileStorage* FS(std::string_view uri);
+FileStorage* FS(const URI& uri);
 
 /// Execute cb on one host, if it succeeds return success if not print
 /// the error and return MpiError

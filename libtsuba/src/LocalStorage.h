@@ -16,43 +16,35 @@ namespace katana {
 /// Store byte arrays to the local file system; Provided as a convenience for
 /// testing only (un-optimized)
 class LocalStorage : public FileStorage {
-  katana::Result<void> WriteFile(
-      const std::string&, const uint8_t* data, uint64_t size);
-  katana::Result<void> ReadFile(
-      const std::string& uri, uint64_t start, uint64_t size, uint8_t* data);
-  katana::Result<void> RemoteCopyFile(
-      const std::string& source_uri, const std::string& dest_uri,
-      uint64_t begin, uint64_t size);
-
 public:
-  LocalStorage() : FileStorage("file://") {}
+  LocalStorage() : FileStorage("file") {}
 
   katana::Result<void> Init() override { return katana::ResultSuccess(); }
   katana::Result<void> Fini() override { return katana::ResultSuccess(); }
-  katana::Result<void> Stat(const std::string& uri, StatBuf* s_buf) override;
+  katana::Result<void> Stat(const URI& uri, StatBuf* s_buf) override;
 
   uint32_t Priority() const override { return 1; }
 
   katana::Result<void> GetMultiSync(
-      const std::string& uri, uint64_t start, uint64_t size,
+      const URI& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) override {
     return ReadFile(uri, start, size, result_buf);
   }
 
   katana::Result<void> PutMultiSync(
-      const std::string& uri, const uint8_t* data, uint64_t size) override {
+      const URI& uri, const uint8_t* data, uint64_t size) override {
     return WriteFile(uri, data, size);
   }
 
   katana::Result<void> RemoteCopy(
-      const std::string& source_uri, const std::string& dest_uri,
-      uint64_t begin, uint64_t size) override {
+      const URI& source_uri, const URI& dest_uri, uint64_t begin,
+      uint64_t size) override {
     return RemoteCopyFile(source_uri, dest_uri, begin, size);
   }
 
   // get on future can potentially block (bulk synchronous parallel)
   std::future<katana::CopyableResult<void>> PutAsync(
-      const std::string& uri, const uint8_t* data, uint64_t size) override {
+      const URI& uri, const uint8_t* data, uint64_t size) override {
     // No need for AsyncPut to local storage right now
     if (auto write_res = WriteFile(uri, data, size); !write_res) {
       katana::CopyableErrorInfo cei{write_res.error()};
@@ -66,7 +58,7 @@ public:
         });
   }
   std::future<katana::CopyableResult<void>> GetAsync(
-      const std::string& uri, uint64_t start, uint64_t size,
+      const URI& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) override {
     // I suppose there is no need for AsyncGet to local storage either
     if (auto read_res = ReadFile(uri, start, size, result_buf); !read_res) {
@@ -81,12 +73,21 @@ public:
         });
   }
   std::future<katana::CopyableResult<void>> ListAsync(
-      const std::string& uri, std::vector<std::string>* list,
+      const URI& uri, std::vector<std::string>* list,
       std::vector<uint64_t>* size) override;
 
   katana::Result<void> Delete(
-      const std::string& directory,
+      const URI& directory,
       const std::unordered_set<std::string>& files) override;
+
+private:
+  katana::Result<void> WriteFile(
+      const URI&, const uint8_t* data, uint64_t size);
+  katana::Result<void> ReadFile(
+      const URI& uri, uint64_t start, uint64_t size, uint8_t* data);
+  katana::Result<void> RemoteCopyFile(
+      const URI& source_uri, const URI& dest_uri, uint64_t begin,
+      uint64_t size);
 };
 
 }  // namespace katana

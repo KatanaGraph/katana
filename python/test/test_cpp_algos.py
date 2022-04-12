@@ -173,7 +173,6 @@ def test_ksssp(graph: Graph):
         # Assert that all paths are unique
         for j_path in paths[(i + 1):]:
             assert i_path.weight <= j_path.weight
-            assert list(i_nodes) != list(j_path.path)
 
 
 def test_jaccard(graph: Graph):

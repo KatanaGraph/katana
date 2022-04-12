@@ -23,16 +23,15 @@ public:
   /// the file name for debugging. `on_complete` is guaranteed to be called
   /// in FIFO order
   void AddOp(
-      std::future<katana::CopyableResult<void>> future, std::string file,
-      const std::function<katana::CopyableResult<void>()>& on_complete);
+      std::future<CopyableResult<void>> future, const URI& file,
+      const std::function<CopyableResult<void>()>& on_complete);
 
   /// same as AddOp, but the future may return a data type which can then be
   /// consumed by on_complete
   template <typename RetType>
   void AddReturnsOp(
-      std::future<katana::CopyableResult<RetType>> future,
-      const std::string& file,
-      const std::function<katana::CopyableResult<void>(RetType)>& on_complete) {
+      std::future<CopyableResult<RetType>> future, const URI& file,
+      const std::function<CopyableResult<void>(RetType)>& on_complete) {
     // n.b., make shared instead of unique because move capture below prevents
     // passing generic_complete_fn as a std::function
     auto ret_val = std::make_shared<RetType>();

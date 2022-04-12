@@ -31,7 +31,7 @@ public:
   static katana::Result<RDKLSHIndexPrimitive> Load(
       const katana::URI& rdg_dir_path, const std::string& path) {
     RDKLSHIndexPrimitive index =
-        KATANA_CHECKED(LoadJson(rdg_dir_path.Join(path).string()));
+        KATANA_CHECKED(LoadJson(rdg_dir_path.Join(path)));
     return index;
   }
 
@@ -39,7 +39,7 @@ public:
     // Write out our json manifest
     katana::URI manifest_path = rdg_dir_path.RandFile(
         kOptionalDatastructureRDKLSHIndexPrimitiveFilename);
-    KATANA_CHECKED(WriteManifest(manifest_path.string()));
+    KATANA_CHECKED(WriteManifest(manifest_path));
     return manifest_path.BaseName();
   }
 
@@ -91,8 +91,7 @@ private:
   // Array of fingerprint bitsets indexed on num_fingerprints_
   std::vector<katana::DynamicBitset> fingerprints_;
 
-  static katana::Result<RDKLSHIndexPrimitive> LoadJson(
-      const std::string& path) {
+  static katana::Result<RDKLSHIndexPrimitive> LoadJson(const URI& path) {
     katana::FileView fv;
     KATANA_CHECKED(fv.Bind(path, true));
 
@@ -106,7 +105,7 @@ private:
     return index;
   }
 
-  katana::Result<void> WriteManifest(const std::string& path) const {
+  katana::Result<void> WriteManifest(const URI& path) const {
     std::string serialized = KATANA_CHECKED(katana::JsonDump(*this));
     // POSIX files end with newlines
     serialized = serialized + "\n";

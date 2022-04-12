@@ -5,6 +5,7 @@
 #include <list>
 
 #include "katana/Result.h"
+#include "katana/URI.h"
 
 namespace katana {
 
@@ -12,14 +13,14 @@ class AsyncOpGroup {
 public:
   struct AsyncOp {
     std::future<katana::CopyableResult<void>> result;
-    std::string location;
+    URI location;
     std::function<katana::CopyableResult<void>()> on_complete;
   };
 
   /// Add future to the list of futures this descriptor will wait for, note
   /// the file name for debugging.
   void AddOp(
-      std::future<katana::CopyableResult<void>> future, std::string file,
+      std::future<katana::CopyableResult<void>> future, const URI& file,
       const std::function<katana::CopyableResult<void>()>& on_complete);
 
   /// Wait until all operations this descriptor knows about have completed

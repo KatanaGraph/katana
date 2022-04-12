@@ -10,6 +10,7 @@
 
 #include "katana/Logging.h"
 #include "katana/Result.h"
+#include "katana/URI.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -66,12 +67,11 @@ public:
   /// reads internally, but if you intend to use ptr(), you should pass
   /// resolve=true.
   katana::Result<void> Bind(
-      std::string_view filename, uint64_t begin, uint64_t end, bool resolve);
-  katana::Result<void> Bind(
-      std::string_view filename, uint64_t stop, bool resolve) {
+      const URI& filename, uint64_t begin, uint64_t end, bool resolve);
+  katana::Result<void> Bind(const URI& filename, uint64_t stop, bool resolve) {
     return Bind(filename, 0, stop, resolve);
   }
-  katana::Result<void> Bind(std::string_view filename, bool resolve) {
+  katana::Result<void> Bind(const URI& filename, bool resolve) {
     return Bind(filename, 0, std::numeric_limits<uint64_t>::max(), resolve);
   }
 
@@ -110,7 +110,7 @@ public:
   }
 
   uint64_t size() const { return file_size_; }
-  const std::string& filename() const { return filename_; }
+  const URI& filename() const { return filename_; }
 
   // support iterating through characters
   const char* begin() const { return ptr<char>(); }
@@ -167,7 +167,7 @@ private:
   uint8_t page_shift_{0};
   int64_t cursor_{0};
   int64_t mem_start_{0};
-  std::string filename_;
+  URI filename_;
   bool bound_{false};
   std::vector<uint64_t> filling_;
   std::unique_ptr<std::vector<FillingRange>> fetches_;

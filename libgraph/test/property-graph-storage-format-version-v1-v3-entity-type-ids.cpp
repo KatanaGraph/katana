@@ -26,8 +26,14 @@ main(int argc, char** argv) {
   katana::SharedMemSys sys;
   cll::ParseCommandLineOptions(argc, argv);
 
-  TestConvertGraphStorageFormat(ldbc_003InputFile);
-  TestRoundTripNewStorageFormat(ldbc_003InputFile);
+  auto res = katana::URI::Make(ldbc_003InputFile);
+  if (!res) {
+    KATANA_LOG_FATAL("input file {} error: {}", ldbc_003InputFile, res.error());
+  }
+  auto inputURI = res.value();
+
+  TestConvertGraphStorageFormat(inputURI);
+  TestRoundTripNewStorageFormat(inputURI);
 
   return 0;
 }

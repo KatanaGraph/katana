@@ -197,7 +197,7 @@ katana::RDGSlice::DoMake(
 
     KATANA_CHECKED_CONTEXT(
         core_->node_entity_type_id_array_file_storage().Bind(
-            node_types_path.string(),
+            node_types_path,
             entity_type_id_array_header_offset +
                 slice.node_range.first * sizeof(katana::EntityTypeID),
             entity_type_id_array_header_offset +
@@ -208,7 +208,7 @@ katana::RDGSlice::DoMake(
         slice.node_range.second * sizeof(katana::EntityTypeID));
     KATANA_CHECKED_CONTEXT(
         core_->edge_entity_type_id_array_file_storage().Bind(
-            edge_types_path.string(),
+            edge_types_path,
             entity_type_id_array_header_offset +
                 slice.edge_range.first * sizeof(katana::EntityTypeID),
             entity_type_id_array_header_offset +

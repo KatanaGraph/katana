@@ -244,12 +244,13 @@ katana::URI::MakeFromFile(const std::string& str) {
 
 katana::Result<katana::URI>
 katana::URI::Make(const std::string& str) {
+  if (str.empty()) {
+    // empty URI
+    return URI();
+  }
+
   std::smatch sub_match;
   if (!std::regex_match(str, sub_match, kURIRegex)) {
-    if (str.empty()) {
-      return KATANA_ERROR(
-          ErrorCode::InvalidArgument, "can't make URI from empty string");
-    }
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "could not parse URI: {}", str);
   }

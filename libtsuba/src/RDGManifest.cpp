@@ -52,7 +52,7 @@ katana::Result<katana::RDGManifest>
 katana::RDGManifest::MakeFromStorage(const katana::URI& uri) {
   katana::FileView fv;
 
-  KATANA_CHECKED(fv.Bind(uri.string(), true));
+  KATANA_CHECKED(fv.Bind(uri, true));
 
   katana::RDGManifest manifest(uri.DirName());
   auto manifest_res = katana::JsonParse<katana::RDGManifest>(fv, &manifest);
@@ -211,16 +211,14 @@ AddPropertySubFiles(std::set<std::string>& fnames, std::string full_path) {
   auto uri_path = KATANA_CHECKED(katana::URI::Make(full_path));
   auto sub_files = KATANA_CHECKED(reader->GetFiles(uri_path));
   for (const auto& sub_file : sub_files) {
-    auto sub_file_uri = KATANA_CHECKED(katana::URI::Make(sub_file));
-    fnames.emplace(
-        sub_file_uri.BaseName());  // Only want the file name without dir
+    fnames.emplace(sub_file.BaseName());  // Only want the file name without dir
   }
   return katana::ResultSuccess();
 }
 
 katana::Result<void>
 AddOptionalDatastructureSubfiles(
-    std::set<std::string>& fnames, std::string full_path) {
+    std::set<std::string>& fnames, const katana::URI& full_path) {
   katana::FileView fv;
   KATANA_CHECKED(fv.Bind(full_path, true));
   katana::RDGOptionalDatastructure data;
@@ -288,8 +286,8 @@ katana::RDGManifest::FileNames() {
 
       for (auto it : header.optional_datastructure_manifests()) {
         fnames.emplace(it.second);
-        KATANA_CHECKED(AddOptionalDatastructureSubfiles(
-            fnames, katana::URI::JoinPath(dir().string(), it.second)));
+        KATANA_CHECKED(
+            AddOptionalDatastructureSubfiles(fnames, dir().Join(it.second)));
       }
     }
   }

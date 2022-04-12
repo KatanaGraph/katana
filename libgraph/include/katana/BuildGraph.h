@@ -17,6 +17,7 @@
 #include <arrow/type.h>
 
 #include "katana/PropertyGraph.h"
+#include "katana/URI.h"
 
 namespace katana {
 
@@ -236,12 +237,12 @@ ConvertToPropertyGraph(
     GraphComponents&& graph_comps, katana::TxnContext* txn_ctx);
 
 KATANA_EXPORT Result<void> WritePropertyGraph(
-    GraphComponents&& graph_comps, const std::string& dir,
+    GraphComponents&& graph_comps, const katana::URI& dir,
     katana::TxnContext* txn_ctx);
 
 // TODO(amber): Take PropertyGraph by const ref
 KATANA_EXPORT Result<void> WritePropertyGraph(
-    PropertyGraph& prop_graph, const std::string& dir,
+    PropertyGraph& prop_graph, const katana::URI& dir,
     katana::TxnContext* txn_ctx);
 
 /// Convert Arrow chunked array to/from a vector of ImportData

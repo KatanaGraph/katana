@@ -40,11 +40,11 @@ katana::AsyncOpGroup::Finish() {
 
 void
 katana::AsyncOpGroup::AddOp(
-    std::future<katana::CopyableResult<void>> future, std::string file,
+    std::future<katana::CopyableResult<void>> future, const URI& file,
     const std::function<katana::CopyableResult<void>()>& on_complete) {
   pending_ops_.emplace_back(AsyncOp{
       .result = std::move(future),
-      .location = std::move(file),
+      .location = file,
       .on_complete = on_complete,
   });
   total_ += 1;

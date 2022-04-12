@@ -31,7 +31,7 @@ verify_view(View generated_view, View loaded_view) {
 }
 
 void
-TestOptionalTopologyStorageEdgeShuffleTopology(std::string inputFile) {
+TestOptionalTopologyStorageEdgeShuffleTopology(const katana::URI& inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeShuffleTopology *****");
 
   katana::TxnContext txn_ctx;
@@ -44,7 +44,7 @@ TestOptionalTopologyStorageEdgeShuffleTopology(std::string inputFile) {
   // TODO: ensure this view was generated, not loaded
   // generated_sorted_view.Print();
 
-  std::string g2_rdg_file = StoreGraph(&pg);
+  auto g2_rdg_file = StoreGraph(&pg);
   katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
 
   SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();
@@ -55,7 +55,7 @@ TestOptionalTopologyStorageEdgeShuffleTopology(std::string inputFile) {
 }
 
 void
-TestOptionalTopologyStorageShuffleTopology(std::string inputFile) {
+TestOptionalTopologyStorageShuffleTopology(const katana::URI& inputFile) {
   KATANA_LOG_WARN("***** Testing ShuffleTopology *****");
 
   katana::TxnContext txn_ctx;
@@ -69,7 +69,7 @@ TestOptionalTopologyStorageShuffleTopology(std::string inputFile) {
   // TODO: ensure this view was generated, not loaded
   // generated_sorted_view.Print();
 
-  std::string g2_rdg_file = StoreGraph(&pg);
+  auto g2_rdg_file = StoreGraph(&pg);
   katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
 
   SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();
@@ -80,7 +80,7 @@ TestOptionalTopologyStorageShuffleTopology(std::string inputFile) {
 }
 
 void
-TestOptionalTopologyStorageEdgeTypeAwareTopology(std::string inputFile) {
+TestOptionalTopologyStorageEdgeTypeAwareTopology(const katana::URI& inputFile) {
   KATANA_LOG_WARN("***** Testing EdgeTypeAware Topology *****");
 
   katana::TxnContext txn_ctx;
@@ -92,7 +92,7 @@ TestOptionalTopologyStorageEdgeTypeAwareTopology(std::string inputFile) {
   SortedGraphView generated_sorted_view = pg.BuildView<SortedGraphView>();
   // generated_sorted_view.Print();
 
-  std::string g2_rdg_file = StoreGraph(&pg);
+  auto g2_rdg_file = StoreGraph(&pg);
   katana::PropertyGraph pg2 = LoadGraph(g2_rdg_file);
 
   SortedGraphView loaded_sorted_view = pg2.BuildView<SortedGraphView>();

@@ -60,7 +60,7 @@ BlockTable(std::shared_ptr<arrow::Table> table, uint64_t mbs_per_block) {
 
 Result<void>
 DoStoreParquet(
-    const std::string& path, std::shared_ptr<arrow::Table> table,
+    const katana::URI& path, std::shared_ptr<arrow::Table> table,
     const std::shared_ptr<parquet::WriterProperties>& writer_props,
     const std::shared_ptr<parquet::ArrowWriterProperties>& arrow_props,
     katana::WriteGroup* desc) {
@@ -156,7 +156,7 @@ katana::ParquetWriter::StoreParquet(
   std::string prefix = uri.string();
 
   if (table->num_rows() <= kMaxRowsPerFile) {
-    return DoStoreParquet(prefix, table, writer_props, arrow_props, desc);
+    return DoStoreParquet(uri, table, writer_props, arrow_props, desc);
   }
 
   std::vector<std::shared_ptr<arrow::Table>> tables;
@@ -178,11 +178,10 @@ katana::ParquetWriter::StoreParquet(
   uint32_t table_count = 0;
   for (const auto& t : tables) {
     KATANA_CHECKED(DoStoreParquet(
-        fmt::format("{}.part_{:09}", prefix, table_count++), t, writer_props,
+        uri + fmt::format(".part_{:09}", table_count++), t, writer_props,
         arrow_props, desc));
   }
-  return FileStore(
-      uri.string(), KATANA_CHECKED(katana::JsonDump(table_offsets)));
+  return FileStore(uri, KATANA_CHECKED(katana::JsonDump(table_offsets)));
 }
 
 katana::Result<void>

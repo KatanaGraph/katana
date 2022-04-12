@@ -21,15 +21,15 @@ katana::RDGPrefix::DoMakePrefix(
 
   CSRTopologyHeader gr_header;
   KATANA_CHECKED_CONTEXT(
-      FileGet(t_path.string(), &gr_header), "file get failed: {}; sz: {}",
-      t_path, sizeof(gr_header));
+      FileGet(t_path, &gr_header), "file get failed: {}; sz: {}", t_path,
+      sizeof(gr_header));
 
   FileView fv;
   uint64_t offset =
       sizeof(gr_header) + (gr_header.num_nodes * sizeof(uint64_t));
   KATANA_CHECKED_CONTEXT(
-      fv.Bind(t_path.string(), offset, true),
-      "failed to bind {}; begin: 0, end: {}", t_path, offset);
+      fv.Bind(t_path, offset, true), "failed to bind {}; begin: 0, end: {}",
+      t_path, offset);
 
   return RDGPrefix(std::move(fv), offset);
 }

@@ -2874,7 +2874,7 @@ AppendEdgeData<void>(
  */
 struct Gr2Kg : public Conversion {
   katana::Result<void> OutOfCoreConvert(
-      const std::string& in_file_name, const std::string& out_file_name) {
+      const katana::URI& in_file_name, const katana::URI& out_file_name) {
     katana::CSRTopologyHeader header;
     if (auto res = katana::FileGet(in_file_name, &header); !res) {
       return res.error();
@@ -2892,7 +2892,7 @@ struct Gr2Kg : public Conversion {
 
     katana::StatBuf stat_buf;
     if (auto res = katana::FileStat(in_file_name, &stat_buf); !res) {
-      KATANA_LOG_DEBUG("could not stat {}", out_file_name);
+      KATANA_LOG_DEBUG("could not stat {}", in_file_name);
       return res.error();
     }
 
@@ -2903,10 +2903,7 @@ struct Gr2Kg : public Conversion {
       return katana::ErrorCode::InvalidArgument;
     }
 
-    if (auto res = katana::Create(out_file_name); !res) {
-      return res.error();
-    }
-
+    KATANA_CHECKED(katana::Create(out_file_name));
     katana::RDGManifest manifest =
         KATANA_CHECKED(katana::FindManifest(out_file_name));
     katana::RDGHandle rdg_handle =
@@ -2914,8 +2911,8 @@ struct Gr2Kg : public Conversion {
     katana::RDGFile handle(std::move(rdg_handle));
 
     katana::URI top_file_name = katana::MakeTopologyFileName(handle);
-    if (auto res = katana::FileRemoteCopy(
-            in_file_name, top_file_name.string(), 0, new_size);
+    if (auto res =
+            katana::FileRemoteCopy(in_file_name, top_file_name, 0, new_size);
         !res) {
       return res.error();
     }
@@ -2971,7 +2968,10 @@ struct Gr2Kg : public Conversion {
       // host so it's important to do this to support large graphs
       fmt::print(stderr, "attempting out-of-core conversion\n");
 
-      auto res = OutOfCoreConvert(in_file_name, out_file_name);
+      auto in_file_uri = katana::URI::Make(in_file_name).assume_value();
+      auto out_file_uri = katana::URI::Make(out_file_name).assume_value();
+
+      auto res = OutOfCoreConvert(in_file_uri, out_file_uri);
       if (res) {
         return;
       }
@@ -3030,7 +3030,13 @@ struct Gr2Kg : public Conversion {
     katana::gPrint(
         "Node Schema : ", pg->loaded_node_schema()->ToString(), "\n");
 
-    if (auto r = pg->Write(out_file_name, "cmd", &txn_ctx); !r) {
+    auto res = katana::URI::Make(out_file_name);
+    if (!res) {
+      KATANA_LOG_FATAL("file {} error: {}", out_file_name, res.error());
+    }
+    auto out_uri = res.value();
+
+    if (auto r = pg->Write(out_uri, "cmd", &txn_ctx); !r) {
       KATANA_LOG_FATAL("Failed to write property file graph: {}", r.error());
     }
     printStatus(graph.size(), graph.sizeEdges());

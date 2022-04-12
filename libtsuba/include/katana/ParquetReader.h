@@ -74,7 +74,7 @@ public:
 
   /// Get the files for the logical parquet table
   ///   \param uri an identifier for a parquet file
-  katana::Result<std::vector<std::string>> GetFiles(const katana::URI& uri);
+  katana::Result<std::vector<katana::URI>> GetFiles(const katana::URI& uri);
 
 private:
   ParquetReader(bool make_canonical) : make_canonical_{make_canonical} {}

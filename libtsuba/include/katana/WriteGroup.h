@@ -44,7 +44,7 @@ public:
   void StartStore(std::shared_ptr<FileFrame> ff);
 
   /// Start async store op, caller responsible for keeping buffer live
-  void StartStore(const std::string& file, const uint8_t* buf, uint64_t size) {
+  void StartStore(const URI& file, const uint8_t* buf, uint64_t size) {
     AddOp(FileStoreAsync(file, buf, size), file);
   }
 
@@ -54,7 +54,7 @@ public:
   /// the file name for debugging. If the operation is associated with a file
   /// frame that we are responsible for, note the size
   void AddOp(
-      std::future<katana::CopyableResult<void>> future, std::string file,
+      std::future<katana::CopyableResult<void>> future, const URI& file,
       uint64_t accounted_size = 0);
 };
 

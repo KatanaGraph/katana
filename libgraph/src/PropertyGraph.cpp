@@ -213,10 +213,10 @@ katana::PropertyGraph::Make(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const std::string& rdg_name, katana::TxnContext* txn_ctx,
+    const katana::URI& rdg_dir, katana::TxnContext* txn_ctx,
     const katana::RDGLoadOptions& opts) {
   katana::RDGManifest manifest =
-      KATANA_CHECKED(katana::FindManifest(rdg_name, txn_ctx));
+      KATANA_CHECKED(katana::FindManifest(rdg_dir, txn_ctx));
   auto rdg_handle =
       KATANA_CHECKED(katana::Open(std::move(manifest), katana::kReadWrite));
   auto new_file = std::make_unique<katana::RDGFile>(rdg_handle);
@@ -794,7 +794,7 @@ katana::PropertyGraph::DoWrite(
 
 katana::Result<void>
 katana::PropertyGraph::ConductWriteOp(
-    const std::string& uri, const std::string& command_line,
+    const katana::URI& uri, const std::string& command_line,
     katana::RDG::RDGVersioningPolicy versioning_action,
     katana::TxnContext* txn_ctx) {
   katana::RDGManifest manifest =
@@ -813,7 +813,7 @@ katana::PropertyGraph::ConductWriteOp(
 
 katana::Result<void>
 katana::PropertyGraph::WriteView(
-    const std::string& uri, const std::string& command_line,
+    const katana::URI& uri, const std::string& command_line,
     katana::TxnContext* txn_ctx) {
   return ConductWriteOp(
       uri, command_line, katana::RDG::RDGVersioningPolicy::RetainVersion,
@@ -822,7 +822,7 @@ katana::PropertyGraph::WriteView(
 
 katana::Result<void>
 katana::PropertyGraph::WriteGraph(
-    const std::string& uri, const std::string& command_line,
+    const katana::URI& uri, const std::string& command_line,
     katana::TxnContext* txn_ctx) {
   return ConductWriteOp(
       uri, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion,
@@ -841,7 +841,7 @@ katana::PropertyGraph::Commit(
       return KATANA_ERROR(
           ErrorCode::InvalidArgument, "RDG commit but rdg_dir_ is empty");
     }
-    return WriteGraph(rdg_->rdg_dir().string(), command_line, txn_ctx);
+    return WriteGraph(rdg_->rdg_dir(), command_line, txn_ctx);
   }
   return DoWrite(
       *file_, command_line, katana::RDG::RDGVersioningPolicy::IncrementVersion,
@@ -858,7 +858,7 @@ katana::PropertyGraph::WriteView(
   }
   // WriteView occurs once, and only before any Commit/Write operation
   KATANA_LOG_DEBUG_ASSERT(file_ == nullptr);
-  return WriteView(rdg_->rdg_dir().string(), command_line, txn_ctx);
+  return WriteView(rdg_->rdg_dir(), command_line, txn_ctx);
 }
 
 bool
@@ -1126,16 +1126,16 @@ katana::PropertyGraph::GetEdgePropertyStorageLocation(
 
 katana::Result<void>
 katana::PropertyGraph::Write(
-    const std::string& rdg_name, const std::string& command_line,
+    const katana::URI& rdg_dir, const std::string& command_line,
     katana::TxnContext* txn_ctx) {
   if (IsTransformed()) {
-    return parent_->Write(rdg_name, command_line, txn_ctx);
+    return parent_->Write(rdg_dir, command_line, txn_ctx);
   }
 
-  if (auto res = katana::Create(rdg_name); !res) {
+  if (auto res = katana::Create(rdg_dir); !res) {
     return res.error();
   }
-  return WriteGraph(rdg_name, command_line, txn_ctx);
+  return WriteGraph(rdg_dir, command_line, txn_ctx);
 }
 
 // We do this to avoid a virtual call, since this method is often on a hot path.

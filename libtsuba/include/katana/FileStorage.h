@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "katana/Result.h"
+#include "katana/URI.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -30,18 +31,17 @@ public:
   std::string_view uri_scheme() const { return uri_scheme_; }
   virtual katana::Result<void> Init() = 0;
   virtual katana::Result<void> Fini() = 0;
-  virtual katana::Result<void> Stat(const std::string& uri, StatBuf* size) = 0;
+  virtual katana::Result<void> Stat(const URI& uri, StatBuf* size) = 0;
 
   virtual katana::Result<void> GetMultiSync(
-      const std::string& uri, uint64_t start, uint64_t size,
-      uint8_t* result_buf) = 0;
+      const URI& uri, uint64_t start, uint64_t size, uint8_t* result_buf) = 0;
 
   virtual katana::Result<void> PutMultiSync(
-      const std::string& uri, const uint8_t* data, uint64_t size) = 0;
+      const URI& uri, const uint8_t* data, uint64_t size) = 0;
 
   virtual katana::Result<void> RemoteCopy(
-      const std::string& source_uri, const std::string& dest_uri,
-      uint64_t begin, uint64_t size) = 0;
+      const URI& source_uri, const URI& dest_uri, uint64_t begin,
+      uint64_t size) = 0;
 
   /// Storage classes with higher priority will be tried by GlobalState earlier
   /// currently only used to enforce local fs default; GlobalState defaults
@@ -50,16 +50,14 @@ public:
 
   // get on future can potentially block (bulk synchronous parallel)
   virtual std::future<katana::CopyableResult<void>> PutAsync(
-      const std::string& uri, const uint8_t* data, uint64_t size) = 0;
+      const URI& uri, const uint8_t* data, uint64_t size) = 0;
   virtual std::future<katana::CopyableResult<void>> GetAsync(
-      const std::string& uri, uint64_t start, uint64_t size,
-      uint8_t* result_buf) = 0;
+      const URI& uri, uint64_t start, uint64_t size, uint8_t* result_buf) = 0;
   virtual std::future<katana::CopyableResult<void>> ListAsync(
-      const std::string& directory, std::vector<std::string>* list,
+      const URI& directory, std::vector<std::string>* list,
       std::vector<uint64_t>* size) = 0;
   virtual katana::Result<void> Delete(
-      const std::string& directory,
-      const std::unordered_set<std::string>& files) = 0;
+      const URI& directory, const std::unordered_set<std::string>& files) = 0;
 };
 
 /// RegisterFileStorage adds a file storage backend to the tsuba library. File

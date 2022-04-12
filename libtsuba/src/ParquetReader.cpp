@@ -58,7 +58,7 @@ HandleBadParquetTypes(std::shared_ptr<arrow::Field> old_field) {
 
 Result<std::unique_ptr<parquet::arrow::FileReader>>
 BuildReader(
-    const std::string& uri, bool preload,
+    const katana::URI& uri, bool preload,
     std::shared_ptr<katana::FileView>* fv) {
   auto fv_tmp = std::make_shared<katana::FileView>();
   uint64_t end = preload ? std::numeric_limits<uint64_t>::max() : 0;
@@ -132,7 +132,7 @@ public:
   static Result<std::unique_ptr<BlockedParquetReader>> Make(
       const katana::URI& uri, bool preload) {
     std::shared_ptr<katana::FileView> fv;
-    auto builder_res = BuildReader(uri.string(), preload, &fv);
+    auto builder_res = BuildReader(uri, preload, &fv);
 
     if (builder_res) {
       std::vector<std::unique_ptr<parquet::arrow::FileReader>> readers;
@@ -141,7 +141,7 @@ public:
       fvs.emplace_back(std::move(fv));
 
       return std::unique_ptr<BlockedParquetReader>(new BlockedParquetReader(
-          uri.string(), std::move(fvs), std::move(readers), {0}));
+          uri, std::move(fvs), std::move(readers), {0}));
     }
 
     if (builder_res.error() != katana::ErrorCode::InvalidArgument) {
@@ -168,8 +168,7 @@ public:
     std::vector<std::shared_ptr<katana::FileView>> fvs(row_offsets.size());
 
     std::unique_ptr<BlockedParquetReader> bpr(new BlockedParquetReader(
-        uri.string(), std::move(fvs), std::move(readers),
-        std::move(row_offsets)));
+        uri, std::move(fvs), std::move(readers), std::move(row_offsets)));
 
     if (preload) {
       for (size_t i = 0, num_files = bpr->row_offsets_.size(); i < num_files;
@@ -317,8 +316,8 @@ public:
     return concatenated_table;
   }
 
-  Result<std::vector<std::string>> GetFiles() {
-    std::vector<std::string> sub_files;
+  Result<std::vector<katana::URI>> GetFiles() {
+    std::vector<katana::URI> sub_files;
     sub_files.reserve(fvs_.size());
     // Bind some the file views so we can get the filenames
     for (size_t i = 0, num_files = readers_.size(); i < num_files; ++i) {
@@ -332,7 +331,7 @@ public:
 
 private:
   BlockedParquetReader(
-      std::string prefix, std::vector<std::shared_ptr<katana::FileView>>&& fvs,
+      katana::URI prefix, std::vector<std::shared_ptr<katana::FileView>>&& fvs,
       std::vector<std::unique_ptr<parquet::arrow::FileReader>>&& readers,
       std::vector<int64_t>&& row_offsets)
       : prefix_(std::move(prefix)),
@@ -346,12 +345,12 @@ private:
       return katana::ResultSuccess();
     }
     readers_[idx] = KATANA_CHECKED(BuildReader(
-        fmt::format("{}.part_{:09}", prefix_, idx), preload, &fvs_[idx]));
+        prefix_ + fmt::format(".part_{:09}", idx), preload, &fvs_[idx]));
 
     return katana::ResultSuccess();
   }
 
-  std::string prefix_;
+  katana::URI prefix_;
   std::vector<std::shared_ptr<katana::FileView>> fvs_;
   std::vector<std::unique_ptr<parquet::arrow::FileReader>> readers_;
   std::vector<int64_t> row_offsets_;
@@ -411,7 +410,7 @@ katana::ParquetReader::NumRows(const katana::URI& uri) {
   return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->NumRows();
 }
 
-Result<std::vector<std::string>>
+Result<std::vector<katana::URI>>
 katana::ParquetReader::GetFiles(const katana::URI& uri) {
   return KATANA_CHECKED(BlockedParquetReader::Make(uri, false))->GetFiles();
 }

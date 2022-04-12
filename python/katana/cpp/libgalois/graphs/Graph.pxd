@@ -169,7 +169,7 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         bool DoesNodeHaveType(Node node, EntityTypeID node_entity_type_id) const
         bool DoesEdgeHaveTypeFromPropertyIndex(Edge edge, EntityTypeID edge_entity_type_id) const
 
-        const string& rdg_dir()
+        string rdg_dir_raw_string()
 
         shared_ptr[CChunkedArray] GetNodeProperty(int i)
         shared_ptr[CChunkedArray] GetNodeProperty(const string&)

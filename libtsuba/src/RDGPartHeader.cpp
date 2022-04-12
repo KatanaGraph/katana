@@ -68,8 +68,8 @@ CopyProperty(
   katana::URI new_path = new_location.Join(prop->path());
   katana::FileView fv;
 
-  KATANA_CHECKED(fv.Bind(old_path.string(), true));
-  return katana::FileStore(new_path.string(), fv.ptr<uint8_t>(), fv.size());
+  KATANA_CHECKED(fv.Bind(old_path, true));
+  return katana::FileStore(new_path, fv.ptr<uint8_t>(), fv.size());
 }
 
 katana::PropStorageInfo*
@@ -106,7 +106,7 @@ const int kPartitionMatchHostIndex = 3;
 katana::Result<katana::RDGPartHeader>
 katana::RDGPartHeader::MakeJson(const katana::URI& partition_path) {
   katana::FileView fv;
-  KATANA_CHECKED(fv.Bind(partition_path.string(), true));
+  KATANA_CHECKED(fv.Bind(partition_path, true));
 
   if (fv.size() == 0) {
     return katana::RDGPartHeader();
@@ -145,10 +145,8 @@ katana::RDGPartHeader::FillFileFrame(
           : (handle.impl_->rdg_manifest().version() + 1);
   KATANA_LOG_DEBUG("Next verison: {}", next_version);
   ff->Bind(katana::RDGManifest::PartitionFileName(
-               handle.impl_->rdg_manifest().viewtype(),
-               handle.impl_->rdg_manifest().dir(), katana::Comm()->Rank,
-               next_version)
-               .string());
+      handle.impl_->rdg_manifest().viewtype(),
+      handle.impl_->rdg_manifest().dir(), katana::Comm()->Rank, next_version));
   return katana::MakeResult(std::move(ff));
 }
 

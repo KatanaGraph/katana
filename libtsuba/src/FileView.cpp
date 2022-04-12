@@ -53,7 +53,6 @@ katana::FileView::Unbind() {
     page_shift_ = 0;
     cursor_ = 0;
     mem_start_ = 0;
-    filename_ = "";
     filling_ = std::vector<uint64_t>();
     KATANA_LOG_DEBUG_ASSERT(fetches_->empty());
 
@@ -64,7 +63,7 @@ katana::FileView::Unbind() {
 
 katana::Result<void>
 katana::FileView::Bind(
-    std::string_view filename, uint64_t begin, uint64_t end, bool resolve) {
+    const URI& filename, uint64_t begin, uint64_t end, bool resolve) {
   StatBuf buf;
   filename_ = filename;
   KATANA_CHECKED_CONTEXT(FileStat(filename_, &buf), "{}", filename);

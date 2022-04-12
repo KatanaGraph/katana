@@ -41,18 +41,12 @@ EnsureDirectories(const std::string& path) {
   return katana::ResultSuccess();
 }
 
-katana::Result<std::string>
-GetPath(const std::string& uri) {
-  auto u = KATANA_CHECKED(katana::URI::Make(uri));
-  return u.path();
-}
-
 }  // namespace
 
 katana::Result<void>
 katana::LocalStorage::WriteFile(
-    const std::string& uri, const uint8_t* data, uint64_t size) {
-  std::string path = KATANA_CHECKED(GetPath(uri));
+    const URI& uri, const uint8_t* data, uint64_t size) {
+  std::string path = uri.path();
   KATANA_CHECKED(EnsureDirectories(path));
 
   std::ofstream ofile(path);
@@ -69,10 +63,9 @@ katana::LocalStorage::WriteFile(
 
 katana::Result<void>
 katana::LocalStorage::RemoteCopyFile(
-    const std::string& source_uri, const std::string& dest_uri, uint64_t begin,
-    uint64_t size) {
-  std::string source_path = KATANA_CHECKED(GetPath(source_uri));
-  std::string dest_path = KATANA_CHECKED(GetPath(dest_uri));
+    const URI& source_uri, const URI& dest_uri, uint64_t begin, uint64_t size) {
+  const std::string& source_path = source_uri.path();
+  const std::string& dest_path = dest_uri.path();
 
   KATANA_CHECKED(EnsureDirectories(dest_path));
 
@@ -97,8 +90,8 @@ katana::LocalStorage::RemoteCopyFile(
 
 katana::Result<void>
 katana::LocalStorage::ReadFile(
-    const std::string& uri, uint64_t start, uint64_t size, uint8_t* data) {
-  std::string path = KATANA_CHECKED(GetPath(uri));
+    const URI& uri, uint64_t start, uint64_t size, uint8_t* data) {
+  std::string path = uri.path();
   std::ifstream ifile(path, std::ios_base::binary);
   if (!ifile) {
     return KATANA_ERROR(
@@ -126,8 +119,8 @@ katana::LocalStorage::ReadFile(
 }
 
 katana::Result<void>
-katana::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
-  std::string path = KATANA_CHECKED(GetPath(uri));
+katana::LocalStorage::Stat(const URI& uri, StatBuf* s_buf) {
+  std::string path = uri.path();
   struct stat local_s_buf;
 
   if (int ret = stat(path.c_str(), &local_s_buf); ret) {
@@ -140,25 +133,13 @@ katana::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
 // Current implementation is not async
 std::future<katana::CopyableResult<void>>
 katana::LocalStorage::ListAsync(
-    const std::string& uri, std::vector<std::string>* list,
+    const URI& uri, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
   // Implement with synchronous calls
   DIR* dirp{};
   struct dirent* dp{};
 
-  auto get_path_res = GetPath(uri);
-
-  if (!get_path_res) {
-    CopyableErrorInfo ei = get_path_res.error();
-    return std::async(
-        std::launch::deferred, [ei, uri]() -> katana::CopyableResult<void> {
-          return KATANA_ERROR(
-              ErrorCode::LocalStorageError, "list dir failed: {}: {}", uri, ei);
-        });
-  }
-
-  std::string dirname = std::move(get_path_res.value());
-
+  std::string dirname = uri.path();
   if ((dirp = opendir(dirname.c_str())) == nullptr) {
     if (errno == ENOENT) {
       // other storage backends are flat and so return an empty list here
@@ -222,9 +203,8 @@ katana::LocalStorage::ListAsync(
 
 katana::Result<void>
 katana::LocalStorage::Delete(
-    const std::string& directory_uri,
-    const std::unordered_set<std::string>& files) {
-  std::string dir = KATANA_CHECKED(GetPath(directory_uri));
+    const URI& directory_uri, const std::unordered_set<std::string>& files) {
+  std::string dir = directory_uri.path();
 
   if (files.empty()) {
     rmdir(dir.c_str());

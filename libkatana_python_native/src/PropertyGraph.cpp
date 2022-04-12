@@ -173,6 +173,7 @@ DefPropertyGraph(py::module& m) {
              std::optional<std::vector<std::string>> edge_properties,
              TxnContext* txn_ctx) -> std::shared_ptr<PropertyGraph> {
             auto path_str = py::str(path).cast<std::string>();
+            auto path_uri = PythonChecked(URI::Make(path_str));
             py::gil_scoped_release guard;
             katana::RDGLoadOptions options = katana::RDGLoadOptions::Defaults();
             options.node_properties = node_properties;
@@ -180,7 +181,7 @@ DefPropertyGraph(py::module& m) {
             TxnContextArgumentHandler txn_context_handler(txn_ctx);
             KATANA_LOG_DEBUG("{}", reinterpret_cast<uintptr_t>(path.ptr()));
             return PythonChecked(PropertyGraph::Make(
-                path_str, txn_context_handler.get(), options));
+                path_uri, txn_context_handler.get(), options));
           }),
       py::arg("path"), py::kw_only(), py::arg("node_properties") = std::nullopt,
       py::arg("edge_properties") = std::nullopt,
@@ -671,7 +672,8 @@ DefPropertyGraph(py::module& m) {
          const std::string& provenance, TxnContext* txn_ctx) {
         TxnContextArgumentHandler txn_handler(txn_ctx);
         if (path) {
-          return self.Write(*path, provenance, txn_handler.get());
+          auto path_uri = PythonChecked(URI::Make(*path));
+          return self.Write(path_uri, provenance, txn_handler.get());
         }
         return self.Commit(provenance, txn_handler.get());
       },
@@ -688,7 +690,9 @@ DefPropertyGraph(py::module& m) {
       :param command_line: Lineage information in the form of a command line.
       :type command_line: str
       )""");
-  cls.def_property_readonly("path", &PropertyGraph::rdg_dir);
+  cls.def_property_readonly("path", [](PropertyGraph& self) -> std::string {
+    return self.rdg_dir().string();
+  });
 }
 
 template <typename node_or_edge>

@@ -27,7 +27,7 @@ namespace fs = boost::filesystem;
 
 // Ensure that uint16_t EntityTypeIDs survive the store/load cycle
 katana::Result<void>
-TestEntityTypeManagerRoundTrip(const std::string& rdg_name) {
+TestEntityTypeManagerRoundTrip(const katana::URI& rdg_name) {
   KATANA_LOG_DEBUG("***** TestBasicEntityTypeIDConversion *****");
 
   KATANA_LOG_ASSERT(!rdg_name.empty());
@@ -45,7 +45,7 @@ TestEntityTypeManagerRoundTrip(const std::string& rdg_name) {
       KATANA_CHECKED(rdg_orig.node_entity_type_manager());
 
   // write back the converted RDG
-  std::string rdg_dir_converted = KATANA_CHECKED(WriteRDG(std::move(rdg_orig)));
+  auto rdg_dir_converted = KATANA_CHECKED(WriteRDG(std::move(rdg_orig)));
 
   katana::RDG rdg_converted = KATANA_CHECKED(LoadRDG(rdg_dir_converted));
 
@@ -65,20 +65,20 @@ TestEntityTypeManagerRoundTrip(const std::string& rdg_name) {
       "node EntityTypeManager");
 
   KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir_converted);
-  fs::remove_all(rdg_dir_converted);
+  fs::remove_all(rdg_dir_converted.path());
 
   return katana::ResultSuccess();
 }
 
 // Ensure rdg with maximum EntityTypeIDs, aka max(uint16_t) survive the store/load cycle
 katana::Result<void>
-TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
+TestMaxNumberEntityTypeIDs(const katana::URI& rdg_dir) {
   KATANA_LOG_DEBUG("***** TestMaxNumberEntityTypeIDs *****");
 
-  KATANA_LOG_ASSERT(!rdg_name.empty());
+  KATANA_LOG_ASSERT(!rdg_dir.empty());
 
   // conversion of properties from uint8_t -> uint16_t in memory happens in load
-  katana::RDG rdg_orig = KATANA_CHECKED(LoadRDG(rdg_name));
+  katana::RDG rdg_orig = KATANA_CHECKED(LoadRDG(rdg_dir));
 
   // Ensure we are working on a graph that already has EntityTypeIDs
   // libgalois is required to generate EntityTypeIDs, so tests for generation/storage
@@ -168,18 +168,19 @@ TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
   KATANA_LOG_ASSERT(node_ids == added_node_ids);
 
   // store our full EntityTypeManagers
-  std::string rdg_dir = KATANA_CHECKED(
+  auto rdg_dir_again = KATANA_CHECKED(
       WriteRDG(std::move(rdg_orig), node_manager_orig, edge_manager_orig));
 
-  katana::RDG rdg_full_entity_type_managers = KATANA_CHECKED(LoadRDG(rdg_dir));
+  katana::RDG rdg_full_entity_type_managers =
+      KATANA_CHECKED(LoadRDG(rdg_dir_again));
 
   katana::EntityTypeManager edge_manager =
       KATANA_CHECKED(rdg_full_entity_type_managers.edge_entity_type_manager());
   katana::EntityTypeManager node_manager =
       KATANA_CHECKED(rdg_full_entity_type_managers.node_entity_type_manager());
 
-  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir);
-  fs::remove_all(rdg_dir);
+  KATANA_LOG_DEBUG("removing rdg dir: {}", rdg_dir_again);
+  fs::remove_all(rdg_dir_again.path());
 
   KATANA_LOG_VASSERT(
       edge_manager.GetNumEntityTypes() ==
@@ -205,6 +206,15 @@ TestMaxNumberEntityTypeIDs(const std::string& rdg_name) {
   return katana::ResultSuccess();
 }
 
+katana::Result<void>
+Run(const std::string& rdg_str) {
+  auto rdg_dir = KATANA_CHECKED(katana::URI::Make(rdg_str));
+
+  KATANA_CHECKED(TestEntityTypeManagerRoundTrip(rdg_dir));
+  KATANA_CHECKED(TestMaxNumberEntityTypeIDs(rdg_dir));
+  return katana::ResultSuccess();
+}
+
 int
 main(int argc, char* argv[]) {
   if (auto init_good = katana::InitTsuba(); !init_good) {
@@ -215,14 +225,8 @@ main(int argc, char* argv[]) {
     KATANA_LOG_FATAL("missing rdg file directory");
   }
 
-  auto res = TestEntityTypeManagerRoundTrip(argv[1]);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
-  }
-
-  res = TestMaxNumberEntityTypeIDs(argv[1]);
-  if (!res) {
-    KATANA_LOG_FATAL("test failed: {}", res.error());
+  if (auto res = Run(argv[1]); !res) {
+    KATANA_LOG_FATAL("run failed: {}", res.error());
   }
 
   if (auto fini_good = katana::FiniTsuba(); !fini_good) {

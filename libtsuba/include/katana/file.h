@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include "katana/Result.h"
+#include "katana/URI.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -33,24 +34,23 @@ struct StatBuf {
 };
 
 // Returns an error file uri does not exist
-KATANA_EXPORT katana::Result<void> FileStat(
-    const std::string& uri, StatBuf* s_buf);
+KATANA_EXPORT Result<void> FileStat(const URI& uri, StatBuf* s_buf);
 
 /// Take whatever is in a buffer and put it in the file
 ///
 /// \param uri the destination file to fill with data
 /// \param data a pointer to the buffer containing data
 /// \param size the length of the buffer
-KATANA_EXPORT katana::Result<void> FileStore(
-    const std::string& uri, const void* data, uint64_t size);
+KATANA_EXPORT Result<void> FileStore(
+    const URI& uri, const void* data, uint64_t size);
 
 template <
     class ContigContainer,
     std::enable_if_t<
         std::is_standard_layout<typename ContigContainer::value_type>::value,
         bool> = true>
-KATANA_EXPORT katana::Result<void>
-FileStore(const std::string& uri, const ContigContainer& container) {
+KATANA_EXPORT Result<void>
+FileStore(const URI& uri, const ContigContainer& container) {
   return FileStore(
       uri, container.data(),
       container.size() * sizeof(typename ContigContainer::value_type));
@@ -65,33 +65,32 @@ FileStore(const std::string& uri, const ContigContainer& container) {
 ///
 /// \param source_uri source URI
 /// \param dest_uri destination URI
-KATANA_EXPORT katana::Result<void> FileRemoteCopy(
-    const std::string& source_uri, const std::string& dest_uri, uint64_t begin,
-    uint64_t size);
+KATANA_EXPORT Result<void> FileRemoteCopy(
+    const URI& source_uri, const URI& dest_uri, uint64_t begin, uint64_t size);
 
 /// Take whatever is in a buffer and put it in the file
 ///
 /// \param uri the destination file to fill with data
 /// \param data a pointer to the buffer containing data
 /// \param size the length of the buffer
-KATANA_EXPORT std::future<katana::CopyableResult<void>> FileStoreAsync(
-    const std::string& uri, const void* data, uint64_t size);
+KATANA_EXPORT std::future<CopyableResult<void>> FileStoreAsync(
+    const URI& uri, const void* data, uint64_t size);
 
 // read a part of the file into a caller defined buffer
-KATANA_EXPORT katana::Result<void> FileGet(
-    const std::string& uri, void* result_buffer, uint64_t begin, uint64_t size);
+KATANA_EXPORT Result<void> FileGet(
+    const URI& uri, void* result_buffer, uint64_t begin, uint64_t size);
 
 template <
-    typename StrType, typename T,
+    typename T,
     std::enable_if_t<std::is_standard_layout<T>::value, bool> = true>
-static inline katana::Result<void>
-FileGet(const StrType& uri, T* obj) {
+Result<void>
+FileGet(const URI& uri, T* obj) {
   return FileGet(uri, obj, 0, sizeof(T));
 }
 
 // start reading a part of the file into a caller defined buffer
-KATANA_EXPORT std::future<katana::CopyableResult<void>> FileGetAsync(
-    const std::string& uri, void* result_buffer, uint64_t begin, uint64_t size);
+KATANA_EXPORT std::future<CopyableResult<void>> FileGetAsync(
+    const URI& uri, void* result_buffer, uint64_t begin, uint64_t size);
 
 /// List the set of files in a directory
 /// \param directory is URI whose contents are listed. It can be
@@ -102,16 +101,16 @@ KATANA_EXPORT std::future<katana::CopyableResult<void>> FileGetAsync(
 ///
 /// \return future; files will be in `list` after this object
 /// reports its return value
-KATANA_EXPORT std::future<katana::CopyableResult<void>> FileListAsync(
-    const std::string& directory, std::vector<std::string>* list,
+KATANA_EXPORT std::future<CopyableResult<void>> FileListAsync(
+    const URI& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size = nullptr);
 
 /// Delete a set of files in a directory
 /// \param directory is a base URI
 /// \param files is a set of file names relative to the directory that should be
 /// deleted
-KATANA_EXPORT katana::Result<void> FileDelete(
-    const std::string& directory, const std::unordered_set<std::string>& files);
+KATANA_EXPORT Result<void> FileDelete(
+    const URI& directory, const std::unordered_set<std::string>& files);
 
 }  // namespace katana
 

@@ -16,6 +16,23 @@ def test_load(graph):
     assert len(graph.loaded_edge_schema()) == 3
 
 
+def test_schemas(graph):
+    assert len(graph.loaded_node_schema()) == 17
+    assert len(graph.loaded_edge_schema()) == 3
+    assert len(graph.node_schema()) == 17
+    assert len(graph.edge_schema()) == 3
+    node_schema = graph.loaded_node_schema()
+    for n in node_schema.names:
+        graph.unload_node_property(n)
+    assert len(graph.loaded_node_schema()) == 0
+    assert len(graph.node_schema()) == 17
+    node_schema = graph.node_schema()
+    for n in node_schema.names:
+        graph.get_node_property(n)
+    assert len(graph.loaded_node_schema()) == 17
+    assert len(graph.node_schema()) == 17
+
+
 def test_write(graph):
     with TemporaryDirectory() as tmpdir:
         graph.write(tmpdir)

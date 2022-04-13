@@ -538,6 +538,15 @@ DefPropertyGraph(py::module& m) {
         arrow::py::wrap_schema(self.loaded_edge_schema()));
   });
 
+  cls.def("node_schema", [](PropertyGraph& self) {
+    return py::reinterpret_steal<py::object>(
+        arrow::py::wrap_schema(self.full_node_schema()));
+  });
+  cls.def("edge_schema", [](PropertyGraph& self) {
+    return py::reinterpret_steal<py::object>(
+        arrow::py::wrap_schema(self.full_edge_schema()));
+  });
+
   // GetNodeEntityType(NodePropertyIndex)-> EntityTypeID - entity type for a node
   cls.def(
       "get_node_type",

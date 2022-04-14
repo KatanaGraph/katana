@@ -14,6 +14,8 @@ labels:
     inherits:
       - conda
     description: Packages installed for conda builds that may not be needed in the run environment.
+  conda/notebook:
+    description: Packages installed for conda builds that are only needed in the run environment but are not strict package dependencies.
   apt:
     description: Packages installed with APT in non-conda builds.
   pip:
@@ -26,9 +28,9 @@ labels:
 packaging_systems:
   conda:
     channels:
-      - conda-forge
       - katanagraph
       - metagraph
+      - conda-forge
       - defaults
     description: |
       A Python-oriented, but universal, packaging system. Packages are installed in user-local directories. Python, C++
@@ -71,6 +73,23 @@ packaging_systems:
       APT packages for Ubuntu 18.04.
     format: apt
 
+aws-sdk-cpp:
+  # this is a transitive dependency of arrow but we only support a subset of
+  # versions
+  version: [ 1.9.100, 1.9.161 ]
+  labels:
+    - conda
+    - conan
+  version_overrides:
+    conan: 1.9.100
+aws-c-s3:
+  # This is a transitive dependency of aws-sdk-cpp but the conan package does
+  # not express its version requirements very well.
+  version: [ 0.1.27, null ]
+  labels:
+    - conan
+  version_overrides:
+    conan: 0.1.27
 boa:
   version: [0.6, 1]
   labels:
@@ -105,13 +124,20 @@ breathe:
   version: [ 4.30, null ]
   labels:
     - conda/dev
+click:
+  # <8.1 required until we use black>22.3.0
+  # https://github.com/psf/black/issues/2964
+  version: [ 8.0, 8.1 ]
+  labels:
+    - conda/dev
+    - pip/dev
 cmake:
   version: [ 3.22.3, 4 ]
   labels:
     - apt
     - conda/dev
   version_overrides:
-    # This  is due to the fact that apt doesn't have a CMake 3.22.3 package available yet
+    # This is due to the fact that apt doesn't have a CMake 3.22.3 package available yet
     apt: ">=3.22,<<4a0"
 conan:
   version: [ 1.40, null ]
@@ -119,6 +145,10 @@ conan:
     - pip/dev
 conda-build:
   version: [ 3, null ]
+  labels:
+    - conda/dev
+conda-lock:
+  version: [ 1, null ]
   labels:
     - conda/dev
 conda-verify:
@@ -140,6 +170,7 @@ cxx-compiler:
 cython:
   labels:
     - conda/dev
+    - conda/notebook
     - pip/dev
   name_overrides:
     pip: Cython
@@ -184,12 +215,6 @@ jemalloc:
   labels:
     - conan
     - conda
-jinja2:
-  # nbconvert does not express its own dependencies very well. In particular,
-  # it depends on jinja2<3.1
-  version: [ 2.11, 3.1 ]
-  labels:
-    - conda/dev
 markupsafe:
   version: [ 2.0, 2.1 ]
   labels:
@@ -207,6 +232,7 @@ jupyterlab:
   version: [ 3.1, null ]
   labels:
     - conda
+    - conda/notebook
     - pip
 libarrow-python:
   name_overrides:
@@ -219,6 +245,7 @@ libarrow-python:
     - apt
   version_overrides: &arrow_version_overrides
     apt: "=6.0.1-1"
+    conda: "6.0.* *_3_*"
 libarrow:
   name_overrides:
     conan: arrow
@@ -264,6 +291,10 @@ make:
   labels:
     - conda/dev
     - apt
+mamba:
+  version: [ 0.22, null ]
+  labels:
+    - conda/dev
 metagraph:
   version: [ 0.2.6, null ]
   labels:
@@ -295,6 +326,7 @@ numba:
   version: [ 0.53.1, 0.54 ]
   labels:
     - conda
+    - conda/notebook
     - pip
 numpy:
   name_overrides:
@@ -309,6 +341,9 @@ openblas:
   version: [ 0.3.12, null ]
   labels:
     - conda
+    - conan
+  version_overrides:
+    conan: 0.3.12
 openssl:
   # Due to version ordering 1.1.1h is *before* 1.1.1 in some systems. So we use 1.1.0 as the lower bound and provide
   # overrides below in cases where it might matter.
@@ -327,6 +362,7 @@ pandas:
   version: [ 1.1, 1.4 ]
   labels:
     - conda
+    - conda/notebook
     - pip
 pandoc:
   version: [ 2a, null ]
@@ -405,9 +441,11 @@ zlib:
   version: [ 1.2.11, 2 ]
   labels:
     - conda
+    - conan
     - apt
   version_overrides:
     apt: ">=1:1.2.11,<<1:2"
+    conan: 1.2.11
 git:
   version: [ 2, 3 ]
   labels:
@@ -417,26 +455,29 @@ git:
 readline:
   name_overrides:
     apt: libreadline-dev
-  version: [ 8, null ]
+  version: [ 8, 8.1.1 ]
   labels:
     - conda
+    - conan
     - apt
+  version_overrides:
+    conan: 8.0
 libnuma:
   name_overrides:
     apt: libnuma-dev
     conda: numactl-devel-cos6-x86_64
-  version: [2, null]
+  version: [ 2, null ]
   labels:
     - apt
 ccache:
-  version: [3, 4.3]
+  version: [ 3, 4.3 ]
   labels:
     - apt/dev
     - conda/apt
 clangxx:
   name_overrides:
     apt: clang
-  version: &clang_version [10, null]
+  version: &clang_version [ 10, null ]
   labels:
     - apt/dev
     - conda/dev
@@ -467,20 +508,20 @@ clangd:
     - apt/dev
   version_overrides: *clang_version_overrides
 graphviz:
-  version: [2, null]
+  version: [ 2, null ]
   labels:
     - apt/dev
 pkg-config:
-  version: [0.29, null]
+  version: [ 0.29, null ]
   labels:
     - apt/dev
     - conda/dev
 testresources:
-  version: [2, 3]
+  version: [ 2, 3 ]
   labels:
     - pip
 nbconvert:
-  version: [5.6, 6]
+  version: [ 5.6, 6 ]
   labels:
     - pip/dev
     - conda/dev
@@ -488,59 +529,63 @@ pip:
   name_overrides:
     conda: null
     apt: python3-pip
-  version: [20, null]
+  version: [ 20, null ]
   labels:
     - pip
     - apt
 setuptools:
-  version: [50, null]
+  version: [ 50, null ]
   labels:
     - pip/dev
     - conda/dev
 scipy:
-  version: [1, 2]
+  version: [ 1, 2 ]
+  labels:
+  - conda
+  - conda/notebook
+  - pip
 sphinxcontrib-applehelp:
-  version: [1.0.2, null]
+  version: [ 1.0.2, null ]
   labels:
     - pip/dev
     - conda/dev
 sphinxcontrib-devhelp:
-  version: [1.0.2, null]
+  version: [ 1.0.2, null ]
   labels:
     - pip/dev
     - conda/dev
 sphinxcontrib-htmlhelp:
-  version: [1.0.3, null]
+  version: [ 1.0.3, null ]
   labels:
     - pip/dev
     - conda/dev
 sphinxcontrib-jsmath:
-  version: [1.0.1, null]
+  version: [ 1.0.1, null ]
   labels:
     - pip/dev
     - conda/dev
 sphinxcontrib-qthelp:
-  version: [1.0.3, null]
+  version: [ 1.0.3, null ]
   labels:
     - pip/dev
     - conda/dev
 sphinxcontrib-serializinghtml:
-  version: [1.1.4, null]
+  version: [ 1.1.4, null ]
   labels:
     - pip/dev
     - conda/dev
 pytest-asyncio:
-  version: [0.15, 1]
+  version: [ 0.15, 1 ]
   labels:
     - pip/dev
     - conda/dev
 pytest-timeout:
-  version: [1.4.2, 2]
+  version: [ 1.4.2, 2 ]
   labels:
     - pip/dev
     - conda/dev
 pyyaml:
-  version: [5.4.1, 6]
+  version: [ 5.4.1, 6 ]
   labels:
     - pip
     - conda
@@ -549,47 +594,53 @@ gxx:
   name_overrides:
     conda: gxx_linux-64
     apt: g++
-  version: [9.3, null]
+  version: [ 9.3, null ]
   labels:
     - conda/dev
 gcc:
   name_overrides:
     conda: gcc_linux-64
     apt: gcc
-  version: [9.3, null]
+  version: [ 9.3, null ]
   labels:
     - conda/dev
 sysroot:
   name_overrides:
     conda: sysroot_linux-64
-  version: [2.17, 3]
+  version: [ 2.17, 3 ]
   labels:
     - conda/dev
 
 
 # The dependencies for pytest-notebook are incomplete, we include then manually here.
 pytest-notebook:
-  version: [0.6.1, 1]
+  version: [ 0.6.1, 1 ]
   labels:
     - pip/dev
     - conda/dev
 jupyter_client:
-  version: [6, 7]
+  version: [ 6, 7 ]
   labels:
     - pip/dev
     - conda/dev
 attrs:
-  version: [19, 21]
+  version: [ 19, 21 ]
   labels:
     - pip/dev
     - conda/dev
 pexpect:
-  version: [4.8, 5]
+  version: [ 4.8, 5 ]
   labels:
     - pip/dev
     - conda/dev
 mistune:
-  version: [0.8, 2]
+  version: [ 0.8, 2 ]
   labels:
     - pip/dev
+    - conda/dev
+jinja2:
+  # nbconvert does not express its own dependencies very well. In particular,
+  # it depends on jinja2<3.1
+  version: [ 2.11, 3.1 ]
+  labels:
     - conda/dev

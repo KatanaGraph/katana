@@ -33,6 +33,13 @@ class KATANA_EXPORT RDGManifest {
   uint32_t policy_id_{0};
   bool transpose_{false};
   RDGLineage lineage_;
+  // We attempt to maintain the following invariant:
+  // EITHER
+  // 1. view_type_ is a single view type (like "rdg") and view_args_ is a vector
+  //    of other view describing parameters (like {"random-oec", "part3"}).
+  // OR
+  // 2. view_type_ is a full view descriptor (like "rdg_random-oec_part3") and
+  //    view_args_ is empty.
   std::string view_type_;
   std::vector<std::string> view_args_;
 

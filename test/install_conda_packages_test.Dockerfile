@@ -27,9 +27,14 @@ RUN set -eu; \
 
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"
 
+# The latest mamba is broken w.r.t. latest conda
+#RUN set -eu; \
+#    . /activate_miniconda.sh; \
+#    mamba update --quiet --yes --all; \
+#    ${CONDA_CLEAN}
+
 RUN set -eu; \
     . /activate_miniconda.sh; \
-    mamba update --quiet --yes --all; \
     ${CONDA_CLEAN}
 
 FROM base_with_conda AS pre_install

@@ -260,6 +260,7 @@ katana::CreateSrcDestFromViewsForCopy(
     rdg_manifest.set_prev_version(1);
 
     rdg_manifest.set_viewtype(rdg_manifest.view_specifier());
+    rdg_manifest.set_viewargs({});
 
     auto dst_rdg_manifest_path =
         katana::URI::JoinPath(dst_dir, rdg_manifest.FileName().BaseName());

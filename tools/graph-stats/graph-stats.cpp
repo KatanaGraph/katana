@@ -25,38 +25,28 @@
 #include "katana/LCGraph.h"
 #include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
+#include "tsuba/RDGInspection.h"
 
 namespace cll = llvm::cl;
 
-enum StatMode {
-  degreehist,
-  degrees,
-  maxDegreeNode,
-  dsthist,
-  indegreehist,
-  sortedlogoffsethist,
-  sparsityPattern,
-  summary
-};
-
 static cll::opt<std::string> inputfilename(
     cll::Positional, cll::desc("<graph file>"), cll::Required);
-static cll::list<StatMode> statModeList(
+static cll::list<tsuba::StatMode> statModeList(
     cll::desc("Available stats:"),
     cll::values(
-        clEnumVal(degreehist, "Histogram of degrees"),
-        clEnumVal(degrees, "Node degrees"),
-        clEnumVal(maxDegreeNode, "Max Degree Node"),
-        clEnumVal(dsthist, "Histogram of destinations"),
-        clEnumVal(indegreehist, "Histogram of indegrees"),
+        clEnumVal(tsuba::degreehist, "Histogram of degrees"),
+        clEnumVal(tsuba::degrees, "Node degrees"),
+        clEnumVal(tsuba::maxDegreeNode, "Max Degree Node"),
+        clEnumVal(tsuba::dsthist, "Histogram of destinations"),
+        clEnumVal(tsuba::indegreehist, "Histogram of indegrees"),
         clEnumVal(
-            sortedlogoffsethist,
+            tsuba::sortedlogoffsethist,
             "Histogram of neighbor offsets with sorted edges"),
         clEnumVal(
-            sparsityPattern,
+            tsuba::sparsityPattern,
             "Pattern of non-zeros when graph is "
             "interpreted as a sparse matrix"),
-        clEnumVal(summary, "Graph summary")));
+        clEnumVal(tsuba::summary, "Graph summary")));
 static cll::opt<int> numBins(
     "numBins", cll::desc("Number of bins"), cll::init(-1));
 static cll::opt<int> columns(
@@ -65,192 +55,6 @@ static cll::opt<int> columns(
 typedef katana::OfflineGraph Graph;
 typedef Graph::GraphNode GNode;
 
-void
-doSummary(Graph& graph) {
-  std::cout << "NumNodes: " << graph.size() << "\n";
-  std::cout << "NumEdges: " << graph.sizeEdges() << "\n";
-  std::cout << "SizeofEdge: " << graph.edgeSize() << "\n";
-}
-
-void
-doDegrees(Graph& graph) {
-  for (auto n : graph) {
-    std::cout << graph.edges(n).size() << "\n";
-  }
-}
-
-void
-findMaxDegreeNode(Graph& graph) {
-  uint64_t nodeID = 0;
-  size_t MaxDegree = 0;
-  uint64_t MaxDegreeNode = 0;
-  for (auto n : graph) {
-    size_t degree = graph.edges(n).size();
-    if (MaxDegree < degree) {
-      MaxDegree = degree;
-      MaxDegreeNode = nodeID;
-    }
-    ++nodeID;
-  }
-  std::cout << "MaxDegreeNode : " << MaxDegreeNode
-            << " , MaxDegree : " << MaxDegree << "\n";
-}
-
-void
-printHistogram(const std::string& name, std::map<uint64_t, uint64_t>& hists) {
-  auto max = hists.rbegin()->first;
-  if (numBins <= 0) {
-    std::cout << name << "Bin,Start,End,Count\n";
-    for (unsigned x = 0; x <= max; ++x) {
-      std::cout << x << ',' << x << ',' << x + 1 << ',';
-      if (hists.count(x)) {
-        std::cout << hists[x] << '\n';
-      } else {
-        std::cout << "0\n";
-      }
-    }
-  } else {
-    std::vector<uint64_t> bins(numBins);
-    auto bwidth = (max + 1) / numBins;
-    if ((max + 1) % numBins) {
-      ++bwidth;
-    }
-    // std::cerr << "* " << max << " " << numBins << " " << bwidth << "\n";
-    for (auto p : hists) {
-      bins.at(p.first / bwidth) += p.second;
-    }
-    std::cout << name << "Bin,Start,End,Count\n";
-    for (unsigned x = 0; x < bins.size(); ++x) {
-      std::cout << x << ',' << x * bwidth << ',' << (x * bwidth + bwidth) << ','
-                << bins[x] << '\n';
-    }
-  }
-}
-
-void
-doSparsityPattern(
-    Graph& graph, std::function<void(unsigned, unsigned, bool)> printFn) {
-  unsigned blockSize = (graph.size() + columns - 1) / columns;
-
-  for (int i = 0; i < columns; ++i) {
-    std::vector<bool> row(columns);
-    auto p = katana::block_range(graph.begin(), graph.end(), i, columns);
-    for (auto ii = p.first, ei = p.second; ii != ei; ++ii) {
-      for (auto jj : graph.edges(*ii)) {
-        row[graph.getEdgeDst(jj) / blockSize] = true;
-      }
-    }
-    for (int x = 0; x < columns; ++x) {
-      printFn(x, i, row[x]);
-    }
-  }
-}
-
-void
-doDegreeHistogram(Graph& graph) {
-  std::map<uint64_t, uint64_t> hist;
-  for (auto ii : graph) {
-    ++hist[graph.edges(ii).size()];
-  }
-  printHistogram("Degree", hist);
-}
-
-void
-doInDegreeHistogram(Graph& graph) {
-  std::vector<uint64_t> inv(graph.size());
-  std::map<uint64_t, uint64_t> hist;
-  for (auto ii : graph) {
-    for (auto jj : graph.edges(ii)) {
-      ++inv[graph.getEdgeDst(jj)];
-    }
-  }
-  for (uint64_t n : inv) {
-    ++hist[n];
-  }
-  printHistogram("InDegree", hist);
-}
-
-struct EdgeComp {
-  typedef katana::EdgeSortValue<GNode, void> Edge;
-
-  bool operator()(const Edge& a, const Edge& b) const { return a.dst < b.dst; }
-};
-
-int
-getLogIndex(ptrdiff_t x) {
-  int logvalue = 0;
-  int sign = x < 0 ? -1 : 1;
-
-  if (x < 0) {
-    x = -x;
-  }
-
-  while ((x >>= 1) != 0) {
-    ++logvalue;
-  }
-  return sign * logvalue;
-}
-
-void
-doSortedLogOffsetHistogram([[maybe_unused]] Graph& graph) {
-  // Graph copy;
-  // {
-  //   // Original FileGraph is immutable because it is backed by a file
-  //   copy = graph;
-  // }
-
-  // std::vector<std::map<int, size_t> > hists;
-  // hists.emplace_back();
-  // auto hist = &hists.back();
-  // int curHist = 0;
-  // auto p = katana::block_range(
-  //     boost::counting_iterator<size_t>(0),
-  //     boost::counting_iterator<size_t>(graph.sizeEdges()),
-  //     curHist,
-  //     numHist);
-  // for (auto ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
-  //   copy.sortEdges<void>(*ii, EdgeComp());
-
-  //   GNode last = 0;
-  //   bool first = true;
-  //   for (auto jj = copy.edge_begin(*ii), ej = copy.edge_end(*ii); jj != ej;
-  //   ++jj) {
-  //     GNode dst = copy.getEdgeDst(jj);
-  //     ptrdiff_t diff = dst - (ptrdiff_t) last;
-
-  //     if (!first) {
-  //       int index = getLogIndex(diff);
-  //       ++(*hist)[index];
-  //     }
-  //     first = false;
-  //     last = dst;
-  //     if (++p.first == p.second) {
-  //       hists.emplace_back();
-  //       hist = &hists.back();
-  //       curHist += 1;
-  //       p = katana::block_range(
-  //           boost::counting_iterator<size_t>(0),
-  //           boost::counting_iterator<size_t>(graph.sizeEdges()),
-  //           curHist,
-  //           numHist);
-  //     }
-  //   }
-  // }
-
-  // printHistogram("LogOffset", hists);
-}
-
-void
-doDestinationHistogram(Graph& graph) {
-  std::map<uint64_t, uint64_t> hist;
-  for (auto ii : graph) {
-    for (auto jj : graph.edges(ii)) {
-      ++hist[graph.getEdgeDst(jj)];
-    }
-  }
-  printHistogram("DestinationBin", hist);
-}
-
 int
 main(int argc, char** argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
@@ -258,38 +62,39 @@ main(int argc, char** argv) {
     Graph graph(inputfilename);
     for (unsigned i = 0; i != statModeList.size(); ++i) {
       switch (statModeList[i]) {
-      case degreehist:
-        doDegreeHistogram(graph);
+      case tsuba::degreehist:
+        tsuba::doDegreeHistogram(graph, numBins);
         break;
-      case degrees:
-        doDegrees(graph);
+      case tsuba::degrees:
+        tsuba::doDegrees(graph);
         break;
-      case maxDegreeNode:
-        findMaxDegreeNode(graph);
+      case tsuba::maxDegreeNode:
+        tsuba::findMaxDegreeNode(graph);
         break;
-      case dsthist:
-        doDestinationHistogram(graph);
+      case tsuba::dsthist:
+        tsuba::doDestinationHistogram(graph, numBins);
         break;
-      case indegreehist:
-        doInDegreeHistogram(graph);
+      case tsuba::indegreehist:
+        tsuba::doInDegreeHistogram(graph, numBins);
         break;
-      case sortedlogoffsethist:
-        doSortedLogOffsetHistogram(graph);
+      case tsuba::sortedlogoffsethist:
+        tsuba::doSortedLogOffsetHistogram(graph);
         break;
-      case sparsityPattern: {
+      case tsuba::sparsityPattern: {
         unsigned lastrow = ~0;
-        doSparsityPattern(graph, [&lastrow](unsigned, unsigned y, bool val) {
-          if (y != lastrow) {
-            lastrow = y;
-            std::cout << '\n';
-          }
-          std::cout << (val ? 'x' : '.');
-        });
+        tsuba::doSparsityPattern(
+            graph, columns, [&lastrow](unsigned, unsigned y, bool val) {
+              if (y != lastrow) {
+                lastrow = y;
+                std::cout << '\n';
+              }
+              std::cout << (val ? 'x' : '.');
+            });
         std::cout << '\n';
         break;
       }
-      case summary:
-        doSummary(graph);
+      case tsuba::summary:
+        tsuba::doSummary(graph);
         break;
       default:
         std::cerr << "Unknown stat requested\n";
